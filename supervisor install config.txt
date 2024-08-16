@@ -1,0 +1,13 @@
+sudo apt-get install supervisor
+sudo supervisorctl reread
+sudo supervisorctl update
+sudo supervisorctl status
+
+
+sudo supervisorctl start laravel-tcp-client
+sudo supervisorctl restart laravel-tcp-client:*
+
+sudo supervisorctl start laravel-modbus-subscriber
+sudo supervisorctl start laravel-mqtt-subscriber
+sudo supervisorctl restart laravel-modbus-subscriber:*
+sudo supervisorctl restart laravel-mqtt-subscriber:*

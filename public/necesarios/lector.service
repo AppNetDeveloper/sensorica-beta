@@ -1,0 +1,17 @@
+[Unit]
+Description=Lector Service
+#After=network.target
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+WorkingDirectory=/root/lector
+Environment=LECTOR_ARGS="172.25.30.75 192.168.194.55 1883 c/DICAPRODUCT/pli/DICAPROD30739PLI07 PLASTIB30840PLI01STA06MAC02 192.168.0.158 2002"
+ExecStart=/usr/bin/python3 exec-lector.py $LECTOR_ARGS
+Restart=always
+RestartSec=5  # Tiempo de espera antes de intentar reiniciar el servicio
+User=root
+Group=root
+
+[Install]
+WantedBy=multi-user.target

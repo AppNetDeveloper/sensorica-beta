@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <title>BOIZOLO Autoconto</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
+  <style>
+    body {
+        font-family: sans-serif;
+        background-color: #333;
+        color: white;
+        margin: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        overflow: hidden;
+      }
+
+      .container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 90%; /* Ocupa el 90% del ancho de la pantalla */
+        max-width: 1200px; /* Limita el ancho máximo para pantallas anchas */
+        height: 100%; /* Ocupa el 100% de la altura de la pantalla */
+        padding: 20px;
+        background-color: #444; /* Fondo visible */
+        border-radius: 8px;
+        box-sizing: border-box;
+        overflow: hidden; /* Evita que el contenido sobresalga */
+      }
+
+    footer {
+      width: 100%;
+    }
+    
+    header {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px; /* Añadir un margen para separar el logo del contenido */
+      }
+
+      .logo {
+        max-width: 30%; /* Ajusta este valor para reducir el tamaño del logo */
+        height: auto; /* Mantén la proporción del logo */
+      }
+
+    .time {
+      font-size: 24px;
+      margin: 10px 0;
+    }
+
+    main {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      flex-grow: 1;
+    }
+
+    .box {
+      background-color: #555;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      width: 100%; /* Ocupa el 100% del ancho disponible en el contenedor */
+      max-width: none; /* Elimina el límite de ancho máximo */
+      display: flex;
+      flex-direction: column; /* Asegura que el título esté arriba y los elementos en fila abajo */
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .box-title {
+      font-size: 36px; /* Tamaño mayor para los títulos */
+      text-align: center; /* Centrado del título */
+      margin-bottom: 20px; /* Espacio entre el título y el contenido */
+      width: 100%;
+    }
+
+    .box-content {
+      display: flex; /* Coloca los elementos en una fila */
+      justify-content: space-around;
+      align-items: center;
+      width: 100%;
+    }
+
+    .info-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 0 10px;
+      min-width: 150px;
+      margin-bottom: 20px;
+    }
+
+    .weight-display {
+      font-size: 140px; /* Ajusta el tamaño de la fuente para que sea visible desde lejos */
+      font-weight: bold;
+    }
+
+    #weightDisplay {
+      font-size: 122px; /* Ajusta el tamaño de la fuente para que sea visible desde lejos */
+    }
+
+    #lastWeightDisplay {
+      font-size: 36px;
+    }
+
+    #lastBarcode {
+      margin-top: 15px;
+      width: 100%;
+    }
+
+    .info-box img {
+      width: 80px; /* Ajusta el tamaño de las imágenes para que sean consistentes */
+      margin-bottom: 10px;
+    }
+
+    .info-box p {
+      font-size: 18px; /* Ajusta el tamaño del texto para mayor visibilidad */
+    }
+  </style>
+</head>
+<body>
+    <div class="container">
+      <header class="d-flex justify-content-between align-items-center">
+        <img src="logo.png" alt="Logo" class="logo">
+        <div class="time" id="timeDisplay">02:33:21</div>
+      </header>
+
+      <main>
+        <div class="box">
+          <div class="box-title" id="name">Pesaje en vivo</div> <!-- Título centrado -->
+          <div class="box-content"> <!-- Contenido en fila como antes -->
+            <div class="info-box">
+              <img src="bascula.png" alt="Weight">
+              <p class="weight-display" id="weightDisplay">0.0</p>
+            </div>
+            <div class="info-box">
+              <img src="medida.png" alt="Dimensions">
+              <p id="dimensionDisplay">0 mm</p>
+            </div>
+            <div class="info-box">
+              <img src="recuento.png" alt="Pallets">
+              <p id="boxNumberDisplay">1120 palets</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="box">
+          <div class="box-title" id="last_name">Ultimo pesaje</div> <!-- Título centrado -->
+          <div class="box-content"> <!-- Contenido en fila como antes -->
+            <div class="info-box">
+              <img src="bascula.png" alt="Weight">
+              <p class="weight-display" id="lastWeightDisplay">44.0</p>
+            </div>
+            <div class="info-box">
+              <img src="medida.png" alt="Dimensions">
+              <p id="lastDimensionDisplay">0 mm</p>
+            </div>
+            <div class="info-box">
+              <img src="recuento.png" alt="Pallets">
+              <p id="lastBoxNumberDisplay">1119 palets</p>
+            </div>
+          </div>
+          <div class="barcode" id="barcode">
+            <center><p>Barcoder Anonimus BOX</p></center>
+            <svg id="lastBarcode"></svg>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script>
+       // Función para obtener el token de la URL
+        function getTokenFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('token');
+        }
+
+        const token = getTokenFromUrl();
+        const apiUrl = `/api/control-weight/${token}`;
+
+        async function updateData() {
+            try {
+                const response = await fetch(apiUrl);
+
+                if (!response.ok) {
+                    throw new Error(`Error HTTP: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log("Datos recibidos:", data); // Verifica los datos recibidos
+
+                const grossWeight = parseFloat(data.gross_weight) || 0;
+                const lastControlWeight = parseFloat(data.last_control_weight) || 0;
+
+                document.getElementById('name').textContent = "Pesaje en vivo: " + data.name; // Actualiza el nombre
+                document.getElementById('last_name').textContent = "Ultimo pesaje: " + data.name; // Actualiza el nombre
+                document.getElementById('weightDisplay').innerHTML = grossWeight.toFixed(1) + '<b style="font-size:1vw;"> Kg</b>';
+
+                document.getElementById('dimensionDisplay').textContent = data.dimension + " mm";
+                document.getElementById('boxNumberDisplay').textContent = data.box_number + " palets";
+
+                document.getElementById('lastWeightDisplay').innerHTML = lastControlWeight.toFixed(1) + '<b style="font-size:1vw;"> Kg</b>';
+                document.getElementById('lastDimensionDisplay').textContent = data.last_dimension + " mm";
+                document.getElementById('lastBoxNumberDisplay').textContent = data.last_box_number + " palets";
+
+                JsBarcode("#lastBarcode", data.last_barcoder.toString(), {
+                    format: "CODE128",
+                    displayValue: true,
+                    fontSize: 20,
+                    height: 80
+                });
+
+            } catch (error) {
+                console.error("Error al obtener o procesar datos de la API:", error);
+            }
+        }
+
+        function updateTime() {
+          const timeElement = document.getElementById('timeDisplay');
+          const now = new Date();
+          timeElement.textContent = now.toLocaleTimeString();
+        }
+
+        setInterval(updateData, 300);
+        setInterval(updateTime, 1000);
+
+        updateData();
+    </script>
+</body>
+</html>

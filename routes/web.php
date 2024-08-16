@@ -1,0 +1,163 @@
+<?php
+
+use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\ModualController;
+use App\Http\Controllers\PermissionController;
+use App\Http\Controllers\RoleController;
+use App\Http\Controllers\SettingController;
+use App\Http\Controllers\LanguageController;
+use App\Http\Controllers\UserController;
+use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\LoginSecurityController;
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\DebugController;
+use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\ProductionLineController;
+use App\Http\Controllers\SensorController;
+use App\Http\Controllers\BarcodeController;
+use App\Http\Controllers\PrinterController;
+
+
+/*
+|--------------------------------------------------------------------------
+| Web Routes
+|--------------------------------------------------------------------------
+|
+| Here is where you can register web routes for your application.
+| These routes are loaded by the RouteServiceProvider within a group which
+| contains the "web" middleware group. Now create something great!
+|
+*/
+
+Auth::routes();
+Route::get('/debug', [DebugController::class, 'index']);
+
+// Ruta para mostrar el formulario de edición
+Route::get('customers/{id}/edit', [CustomerController::class, 'edit'])->name('customers.edit');
+
+// Ruta para actualizar el cliente
+Route::put('customers/{id}', [CustomerController::class, 'update'])->name('customers.update');
+
+// Ruta para eliminar el cliente
+Route::delete('customers/{id}', [CustomerController::class, 'destroy'])->name('customers.destroy');
+
+// Ruta para obtener los datos de los clientes (para DataTables)
+Route::get('customers/getCustomers', [CustomerController::class, 'getCustomers'])->name('customers.getCustomers');
+
+// Ruta para la página principal de clientes
+Route::get('customers', [CustomerController::class, 'index'])->name('customers.index');
+
+// Ruta para la página principal de sensores
+Route::get('sensors/{id}', [SensorController::class, 'index'])->name('sensors.index');
+
+// Rutas para las líneas de producción
+Route::get('customers/{customer_id}/productionlines', [ProductionLineController::class, 'index'])->name('productionlines.index');
+Route::get('productionlines/{id}/edit', [ProductionLineController::class, 'edit'])->name('productionlines.edit');
+Route::delete('productionlines/{id}', [ProductionLineController::class, 'destroy'])->name('productionlines.destroy');
+Route::get('customers/{customer_id}/productionlinesjson', [ProductionLineController::class, 'getProductionLines'])->name('productionlinesjson.index');
+Route::put('productionlines/{id}', [ProductionLineController::class, 'update'])->name('productionlines.update');
+Route::get('customers/{customer_id}/productionlinescreate', [ProductionLineController::class, 'create'])->name('productionlines.create');
+
+Route::post('productionlines', [ProductionLineController::class, 'store'])->name('productionlines.store');
+
+
+//Route::get('barcoders/{production_line_id}', [BarcodeController::class, 'index'])->name('barcoders.index');
+
+// Ruta para listar los barcodes de una línea de producción
+Route::get('productionlines/{production_line_id}/barcodes', [BarcodeController::class, 'index'])->name('barcodes.index');
+
+// Ruta para obtener los barcodes en formato JSON
+Route::get('productionlines/{production_line_id}/barcodesjson', [BarcodeController::class, 'getBarcodes'])->name('barcodes.json');
+
+// Ruta para mostrar el formulario de creación
+Route::get('productionlines/{production_line_id}/barcodes/create', [BarcodeController::class, 'create'])->name('barcodes.create');
+
+// Ruta para almacenar el nuevo barcode
+Route::post('productionlines/{production_line_id}/barcodes', [BarcodeController::class, 'store'])->name('barcodes.store');
+
+// Ruta para mostrar el formulario de edición
+Route::get('barcodes/{id}/edit', [BarcodeController::class, 'edit'])->name('barcodes.edit');
+
+// Ruta para actualizar el barcode
+Route::put('barcodes/{id}', [BarcodeController::class, 'update'])->name('barcodes.update');
+
+// Ruta para eliminar el barcode
+Route::delete('barcodes/{id}', [BarcodeController::class, 'destroy'])->name('barcodes.destroy');
+
+//ruta para impresoras
+Route::resource('printers', PrinterController::class);
+
+
+
+
+
+Route::get('/', [HomeController::class, 'index'])->name('home')->middleware(['auth', 'XSS', '2fa']);
+
+Route::post('/chart', [HomeController::class, 'chart'])->name('get.chart.data')->middleware(['auth', 'XSS']);
+
+Route::get('notification', [HomeController::class, 'notification']);
+
+Route::group(['middleware' => ['auth', 'XSS']], function () {
+    Route::resource('roles', RoleController::class);
+    Route::resource('users', UserController::class);
+    Route::resource('permission', PermissionController::class);
+    Route::resource('modules', ModualController::class);
+});
+
+Route::delete('/user/{id}', [UserController::class, 'destroy'])->name('users.destroy')->middleware(['auth', 'XSS']);
+
+Route::post('/role/{id}', [RoleController::class, 'assignPermission'])->name('roles_permit')->middleware(['auth', 'XSS']);
+
+Route::group(['middleware' => ['auth', 'XSS']], function () {
+    Route::get('setting/email-setting', [SettingController::class, 'getmail'])->name('settings.getmail');
+    Route::post('setting/email-settings_store', [SettingController::class, 'saveEmailSettings'])->name('settings.emails');
+
+    Route::get('setting/datetime', [SettingController::class, 'getdate'])->name('datetime');
+    Route::post('setting/datetime-settings_store', [SettingController::class, 'saveSystemSettings'])->name('settings.datetime');
+
+    Route::get('setting/logo', [SettingController::class, 'getlogo'])->name('getlogo');
+    Route::post('setting/logo_store', [SettingController::class, 'store'])->name('settings.logo');
+    Route::resource('settings', SettingController::class);
+
+    Route::get('test-mail', [SettingController::class, 'testMail'])->name('test.mail');
+    Route::post('test-mail', [SettingController::class, 'testSendMail'])->name('test.send.mail');
+});
+
+Route::get('profile', [UserController::class, 'profile'])->name('profile')->middleware(['auth', 'XSS']);
+
+Route::post('edit-profile', [UserController::class, 'editprofile'])->name('update.profile')->middleware(['auth', 'XSS']);
+
+Route::group(['middleware' => ['auth', 'XSS']], function () {
+    Route::get('change-language/{lang}', [LanguageController::class, 'changeLanquage'])->name('change.language');
+    Route::get('manage-language/{lang}', [LanguageController::class, 'manageLanguage'])->name('manage.language');
+    Route::post('store-language-data/{lang}', [LanguageController::class, 'storeLanguageData'])->name('store.language.data');
+    Route::get('create-language', [LanguageController::class, 'createLanguage'])->name('create.language');
+    Route::post('store-language', [LanguageController::class, 'storeLanguage'])->name('store.language');
+    Route::delete('/lang/{lang}', [LanguageController::class, 'destroyLang'])->name('lang.destroy');
+    Route::get('language', [LanguageController::class, 'index'])->name('index');
+});
+
+Route::get('generator_builder', '\InfyOm\GeneratorBuilder\Controllers\GeneratorBuilderController@builder')->name('io_generator_builder')->middleware(['auth', 'XSS']);
+
+Route::get('field_template', '\InfyOm\GeneratorBuilder\Controllers\GeneratorBuilderController@fieldTemplate')->name('io_field_template')->middleware(['auth', 'XSS']);
+
+Route::get('relation_field_template', '\InfyOm\GeneratorBuilder\Controllers\GeneratorBuilderController@relationFieldTemplate')->name('io_relation_field_template')->middleware(['auth', 'XSS']);
+
+Route::post('generator_builder/generate', '\InfyOm\GeneratorBuilder\Controllers\GeneratorBuilderController@generate')->name('io_generator_builder_generate')->middleware(['auth', 'XSS']);
+
+Route::post('generator_builder/rollback', '\InfyOm\GeneratorBuilder\Controllers\GeneratorBuilderController@rollback')->name('io_generator_builder_rollback')->middleware(['auth', 'XSS']);
+
+Route::post('generator_builder/generate-from-file', '\InfyOm\GeneratorBuilder\Controllers\GeneratorBuilderController@generateFromFile')->name('io_generator_builder_generate_from_file')->middleware(['auth', 'XSS']);
+
+Route::group(['prefix' => '2fa', 'middleware' => ['auth', 'XSS']], function () {
+    Route::get('/', [UserController::class, 'profile'])->name('2fa');
+    Route::post('/generateSecret', [LoginSecurityController::class, 'generate2faSecret'])->name('generate2faSecret');
+    Route::post('/enable2fa', [LoginSecurityController::class, 'enable2fa'])->name('enable2fa');
+    Route::post('/disable2fa', [LoginSecurityController::class, 'disable2fa'])->name('disable2fa');
+
+    // Middleware 2fa
+    Route::post('/2faVerify', function () {
+        return redirect()->back();
+    })->name('2faVerify')->middleware('2fa');
+});
