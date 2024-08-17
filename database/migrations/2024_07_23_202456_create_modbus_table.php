@@ -12,7 +12,6 @@ return new class extends Migration
             $table->id();
             $table->string('name')->nullable();
             $table->unsignedBigInteger('production_line_id');
-            $table->string('url_api')->nullable(); //url de la api de modbus
             $table->text('json_api')->nullable(); //identificar el valor de la api
             $table->string('mqtt_server')->nullable(); //mqtt server de donde se saca valores si no quieres por api
             $table->integer('mqtt_port')->nullable(); //puerto de mqtt server
@@ -25,7 +24,8 @@ return new class extends Migration
             $table->string('dimension')->nullable(); //la dimension del bulto si tiene un medidor de altura anadido
             $table->string('max_kg')->nullable();   //maximo kg que se han recivido de una linea entre los 0 y 0 para resetear
             $table->string('rep_number')->nullable(); //numero de repeticion que se ha recivido de una linea entre los 0 y 0    para poner el valor como max
-            $table->string('tara')->nullable()->default('0');; //el peso del palet o para hacer un 0 por software
+            $table->string('tara')->nullable()->default('0'); //el peso del palet o para hacer un 0 por software
+            $table->string('tara_calibrate')->nullable()->default('0'); //tara para hacer o automatico
             $table->string('min_kg')->nullable(); //minimo kg que activan el contador
             $table->string('last_kg')->nullable(); //ultimo kg que se ha recivido de una linea mayor de min_kg
             $table->string('last_rep')->nullable(); //numero de repeticion que se ha recivido en un valor estable de last_kg

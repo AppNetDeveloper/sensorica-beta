@@ -8,7 +8,6 @@ class Modbus extends Model
 {
     protected $fillable = [
         'production_line_id',
-        'url_api',
         'json_api',
         'mqtt_server',
         'mqtt_port',
@@ -25,6 +24,7 @@ class Modbus extends Model
         'last_kg',
         'last_rep',
         'tara',
+        'tara_calibrate',
         'rec_box', // Esta es la columna que vamos a actualizar
         'model_name',
         'name',
@@ -54,4 +54,44 @@ class Modbus extends Model
      {
          return $this->hasMany(ControlHeight::class);
      }
-}
+
+     protected static function boot()
+     {
+         parent::boot();
+ 
+         static::updating(function ($modbus) {
+             if ($modbus->isDirty([
+                'mqtt_server', 
+                'mqtt_port', 
+                'mqtt_topic_modbus',
+                'mqtt_topic_gross',
+                'mqtt_topic_control',
+                'mqtt_topic_boxcontrol',])) {
+                    self::restartSupervisor();
+                }
+         });
+ 
+         static::created(function ($modbus) {
+             self::restartSupervisor();
+         });
+ 
+         static::deleted(function ($modbus) {
+             self::restartSupervisor();
+         });
+     }
+ 
+     protected static function restartSupervisor()
+     {
+         try {
+             exec('supervisorctl restart modbus:read', $output, $returnVar);
+ 
+             if ($returnVar === 0) {
+                 Log::info("Supervisor reiniciado exitosamente para modbus:read.");
+             } else {
+                 Log::error("Error al reiniciar supervisor: " . implode("\n", $output));
+             }
+         } catch (\Exception $e) {
+             Log::error("Excepción al reiniciar supervisor: " . $e->getMessage());
+         }
+     }
+ }
