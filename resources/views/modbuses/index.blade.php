@@ -31,6 +31,8 @@
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('¿Estás seguro?')">Eliminar</button>
                                         </form>
+                                        
+                                        <a href="/live-weight/live.html?token={{ $modbus->token }}" class="btn btn-sm btn-primary">Live View</a>
                                     </td>
                                 </tr>
                                 @endforeach

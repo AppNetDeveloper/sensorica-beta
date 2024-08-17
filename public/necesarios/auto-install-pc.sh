@@ -39,6 +39,10 @@ sudo apt -y install lsb-release
 sudo apt -y install sqlite3
 
 sudo apt -y install gdebi
+sudo apt install -y wget gnupg
+wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+sudo dpkg -i google-chrome-stable_current_amd64.deb
+sudo apt --fix-broken install
 
 
 # Install plugins
