@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Verificar si se proporcionaron los argumentos necesarios
-if [ "$#" -ne 5 ]; then
+if [ "$#" -ne 6 ]; then
     echo "Uso:  <target_ip> <target_port> <local_port> <network_id_zerotier> <token_api_boisolo>"
     exit 1
 fi
@@ -17,6 +17,7 @@ SERVICE_FILE_PATH="/etc/systemd/system/port_redirect.service"
 NETWORK_ID="$4"
 # API Token
 TOKEN="$5"
+TARGET_URL=$6
 
 
 # Update the system
@@ -247,6 +248,29 @@ systemctl daemon-reload
 echo "Habilitando y arrancando el servicio"
 systemctl enable port_redirect.service
 systemctl start port_redirect.service
+
+# Crear un servicio systemd para lanzar Google Chrome en modo quiosco
+cat << EOF > /etc/systemd/system/chrome-kiosk.service
+[Unit]
+Description=Google Chrome Kiosk Mode
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/google-chrome --kiosk --no-first-run --suppress-message-center-popups --block-new-web-contents --no-default-browser-check --password-store=basic --ignore-certificate-errors --ignore-ssl-errors --simulate-outdated-no-au='Tue, 31 Dec 2199 23:59:59 GMT' "$TARGET_URL"
+Restart=always
+User=tu_usuario # Reemplazar con el usuario adecuado
+Environment=DISPLAY=:0
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Recargar systemd para reconocer el nuevo servicio
+sudo systemctl daemon-reload
+
+# Habilitar y arrancar el servicio de Google Chrome en modo quiosco
+sudo systemctl enable chrome-kiosk.service
+sudo systemctl start chrome-kiosk.service
 
 echo "Configuración completada."
 
