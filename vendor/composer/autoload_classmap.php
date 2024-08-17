@@ -69,6 +69,7 @@ return array(
     'App\\Models\\ControlHeight' => $baseDir . '/app/Models/ControlHeight.php',
     'App\\Models\\ControlWeight' => $baseDir . '/app/Models/ControlWeight.php',
     'App\\Models\\Customer' => $baseDir . '/app/Models/Customer.php',
+    'App\\Models\\LiveTrafficMonitor' => $baseDir . '/app/Models/LiveTrafficMonitor.php',
     'App\\Models\\LoginSecurity' => $baseDir . '/app/Models/LoginSecurity.php',
     'App\\Models\\Modbus' => $baseDir . '/app/Models/Modbus.php',
     'App\\Models\\Modual' => $baseDir . '/app/Models/Modual.php',

@@ -818,6 +818,7 @@ class ComposerStaticInit069c47289a3924fb326a2b94bac13c46
         'App\\Models\\ControlHeight' => __DIR__ . '/../..' . '/app/Models/ControlHeight.php',
         'App\\Models\\ControlWeight' => __DIR__ . '/../..' . '/app/Models/ControlWeight.php',
         'App\\Models\\Customer' => __DIR__ . '/../..' . '/app/Models/Customer.php',
+        'App\\Models\\LiveTrafficMonitor' => __DIR__ . '/../..' . '/app/Models/LiveTrafficMonitor.php',
         'App\\Models\\LoginSecurity' => __DIR__ . '/../..' . '/app/Models/LoginSecurity.php',
         'App\\Models\\Modbus' => __DIR__ . '/../..' . '/app/Models/Modbus.php',
         'App\\Models\\Modual' => __DIR__ . '/../..' . '/app/Models/Modual.php',
