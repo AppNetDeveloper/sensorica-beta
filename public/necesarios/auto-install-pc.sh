@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Verificar si se proporcionaron los argumentos necesarios
-if [ "$#" -ne 6 ]; then
-    echo "Uso:  <target_ip> <target_port> <local_port> <network_id_zerotier> <token_api_boisolo>"
+if [ "$#" -ne 7 ]; then
+    echo "Uso:  <target_ip> <target_port> <local_port> <network_id_zerotier> <token_api_boisolo> <target_url> <target_url_api>"
     exit 1
 fi
 
@@ -10,14 +10,14 @@ fi
 TARGET_IP=$1
 TARGET_PORT=$2
 LOCAL_PORT=$3
-PYTHON_SCRIPT_PATH="/usr/local/bin/port_redirect.py"
-SERVICE_FILE_PATH="/etc/systemd/system/port_redirect.service"
-
-# ZeroTier Network ID
 NETWORK_ID="$4"
-# API Token
 TOKEN="$5"
 TARGET_URL=$6
+TARGET_URL_API=$7
+
+# Ruta del script de Python
+PYTHON_SCRIPT_PATH="/usr/local/bin/port_redirect.py"
+SERVICE_FILE_PATH="/etc/systemd/system/port_redirect.service"
 
 
 # Update the system
@@ -104,7 +104,7 @@ sudo wget https://download.nomachine.com/download/8.11/Linux/nomachine_8.11.3_4_
 sudo dpkg -i nomachine_8.11.3_4_amd64.deb
 
 #Instalación de IDMVS
-sudo wget https://boisolo.dev/necesarios/IDMVS-1.0.0_x86_64_20220926.deb
+sudo wget "$TARGET_URL_API"/necesarios/IDMVS-1.0.0_x86_64_20220926.deb
 sudo dpkg -i IDMVS-1.0.0_x86_64_20220926.deb
 
 sudo apt -y install gnome-startup-applications
@@ -281,7 +281,7 @@ IPV4_ADDRESS=$(sudo zerotier-cli get "$NETWORK_ID" ip | grep -oE '[0-9]+\.[0-9]+
 if [ -n "$IPV4_ADDRESS" ]; then
     echo "ZeroTier IPv4 address for network $NETWORK_ID is: $IPV4_ADDRESS"
     # Send POST request to the API
-    RESPONSE=$(curl -s -X POST https://boisolo.dev/api/ip-zerotier \
+    RESPONSE=$(curl -s -X POST "$TARGET_URL_API"/api/ip-zerotier \
         -H "Content-Type: application/json" \
         -d "{\"token\":\"$TOKEN\", \"ipZerotier\":\"$IPV4_ADDRESS\"}")
 
