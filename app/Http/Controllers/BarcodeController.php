@@ -98,6 +98,7 @@ class BarcodeController extends Controller
     {
         $barcode = Barcode::findOrFail($id);
         return view('barcodes.edit', compact('barcode'));
+        
     }
 
     public function update(Request $request, $id)

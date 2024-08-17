@@ -13,8 +13,6 @@ return new class extends Migration
             $table->string('name')->nullable();
             $table->unsignedBigInteger('production_line_id');
             $table->text('json_api')->nullable(); //identificar el valor de la api
-            $table->string('mqtt_server')->nullable(); //mqtt server de donde se saca valores si no quieres por api
-            $table->integer('mqtt_port')->nullable(); //puerto de mqtt server
             $table->string('mqtt_topic_modbus')->nullable();    //esto para extrar de mqtt en lugar de api
             $table->string('mqtt_topic_gross')->nullable(); //esto para mandar groos
             $table->string('mqtt_topic_control')->nullable();   //esto para mandar control

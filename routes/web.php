@@ -17,6 +17,7 @@ use App\Http\Controllers\ProductionLineController;
 use App\Http\Controllers\SensorController;
 use App\Http\Controllers\BarcodeController;
 use App\Http\Controllers\PrinterController;
+use App\Http\Controllers\ModbusController;
 
 
 /*
@@ -87,6 +88,28 @@ Route::delete('barcodes/{id}', [BarcodeController::class, 'destroy'])->name('bar
 
 //ruta para impresoras
 Route::resource('printers', PrinterController::class);
+
+// Ruta para listar los Modbuses de una línea de producción
+Route::get('productionlines/{production_line_id}/modbuses', [ModbusController::class, 'index'])->name('modbuses.index');
+
+// Ruta para obtener los Modbuses en formato JSON (opcional, si usas DataTables)
+Route::get('productionlines/{production_line_id}/modbusesjson', [ModbusController::class, 'getModbuses'])->name('modbuses.json');
+
+// Ruta para mostrar el formulario de creación
+Route::get('productionlines/{production_line_id}/modbuses/create', [ModbusController::class, 'create'])->name('modbuses.create');
+
+// Ruta para almacenar el nuevo Modbus
+Route::post('productionlines/{production_line_id}/modbuses', [ModbusController::class, 'store'])->name('modbuses.store');
+
+// Ruta para mostrar el formulario de edición
+Route::get('modbuses/{id}/edit', [ModbusController::class, 'edit'])->name('modbuses.edit');
+
+// Ruta para actualizar el Modbus
+Route::put('modbuses/{id}', [ModbusController::class, 'update'])->name('modbuses.update');
+
+// Ruta para eliminar el Modbus
+Route::delete('modbuses/{id}', [ModbusController::class, 'destroy'])->name('modbuses.destroy');
+
 
 
 

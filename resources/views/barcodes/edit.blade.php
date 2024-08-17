@@ -7,7 +7,7 @@
         <li class="breadcrumb-item"><a href="{{ route('home') }}">{{ __('Dashboard') }}</a></li>
         <li class="breadcrumb-item"><a href="{{ route('customers.index') }}">{{ __('Customers') }}</a></li>
         <li class="breadcrumb-item"><a href="{{ route('productionlines.index', ['customer_id' => request()->route('id')]) }}">{{ __('Production Lines') }}</a></li>
-        <li class="breadcrumb-item"><a href="{{ route('productionlines.barcodes.index', ['production_line_id' => $barcode->production_line_id]) }}">{{ __('Barcodes') }}</a></li>
+        <li class="breadcrumb-item"><a href="{{ route('barcodes.index', ['production_line_id' => $barcode->production_line_id]) }}">{{ __('Barcodes') }}</a></li>
         <li class="breadcrumb-item">{{ __('Edit Barcode') }}</li>
     </ul>
 @endsection
@@ -18,7 +18,7 @@
             <div class="card">
                 <div class="card-body">
                     <h4 class="card-title">{{ __('Edit Barcode') }}</h4>
-                    <form action="{{ route('productionlines.barcodes.update', $barcode->id) }}" method="POST">
+                    <form action="{{ route('barcodes.update', $barcode->id) }}" method="POST">
                         @csrf
                         @method('PUT')
 
@@ -64,7 +64,7 @@
 
                         <div class="form-group">
                             <label for="order_notice">{{ __('Order Notice') }}</label>
-                            <input type="text" class="form-control" id="order_notice" name="order_notice" value="{{ $barcode->order_notice }}">
+                            <textarea class="form-control" id="order_notice" name="order_notice" rows="6">{{ json_encode(json_decode($barcode->order_notice), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</textarea>
                         </div>
 
                         <div class="form-group">
@@ -108,7 +108,7 @@
                         </div>
 
                         <button type="submit" class="btn btn-primary">{{ __('Save') }}</button>
-                        <a href="{{ route('productionlines.barcodes.index', ['production_line_id' => $barcode->production_line_id]) }}" class="btn btn-secondary">{{ __('Cancel') }}</a>
+                        <a href="{{ route('barcodes.index', ['production_line_id' => $barcode->production_line_id]) }}" class="btn btn-secondary">{{ __('Cancel') }}</a>
                     </form>
                 </div>
             </div>

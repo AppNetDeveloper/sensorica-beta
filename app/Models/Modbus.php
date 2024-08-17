@@ -9,8 +9,6 @@ class Modbus extends Model
     protected $fillable = [
         'production_line_id',
         'json_api',
-        'mqtt_server',
-        'mqtt_port',
         'mqtt_topic_modbus', // Corregido el nombre del campo
         'mqtt_topic_gross',
         'mqtt_topic_control',

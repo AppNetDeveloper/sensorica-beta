@@ -24,23 +24,9 @@
                                         <th>ID</th>
                                         <th>Name</th>
                                         <th>Token</th>
-                                        <th>MQTT Topic Barcodes</th>
-                                        <th>MQTT Topic Orders</th>
-                                        <th>MQTT Topic Finish</th>
-                                        <th>MQTT Topic Pause</th>
                                         <th>Machine ID</th>
                                         <th>OPE ID</th>
-                                        <th>Order Notice</th>
                                         <th>Last Barcode</th>
-                                        <th>IP Zerotier</th>
-                                        <th>User SSH</th>
-                                        <th>Port SSH</th>
-                                        <th>User SSH Password</th>
-                                        <th>IP Barcoder</th>
-                                        <th>Port Barcoder</th>
-                                        <th>Conexion Type</th>
-                                        <th>Created At</th>
-                                        <th>Updated At</th>
                                         <th>Action</th>
                                     </tr>
                                 </thead>
@@ -79,23 +65,10 @@
                     {data: 'id', name: 'id'},
                     {data: 'name', name: 'name'},
                     {data: 'token', name: 'token'},
-                    {data: 'mqtt_topic_barcodes', name: 'mqtt_topic_barcodes'},
-                    {data: 'mqtt_topic_orders', name: 'mqtt_topic_orders'},
-                    {data: 'mqtt_topic_finish', name: 'mqtt_topic_finish'},
-                    {data: 'mqtt_topic_pause', name: 'mqtt_topic_pause'},
                     {data: 'machine_id', name: 'machine_id'},
                     {data: 'ope_id', name: 'ope_id'},
-                    {data: 'order_notice', name: 'order_notice'},
                     {data: 'last_barcode', name: 'last_barcode'},
-                    {data: 'ip_zerotier', name: 'ip_zerotier'},
-                    {data: 'user_ssh', name: 'user_ssh'},
-                    {data: 'port_ssh', name: 'port_ssh'},
-                    {data: 'user_ssh_password', name: 'user_ssh_password'},
-                    {data: 'ip_barcoder', name: 'ip_barcoder'},
-                    {data: 'port_barcoder', name: 'port_barcoder'},
-                    {data: 'conexion_type', name: 'conexion_type'},
-                    {data: 'created_at', name: 'created_at'},
-                    {data: 'updated_at', name: 'updated_at'},
+                    
                     {data: 'action', name: 'action', orderable: false, searchable: false},
                 ],
                 scrollX: true, 

@@ -17,8 +17,21 @@
                     <img src="/necesarios/Designer.jpeg" class="card-img-top" alt="Barcoders">
                     <div class="card-body">
                         <h5 class="card-title">Barcoders</h5>
-                        <p class="card-text">Administrar listado de Lectores .</p>
+                        <p class="card-text">Administrar listado de Lectores.</p>
                         <a href="{{ route('barcodes.index', ['production_line_id' => request()->route('id')]) }}" class="btn btn-primary">Ver más</a>
+                    </div>
+                </div>
+            </div>
+            <!-- Fin del card -->
+
+            <!-- Card para Modbuses -->
+            <div class="col-md-4">
+                <div class="card">
+                    <img src="/necesarios/Modbus.jpeg" class="card-img-top" alt="Modbuses">
+                    <div class="card-body">
+                        <h5 class="card-title">Modbuses</h5>
+                        <p class="card-text">Administrar listado de Modbuses.</p>
+                        <a href="{{ route('modbuses.index', ['production_line_id' => request()->route('id')]) }}" class="btn btn-primary">Ver más</a>
                     </div>
                 </div>
             </div>
