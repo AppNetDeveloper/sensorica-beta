@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
+
 
 class Modbus extends Model
 {
@@ -79,17 +81,19 @@ class Modbus extends Model
      }
  
      protected static function restartSupervisor()
-     {
-         try {
-             exec('supervisorctl restart modbus:read', $output, $returnVar);
- 
-             if ($returnVar === 0) {
-                 Log::info("Supervisor reiniciado exitosamente para modbus:read.");
-             } else {
-                 Log::error("Error al reiniciar supervisor: " . implode("\n", $output));
-             }
-         } catch (\Exception $e) {
-             Log::error("Excepción al reiniciar supervisor: " . $e->getMessage());
-         }
-     }
+{
+    try {
+        // Usa sudo para ejecutar supervisorctl sin contraseña
+        exec('sudo /usr/bin/supervisorctl restart all', $output, $returnVar);
+
+        if ($returnVar === 0) {
+            Log::info("Supervisor reiniciado exitosamente para modbus:read.");
+        } else {
+            Log::error("Error al reiniciar supervisor: " . implode("\n", $output));
+        }
+    } catch (\Exception $e) {
+        Log::error("Excepción al reiniciar supervisor: " . $e->getMessage());
+    }
+}
+
  }
