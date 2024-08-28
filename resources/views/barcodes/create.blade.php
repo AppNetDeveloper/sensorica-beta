@@ -54,6 +54,11 @@
                         </div>
 
                         <div class="form-group">
+                            <label for="mqtt_topic_shift">{{ __('MQTT Topic Shift') }}</label>
+                            <input type="text" class="form-control" id="mqtt_topic_shift" name="mqtt_topic_shift" required>
+                        </div>
+
+                        <div class="form-group">
                             <label for="machine_id">{{ __('Machine ID') }}</label>
                             <input type="text" class="form-control" id="machine_id" name="machine_id">
                         </div>

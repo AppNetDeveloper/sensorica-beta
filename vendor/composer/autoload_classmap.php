@@ -22,6 +22,7 @@ return array(
     'App\\Helpers\\MqttPersistentHelper' => $baseDir . '/app/Helpers/MqttPersistentHelper.php',
     'App\\Http\\Controllers\\API\\TestAPIController' => $baseDir . '/app/Http/Controllers/API/TestAPIController.php',
     'App\\Http\\Controllers\\Api\\ApiBarcoderController' => $baseDir . '/app/Http/Controllers/Api/ApiBarcoderController.php',
+    'App\\Http\\Controllers\\Api\\BarcodeController' => $baseDir . '/app/Http/Controllers/Api/BarcodeController.php',
     'App\\Http\\Controllers\\Api\\ControlWeightController' => $baseDir . '/app/Http/Controllers/Api/ControlWeightController.php',
     'App\\Http\\Controllers\\Api\\ModbusController' => $baseDir . '/app/Http/Controllers/Api/ModbusController.php',
     'App\\Http\\Controllers\\Api\\StoreQueueController' => $baseDir . '/app/Http/Controllers/Api/StoreQueueController.php',

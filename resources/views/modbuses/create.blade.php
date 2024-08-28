@@ -62,6 +62,14 @@
                                 <input type="text" class="form-control" id="tara_calibrate" name="tara_calibrate" value="0">
                             </div>
                             <div class="form-group">
+                                <label for="calibration_type">{{ __('Calibration Type') }}</label>
+                                <select class="form-control" id="calibration_type" name="calibration_type" required>
+                                    <option value="none">Sin Tara</option>
+                                    <option value="software">Tara por Software</option>
+                                    <option value="hardware">Tara por Hardware</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
                                 <label for="min_kg">{{ __('Min KG') }}</label>
                                 <input type="text" class="form-control" id="min_kg" name="min_kg">
                             </div>

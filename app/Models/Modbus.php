@@ -25,6 +25,7 @@ class Modbus extends Model
         'last_rep',
         'tara',
         'tara_calibrate',
+        'calibration_type',
         'rec_box', // Esta es la columna que vamos a actualizar
         'model_name',
         'name',

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\GetTokenController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\ApiBarcoderController;
@@ -8,7 +9,7 @@ use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\Api\ModbusController;
 use App\Http\Controllers\Api\StoreQueueController;
 use App\Http\Controllers\Api\ZerotierIpBarcoderController;
-
+use App\Http\Controllers\BarcodeController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -33,6 +34,24 @@ Route::get('control-weights/all/{token}', [ControlWeightController::class, 'getA
 Route::middleware(['throttle:1000,1'])->group(function () {
     Route::get('/control-weight/{token}', [ControlWeightController::class, 'getDataByToken']);
 });
+
+
+// Ruta para GET request
+Route::get('/order-notice/{token?}', [ApibarcoderController::class, 'getOrderNotice']);
+
+// Ruta para POST request
+Route::post('/order-notice', [ApibarcoderController::class, 'getOrderNotice']);
+
+
+// Ruta para GET request (con el token en la URL)
+Route::get('/barcode-info/{token}', [ApiBarcoderController::class, 'getBarcodeInfo']);
+
+// Ruta para POST request (con el token en el cuerpo de la solicitud)
+Route::post('/barcode-info', [ApiBarcoderController::class, 'getBarcodeInfo']);
+
+Route::match(['get', 'post'], '/production-lines/{customerToken}', [GetTokenController::class, 'getProductionLinesByCustomerToken']);
+Route::match(['get', 'post'], '/modbus-info/{token}', [GetTokenController::class, 'getModbusInfo']);
+Route::match(['get', 'post'], '/barcode-info-by-customer/{customerToken}', [GetTokenController::class, 'getBarcodeInfoByCustomer']);
 
 Route::middleware('auth:api')->get('/user', function (Request $request) {
     return $request->user();

@@ -24,6 +24,7 @@ return new class extends Migration
             $table->string('rep_number')->nullable(); //numero de repeticion que se ha recivido de una linea entre los 0 y 0    para poner el valor como max
             $table->string('tara')->nullable()->default('0'); //el peso del palet o para hacer un 0 por software
             $table->string('tara_calibrate')->nullable()->default('0'); //tara para hacer o automatico
+            $table->string('calibration_type')->nullable()->default('0'); //tara maxima para hacer o automatico
             $table->string('min_kg')->nullable(); //minimo kg que activan el contador
             $table->string('last_kg')->nullable(); //ultimo kg que se ha recivido de una linea mayor de min_kg
             $table->string('last_rep')->nullable(); //numero de repeticion que se ha recivido en un valor estable de last_kg

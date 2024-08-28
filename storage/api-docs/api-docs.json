@@ -4,7 +4,7 @@
         "title": "Boisolo Api",
         "description": "This is a sample API documentation",
         "contact": {
-            "email": "dev@boisolo.dev"
+            "email": "dev@boisolo.com"
         },
         "license": {
             "name": "Apache 2.0",
@@ -128,6 +128,200 @@
                                 }
                             }
                         }
+                    }
+                }
+            }
+        },
+        "/api/order-notice/{token}": {
+            "get": {
+                "tags": [
+                    "Order Notice"
+                ],
+                "summary": "Obtener el order_notice por token (GET)",
+                "description": "Retorna el JSON almacenado en order_notice para el token especificado.",
+                "operationId": "getOrderNoticeByTokenGet",
+                "parameters": [
+                    {
+                        "name": "token",
+                        "in": "path",
+                        "description": "El token del código de barras",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "order_notice": {
+                                            "description": "El contenido de order_notice en formato JSON",
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Token no encontrado"
+                    }
+                }
+            }
+        },
+        "/api/order-notice": {
+            "post": {
+                "tags": [
+                    "Order Notice"
+                ],
+                "summary": "Obtener el order_notice por token (POST)",
+                "description": "Retorna el JSON almacenado en order_notice para el token especificado en el cuerpo de la solicitud.",
+                "operationId": "getOrderNoticeByTokenPost",
+                "requestBody": {
+                    "description": "El token del código de barras",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "token": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "order_notice": {
+                                            "description": "El contenido de order_notice en formato JSON",
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Token no encontrado"
+                    }
+                }
+            }
+        },
+        "/api/barcode-info/{token}": {
+            "get": {
+                "tags": [
+                    "Barcode Info"
+                ],
+                "summary": "Obtener información del código de barras por token (GET)",
+                "description": "Retorna machine_id, ope_id y last_barcode para el token especificado.",
+                "operationId": "getBarcodeInfoByTokenGet",
+                "parameters": [
+                    {
+                        "name": "token",
+                        "in": "path",
+                        "description": "El token del código de barras",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "machine_id": {
+                                            "description": "El ID de la máquina",
+                                            "type": "string"
+                                        },
+                                        "ope_id": {
+                                            "description": "El ID del operador",
+                                            "type": "string"
+                                        },
+                                        "last_barcode": {
+                                            "description": "El último código de barras escaneado",
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Token no encontrado"
+                    }
+                }
+            }
+        },
+        "/api/barcode-info": {
+            "post": {
+                "tags": [
+                    "Barcode Info"
+                ],
+                "summary": "Obtener información del código de barras por token (POST)",
+                "description": "Retorna machine_id, ope_id y last_barcode para el token especificado en el cuerpo de la solicitud.",
+                "operationId": "getBarcodeInfoByTokenPost",
+                "requestBody": {
+                    "description": "El token del código de barras",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "token": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "machine_id": {
+                                            "description": "El ID de la máquina",
+                                            "type": "string"
+                                        },
+                                        "ope_id": {
+                                            "description": "El ID del operador",
+                                            "type": "string"
+                                        },
+                                        "last_barcode": {
+                                            "description": "El último código de barras escaneado",
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Token no encontrado"
                     }
                 }
             }
@@ -292,6 +486,315 @@
                 }
             }
         },
+        "/api/production-lines/{customerToken}": {
+            "get": {
+                "tags": [
+                    "Production Lines"
+                ],
+                "summary": "Obtener líneas de producción por token de cliente (GET)",
+                "description": "Retorna los tokens y nombres de las líneas de producción asociadas al cliente.",
+                "operationId": "getProductionLinesByCustomerTokenGet",
+                "parameters": [
+                    {
+                        "name": "customerToken",
+                        "in": "path",
+                        "description": "El token del cliente",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "properties": {
+                                            "name": {
+                                                "description": "Nombre de la línea de producción",
+                                                "type": "string"
+                                            },
+                                            "token": {
+                                                "description": "Token de la línea de producción",
+                                                "type": "string"
+                                            }
+                                        },
+                                        "type": "object"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Cliente no encontrado"
+                    }
+                }
+            }
+        },
+        "/api/production-lines": {
+            "post": {
+                "tags": [
+                    "Production Lines"
+                ],
+                "summary": "Obtener líneas de producción por token de cliente (POST)",
+                "description": "Retorna los tokens y nombres de las líneas de producción asociadas al cliente.",
+                "operationId": "getProductionLinesByCustomerTokenPost",
+                "requestBody": {
+                    "description": "El token del cliente",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "customerToken": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "properties": {
+                                            "name": {
+                                                "description": "Nombre de la línea de producción",
+                                                "type": "string"
+                                            },
+                                            "token": {
+                                                "description": "Token de la línea de producción",
+                                                "type": "string"
+                                            }
+                                        },
+                                        "type": "object"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Cliente no encontrado"
+                    }
+                }
+            }
+        },
+        "/api/modbus-info/{customerToken}": {
+            "get": {
+                "tags": [
+                    "Modbus Info"
+                ],
+                "summary": "Obtener información de Modbuses por token de cliente (GET)",
+                "description": "Retorna los nombres y tokens de los Modbuses asociados al cliente.",
+                "operationId": "getModbusInfoByCustomerTokenGet",
+                "parameters": [
+                    {
+                        "name": "customerToken",
+                        "in": "path",
+                        "description": "El token del cliente",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "properties": {
+                                            "name": {
+                                                "description": "Nombre del Modbus",
+                                                "type": "string"
+                                            },
+                                            "token": {
+                                                "description": "Token del Modbus",
+                                                "type": "string"
+                                            }
+                                        },
+                                        "type": "object"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Cliente no encontrado"
+                    }
+                }
+            }
+        },
+        "/api/modbus-info": {
+            "post": {
+                "tags": [
+                    "Modbus Info"
+                ],
+                "summary": "Obtener información de Modbuses por token de cliente (POST)",
+                "description": "Retorna los nombres y tokens de los Modbuses asociados al cliente.",
+                "operationId": "getModbusInfoByCustomerTokenPost",
+                "requestBody": {
+                    "description": "El token del cliente",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "customerToken": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "properties": {
+                                            "name": {
+                                                "description": "Nombre del Modbus",
+                                                "type": "string"
+                                            },
+                                            "token": {
+                                                "description": "Token del Modbus",
+                                                "type": "string"
+                                            }
+                                        },
+                                        "type": "object"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Cliente no encontrado"
+                    }
+                }
+            }
+        },
+        "/api/barcode-info-by-customer/{customerToken}": {
+            "get": {
+                "tags": [
+                    "Barcode Info"
+                ],
+                "summary": "Obtener información de códigos de barras por token de cliente (GET)",
+                "description": "Retorna los nombres y tokens de los códigos de barras asociados al cliente.",
+                "operationId": "getBarcodeInfoByCustomerTokenGet",
+                "parameters": [
+                    {
+                        "name": "customerToken",
+                        "in": "path",
+                        "description": "El token del cliente",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "properties": {
+                                            "name": {
+                                                "description": "Nombre del código de barras",
+                                                "type": "string"
+                                            },
+                                            "token": {
+                                                "description": "Token del código de barras",
+                                                "type": "string"
+                                            }
+                                        },
+                                        "type": "object"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Cliente no encontrado"
+                    }
+                }
+            }
+        },
+        "/api/barcode-info-by-customer": {
+            "post": {
+                "tags": [
+                    "Barcode Info"
+                ],
+                "summary": "Obtener información de códigos de barras por token de cliente (POST)",
+                "description": "Retorna los nombres y tokens de los códigos de barras asociados al cliente.",
+                "operationId": "getBarcodeInfoByCustomerTokenPost",
+                "requestBody": {
+                    "description": "El token del cliente",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "customerToken": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "properties": {
+                                            "name": {
+                                                "description": "Nombre del código de barras",
+                                                "type": "string"
+                                            },
+                                            "token": {
+                                                "description": "Token del código de barras",
+                                                "type": "string"
+                                            }
+                                        },
+                                        "type": "object"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Cliente no encontrado"
+                    }
+                }
+            }
+        },
         "/api/modbuses": {
             "get": {
                 "tags": [
@@ -364,13 +867,13 @@
                 }
             }
         },
-        "/api/store-queue-print": {
-            "post": {
+        "/api/queue-print": {
+            "get": {
                 "tags": [
                     "Queue"
                 ],
-                "summary": "Store a value in the print queue",
-                "operationId": "5777987718be7f678fab18fb2588e9fb",
+                "summary": "Store a value in the print queue (GET)",
+                "operationId": "c2eb497c63f8619c2b9616a1e91d749e",
                 "parameters": [
                     {
                         "name": "token",
@@ -406,6 +909,90 @@
                         }
                     }
                 ],
+                "responses": {
+                    "200": {
+                        "description": "Valor agregado a la cola de impresión",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Token not provided",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Token inválido",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Datos inválidos",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Error interno del servidor",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Queue"
+                ],
+                "summary": "Store a value in the print queue (POST)",
+                "operationId": "09e7517a2f89716553160b6317ce872c",
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -600,8 +1187,24 @@
             "description": "Barcode"
         },
         {
+            "name": "Order Notice",
+            "description": "Order Notice"
+        },
+        {
+            "name": "Barcode Info",
+            "description": "Barcode Info"
+        },
+        {
             "name": "Control Weight",
             "description": "Control Weight"
+        },
+        {
+            "name": "Production Lines",
+            "description": "Production Lines"
+        },
+        {
+            "name": "Modbus Info",
+            "description": "Modbus Info"
         },
         {
             "name": "Modbus",

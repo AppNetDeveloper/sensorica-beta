@@ -17,6 +17,7 @@ class Barcode extends Model
         'mqtt_topic_orders',
         'mqtt_topic_finish',
         'mqtt_topic_pause',
+        'mqtt_topic_shift',
         'machine_id',
         'ope_id',
         'order_notice',

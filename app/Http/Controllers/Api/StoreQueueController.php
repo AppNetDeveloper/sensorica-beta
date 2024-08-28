@@ -13,9 +13,9 @@ use App\Models\ApiQueuePrint;
 class StoreQueueController extends Controller
 {
     /**
-     * @OA\Post(
-     *     path="/api/store-queue-print",
-     *     summary="Store a value in the print queue",
+     * @OA\Get(
+     *     path="/api/queue-print",
+     *     summary="Store a value in the print queue (GET)",
      *     tags={"Queue"},
      *     @OA\Parameter(
      *         name="token",
@@ -50,6 +50,52 @@ class StoreQueueController extends Controller
      *             type="string"
      *         )
      *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Valor agregado a la cola de impresión",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="message", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Token not provided",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="error", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Token inválido",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="error", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Datos inválidos",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="error", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Error interno del servidor",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="error", type="string")
+     *         )
+     *     )
+     * )
+     *
+     * @OA\Post(
+     *     path="/api/queue-print",
+     *     summary="Store a value in the print queue (POST)",
+     *     tags={"Queue"},
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(

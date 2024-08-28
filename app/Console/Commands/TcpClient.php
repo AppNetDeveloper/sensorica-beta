@@ -240,6 +240,7 @@ class TcpClient extends Command
         $orderNotice = $barcode->order_notice;
         $lastBarcode = $barcode->last_barcode;
         $machineId = $barcode->machine_id;
+        $mqttTopicShift = $barcode->mqtt_topic_shift; // Añadido para el nuevo caso
 
         $orderNoticeData = json_decode($orderNotice, true);
         $orderId = $orderNoticeData['orderId'] ?? null;
@@ -327,6 +328,14 @@ class TcpClient extends Command
 
             $barcode->last_barcode = $barcodeValue;
             $barcode->save();
+        } elseif ($barcodeValue === 'Turno Programado') {
+            // Case 5: barcodeValue is Turno Programado
+            $comando = [
+                "shift_type" => "Turno Programado",
+                "event" => "start"
+            ];
+            $mqttTopic = $mqttTopicShift;
+            $this->publishMqttMessage($mqttTopic, $comando);
         }
     }
 

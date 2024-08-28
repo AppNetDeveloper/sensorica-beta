@@ -18,10 +18,11 @@ class CreateBarcodesTable extends Migration
             $table->unsignedBigInteger('production_line_id');
             $table->string('name');
             $table->string('token')->unique();
-            $table->string('mqtt_topic_barcodes');
-            $table->string('mqtt_topic_orders');
-            $table->string('mqtt_topic_finish');
-            $table->string('mqtt_topic_pause');
+            $table->string('mqtt_topic_barcodes')->nullable();
+            $table->string('mqtt_topic_orders')->nullable();
+            $table->string('mqtt_topic_finish')->nullable();
+            $table->string('mqtt_topic_pause')->nullable();
+            $table->string('mqtt_topic_shift')->nullable();
             $table->string('machine_id')->nullable(); // Permite valores nulos
             $table->string('ope_id')->nullable();    // Permite valores nulos
             $table->json('order_notice')->nullable(); // Almacena datos JSON

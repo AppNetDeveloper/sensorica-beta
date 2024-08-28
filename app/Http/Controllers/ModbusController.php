@@ -45,6 +45,7 @@ class ModbusController extends Controller
             'rep_number' => $request->rep_number,
             'tara' => $request->tara,
             'tara_calibrate' => $request->tara_calibrate,
+            'calibration_type' => $request->calibration_type,
             'min_kg' => $request->min_kg,
             'last_kg' => $request->last_kg,
             'last_rep' => $request->last_rep,

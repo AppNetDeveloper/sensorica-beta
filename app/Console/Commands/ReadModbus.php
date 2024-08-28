@@ -190,6 +190,22 @@ class ReadModbus extends Command
     public function processWeightModel($config, $value)
     {
         $updatedValue = $value / 10;
+        
+        
+        if ($config->calibration_type == '0') { 
+            // O 'software' si usas un booleano
+            if ($updatedValue > $config->tara_calibrate) {
+            // Restamos 'tara_calibrate' si es mayor
+                $updatedValue -= $config->tara_calibrate;
+            } 
+                // Ahora, comparamos con 'tara' después de la posible resta anterior
+            if ($updatedValue > $config->tara) {
+                $updatedValue -= $config->tara;
+            }
+        } else { // Calibración por HARDWARE
+            //Por momento no tengo logica de recalibrate por hRDWARE
+        }
+        
         $mqttTopic = $config->mqtt_topic_gross;
 
 

@@ -245,4 +245,165 @@ class ApiBarcoderController extends Controller
             'lastBarcode' => $lastBarcode,
         ]);
     }
+
+
+    /**
+ * @OA\Get(
+ *     path="/api/order-notice/{token}",
+ *     summary="Obtener el order_notice por token (GET)",
+ *     description="Retorna el JSON almacenado en order_notice para el token especificado.",
+ *     operationId="getOrderNoticeByTokenGet",
+ *     tags={"Order Notice"},
+ *     @OA\Parameter(
+ *         name="token",
+ *         in="path",
+ *         description="El token del código de barras",
+ *         required=true,
+ *         @OA\Schema(type="string")
+ *     ),
+ *     @OA\Response(
+ *         response=200,
+ *         description="Operación exitosa",
+ *         @OA\JsonContent(
+ *             type="object",
+ *             @OA\Property(property="order_notice", type="object", description="El contenido de order_notice en formato JSON")
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=404,
+ *         description="Token no encontrado"
+ *     )
+ * )
+ *
+ * @OA\Post(
+ *     path="/api/order-notice",
+ *     summary="Obtener el order_notice por token (POST)",
+ *     description="Retorna el JSON almacenado en order_notice para el token especificado en el cuerpo de la solicitud.",
+ *     operationId="getOrderNoticeByTokenPost",
+ *     tags={"Order Notice"},
+ *     @OA\RequestBody(
+ *         description="El token del código de barras",
+ *         required=true,
+ *         @OA\JsonContent(
+ *             type="object",
+ *             @OA\Property(property="token", type="string")
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=200,
+ *         description="Operación exitosa",
+ *         @OA\JsonContent(
+ *             type="object",
+ *             @OA\Property(property="order_notice", type="object", description="El contenido de order_notice en formato JSON")
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=404,
+ *         description="Token no encontrado"
+ *     )
+ * )
+ */
+    public function getOrderNotice(Request $request, $token = null)
+    {
+        // Si el token no viene en la URL, lo tomamos del body (POST)
+        if (!$token) {
+            $token = $request->input('token');
+        }
+
+        // Buscar el registro por el token
+        $barcode = Barcode::where('token', $token)->first();
+
+        // Verificar si se encontró el registro
+        if (!$barcode) {
+            return response()->json(['error' => 'Token not found'], 404);
+        }
+
+        // Decodificar el JSON antes de devolverlo
+        $orderNotice = json_decode($barcode->order_notice, true); 
+
+        return response()->json($orderNotice);
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/barcode-info/{token}",
+     *     summary="Obtener información del código de barras por token (GET)",
+     *     description="Retorna machine_id, ope_id y last_barcode para el token especificado.",
+     *     operationId="getBarcodeInfoByTokenGet",
+     *     tags={"Barcode Info"},
+     *     @OA\Parameter(
+     *         name="token",
+     *         in="path",
+     *         description="El token del código de barras",
+     *         required=true,
+     *         @OA\Schema(type="string")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Operación exitosa",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="machine_id", type="string", description="El ID de la máquina"),
+     *             @OA\Property(property="ope_id", type="string", description="El ID del operador"),
+     *             @OA\Property(property="last_barcode", type="string", description="El último código de barras escaneado")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Token no encontrado"
+     *     )
+     * )
+     *
+     * @OA\Post(
+     *     path="/api/barcode-info",
+     *     summary="Obtener información del código de barras por token (POST)",
+     *     description="Retorna machine_id, ope_id y last_barcode para el token especificado en el cuerpo de la solicitud.",
+     *     operationId="getBarcodeInfoByTokenPost",
+     *     tags={"Barcode Info"},
+     *     @OA\RequestBody(
+     *         description="El token del código de barras",
+     *         required=true,
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="token", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Operación exitosa",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="machine_id", type="string", description="El ID de la máquina"),
+     *             @OA\Property(property="ope_id", type="string", description="El ID del operador"),
+     *             @OA\Property(property="last_barcode", type="string", description="El último código de barras escaneado")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Token no encontrado"
+     *     )
+     * )
+     */
+    public function getBarcodeInfo(Request $request, $token = null)
+    {
+        // Si el token no viene en la URL (GET), lo tomamos del body (POST)
+        if (!$token) {
+            $token = $request->input('token');
+        }
+
+        // Buscar el registro por el token
+        $barcode = Barcode::where('token', $token)->first();
+
+        // Verificar si se encontró el registro
+        if (!$barcode) {
+            return response()->json(['error' => 'Token not found'], 404);
+        }
+
+        // Retornar la información requerida
+        return response()->json([
+            'machine_id' => $barcode->machine_id,
+            'ope_id' => $barcode->ope_id,
+            'last_barcode' => $barcode->last_barcode
+        ]);
+    }
 }
