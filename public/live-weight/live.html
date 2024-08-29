@@ -6,178 +6,199 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
   <style>
-    body {
-        font-family: sans-serif;
-        background-color: #333;
-        color: white;
-        margin: 0;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh;
-        overflow: hidden;
-      }
-
-      .container {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        width: 90%; /* Ocupa el 90% del ancho de la pantalla */
-        max-width: 1200px; /* Limita el ancho máximo para pantallas anchas */
-        height: 100%; /* Ocupa el 100% de la altura de la pantalla */
-        padding: 20px;
-        background-color: #444; /* Fondo visible */
-        border-radius: 8px;
-        box-sizing: border-box;
-        overflow: hidden; /* Evita que el contenido sobresalga */
-      }
-
-    footer {
+    html, body {
       width: 100%;
-    }
-    
-    header {
-        width: 100%;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 10px; /* Añadir un margen para separar el logo del contenido */
-      }
-
-      .logo {
-        max-width: 30%; /* Ajusta este valor para reducir el tamaño del logo */
-        height: auto; /* Mantén la proporción del logo */
-      }
-
-    .time {
-      font-size: 24px;
-      margin: 10px 0;
-    }
-
-    main {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background-color: #333;
+      color: white;
+      box-sizing: border-box;
+      overflow: hidden; /* Evita que aparezca scroll */
+  }
+  
+  header {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      box-sizing: border-box;
+  }
+  
+  .logo {
+      max-width: 30%;
+      height: auto;
+  }
+  
+  .time {
+      font-size: 4vh; /* Aumenta el tamaño de la fuente */
+      margin-right: 20px; /* Añade espacio a la derecha del timeDisplay */
+  }
+  
+  main {
       display: flex;
       flex-direction: column;
       align-items: center;
       width: 100%;
-      flex-grow: 1;
-    }
-
-    .box {
+      height: 100%;
+      flex-grow: 1; /* Ocupa el espacio restante entre header y footer */
+      justify-content: center; /* Centra el contenido verticalmente */
+  }
+  
+  .box {
       background-color: #555;
-      padding: 20px;
-      margin-bottom: 20px;
+      padding: 15px; /* Ajuste de padding */
+      margin-bottom: 15px;
       border-radius: 8px;
-      width: 100%; /* Ocupa el 100% del ancho disponible en el contenedor */
-      max-width: none; /* Elimina el límite de ancho máximo */
+      width: 98%; /* Ajuste para ocupar el 98% del ancho disponible */
+      max-width: 98%; /* Asegura que ocupe el 98% del ancho disponible */
       display: flex;
-      flex-direction: column; /* Asegura que el título esté arriba y los elementos en fila abajo */
+      flex-direction: column;
       align-items: center;
       justify-content: space-between;
-    }
-
-    .box-title {
-      font-size: 36px; /* Tamaño mayor para los títulos */
-      text-align: center; /* Centrado del título */
-      margin-bottom: 20px; /* Espacio entre el título y el contenido */
+      flex-grow: 1; /* Permite que crezca para llenar el espacio disponible */
+  }
+  
+  .box-title {
+      font-size: 2.5vh; /* Tamaño adaptativo basado en la altura de la ventana */
+      text-align: center;
+      margin-bottom: 10px; /* Reduce el margen inferior */
       width: 100%;
-    }
-
-    .box-content {
-      display: flex; /* Coloca los elementos en una fila */
+  }
+  
+  .box-content {
+      display: flex;
       justify-content: space-around;
       align-items: center;
       width: 100%;
-    }
-
-    .info-box {
+      flex-wrap: wrap; /* Permite que los elementos se acomoden si es necesario */
+      flex-grow: 1; /* Ocupa el espacio disponible */
+  }
+  
+  .info-box {
       display: flex;
       flex-direction: column;
       align-items: center;
-      margin: 0 10px;
-      min-width: 150px;
-      margin-bottom: 20px;
-    }
-
-    .weight-display {
-      font-size: 140px; /* Ajusta el tamaño de la fuente para que sea visible desde lejos */
+      margin: 5px;
+      min-width: 90px;
+      flex-grow: 1;
+      text-align: center;
+      justify-content: center; /* Centra el contenido */
+  }
+  
+  /* Aquí se ajusta solo el tamaño del texto para el peso en vivo */
+  .weight-display {
+      font-size: 16vw; /* Tamaño adaptativo basado en el ancho de la ventana */
       font-weight: bold;
-    }
-
-    #weightDisplay {
-      font-size: 122px; /* Ajusta el tamaño de la fuente para que sea visible desde lejos */
-    }
-
-    #lastWeightDisplay {
-      font-size: 36px;
-    }
-
-    #lastBarcode {
-      margin-top: 15px;
+      line-height: 1; /* Asegura que el texto no tenga espacio extra entre líneas */
+  }
+  
+  #weightDisplay {
+      font-size: 12vw; /* Tamaño aún mayor para el peso en vivo */
+      font-weight: bold; /* Asegura que el texto sea grueso y visible */
+      line-height: 1; /* Asegura que el texto no tenga espacio extra entre líneas */
+  }
+  
+  #lastWeightDisplay {
+      font-size: 6vh; /* Tamaño de fuente adaptativo */
+      font-weight: bold;
+  }
+  
+  #lastBarcode {
+      margin-top: 5px;
       width: 100%;
-    }
-
-    .info-box img {
-      width: 80px; /* Ajusta el tamaño de las imágenes para que sean consistentes */
-      margin-bottom: 10px;
-    }
-
-    .info-box p {
-      font-size: 18px; /* Ajusta el tamaño del texto para mayor visibilidad */
-    }
+  }
+  
+  .info-box img {
+      width: 8vh; /* Tamaño adaptativo basado en la altura */
+      margin-bottom: 5px;
+  }
+  
+  .info-box p {
+      font-size: 2.5vh; /* Tamaño adaptativo basado en la altura */
+      max-width: 100%;
+  }
+  
+  /* Media query para pantallas pequeñas */
+  @media (max-width: 768px) {
+      .box-content {
+          flex-direction: column; /* Apila los elementos verticalmente en pantallas pequeñas */
+      }
+  
+      #weightDisplay {
+          font-size: 30vw; /* Aumenta el tamaño en pantallas pequeñas */
+      }
+  
+      .box-title {
+          font-size: 2vh;
+      }
+  
+      .info-box img {
+          width: 12vh;
+      }
+  
+      .info-box p {
+          font-size: 2vh;
+      }
+  }
+  
   </style>
 </head>
 <body>
-    <div class="container">
-      <header class="d-flex justify-content-between align-items-center">
+    <header class="d-flex justify-content-between align-items-center">
         <img src="logo.png" alt="Logo" class="logo">
         <div class="time" id="timeDisplay">02:33:21</div>
-      </header>
+    </header>
 
-      <main>
+    <main>
         <div class="box">
-          <div class="box-title" id="name">Pesaje en vivo</div> <!-- Título centrado -->
-          <div class="box-content"> <!-- Contenido en fila como antes -->
-            <div class="info-box">
-              <img src="bascula.png" alt="Weight">
-              <p class="weight-display" id="weightDisplay">0.0</p>
+            <div class="box-title" id="name">Pesaje en vivo</div> <!-- Título centrado -->
+            <div class="box-content"> <!-- Contenido en fila como antes -->
+                <div class="info-box">
+                    <img src="bascula.png" alt="Weight">
+                    <p class="weight-display" id="weightDisplay">0.0</p>
+                </div>
+                <div class="info-box">
+                    <img src="medida.png" alt="Dimensions">
+                    <p id="dimensionDisplay">0 mm</p>
+                </div>
+                <div class="info-box">
+                    <img src="recuento.png" alt="Pallets">
+                    <p id="boxNumberDisplay">1120 palets</p>
+                </div>
             </div>
-            <div class="info-box">
-              <img src="medida.png" alt="Dimensions">
-              <p id="dimensionDisplay">0 mm</p>
-            </div>
-            <div class="info-box">
-              <img src="recuento.png" alt="Pallets">
-              <p id="boxNumberDisplay">1120 palets</p>
-            </div>
-          </div>
         </div>
 
         <div class="box">
-          <div class="box-title" id="last_name">Ultimo pesaje</div> <!-- Título centrado -->
-          <div class="box-content"> <!-- Contenido en fila como antes -->
-            <div class="info-box">
-              <img src="bascula.png" alt="Weight">
-              <p class="weight-display" id="lastWeightDisplay">44.0</p>
+            <div class="box-title" id="last_name">Ultimo pesaje</div> <!-- Título centrado -->
+            <div class="box-content"> <!-- Contenido en fila como antes -->
+                <div class="info-box">
+                    <img src="bascula.png" alt="Weight">
+                    <p class="weight-display" id="lastWeightDisplay">44.0</p>
+                </div>
+                <div class="info-box">
+                    <img src="medida.png" alt="Dimensions">
+                    <p id="lastDimensionDisplay">0 mm</p>
+                </div>
+                <div class="info-box">
+                    <img src="recuento.png" alt="Pallets">
+                    <p id="lastBoxNumberDisplay">1119 palets</p>
+                </div>
             </div>
-            <div class="info-box">
-              <img src="medida.png" alt="Dimensions">
-              <p id="lastDimensionDisplay">0 mm</p>
+            <div class="barcode" id="barcode">
+                <center><p>Barcoder Anonimus BOX</p></center>
+                <svg id="lastBarcode"></svg>
             </div>
-            <div class="info-box">
-              <img src="recuento.png" alt="Pallets">
-              <p id="lastBoxNumberDisplay">1119 palets</p>
-            </div>
-          </div>
-          <div class="barcode" id="barcode">
-            <center><p>Barcoder Anonimus BOX</p></center>
-            <svg id="lastBarcode"></svg>
-          </div>
         </div>
-      </main>
-    </div>
+    </main>
 
     <script>
-       // Función para obtener el token de la URL
+        // Función para obtener el token de la URL
         function getTokenFromUrl() {
             const urlParams = new URLSearchParams(window.location.search);
             return urlParams.get('token');
@@ -224,9 +245,9 @@
         }
 
         function updateTime() {
-          const timeElement = document.getElementById('timeDisplay');
-          const now = new Date();
-          timeElement.textContent = now.toLocaleTimeString();
+            const timeElement = document.getElementById('timeDisplay');
+            const now = new Date();
+            timeElement.textContent = now.toLocaleTimeString();
         }
 
         setInterval(updateData, 300);

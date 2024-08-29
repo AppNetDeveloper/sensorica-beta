@@ -77,7 +77,7 @@ class ControlWeightController extends Controller
     }
     /**
      * @OA\Get(
-     *     path="/api/control-weight/{token}/all",
+     *     path="/api/control-weights/{token}/all",
      *     summary="Get all control weight data by token",
      *     tags={"Control Weight"},
      *     @OA\Parameter(

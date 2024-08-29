@@ -398,13 +398,13 @@
                 }
             }
         },
-        "/api/control-weight/{token}/all": {
+        "/api/control-weights/{token}/all": {
             "get": {
                 "tags": [
                     "Control Weight"
                 ],
                 "summary": "Get all control weight data by token",
-                "operationId": "7a9dd6494adf6925d6dd6c823d09acaa",
+                "operationId": "ccf627f712de5ef777b163e0cf9eeddc",
                 "parameters": [
                     {
                         "name": "token",

@@ -29,7 +29,7 @@ Route::match(['get', 'post'], '/queue-print', [StoreQueueController::class, 'sto
 
 Route::get('/modbuses', [ModbusController::class, 'getModbuses']);
 
-Route::get('control-weights/all/{token}', [ControlWeightController::class, 'getAllDataByToken']);
+Route::get('/control-weights/{token}/all', [ControlWeightController::class, 'getAllDataByToken']);
 
 Route::middleware(['throttle:1000,1'])->group(function () {
     Route::get('/control-weight/{token}', [ControlWeightController::class, 'getDataByToken']);
