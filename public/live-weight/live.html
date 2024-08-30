@@ -15,150 +15,176 @@
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      background-color: #333;
-      color: white;
+      background-color: #1e1e2f;
+      color: #ffffff;
+      font-family: 'Roboto', sans-serif;
       box-sizing: border-box;
-      overflow: hidden; /* Evita que aparezca scroll */
-  }
-  
-  header {
+      overflow: hidden;
+    }
+    
+    header {
       width: 100%;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 10px;
-      box-sizing: border-box;
-  }
-  
-  .logo {
-      max-width: 30%;
+      padding: 15px 30px;
+      background-color: #28293e;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+    }
+    
+    .logo {
+      max-width: 25%;
       height: auto;
-  }
-  
-  .time {
-      font-size: 4vh; /* Aumenta el tamaño de la fuente */
-      margin-right: 20px; /* Añade espacio a la derecha del timeDisplay */
-  }
-  
-  main {
+    }
+    
+    .time {
+      font-size: 4vh;
+      margin-right: 20px;
+    }
+
+    #scaleName {
+      font-size: 2.5vh;
+      color: #00d1b2;
+      text-align: center;
+    }
+    
+    main {
       display: flex;
       flex-direction: column;
       align-items: center;
       width: 100%;
       height: 100%;
-      flex-grow: 1; /* Ocupa el espacio restante entre header y footer */
-      justify-content: center; /* Centra el contenido verticalmente */
-  }
-  
-  .box {
-      background-color: #555;
-      padding: 15px; /* Ajuste de padding */
-      margin-bottom: 15px;
-      border-radius: 8px;
-      width: 98%; /* Ajuste para ocupar el 98% del ancho disponible */
-      max-width: 98%; /* Asegura que ocupe el 98% del ancho disponible */
+      padding: 20px;
+      overflow-y: auto;
+    }
+    
+    .box {
+      background-color: #2e2f47;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 10px;
+      width: 98%;
+      max-width: 1500px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: space-between;
-      flex-grow: 1; /* Permite que crezca para llenar el espacio disponible */
-  }
-  
-  .box-title {
-      font-size: 2.5vh; /* Tamaño adaptativo basado en la altura de la ventana */
-      text-align: center;
-      margin-bottom: 10px; /* Reduce el margen inferior */
-      width: 100%;
-  }
-  
-  .box-content {
+    }
+    
+    .box-content {
       display: flex;
       justify-content: space-around;
       align-items: center;
       width: 100%;
-      flex-wrap: wrap; /* Permite que los elementos se acomoden si es necesario */
-      flex-grow: 1; /* Ocupa el espacio disponible */
-  }
-  
-  .info-box {
+      flex-wrap: wrap;
+    }
+    
+    .info-box {
       display: flex;
       flex-direction: column;
       align-items: center;
-      margin: 5px;
-      min-width: 90px;
-      flex-grow: 1;
+      margin: 10px;
+      min-width: 180px;
       text-align: center;
-      justify-content: center; /* Centra el contenido */
-  }
-  
-  /* Aquí se ajusta solo el tamaño del texto para el peso en vivo */
-  .weight-display {
-      font-size: 16vw; /* Tamaño adaptativo basado en el ancho de la ventana */
+      flex-grow: 1;
+      padding: 15px;
+      border-radius: 8px;
+      background-color: #3b3c55;
+      box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+    }
+    
+    .weight-display {
+      font-size: 10vw;
       font-weight: bold;
-      line-height: 1; /* Asegura que el texto no tenga espacio extra entre líneas */
-  }
-  
-  #weightDisplay {
-      font-size: 12vw; /* Tamaño aún mayor para el peso en vivo */
-      font-weight: bold; /* Asegura que el texto sea grueso y visible */
-      line-height: 1; /* Asegura que el texto no tenga espacio extra entre líneas */
-  }
-  
-  #lastWeightDisplay {
-      font-size: 6vh; /* Tamaño de fuente adaptativo */
+      color: #ffcc00;
+      line-height: 1;
+      word-wrap: break-word;
+    }
+    
+    #weightDisplay {
+      font-size: 10vw;
       font-weight: bold;
-  }
-  
-  #lastBarcode {
-      margin-top: 5px;
+      color: #ffcc00;
+      line-height: 1;
+      word-wrap: break-word;
+    }
+    
+    #lastWeightDisplay {
+      font-size: 6vh;
+      font-weight: bold;
+      color: #ffcc00;
+    }
+    
+    #lastBarcode {
+      margin-top: 10px;
       width: 100%;
-  }
-  
-  .info-box img {
-      width: 8vh; /* Tamaño adaptativo basado en la altura */
-      margin-bottom: 5px;
-  }
-  
-  .info-box p {
-      font-size: 2.5vh; /* Tamaño adaptativo basado en la altura */
-      max-width: 100%;
-  }
-  
-  /* Media query para pantallas pequeñas */
-  @media (max-width: 768px) {
+    }
+    
+    .info-box img {
+      width: 8vh;
+      margin-bottom: 10px;
+      filter: brightness(0) invert(1);
+    }
+    
+    .info-box p {
+      font-size: 2.5vh;
+      color: #ffffff;
+    }
+    
+    .barcode p {
+      font-size: 2vh;
+      color: #ffffff;
+    }
+
+    .live-icon {
+      width: 100px;
+      animation: blink 1s infinite;
+    }
+
+    .history-icon {
+      width: 80px;
+      margin-bottom: 10px;
+    }
+    
+    @keyframes blink {
+      0% { opacity: 1; }
+      50% { opacity: 0; }
+      100% { opacity: 1; }
+    }
+    
+    @media (max-width: 768px) {
       .box-content {
-          flex-direction: column; /* Apila los elementos verticalmente en pantallas pequeñas */
+        flex-direction: column;
       }
-  
+    
       #weightDisplay {
-          font-size: 30vw; /* Aumenta el tamaño en pantallas pequeñas */
+        font-size: 20vw;
       }
-  
+    
       .box-title {
-          font-size: 2vh;
+        font-size: 2.5vh;
       }
-  
+    
       .info-box img {
-          width: 12vh;
+        width: 12vh;
       }
-  
+    
       .info-box p {
-          font-size: 2vh;
+        font-size: 2vh;
       }
-  }
-  
+    }
   </style>
 </head>
 <body>
     <header class="d-flex justify-content-between align-items-center">
         <img src="logo.png" alt="Logo" class="logo">
+        <div id="scaleName">Nombre de la Báscula</div>
         <div class="time" id="timeDisplay">02:33:21</div>
     </header>
 
     <main>
         <div class="box">
-            <div class="box-title" id="name">Pesaje en vivo</div> <!-- Título centrado -->
-            <div class="box-content"> <!-- Contenido en fila como antes -->
+            <div class="box-content">
                 <div class="info-box">
                     <img src="bascula.png" alt="Weight">
                     <p class="weight-display" id="weightDisplay">0.0</p>
@@ -175,8 +201,7 @@
         </div>
 
         <div class="box">
-            <div class="box-title" id="last_name">Ultimo pesaje</div> <!-- Título centrado -->
-            <div class="box-content"> <!-- Contenido en fila como antes -->
+            <div class="box-content">
                 <div class="info-box">
                     <img src="bascula.png" alt="Weight">
                     <p class="weight-display" id="lastWeightDisplay">44.0</p>
@@ -221,10 +246,8 @@
                 const grossWeight = parseFloat(data.gross_weight) || 0;
                 const lastControlWeight = parseFloat(data.last_control_weight) || 0;
 
-                document.getElementById('name').textContent = "Pesaje en vivo: " + data.name; // Actualiza el nombre
-                document.getElementById('last_name').textContent = "Ultimo pesaje: " + data.name; // Actualiza el nombre
+                document.getElementById('scaleName').textContent = data.name || "Nombre de la Báscula";
                 document.getElementById('weightDisplay').innerHTML = grossWeight.toFixed(1) + '<b style="font-size:1vw;"> Kg</b>';
-
                 document.getElementById('dimensionDisplay').textContent = data.dimension + " mm";
                 document.getElementById('boxNumberDisplay').textContent = data.box_number + " palets";
 
