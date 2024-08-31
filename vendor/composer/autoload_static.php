@@ -773,6 +773,7 @@ class ComposerStaticInit069c47289a3924fb326a2b94bac13c46
         'App\\Http\\Controllers\\Api\\ApiBarcoderController' => __DIR__ . '/../..' . '/app/Http/Controllers/Api/ApiBarcoderController.php',
         'App\\Http\\Controllers\\Api\\BarcodeController' => __DIR__ . '/../..' . '/app/Http/Controllers/Api/BarcodeController.php',
         'App\\Http\\Controllers\\Api\\ControlWeightController' => __DIR__ . '/../..' . '/app/Http/Controllers/Api/ControlWeightController.php',
+        'App\\Http\\Controllers\\Api\\GetTokenController' => __DIR__ . '/../..' . '/app/Http/Controllers/Api/GetTokenController.php',
         'App\\Http\\Controllers\\Api\\ModbusController' => __DIR__ . '/../..' . '/app/Http/Controllers/Api/ModbusController.php',
         'App\\Http\\Controllers\\Api\\StoreQueueController' => __DIR__ . '/../..' . '/app/Http/Controllers/Api/StoreQueueController.php',
         'App\\Http\\Controllers\\Api\\SwaggerController' => __DIR__ . '/../..' . '/app/Http/Controllers/Api/SwaggerController.php',

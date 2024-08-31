@@ -82,19 +82,18 @@ class Modbus extends Model
      }
  
      protected static function restartSupervisor()
-{
-    try {
-        // Usa sudo para ejecutar supervisorctl sin contraseña
-        exec('sudo /usr/bin/supervisorctl restart all', $output, $returnVar);
-
-        if ($returnVar === 0) {
-            Log::info("Supervisor reiniciado exitosamente para modbus:read.");
-        } else {
-            Log::error("Error al reiniciar supervisor: " . implode("\n", $output));
-        }
-    } catch (\Exception $e) {
-        Log::error("Excepción al reiniciar supervisor: " . $e->getMessage());
-    }
-}
-
+     {
+         try {
+             // Usa sudo para ejecutar supervisorctl sin contraseña
+             exec('sudo /usr/bin/supervisorctl restart all', $output, $returnVar);
+     
+             if ($returnVar === 0) {
+                 Log::channel('supervisor')->info("Supervisor reiniciado exitosamente.");
+             } else {
+                 Log::channel('supervisor')->error("Error al reiniciar supervisor: " . implode("\n", $output));
+             }
+         } catch (\Exception $e) {
+             Log::channel('supervisor')->error("Excepción al reiniciar supervisor: " . $e->getMessage());
+         }
+     }     
  }

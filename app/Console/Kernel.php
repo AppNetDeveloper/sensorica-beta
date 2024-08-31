@@ -17,6 +17,8 @@ class Kernel extends ConsoleKernel
         // ... otros comandos ...
         Commands\MqttSubscriber::class,
         Commands\ReadModbus::class,
+        Commands\PublishToMqttServer1::class,
+        Commands\PublishToMqttServer2::class,
         Commands\TcpClient::class
     ];
 

@@ -35,6 +35,11 @@ return [
     */
 
     'channels' => [
+        'supervisor' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/supervisor.log'),
+            'level' => 'debug',
+        ],
         'stack' => [
             'driver' => 'stack',
             'channels' => ['single'],

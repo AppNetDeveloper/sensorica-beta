@@ -20,6 +20,8 @@ use App\Models\Printer;
 use App\Helpers\MqttHelper; // Importa el helper
 use App\Helpers\MqttPersistentHelper;
 use App\Models\LiveTrafficMonitor;
+use App\Models\MqttSendServer1;
+use App\Models\MqttSendServer2;
 
 
 class ReadModbus extends Command
@@ -535,7 +537,19 @@ class ReadModbus extends Command
 
     private function publishMqttMessage($topic, $message)
     {
-        MqttHelper::publishMessage($topic, $message, env('MQTT_SERVER'), intval(env('MQTT_PORT')));
+        ///MqttHelper::publishMessage($topic, $message, env('MQTT_SERVER'), intval(env('MQTT_PORT')));
        //MqttPersistentHelper::publishMessage($topic, $message, env('MQTT_SERVER'), intval(env('MQTT_PORT')));
+       try {
+        // Inserta en la tabla mqtt_send_server1
+        MqttSendServer1::createRecord($topic, $message);
+
+        // Inserta en la tabla mqtt_send_server2
+        MqttSendServer2::createRecord($topic, $message);
+
+        $this->info("Stored message in both mqtt_send_server1 and mqtt_send_server2 tables.");
+
+        } catch (\Exception $e) {
+            Log::error("Error storing message in databases: " . $e->getMessage());
+        }
     }
 }
