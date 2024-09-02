@@ -19,6 +19,7 @@ class Kernel extends ConsoleKernel
         Commands\ReadModbus::class,
         Commands\PublishToMqttServer1::class,
         Commands\PublishToMqttServer2::class,
+        Commands\ReadSensors::class,
         Commands\TcpClient::class
     ];
 

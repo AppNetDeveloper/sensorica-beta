@@ -757,6 +757,8 @@ class ComposerStaticInit069c47289a3924fb326a2b94bac13c46
     public static $classMap = array (
         'App\\Console\\Commands\\MqttSubscriber' => __DIR__ . '/../..' . '/app/Console/Commands/MqttSubscriber.php',
         'App\\Console\\Commands\\MqttSubscriberModbus' => __DIR__ . '/../..' . '/app/Console/Commands/MqttSubscriberModbus.php',
+        'App\\Console\\Commands\\PublishToMqttServer1' => __DIR__ . '/../..' . '/app/Console/Commands/PublishToMqttServer1.php',
+        'App\\Console\\Commands\\PublishToMqttServer2' => __DIR__ . '/../..' . '/app/Console/Commands/PublishToMqttServer2.php',
         'App\\Console\\Commands\\ReadModbus' => __DIR__ . '/../..' . '/app/Console/Commands/ReadModbus.php',
         'App\\Console\\Commands\\TcpClient' => __DIR__ . '/../..' . '/app/Console/Commands/TcpClient.php',
         'App\\Console\\Kernel' => __DIR__ . '/../..' . '/app/Console/Kernel.php',
@@ -824,6 +826,8 @@ class ComposerStaticInit069c47289a3924fb326a2b94bac13c46
         'App\\Models\\LoginSecurity' => __DIR__ . '/../..' . '/app/Models/LoginSecurity.php',
         'App\\Models\\Modbus' => __DIR__ . '/../..' . '/app/Models/Modbus.php',
         'App\\Models\\Modual' => __DIR__ . '/../..' . '/app/Models/Modual.php',
+        'App\\Models\\MqttSendServer1' => __DIR__ . '/../..' . '/app/Models/MqttSendServer1.php',
+        'App\\Models\\MqttSendServer2' => __DIR__ . '/../..' . '/app/Models/MqttSendServer2.php',
         'App\\Models\\Permission' => __DIR__ . '/../..' . '/app/Models/Permission.php',
         'App\\Models\\Printer' => __DIR__ . '/../..' . '/app/Models/Printer.php',
         'App\\Models\\ProductionLine' => __DIR__ . '/../..' . '/app/Models/ProductionLine.php',

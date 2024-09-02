@@ -62,8 +62,6 @@ class Modbus extends Model
  
          static::updating(function ($modbus) {
              if ($modbus->isDirty([
-                'mqtt_server', 
-                'mqtt_port', 
                 'mqtt_topic_modbus',
                 'mqtt_topic_gross',
                 'mqtt_topic_control',

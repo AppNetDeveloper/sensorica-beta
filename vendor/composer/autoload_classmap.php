@@ -8,6 +8,8 @@ $baseDir = dirname($vendorDir);
 return array(
     'App\\Console\\Commands\\MqttSubscriber' => $baseDir . '/app/Console/Commands/MqttSubscriber.php',
     'App\\Console\\Commands\\MqttSubscriberModbus' => $baseDir . '/app/Console/Commands/MqttSubscriberModbus.php',
+    'App\\Console\\Commands\\PublishToMqttServer1' => $baseDir . '/app/Console/Commands/PublishToMqttServer1.php',
+    'App\\Console\\Commands\\PublishToMqttServer2' => $baseDir . '/app/Console/Commands/PublishToMqttServer2.php',
     'App\\Console\\Commands\\ReadModbus' => $baseDir . '/app/Console/Commands/ReadModbus.php',
     'App\\Console\\Commands\\TcpClient' => $baseDir . '/app/Console/Commands/TcpClient.php',
     'App\\Console\\Kernel' => $baseDir . '/app/Console/Kernel.php',
@@ -75,6 +77,8 @@ return array(
     'App\\Models\\LoginSecurity' => $baseDir . '/app/Models/LoginSecurity.php',
     'App\\Models\\Modbus' => $baseDir . '/app/Models/Modbus.php',
     'App\\Models\\Modual' => $baseDir . '/app/Models/Modual.php',
+    'App\\Models\\MqttSendServer1' => $baseDir . '/app/Models/MqttSendServer1.php',
+    'App\\Models\\MqttSendServer2' => $baseDir . '/app/Models/MqttSendServer2.php',
     'App\\Models\\Permission' => $baseDir . '/app/Models/Permission.php',
     'App\\Models\\Printer' => $baseDir . '/app/Models/Printer.php',
     'App\\Models\\ProductionLine' => $baseDir . '/app/Models/ProductionLine.php',
