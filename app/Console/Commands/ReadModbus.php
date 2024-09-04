@@ -506,11 +506,20 @@ class ReadModbus extends Command
             'rec_box' => $newBoxNumber,
             'max_kg' => $maxKg,
             'last_dimension' => $dimensionFinal,
-            'last_barcoder' => $uniqueBarcoder
+            'last_barcoder' => $uniqueBarcoder,
+            'peso' => $maxKg,
+            'alto' => $dimensionFinal,
+
         ];
 
         try {
+            // Intenta POST primero
             $response = Http::post($apiQueue->url_back, $dataToSend);
+
+            if (!$response->successful() && $response->status() === 405) { 
+                // Si POST falla con 405, intenta PUT
+                $response = Http::put($apiQueue->url_back, $dataToSend);
+            }
 
             if ($response->successful()) {
                 Log::info("Respuesta exitosa de la API externa para el Modbus ID: {$config->id}", [
