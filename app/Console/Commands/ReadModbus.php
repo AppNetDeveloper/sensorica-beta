@@ -256,24 +256,7 @@ class ReadModbus extends Command
         $dimensionVariation = $config->dimension_variacion;
         $dimensionOffset = $config->offset_meter;
 
-        // comprubar si el de $value es igual con un segundo sensor laser
-        //obtener valor del laser si existe
-            $jsonPathLaser = "medidor-laser";
-            $value2 = $this->getValueFromJson($data, $jsonPathLaser);
-            Log::info("Valor segundo sensor laser: {$value2}");
-
-            if (isset($value2) && $value2 !== null && $value2 !== '' && !empty($value2)) {
-               //comprobar que valor de value y value2 o value2 y value no tienen una variacion de mas de 100
-                if (abs($value - $value2) >= $dimensionVariation || abs($value2 - $value) >= $dimensionVariation) { 
-                    //salimos de esta funcion
-                    Log::info("Salimos de esta funcion medicion por no ser una medida real!");
-                    return;
-                }
-            } else {
-                //salimos de esta funcion
-                Log::info("Salimos de esta funcion medicion por no ser una medida real!!");
-                return;
-            }
+        
 
         // Calcular el valor actual
         $currentValue = $dimensionDefault - $value + $offsetMeter;
@@ -523,7 +506,7 @@ class ReadModbus extends Command
 
     private function callExternalApi($apiQueue, $config, $newBoxNumber, $maxKg, $dimensionFinal, $uniqueBarcoder)
     {
-        Log::info("Llamada a la API externa para el Modbus ID: {$config->id}");
+        //Log::info("Llamada a la API externa para el Modbus ID: {$config->id}");
 
         $dataToSend = [
             'token' => $apiQueue->token_back,
@@ -533,8 +516,7 @@ class ReadModbus extends Command
             'last_barcoder' => $uniqueBarcoder,
             'peso' => $maxKg,
             'alto' => $dimensionFinal,
-            'used_value' => $apiQueue->value,',
-
+            'used_value' => $apiQueue->value, 
         ];
 
         try {
@@ -565,8 +547,9 @@ class ReadModbus extends Command
         $apiQueue->used = true;
         $apiQueue->save();
 
-       // $apiQueue->delete();
+    // $apiQueue->delete();
     }
+
 
 
     private function publishMqttMessage($topic, $message)
