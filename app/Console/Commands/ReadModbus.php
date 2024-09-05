@@ -155,17 +155,17 @@ class ReadModbus extends Command
 
         Log::info("Mensaje: {$config->name} (ID: {$config->id}) // topic: {$config->topic} // value: {$value}");
         //procesor modelo de sensor
-        $this->processModel($config, $value);
+        $this->processModel($config, $value, $data);
     }
 
-    public function processModel($config, $value)
+    public function processModel($config, $value, $data)
     {
         switch ($config->model_name) {
             case 'weight':
                 $this->processWeightModel($config, $value);
                 break;
             case 'height':
-                $this->processHeightModel($config, $value);
+                $this->processHeightModel($config, $value, $data);
                 break;
             case 'lifeTraficMonitor':
                 $this->lifeTraficMonitor($config, $value);
@@ -244,7 +244,7 @@ class ReadModbus extends Command
     }
 
     // Implementar funciones para otros modelos
-    public function processHeightModel($config, $value)
+    public function processHeightModel($config, $value, $data)
     {
         // Lógica para procesar datos de altura
         Log::info("Procesando modelo de altura. Valor: {$value}");
@@ -255,6 +255,25 @@ class ReadModbus extends Command
         $offsetMeter = $config->offset_meter;
         $dimensionVariation = $config->dimension_variacion;
         $dimensionOffset = $config->offset_meter;
+
+        // comprubar si el de $value es igual con un segundo sensor laser
+        //obtener valor del laser si existe
+            $jsonPathLaser = "medidor-laser";
+            $value2 = $this->getValueFromJson($data, $jsonPathLaser);
+            Log::info("Valor segundo sensor laser: {$value2}");
+
+            if (isset($value2) && $value2 !== null && $value2 !== '' && !empty($value2)) {
+               //comprobar que valor de value y value2 o value2 y value no tienen una variacion de mas de 100
+                if (abs($value - $value2) >= $dimensionVariation || abs($value2 - $value) >= $dimensionVariation) { 
+                    //salimos de esta funcion
+                    Log::info("Salimos de esta funcion medicion por no ser una medida real!");
+                    return;
+                }
+            } else {
+                //salimos de esta funcion
+                Log::info("Salimos de esta funcion medicion por no ser una medida real!!");
+                return;
+            }
 
         // Calcular el valor actual
         $currentValue = $dimensionDefault - $value + $offsetMeter;
@@ -424,7 +443,7 @@ class ReadModbus extends Command
             //llamar mqtt recuento de bultos cajas
             $messageBoxNumber = [
                     'value' => $newBoxNumber,
-                    'status' => '0'
+                    'status' => '2'
                 ];
             $this->publishMqttMessage($topic_box_control, $messageBoxNumber); // Enviar mensaje de control
 
@@ -436,7 +455,12 @@ class ReadModbus extends Command
                 ->first();
 
             if ($apiQueue) {
-                $this->callExternalApi($apiQueue, $config, $newBoxNumber, $maxKg, $dimensionFinal, $uniqueBarcoder);
+                if ($apiQueue->value == 0) {
+                    $apiQueue->used = true;
+                    $apiQueue->save();
+                } else {
+                    $this->callExternalApi($apiQueue, $config, $newBoxNumber, $maxKg, $dimensionFinal, $uniqueBarcoder);
+                }
             }
 
             //llamar a la impresora local para imprimir si es un bulto anonimo para habilitar bultos anonimos tenemos que anadir una impresora a la modbus si impresora no existe no se imprime, el printer_id tiene que no estar null con 0 o vacio
@@ -509,6 +533,7 @@ class ReadModbus extends Command
             'last_barcoder' => $uniqueBarcoder,
             'peso' => $maxKg,
             'alto' => $dimensionFinal,
+            'used_value' => $apiQueue->value,',
 
         ];
 
@@ -540,7 +565,7 @@ class ReadModbus extends Command
         $apiQueue->used = true;
         $apiQueue->save();
 
-        $apiQueue->delete();
+       // $apiQueue->delete();
     }
 
 

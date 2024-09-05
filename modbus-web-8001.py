@@ -1,13 +1,8 @@
 import threading
 import time
 import json
-from flask import Flask, jsonify
-from flask_cors import CORS
 import paho.mqtt.client as mqtt
 from pymodbus.client import ModbusTcpClient
-
-app = Flask(__name__)
-CORS(app)  # Permite solicitudes desde cualquier dominio
 
 # --- Configuración ---
 
@@ -18,17 +13,17 @@ modbus_port = 502
 # Define manualmente las combinaciones de unit_id y address
 modbus_configurations = [
     {"unit_id": 1, "address": 300},
-    {"unit_id": 1, "address": 301}, # bascula cinta 
+    {"unit_id": 1, "address": 301},  # bascula cinta 
     {"unit_id": 1, "address": 120},
-	{"unit_id": 1, "address": 121},
+    {"unit_id": 1, "address": 121},
     {"unit_id": 1, "address": 220},
     {"unit_id": 1, "address": 200},
-	{"unit_id": 1, "address": 221},
+    {"unit_id": 1, "address": 221},
     {"unit_id": 1, "address": 201},
     {"unit_id": 1, "address": 100},
-	{"unit_id": 1, "address": 101},
+    {"unit_id": 1, "address": 101},
     {"unit_id": 1, "address": 310},
-    {"unit_id": 1, "address": 311}, # bascula fija fuera
+    {"unit_id": 1, "address": 311},  # bascula fija fuera
     # Añade más configuraciones aquí según sea necesario
 ]
 
@@ -87,7 +82,7 @@ def read_modbus_and_publish():
                     unit_id = config['unit_id']
                     address = config['address']
 
-                    result = client_modbus.read_holding_registers(address, 1, unit=unit_id)
+                    result = client_modbus.read_holding_registers(address, 1)
                     if not result.isError():
                         value = result.registers[0]
                         key = f"Unidad {unit_id}, Direccion {address}"
@@ -109,19 +104,12 @@ def read_modbus_and_publish():
             client_modbus = connect_modbus()
             client_mqtt = connect_mqtt()
 
-# --- Flask API ---
-
-@app.route('/datos', methods=['GET'])
-def obtener_datos():
-    with lock:  # Acquire the lock before reading lecturas
-        formatted_lecturas = {key: {"value": value} for key, value in lecturas.items()}
-        return jsonify(formatted_lecturas)
-
 # --- Main ---
 
 if __name__ == '__main__':
     # Start the Modbus reading and MQTT publishing in a separate thread
     threading.Thread(target=read_modbus_and_publish, daemon=True).start()
 
-    # Start the Flask server
-    app.run(host='0.0.0.0', port=8000)
+    # El código ahora solo se ejecuta en segundo plano para Modbus y MQTT
+    while True:
+        time.sleep(1)  # Mantiene el hilo principal activo
