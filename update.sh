@@ -9,6 +9,7 @@ git pull --rebase origin main
 git rebase --continue
 git push origin main
 
+
 php artisan migrate
 
 npm update
