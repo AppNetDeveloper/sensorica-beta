@@ -6481,6 +6481,9 @@
             "name": "symfony/console",
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 78757138 (main)
             "version": "v5.4.47",
             "source": {
                 "type": "git",
@@ -6491,6 +6494,7 @@
                 "type": "zip",
                 "url": "https://api.github.com/repos/symfony/console/zipball/c4ba980ca61a9eb18ee6bcc73f28e475852bb1ed",
                 "reference": "c4ba980ca61a9eb18ee6bcc73f28e475852bb1ed",
+<<<<<<< HEAD
 =======
             "version": "v5.4.46",
 =======
@@ -6511,6 +6515,8 @@
                 "url": "https://api.github.com/repos/symfony/console/zipball/c4ba980ca61a9eb18ee6bcc73f28e475852bb1ed",
                 "reference": "c4ba980ca61a9eb18ee6bcc73f28e475852bb1ed",
 >>>>>>> bdb38daf (Guardando cambios locales antes de rebase)
+=======
+>>>>>>> 78757138 (main)
                 "shasum": ""
             },
             "require": {
@@ -6582,6 +6588,7 @@
             "support": {
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
                 "source": "https://github.com/symfony/console/tree/v5.4.47"
 =======
                 "source": "https://github.com/symfony/console/tree/v5.4.46"
@@ -6589,6 +6596,9 @@
 =======
                 "source": "https://github.com/symfony/console/tree/v5.4.47"
 >>>>>>> bdb38daf (Guardando cambios locales antes de rebase)
+=======
+                "source": "https://github.com/symfony/console/tree/v5.4.47"
+>>>>>>> 78757138 (main)
             },
             "funding": [
                 {
@@ -6606,6 +6616,7 @@
             ],
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
             "time": "2024-11-06T11:30:55+00:00"
 =======
             "time": "2024-11-05T14:17:06+00:00"
@@ -6613,6 +6624,9 @@
 =======
             "time": "2024-11-06T11:30:55+00:00"
 >>>>>>> bdb38daf (Guardando cambios locales antes de rebase)
+=======
+            "time": "2024-11-06T11:30:55+00:00"
+>>>>>>> 78757138 (main)
         },
         {
             "name": "symfony/css-selector",
@@ -7116,6 +7130,9 @@
             "name": "symfony/http-kernel",
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 78757138 (main)
             "version": "v5.4.47",
             "source": {
                 "type": "git",
@@ -7126,6 +7143,7 @@
                 "type": "zip",
                 "url": "https://api.github.com/repos/symfony/http-kernel/zipball/0ac42d5e16317f15dc5f8ea83742c51d2ed2350f",
                 "reference": "0ac42d5e16317f15dc5f8ea83742c51d2ed2350f",
+<<<<<<< HEAD
 =======
             "version": "v5.4.46",
 =======
@@ -7146,6 +7164,8 @@
                 "url": "https://api.github.com/repos/symfony/http-kernel/zipball/0ac42d5e16317f15dc5f8ea83742c51d2ed2350f",
                 "reference": "0ac42d5e16317f15dc5f8ea83742c51d2ed2350f",
 >>>>>>> bdb38daf (Guardando cambios locales antes de rebase)
+=======
+>>>>>>> 78757138 (main)
                 "shasum": ""
             },
             "require": {
@@ -7231,6 +7251,7 @@
             "support": {
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
                 "source": "https://github.com/symfony/http-kernel/tree/v5.4.47"
 =======
                 "source": "https://github.com/symfony/http-kernel/tree/v5.4.46"
@@ -7238,6 +7259,9 @@
 =======
                 "source": "https://github.com/symfony/http-kernel/tree/v5.4.47"
 >>>>>>> bdb38daf (Guardando cambios locales antes de rebase)
+=======
+                "source": "https://github.com/symfony/http-kernel/tree/v5.4.47"
+>>>>>>> 78757138 (main)
             },
             "funding": [
                 {
@@ -7255,6 +7279,7 @@
             ],
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
             "time": "2024-11-13T13:47:53+00:00"
 =======
             "time": "2024-11-06T09:26:57+00:00"
@@ -7262,6 +7287,9 @@
 =======
             "time": "2024-11-13T13:47:53+00:00"
 >>>>>>> bdb38daf (Guardando cambios locales antes de rebase)
+=======
+            "time": "2024-11-13T13:47:53+00:00"
+>>>>>>> 78757138 (main)
         },
         {
             "name": "symfony/mime",
@@ -7989,6 +8017,9 @@
             "name": "symfony/process",
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 78757138 (main)
             "version": "v5.4.47",
             "source": {
                 "type": "git",
@@ -7999,6 +8030,7 @@
                 "type": "zip",
                 "url": "https://api.github.com/repos/symfony/process/zipball/5d1662fb32ebc94f17ddb8d635454a776066733d",
                 "reference": "5d1662fb32ebc94f17ddb8d635454a776066733d",
+<<<<<<< HEAD
 =======
             "version": "v5.4.46",
 =======
@@ -8019,6 +8051,8 @@
                 "url": "https://api.github.com/repos/symfony/process/zipball/5d1662fb32ebc94f17ddb8d635454a776066733d",
                 "reference": "5d1662fb32ebc94f17ddb8d635454a776066733d",
 >>>>>>> bdb38daf (Guardando cambios locales antes de rebase)
+=======
+>>>>>>> 78757138 (main)
                 "shasum": ""
             },
             "require": {
@@ -8053,6 +8087,7 @@
             "support": {
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
                 "source": "https://github.com/symfony/process/tree/v5.4.47"
 =======
                 "source": "https://github.com/symfony/process/tree/v5.4.46"
@@ -8060,6 +8095,9 @@
 =======
                 "source": "https://github.com/symfony/process/tree/v5.4.47"
 >>>>>>> bdb38daf (Guardando cambios locales antes de rebase)
+=======
+                "source": "https://github.com/symfony/process/tree/v5.4.47"
+>>>>>>> 78757138 (main)
             },
             "funding": [
                 {
@@ -8077,6 +8115,7 @@
             ],
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
             "time": "2024-11-06T11:36:42+00:00"
 =======
             "time": "2024-11-06T09:18:28+00:00"
@@ -8084,6 +8123,9 @@
 =======
             "time": "2024-11-06T11:36:42+00:00"
 >>>>>>> bdb38daf (Guardando cambios locales antes de rebase)
+=======
+            "time": "2024-11-06T11:36:42+00:00"
+>>>>>>> 78757138 (main)
         },
         {
             "name": "symfony/routing",
@@ -8521,6 +8563,9 @@
             "name": "symfony/var-dumper",
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 78757138 (main)
             "version": "v5.4.47",
             "source": {
                 "type": "git",
@@ -8531,6 +8576,7 @@
                 "type": "zip",
                 "url": "https://api.github.com/repos/symfony/var-dumper/zipball/e13e8dfa8eaab2b0536ef365beddc2af723a9ac0",
                 "reference": "e13e8dfa8eaab2b0536ef365beddc2af723a9ac0",
+<<<<<<< HEAD
 =======
             "version": "v5.4.46",
 =======
@@ -8551,6 +8597,8 @@
                 "url": "https://api.github.com/repos/symfony/var-dumper/zipball/e13e8dfa8eaab2b0536ef365beddc2af723a9ac0",
                 "reference": "e13e8dfa8eaab2b0536ef365beddc2af723a9ac0",
 >>>>>>> bdb38daf (Guardando cambios locales antes de rebase)
+=======
+>>>>>>> 78757138 (main)
                 "shasum": ""
             },
             "require": {
@@ -8612,6 +8660,7 @@
             "support": {
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
                 "source": "https://github.com/symfony/var-dumper/tree/v5.4.47"
 =======
                 "source": "https://github.com/symfony/var-dumper/tree/v5.4.46"
@@ -8619,6 +8668,9 @@
 =======
                 "source": "https://github.com/symfony/var-dumper/tree/v5.4.47"
 >>>>>>> bdb38daf (Guardando cambios locales antes de rebase)
+=======
+                "source": "https://github.com/symfony/var-dumper/tree/v5.4.47"
+>>>>>>> 78757138 (main)
             },
             "funding": [
                 {
@@ -8636,6 +8688,7 @@
             ],
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
             "time": "2024-11-08T15:21:10+00:00"
 =======
             "time": "2024-11-05T14:17:06+00:00"
@@ -8643,6 +8696,9 @@
 =======
             "time": "2024-11-08T15:21:10+00:00"
 >>>>>>> bdb38daf (Guardando cambios locales antes de rebase)
+=======
+            "time": "2024-11-08T15:21:10+00:00"
+>>>>>>> 78757138 (main)
         },
         {
             "name": "symfony/yaml",
