@@ -28,10 +28,6 @@ class Kernel extends ConsoleKernel
         Commands\CalculateProductionMonitorOee::class,
         Commands\CheckShiftList::class,
         Commands\ConnectWhatsApp::class,
-        Commands\ReadRfidReadings::class,
-        commands\ReadBluetoothReadings::class,
-        Commands\CheckBluetoothExit::class,
-        
     ];
 
     /**
