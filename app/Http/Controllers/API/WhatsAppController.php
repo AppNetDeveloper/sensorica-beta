@@ -1,7 +1,7 @@
 <?php
-
+//update
 namespace App\Http\Controllers\Api;
-
+   
 use Illuminate\Http\Request; // Asegúrate de importar esta clase
 use Illuminate\Http\Response;
 use App\Http\Controllers\Controller;
