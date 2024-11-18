@@ -40,6 +40,9 @@ echo "EXTERNAL_API_QUEUE_MODEL=dataToSend3" >> .env
 echo "EXTERNAL_API_QUEUE_TYPE=put" >> .env
 echo "USE_CURL=true" >> .env
 
+echo "WHATSAPP_LINK= http://127.0.0.1:3005" >> .env
+echo "WHATSAPP_PHONE_NOT=34619929305" >> .env
+
 
 sudo supervisorctl stop all
 rm -rf /etc/supervisor/conf.d/*
