@@ -114,4 +114,37 @@ class SystemController extends Controller
             ], 500);
         }
     }
+    public function restartSupervisor(Request $request)
+    {
+        $validation = $this->validateToken($request);
+        if ($validation) {
+            return $validation;
+        }
+    
+        try {
+            $command = 'sudo /usr/bin/supervisorctl restart all';
+            $process = Process::fromShellCommandline($command);
+            $process->run();
+    
+            // Registrar salida del proceso
+            Log::info("Salida del proceso: " . $process->getOutput());
+            Log::info("Errores del proceso: " . $process->getErrorOutput());
+    
+            if (!$process->isSuccessful()) {
+                throw new ProcessFailedException($process);
+            }
+    
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Supervisor reiniciado con éxito.',
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Error al reiniciar Supervisor: " . $e->getMessage());
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+    
 }
