@@ -3884,3 +3884,7 @@
 {"level":10,"time":"2024-11-18T16:07:33.544Z","pid":20046,"hostname":"boisolo-HCAR5000-MI","class":"ns","msg":"recv 46 bytes, total recv 46 bytes"}
 {"level":10,"time":"2024-11-18T16:07:33.544Z","pid":20046,"hostname":"boisolo-HCAR5000-MI","class":"ns","msg":"9470.59493-2","msg":"recv frame"}
 {"level":10,"time":"2024-11-18T16:07:33.544Z","pid":20046,"hostname":"boisolo-HCAR5000-MI","xml":"<iq from='@s.whatsapp.net' type='result' id='9470.59493-2' t='1731946053'/>","msg":"recv xml"}
+{"level":10,"time":"2024-11-18T16:08:03.468Z","pid":20046,"hostname":"boisolo-HCAR5000-MI","xml":"<iq id='9470.59493-3' to='@s.whatsapp.net' type='get' xmlns='w:p'>\n\t\t<ping />\n</iq>","msg":"xml send"}
+{"level":10,"time":"2024-11-18T16:08:03.547Z","pid":20046,"hostname":"boisolo-HCAR5000-MI","class":"ns","msg":"recv 46 bytes, total recv 46 bytes"}
+{"level":10,"time":"2024-11-18T16:08:03.547Z","pid":20046,"hostname":"boisolo-HCAR5000-MI","class":"ns","msg":"9470.59493-3","msg":"recv frame"}
+{"level":10,"time":"2024-11-18T16:08:03.547Z","pid":20046,"hostname":"boisolo-HCAR5000-MI","xml":"<iq from='@s.whatsapp.net' type='result' id='9470.59493-3' t='1731946083'/>","msg":"recv xml"}
