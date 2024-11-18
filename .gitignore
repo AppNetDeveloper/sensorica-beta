@@ -22,3 +22,5 @@ yarn-error.log
 /storage/dotenv-editor
 /packages
 ngrok.exe
+baileys_store_multi.json
+baileys_auth_info

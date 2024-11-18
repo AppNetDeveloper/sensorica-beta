@@ -5,7 +5,7 @@
     "keywords": ["framework", "laravel"],
     "license": "MIT",
     "require": {
-        "php": "^8.4",
+        "php": "^8.3",
         "aldas/modbus-tcp-client": "^3.5",
         "arcanedev/log-viewer": "^8.3",
         "brian2694/laravel-toastr": "^5.56",
