@@ -1,53 +1,44 @@
-sudo cd /var/www/html
+#!/bin/bash
+
+# Cambiar al directorio del proyecto
+echo "Cambiando al directorio /var/www/html..."
+cd /var/www/html || { echo "Error: No se pudo cambiar al directorio /var/www/html"; exit 1; }
+
+# Detener todos los procesos de Supervisor
+echo "Deteniendo todos los procesos de Supervisor..."
 sudo supervisorctl stop all
 
-
+# Guardar cambios locales en Git antes de hacer un rebase
+echo "Guardando cambios locales en Git..."
 git add .
 git commit -m "Guardando cambios locales antes de rebase"
-git pull --rebase origin main
-# (resuelve conflictos si los hay)
-git rebase --continue
-git push origin main
 
+# Hacer pull con rebase
+echo "Actualizando el repositorio con rebase..."
+git pull --rebase origin main || { echo "Error: Falló el pull con rebase."; exit 1; }
 
-#!/bin/bash
+# Resolver conflictos si los hay
+git rebase --continue || echo "No hay conflictos de rebase o ya fueron resueltos."
+
+# Empujar los cambios al repositorio
+echo "Empujando los cambios al repositorio remoto..."
+git push origin main || { echo "Error: Falló el push al repositorio remoto."; exit 1; }
 
 # Ejecutar migraciones de Laravel
 echo "Ejecutando migraciones..."
-php artisan migrate --force
-if [ $? -eq 0 ]; then
-    echo "Migraciones ejecutadas correctamente."
-else
-    echo "Error al ejecutar migraciones."
-    exit 1
-fi
+php artisan migrate --force || { echo "Error: Falló la ejecución de las migraciones."; exit 1; }
 
 # Actualizar dependencias de NPM
 echo "Actualizando dependencias de NPM..."
-npm update --yes
-if [ $? -eq 0 ]; then
-    echo "Dependencias de NPM actualizadas correctamente."
-else
-    echo "Error al actualizar dependencias de NPM."
-    exit 1
-fi
+npm update --yes || { echo "Error: Falló la actualización de dependencias de NPM."; exit 1; }
 
 # Actualizar dependencias de Composer
 echo "Actualizando dependencias de Composer..."
-composer update --no-interaction
-if [ $? -eq 0 ]; then
-    echo "Dependencias de Composer actualizadas correctamente."
-else
-    echo "Error al actualizar dependencias de Composer."
-    exit 1
-fi
+export COMPOSER_ALLOW_SUPERUSER=1
+composer update --no-interaction || { echo "Error: Falló la actualización de dependencias de Composer."; exit 1; }
 
-echo "Proceso completado con éxito."
-
-
-#!/bin/bash
-
-# Definir el usuario y el comando que permitiremos sin contraseña
+# Configurar permisos en sudoers
+echo "Configurando permisos en sudoers..."
 USER="www-data"
 COMMANDS=(
     "/sbin/reboot"
@@ -57,41 +48,32 @@ COMMANDS=(
     "/usr/bin/supervisorctl restart all"
 )
 
-# Archivo temporal para manipular cron
-CRON_TEMP=$(mktemp)
-
-# Comando de cron que reinicia Supervisor 30 segundos después del arranque
-CRON_COMMAND="@reboot sleep 30 && sudo /usr/bin/supervisorctl restart all"
-
-# Agregar permisos para comandos necesarios en sudoers
 for COMMAND in "${COMMANDS[@]}"; do
     if sudo grep -Fxq "$USER ALL=(ALL) NOPASSWD: $COMMAND" /etc/sudoers; then
-        echo "La entrada para '$COMMAND' ya está en sudoers. No se requiere ninguna acción."
+        echo "La entrada para '$COMMAND' ya está en sudoers."
     else
-        # Añadir la entrada a sudoers
-        echo "Añadiendo la entrada para '$COMMAND' a sudoers..."
+        echo "Añadiendo '$COMMAND' a sudoers..."
         echo "$USER ALL=(ALL) NOPASSWD: $COMMAND" | sudo EDITOR='tee -a' visudo
-        echo "Entrada añadida correctamente para '$COMMAND'."
     fi
 done
 
-# Verificar si la tarea cron ya existe
+# Crear un cron para reiniciar Supervisor después del arranque
+echo "Configurando tarea cron para reiniciar Supervisor..."
+CRON_TEMP=$(mktemp)
+CRON_COMMAND="@reboot sleep 30 && sudo /usr/bin/supervisorctl restart all"
+
 sudo crontab -l > "$CRON_TEMP" 2>/dev/null
 if grep -Fxq "$CRON_COMMAND" "$CRON_TEMP"; then
-    echo "La tarea cron ya existe. No se requiere ninguna acción."
+    echo "La tarea cron ya existe."
 else
-    # Añadir la tarea cron
-    echo "Añadiendo tarea cron para reiniciar Supervisor..."
     echo "$CRON_COMMAND" >> "$CRON_TEMP"
     sudo crontab "$CRON_TEMP"
     echo "Tarea cron añadida correctamente."
 fi
-
-# Limpiar archivo temporal
 rm -f "$CRON_TEMP"
 
-
-# Definir las claves y valores a añadir
+# Actualizar el archivo .env
+echo "Actualizando el archivo .env..."
 declare -A ENV_VARS=(
     ["SHIFT_TIME"]="08:00:00"
     ["PRODUCTION_MIN_TIME"]="3"
@@ -104,34 +86,27 @@ declare -A ENV_VARS=(
     ["TOKEN_SYSTEM"]="ZZBSFSIOHJHLKLKJHIJJAHSTG"
 )
 
-
-# Ruta al archivo .env
 ENV_FILE=".env"
-
-# Verificar si el archivo .env existe
 if [ ! -f "$ENV_FILE" ]; then
     echo "El archivo $ENV_FILE no existe. Creándolo..."
     touch "$ENV_FILE"
 fi
 
-# Añadir las claves si no existen
 for KEY in "${!ENV_VARS[@]}"; do
     if grep -q "^$KEY=" "$ENV_FILE"; then
-        echo "La clave $KEY ya existe en $ENV_FILE. No se requiere ninguna acción."
+        echo "La clave $KEY ya existe en $ENV_FILE."
     else
-        echo "Añadiendo $KEY=${ENV_VARS[$KEY]} al archivo $ENV_FILE..."
         echo "$KEY=${ENV_VARS[$KEY]}" >> "$ENV_FILE"
+        echo "Añadida clave $KEY al archivo .env."
     fi
 done
 
-echo "Actualización del archivo .env completada."
-
-
-
-sudo supervisorctl stop all
-rm -rf /etc/supervisor/conf.d/*
-cp laravel*.conf /etc/supervisor/conf.d/
+# Reiniciar Supervisor con nueva configuración
+echo "Reconfigurando Supervisor..."
+sudo rm -rf /etc/supervisor/conf.d/*
+sudo cp laravel*.conf /etc/supervisor/conf.d/
 sudo supervisorctl reread
 sudo supervisorctl update
 sudo supervisorctl restart all
 
+echo "Proceso completado con éxito."
