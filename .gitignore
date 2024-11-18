@@ -24,4 +24,4 @@ yarn-error.log
 ngrok.exe
 baileys_store_multi.json
 baileys_auth_info
-wa-logs.txt
+wa-logs*
