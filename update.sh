@@ -45,6 +45,7 @@ COMMANDS=(
     "/sbin/poweroff"
     "/var/www/html/reboot-system.sh"
     "/var/www/html/poweroff-system.sh"
+    "/var/www/html/update.sh"
     "/usr/bin/supervisorctl restart all"
 )
 

@@ -146,5 +146,38 @@ class SystemController extends Controller
             ], 500);
         }
     }
-    
+    public function runUpdateScript(Request $request)
+    {
+        $validation = $this->validateToken($request);
+        if ($validation) {
+            return $validation;
+        }
+
+        try {
+            $command = 'sudo /var/www/html/update.sh';
+            $process = Process::fromShellCommandline($command);
+            $process->setTimeout(600); // Ajusta el tiempo de espera según sea necesario
+            $process->run();
+
+            // Registrar salida del proceso
+            $output = $process->getOutput();
+            $errorOutput = $process->getErrorOutput();
+
+            if (!$process->isSuccessful()) {
+                throw new ProcessFailedException($process);
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'El script de actualización se ejecutó correctamente.',
+                'output' => $output,
+                'errorOutput' => $errorOutput,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }    
 }

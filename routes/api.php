@@ -122,6 +122,8 @@ Route::post('/reboot', [SystemController::class, 'rebootSystem']);
 Route::post('/poweroff', [SystemController::class, 'powerOffSystem']);
 Route::get('/server-stats', [SystemController::class, 'getServerStats']);
 Route::post('/restart-supervisor', [SystemController::class, 'restartSupervisor']);
+Route::post('/run-update', [SystemController::class, 'runUpdateScript']);
+
 
 Route::middleware('auth:api')->get('/user', function (Request $request) {
     return $request->user();
