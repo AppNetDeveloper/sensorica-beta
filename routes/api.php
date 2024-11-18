@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\ScadaMaterialTypeController;
 use App\Http\Controllers\Api\RfidDetailController;
 use App\Http\Controllers\Api\WhatsAppController;
 use App\Http\Controllers\Api\BluetoothDetailController;
+use App\Http\Controllers\Api\SystemController;
 
 
 /*
@@ -113,6 +114,13 @@ Route::prefix('bluetooth')->group(function () {
     // Ruta para obtener los filtros disponibles para Bluetooth (antenas y MACs)
     Route::get('/filters', [BluetoothDetailController::class, 'getFilters'])->name('bluetooth.filters');
 });
+
+
+//system control
+
+Route::post('/reboot', [SystemController::class, 'rebootSystem']);
+Route::post('/poweroff', [SystemController::class, 'powerOffSystem']);
+Route::get('/server-stats', [SystemController::class, 'getServerStats']);
 
 Route::middleware('auth:api')->get('/user', function (Request $request) {
     return $request->user();
