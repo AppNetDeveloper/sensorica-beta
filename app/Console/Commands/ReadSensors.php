@@ -4,7 +4,6 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use App\Models\Sensor;
-use Illuminate\Support\Facades\Log;
 use PhpMqtt\Client\MqttClient;
 use PhpMqtt\Client\ConnectionSettings;
 
@@ -46,8 +45,6 @@ class ReadSensors extends Command
     
             // Bucle principal para verificar y suscribirse a nuevos tópicos
             while ($this->shouldContinue) {
-                // Verificar y suscribir a nuevos tópicos
-               // $this->checkAndSubscribeNewTopics($mqtt);
     
                 // Mantener la conexión activa y procesar mensajes MQTT
                 $mqtt->loop(true);
@@ -65,7 +62,6 @@ class ReadSensors extends Command
     
         } catch (\Exception $e) {
             // Capturar cualquier excepción y registrarla en los logs
-            Log::error("Error en el comando sensors:read: " . $e->getMessage());
             $this->error("Error en el comando sensors:read: " . $e->getMessage());
         }
     }
@@ -110,68 +106,48 @@ class ReadSensors extends Command
         $this->info('Subscribed to initial topics.');
     }
 
-    private function checkAndSubscribeNewTopics(MqttClient $mqtt)
-    {
-        $currentTopics = Sensor::pluck('mqtt_topic_sensor')->toArray();
-
-        // Comparar con los tópicos a los que ya estamos suscritos
-        foreach ($currentTopics as $topic) {
-            if (!in_array($topic, $this->subscribedTopics)) {
-                // Suscribirse al nuevo tópico
-                $mqtt->subscribe($topic, function ($topic, $message) {
-                    // Sacamos id para identificar la línea pero solo id para no cargar la RAM
-                    $id = Sensor::where('mqtt_topic_sensor', $topic)->value('id');
-                    // Llamamos a procesar el mensaje
-                    $this->processMessage($id, $message);
-                }, 0);
-
-                $this->subscribedTopics[] = $topic;
-                $this->info("Subscribed to new topic: {$topic}");
-            }
-        }
-    }
-
     private function processMessage($id, $message)
     {
-        $config = Sensor::where('id', $id)->first();
         $data = json_decode($message, true);
-        
+    
         if (is_null($data)) {
-            Log::error("Error: El mensaje recibido no es un JSON válido.");
+            $this->error("Error: El mensaje recibido no es un JSON válido.");
             return;
         }
     
-        if (is_null($config)) {
-            Log::error("Error: No se encontró la configuración para Sensor ID {$id}. El sensor puede haber sido eliminado.");
-            return;
-        }
+       // $this->info("Contenido del Sensor ID {$id} JSON: " . print_r($data, true));
     
-        $this->info("Contenido del Sensor ID {$id} JSON: " . print_r($data, true));
+        // Intentar obtener el valor directamente del JSON
+        $value = $data['value'] ?? null;
     
-        $value = null;
-        if (empty($config->json_api)) {
-            $value = $data['value'] ?? null;
-            if ($value === null) {
-                Log::error("Error: No se encontró 'value' en el JSON cuando json_api está vacío.");
+        if ($value === null) {
+            // Si no encontramos 'value', intentamos buscar con json_api
+            $config = Sensor::find($id);
+    
+            if (!$config) {
+                $this->error("Error: No se encontró un sensor con ID $id.");
                 return;
             }
-        } else {
-            $jsonPath = $config->json_api;
-            $value = $this->getValueFromJson($data, $jsonPath);
-            if ($value === null) {
-                Log::warning("Advertencia: No se encontró la clave '$jsonPath' en la respuesta JSON, buscando el valor directamente.");
-                $value = $data['value'] ?? null;
+    
+            if (!empty($config->json_api)) {
+                $jsonPath = $config->json_api;
+                $value = $this->getValueFromJson($data, $jsonPath);
+    
                 if ($value === null) {
-                    Log::error("Error: No se encontró 'value' en el JSON.");
-                    return;
+                    $this->info("Advertencia: No se encontró la clave '$jsonPath' en el JSON.");
                 }
             }
+    
+            // Si aún no encontramos el valor, registramos un error
+            if ($value === null) {
+                $this->error("Error: No se encontró 'value' en el JSON.");
+                return;
+            }
         }
-
     
         // Llamada asíncrona a la API
         $appUrl = rtrim(env('APP_URL'), '/');
-        $apiUrl = $appUrl . '/api/sensor-insert'; // Corregido: agregada la barra
+        $apiUrl = $appUrl . '/api/sensor-insert';
     
         // Configurar cliente Guzzle para operaciones asíncronas
         $client = new \GuzzleHttp\Client([
@@ -183,7 +159,7 @@ class ReadSensors extends Command
         // Datos para enviar
         $dataToSend = [
             'value' => $value,
-            'sensor' => $config->mqtt_topic_sensor,
+            'id' => $id, // Usamos el ID directamente en lugar de mqtt_topic_sensor
         ];
     
         try {
@@ -194,23 +170,24 @@ class ReadSensors extends Command
     
             // Manejar la promesa de forma no bloqueante
             $promise->then(
-                function ($response) use ($config) {
-                    $this->info("API call success for sensor {$config->id}: " . $response->getStatusCode());
+                function ($response) use ($id) {
+                    $this->info("API call success for sensor {$id}: " . $response->getStatusCode());
                 },
-                function ($exception) use ($config) {
-                    $this->error("API call error for sensor {$config->id}: " . $exception->getMessage());
+                function ($exception) use ($id) {
+                    $this->error("API call error for sensor {$id}: " . $exception->getMessage());
                 }
             );
     
-            // Importante: Permitir que la promesa se resuelva en el siguiente ciclo del event loop
+            // Permitir que la promesa se resuelva en el siguiente ciclo del event loop
             $promise->wait(false);
     
         } catch (\Exception $e) {
             $this->error("Error al intentar llamar a la API: " . $e->getMessage());
         }
     
-        $this->info("Mensaje procesado para sensor {$config->id} con valor {$value}");
+        $this->info("Mensaje procesado para sensor {$id} con valor {$value}");
     }
+    
 
 
     private function getValueFromJson($data, $jsonPath)

@@ -11,8 +11,6 @@ use App\Models\MqttSendServer1;
 use App\Models\MqttSendServer2;
 use App\Models\Barcode;
 use App\Models\SensorCount;
-use Illuminate\Support\Facades\DB;
-
 
 class SensorController extends Controller
 {
@@ -155,40 +153,34 @@ class SensorController extends Controller
      *         )
      *     )
      * )
-     */
-    public function sensorInsert(Request $request)
+     */public function sensorInsert(Request $request)
     {
-        // Validar que el cuerpo de la solicitud tenga los campos necesarios
+        // Validar los datos de entrada
         $validated = $request->validate([
             'value' => 'required|integer',
-            'sensor' => 'required|string',
+            'id' => 'required|integer',
         ]);
 
-        // Buscar el sensor usando el campo 'sensor'
-        $topic = $request->input('sensor'); // Obtener el valor del campo 'sensor'
-        $sensor = Sensor::where('mqtt_topic_sensor', $topic)->first();
+        // Buscar el sensor directamente usando el ID
+        $sensor = Sensor::find($validated['id']);
 
-        // Verificar si el sensor existe
+        // Manejar el caso en que no se encuentre el sensor
         if (!$sensor) {
             return response()->json(['error' => 'Sensor no encontrado'], 404);
         }
 
-        // Procesar el valor del sensor (lógica del proceso similar a la de MQTT)
+        // Procesar el valor del sensor
         $value = $validated['value'];
-        
-        // Invertir sensor si está seleccionado
-        $inversSensor = $sensor->invers_sensors;
-        if ($inversSensor === true || $inversSensor === 1 || $inversSensor === "1") {
-            $value = 1 - $value; // Invierte entre 0 y 1
+
+        // Invertir el valor si corresponde
+        if ($sensor->invers_sensors) {
+            $value = 1 - $value;
         }
 
-        // Buscar el último registro en sensor_counts para el sensor_id
-        $lastSensorCount = DB::table('sensor_counts')
-            ->where('sensor_id', $sensor->id)
-            ->latest('id') // Ordenar por id descendente para obtener el último
+        $lastSensorCount = SensorCount::where('sensor_id', $sensor->id)
+            ->latest('id') // Ordena por ID descendente y toma el último
             ->first();
 
-        // Verificar si el último valor coincide
         if ($lastSensorCount && $lastSensorCount->value == $value) {
             return response()->json([
                 'error' => 'El valor recibido ya está registrado como el último valor para este sensor',
@@ -197,18 +189,25 @@ class SensorController extends Controller
             ], 400);
         }
 
-        $this->processModel($sensor, $value);
 
-        // Retornar la respuesta
-        return response()->json(['message' => 'Datos procesados correctamente', 'sensor' => $sensor->name], 200);
+        try {
+            // Procesar el sensor y el valor
+            $this->processModel($sensor, $value);
+
+            // Retornar la respuesta de éxito
+            return response()->json([
+                'message' => 'Datos procesados correctamente',
+                'sensor' => $sensor->name,
+            ], 200);
+
+        } catch (\Exception $e) {
+            // Manejar errores inesperados
+            Log::error("Error al procesar el sensor ID {$sensor->id}: " . $e->getMessage());
+            return response()->json(['error' => 'Error interno del servidor'], 500);
+        }
     }
 
-
-
-
-
-
-
+    
 
     private function processModel($config, $value)
     {
@@ -236,158 +235,63 @@ class SensorController extends Controller
 
     private function process0Model($config, $value, $barcode)
     {
-        // Validar el campo order_notice
-        if (!$barcode || !$barcode->order_notice) {
-            Log::warning("El campo order_notice está vacío o no se encontró el barcode ID: {$barcode->id}");
-            $orderId = $valuePerPackage = $productName = $unitsPerBox = $totalPerBox = "0";
-        } else {
-            // Decodificar el JSON y extraer valores
-            $orderNotice = json_decode($barcode->order_notice, true);
-    
-            $orderId = $orderNotice['orderId'] ?? "0";
-            $valuePerPackage = $orderNotice['refer']['value'] ?? "0";
-            $productName = $orderNotice['refer']['groupLevel'][0]['id'] ?? "0";
-            $unitsPerBox = $orderNotice['refer']['groupLevel'][0]['uds'] ?? "0";
-            $totalPerBox = $orderNotice['refer']['groupLevel'][0]['total'] ?? "0";
-    
-            // Log para depuración de valores extraídos
-            Log::debug("Valores extraídos del JSON: OrderId: $orderId, ValuePerPackage: $valuePerPackage, ProductName: $productName");
-        }
-    
-        // Incrementar contadores dentro de una transacción
-        try {
-            DB::transaction(function () use ($config) {
-                $config->increment('count_shift_0');
-                $config->increment('count_total_0');
-                $config->increment('count_order_0');
-            });
-            Log::info("Contadores incrementados correctamente.");
-        } catch (\Exception $e) {
-            Log::error("Error al incrementar los contadores: " . $e->getMessage());
-            return;
-        }
-    
-        // Calcular time_00 y time_10 en una única consulta
-        try {
-            $previousEntries = SensorCount::where('sensor_id', $config->id)
-                ->whereIn('value', [0, 1])
-                ->orderBy('created_at', 'desc')
-                ->get();
-    
-            $previousEntry0 = $previousEntries->firstWhere('value', 0);
-            $previousEntry1 = $previousEntries->firstWhere('value', 1);
-    
-            $defaultTime = 300;
-            $time_00 = $previousEntry0 ? now()->diffInSeconds($previousEntry0->created_at) : $defaultTime;
-            $time_10 = $previousEntry1 ? now()->diffInSeconds($previousEntry1->created_at) : $defaultTime;
-    
-            Log::debug("Valores calculados: time_00: $time_00, time_10: $time_10");
-        } catch (\Exception $e) {
-            Log::error("Error al calcular los tiempos: " . $e->getMessage());
-            return;
-        }
-    
-        // Insertar el nuevo registro en la tabla sensor_counts
-        try {
-            SensorCount::create([
-                'name' => $config->name,
-                'value' => $value,
-                'sensor_id' => $config->id,
-                'production_line_id' => $config->production_line_id,
-                'model_product' => $productName,
-                'orderId' => $orderId,
-                'count_total_0' => $config->count_total_0,
-                'count_shift_0' => $config->count_shift_0,
-                'count_order_0' => $config->count_order_0,
-                'time_00' => $time_00,
-                'time_10' => $time_10,
-            ]);
-            Log::info("Registro insertado en sensor_counts correctamente.");
-        } catch (\Exception $e) {
-            Log::error("Error al insertar en sensor_counts: " . $e->getMessage());
-        }
-    
-        // Determinar la función a ejecutar basada en function_model_0
-        try {
-            switch ($config->function_model_0) {
-                case 'none':
-                    $this->none($config, $value);
-                    break;
-                case 'sendMqttValue0':
-                    $this->sendMqttValue($config, $value, 0);
-                    break;
-                default:
-                    Log::warning("Función desconocida: {$config->function_model_0}");
-                    break;
-            }
-        } catch (\Exception $e) {
-            Log::error("Error al ejecutar la función dinámica: " . $e->getMessage());
-        }
+        $this->processModelFinal($config, $value, $barcode, [
+            'shift' => 'count_shift_0',
+            'total' => 'count_total_0',
+            'order' => 'count_order_0',
+            'time_0' => 'time_00',
+            'time_1' => 'time_10',
+            'function_model' => $config->function_model_0,
+            'sendFunction' => 'sendMqttValue0',
+        ]);
     }
     
-    
-
-    /**
-     * Process the sensor data with model 1.
-     *
-     * @param \App\Models\Sensor $config Sensor configuration
-     * @param string $value Sensor value (0 or 1)
-     * @return void
-     */
     private function process1Model($config, $value, $barcode)
     {
-        // Validar el campo order_notice
-        if (!$barcode || !$barcode->order_notice) {
-            Log::warning("El campo order_notice está vacío o no se encontró el barcode ID: {$barcode->id}");
-            $orderId = $valuePerPackage = $productName = $unitsPerBox = $totalPerBox = "0";
-        } else {
-            // Decodificar el JSON y extraer valores
-            $orderNotice = json_decode($barcode->order_notice, true);
+        $this->processModelFinal($config, $value, $barcode, [
+            'shift' => 'count_shift_1',
+            'total' => 'count_total_1',
+            'order' => 'count_order_1',
+            'time_0' => 'time_01',
+            'time_1' => 'time_11',
+            'function_model' => $config->function_model_1,
+            'sendFunction' => 'sendMqttValue1',
+        ]);
+    }
     
-            $orderId = $orderNotice['orderId'] ?? "0";
-            $valuePerPackage = $orderNotice['refer']['value'] ?? "0";
-            $productName = $orderNotice['refer']['groupLevel'][0]['id'] ?? "0";
-            $unitsPerBox = $orderNotice['refer']['groupLevel'][0]['uds'] ?? "0";
-            $totalPerBox = $orderNotice['refer']['groupLevel'][0]['total'] ?? "0";
+    private function processModelFinal($config, $value, $barcode, $modelConfig)
+    {
+        // Decodificar y extraer valores del JSON almacenado en order_notice
+        $orderNotice = $barcode && $barcode->order_notice ? json_decode($barcode->order_notice, true) : [];
+        $orderId = $orderNotice['orderId'] ?? '0';
+        $productName = $orderNotice['refer']['groupLevel'][0]['id'] ?? '0';
     
-            // Log para depuración de valores extraídos
-            Log::debug("Valores extraídos del JSON: OrderId: $orderId, ValuePerPackage: $valuePerPackage, ProductName: $productName");
-        }
-    
-        // Incrementar contadores dentro de una transacción
+        // Incrementar los contadores
         try {
-            DB::transaction(function () use ($config) {
-                $config->increment('count_shift_1');
-                $config->increment('count_total_1');
-                $config->increment('count_order_1');
-            });
-            Log::info("Contadores incrementados correctamente.");
+            $config->increment($modelConfig['shift']);
+            $config->increment($modelConfig['total']);
+            $config->increment($modelConfig['order']);
+            Log::info("Contadores incrementados correctamente para el modelo.");
         } catch (\Exception $e) {
             Log::error("Error al incrementar los contadores: " . $e->getMessage());
             return;
         }
     
-        // Calcular time_11 y time_01 en una única consulta
+        // Calcular tiempos
         try {
-            $previousEntries = SensorCount::where('sensor_id', $config->id)
-                ->whereIn('value', [0, 1])
-                ->orderBy('created_at', 'desc')
-                ->get();
-    
-            $previousEntry1 = $previousEntries->firstWhere('value', 1);
-            $previousEntry0 = $previousEntries->firstWhere('value', 0);
-    
-            $defaultTime = 300;
-            $time_11 = $previousEntry1 ? now()->diffInSeconds($previousEntry1->created_at) : $defaultTime;
-            $time_01 = $previousEntry0 ? now()->diffInSeconds($previousEntry0->created_at) : $defaultTime;
-    
-            Log::debug("Valores calculados: time_11: $time_11, time_01: $time_01");
+            $previousEntry0 = $this->getLastEntryByValue($config->id, 0);
+            $previousEntry1 = $this->getLastEntryByValue($config->id, 1);
+
+            $time_0 = $previousEntry0 ? now()->diffInSeconds($previousEntry0->created_at) : 300;
+            $time_1 = $previousEntry1 ? now()->diffInSeconds($previousEntry1->created_at) : 300;
+
+            Log::debug("Tiempos calculados: {$modelConfig['time_0']}: $time_0, {$modelConfig['time_1']}: $time_1");
         } catch (\Exception $e) {
             Log::error("Error al calcular los tiempos: " . $e->getMessage());
             return;
         }
-    
-        // Insertar el nuevo registro en la tabla sensor_counts
+
+        // Insertar en la tabla sensor_counts
         try {
             SensorCount::create([
                 'name' => $config->name,
@@ -396,136 +300,116 @@ class SensorController extends Controller
                 'production_line_id' => $config->production_line_id,
                 'model_product' => $productName,
                 'orderId' => $orderId,
-                'count_total_1' => $config->count_total_1,
-                'count_shift_1' => $config->count_shift_1,
-                'count_order_1' => $config->count_order_1,
-                'time_11' => $time_11,
-                'time_01' => $time_01,
-                'unic_code_order' => $config->unic_code_order,
+                $modelConfig['total'] => $config->{$modelConfig['total']},
+                $modelConfig['shift'] => $config->{$modelConfig['shift']},
+                $modelConfig['order'] => $config->{$modelConfig['order']},
+                $modelConfig['time_0'] => $time_0,
+                $modelConfig['time_1'] => $time_1,
             ]);
-            Log::info("Registro insertado en sensor_counts correctamente.");
+    
+            Log::info("Registro insertado correctamente en sensor_counts.");
         } catch (\Exception $e) {
             Log::error("Error al insertar en sensor_counts: " . $e->getMessage());
         }
     
-        // Determinar la función a ejecutar basada en function_model_1
-        try {
-            switch ($config->function_model_1) {
-                case 'none':
-                    $this->none($config, $value);
-                    break;
-                case 'sendMqttValue1':
-                    $this->sendMqttValue($config, $value, 1);
-                    break;
-                default:
-                    Log::warning("Función desconocida: {$config->function_model_1}");
-                    break;
-            }
-        } catch (\Exception $e) {
-            Log::error("Error al ejecutar la función dinámica: " . $e->getMessage());
+        // Determinar la función a ejecutar basada en el modelo
+        switch ($modelConfig['function_model']) {
+            case 'none':
+                $this->none($config, $value);
+                break;
+            case $modelConfig['sendFunction']:
+                $this->{$modelConfig['sendFunction']}($config, $value);
+                break;
+            default:
+                Log::warning("Función desconocida: {$modelConfig['function_model']}");
+                break;
         }
     }
     
+    private function getLastEntryByValue($sensorId, $value)
+    {
+        return SensorCount::where('sensor_id', $sensorId)
+            ->where('value', $value)
+            ->orderBy('created_at', 'desc')
+            ->limit(1)
+            ->first();
+    }
 
+    
     private function none($config, $value)
     {
         // No hace nada, función placeholder
     }
-    /**
-     * Envía mensajes MQTT basados en el tipo y valor del sensor.
-     *
-     * @param \App\Models\Sensor $config Configuración del sensor.
-     * @param mixed $value Valor recibido del sensor.
-     * @param int $type Tipo de procesamiento (0 o 1).
-     */
-    private function sendMqttValue($config, $value, $type)
+
+    private function sendMqttValue0($config, $value)
     {
-        // Determinar el estado según el tipo y el valor del sensor.
-        $status = $this->determineStatus($value, $type, $config);
-
-        // Construir los mensajes JSON para enviar.
-        $messages = [
-            'order' => $this->createMqttMessage($config->{'count_order_' . $type}, $status),
-            'total' => $this->createMqttMessage($config->{'count_total_' . $type}, $status),
-            'shift' => $this->createMqttMessage($config->{'count_shift_' . $type}, $status),
-        ];
-
-        // Intentar publicar los mensajes MQTT utilizando el método existente.
-        try {
-            // Publica el mensaje del contador total en el tópico correspondiente.
-            $this->publishMqttMessage("{$config->mqtt_topic_1}/infinite_counter", $messages['total']);
-
-            // Publica el mensaje del contador de órdenes en el tópico principal.
-            $this->publishMqttMessage($config->mqtt_topic_1, $messages['order']);
-
-            // Registrar en el log que los mensajes fueron publicados correctamente.
-            Log::info("Mensajes MQTT publicados correctamente para tipo {$type}: {$messages['order']}");
-        } catch (\Exception $e) {
-            // En caso de error, registrar el mensaje de error en el log.
-            Log::error("Error publicando mensajes MQTT: " . $e->getMessage());
-        }
+        // Determinar el estado según el valor recibido
+        $status = ($value === 1 || $value === "1") ? 2 : 0; // 2: buen estado, 0: parada
+    
+        // Crear mensajes JSON y publicar a MQTT
+        $this->sendMqttMessages($config, $status, 'count_order_0', 'count_total_0', 'count_shift_0');
     }
-
-    /**
-     * Determina el estado basado en el tipo y la configuración del sensor.
-     *
-     * @param mixed $value Valor recibido del sensor.
-     * @param int $type Tipo de procesamiento (0 o 1).
-     * @param \App\Models\Sensor $config Configuración del sensor.
-     * @return int Estado calculado (0, 1, 2, o 3).
-     */
-    private function determineStatus($value, $type, $config)
+    
+    private function sendMqttValue1($config, $value)
     {
-        if ($type === 0) {
-            // Para tipo 0, el estado se basa directamente en el valor recibido.
-            return ($value === 1 || $value === "1") ? 2 : 0;
-        }
-
-        if ($type === 1) {
-            // Para tipo 1, se necesita calcular el estado basado en el tiempo transcurrido.
-            // Obtener el último valor de time_11 desde sensor_counts.
-            $lastTime = SensorCount::where('sensor_id', $config->id)
-                ->where('value', 1)
-                ->orderBy('created_at', 'desc')
-                ->value('time_11');
-
-            // Verificar si lastTime es numérico.
-            if (is_numeric($lastTime)) {
-                if ($lastTime <= $config->optimal_production_time) {
-                    // Si el tiempo es menor o igual al tiempo óptimo, buen estado.
-                    return 2; // Buen estado.
-                } elseif ($lastTime <= $config->optimal_production_time * $config->reduced_speed_time_multiplier) {
-                    // Si el tiempo está dentro del multiplicador de velocidad reducida, estado de velocidad reducida.
-                    return 1; // Velocidad reducida.
-                }
-            }
-            // Si no cumple ninguna condición anterior, se considera parada.
-            return 0; // Parada.
-        }
-
-        // Si el tipo no es 0 ni 1, se retorna 'sin datos'.
-        return 3; // Sin datos.
+        // Obtener el último valor de time_11 desde la tabla sensor_counts
+        $lastTime = SensorCount::where('sensor_id', $config->id)
+            ->where('value', 1)
+            ->orderBy('created_at', 'desc')
+            ->value('time_11');
+    
+        // Determinar el estado basado en tiempos
+        $optimalTime = $config->optimal_production_time;
+        $reducedSpeedMultiplier = $config->reduced_speed_time_multiplier;
+        $status = $this->determineStatus($lastTime, $optimalTime, $reducedSpeedMultiplier);
+    
+        // Crear mensajes JSON y publicar a MQTT
+        $this->sendMqttMessages($config, $status, 'count_order_1', 'count_total_1', 'count_shift_1');
     }
-
-    /**
-     * Crea un mensaje JSON para enviar a través de MQTT.
-     *
-     * @param int $value Valor del contador a enviar.
-     * @param int $status Estado calculado para el mensaje.
-     * @return string Mensaje JSON listo para enviar.
-     */
-    private function createMqttMessage($value, $status)
+    
+    private function sendMqttMessages($config, $status, $orderCountKey, $totalCountKey, $shiftCountKey)
     {
-        // Construir el mensaje como un arreglo asociativo y convertirlo a JSON.
-        return json_encode([
-            'value' => $value,
+        // Crear los mensajes JSON
+        $processedMessage = json_encode([
+            'value' => $config->{$orderCountKey},
             'status' => $status,
         ]);
+    
+        $processedMessageTotal = json_encode([
+            'value' => $config->{$totalCountKey},
+            'status' => $status,
+        ]);
+    
+        $processedMessageTotalShift = json_encode([
+            'value' => $config->{$shiftCountKey},
+            'status' => $status,
+        ]);
+    
+        // Publicar los mensajes a través de MQTT
+        $this->publishMqttMessage($config->mqtt_topic_1 . '/infinite_counter', $processedMessageTotal);
+        $this->publishMqttMessage($config->mqtt_topic_1, $processedMessage);
+    
+        Log::info("Mensaje MQTT procesado y enviado al tópico {$config->mqtt_topic_1}: {$processedMessage}");
     }
-
-        
-
-
+    
+    private function determineStatus($lastTime, $optimalTime, $reducedSpeedMultiplier)
+    {
+        // Determinar el estado según los tiempos
+        if (!is_numeric($lastTime)) {
+            return 3; // Sin datos
+        }
+    
+        if ($lastTime <= $optimalTime) {
+            return 2; // Buen estado
+        }
+    
+        if ($lastTime <= $optimalTime * $reducedSpeedMultiplier) {
+            return 1; // Velocidad reducida
+        }
+    
+        return 0; // Parada
+    }
+    
     private function publishMqttMessage($topic, $message)
     {
        try {
