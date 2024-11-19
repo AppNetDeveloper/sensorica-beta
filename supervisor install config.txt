@@ -11,3 +11,6 @@ sudo supervisorctl start laravel-modbus-subscriber
 sudo supervisorctl start laravel-mqtt-subscriber
 sudo supervisorctl restart laravel-modbus-subscriber:*
 sudo supervisorctl restart laravel-mqtt-subscriber:*
+
+
+./vendor/bin/openapi ./app/Http/Controllers > ./public/docs/api-docs.json

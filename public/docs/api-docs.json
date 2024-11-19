@@ -1,0 +1,1117 @@
+openapi: 3.0.0
+info:
+  title: 'Boisolo Api'
+  description: 'This is a sample API documentation'
+  contact:
+    email: dev@boisolo.com
+  license:
+    name: 'Apache 2.0'
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+  version: 1.0.0
+paths:
+  /api/barcode:
+    post:
+      tags:
+        - Barcode
+      summary: 'Process barcode actions'
+      operationId: c9c30919385e9fad2379fa4c0659a51d
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                barcoder:
+                  type: string
+                token:
+                  type: string
+                machine_id:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'Comprobación exitosa'
+          content:
+            application/json:
+              schema:
+                properties:
+                  comando: { type: object }
+                  status: { type: string }
+                  message: { type: string }
+                  barcode: { type: string }
+                  token: { type: string }
+                  machineId: { type: string }
+                  mqttTopicBarcodes: { type: string }
+                  mqttTopicOrders: { type: string }
+                  mqttTopicFinish: { type: string }
+                  mqttTopicPause: { type: string }
+                  opeId: { type: string }
+                  orderNotice: { type: string }
+                  lastBarcode: { type: string }
+                type: object
+        '400':
+          description: 'Proceso interrumpido: machine_id inválido'
+          content:
+            application/json:
+              schema:
+                properties:
+                  status: { type: string }
+                  message: { type: string }
+                type: object
+        '401':
+          description: 'Proceso interrumpido: token inválido'
+          content:
+            application/json:
+              schema:
+                properties:
+                  status: { type: string }
+                  message: { type: string }
+                type: object
+  '/api/order-notice/{token}':
+    get:
+      tags:
+        - 'Order Notice'
+      summary: 'Obtener el order_notice por token (GET)'
+      description: 'Retorna el JSON almacenado en order_notice para el token especificado.'
+      operationId: getOrderNoticeByTokenGet
+      parameters:
+        -
+          name: token
+          in: path
+          description: 'El token del código de barras'
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 'Operación exitosa'
+          content:
+            application/json:
+              schema:
+                properties:
+                  order_notice: { description: 'El contenido de order_notice en formato JSON', type: object }
+                type: object
+        '404':
+          description: 'Token no encontrado'
+  /api/order-notice:
+    post:
+      tags:
+        - 'Order Notice'
+      summary: 'Obtener el order_notice por token (POST)'
+      description: 'Retorna el JSON almacenado en order_notice para el token especificado en el cuerpo de la solicitud.'
+      operationId: getOrderNoticeByTokenPost
+      requestBody:
+        description: 'El token del código de barras'
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'Operación exitosa'
+          content:
+            application/json:
+              schema:
+                properties:
+                  order_notice: { description: 'El contenido de order_notice en formato JSON', type: object }
+                type: object
+        '404':
+          description: 'Token no encontrado'
+  '/api/barcode-info/{token}':
+    get:
+      tags:
+        - 'Barcode Info'
+      summary: 'Obtener información del código de barras por token (GET)'
+      description: 'Retorna machine_id, ope_id y last_barcode para el token especificado.'
+      operationId: getBarcodeInfoByTokenGet
+      parameters:
+        -
+          name: token
+          in: path
+          description: 'El token del código de barras'
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 'Operación exitosa'
+          content:
+            application/json:
+              schema:
+                properties:
+                  machine_id: { description: 'El ID de la máquina', type: string }
+                  ope_id: { description: 'El ID del operador', type: string }
+                  last_barcode: { description: 'El último código de barras escaneado', type: string }
+                type: object
+        '404':
+          description: 'Token no encontrado'
+  /api/barcode-info:
+    post:
+      tags:
+        - 'Barcode Info'
+      summary: 'Obtener información del código de barras por token (POST)'
+      description: 'Retorna machine_id, ope_id y last_barcode para el token especificado en el cuerpo de la solicitud.'
+      operationId: getBarcodeInfoByTokenPost
+      requestBody:
+        description: 'El token del código de barras'
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'Operación exitosa'
+          content:
+            application/json:
+              schema:
+                properties:
+                  machine_id: { description: 'El ID de la máquina', type: string }
+                  ope_id: { description: 'El ID del operador', type: string }
+                  last_barcode: { description: 'El último código de barras escaneado', type: string }
+                type: object
+        '404':
+          description: 'Token no encontrado'
+  '/api/control-weight/{token}':
+    get:
+      tags:
+        - 'Control Weight'
+      summary: 'Get latest control weight data by token'
+      operationId: 62ca68f0bb006dadd9d78f0f60d901e8
+      parameters:
+        -
+          name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 'Successful response'
+          content:
+            application/json:
+              schema:
+                properties:
+                  name: { type: string }
+                  gross_weight: { type: number }
+                  dimension: { type: string }
+                  box_number: { type: integer }
+                  last_control_weight: { type: number }
+                  last_dimension: { type: number }
+                  last_box_number: { type: integer }
+                  last_barcoder: { type: string }
+                type: object
+        '404':
+          description: 'Modbus not found'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string }
+                type: object
+  '/api/control-weights/{token}/all':
+    get:
+      tags:
+        - 'Control Weight'
+      summary: 'Get all control weight data by token'
+      operationId: ccf627f712de5ef777b163e0cf9eeddc
+      parameters:
+        -
+          name: token
+          in: path
+          required: true
+          schema:
+            type: string
+        -
+          name: start_date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        -
+          name: end_date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: 'Successful response'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  properties: { last_control_weight: { type: number }, last_dimension: { type: number }, last_box_number: { type: integer }, last_barcoder: { type: string }, last_final_barcoder: { type: string }, created_at: { type: string, format: date-time } }
+                  type: object
+        '404':
+          description: 'Modbus not found'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string }
+                type: object
+  '/api/production-lines/{customerToken}':
+    get:
+      tags:
+        - 'Production Lines'
+      summary: 'Obtener líneas de producción por token de cliente (GET)'
+      description: 'Retorna los tokens y nombres de las líneas de producción asociadas al cliente.'
+      operationId: getProductionLinesByCustomerTokenGet
+      parameters:
+        -
+          name: customerToken
+          in: path
+          description: 'El token del cliente'
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 'Operación exitosa'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  properties: { name: { description: 'Nombre de la línea de producción', type: string }, token: { description: 'Token de la línea de producción', type: string } }
+                  type: object
+        '404':
+          description: 'Cliente no encontrado'
+  /api/production-lines:
+    post:
+      tags:
+        - 'Production Lines'
+      summary: 'Obtener líneas de producción por token de cliente (POST)'
+      description: 'Retorna los tokens y nombres de las líneas de producción asociadas al cliente.'
+      operationId: getProductionLinesByCustomerTokenPost
+      requestBody:
+        description: 'El token del cliente'
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                customerToken:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'Operación exitosa'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  properties: { name: { description: 'Nombre de la línea de producción', type: string }, token: { description: 'Token de la línea de producción', type: string } }
+                  type: object
+        '404':
+          description: 'Cliente no encontrado'
+  '/api/modbus-info/{customerToken}':
+    get:
+      tags:
+        - 'Modbus Info'
+      summary: 'Obtener información de Modbuses por token de cliente (GET)'
+      description: 'Retorna los nombres y tokens de los Modbuses asociados al cliente.'
+      operationId: getModbusInfoByCustomerTokenGet
+      parameters:
+        -
+          name: customerToken
+          in: path
+          description: 'El token del cliente'
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 'Operación exitosa'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  properties: { name: { description: 'Nombre del Modbus', type: string }, token: { description: 'Token del Modbus', type: string } }
+                  type: object
+        '404':
+          description: 'Cliente no encontrado'
+  /api/modbus-info:
+    post:
+      tags:
+        - 'Modbus Info'
+      summary: 'Obtener información de Modbuses por token de cliente (POST)'
+      description: 'Retorna los nombres y tokens de los Modbuses asociados al cliente.'
+      operationId: getModbusInfoByCustomerTokenPost
+      requestBody:
+        description: 'El token del cliente'
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                customerToken:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'Operación exitosa'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  properties: { name: { description: 'Nombre del Modbus', type: string }, token: { description: 'Token del Modbus', type: string } }
+                  type: object
+        '404':
+          description: 'Cliente no encontrado'
+  '/api/barcode-info-by-customer/{customerToken}':
+    get:
+      tags:
+        - 'Barcode Info'
+      summary: 'Obtener información de códigos de barras por token de cliente (GET)'
+      description: 'Retorna los nombres y tokens de los códigos de barras asociados al cliente.'
+      operationId: getBarcodeInfoByCustomerTokenGet
+      parameters:
+        -
+          name: customerToken
+          in: path
+          description: 'El token del cliente'
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 'Operación exitosa'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  properties: { name: { description: 'Nombre del código de barras', type: string }, token: { description: 'Token del código de barras', type: string } }
+                  type: object
+        '404':
+          description: 'Cliente no encontrado'
+  /api/barcode-info-by-customer:
+    post:
+      tags:
+        - 'Barcode Info'
+      summary: 'Obtener información de códigos de barras por token de cliente (POST)'
+      description: 'Retorna los nombres y tokens de los códigos de barras asociados al cliente.'
+      operationId: getBarcodeInfoByCustomerTokenPost
+      requestBody:
+        description: 'El token del cliente'
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                customerToken:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'Operación exitosa'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  properties: { name: { description: 'Nombre del código de barras', type: string }, token: { description: 'Token del código de barras', type: string } }
+                  type: object
+        '404':
+          description: 'Cliente no encontrado'
+  /api/modbuses:
+    get:
+      tags:
+        - Modbus
+      summary: 'Get modbuses by customer token'
+      operationId: 6646650bb8da49bee7e1fc2223f0082e
+      parameters:
+        -
+          name: token
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 'Successful response'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  properties: { name: { type: string }, token: { type: string } }
+                  type: object
+        '400':
+          description: 'Token not provided'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string }
+                type: object
+        '404':
+          description: 'Invalid token'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string }
+                type: object
+  /api/modbus/send:
+    post:
+      tags:
+        - Modbus
+      summary: 'Send dosage value via MQTT'
+      operationId: af996aff13c7777fe17ac7a1bcc3b19a
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                tolvaId:
+                  type: integer
+                token:
+                  type: string
+                value:
+                  type: integer
+              type: object
+      responses:
+        '200':
+          description: 'Successful response'
+          content:
+            application/json:
+              schema:
+                properties:
+                  message: { type: string }
+                type: object
+        '400':
+          description: 'Token not provided'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string }
+                type: object
+        '404':
+          description: 'Invalid token'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string }
+                type: object
+  /api/order-stats/last:
+    post:
+      tags:
+        - OrderStats
+      summary: 'Obtener la última estadística de un pedido'
+      description: 'Retorna la última estadística de pedidos para una línea de producción usando un token.'
+      operationId: ee47f14473643b8ecb7469ddd308a775
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                token:
+                  type: string
+                  example: some-production-line-token
+                production_line_id:
+                  type: integer
+                  example: 1
+                order_id:
+                  type: string
+                  example: ORD12345
+                units:
+                  type: integer
+                  example: 100
+                box:
+                  type: integer
+                  example: 10
+                units_box:
+                  type: integer
+                  example: 50
+              type: object
+      responses:
+        '200':
+          description: 'Última estadística de pedido obtenida exitosamente'
+          content:
+            application/json:
+              schema:
+                properties:
+                  id: { type: integer, example: 1 }
+                  production_line_name: { type: string, example: 'Linea 1' }
+                  order_id: { type: string, example: ORD12345 }
+                  units: { type: integer, example: 100 }
+                  created_at: { type: string, example: '2024-10-15 14:35:12' }
+                type: object
+        '400':
+          description: 'Token es requerido'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string, example: 'Token is required' }
+                type: object
+        '404':
+          description: 'Línea de producción no encontrada'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string, example: 'Production line not found' }
+                type: object
+  /api/order-stats/between-dates:
+    post:
+      tags:
+        - OrderStats
+      summary: 'Obtener estadísticas de pedidos entre fechas'
+      description: 'Obtiene estadísticas de pedidos entre dos fechas dadas para una línea de producción específica, utilizando el token de la línea.'
+      operationId: 89d56fec7821f1729d93f47db5a82eee
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                token:
+                  type: string
+                  example: some-production-line-token
+                start_date:
+                  type: string
+                  example: '2024-10-01'
+                end_date:
+                  type: string
+                  example: '2024-10-20'
+              type: object
+      responses:
+        '200':
+          description: 'Estadísticas de pedidos entre fechas obtenidas exitosamente'
+          content:
+            application/json:
+              schema:
+                properties:
+                  production_line_name: { type: string, example: 'Linea 1' }
+                  order_id: { type: string, example: ORD12345 }
+                  units: { type: integer, example: 100 }
+                  created_at: { type: string, example: '2024-10-15 14:35:12' }
+                type: object
+        '404':
+          description: 'Línea de producción no encontrada o sin estadísticas'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string, example: 'Production line not found or no order stats found for the specified dates' }
+                type: object
+  '/api/sensors/{token}':
+    get:
+      tags:
+        - Sensores
+      summary: 'Obtener datos del sensor por token'
+      operationId: f5faa6b35d2bdbf9c74ca13977f9b46b
+      parameters:
+        -
+          name: token
+          in: path
+          description: 'Token del sensor'
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 'Datos del sensor obtenidos correctamente'
+          content:
+            application/json:
+              schema:
+                properties:
+                  id: { type: integer, example: 1 }
+                  name: { type: string, example: 'Sensor 1' }
+                  sensor_type: { type: integer, example: 0 }
+                  mqtt_topic_sensor: { type: string, example: sensor/topic/1 }
+                  count_total: { type: integer, example: 100 }
+                  token: { type: string, example: abc123 }
+                type: object
+        '404':
+          description: 'Sensor no encontrado'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string, example: 'Sensor not found' }
+                type: object
+  /api/sensors:
+    get:
+      tags:
+        - Sensores
+      summary: 'Obtener todos los sensores'
+      description: 'Obtiene una lista de todos los sensores, agrupados por línea de producción.'
+      operationId: 87a4f9259e66573c0b9ab249788f09ab
+      responses:
+        '200':
+          description: 'Lista de sensores'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  properties: { id: { type: integer, example: 1 }, name: { type: string, example: 'Sensor 1' }, value: { type: integer, example: 0 }, production_line: { properties: { id: { type: integer, example: 1 }, name: { type: string, example: 'Línea 1' } }, type: object } }
+                  type: object
+  /api/sensors/insert:
+    post:
+      tags:
+        - Sensores
+      summary: 'Insertar datos del sensor'
+      description: 'Inserta datos en el sensor, verificando si necesita invertir el valor según su configuración.'
+      operationId: b588a760b55c4b906e3abed7ad38cca1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                value:
+                  type: integer
+                  example: 1
+                sensor:
+                  type: string
+                  example: sensor/topic
+              type: object
+      responses:
+        '200':
+          description: 'Datos procesados correctamente'
+          content:
+            application/json:
+              schema:
+                properties:
+                  message: { type: string, example: 'Datos procesados correctamente' }
+                  sensor: { type: string, example: 'Sensor 1' }
+                type: object
+        '404':
+          description: 'Sensor no encontrado'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string, example: 'Sensor no encontrado' }
+                type: object
+  /api/queue-print:
+    get:
+      tags:
+        - Queue
+      summary: 'Store a value in the print queue (GET)'
+      operationId: c2eb497c63f8619c2b9616a1e91d749e
+      parameters:
+        -
+          name: token
+          in: query
+          required: true
+          schema:
+            type: string
+        -
+          name: value
+          in: query
+          required: true
+          schema:
+            type: string
+        -
+          name: url_back
+          in: query
+          required: true
+          schema:
+            type: string
+            format: url
+        -
+          name: token_back
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 'Valor agregado a la cola de impresión'
+          content:
+            application/json:
+              schema:
+                properties:
+                  message: { type: string }
+                type: object
+        '400':
+          description: 'Token not provided'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string }
+                type: object
+        '401':
+          description: 'Token inválido'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string }
+                type: object
+        '422':
+          description: 'Datos inválidos'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string }
+                type: object
+        '500':
+          description: 'Error interno del servidor'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string }
+                type: object
+    post:
+      tags:
+        - Queue
+      summary: 'Store a value in the print queue (POST)'
+      operationId: 09e7517a2f89716553160b6317ce872c
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                token:
+                  type: string
+                value:
+                  type: string
+                url_back:
+                  type: string
+                  format: url
+                token_back:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'Valor agregado a la cola de impresión'
+          content:
+            application/json:
+              schema:
+                properties:
+                  message: { type: string }
+                type: object
+        '400':
+          description: 'Token not provided'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string }
+                type: object
+        '401':
+          description: 'Token inválido'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string }
+                type: object
+        '422':
+          description: 'Datos inválidos'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string }
+                type: object
+        '500':
+          description: 'Error interno del servidor'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string }
+                type: object
+  /api/queue-print-list:
+    get:
+      tags:
+        - Queue
+      summary: 'Get a list of print queue items'
+      operationId: 70db0a363dcec6beeee8e5353f7bc943
+      parameters:
+        -
+          name: token
+          in: query
+          required: true
+          schema:
+            type: string
+        -
+          name: used
+          in: query
+          description: '0: only unused, 1: only used, all: all items'
+          required: true
+          schema:
+            type: string
+            enum:
+              - '0'
+              - '1'
+              - all
+      responses:
+        '200':
+          description: 'Listado de la cola de impresión'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  properties: { id: { type: integer }, modbus_id: { type: integer }, value: { type: string }, used: { type: boolean }, url_back: { type: string }, token_back: { type: string }, created_at: { type: string, format: date-time }, updated_at: { type: string, format: date-time } }
+                  type: object
+        '401':
+          description: 'Token inválido'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string }
+                type: object
+        '500':
+          description: 'Error interno del servidor'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string }
+                type: object
+  /api/ip-zerotier:
+    post:
+      tags:
+        - Barcode
+      summary: 'Update the ZeroTier IP address for a barcode'
+      operationId: 82cbd58107a2a5978641ce86344356ad
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                token:
+                  type: string
+                ipZerotier:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'ipZerotier updated successfully'
+          content:
+            application/json:
+              schema:
+                properties:
+                  status: { type: string }
+                  message: { type: string }
+                type: object
+        '400':
+          description: 'Token and ipZerotier are required'
+          content:
+            application/json:
+              schema:
+                properties:
+                  status: { type: string }
+                  message: { type: string }
+                type: object
+        '404':
+          description: 'Invalid token'
+          content:
+            application/json:
+              schema:
+                properties:
+                  status: { type: string }
+                  message: { type: string }
+                type: object
+  /api/operators/update-or-insert:
+    post:
+      tags:
+        - Workers
+      summary: 'Update or insert a single worker'
+      operationId: 30679e67ea159788ab82f5bb1531f69e
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                id:
+                  description: 'Client ID'
+                  type: integer
+                name:
+                  description: 'Worker name'
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'Worker updated or inserted successfully'
+          content:
+            application/json:
+              schema:
+                properties:
+                  message: { type: string }
+                type: object
+        '422':
+          description: 'Validation error'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string }
+                type: object
+  /api/operators/replace-all:
+    post:
+      tags:
+        - Workers
+      summary: 'Replace all Workers'
+      operationId: 7c9f998a02550d7026df15b8c78e7f96
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                properties:
+                  id: { description: 'Client ID', type: integer }
+                  name: { description: 'Workers name', type: string }
+                type: object
+      responses:
+        '200':
+          description: 'All workers replaced successfully'
+          content:
+            application/json:
+              schema:
+                properties:
+                  message: { type: string }
+                type: object
+        '422':
+          description: 'Validation error'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string }
+                type: object
+  /api/product-lists/update-or-insert:
+    post:
+      tags:
+        - 'Product Lists'
+      summary: 'Update or insert a single product list item'
+      operationId: a753256c08bc0fd1aa24bf250da69237
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                id:
+                  description: 'Client ID'
+                  type: integer
+                name:
+                  description: 'Product name'
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'Product list item updated or inserted successfully'
+          content:
+            application/json:
+              schema:
+                properties:
+                  message: { type: string }
+                type: object
+        '422':
+          description: 'Validation error'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string }
+                type: object
+  /api/product-lists/replace-all:
+    post:
+      tags:
+        - 'Product Lists'
+      summary: 'Replace all product lists'
+      operationId: 604b6c084acc732f39dee76c3047ac99
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                properties:
+                  id: { description: 'Client ID', type: integer }
+                  name: { description: 'Product name', type: string }
+                type: object
+      responses:
+        '200':
+          description: 'All product lists replaced successfully'
+          content:
+            application/json:
+              schema:
+                properties:
+                  message: { type: string }
+                type: object
+        '422':
+          description: 'Validation error'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string }
+                type: object
+tags:
+  -
+    name: Barcode
+    description: Barcode
+  -
+    name: 'Order Notice'
+    description: 'Order Notice'
+  -
+    name: 'Barcode Info'
+    description: 'Barcode Info'
+  -
+    name: 'Control Weight'
+    description: 'Control Weight'
+  -
+    name: 'Production Lines'
+    description: 'Production Lines'
+  -
+    name: 'Modbus Info'
+    description: 'Modbus Info'
+  -
+    name: Modbus
+    description: Modbus
+  -
+    name: OrderStats
+    description: OrderStats
+  -
+    name: Sensores
+    description: Sensores
+  -
+    name: Queue
+    description: Queue
+  -
+    name: Workers
+    description: Workers
+  -
+    name: 'Product Lists'
+    description: 'Product Lists'
+

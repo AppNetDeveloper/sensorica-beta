@@ -18,7 +18,8 @@ use App\Http\Controllers\Api\RfidDetailController;
 use App\Http\Controllers\Api\WhatsAppController;
 use App\Http\Controllers\Api\BluetoothDetailController;
 use App\Http\Controllers\Api\SystemController;
-
+use App\Http\Controllers\Api\OperatorController;
+use App\Http\Controllers\Api\ProductListController;
 
 /*
 |--------------------------------------------------------------------------
@@ -124,6 +125,13 @@ Route::get('/server-stats', [SystemController::class, 'getServerStats']);
 Route::post('/restart-supervisor', [SystemController::class, 'restartSupervisor']);
 Route::post('/run-update', [SystemController::class, 'runUpdateScript']);
 
+// Routes for Operators
+Route::post('/operators/update-or-insert', [OperatorController::class, 'updateOrInsertSingle']);
+Route::post('/operators/replace-all', [OperatorController::class, 'replaceAll']);
+
+// Routes for Product Lists
+Route::post('/product-lists/update-or-insert', [ProductListController::class, 'updateOrInsertSingle']);
+Route::post('/product-lists/replace-all', [ProductListController::class, 'replaceAll']);
 
 Route::middleware('auth:api')->get('/user', function (Request $request) {
     return $request->user();
