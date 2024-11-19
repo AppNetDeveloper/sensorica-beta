@@ -3,14 +3,12 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use App\Models\Sensor;
 use App\Models\DowntimeSensor;
 use App\Models\MqttSendServer1;
 use App\Models\MqttSendServer2;
 use App\Models\SensorCount;
-//anadir log
 use Illuminate\Support\Facades\Log;
 
 class CalculateProductionDowntime extends Command

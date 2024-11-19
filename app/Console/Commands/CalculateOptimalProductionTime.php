@@ -112,7 +112,7 @@ class CalculateOptimalProductionTime extends Command
 
             // Esperar 1 minutos antes de volver a ejecutar la lógica
             $this->info("Waiting for 1 minutes before the next run...");
-            sleep(60); // Pausar 60 segundos (1 minutos)
+            sleep(600); // Pausar 10 minutos
         }
 
         return 0;
