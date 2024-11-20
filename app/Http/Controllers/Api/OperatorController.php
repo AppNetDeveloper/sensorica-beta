@@ -10,7 +10,7 @@ class OperatorController extends Controller
 {
        /**
      * @OA\Post(
-     *     path="/api/operators/update-or-insert",
+     *     path="/api/workers/update-or-insert",
      *     summary="Update or insert a single worker",
      *     tags={"Workers"},
      *     @OA\RequestBody(
@@ -63,7 +63,7 @@ class OperatorController extends Controller
     }
         /**
      * @OA\Post(
-     *     path="/api/operators/replace-all",
+     *     path="/api/workers/replace-all",
      *     summary="Replace all Workers",
      *     tags={"Workers"},
      *     @OA\RequestBody(

@@ -937,12 +937,12 @@ paths:
                   status: { type: string }
                   message: { type: string }
                 type: object
-  /api/operators/update-or-insert:
+  /api/workers/update-or-insert:
     post:
       tags:
         - Workers
       summary: 'Update or insert a single worker'
-      operationId: 30679e67ea159788ab82f5bb1531f69e
+      operationId: 7fe81bb385eb00fa676d376b4b92d08f
       requestBody:
         required: true
         content:
@@ -973,12 +973,12 @@ paths:
                 properties:
                   error: { type: string }
                 type: object
-  /api/operators/replace-all:
+  /api/workers/replace-all:
     post:
       tags:
         - Workers
       summary: 'Replace all Workers'
-      operationId: 7c9f998a02550d7026df15b8c78e7f96
+      operationId: 413a0097ac3e84e62e64babf962f122d
       requestBody:
         required: true
         content:

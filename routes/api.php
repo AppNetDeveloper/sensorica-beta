@@ -126,8 +126,8 @@ Route::post('/restart-supervisor', [SystemController::class, 'restartSupervisor'
 Route::post('/run-update', [SystemController::class, 'runUpdateScript']);
 
 // Routes for Operators
-Route::post('/operators/update-or-insert', [OperatorController::class, 'updateOrInsertSingle']);
-Route::post('/operators/replace-all', [OperatorController::class, 'replaceAll']);
+Route::post('/workers/update-or-insert', [OperatorController::class, 'updateOrInsertSingle']);
+Route::post('/workers/replace-all', [OperatorController::class, 'replaceAll']);
 
 // Routes for Product Lists
 Route::post('/product-lists/update-or-insert', [ProductListController::class, 'updateOrInsertSingle']);
