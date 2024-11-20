@@ -122,7 +122,7 @@ class CalculateProductionMonitorOee extends Command
             $orderNotice = json_decode($barcoder->order_notice, true);
             if (isset($orderNotice['orderId'])) {
                 $orderId = $orderNotice['orderId'];
-                $this->info("OrderId extraído: {$orderId}");
+                $this->info("OrderId extraído: {$orderId} ");
 
                 // Extraer unic_code_order, optimal_production_time, y count_order_1 del sensor
                 $unicCodeOrder = $sensor->unic_code_order;

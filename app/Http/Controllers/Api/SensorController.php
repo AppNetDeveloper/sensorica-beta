@@ -300,6 +300,7 @@ class SensorController extends Controller
                 'production_line_id' => $config->production_line_id,
                 'model_product' => $productName,
                 'orderId' => $orderId,
+                'unic_code_order' => $config->unic_code_order,
                 $modelConfig['total'] => $config->{$modelConfig['total']},
                 $modelConfig['shift'] => $config->{$modelConfig['shift']},
                 $modelConfig['order'] => $config->{$modelConfig['order']},
