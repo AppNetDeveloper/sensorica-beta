@@ -228,7 +228,7 @@
     position: fixed;
     bottom: 20px;
     right: 20px;
-    background-color: #008CBA; /* Color azul */
+    background-color: #7d9ca7; /* Color azul */
     color: white;
     padding: 15px;
     border: none;
@@ -238,7 +238,7 @@
   }
 
   #botonRefrescar:hover {
-    background-color: #005f73; /* Azul más oscuro al pasar el ratón */
+    background-color: #a7c6cc; /* Azul más oscuro al pasar el ratón */
   }
 
 
@@ -255,14 +255,78 @@
       background-color: #3085d6;
       border-radius: 10px;
     }
+  /* Icono de estado limpio y sin cuadro */
+  #comunicacionStatus {
+    display: flex; /* Flex para alinear icono y texto */
+    align-items: center; /* Centrar verticalmente */
+    margin-left: 15px; /* Separación del logo */
+    font-size: 1.2em; /* Tamaño de texto */
+    color: #deebe1; /* Color verde para texto e ícono */
+    background: none; /* Sin fondo */
+    border: none; /* Sin bordes */
+    box-shadow: none; /* Sin sombra */
+  }
 
-  
+  #comunicacionStatus i {
+    font-size: 3em; /* Tamaño del ícono */
+    margin-right: 10px; /* Espacio entre ícono y texto */
+  }
+
+  /* Estilos para diferentes estados */
+  .status-ok {
+    color: #5cda79; /* Verde */
+  }
+
+  .status-warning {
+    color: #ffc107; /* Amarillo */
+  }
+
+  .status-error {
+    color: #d10c20; /* Rojo */
+  }
+
+
+
+  .power-container {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end; /* Alinear el botón a la derecha */
+  }
+
+  .shutdown-btn {
+    background-color: transparent;
+    border: none;
+    color: #ff4c4c; /* Rojo para el ícono */
+    font-size: 3em; /* Tamaño del ícono */
+    cursor: pointer;
+    transition: transform 0.3s ease, color 0.3s ease;
+  }
+
+  .shutdown-btn:hover {
+    transform: scale(1.2); /* Efecto de agrandamiento */
+    color: #e60000; /* Rojo más oscuro al pasar el cursor */
+  }
+
+  .shutdown-btn:focus {
+    outline: none;
+  }
 
   </style>
 </head>
 <body>
   <header class="d-flex justify-content-between align-items-center">
     <img src="logo.png" alt="Logo" class="logo">
+    <!-- Barra de estado de comunicación -->
+    <div id="comunicacionStatus" class="status-ok" onclick="mostrarMensajeEstado()" style="cursor: pointer;">
+      <i class="fas fa-thumbs-up"></i>
+      <span>Buscando Comunicacion</span>
+    </div>
+    <div class="power-container">
+      <button id="shutdownButton" class="shutdown-btn" onclick="mostrarOpcionesSistema()">
+        <i class="fas fa-power-off"></i>
+      </button>
+    </div>
+
     <div class="time-container">
       <div class="time" id="timeDisplay">02:33:21</div>
       <div id="scaleName" class="center-name">Client Name</div>
@@ -280,6 +344,210 @@
     </div>
   </main>
   <script>
+    // Función para cargar el estado de comunicación
+    let estadoActual = 'Buscando Comunicación'; // Variable global para almacenar el estado actual
+
+// Función para cargar el estado de comunicación
+async function cargarEstadoComunicacion() {
+  try {
+    // Llamar a la API con el token
+    const response = await fetch(`/api/production-line/status/${token}`);
+    const data = await response.json();
+
+    // Verificar si hay un error en la respuesta
+    if (!data.monitor_connections || data.monitor_connections.length === 0) {
+      estadoActual = 'No se encontraron conexiones de monitor.';
+      actualizarEstado('error', 'fas fa-exclamation-triangle', estadoActual);
+      return;
+    }
+
+    // Obtener el estado desde el JSON
+    const lastStatus = data.monitor_connections[0]?.last_status || 'Desconocido';
+
+    // Actualizar el estado
+    if (lastStatus.toLowerCase() === 'ok') {
+      estadoActual = 'Comunicación funcionando en parámetros normales.';
+      actualizarEstado('success', 'fas fa-thumbs-up', '');
+    } else {
+      estadoActual = `Estado de comunicación: ${lastStatus}`;
+      actualizarEstado('warning', 'fas fa-exclamation-circle', lastStatus);
+    }
+  } catch (error) {
+    console.error('Error al cargar el estado de comunicación:', error);
+    estadoActual = 'Error al cargar el estado de comunicación.';
+    actualizarEstado('error', 'fas fa-exclamation-triangle', estadoActual);
+  }
+}
+
+// Función para actualizar el estado visualmente
+function actualizarEstado(tipo, icono, mensaje) {
+  const statusElement = document.getElementById('comunicacionStatus');
+  statusElement.className = `alert alert-${tipo} text-center`;
+  statusElement.innerHTML = `
+    <i class="${icono} fa-2x"></i>
+  `;
+}
+
+// Función para mostrar el mensaje según el estado
+function mostrarMensajeEstado() {
+  isSwalOpen = true;  // Establecer que el Swal está abierto
+  if (estadoActual.toLowerCase().includes('ok')) {
+    Swal.fire({
+      icon: 'success',
+      title: 'Estado de Comunicación',
+      text: estadoActual,
+      confirmButtonText: 'Aceptar',
+      showCancelButton: false, // Deshabilita la opción de cerrar el modal manualmente
+      allowOutsideClick: false, // No permite cerrar el modal haciendo clic fuera
+      allowEscapeKey: false, // No permite cerrar el modal con la tecla "Esc"
+    });
+  } else {
+    Swal.fire({
+      icon: 'warning',
+      title: `${estadoActual}`,
+      text: `Por favor, pulsa "Restablecer Comunicación" SOLO SI ES NECESARIO.`,
+      showCancelButton: true,
+      confirmButtonText: 'Restablecer Comunicación',
+      cancelButtonText: 'Cancelar',
+      allowOutsideClick: false, // No permite cerrar el modal haciendo clic fuera
+      allowEscapeKey: false, // No permite cerrar el modal con la tecla "Esc"
+    }).then((result) => {
+      if (result.isConfirmed) {
+        iniciarCuentaAtrasRestablecimiento(); // Iniciar la cuenta atrás
+        // Aquí podrías agregar lógica adicional para intentar restablecer la comunicación
+      }else{
+        isSwalOpen = false;
+      }
+    });
+  }
+}
+function iniciarCuentaAtrasRestablecimiento() {
+  let tiempoRestante = 12; // 3 minutos en segundos
+
+  const intervalId = setInterval(() => {
+    tiempoRestante--;
+
+    // Actualizar el Swal con el tiempo restante
+    Swal.update({
+      icon: 'warning',
+      title: 'Restableciendo Comunicación',
+      html: `
+        <p>Este proceso puede durar <strong>hasta 3 minutos</strong>.</p>
+        <p>Tiempo restante: <strong>${tiempoRestante} segundos</strong>.</p>
+        <p>Si no se restablece la comunicación, <strong>reinicie todo el sistema</strong>.</p>
+        <p><strong style="color: red;">Precaución:</strong> Reiniciar el sistema puede interrumpir los procesos en curso.</p>
+      `,
+      showCancelButton: false
+    });
+
+    if (tiempoRestante <= 0) {
+      clearInterval(intervalId); // Detener la cuenta atrás
+      isSwalOpen = false; // Permitir que el sistema vuelva a refrescar
+      Swal.fire({
+        icon: 'error',
+        title: 'Tiempo Excedido',
+        text: 'No se pudo restablecer la comunicación. Por favor, reinicie el sistema manualmente.',
+        confirmButtonText: 'Aceptar',
+        showCancelButton: false, // There won't be any cancel button
+        showConfirmButton: false, // There won't be any confirm button
+        allowOutsideClick: false, // No permite cerrar el modal haciendo clic fuera
+        allowEscapeKey: false, // No permite cerrar el modal con la tecla "Esc"
+      });
+    }
+  }, 1000); // Reducir el tiempo cada segundo
+
+  // Mostrar el Swal inicial
+  Swal.fire({
+    icon: 'warning',
+    title: 'Restableciendo Comunicación',
+    html: `
+      <p>Este proceso puede durar <strong>hasta 3 minutos</strong>.</p>
+      <p>Tiempo restante: <strong>${tiempoRestante} segundos</strong>.</p>
+      <p>Si no se restablece la comunicación, <strong>reinicie todo el sistema</strong>.</p>
+      <p><strong style="color: red;">Precaución:</strong> Reiniciar el sistema puede interrumpir los procesos en curso.</p>
+    `,
+    showCancelButton: false, // There won't be any cancel button
+    showConfirmButton: false, // There won't be any confirm button
+    allowOutsideClick: false, // No permite cerrar el modal haciendo clic fuera
+    allowEscapeKey: false, // No permite cerrar el modal con la tecla "Esc"
+    didOpen: () => {
+      // Iniciar la cuenta atrás
+      isSwalOpen = true;
+    }
+  });
+}
+// Llamar a la función cada 5 segundos para mantener el estado actualizado
+setInterval(cargarEstadoComunicacion, 5000);
+cargarEstadoComunicacion(); // Llamar inicialmente para cargar el estado inicial
+
+function mostrarOpcionesSistema() {
+  isSwalOpen = true; // Establecemos el estado como abierto
+  Swal.fire({
+    icon: 'warning',
+    title: 'Opciones del Sistema',
+    text: '¿Deseas reiniciar o apagar el sistema?',
+    showCancelButton: true,
+    confirmButtonText: 'Reiniciar',
+    cancelButtonText: 'Cancelar',
+    showDenyButton: true,
+    denyButtonText: 'Apagar',
+    allowOutsideClick: false,
+    allowEscapeKey: false
+  }).then((result) => {
+    if (result.isConfirmed) {
+      mostrarConfirmacion('Reiniciar');
+    } else if (result.isDenied) {
+      mostrarConfirmacion('Apagar');
+    } else {
+      isSwalOpen = false; // Si se cancela, cerramos el estado del modal
+    }
+  });
+}
+
+function mostrarConfirmacion(opcion) {
+  Swal.fire({
+    icon: 'question',
+    title: `¿Seguro que deseas ${opcion.toLowerCase()} el sistema?`,
+    html: `<p>Por favor, confirma para continuar.</p>`,
+    showCancelButton: true,
+    confirmButtonText: `${opcion}`,
+    cancelButtonText: 'Cancelar',
+    allowOutsideClick: false,
+    allowEscapeKey: false
+  }).then((result) => {
+    if (result.isConfirmed) {
+      Swal.fire({
+        icon: 'info',
+        title: `${opcion} en Progreso`,
+        text: `Ejecutando acción de ${opcion}. Esto puede tomar unos segundos.`,
+        timer: 3000,
+        timerProgressBar: true,
+        allowOutsideClick: false,
+        allowEscapeKey: false
+      }).then(() => {
+        ejecutarAccionSistema(opcion);
+      });
+    } else {
+      isSwalOpen = false; // Cerrar el estado si se cancela
+    }
+  });
+}
+
+function ejecutarAccionSistema(opcion) {
+  console.log(`Acción seleccionada: ${opcion}`);
+  isSwalOpen = false; // Cerramos el estado del modal
+
+  if (opcion === 'Reiniciar') {
+    // Código para reiniciar el sistema
+    console.log('Reiniciando el sistema...');
+  } else if (opcion === 'Apagar') {
+    // Código para apagar el sistema
+    console.log('Apagando el sistema...');
+  }
+}
+
+
+
     let animacion;
     let animacionData;
     let materialOptions = []; // Array para almacenar los materiales

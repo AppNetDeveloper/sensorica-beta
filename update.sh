@@ -47,6 +47,12 @@ COMMANDS=(
     "/var/www/html/poweroff-system.sh"
     "/var/www/html/update.sh"
     "/usr/bin/supervisorctl restart all"
+    "/usr/bin/supervisorctl stop all"
+    "/usr/bin/supervisorctl start all"
+    "/usr/bin/supervisorctl reread"
+    "/usr/bin/supervisorctl update"
+    "/usr/bin/supervisorctl status"
+    "systemctl restart 485.service"
 )
 
 for COMMAND in "${COMMANDS[@]}"; do

@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\BluetoothDetailController;
 use App\Http\Controllers\Api\SystemController;
 use App\Http\Controllers\Api\OperatorController;
 use App\Http\Controllers\Api\ProductListController;
+use App\Http\Controllers\Api\ProductionLineStatusController;
 
 /*
 |--------------------------------------------------------------------------
@@ -132,6 +133,10 @@ Route::post('/workers/replace-all', [OperatorController::class, 'replaceAll']);
 // Routes for Product Lists
 Route::post('/product-lists/update-or-insert', [ProductListController::class, 'updateOrInsertSingle']);
 Route::post('/product-lists/replace-all', [ProductListController::class, 'replaceAll']);
+
+//ver el ultimo status de comunicacion
+
+Route::get('production-line/status/{token}', [ProductionLineStatusController::class, 'getStatusByToken']);
 
 Route::middleware('auth:api')->get('/user', function (Request $request) {
     return $request->user();

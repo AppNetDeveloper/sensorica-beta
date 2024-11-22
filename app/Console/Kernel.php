@@ -31,6 +31,7 @@ class Kernel extends ConsoleKernel
         Commands\ReadRfidReadings::class,
         commands\ReadBluetoothReadings::class,
         Commands\CheckBluetoothExit::class,
+        Commands\MonitorConnections::class,
         
     ];
 
