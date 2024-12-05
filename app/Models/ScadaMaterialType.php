@@ -12,9 +12,11 @@ class ScadaMaterialType extends Model
     protected $table = 'scada_material_type';
 
     protected $fillable = [
-        'scada_id', 
-        'name', 
-        'density'
+        'scada_id',
+        'name',
+        'density',
+        'service_type',
+        'client_id',
     ];
 
     // Relación con la tabla Scada

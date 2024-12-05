@@ -7,6 +7,7 @@ use App\Models\Scada;
 use App\Models\Modbus;
 use App\Models\ScadaList;
 use Illuminate\Http\Request;
+use App\Models\ScadaOrder;
 
 class ScadaController extends Controller
 {
@@ -21,6 +22,26 @@ class ScadaController extends Controller
 
         // Obtener el production_line_id de scada
         $productionLineId = $scada->production_line_id;
+
+                // Buscar el scada_order con las condiciones dadas
+        $scadaOrder = ScadaOrder::where('scada_id', $scada->id)
+        ->where('status', 1)
+        ->orderBy('orden', 'asc')
+        ->first();
+
+        // Si no se cumple la condición de status = 1, buscar con status = 0
+        if (!$scadaOrder) {
+            $scadaOrder = ScadaOrder::where('scada_id', $scada->id)
+                ->where('status', 0)
+                ->orderBy('orden', 'asc')
+                ->first();
+        }
+
+        // Obtener el scada_name y scada_order de scada_order o valores predeterminados
+        $scadaName = $scada->name;
+        $scadaOrderValue =  $scadaOrder->order_id ?? 'N/A';
+        $scadaOrderUpdateDateTime = $scadaOrder ? $scadaOrder->updated_at->format('H:i:s d/m/Y') : '00:00:00 00/00/00';
+        $scadaOrderId =  $scadaOrder->id ?? 'N/A';
 
         // Buscar en modbuses donde production_line_id coincida y model_name sea 'weight'
         $modbuses = Modbus::where('production_line_id', $productionLineId)
@@ -55,7 +76,8 @@ class ScadaController extends Controller
                     'fillinglevels' => $scadaList->fillinglevels,  // Añadir fillinglevels
                     'material_type' => $materialTypeName,           // Añadir nombre del material
                     'density' => $density,                          // Añadir density del material
-                    'm3' => $scadaList->m3                          // Añadir m3
+                    'm3' => $scadaList->m3,                          // Añadir m3
+                    'tara' => $modbus->tara, //tara de la mosbus
                 ];
             }
 
@@ -73,13 +95,17 @@ class ScadaController extends Controller
                 'fillinglevels' => 'N/A',
                 'material_type' => 'N/A',
                 'density' => 'N/A',
-                'm3' => 'N/A'
+                'm3' => 'N/A',
+                'tara'=> '0',
             ];
         });
 
         // Incluir el name de la línea scada en el JSON
         $response = [
-            'scada_name' => $scada->name,
+            'scada_name' => $scadaName,
+            'scada_order' => $scadaOrderValue,
+            'scada_order_id' => $scadaOrderId,
+            'scada_order_update_time' => $scadaOrderUpdateDateTime,
             'modbus_lines' => $modbusData
         ];
 

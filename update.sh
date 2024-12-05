@@ -52,7 +52,7 @@ COMMANDS=(
     "/usr/bin/supervisorctl reread"
     "/usr/bin/supervisorctl update"
     "/usr/bin/supervisorctl status"
-    "systemctl restart 485.service"
+    "/bin/systemctl restart 485.service"
 )
 
 for COMMAND in "${COMMANDS[@]}"; do

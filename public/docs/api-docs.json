@@ -7,7 +7,7 @@ info:
   license:
     name: 'Apache 2.0'
     url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
-  version: 1.0.0
+  version: 1.0.1
 paths:
   /api/barcode:
     post:
@@ -892,6 +892,101 @@ paths:
                 properties:
                   error: { type: string }
                 type: object
+  /api/store-credentials:
+    post:
+      tags:
+        - WhatsApp
+      summary: 'Guardar credenciales de WhatsApp'
+      operationId: 72cb9d0ee6652cc1ebfc545770adbe6a
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                creds:
+                  type: string
+                keys:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'Credenciales guardadas con éxito.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  message: { type: string }
+                type: object
+        '500':
+          description: 'Error al guardar las credenciales.'
+  /api/send-message:
+    post:
+      tags:
+        - WhatsApp
+      summary: 'Enviar un mensaje a través de WhatsApp'
+      operationId: 5f44fe4e091ddab7f95b25cec592e056
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                jid:
+                  description: 'JID del destinatario'
+                  type: string
+                message:
+                  description: 'Mensaje a enviar'
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'Mensaje enviado con éxito.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  message: { type: string }
+                type: object
+        '400':
+          description: 'Parámetros faltantes o inválidos.'
+        '500':
+          description: 'Error al enviar el mensaje.'
+  /api/logout:
+    post:
+      tags:
+        - WhatsApp
+      summary: 'Cerrar sesión de WhatsApp'
+      operationId: 6b54e589fe797e9a4e24da52954aa526
+      responses:
+        '200':
+          description: 'Sesión cerrada y reiniciada con éxito.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  message: { type: string }
+                type: object
+        '500':
+          description: 'Error al procesar la solicitud de cierre de sesión.'
+  /api/get-qr:
+    get:
+      tags:
+        - WhatsApp
+      summary: 'Obtener código QR en formato SVG'
+      operationId: bf95522aa18debe712b7679655fcaa40
+      responses:
+        '200':
+          description: 'Código QR generado con éxito.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean }
+                  qr_svg: { type: string, format: svg }
+                type: object
+        '500':
+          description: 'Error al generar el código QR.'
   /api/ip-zerotier:
     post:
       tags:
@@ -1077,6 +1172,471 @@ paths:
                 properties:
                   error: { type: string }
                 type: object
+  '/api/production-line/status/{token}':
+    get:
+      tags:
+        - Dispositivos
+      summary: 'Obtener el estado de la comunicacion con 485 y monitor'
+      operationId: 49a10b1ce2e6db7abb783534d8763d24
+      parameters:
+        -
+          name: token
+          in: path
+          description: 'Token de la línea de producción o SCADA'
+          required: true
+          schema:
+            type: string
+            example: abcd1234
+      responses:
+        '200':
+          description: 'Estado de la línea de producción obtenido con éxito.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  production_line: { type: string, example: 'Linea A' }
+                  monitor_connections: { type: array, items: { properties: { name: { type: string, example: 'Monitor A' }, last_status: { type: string, example: active } }, type: object } }
+                type: object
+        '404':
+          description: 'Token no encontrado o conexiones de monitor no encontradas.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string, example: 'Production line not found.' }
+                  searched_token: { type: string, example: abcd1234 }
+                  production_line_id: { type: integer, example: 1, nullable: true }
+                type: object
+        '500':
+          description: 'Error interno del servidor.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string, example: 'An error occurred: Internal server error.' }
+                  searched_token: { type: string, example: abcd1234 }
+                type: object
+  '/api/scada-orders/{token}':
+    get:
+      tags:
+        - 'SCADA Orders'
+      summary: 'Obtener órdenes por token'
+      operationId: 0418b9e6e4235726f7a199e634a52f64
+      parameters:
+        -
+          name: token
+          in: path
+          description: 'Token único asociado a la SCADA'
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Éxito
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean }
+                  scada_id: { type: integer }
+                  scada_name: { type: string }
+                  orders: { type: array, items: { type: object } }
+                type: object
+        '404':
+          description: 'Token inválido o SCADA no encontrada'
+  /api/scada-orders/update:
+    post:
+      tags:
+        - 'SCADA Orders'
+      summary: 'Actualizar estado de la orden'
+      operationId: e31bc407a12b85abceb3876ec1c4f2f4
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                order_id:
+                  type: string
+                status:
+                  type: integer
+                orden:
+                  type: integer
+              type: object
+      responses:
+        '200':
+          description: 'Estado actualizado correctamente'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                type: object
+        '404':
+          description: 'Orden no encontrada'
+  /api/scada-orders/delete:
+    delete:
+      tags:
+        - 'SCADA Orders'
+      summary: 'Eliminar una orden'
+      operationId: 8dbc2ee05bbec09888aac64cfefe5633
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                order_id:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'Orden eliminada correctamente'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                type: object
+        '404':
+          description: 'Orden no encontrada'
+  '/api/scada-orders/{scadaOrderId}/lines':
+    get:
+      tags:
+        - 'SCADA Orders'
+      summary: 'Obtener estado de las líneas de una orden'
+      operationId: e4a86ff2881d83efec54242ce3dac6a9
+      parameters:
+        -
+          name: scadaOrderId
+          in: path
+          description: 'ID de la orden en SCADA'
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Éxito
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean }
+                  status: { type: string }
+                  lines: { type: array, items: { type: object } }
+                type: object
+        '404':
+          description: 'No se encontraron líneas asociadas para este ID de SCADA Order'
+  /api/reboot:
+    post:
+      tags:
+        - Sistema
+      summary: 'Reiniciar el sistema'
+      operationId: d55627f1840b7d732b05358ca0460e2a
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                token:
+                  description: 'Token de autorización'
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'El sistema se está reiniciando.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  status: { type: string }
+                  message: { type: string }
+                type: object
+        '403':
+          description: 'Token de autorización inválido.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string }
+                type: object
+        '500':
+          description: 'Error al intentar reiniciar el sistema.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string }
+                type: object
+      security:
+        -
+          bearerAuth: []
+  /api/poweroff:
+    post:
+      tags:
+        - Sistema
+      summary: 'Apagar el sistema'
+      operationId: fcad9aa149969074ed2cf427a86e3994
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                token:
+                  description: 'Token de autorización'
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'El sistema se está apagando.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  status: { type: string }
+                  message: { type: string }
+                type: object
+        '403':
+          description: 'Token de autorización inválido.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string }
+                type: object
+        '500':
+          description: 'Error al intentar apagar el sistema.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string }
+                type: object
+      security:
+        -
+          bearerAuth: []
+  /api/server-stats:
+    get:
+      tags:
+        - Sistema
+      summary: 'Obtener estadísticas del servidor'
+      operationId: b0fdf6237f283731c2ba4db819f253e3
+      parameters:
+        -
+          name: Authorization
+          in: header
+          description: "Token de autorización '"
+          required: true
+          schema:
+            type: string
+            example: 'Token de autorización'
+      responses:
+        '200':
+          description: 'Estadísticas del servidor obtenidas con éxito.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  status: { type: string, example: success }
+                  cpu_usage: { type: string, example: 15% }
+                  ram_usage: { type: string, example: 1024MB/4096MB }
+                type: object
+        '403':
+          description: 'Token de autorización inválido.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string, example: 'Token de autorización inválido.' }
+                type: object
+      security:
+        -
+          bearerAuth: []
+  /api/restart-supervisor:
+    post:
+      tags:
+        - Supervisor
+      summary: 'Reiniciar todos los procesos de Supervisor'
+      operationId: 61400261fcd97e91c9256baf2b36850f
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                token:
+                  description: 'Token de autorización'
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'Supervisor reiniciado con éxito.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  status: { type: string }
+                  message: { type: string }
+                type: object
+        '403':
+          description: 'Token de autorización inválido.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string }
+                type: object
+        '500':
+          description: 'Error al reiniciar Supervisor.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string }
+                type: object
+      security:
+        -
+          bearerAuth: []
+  /api/start-supervisor:
+    post:
+      tags:
+        - Supervisor
+      summary: 'Iniciar todos los procesos de Supervisor'
+      operationId: 5c494ab8e17b2482ec9739d9c6a0a3ed
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                token:
+                  description: 'Token de autorización'
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'Supervisor iniciado con éxito.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  status: { type: string }
+                  message: { type: string }
+                type: object
+        '403':
+          description: 'Token de autorización inválido.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string }
+                type: object
+        '500':
+          description: 'Error al iniciar Supervisor.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string }
+                type: object
+      security:
+        -
+          bearerAuth: []
+  /api/stop-supervisor:
+    post:
+      tags:
+        - Supervisor
+      summary: 'Detener todos los procesos de Supervisor'
+      operationId: 98132799a65df6dc6be3d2ac562e92b7
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                token:
+                  description: 'Token de autorización'
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'Supervisor apagado con éxito.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  status: { type: string }
+                  message: { type: string }
+                type: object
+        '403':
+          description: 'Token de autorización inválido.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string }
+                type: object
+        '500':
+          description: 'Error al apagar Supervisor.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string }
+                type: object
+      security:
+        -
+          bearerAuth: []
+  /api/restart-485-Swift:
+    post:
+      tags:
+        - Dispositivos
+      summary: 'Reiniciar el dispositivo SWIFT 485'
+      operationId: f550b4b194e9f41e17d877701948bc23
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                token:
+                  description: 'Token de autorización'
+                  type: string
+                  example: TU_TOKEN_DE_AUTORIZACION
+              type: object
+      responses:
+        '200':
+          description: 'SWIFT 485 reiniciado con éxito.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  status: { type: string, example: success }
+                  message: { type: string, example: 'SWIFT 485 reiniciado con éxito.' }
+                type: object
+        '403':
+          description: 'Token de autorización inválido.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string, example: 'Token de autorización inválido.' }
+                type: object
+        '500':
+          description: 'Error al reiniciar SWIFT 485.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string, example: 'Error al reiniciar SWIFT 485. Detalles: Permiso denegado.' }
+                type: object
+      security:
+        -
+          bearerAuth: []
 tags:
   -
     name: Barcode
@@ -1109,9 +1669,24 @@ tags:
     name: Queue
     description: Queue
   -
+    name: WhatsApp
+    description: WhatsApp
+  -
     name: Workers
     description: Workers
   -
     name: 'Product Lists'
     description: 'Product Lists'
+  -
+    name: Dispositivos
+    description: Dispositivos
+  -
+    name: 'SCADA Orders'
+    description: 'SCADA Orders'
+  -
+    name: Sistema
+    description: Sistema
+  -
+    name: Supervisor
+    description: Supervisor
 

@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\SystemController;
 use App\Http\Controllers\Api\OperatorController;
 use App\Http\Controllers\Api\ProductListController;
 use App\Http\Controllers\Api\ProductionLineStatusController;
+use App\Http\Controllers\Api\ScadaOrderController;
 
 /*
 |--------------------------------------------------------------------------
@@ -124,6 +125,9 @@ Route::post('/reboot', [SystemController::class, 'rebootSystem']);
 Route::post('/poweroff', [SystemController::class, 'powerOffSystem']);
 Route::get('/server-stats', [SystemController::class, 'getServerStats']);
 Route::post('/restart-supervisor', [SystemController::class, 'restartSupervisor']);
+Route::post('/stop-supervisor', [SystemController::class, 'stopSupervisor']);
+Route::post('/start-supervisor', [SystemController::class, 'startSupervisor']);
+Route::post('/restart-485-Swift', [SystemController::class, 'restart485Swift']);
 Route::post('/run-update', [SystemController::class, 'runUpdateScript']);
 
 // Routes for Operators
@@ -137,6 +141,12 @@ Route::post('/product-lists/replace-all', [ProductListController::class, 'replac
 //ver el ultimo status de comunicacion
 
 Route::get('production-line/status/{token}', [ProductionLineStatusController::class, 'getStatusByToken']);
+
+//scada orders api show
+Route::get('/scada-orders/{token}', [ScadaOrderController::class, 'getOrdersByToken']);
+Route::post('/scada-orders/update', [ScadaOrderController::class, 'updateOrderStatus']);
+Route::delete('/scada-orders/delete', [ScadaOrderController::class, 'deleteOrder']);
+Route::get('/scada-orders/{scadaOrderId}/lines', [ScadaOrderController::class, 'getLinesStatusByScadaOrderId']);
 
 Route::middleware('auth:api')->get('/user', function (Request $request) {
     return $request->user();

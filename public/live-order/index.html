@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoConto Kanban Order Control</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        .header-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: #343a40;
+            color: white;
+            padding: 10px 20px;
+        }
+        .header-left img {
+            height: 50px;
+            width: auto;
+        }
+        .header-right {
+            font-size: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 5px;
+        }
+        .header-right small {
+            font-size: 1.1rem;
+            color: #ffc107;
+        }
+        .kanban-board {
+            display: flex;
+            gap: 15px;
+            padding: 20px;
+            overflow-x: auto;
+        }
+        .column {
+            flex: 1;
+            background-color: #e0e0e0;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            min-width: 200px;
+        }
+        .column h3 {
+            background-color: #343a40;
+            color: white;
+            text-align: center;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        .column.disabled {
+            background-color: #d3d3d3;
+            pointer-events: none;
+        }
+        .card {
+            background-color: #ffffff;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            position: relative;
+            cursor: grab;
+        }
+        .card:hover {
+            background-color: #f1f1f1;
+        }
+        .card-menu {
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            font-size: 20px;
+            cursor: pointer;
+        }
+    </style>
+    <!-- SweetAlert2 -->
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+    <header class="header-container">
+        <div class="header-left">
+            <img src="logo.png" alt="Logo">
+        </div>
+        <div class="header-right">
+            <div id="clock">--:--:--</div>
+            <small id="scada-name">Cargando SCADA...</small>
+        </div>
+    </header>
+
+    <div class="kanban-board"></div>
+    <script>
+        const columns = {
+            0: { id: 'pending', name: 'En Espera' },
+            1: { id: 'started', name: 'Iniciado' },
+            2: { id: 'completed', name: 'Finalizado' },
+            3: { id: 'paused', name: 'Pausado' },
+            4: { id: 'cancelled', name: 'Cancelado' },
+            5: { id: 'issues', name: 'Con Incidencias', disabled: true }
+        };
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+
+        if (!token) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Token no proporcionado en la URL.',
+            });
+            throw new Error('Token requerido para cargar los datos.');
+        }
+
+        async function loadKanbanData() {
+            try {
+                const response = await fetch(`/api/scada-orders/${token}`);
+                if (!response.ok) throw new Error('Error al obtener datos de la API.');
+                const data = await response.json();
+                if (data.success) {
+                    document.getElementById('scada-name').textContent = data.scada_name;
+                    renderKanbanBoard(data.orders);
+                } else {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Sin órdenes',
+                        text: 'No se encontraron órdenes para el token proporcionado.',
+                    });
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Ocurrió un error al cargar los datos del Kanban.',
+                });
+            }
+        }
+
+        function renderKanbanBoard(orders) {
+            const kanbanBoard = document.querySelector('.kanban-board');
+            kanbanBoard.innerHTML = '';
+            Object.entries(columns).forEach(([status, column]) => {
+                const columnElement = document.createElement('div');
+                columnElement.classList.add('column');
+                columnElement.id = column.id;
+                if (column.disabled) columnElement.classList.add('disabled');
+                columnElement.innerHTML = `<h3>${column.name}</h3>`;
+                kanbanBoard.appendChild(columnElement);
+            });
+
+            orders.sort((a, b) => a.orden - b.orden).forEach(order => {
+                const columnId = columns[order.status].id;
+                const columnElement = document.getElementById(columnId);
+
+                // Usar order.id como Linea ID
+                const lineId = order.id || "No disponible";
+
+                const cardElement = document.createElement('div');
+                cardElement.classList.add('card');
+                cardElement.draggable = true;
+                cardElement.innerHTML = `
+                    <span class="card-menu" onclick="showCardMenu('${order.order_id}', '${order.box}', ${order.units}, '${lineId}')">⋮</span>
+                    <div>Order ID: ${order.order_id}</div>
+                    <div>Box: ${order.box}</div>
+                    <div>Units: ${order.units}</div>
+                `;
+                cardElement.ondragstart = drag;
+                cardElement.setAttribute('data-order-id', order.order_id);
+                columnElement.appendChild(cardElement);
+            });
+
+            document.querySelectorAll('.column:not(.disabled)').forEach(column => {
+                column.ondragover = allowDrop;
+                column.ondrop = drop;
+            });
+        }
+
+        function showCardMenu(orderId, box, units, lineId) {
+            Swal.fire({
+                title: 'Detalles de la Tarjeta',
+                html: `
+                    <p><strong>Order ID:</strong> ${orderId}</p>
+                    <p><strong>Box:</strong> ${box}</p>
+                    <p><strong>Units:</strong> ${units}</p>
+                    <p><strong>Linea ID:</strong> ${lineId}</p>
+                `,
+                icon: 'info',
+                showCancelButton: true,
+                showDenyButton: true,
+                confirmButtonText: 'Cerrar',
+                denyButtonText: 'Borrar Orden',
+                cancelButtonText: 'Cancelar',
+            }).then((result) => {
+                if (result.isDenied) {
+                    Swal.fire({
+                        title: '¿Estás seguro?',
+                        text: `Esta acción eliminará la orden con ID ${orderId}.`,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Sí, borrar',
+                        cancelButtonText: 'No, cancelar',
+                    }).then(async (confirmResult) => {
+                        if (confirmResult.isConfirmed) {
+                            try {
+                                const response = await fetch('/api/scada-orders/delete', {
+                                    method: 'DELETE',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ order_id: orderId }),
+                                });
+                                const result = await response.json();
+                                if (result.success) {
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: 'Eliminado',
+                                        text: `La orden con ID ${orderId} ha sido eliminada.`,
+                                    });
+
+                                    // Recargar los datos del tablero
+                                    loadKanbanData();
+                                } else {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: 'Error',
+                                        text: result.message || 'No se pudo eliminar la orden.',
+                                    });
+                                }
+                            } catch (error) {
+                                console.error('Error:', error);
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error al llamar a la API',
+                                    text: 'No se pudo conectar al servidor.',
+                                });
+                            }
+                        }
+                    });
+                }
+            });
+        }
+
+        let draggedCard = null;
+
+        function drag(event) {
+            draggedCard = event.target;
+        }
+
+        function allowDrop(event) {
+            event.preventDefault();
+        }
+
+        async function drop(event) {
+            event.preventDefault();
+            const targetColumn = event.target.closest('.column');
+            if (draggedCard && targetColumn) {
+                const orderId = draggedCard.getAttribute('data-order-id');
+                const newStatus = Object.entries(columns).find(([key, col]) => col.id === targetColumn.id)[0];
+
+                targetColumn.appendChild(draggedCard);
+
+                const cardsInColumn = Array.from(targetColumn.querySelectorAll('.card'));
+                cardsInColumn.forEach((card, index) => {
+                    card.setAttribute('data-orden', index + 1);
+                });
+
+                const newOrder = cardsInColumn.findIndex(card => card === draggedCard) + 1;
+
+                try {
+                    const response = await fetch('/api/scada-orders/update', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            order_id: orderId,
+                            status: parseInt(newStatus),
+                            orden: newOrder,
+                        }),
+                    });
+
+                    const result = await response.json();
+                    if (result.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Éxito',
+                            text: `La tarjeta Order ID: ${orderId} ahora está en la columna ${columns[newStatus].name}, posición ${newOrder}.`,
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error al actualizar',
+                            text: result.message || 'No se pudo actualizar la posición en el servidor.',
+                        });
+                    }
+                } catch (error) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error al llamar a la API',
+                        text: 'No se pudo conectar al servidor.',
+                    });
+                    console.error('Error:', error);
+                }
+            }
+        }
+
+        function updateClock() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            document.getElementById('clock').textContent = `${hours}:${minutes}:${seconds}`;
+        }
+
+        setInterval(updateClock, 1000);
+        updateClock();
+        loadKanbanData();
+        setInterval(loadKanbanData, 5000);
+    </script>
+</body>
+</html>
