@@ -24,4 +24,5 @@ class ScadaMaterialType extends Model
     {
         return $this->belongsTo(Scada::class);
     }
+    
 }

@@ -616,6 +616,39 @@ paths:
                 properties:
                   error: { type: string, example: 'Production line not found or no order stats found for the specified dates' }
                 type: object
+  '/api/scada-material/{token}':
+    get:
+      tags:
+        - 'Scada Materials'
+      summary: 'Obtener los materiales de un SCADA por su token'
+      operationId: c7a9ce0d72239d3404a54979961a6bc3
+      parameters:
+        -
+          name: token
+          in: path
+          description: 'Token único del SCADA'
+          required: true
+          schema:
+            type: string
+            example: abc123
+      responses:
+        '200':
+          description: 'Lista de materiales asociados al SCADA'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  properties: { id: { type: integer, example: 1 }, name: { type: string, example: 'Material 1' } }
+                  type: object
+        '404':
+          description: 'SCADA o materiales no encontrados'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string, example: 'Scada or materials not found' }
+                type: object
   '/api/sensors/{token}':
     get:
       tags:
@@ -1032,6 +1065,92 @@ paths:
                   status: { type: string }
                   message: { type: string }
                 type: object
+  /api/modbus/tara:
+    post:
+      tags:
+        - Modbus
+      summary: 'Set tara value for a Modbus'
+      operationId: 9bfefcde1365c3e903e576afee94fb63
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                id:
+                  type: integer
+                token:
+                  type: string
+                value:
+                  type: number
+              type: object
+      responses:
+        '200':
+          description: 'Tara value set successfully'
+          content:
+            application/json:
+              schema:
+                properties:
+                  message: { type: string }
+                type: object
+        '400':
+          description: 'Token not provided'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string }
+                type: object
+        '404':
+          description: 'Invalid token or Modbus not found'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string }
+                type: object
+  /api/modbus/tara/reset:
+    post:
+      tags:
+        - Modbus
+      summary: 'Reset tara value for a Modbus to zero'
+      operationId: e5ada42aca56e2231d82f4d065d26bc5
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                id:
+                  type: integer
+                token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'Tara reset successfully'
+          content:
+            application/json:
+              schema:
+                properties:
+                  message: { type: string }
+                type: object
+        '400':
+          description: 'Token not provided'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string }
+                type: object
+        '404':
+          description: 'Invalid token or Modbus not found'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string }
+                type: object
   /api/workers/update-or-insert:
     post:
       tags:
@@ -1216,6 +1335,152 @@ paths:
                   error: { type: string, example: 'An error occurred: Internal server error.' }
                   searched_token: { type: string, example: abcd1234 }
                 type: object
+  '/api/scada/{token}/material-types':
+    get:
+      tags:
+        - 'Scada Material Types'
+      summary: 'Listar materiales de SCADA'
+      operationId: 81fdcb397aaab780f15bde17db2994d8
+      parameters:
+        -
+          name: token
+          in: path
+          description: 'Token de SCADA'
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 'Listado exitoso'
+        '404':
+          description: 'SCADA no encontrado'
+    post:
+      tags:
+        - 'Scada Material Types'
+      summary: 'Crear material en SCADA'
+      operationId: 103a2f14be552401e32813f521aee0a5
+      parameters:
+        -
+          name: token
+          in: path
+          description: 'Token de SCADA'
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - name
+                - density
+              properties:
+                name:
+                  type: string
+                density:
+                  type: string
+                service_type:
+                  type: integer
+                client_id:
+                  type: string
+              type: object
+      responses:
+        '201':
+          description: 'Creado exitosamente'
+        '404':
+          description: 'SCADA no encontrado'
+  '/api/scada/{token}/material-types/{id}':
+    get:
+      tags:
+        - 'Scada Material Types'
+      summary: 'Obtener un material específico'
+      operationId: 44c5ac7db5a45a975a2dac4dfa1684db
+      parameters:
+        -
+          name: token
+          in: path
+          description: 'Token de SCADA'
+          required: true
+          schema:
+            type: string
+        -
+          name: id
+          in: path
+          description: 'ID del material'
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 'Material encontrado'
+        '404':
+          description: 'SCADA o material no encontrado'
+    put:
+      tags:
+        - 'Scada Material Types'
+      summary: 'Actualizar un material'
+      operationId: b452fe2bb6b1fadd726a5601039b7a41
+      parameters:
+        -
+          name: token
+          in: path
+          description: 'Token de SCADA'
+          required: true
+          schema:
+            type: string
+        -
+          name: id
+          in: path
+          description: 'ID del material'
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                name:
+                  type: string
+                density:
+                  type: string
+                service_type:
+                  type: integer
+                client_id:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'Actualizado exitosamente'
+        '404':
+          description: 'SCADA o material no encontrado'
+    delete:
+      tags:
+        - 'Scada Material Types'
+      summary: 'Eliminar un material'
+      operationId: 0bce9f5d953431183ece4927b6ffa5fe
+      parameters:
+        -
+          name: token
+          in: path
+          description: 'Token de SCADA'
+          required: true
+          schema:
+            type: string
+        -
+          name: id
+          in: path
+          description: 'ID del material'
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: 'Eliminado exitosamente'
+        '404':
+          description: 'SCADA o material no encontrado'
   '/api/scada-orders/{token}':
     get:
       tags:
@@ -1329,6 +1594,51 @@ paths:
                 type: object
         '404':
           description: 'No se encontraron líneas asociadas para este ID de SCADA Order'
+  /api/scada-orders/process/update-used:
+    post:
+      tags:
+        - 'SCADA Orders'
+      summary: "Actualizar el campo 'used' de un proceso específico"
+      operationId: c64eb1f531b89b4edb7e50d7c466489a
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                id:
+                  type: integer
+                  example: 4264
+                scada_order_list_id:
+                  type: integer
+                  example: 1499
+                scada_material_type_id:
+                  type: integer
+                  example: 3
+                used:
+                  type: integer
+                  enum: [0, 1]
+                  example: 1
+              type: object
+      responses:
+        '200':
+          description: 'Proceso actualizado correctamente'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                type: object
+        '404':
+          description: 'Proceso no encontrado'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                type: object
   /api/reboot:
     post:
       tags:
@@ -1663,6 +1973,9 @@ tags:
     name: OrderStats
     description: OrderStats
   -
+    name: 'Scada Materials'
+    description: 'Scada Materials'
+  -
     name: Sensores
     description: Sensores
   -
@@ -1680,6 +1993,9 @@ tags:
   -
     name: Dispositivos
     description: Dispositivos
+  -
+    name: 'Scada Material Types'
+    description: 'Scada Material Types'
   -
     name: 'SCADA Orders'
     description: 'SCADA Orders'

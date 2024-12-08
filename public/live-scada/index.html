@@ -814,11 +814,63 @@ function mostrarOpcionesSistema() {
             },
         }).then(() => {
             ejecutarAccionSistema(opcion);
+            isSwalOpen = false; // Cerrar el estado si se cancela
         });
         } else {
         isSwalOpen = false; // Cerrar el estado si se cancela
         }
     });
+    }
+
+    async function ejecutarAccionSistema(opcion) {
+        const url = opcion === 'Reiniciar' ? '/api/reboot' : '/api/poweroff';
+        const payload = {
+            token: 'ZZBSFSIOHJHLKLKJHIJJAHSTG', // Token de autorización
+        };
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.status === 'success') {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Éxito',
+                    text: data.message,
+                    timer: 5000,
+                    timerProgressBar: true
+                }).then(() => {
+                    isSwalOpen = false; // Restablecer el estado cuando el Swal se cierre
+                });
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: data.message || 'Ocurrió un error inesperado.',
+                    timer: 5000,
+                    timerProgressBar: true
+                }).then(() => {
+                    isSwalOpen = false; // Restablecer el estado cuando el Swal se cierre
+                });
+            }
+        } catch (error) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error de Conexión',
+                text: `No se pudo conectar con el servidor: ${error.message}`,
+                timer: 5000,
+                timerProgressBar: true
+            }).then(() => {
+                isSwalOpen = false; // Restablecer el estado cuando el Swal se cierre
+            });
+        }
     }
 
     function mostrarOpcionesOrdenesTrabajo() {

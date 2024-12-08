@@ -86,6 +86,10 @@ Route::post('/modbus/send', [ModbusController::class, 'sendDosage']);
 
 Route::post('/modbus/zero', [ModbusController::class, 'setZero']);
 
+Route::post('/modbus/tara', [ModbusController::class, 'setTara']);
+Route::post('/modbus/tara/reset', [ModbusController::class, 'resetTara']);
+
+
 
 //api rfid
 Route::post('/rfid-insert', [RfidDetailController::class, 'store']);
@@ -147,6 +151,19 @@ Route::get('/scada-orders/{token}', [ScadaOrderController::class, 'getOrdersByTo
 Route::post('/scada-orders/update', [ScadaOrderController::class, 'updateOrderStatus']);
 Route::delete('/scada-orders/delete', [ScadaOrderController::class, 'deleteOrder']);
 Route::get('/scada-orders/{scadaOrderId}/lines', [ScadaOrderController::class, 'getLinesStatusByScadaOrderId']);
+Route::post('/scada-orders/process/update-used', [ScadaOrderController::class, 'updateProcessUsed']);
+
+
+
+//scada material api
+Route::prefix('scada')->group(function () {
+    Route::get('/{token}/material-types', [ScadaMaterialTypeController::class, 'index']);
+    Route::post('/{token}/material-types', [ScadaMaterialTypeController::class, 'store']);
+    Route::get('/{token}/material-types/{id}', [ScadaMaterialTypeController::class, 'show']);
+    Route::put('/{token}/material-types/{id}', [ScadaMaterialTypeController::class, 'update']);
+    Route::delete('/{token}/material-types/{id}', [ScadaMaterialTypeController::class, 'destroy']);
+});
+Route::get('scada-material/{token}', [ScadaMaterialTypeController::class, 'getScadaMaterialByToken']);
 
 Route::middleware('auth:api')->get('/user', function (Request $request) {
     return $request->user();

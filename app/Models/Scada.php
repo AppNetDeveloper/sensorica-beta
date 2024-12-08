@@ -13,9 +13,9 @@ class Scada extends Model
     protected $table = 'scada';
 
     protected $fillable = [
-        'scada_id', 
-        'modbus_id', 
-        'fillinglevels', 
+        'scada_id',
+        'modbus_id',
+        'fillinglevels',
         'material_type',
         'm3'
     ];
@@ -35,4 +35,9 @@ class Scada extends Model
     {
         return $this->belongsTo(ProductionLine::class);
     }
+    public function materialTypes()
+    {
+        return $this->hasMany(ScadaMaterialType::class, 'scada_id');
+    }
+    
 }

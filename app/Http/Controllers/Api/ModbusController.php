@@ -117,34 +117,34 @@ class ModbusController extends Controller
         $token = trim($request->input('token')); // Eliminar espacios en blanco y caracteres no visibles
         $inValue = $request->input('value'); // El valor ingresado
         $inValue = is_numeric($inValue) ? $inValue + 0 : 0;  // Convierte a número, si no es numérico, será 0
-    
+
         // Validación básica
         if (!$token) {
             return response()->json(['error' => 'Token not provided'], 400);
         }
-    
+
         // Buscar el modbus utilizando el token
         $modbus = Modbus::where('token', $token)
                         ->where('id', $id)
                         ->first();
-    
+
         if (!$modbus) {
             return response()->json(['error' => 'Invalid token or Modbus not found'], 404);
         }
-        
-        
+
+
         // Modificar el tópico MQTT de peso a dosificación
         $topic = str_replace('peso', 'dosifica', $modbus->mqtt_topic_modbus);
-    
+
         // Crear el JSON con el valor de dosificación
         $message = json_encode(['value' => $inValue]);
-    
+
         // Publicar el mensaje MQTT y registrar en las tablas
         $this->publishMqttMessage($topic, $message);
-    
+
         return response()->json(['message' => 'Dosage value sent successfully']);
     }
-    
+
 
     public function setZero(Request $request)
     {
@@ -193,5 +193,98 @@ class ModbusController extends Controller
         } catch (\Exception $e) {
             Log::error("Error storing message in databases: " . $e->getMessage());
         }
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/api/modbus/tara",
+     *     summary="Set tara value for a Modbus",
+     *     tags={"Modbus"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="id", type="integer"),
+     *             @OA\Property(property="token", type="string"),
+     *             @OA\Property(property="value", type="number")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Tara value set successfully",
+     *         @OA\JsonContent(@OA\Property(property="message", type="string"))
+     *     ),
+     *     @OA\Response(response=400, description="Token not provided",
+     *         @OA\JsonContent(@OA\Property(property="error", type="string"))
+     *     ),
+     *     @OA\Response(response=404, description="Invalid token or Modbus not found",
+     *         @OA\JsonContent(@OA\Property(property="error", type="string"))
+     *     )
+     * )
+     */
+    public function setTara(Request $request)
+    {
+        $token = trim($request->input('token'));
+        $id = $request->input('id');
+        $value = $request->input('value');
+        $value = is_numeric($value) ? $value + 0 : 0;
+
+        if (!$token) {
+            return response()->json(['error' => 'Token not provided'], 400);
+        }
+
+        $modbus = Modbus::where('token', $token)->where('id', $id)->first();
+        if (!$modbus) {
+            return response()->json(['error' => 'Invalid token or Modbus not found'], 404);
+        }
+
+        $modbus->tara = $value;
+        $modbus->save();
+
+        return response()->json(['message' => 'Tara value set successfully']);
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/api/modbus/tara/reset",
+     *     summary="Reset tara value for a Modbus to zero",
+     *     tags={"Modbus"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="id", type="integer"),
+     *             @OA\Property(property="token", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Tara reset successfully",
+     *         @OA\JsonContent(@OA\Property(property="message", type="string"))
+     *     ),
+     *     @OA\Response(response=400, description="Token not provided",
+     *         @OA\JsonContent(@OA\Property(property="error", type="string"))
+     *     ),
+     *     @OA\Response(response=404, description="Invalid token or Modbus not found",
+     *         @OA\JsonContent(@OA\Property(property="error", type="string"))
+     *     )
+     * )
+     */
+    public function resetTara(Request $request)
+    {
+        $token = trim($request->input('token'));
+        $id = $request->input('id');
+
+        if (!$token) {
+            return response()->json(['error' => 'Token not provided'], 400);
+        }
+
+        $modbus = Modbus::where('token', $token)->where('id', $id)->first();
+        if (!$modbus) {
+            return response()->json(['error' => 'Invalid token or Modbus not found'], 404);
+        }
+
+        $modbus->tara = 0;
+        $modbus->save();
+
+        return response()->json(['message' => 'Tara reset successfully']);
     }
 }

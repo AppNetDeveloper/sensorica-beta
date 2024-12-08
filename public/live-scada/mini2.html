@@ -23,8 +23,8 @@
       padding: 0;
       display: flex;
       flex-direction: column;
-      background-color: #ffffff; /* Fondo blanco */
-      color: #000000; /* Texto negro */
+      background-color: #ffffff;
+      color: #000000;
       font-family: 'Roboto', sans-serif;
       box-sizing: border-box;
       overflow: hidden;
@@ -38,21 +38,21 @@
       width: 100%;
       height: 100%;
       padding: 20px;
-      overflow: hidden; /* Evitamos el scroll en la página principal */
+      overflow: hidden;
     }
 
     .box {
-      background-color: #ffffff; /* Fondo blanco */
+      background-color: #ffffff;
       padding: 20px;
       margin-bottom: 20px;
       border-radius: 10px;
       width: 98%;
       max-width: 2400px;
-      box-shadow: none; /* Sin sombra */
+      box-shadow: none;
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      height: 100%; /* Ocupa toda la altura disponible */
+      height: 100%;
     }
 
     .left-side {
@@ -71,63 +71,57 @@
     }
 
     .live-weight {
-      font-size: 10em; /* Tamaño aumentado */
+      font-size: 10em;
       font-weight: bold;
       color: #000000;
       margin-bottom: 20px;
-      line-height: 1; /* Ajuste para evitar espacio extra */
+      line-height: 1;
     }
 
-    /* Reducir el tamaño del texto "kg" en un 30% */
     .live-weight .unit {
-      font-size: 0.7em; /* 70% del tamaño original */
+      font-size: 0.7em;
     }
 
     .button-group {
       display: flex;
-      flex-direction: row; /* Los botones están en la misma línea */
-      gap: 20px; /* Espacio entre botones */
-      margin-bottom: 20px; /* Añadido margen inferior */
+      flex-direction: row;
+      gap: 20px;
+      margin-bottom: 20px;
     }
 
-    .button-group .btn {/* Los botones de zero tara */
+    .button-group .btn {
       width: 160px;
       font-size: 1.5em;
       padding: 16px;
     }
 
-    /* Estilos para mostrar Tara */
     .tara-display {
-      font-size: 2.6em; /* Aumentado en un 30% de 2em a 2.6em */
+      font-size: 2.6em;
       margin-top: 20px;
       color: #000000;
     }
 
-    /* Estilos para la tabla */
     .card-grafico {
       width: 100%;
-      max-height: 600px; /* Ajusta este valor según tus necesidades */
-      overflow-y: auto; /* Habilita el scroll vertical en la tabla */
+      max-height: 600px;
+      overflow-y: auto;
     }
 
     .dataTables_wrapper .dataTables_scroll {
       overflow: unset !important;
     }
 
-    /* Estilos para las filas de separación */
     .separator-row td {
       background-color: #f2f2f2;
       font-weight: bold;
       text-align: center;
     }
 
-    /* Estilos para procesos completados */
     .separator-row.completed td {
-      background-color: #d4edda; /* Verde claro */
-      color: #155724; /* Verde oscuro */
+      background-color: #d4edda;
+      color: #155724;
     }
 
-    /* Estilos para los estados */
     .estado-pendiente {
       color: orange;
     }
@@ -137,7 +131,6 @@
       font-weight: bold;
     }
 
-    /* Estilos para el botón de refrescar */
     #botonRefrescar {
       position: fixed;
       bottom: 20px;
@@ -155,23 +148,26 @@
       background-color: #005f73;
     }
 
-    /* Estilos personalizados para SweetAlert2 */
     .custom-warning-popup .swal2-title {
       font-size: 1.5em;
     }
 
     .custom-confirm-button {
-      font-size: 1.2rem;
-      padding: 20px 30px;
-      background-color: #d33;
-      border-radius: 10px;
+    font-size: 1.2rem !important;
+    padding: 20px 30px !important;
+    background-color: #d33 !important;
+    border-radius: 10px !important;
+    color: #fff !important;
+    margin-right: 20px !important; /* Espacio a la derecha del botón de confirmación */
     }
 
     .custom-cancel-button {
-      font-size: 1.2rem;
-      padding: 20px 30px;
-      background-color: #3085d6;
-      border-radius: 10px;
+    font-size: 1.2rem !important;
+    padding: 20px 30px !important;
+    background-color: #3085d6 !important;
+    border-radius: 10px !important;
+    color: #fff !important;
+    margin-left: 20px !important; /* Espacio a la izquierda del botón de cancelación */
     }
 
   </style>
@@ -179,9 +175,7 @@
 <body>
   <main>
     <div class="box">
-      <!-- Lado izquierdo -->
       <div class="left-side">
-        <!-- Actualizamos el título para incluir el scada_order -->
         <div class="card-grafico">
           <h2 id="materialesTitle">Materiales Necesarios</h2>
           <table id="scadaTable" class="table table-striped table-bordered" style="width:100%">
@@ -193,57 +187,42 @@
                 <th>Check</th>
               </tr>
             </thead>
-            <tbody>
-              <!-- Las filas se llenarán dinámicamente -->
-            </tbody>
+            <tbody></tbody>
           </table>
         </div>
       </div>
-
-      <!-- Lado derecho -->
       <div class="right-side">
-        <!-- Display del peso en vivo -->
         <div id="liveWeightDisplay" class="live-weight">
           <span id="liveWeightValue">0</span><span class="unit"> kg</span>
         </div>
-        <!-- Botones -->
         <div class="button-group">
           <button id="zeroButton" class="btn btn-danger btn-lg">Zero</button>
           <button id="taraButton" class="btn btn-danger btn-lg">Tara</button>
-          <button id="resetTaraButton" class="btn btn-danger btn-lg">Reset Tara</button>
+          <button id="resetTaraButton" class="btn btn-danger btn-lg">Tara reset</button>
         </div>
-        <!-- Mostrar Tara actual -->
         <div id="taraDisplay" class="tara-display">
           Tara actual: <span id="taraValue">0</span> kg
         </div>
       </div>
-
     </div>
   </main>
 
-  <!-- Scripts necesarios -->
-  <!-- jQuery -->
   <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
-  <!-- Bootstrap JS -->
   <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-  <!-- Select2 JS -->
   <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-  <!-- DataTables JS -->
   <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-  <!-- SweetAlert2 -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
   <script>
     let currentTolvaData = null;
     let scadaOrderId = null;
     let scadaOrder = null;
-    let orderData = null; // Declaramos orderData globalmente
+    let orderData = null;
+    let wakeLock = null;
 
     $(document).ready(function() {
-      // Cargar los datos de SCADA cada 1 segundo
       setInterval(cargarScadaData, 1000);
 
-      // Agregamos eventos a los botones Zero, Tara y Reset Tara
       $('#zeroButton').on('click', function() {
         if (currentTolvaData) {
           zeroManual(currentTolvaData.id, currentTolvaData.token, currentTolvaData.name);
@@ -252,7 +231,7 @@
 
       $('#taraButton').on('click', function() {
         if (currentTolvaData) {
-          taraManual(currentTolvaData.id, currentTolvaData.token, currentTolvaData.name);
+          taraManual(currentTolvaData.id, currentTolvaData.token, currentTolvaData.name, currentTolvaData.last_value);
         }
       });
 
@@ -262,7 +241,6 @@
         }
       });
 
-      // Inicializar la tabla de datos SCADA
       $('#scadaTable').DataTable({
         paging: false,
         searching: false,
@@ -272,18 +250,16 @@
           emptyTable: "No hay datos disponibles",
           zeroRecords: "No se encontraron registros"
         },
-        scrollY: '500px', // Altura del scroll interno de la tabla
+        scrollY: '500px',
         scrollCollapse: true,
       });
 
-      // Llamar a solicitarWakeLock cuando la página se carga
       if ('wakeLock' in navigator) {
         solicitarWakeLock();
       } else {
         console.warn('La Screen Wake Lock API no es compatible con este navegador.');
       }
 
-      // Manejar la visibilidad de la página
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') {
           solicitarWakeLock();
@@ -296,14 +272,10 @@
       });
     });
 
-    // Función para solicitar el Wake Lock
-    let wakeLock = null;
-
     async function solicitarWakeLock() {
       try {
         wakeLock = await navigator.wakeLock.request('screen');
         console.log('Wake Lock activado.');
-
         wakeLock.addEventListener('release', () => {
           console.log('Wake Lock liberado.');
         });
@@ -312,7 +284,6 @@
       }
     }
 
-    // Función para obtener el valor de un parámetro de la URL
     function getParameterByName(name, url = window.location.href) {
       name = name.replace(/[\[\]]/g, '\\$&');
       const regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)');
@@ -322,30 +293,23 @@
       return decodeURIComponent(results[2].replace(/\+/g, ' '));
     }
 
-    // Obtener el token y el id desde la URL
     const token = getParameterByName('token');
     const selectedId = parseInt(getParameterByName('id'));
 
-    // Función para cargar los datos de SCADA
     async function cargarScadaData() {
       try {
-        const response = await fetch(`/api/scada/${token}`);  // Usar el token extraído de la URL
+        const response = await fetch(`/api/scada/${token}`);
         const data = await response.json();
 
-        // Guardamos scada_order y scada_order_id
         scadaOrderId = data.scada_order_id;
         scadaOrder = data.scada_order;
 
-        // Actualizamos el título
         $('#materialesTitle').text(`Materiales Necesarios : ${scadaOrder}`);
 
-        // Actualizar la tabla de materiales
         await actualizarTablaMateriales();
 
-        // Buscar el objeto en modbus_lines con el id seleccionado
         if (data.modbus_lines && data.modbus_lines.length > 0) {
           currentTolvaData = data.modbus_lines.find(tolva => tolva.id === selectedId);
-
           if (currentTolvaData) {
             actualizarValoresTolva(currentTolvaData);
           } else {
@@ -357,13 +321,11 @@
       }
     }
 
-    // Función para actualizar el peso en vivo y la tara actual
     function actualizarValoresTolva(tolva) {
       $('#liveWeightValue').text(tolva.last_value);
       $('#taraValue').text(tolva.tara);
     }
 
-    // Función para actualizar la tabla de materiales
     async function actualizarTablaMateriales() {
       const table = $('#scadaTable').DataTable();
       table.clear();
@@ -372,15 +334,13 @@
 
       try {
         const response = await fetch(`/api/scada-orders/${scadaOrderId}/lines`);
-        orderData = await response.json(); // Guardamos los datos en la variable global
+        orderData = await response.json();
 
         if (orderData.lines && orderData.lines.length > 0) {
           orderData.lines.forEach(line => {
-            if (line.process === 1) { // Solo mostramos process == 1
-              // Verificamos si todos los processItem están completados
+            if (line.process === 1) {
               let isLineCompleted = line.processes.every(processItem => processItem.used === 1);
 
-              // Agregamos una fila de separación
               let separatorText = `Proceso ID: ${line.id}`;
               if (isLineCompleted) {
                 separatorText += ' (Completado)';
@@ -413,7 +373,6 @@
 
         table.draw();
 
-        // Añadir evento al checkbox después de dibujar la tabla
         $('.checkbox-used').off('click').on('click', function() {
           const processId = $(this).data('id');
           const isChecked = $(this).is(':checked');
@@ -425,7 +384,6 @@
       }
     }
 
-    // Función para manejar el cambio del checkbox
     function handleCheckboxChange(processId, isChecked) {
       Swal.fire({
         title: 'Confirmación',
@@ -434,43 +392,7 @@
         showCancelButton: true,
         confirmButtonText: 'Sí',
         cancelButtonText: 'No',
-      }).then((result) => {
-        if (result.isConfirmed) {
-          // Aquí iría la llamada a la API para actualizar el estado
-          // Por ahora, simulamos el cambio en la interfaz
-          updateProcessUsedStatus(processId, isChecked ? 1 : 0);
-        } else {
-          // Revertir el cambio en el checkbox
-          $(`input[data-id="${processId}"]`).prop('checked', !isChecked);
-        }
-      });
-    }
-
-    // Función para actualizar el estado 'used' en los datos locales y en la interfaz
-    function updateProcessUsedStatus(processId, newUsedStatus) {
-      // Actualizar el estado en los datos locales (simulación)
-      if (orderData && orderData.lines) {
-        orderData.lines.forEach(line => {
-          line.processes.forEach(processItem => {
-            if (processItem.id === processId) {
-              processItem.used = newUsedStatus;
-            }
-          });
-        });
-      }
-      // Volver a actualizar la tabla
-      actualizarTablaMateriales();
-    }
-
-    // Función para Zero
-    function zeroManual(tolvaId, tolvaToken, tolvaName) {
-      Swal.fire({
-        title: 'Calibrar : '+tolvaName+'',
-        text: 'Estás a punto de poner a cero la báscula. ¿Deseas continuar?',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: '<span style="color: white;">Hacer Zero</span>',
-        cancelButtonText: 'Cancelar',
+        buttonsStyling: false,
         customClass: {
           popup: 'custom-warning-popup',
           confirmButton: 'custom-confirm-button',
@@ -478,16 +400,126 @@
         }
       }).then((result) => {
         if (result.isConfirmed) {
-          // Si el usuario confirma, realizar la llamada a la API
+          updateProcessUsedStatus(processId, isChecked ? 1 : 0);
+        } else {
+          $(`input[data-id="${processId}"]`).prop('checked', !isChecked);
+        }
+      });
+    }
+
+    async function updateProcessUsedStatus(processId, newUsedStatus) {
+      let processItem = null;
+
+      if (orderData && orderData.lines) {
+        for (const line of orderData.lines) {
+          for (const pItem of line.processes) {
+            if (pItem.id === processId) {
+              processItem = pItem;
+              break;
+            }
+          }
+          if (processItem) break;
+        }
+      }
+
+      if (!processItem) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'No se encontró el proceso en los datos locales.',
+          timer: 3000,
+          timerProgressBar: true,
+          buttonsStyling: false,
+          customClass: {
+            popup: 'custom-warning-popup',
+            confirmButton: 'custom-confirm-button'
+          }
+        });
+        return;
+      }
+
+      const payload = {
+        id: processItem.id,
+        scada_order_list_id: processItem.scada_order_list_id,
+        scada_material_type_id: processItem.scada_material_type_id,
+        used: newUsedStatus
+      };
+
+      try {
+        const response = await fetch('/api/scada-orders/process/update-used', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+          Swal.fire({
+            icon: 'success',
+            title: 'Éxito',
+            text: `El proceso ha sido marcado como "${newUsedStatus === 1 ? 'Realizado' : 'Pendiente'}" correctamente.`,
+            timer: 3000,
+            timerProgressBar: true,
+            buttonsStyling: false,
+            customClass: {
+              popup: 'custom-warning-popup',
+              confirmButton: 'custom-confirm-button'
+            }
+          });
+          await actualizarTablaMateriales();
+        } else {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: result.message || 'No se pudo actualizar el proceso.',
+            timer: 3000,
+            timerProgressBar: true,
+            buttonsStyling: false,
+            customClass: {
+              popup: 'custom-warning-popup',
+              confirmButton: 'custom-confirm-button'
+            }
+          });
+          $(`input[data-id="${processId}"]`).prop('checked', newUsedStatus !== 1);
+        }
+      } catch (error) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: `No se pudo conectar con el servidor: ${error.message}`,
+          timer: 3000,
+          timerProgressBar: true,
+          buttonsStyling: false,
+          customClass: {
+            popup: 'custom-warning-popup',
+            confirmButton: 'custom-confirm-button'
+          }
+        });
+        $(`input[data-id="${processId}"]`).prop('checked', newUsedStatus !== 1);
+      }
+    }
+
+    function zeroManual(tolvaId, tolvaToken, tolvaName) {
+      Swal.fire({
+        title: 'Calibrar : ' + tolvaName + '',
+        text: 'Estás a punto de poner a cero la báscula. ¿Deseas continuar?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: '<span style="color: white;">Hacer Zero</span>',
+        cancelButtonText: 'Cancelar',
+        buttonsStyling: false,
+        customClass: {
+          popup: 'custom-warning-popup',
+          confirmButton: 'custom-confirm-button',
+          cancelButton: 'custom-cancel-button'
+        }
+      }).then((result) => {
+        if (result.isConfirmed) {
           fetch(`/api/modbus/zero`, {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              id: tolvaId,         // ID de la tolva
-              token: tolvaToken    // Token de la tolva
-            })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: tolvaId, token: tolvaToken })
           })
           .then(response => response.json())
           .then(data => {
@@ -497,7 +529,12 @@
                 title: 'Error',
                 text: `Hubo un problema: ${data.error}`,
                 timer: 5000,
-                timerProgressBar: true
+                timerProgressBar: true,
+                buttonsStyling: false,
+                customClass: {
+                  popup: 'custom-warning-popup',
+                  confirmButton: 'custom-confirm-button'
+                }
               });
             } else {
               Swal.fire({
@@ -505,7 +542,12 @@
                 title: 'Éxito',
                 text: 'La báscula se ha puesto a cero correctamente.',
                 timer: 5000,
-                timerProgressBar: true
+                timerProgressBar: true,
+                buttonsStyling: false,
+                customClass: {
+                  popup: 'custom-warning-popup',
+                  confirmButton: 'custom-confirm-button'
+                }
               });
             }
           })
@@ -515,7 +557,12 @@
               title: 'Error',
               text: `No se pudo poner a cero la báscula. Error: ${error.message}`,
               timer: 5000,
-              timerProgressBar: true
+              timerProgressBar: true,
+              buttonsStyling: false,
+              customClass: {
+                popup: 'custom-warning-popup',
+                confirmButton: 'custom-confirm-button'
+              }
             });
           });
         } else {
@@ -524,15 +571,15 @@
       });
     }
 
-    // Función para Tara
-    function taraManual(tolvaId, tolvaToken, tolvaName) {
+    function taraManual(tolvaId, tolvaToken, tolvaName, lastValue) {
       Swal.fire({
-        title: 'Tara : '+tolvaName+'',
+        title: 'Tara : ' + tolvaName + '',
         text: 'Estás a punto de tarar la báscula. ¿Deseas continuar?',
         icon: 'warning',
         showCancelButton: true,
         confirmButtonText: '<span style="color: white;">Tara</span>',
         cancelButtonText: 'Cancelar',
+        buttonsStyling: false,
         customClass: {
           popup: 'custom-warning-popup',
           confirmButton: 'custom-confirm-button',
@@ -540,15 +587,13 @@
         }
       }).then((result) => {
         if (result.isConfirmed) {
-          // Si el usuario confirma, realizar la llamada a la API
           fetch(`/api/modbus/tara`, {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               id: tolvaId,
-              token: tolvaToken
+              token: tolvaToken,
+              value: lastValue
             })
           })
           .then(response => response.json())
@@ -559,7 +604,12 @@
                 title: 'Error',
                 text: `Hubo un problema: ${data.error}`,
                 timer: 5000,
-                timerProgressBar: true
+                timerProgressBar: true,
+                buttonsStyling: false,
+                customClass: {
+                  popup: 'custom-warning-popup',
+                  confirmButton: 'custom-confirm-button'
+                }
               });
             } else {
               Swal.fire({
@@ -567,9 +617,13 @@
                 title: 'Éxito',
                 text: 'La tara se ha aplicado correctamente.',
                 timer: 5000,
-                timerProgressBar: true
+                timerProgressBar: true,
+                buttonsStyling: false,
+                customClass: {
+                  popup: 'custom-warning-popup',
+                  confirmButton: 'custom-confirm-button'
+                }
               });
-              // Actualizar la tara actual
               cargarScadaData();
             }
           })
@@ -579,7 +633,12 @@
               title: 'Error',
               text: `No se pudo aplicar la tara. Error: ${error.message}`,
               timer: 5000,
-              timerProgressBar: true
+              timerProgressBar: true,
+              buttonsStyling: false,
+              customClass: {
+                popup: 'custom-warning-popup',
+                confirmButton: 'custom-confirm-button'
+              }
             });
           });
         } else {
@@ -588,15 +647,15 @@
       });
     }
 
-    // Función para Reset Tara
     function resetTaraManual(tolvaId, tolvaToken, tolvaName) {
       Swal.fire({
-        title: 'Reset Tara : '+tolvaName+'',
+        title: 'Reset Tara : ' + tolvaName + '',
         text: 'Estás a punto de resetear la tara de la báscula. ¿Deseas continuar?',
         icon: 'warning',
         showCancelButton: true,
         confirmButtonText: '<span style="color: white;">Reset Tara</span>',
         cancelButtonText: 'Cancelar',
+        buttonsStyling: false,
         customClass: {
           popup: 'custom-warning-popup',
           confirmButton: 'custom-confirm-button',
@@ -604,12 +663,9 @@
         }
       }).then((result) => {
         if (result.isConfirmed) {
-          // Si el usuario confirma, realizar la llamada a la API
-          fetch(`/api/modbus/reset-tara`, {
+          fetch(`/api/modbus/tara/reset`, {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               id: tolvaId,
               token: tolvaToken
@@ -623,7 +679,12 @@
                 title: 'Error',
                 text: `Hubo un problema: ${data.error}`,
                 timer: 5000,
-                timerProgressBar: true
+                timerProgressBar: true,
+                buttonsStyling: false,
+                customClass: {
+                  popup: 'custom-warning-popup',
+                  confirmButton: 'custom-confirm-button'
+                }
               });
             } else {
               Swal.fire({
@@ -631,9 +692,13 @@
                 title: 'Éxito',
                 text: 'La tara se ha reseteado correctamente.',
                 timer: 5000,
-                timerProgressBar: true
+                timerProgressBar: true,
+                buttonsStyling: false,
+                customClass: {
+                  popup: 'custom-warning-popup',
+                  confirmButton: 'custom-confirm-button'
+                }
               });
-              // Actualizar la tara actual
               cargarScadaData();
             }
           })
@@ -643,7 +708,12 @@
               title: 'Error',
               text: `No se pudo resetear la tara. Error: ${error.message}`,
               timer: 5000,
-              timerProgressBar: true
+              timerProgressBar: true,
+              buttonsStyling: false,
+              customClass: {
+                popup: 'custom-warning-popup',
+                confirmButton: 'custom-confirm-button'
+              }
             });
           });
         } else {

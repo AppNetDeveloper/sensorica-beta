@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\Scada;
 use App\Models\ScadaOrder;
 use App\Models\ScadaOrderList;
+use App\Models\ScadaOrderListProcess;
 
 class ScadaOrderController extends Controller
 {
@@ -96,34 +97,59 @@ class ScadaOrderController extends Controller
     {
         $validated = $request->validate([
             'order_id' => 'required|string', // ID del pedido
-            'status' => 'required|integer', // Nuevo estado
-            'orden' => 'required|integer', // Nuevo orden
+            'status' => 'required|integer',  // Nuevo estado
+            'orden' => 'required|integer',   // Nuevo orden
         ]);
 
-        // Buscar el pedido por ID
         $order = ScadaOrder::where('order_id', $validated['order_id'])->first();
 
         if (!$order) {
             return response()->json(['success' => false, 'message' => 'Orden no encontrada.'], 404);
         }
 
-        // Actualizar el estado y el orden, ajustando los números dentro de la columna
-        $order->update([
-            'status' => $validated['status'],
-            'orden' => $validated['orden'],
-        ]);
+        // Cambiar la orden al nuevo status temporalmente con un orden arbitrario
+        $order->status = $validated['status'];
+        $order->save();
 
-        // Reordenar las tarjetas en la columna después de la actualización
+        // Obtener todas las órdenes de esa columna (status), excepto la actual
         $ordersInColumn = ScadaOrder::where('status', $validated['status'])
+            ->where('id', '!=', $order->id)
             ->orderBy('orden')
             ->get();
 
-        foreach ($ordersInColumn as $index => $orderInColumn) {
-            $orderInColumn->update(['orden' => $index + 1]);
+        // Insertar la orden en la posición solicitada dentro de la colección
+        // La idea es reconstruir el orden completamente:
+        $desiredPosition = $validated['orden'];
+        // Ajustar si la posición es mayor al total de órdenes + 1 (colocar al final)
+        if ($desiredPosition > $ordersInColumn->count() + 1) {
+            $desiredPosition = $ordersInColumn->count() + 1;
+        }
+
+        // Crear una nueva colección temporal con las órdenes
+        $reordered = collect();
+
+        // Insertar las órdenes antes de la posición deseada
+        for ($i = 1; $i < $desiredPosition; $i++) {
+            if ($ordersInColumn->isEmpty()) break;
+            $reordered->push($ordersInColumn->shift());
+        }
+
+        // Ahora insertar la orden actual
+        $reordered->push($order);
+
+        // Insertar las órdenes restantes
+        while (!$ordersInColumn->isEmpty()) {
+            $reordered->push($ordersInColumn->shift());
+        }
+
+        // Finalmente, reasignar `orden` a todas las órdenes en la columna
+        foreach ($reordered as $index => $ord) {
+            $ord->update(['orden' => $index + 1]);
         }
 
         return response()->json(['success' => true, 'message' => 'Orden actualizada correctamente.']);
     }
+
     /**
      * @OA\Delete(
      *     path="/api/scada-orders/delete",
@@ -277,6 +303,106 @@ class ScadaOrderController extends Controller
             'status' => $globalStatus,
             'lines' => $lines,
         ]);
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/api/scada-orders/process/update-used",
+     *     summary="Actualizar el campo 'used' de un proceso específico",
+     *     tags={"SCADA Orders"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="id", type="integer", example=4264),
+     *             @OA\Property(property="scada_order_list_id", type="integer", example=1499),
+     *             @OA\Property(property="scada_material_type_id", type="integer", example=3),
+     *             @OA\Property(property="used", type="integer", enum={0,1}, example=1)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Proceso actualizado correctamente",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="success", type="boolean"),
+     *             @OA\Property(property="message", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Proceso no encontrado",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="success", type="boolean"),
+     *             @OA\Property(property="message", type="string")
+     *         )
+     *     )
+     * )
+     */
+    public function updateProcessUsed(Request $request)
+    {
+        $validated = $request->validate([
+            'id' => 'required|integer',
+            'scada_order_list_id' => 'required|integer',
+            'scada_material_type_id' => 'required|integer',
+            'used' => 'required|integer|in:0,1',
+        ]);
+
+        // Buscar el proceso usando los tres campos
+        $process = ScadaOrderListProcess::where('id', $validated['id'])
+            ->where('scada_order_list_id', $validated['scada_order_list_id'])
+            ->where('scada_material_type_id', $validated['scada_material_type_id'])
+            ->first();
+
+        if (!$process) {
+            return response()->json(['success' => false, 'message' => 'Proceso no encontrado.'], 404);
+        }
+
+        // Actualizar el campo 'used'
+        $process->used = $validated['used'];
+        $process->save();
+
+        // Obtener la scada_order_id a partir de scada_order_list_id
+        $scadaOrderList = ScadaOrderList::find($validated['scada_order_list_id']);
+        if ($scadaOrderList) {
+            $scadaOrderId = $scadaOrderList->scada_order_id;
+            // Obtener la scada_order correspondiente
+            $scadaOrder = ScadaOrder::find($scadaOrderId);
+
+            if ($scadaOrder) {
+                // Verificar si todas las líneas y sus procesos están al 100% (used=1)
+                $allCompleted = true;
+
+                // Obtener todas las líneas asociadas a esta ScadaOrder
+                $allLines = ScadaOrderList::where('scada_order_id', $scadaOrder->id)->get();
+
+                foreach ($allLines as $line) {
+                    // Obtener todos los procesos de esta línea
+                    $processes = ScadaOrderListProcess::where('scada_order_list_id', $line->id)->get();
+
+                    // Verificar si todos los procesos de la línea tienen used=1
+                    foreach ($processes as $p) {
+                        if ($p->used !== 1) {
+                            $allCompleted = false;
+                            break 2; // Salir de ambos loops
+                        }
+                    }
+                }
+
+                // Si todos los procesos de todas las líneas son used=1 => status=2
+                // Si no, status=1 (iniciado)
+                $newStatus = $allCompleted ? 2 : 1;
+
+                // Actualizar el status solo si es diferente
+                if ($scadaOrder->status !== $newStatus) {
+                    $scadaOrder->status = $newStatus;
+                    $scadaOrder->save();
+                }
+            }
+        }
+
+        return response()->json(['success' => true, 'message' => 'Proceso actualizado correctamente.']);
     }
 
 

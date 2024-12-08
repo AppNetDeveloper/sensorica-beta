@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Materiales SCADA</title>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        .header-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: #343a40;
+            color: white;
+            padding: 10px 20px;
+        }
+        .header-left img {
+            height: 50px;
+            width: auto;
+        }
+        .header-right {
+            font-size: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 5px;
+        }
+        .header-right small {
+            font-size: 1.1rem;
+            color: #ffc107;
+        }
+        .content {
+            padding: 20px;
+        }
+        table {
+            width: 100%;
+            margin-top: 20px;
+        }
+        button {
+            margin-bottom: 15px;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header-container">
+        <div class="header-left">
+            <img src="logo.png" alt="Logo">
+        </div>
+        <div class="header-right">
+            <div id="clock">--:--:--</div>
+            <small id="scada-name">Cargando SCADA...</small>
+        </div>
+    </header>
+
+    <!-- Content -->
+    <div class="content">
+        <h1>Gestión de Materiales SCADA</h1>
+        <button id="addMaterial">Añadir Material</button>
+        <table id="materialsTable" class="display">
+            <thead>
+                <tr>
+                    <th>ID Interno</th>
+                    <th>Nombre</th>
+                    <th>Densidad</th>
+                    <th>ID Cliente (ERP)</th>
+                    <th>Tipo de Servicio</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+        const apiUrl = `/api/scada/${token}/material-types`;
+
+        if (!token) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Token no proporcionado en la URL.',
+            });
+            throw new Error('Token requerido para cargar los datos.');
+        }
+
+        $(document).ready(function () {
+            const table = $('#materialsTable').DataTable({
+                ajax: {
+                    url: apiUrl,
+                    dataSrc: '',
+                    error: function (xhr) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error al Cargar Datos',
+                            text: `Status: ${xhr.status}. Mensaje: ${xhr.responseJSON?.error || 'Error desconocido'}`,
+                        });
+                    }
+                },
+                columns: [
+                    { data: 'id' }, // ID interno del SCADA
+                    { data: 'name' }, // Nombre del material
+                    { data: 'density' }, // Densidad
+                    {
+                        data: 'cliente_id', // ID del ERP
+                        render: function(data) {
+                            return data ? data : 'Sin ID Cliente';
+                        }
+                    },
+                    {
+                        data: 'service_type', // Tipo de servicio
+                        render: function(data) {
+                            return data === 0 ? 'Automático' : 'Manual';
+                        }
+                    },
+                    {
+                        data: null,
+                        render: function (data) {
+                            return `
+                                <button class="edit-btn" data-id="${data.id}" data-name="${data.name}" data-density="${data.density}" data-cliente_id="${data.cliente_id}" data-service_type="${data.service_type}">Editar</button>
+                                <button class="delete-btn" data-id="${data.id}">Eliminar</button>
+                            `;
+                        }
+                    }
+                ]
+            });
+
+            $('#addMaterial').click(function () {
+                Swal.fire({
+                    title: 'Añadir Material',
+                    html: `
+                        <input id="materialName" class="swal2-input" placeholder="Nombre">
+                        <input id="materialDensity" class="swal2-input" placeholder="Densidad">
+                        <input id="clienteId" class="swal2-input" placeholder="ID Cliente (ERP)">
+                        <select id="serviceType" class="swal2-input">
+                            <option value="0">Automático</option>
+                            <option value="1">Manual</option>
+                        </select>
+                    `,
+                    confirmButtonText: 'Añadir',
+                    showCancelButton: true,
+                    preConfirm: () => {
+                        const name = $('#materialName').val();
+                        const density = $('#materialDensity').val();
+                        const cliente_id = $('#clienteId').val();
+                        const service_type = $('#serviceType').val();
+                        if (!name || !density || !cliente_id || service_type === null) {
+                            Swal.showValidationMessage('Todos los campos son obligatorios.');
+                        }
+                        return { name, density, cliente_id, service_type: parseInt(service_type) };
+                    }
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const { name, density, cliente_id, service_type } = result.value;
+                        $.ajax({
+                            url: apiUrl,
+                            method: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify({ name, density, cliente_id, service_type }),
+                            success: function () {
+                                Swal.fire('Material añadido', '', 'success');
+                                table.ajax.reload();
+                            },
+                            error: function (xhr) {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error al Añadir',
+                                    text: `Status: ${xhr.status}. Mensaje: ${xhr.responseJSON?.error || 'Error desconocido'}`,
+                                });
+                            }
+                        });
+                    }
+                });
+            });
+
+            $('#materialsTable tbody').on('click', '.edit-btn', function () {
+                const id = $(this).data('id');
+                const currentName = $(this).data('name');
+                const currentDensity = $(this).data('density');
+                const currentClienteId = $(this).data('cliente_id');
+                const currentServiceType = $(this).data('service_type');
+
+                Swal.fire({
+                    title: 'Editar Material',
+                    html: `
+                        <input id="materialName" class="swal2-input" value="${currentName}">
+                        <input id="materialDensity" class="swal2-input" value="${currentDensity}">
+                        <input id="clienteId" class="swal2-input" value="${currentClienteId}">
+                        <select id="serviceType" class="swal2-input">
+                            <option value="0" ${currentServiceType === 0 ? 'selected' : ''}>Automático</option>
+                            <option value="1" ${currentServiceType === 1 ? 'selected' : ''}>Manual</option>
+                        </select>
+                    `,
+                    confirmButtonText: 'Actualizar',
+                    showCancelButton: true,
+                    preConfirm: () => {
+                        const name = $('#materialName').val();
+                        const density = $('#materialDensity').val();
+                        const cliente_id = $('#clienteId').val();
+                        const service_type = $('#serviceType').val();
+                        if (!name || !density || !cliente_id || service_type === null) {
+                            Swal.showValidationMessage('Todos los campos son obligatorios.');
+                        }
+                        return { name, density, cliente_id, service_type: parseInt(service_type) };
+                    }
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const { name, density, cliente_id, service_type } = result.value;
+                        $.ajax({
+                            url: `${apiUrl}/${id}`,
+                            method: 'PUT',
+                            contentType: 'application/json',
+                            data: JSON.stringify({ name, density, cliente_id, service_type }),
+                            success: function () {
+                                Swal.fire('Material actualizado', '', 'success');
+                                table.ajax.reload();
+                            },
+                            error: function (xhr) {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error al Actualizar',
+                                    text: `Status: ${xhr.status}. Mensaje: ${xhr.responseJSON?.error || 'Error desconocido'}`,
+                                });
+                            }
+                        });
+                    }
+                });
+            });
+
+            $('#materialsTable tbody').on('click', '.delete-btn', function () {
+                const id = $(this).data('id');
+                Swal.fire({
+                    title: '¿Estás seguro?',
+                    text: 'Esta acción no se puede deshacer.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sí, eliminar',
+                    cancelButtonText: 'Cancelar',
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: `${apiUrl}/${id}`,
+                            method: 'DELETE',
+                            success: function () {
+                                Swal.fire('Material eliminado', '', 'success');
+                                table.ajax.reload();
+                            },
+                            error: function (xhr) {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error al Eliminar',
+                                    text: `Status: ${xhr.status}. Mensaje: ${xhr.responseJSON?.error || 'Error desconocido'}`,
+                                });
+                            }
+                        });
+                    }
+                });
+            });
+        });
+function updateClock() {
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    document.getElementById('clock').textContent = `${hours}:${minutes}:${seconds}`;
+}
+
+// Actualiza el reloj cada segundo
+setInterval(updateClock, 1000);
+updateClock(); // Llamada inicial para mostrar el tiempo inmediatamente
+
+    </script>
+</body>
+</html>

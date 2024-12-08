@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kanban Board</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f5f5f5;
+        }
+        .kanban-board {
+            display: flex;
+            gap: 10px;
+            width: 90%;
+            overflow-x: auto;
+        }
+        .column {
+            flex: 1;
+            background-color: #e0e0e0;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            min-width: 200px;
+        }
+        .column h3 {
+            text-align: center;
+        }
+        .card {
+            background-color: #ffffff;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+            cursor: grab;
+        }
+    </style>
+</head>
+<body>
+    <div class="kanban-board">
+        <!-- Columnas dinámicas -->
+    </div>
+    <script>
+        // Mapeo de columnas por estado
+        const columns = {
+            0: { id: 'pending', name: 'En Espera' },
+            1: { id: 'started', name: 'Iniciado' },
+            2: { id: 'completed', name: 'Finalizado' },
+            3: { id: 'paused', name: 'Pausado' },
+            4: { id: 'cancelled', name: 'Cancelado' },
+            5: { id: 'issues', name: 'Con Incidencias' }
+        };
+
+        // Obtener el token de la URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token'); // Asume que la URL incluye ?token=VALOR
+
+        if (!token) {
+            alert('Token no proporcionado en la URL.');
+            throw new Error('Token es requerido para cargar los datos.');
+        }
+
+        // Función para cargar datos de la API
+        async function loadKanbanData() {
+            try {
+                const response = await fetch(`/api/scada-orders/${token}`);
+                if (!response.ok) {
+                    throw new Error('Error al obtener datos de la API.');
+                }
+                const data = await response.json();
+                if (data.success) {
+                    renderKanbanBoard(data.orders);
+                } else {
+                    alert('No se encontraron órdenes para el token proporcionado.');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Ocurrió un error al cargar los datos del Kanban.');
+            }
+        }
+
+        // Función para renderizar el tablero Kanban
+        function renderKanbanBoard(orders) {
+            const kanbanBoard = document.querySelector('.kanban-board');
+            kanbanBoard.innerHTML = ''; // Limpiar el contenido actual
+
+            // Crear las columnas dinámicamente
+            Object.entries(columns).forEach(([status, column]) => {
+                const columnElement = document.createElement('div');
+                columnElement.classList.add('column');
+                columnElement.id = column.id;
+                columnElement.innerHTML = `<h3>${column.name}</h3>`;
+                kanbanBoard.appendChild(columnElement);
+            });
+
+            // Agregar órdenes a sus columnas correspondientes
+            orders
+                .sort((a, b) => a.orden - b.orden) // Ordenar por 'orden'
+                .forEach(order => {
+                    const columnId = columns[order.status].id;
+                    const columnElement = document.getElementById(columnId);
+
+                    const cardElement = document.createElement('div');
+                    cardElement.classList.add('card');
+                    cardElement.draggable = true; // Hacer las tarjetas arrastrables
+                    cardElement.textContent = `Order ID: ${order.order_id}\nBox: ${order.box}\nUnits: ${order.units}`;
+
+                    // Eventos de arrastre
+                    cardElement.ondragstart = drag;
+                    cardElement.setAttribute('data-status', order.status); // Agregar atributo para rastrear el estado original
+                    cardElement.setAttribute('data-order', order.orden);  // Agregar atributo para rastrear la posición original
+                    columnElement.appendChild(cardElement);
+                });
+
+            // Habilitar eventos de arrastre y soltado en columnas
+            document.querySelectorAll('.column').forEach(column => {
+                column.ondragover = allowDrop;
+                column.ondrop = drop;
+            });
+        }
+
+        // Variables y funciones para el drag-and-drop
+        let draggedCard = null;
+
+        function drag(event) {
+            draggedCard = event.target;
+            event.dataTransfer.effectAllowed = 'move';
+        }
+
+        function allowDrop(event) {
+            event.preventDefault();
+        }
+
+        function drop(event) {
+            event.preventDefault();
+            const targetColumn = event.target.closest('.column');
+
+            if (draggedCard && targetColumn) {
+                // Identificar el elemento objetivo (tarjeta sobre la cual se suelta)
+                const cardsInColumn = Array.from(targetColumn.querySelectorAll('.card'));
+                const dropTarget = event.target.closest('.card');
+
+                // Insertar la tarjeta arrastrada en la posición correcta
+                if (dropTarget && dropTarget !== draggedCard) {
+                    targetColumn.insertBefore(draggedCard, dropTarget);
+                } else {
+                    targetColumn.appendChild(draggedCard); // Colocar al final si no hay objetivo claro
+                }
+
+                // Recalcular el orden de todas las tarjetas en la columna
+                const updatedCardsInColumn = Array.from(targetColumn.querySelectorAll('.card'));
+                updatedCardsInColumn.forEach((card, index) => {
+                    card.setAttribute('data-order', index + 1); // Actualizar el atributo data-order
+                });
+
+                // Obtener el nuevo orden de la tarjeta arrastrada
+                const newOrder = updatedCardsInColumn.findIndex(card => card === draggedCard) + 1;
+
+                // Determinar el nuevo estado basado en la columna
+                const newStatus = Object.entries(columns).find(([key, col]) => col.id === targetColumn.id)[0];
+
+                // Obtener el ID del pedido desde la tarjeta
+                const orderId = draggedCard.textContent.match(/Order ID: (\S+)/)[1];
+
+                // Mostrar un alert con el cambio
+                alert(`La tarjeta "Order ID: ${orderId}" pasó a:
+    Estado: ${columns[newStatus].name}
+    Posición: ${newOrder}.`);
+
+                // Enviar actualización a la API
+                fetch('/api/scada-orders/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        order_id: orderId,
+                        status: parseInt(newStatus),
+                        orden: newOrder,
+                    }),
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            console.log('Orden actualizada correctamente');
+                            // Actualizar los atributos data-status y data-order
+                            draggedCard.setAttribute('data-status', newStatus);
+                            draggedCard.setAttribute('data-order', newOrder);
+                        } else {
+                            console.error('Error al actualizar la orden:', data.message);
+                        }
+                    })
+                    .catch(error => console.error('Error:', error));
+            }
+        }
+
+        // Función para recargar el tablero cada 5 segundos
+        function reloadKanbanData() {
+            loadKanbanData();
+        }
+
+        // Recargar la vista automáticamente cada 5 segundos
+        setInterval(reloadKanbanData, 5000);
+
+        // Cargar los datos al cargar la página
+        loadKanbanData();
+    </script>
+
+</body>
+</html>

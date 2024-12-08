@@ -79,6 +79,9 @@
             font-size: 20px;
             cursor: pointer;
         }
+        .card.dragging {
+            opacity: 0.5;
+        }
     </style>
     <!-- SweetAlert2 -->
     <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
@@ -159,7 +162,6 @@
                 const columnId = columns[order.status].id;
                 const columnElement = document.getElementById(columnId);
 
-                // Usar order.id como Linea ID
                 const lineId = order.id || "No disponible";
 
                 const cardElement = document.createElement('div');
@@ -171,13 +173,14 @@
                     <div>Box: ${order.box}</div>
                     <div>Units: ${order.units}</div>
                 `;
-                cardElement.ondragstart = drag;
+                cardElement.ondragstart = dragStart;
+                cardElement.ondragend = dragEnd;
                 cardElement.setAttribute('data-order-id', order.order_id);
                 columnElement.appendChild(cardElement);
             });
 
             document.querySelectorAll('.column:not(.disabled)').forEach(column => {
-                column.ondragover = allowDrop;
+                column.ondragover = dragOver;
                 column.ondrop = drop;
             });
         }
@@ -247,64 +250,112 @@
 
         let draggedCard = null;
 
-        function drag(event) {
+        function dragStart(event) {
             draggedCard = event.target;
+            event.target.classList.add('dragging');
         }
 
-        function allowDrop(event) {
+        function dragEnd(event) {
+            event.target.classList.remove('dragging');
+        }
+
+        function dragOver(event) {
             event.preventDefault();
+            const column = event.currentTarget;
+            const afterElement = getDragAfterElement(column, event.clientY);
+            const dragging = document.querySelector('.dragging');
+            if (!afterElement) {
+                column.appendChild(dragging);
+            } else {
+                column.insertBefore(dragging, afterElement);
+            }
+        }
+
+        function getDragAfterElement(container, y) {
+            const draggableElements = [...container.querySelectorAll('.card:not(.dragging)')];
+
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
         }
 
         async function drop(event) {
             event.preventDefault();
             const targetColumn = event.target.closest('.column');
-            if (draggedCard && targetColumn) {
-                const orderId = draggedCard.getAttribute('data-order-id');
-                const newStatus = Object.entries(columns).find(([key, col]) => col.id === targetColumn.id)[0];
+            if (!draggedCard || !targetColumn) return;
 
-                targetColumn.appendChild(draggedCard);
-
-                const cardsInColumn = Array.from(targetColumn.querySelectorAll('.card'));
-                cardsInColumn.forEach((card, index) => {
-                    card.setAttribute('data-orden', index + 1);
-                });
-
-                const newOrder = cardsInColumn.findIndex(card => card === draggedCard) + 1;
-
-                try {
-                    const response = await fetch('/api/scada-orders/update', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            order_id: orderId,
-                            status: parseInt(newStatus),
-                            orden: newOrder,
-                        }),
-                    });
-
-                    const result = await response.json();
-                    if (result.success) {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Éxito',
-                            text: `La tarjeta Order ID: ${orderId} ahora está en la columna ${columns[newStatus].name}, posición ${newOrder}.`,
-                        });
-                    } else {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error al actualizar',
-                            text: result.message || 'No se pudo actualizar la posición en el servidor.',
-                        });
-                    }
-                } catch (error) {
+            // Verificar si la columna es "Iniciado"
+            const startedStatusKey = Object.entries(columns).find(([key, col]) => col.id === 'started')[0];
+            if (targetColumn.id === 'started') {
+                // Checar si ya hay una tarjeta en "Iniciado"
+                const cardsInStarted = targetColumn.querySelectorAll('.card');
+                if (cardsInStarted.length > 1) {
+                    // Si se ha intentado colocar una segunda tarjeta, deshacer y notificar
                     Swal.fire({
-                        icon: 'error',
-                        title: 'Error al llamar a la API',
-                        text: 'No se pudo conectar al servidor.',
+                        icon: 'warning',
+                        title: 'No permitido',
+                        text: 'No puedes colocar más de una tarjeta en "Iniciado".',
                     });
-                    console.error('Error:', error);
+
+                    // Devolver la tarjeta a su columna anterior (opcional)
+                    loadKanbanData();
+                    draggedCard = null;
+                    return;
                 }
             }
+
+            const orderId = draggedCard.getAttribute('data-order-id');
+            const newStatus = Object.entries(columns).find(([key, col]) => col.id === targetColumn.id)[0];
+
+            const cardsInColumn = Array.from(targetColumn.querySelectorAll('.card'));
+            cardsInColumn.forEach((card, index) => {
+                card.setAttribute('data-orden', index + 1);
+            });
+
+            const newOrder = cardsInColumn.findIndex(card => card === draggedCard) + 1;
+
+            try {
+                const response = await fetch('/api/scada-orders/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        order_id: orderId,
+                        status: parseInt(newStatus),
+                        orden: newOrder,
+                    }),
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    await loadKanbanData();
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Éxito',
+                        text: `La tarjeta Order ID: ${orderId} se ha movido a la columna ${columns[newStatus].name} en la posición ${newOrder}.`,
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error al actualizar',
+                        text: result.message || 'No se pudo actualizar la posición en el servidor.',
+                    });
+                }
+            } catch (error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error al llamar a la API',
+                    text: 'No se pudo conectar al servidor.',
+                });
+                console.error('Error:', error);
+            }
+
+            draggedCard = null;
         }
 
         function updateClock() {
@@ -318,7 +369,9 @@
         setInterval(updateClock, 1000);
         updateClock();
         loadKanbanData();
-        setInterval(loadKanbanData, 5000);
+
+        // Refresco cada 5 minutos
+        setInterval(loadKanbanData, 10000);
     </script>
 </body>
 </html>
