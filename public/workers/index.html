@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Trabajadores SCADA</title>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        .header-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: #343a40;
+            color: white;
+            padding: 10px 20px;
+        }
+        .header-left img {
+            height: 50px;
+            width: auto;
+        }
+        .header-right {
+            font-size: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 5px;
+        }
+        .header-right small {
+            font-size: 1.1rem;
+            color: #ffc107;
+        }
+        .content {
+            padding: 20px;
+        }
+        table {
+            width: 100%;
+            margin-top: 20px;
+        }
+        button {
+            margin-bottom: 15px;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .btn-secondary {
+            background-color: #6c757d !important;
+        }
+        .btn-success {
+            background-color: #28a745 !important;
+        }
+        .btn-warning {
+            background-color: #ffc107 !important;
+            color: #000;
+        }
+        .btn-danger {
+            background-color: #dc3545 !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header-container">
+        <div class="header-left">
+            <img src="logo.png" alt="Logo">
+        </div>
+        <div class="header-right">
+            <div id="clock">--:--:--</div>
+            <small id="scada-name">Gestión de Trabajadores</small>
+        </div>
+    </header>
+
+    <!-- Content -->
+    <div class="content">
+        <h1>Gestión de Trabajadores</h1>
+        <button id="addWorker">Añadir Trabajador</button>
+        <table id="workersTable" class="display">
+            <thead>
+                <tr>
+                    <th>ID Cliente</th>
+                    <th>Nombre</th>
+                    <th>Email</th>
+                    <th>Teléfono</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script>
+        const workersApiUrl = '/api/workers';
+
+        $(document).ready(function () {
+            const table = $('#workersTable').DataTable({
+                ajax: {
+                    url: `${workersApiUrl}/list-all`,
+                    dataSrc: '',
+                    error: function (xhr) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error al Cargar Datos',
+                            text: `Status: ${xhr.status}. Mensaje: ${xhr.responseJSON?.error || 'Error desconocido'}`
+                        });
+                    }
+                },
+                columns: [
+                    { data: 'id' },
+                    { data: 'name' },
+                    { data: 'email', defaultContent: '' },
+                    { data: 'phone', defaultContent: '' },
+                    {
+                        data: null,
+                        render: function (data) {
+                            return `
+                                <button class="edit-btn btn-secondary" data-id="${data.id}" data-name="${data.name}" data-email="${data.email||''}" data-phone="${data.phone||''}">Editar</button>
+                                <button class="delete-btn btn-danger" data-id="${data.id}">Eliminar</button>
+                                <button class="reset-email-btn btn-warning" data-email="${data.email||''}">Reset Pass Email</button>
+                                <button class="reset-whatsapp-btn btn-success" data-phone="${data.phone||''}">Reset Pass WhatsApp</button>
+                            `;
+                        }
+                    }
+                ]
+            });
+
+            $('#addWorker').click(function () {
+                Swal.fire({
+                    title: 'Añadir Trabajador',
+                    html: `
+                        <input id="workerId" class="swal2-input" placeholder="ID Cliente (Obligatorio)">
+                        <input id="workerName" class="swal2-input" placeholder="Nombre del Trabajador">
+                        <input id="workerEmail" class="swal2-input" placeholder="Email (Opcional)">
+                        <input id="workerPhone" class="swal2-input" placeholder="Teléfono (Opcional)">
+                        <input id="workerPassword" type="password" class="swal2-input" placeholder="Contraseña (Opcional)">
+                    `,
+                    confirmButtonText: 'Añadir',
+                    showCancelButton: true,
+                    preConfirm: () => {
+                        const id = $('#workerId').val();
+                        const name = $('#workerName').val();
+                        const email = $('#workerEmail').val();
+                        const phone = $('#workerPhone').val();
+                        const password = $('#workerPassword').val();
+                        if (!id || !name) {
+                            Swal.showValidationMessage('ID y Nombre son obligatorios.');
+                            return false;
+                        }
+                        return {
+                            id: parseInt(id),
+                            name,
+                            email: email || null,
+                            phone: phone || null,
+                            password: password || null
+                        };
+                    }
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const { id, name, email, phone, password } = result.value;
+                        $.ajax({
+                            url: `${workersApiUrl}/update-or-insert`,
+                            method: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify({ id, name, email, phone, password }),
+                            success: function () {
+                                Swal.fire('Trabajador añadido o actualizado', '', 'success');
+                                table.ajax.reload();
+                            },
+                            error: function (xhr) {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error al Añadir',
+                                    text: `Status: ${xhr.status}. Mensaje: ${xhr.responseJSON?.error || 'Error desconocido'}`
+                                });
+                            }
+                        });
+                    }
+                });
+            });
+
+            $('#workersTable tbody').on('click', '.edit-btn', function () {
+                const currentId = $(this).data('id');
+                const currentName = $(this).data('name');
+                const currentEmail = $(this).data('email');
+                const currentPhone = $(this).data('phone');
+
+                Swal.fire({
+                    title: 'Editar Trabajador',
+                    html: `
+                        <input id="workerId" class="swal2-input" value="${currentId}" readonly>
+                        <input id="workerName" class="swal2-input" value="${currentName}">
+                        <input id="workerEmail" class="swal2-input" placeholder="Email (Opcional)" value="${currentEmail}">
+                        <input id="workerPhone" class="swal2-input" placeholder="Teléfono (Opcional)" value="${currentPhone}">
+                        <input id="workerPassword" type="password" class="swal2-input" placeholder="Nueva Contraseña (opcional)">
+                        <small>Deje la contraseña en blanco para no cambiarla</small>
+                    `,
+                    confirmButtonText: 'Actualizar',
+                    showCancelButton: true,
+                    preConfirm: () => {
+                        const id = $('#workerId').val();
+                        const name = $('#workerName').val();
+                        const email = $('#workerEmail').val() || null;
+                        const phone = $('#workerPhone').val() || null;
+                        const password = $('#workerPassword').val(); // si está vacío, no actualizamos contraseña
+                        if (!id || !name) {
+                            Swal.showValidationMessage('ID y Nombre son obligatorios.');
+                            return false;
+                        }
+                        return {
+                            id: parseInt(id),
+                            name,
+                            email,
+                            phone,
+                            password: password || null
+                        };
+                    }
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const { id, name, email, phone, password } = result.value;
+                        const payload = { id, name, email, phone };
+                        if (password) {
+                            payload.password = password;
+                        }
+                        $.ajax({
+                            url: `${workersApiUrl}/update-or-insert`,
+                            method: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify(payload),
+                            success: function () {
+                                Swal.fire('Trabajador actualizado', '', 'success');
+                                table.ajax.reload();
+                            },
+                            error: function (xhr) {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error al Actualizar',
+                                    text: `Status: ${xhr.status}. Mensaje: ${xhr.responseJSON?.error || 'Error desconocido'}`
+                                });
+                            }
+                        });
+                    }
+                });
+            });
+
+            $('#workersTable tbody').on('click', '.delete-btn', function () {
+                const id = $(this).data('id');
+                Swal.fire({
+                    title: '¿Estás seguro?',
+                    text: 'Esta acción no se puede deshacer.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sí, eliminar',
+                    cancelButtonText: 'Cancelar'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: `${workersApiUrl}/${id}`,
+                            method: 'DELETE',
+                            success: function () {
+                                Swal.fire('Trabajador eliminado', '', 'success');
+                                table.ajax.reload();
+                            },
+                            error: function (xhr) {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error al Eliminar',
+                                    text: `Status: ${xhr.status}. Mensaje: ${xhr.responseJSON?.error || 'Error desconocido'}`
+                                });
+                            }
+                        });
+                    }
+                });
+            });
+
+            // Reset password por email
+            $('#workersTable tbody').on('click', '.reset-email-btn', function() {
+                const email = $(this).data('email');
+                if(!email) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Sin email',
+                        text: 'Este trabajador no tiene email asignado. Por favor, asígnalo primero.'
+                    });
+                    return;
+                }
+
+                Swal.fire({
+                    title: 'Resetear Contraseña por Email',
+                    text: `Se enviará una nueva contraseña al email: ${email}`,
+                    icon: 'info',
+                    showCancelButton: true,
+                    confirmButtonText: 'Confirmar',
+                    cancelButtonText: 'Cancelar'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: `${workersApiUrl}/reset-password-email`,
+                            method: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify({ email }),
+                            success: function () {
+                                Swal.fire('Contraseña reseteada y enviada por email', '', 'success');
+                            },
+                            error: function (xhr) {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error al Resetear por Email',
+                                    text: `Status: ${xhr.status}. Mensaje: ${xhr.responseJSON?.error || 'Error desconocido'}`
+                                });
+                            }
+                        });
+                    }
+                });
+            });
+
+            // Reset password por WhatsApp
+            $('#workersTable tbody').on('click', '.reset-whatsapp-btn', function() {
+                const phone = $(this).data('phone');
+                if(!phone) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Sin teléfono',
+                        text: 'Este trabajador no tiene teléfono asignado. Por favor, asígnalo primero.'
+                    });
+                    return;
+                }
+
+                Swal.fire({
+                    title: 'Resetear Contraseña por WhatsApp',
+                    text: `Se generará una nueva contraseña para el teléfono: ${phone}`,
+                    icon: 'info',
+                    showCancelButton: true,
+                    confirmButtonText: 'Confirmar',
+                    cancelButtonText: 'Cancelar'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: `${workersApiUrl}/reset-password-whatsapp`,
+                            method: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify({ phone }),
+                            success: function () {
+                                Swal.fire('Contraseña reseteada, se enviará por WhatsApp (futuro)', '', 'success');
+                            },
+                            error: function (xhr) {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error al Resetear por WhatsApp',
+                                    text: `Status: ${xhr.status}. Mensaje: ${xhr.responseJSON?.error || 'Error desconocido'}`
+                                });
+                            }
+                        });
+                    }
+                });
+            });
+
+        });
+
+        function updateClock() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            document.getElementById('clock').textContent = `${hours}:${minutes}:${seconds}`;
+        }
+
+        // Actualiza el reloj cada segundo
+        setInterval(updateClock, 1000);
+        updateClock(); // Llamada inicial
+    </script>
+</body>
+</html>

@@ -137,6 +137,17 @@ Route::post('/run-update', [SystemController::class, 'runUpdateScript']);
 // Routes for Operators
 Route::post('/workers/update-or-insert', [OperatorController::class, 'updateOrInsertSingle']);
 Route::post('/workers/replace-all', [OperatorController::class, 'replaceAll']);
+Route::get('/workers/list-all', [OperatorController::class, 'listAll']);
+// Ruta para mostrar un solo operador por ID
+Route::get('/workers/{id}', [OperatorController::class, 'show']);
+// Nuevas rutas para reset de contraseña
+Route::post('/workers/reset-password-email', [OperatorController::class, 'resetPasswordByEmail']);
+Route::post('/workers/reset-password-whatsapp', [OperatorController::class, 'resetPasswordByWhatsapp']);
+Route::post('/workers/verify-password', [OperatorController::class, 'verifyPassword']);
+
+
+// Ruta para eliminar un operador por ID
+Route::delete('/workers/{id}', [OperatorController::class, 'destroy']);
 
 // Routes for Product Lists
 Route::post('/product-lists/update-or-insert', [ProductListController::class, 'updateOrInsertSingle']);

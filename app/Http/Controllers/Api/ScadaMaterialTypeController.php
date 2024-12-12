@@ -109,7 +109,7 @@ class ScadaMaterialTypeController extends Controller
             return [
                 'id' => $material->id,
                 'name' => $material->name,
-                'cliente_id' => $material->client_id,
+                'client_id' => $material->client_id,
                 'service_type' => $material->service_type,
                 'density' => $material->density // Añadimos más detalles si es necesario
             ];
@@ -154,7 +154,7 @@ class ScadaMaterialTypeController extends Controller
             $validated = $request->validate([
                 'name' => 'required|string|max:255',
                 'density' => 'required|string|max:255',
-                'cliente_id' => 'required|string|max:255',
+                'client_id' => 'required|string|max:255',
                 'service_type' => 'required|integer|in:0,1',
             ]);
 
@@ -239,7 +239,7 @@ class ScadaMaterialTypeController extends Controller
             $validated = $request->validate([
                 'name' => 'string|max:255',
                 'density' => 'string|max:255',
-                'cliente_id' => 'string|max:255',
+                'client_id' => 'string|max:255',
                 'service_type' => 'integer|in:0,1',
             ]);
 

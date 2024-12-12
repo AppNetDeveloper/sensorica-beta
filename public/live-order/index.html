@@ -100,6 +100,14 @@
 
     <div class="kanban-board"></div>
     <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            Swal.fire({
+                title: 'Advertencia',
+                text: 'Todos los cambios en este Kanban pueden alterar la producción o causar errores.',
+                icon: 'warning',
+                confirmButtonText: 'Entendido'
+            });
+        });
         const columns = {
             0: { id: 'pending', name: 'En Espera' },
             1: { id: 'started', name: 'Iniciado' },
@@ -146,44 +154,84 @@
             }
         }
 
-        function renderKanbanBoard(orders) {
-            const kanbanBoard = document.querySelector('.kanban-board');
-            kanbanBoard.innerHTML = '';
-            Object.entries(columns).forEach(([status, column]) => {
-                const columnElement = document.createElement('div');
-                columnElement.classList.add('column');
-                columnElement.id = column.id;
-                if (column.disabled) columnElement.classList.add('disabled');
-                columnElement.innerHTML = `<h3>${column.name}</h3>`;
-                kanbanBoard.appendChild(columnElement);
-            });
+        async function renderKanbanBoard(orders) {
+    const kanbanBoard = document.querySelector('.kanban-board');
+    kanbanBoard.innerHTML = '';
+    Object.entries(columns).forEach(([status, column]) => {
+        const columnElement = document.createElement('div');
+        columnElement.classList.add('column');
+        columnElement.id = column.id;
+        if (column.disabled) columnElement.classList.add('disabled');
+        columnElement.innerHTML = `<h3>${column.name}</h3>`;
+        kanbanBoard.appendChild(columnElement);
+    });
 
-            orders.sort((a, b) => a.orden - b.orden).forEach(order => {
-                const columnId = columns[order.status].id;
-                const columnElement = document.getElementById(columnId);
+    for (const order of orders.sort((a, b) => a.orden - b.orden)) {
+        const columnId = columns[order.status].id;
+        const columnElement = document.getElementById(columnId);
 
-                const lineId = order.id || "No disponible";
+        const lineId = order.id || "No disponible";
 
-                const cardElement = document.createElement('div');
-                cardElement.classList.add('card');
-                cardElement.draggable = true;
-                cardElement.innerHTML = `
-                    <span class="card-menu" onclick="showCardMenu('${order.order_id}', '${order.box}', ${order.units}, '${lineId}')">⋮</span>
-                    <div>Order ID: ${order.order_id}</div>
-                    <div>Box: ${order.box}</div>
-                    <div>Units: ${order.units}</div>
-                `;
-                cardElement.ondragstart = dragStart;
-                cardElement.ondragend = dragEnd;
-                cardElement.setAttribute('data-order-id', order.order_id);
-                columnElement.appendChild(cardElement);
-            });
+        const cardElement = document.createElement('div');
+        cardElement.classList.add('card');
+        cardElement.draggable = true;
+        cardElement.innerHTML = `
+            <span class="card-menu" onclick="showCardMenu('${order.order_id}', '${order.box}', ${order.units}, '${lineId}')">⋮</span>
+            <div>Order ID: ${order.order_id}</div>
+            <div>Box: ${order.box}</div>
+            <div>Units: ${order.units}</div>
+        `;
 
-            document.querySelectorAll('.column:not(.disabled)').forEach(column => {
-                column.ondragover = dragOver;
-                column.ondrop = drop;
-            });
+        // Si la tarjeta está en "Iniciado", cargar los contadores
+        if (columnId === 'started') {
+            const { usedZero, usedOne } = await loadStartedCardData(order.id);
+            cardElement.innerHTML += `
+                <div>Pendientes: ${usedZero}</div>
+                <div>Realizados: ${usedOne}</div>
+            `;
         }
+
+        cardElement.ondragstart = dragStart;
+        cardElement.ondragend = dragEnd;
+        cardElement.setAttribute('data-order-id', order.order_id);
+        columnElement.appendChild(cardElement);
+    }
+
+    document.querySelectorAll('.column:not(.disabled)').forEach(column => {
+        column.ondragover = dragOver;
+        column.ondrop = drop;
+    });
+}
+
+async function loadStartedCardData(id) {
+    try {
+        const response = await fetch(`/api/scada-orders/${id}/lines`);
+        if (!response.ok) throw new Error('Error al obtener datos de procesos.');
+
+        const data = await response.json();
+        if (!data.success) return { usedZero: 0, usedOne: 0 };
+
+        let usedZero = 0;
+        let usedOne = 0;
+
+        data.lines.forEach(line => {
+            line.processes.forEach(process => {
+                if (process.used === 0) {
+                    usedZero++;
+                } else if (process.used === 1) {
+                    usedOne++;
+                }
+            });
+        });
+
+        return { usedZero, usedOne };
+    } catch (error) {
+        console.error('Error:', error);
+        return { usedZero: 0, usedOne: 0 };
+    }
+}
+
+
 
         function showCardMenu(orderId, box, units, lineId) {
             Swal.fire({
@@ -337,7 +385,7 @@
                     Swal.fire({
                         icon: 'success',
                         title: 'Éxito',
-                        text: `La tarjeta Order ID: ${orderId} se ha movido a la columna ${columns[newStatus].name} en la posición ${newOrder}.`,
+                        text: `El Orden con Order ID: ${orderId} se ha movido a la columna ${columns[newStatus].name} en la posición ${newOrder}.`,
                     });
                 } else {
                     Swal.fire({

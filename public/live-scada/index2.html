@@ -455,6 +455,53 @@
     cursor: pointer;
   }
 
+/* Nuevos y modificados estilos CSS */
+
+/* Parpadeo del icono cuando no hay operador seleccionado */
+@keyframes blink {
+  0% { opacity: 1; }
+  50% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+/* Clase para el icono que parpadea */
+.blinking {
+  animation: blink 1s infinite;
+}
+
+/* Contenedor del operador y el icono */
+.operator-container {
+  display: flex;
+  align-items: center;
+  margin-right: 20px;
+  margin-left: 20px;
+}
+
+.operator-icon {
+  font-size: 3em;
+  color: #f8f6f2;
+  margin-right: 10px;
+}
+
+.operator-select {
+  height: 50px;
+  font-size: 1.2em;
+  min-width: 200px;
+  background-color: #343a40; /* Mismo color que el header */
+  color: #fff;              /* Texto en blanco */
+  border: 1px solid #343a40;
+  border-radius: 5px;
+  padding: 5px 10px;
+  outline: none;
+  appearance: none;        /* Elimina la apariencia por defecto */
+  -webkit-appearance: none;/* Para Safari/Chrome */
+  -moz-appearance: none;   /* Para Firefox */
+}
+
+.operator-select option {
+  background-color: #343a40; /* Mismo fondo para las opciones */
+  color: #fff;               /* Texto en blanco dentro de las opciones */
+}
 
   </style>
 </head>
@@ -471,7 +518,13 @@
         <i class="fas fa-power-off"></i>
       </button>
     </div>
-    <div class="header-center" onclick="mostrarOpcionesOrdenesTrabajo()" style="cursor: pointer;">
+    <div class="operator-container">
+        <i id="operatorIcon" class="fas fa-user operator-icon blinking"></i>
+        <select id="operatorSelect" class="operator-select">
+          <option value="">Seleccione Operador</option>
+        </select>
+    </div>
+    <div class="header-center" onclick="if(checkOperatorSelected()){mostrarOpcionesOrdenesTrabajo();}" style="cursor: pointer;">
         <div id="order-id">Cargando...</div>
         <div id="created-at" style="font-size: 1rem;">Iniciada ...</div>
         <div id="order-id-intern-id" style="display: none;">Cargando...</div>
@@ -1378,6 +1431,129 @@ async function esperarSwalCerrado(tiempoMs) {
 
       // Cargar los materiales de la API
       cargarMateriales();
+
+      //cargar operadores de la API
+      cargarOperadores();
+
+    // Evento al cambiar operador
+     $('#operatorSelect').on('change', function() {
+        const selectedVal = $(this).val();
+        const icon = document.getElementById('operatorIcon');
+        if (selectedVal) {
+          icon.classList.remove('blinking');
+          // Próximamente: Aquí podrás llamar a otra API para guardar el operador seleccionado
+        } else {
+          icon.classList.add('blinking');
+        }
+      });
+    });
+    async function cargarOperadores() {
+      try {
+        const response = await fetch('/api/workers/list-all');
+        const data = await response.json();
+        const operatorSelect = document.getElementById('operatorSelect');
+
+        data.forEach(worker => {
+          const option = document.createElement('option');
+          option.value = worker.id;
+          option.textContent = worker.name;
+          operatorSelect.appendChild(option);
+        });
+      } catch (error) {
+        console.error('Error al cargar operadores:', error);
+      }
+    }
+    let isOperatorAuthenticated = false;
+
+    document.getElementById('operatorSelect').addEventListener('change', async function() {
+    const operatorId = this.value;
+
+    // Si no hay operador seleccionado, desautenticamos
+    if (!operatorId) {
+        isOperatorAuthenticated = false;
+        return;
+    }
+
+    // Pedir la contraseña
+    isSwalOpen = true; // si usas esta variable para controlar estados
+    const { value: password } = await Swal.fire({
+        title: 'Confirmación de Operador',
+        text: 'Ingrese la contraseña del operador seleccionado',
+        input: 'password',
+        inputAttributes: {
+        autocapitalize: 'off',
+        autocorrect: 'off'
+        },
+        showCancelButton: true,
+        confirmButtonText: 'Confirmar',
+        cancelButtonText: 'Cancelar',
+        allowOutsideClick: false,
+        allowEscapeKey: false
+    });
+
+    if (!password) {
+        // Si canceló o no ingresó contraseña, revertimos selección
+        this.value = '';
+        isOperatorAuthenticated = false;
+        isSwalOpen = false;
+        return;
+    }
+
+    // Verificar contraseña con la API
+    try {
+        const response = await fetch('/api/workers/verify-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ operator_id: parseInt(operatorId), password })
+        });
+        const data = await response.json();
+
+        if (response.ok && data.valid) {
+        Swal.fire({
+            icon: 'success',
+            title: 'Operador autenticado',
+            text: 'La contraseña es correcta.',
+            timer: 2000,
+            showConfirmButton: false,
+            timerProgressBar: true,
+            willClose: () => {
+            isSwalOpen = false;
+            }
+        });
+        isOperatorAuthenticated = true;
+        } else {
+        Swal.fire({
+            icon: 'error',
+            title: 'Contraseña incorrecta',
+            text: 'La contraseña no es válida. Seleccione un operador válido e ingrese la contraseña correcta.',
+            timer: 5000,
+            showConfirmButton: false,
+            timerProgressBar: true,
+            willClose: () => {
+            isSwalOpen = false;
+            }
+        }).then(() => {
+            // Revertimos la selección
+            document.getElementById('operatorSelect').value = '';
+            isOperatorAuthenticated = false;
+        });
+        }
+    } catch (error) {
+        console.error(error);
+        Swal.fire({
+        icon: 'error',
+        title: 'Error de conexión',
+        text: 'No se pudo verificar la contraseña.',
+        timer: 5000,
+        showConfirmButton: false,
+        timerProgressBar: true,
+        willClose: () => {
+            isSwalOpen = false;
+        }
+        });
+        this.value = '';
+        isOperatorAuthenticated = false;
+    }
     });
 
     // Función para obtener el valor de un parámetro de la URL
@@ -1510,15 +1686,15 @@ async function esperarSwalCerrado(tiempoMs) {
 
         // Crear el HTML de la tarjeta de tolva con el nombre que viene del JSON
         const cardHtml = `
-          <div class="card-tolva">
-            <button class="settings-btn" onclick="solicitarContrasena('${tolva.id}', '${tolva.token}', '${tolva.last_value}', '${tolva.name}')">
-              <i class="fas fa-cog"></i>
+        <div class="card-tolva">
+            <button class="settings-btn" onclick="if(checkOperatorSelected()){solicitarContrasena('${tolva.id}', '${tolva.token}', '${tolva.last_value}', '${tolva.name}')};">
+            <i class="fas fa-cog"></i>
             </button>
-            <div class="card-title">${tolva.name}</div> <!-- Mostrar el nombre desde el JSON -->
+            <div class="card-title">${tolva.name}</div>
             <div id="tolvaWeight_${tolvaId}" class="card-weight">${tolva.last_value} <span>Kg</span></div>
             <select class="material-select" id="materialSelect_${tolvaId}"></select>
             <div id="tolvaRelleno_${tolvaId}" class="card-weight">Relleno: ${porcentajeRelleno}%</div>
-          </div>
+        </div>
         `;
 
         // Añadir la tarjeta generada al contenedor
@@ -1583,6 +1759,29 @@ async function esperarSwalCerrado(tiempoMs) {
       });
     }
 
+    function checkOperatorSelected() {
+        const opSelect = document.getElementById('operatorSelect');
+        if (!opSelect.value) {
+            isSwalOpen = true;
+            Swal.fire({
+            icon: 'warning',
+            title: 'Operador no seleccionado',
+            text: 'Por favor seleccione un operador antes de continuar',
+            timer: 5000,
+            timerProgressBar: true,
+            showConfirmButton: false,   // No mostrar botón "OK"
+            showCancelButton: false,    // Sin botón "Cancelar"
+            allowOutsideClick: false,   // No se cierra al hacer clic fuera
+            allowEscapeKey: false,      // No se cierra con la tecla ESC
+            willClose: () => {
+                // Cuando el Swal se cierra (después de 5s)
+                isSwalOpen = false;
+            }
+            });
+            return false; // Retorna false indicando que no hay operador seleccionado
+        }
+        return true; // Hay operador seleccionado
+    }
     // Confirmación antes de hacer la llamada a la API
     function confirmarCambioMaterial(tolva, selectedId, selectedValue) {
       const selectElement = $(`#materialSelect_${tolva.fillinglevels}`);

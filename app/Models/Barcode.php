@@ -100,173 +100,230 @@ class Barcode extends Model
                     'oee' => null,
                 ]);
             } else {
-                // Si existe 'scada', proceder a crear un nuevo 'ScadaOrder'
+                // Si existe 'scada', proceder a crear un nuevo 'ScadaOrder', pero primero comprobar que no es duplicado
 
                 // Obtener el último valor de 'orden' en 'scada_order' para asignar un nuevo orden secuencial
                 $lastOrder = ScadaOrder::max('orden');
                 $newOrder = $lastOrder ? $lastOrder + 1 : 1;
 
-                // Crear un nuevo registro en 'ScadaOrder' con los datos de la orden
-                $scadaOrder = ScadaOrder::create([
-                    'scada_id' => $scada->id,
-                    'production_line_id' => $productionLineId,
-                    'barcoder_id' => $barcode->id,
-                    'box' => $box,
-                    'units_box' => $units,
-                    'units' => $box * $units,
-                    'order_id' => $orderId,
-                    'json' => $orderNotice, // Almacenar el JSON original
-                    'status' => 0, // Estado inicial
-                    'orden' => $newOrder, // Asignar el nuevo orden
-                ]);
+                 // Si existe 'scada', verificar si el 'orderId' ya existe en 'ScadaOrder'
+                $existingOrder = ScadaOrder::where('order_id', $orderId)->first();
+                if ($existingOrder) {
+                    // Si el 'orderId' ya existe, crear un nuevo 'ScadaOrder' con status = 5
 
-                // Obtener la capacidad de la mezcladora en metros cúbicos desde 'scada'
-                $mixerCapacity = $scada->mixer_m3;
+                    // Crear un nuevo registro en 'ScadaOrder' con los datos de la orden
+                    $scadaOrder = ScadaOrder::create([
+                        'scada_id' => $scada->id,
+                        'production_line_id' => $productionLineId,
+                        'barcoder_id' => $barcode->id,
+                        'box' => $box,
+                        'units_box' => $units,
+                        'units' => $box * $units,
+                        'order_id' => $orderId . "-Order-Duplicado", // Añadir "-Order-Duplicado" al order_id
+                        'json' => $orderNotice, // Almacenar el JSON original
+                        'status' => 5, // Estado 5 para indicar orden duplicada
+                        'orden' => $newOrder, // Asignar el nuevo orden
+                    ]);
 
-                // Inicializar variables para el volumen total y la detección de densidades faltantes
-                $totalVolume = 0;
-                $missingDensity = false;
+                    Log::warning("Orden duplicada detectada. ScadaOrder creado con status 5 y order_id: {$orderId}-Order-Duplicado");
+                    
+                    // Borrar el campo 'order_notice' del barcode
+                    $barcode->order_notice = null;
+                    $barcode->save(); // Actualizar el barcode
 
-                // Arreglo para almacenar los materiales procesados
-                $materialVolumes = [];
+                    return; // Salir del método
+                }else{
+                    // Crear un nuevo registro en 'ScadaOrder' con los datos de la orden
+                    $scadaOrder = ScadaOrder::create([
+                        'scada_id' => $scada->id,
+                        'production_line_id' => $productionLineId,
+                        'barcoder_id' => $barcode->id,
+                        'box' => $box,
+                        'units_box' => $units,
+                        'units' => $box * $units,
+                        'order_id' => $orderId,
+                        'json' => $orderNotice, // Almacenar el JSON original
+                        'status' => 0, // Estado inicial
+                        'orden' => $newOrder, // Asignar el nuevo orden
+                    ]);
 
-                // Recorrer cada material en 'groupLevel' del JSON
-                foreach ($orderNotice['refer']['groupLevel'] as $material) {
-                    // Procesar solo materiales donde 'measure' es 'Kg'
-                    if ($material['measure'] === 'Kg') {
-                        // Intentar encontrar el material en 'scada_material_type' usando 'client_id'
-                        $materialType = ScadaMaterialType::where('client_id', $material['id'])->first();
+                    // Obtener la capacidad de la mezcladora en metros cúbicos desde 'scada'
+                    $mixerCapacity = $scada->mixer_m3;
 
-                        if (!$materialType) {
-                            // Si no se encuentra por 'client_id', buscar por 'name'
-                            $materialType = ScadaMaterialType::where('name', $material['name'])->first();
+                    // Inicializar variables para el volumen total y la detección de densidades faltantes
+                    $totalVolume = 0;
+                    $missingDensity = false;
 
-                            if ($materialType) {
-                                // Si se encuentra por 'name', actualizar 'client_id' en la base de datos solo si esl clint_id es null
-                                if ($materialType->client_id === null) {
-                                    $materialType->client_id = $material['id'];
-                                    $materialType->save();
-                                }else {
+                    // Arreglo para almacenar los materiales procesados
+                    $materialVolumes = [];
+
+                    // Recorrer cada material en 'groupLevel' del JSON
+                    foreach ($orderNotice['refer']['groupLevel'] as $material) {
+                        // Procesar solo materiales donde 'measure' es 'Kg'
+                        if ($material['measure'] === 'Kg') {
+                            // Intentar encontrar el material en 'scada_material_type' usando 'client_id'
+                            $materialType = ScadaMaterialType::where('client_id', $material['id'])->first();
+
+                            if (!$materialType) {
+                                // Si no se encuentra por 'client_id', buscar por 'name'
+                                $materialType = ScadaMaterialType::where('name', $material['name'])->first();
+
+                                if ($materialType) {
+                                    // Si se encuentra por 'name', actualizar 'client_id' en la base de datos solo si esl clint_id es null
+                                    if ($materialType->client_id === null) {
+                                        $materialType->client_id = $material['id'];
+                                        $materialType->save();
+                                    }else {
+                                        $scadaOrder->update(['status' => 5]);
+                                        Log::warning("Material : {$material['name']} (ID: {$material['id']}) No encontrado con id de cliente en NULL para poder ser actualizado. ScadaOrder actualizado a estado 5.");
+
+                                                                // Actualizar order_id con el valor actual + "-Falta-Materiales"
+                                        $newOrderId = $scadaOrder->order_id . "-Falta-Materiales";
+                                        $scadaOrder->update(['order_id' => $newOrderId]);
+                                        Log::warning("ScadaOrder actualizado a estado 5 con order_id: {$newOrderId}");
+                                        return; // Salir del método
+                                    }
+
+                                } else {
+                                    // Si no se encuentra, actualizar estado de 'scadaOrder' a 5 (incidencia) y registrar en el log
                                     $scadaOrder->update(['status' => 5]);
-                                    Log::warning("Material : {$material['name']} (ID: {$material['id']}) No encontrado con id de cliente en NULL para poder ser actualizado. ScadaOrder actualizado a estado 5.");
+                                    Log::warning("Material no encontrado: {$material['name']} (ID: {$material['id']}). ScadaOrder actualizado a estado 5.");
+
+                                                            // Actualizar order_id con el valor actual + "-Falta-Materiales"
+                                    $newOrderId = $scadaOrder->order_id . "-Falta-Materiales";
+                                    $scadaOrder->update(['order_id' => $newOrderId]);
+                                    Log::warning("ScadaOrder actualizado a estado 5 con order_id: {$newOrderId}");
                                     return; // Salir del método
                                 }
-
                             } else {
-                                // Si no se encuentra, actualizar estado de 'scadaOrder' a 5 (incidencia) y registrar en el log
+                                // Si se encontró por 'client_id', verificar que el 'name' coincida
+                                if ($materialType->name !== $material['name']) {
+                                    // Si el nombre no coincide, actualizar estado a 5 y registrar en el log
+                                    $scadaOrder->update(['status' => 5]);
+                                    Log::warning("ID y nombre del material no coinciden: ID {$material['id']} tiene nombre {$materialType->name}, se esperaba {$material['name']}. ScadaOrder actualizado a estado 5.");
+
+                                                            // Actualizar order_id con el valor actual + "-Falta-Materiales"
+                                    $newOrderId = $scadaOrder->order_id . "-Falta-Materiales";
+                                    $scadaOrder->update(['order_id' => $newOrderId]);
+                                    Log::warning("ScadaOrder actualizado a estado 5 con order_id: {$newOrderId}");
+                                    return; // Salir del método
+                                }
+                            }
+
+                            // Obtener la densidad del material desde 'scada_material_type'
+                            $density = $materialType->density;
+
+                            if (!$density || $density == 0) {
+                                // Si la densidad es nula o cero, actualizar estado a 5 y registrar en el log
                                 $scadaOrder->update(['status' => 5]);
-                                Log::warning("Material no encontrado: {$material['name']} (ID: {$material['id']}). ScadaOrder actualizado a estado 5.");
+                                Log::warning("Densidad faltante para material: {$material['name']}. ScadaOrder actualizado a estado 5.");
+
+                                // Actualizar order_id con el valor actual + "-Falta-Materiales"
+                                $newOrderId = $scadaOrder->order_id . "-Falta-Materiales";
+                                $scadaOrder->update(['order_id' => $newOrderId]);
+                                Log::warning("ScadaOrder actualizado a estado 5 con order_id: {$newOrderId}");
                                 return; // Salir del método
                             }
+
+                            // Calcular el volumen del material en metros cúbicos: volumen = peso total (kg) / densidad (kg/m3)
+                            $materialVolume = $material['total'] / $density;
+
+                            // Sumar el volumen del material al volumen total
+                            $totalVolume += $materialVolume;
+
+                            // Almacenar los datos del material para uso posterior
+                            $material['volume'] = $materialVolume; // Volumen en m3
+                            $material['density'] = $density; // Densidad en kg/m3
+                            $material['material_type'] = $materialType; // Objeto 'ScadaMaterialType'
+                            $material['value'] = $material['total']; // Peso total en kg
+                            $materialVolumes[] = $material; // Agregar al arreglo de materiales
                         } else {
-                            // Si se encontró por 'client_id', verificar que el 'name' coincida
-                            if ($materialType->name !== $material['name']) {
-                                // Si el nombre no coincide, actualizar estado a 5 y registrar en el log
-                                $scadaOrder->update(['status' => 5]);
-                                Log::warning("ID y nombre del material no coinciden: ID {$material['id']} tiene nombre {$materialType->name}, se esperaba {$material['name']}. ScadaOrder actualizado a estado 5.");
-                                return; // Salir del método
+                            // Si 'measure' no es 'Kg', ignorar este material y continuar con el siguiente
+                            continue;
+                        }
+                    }
+
+                    // Verificar si no hay materiales válidos después del procesamiento
+                    if (empty($materialVolumes)) {
+                        // Si no hay materiales para procesar, actualizar estado a 5 y registrar en el log
+                        $scadaOrder->update(['status' => 5]);
+                        Log::warning("No hay materiales válidos para procesar. ScadaOrder actualizado a estado 5.");
+
+                            // Actualizar order_id con el valor actual + "-Falta-Materiales"
+                        $newOrderId = $scadaOrder->order_id . "-Falta-Materiales";
+                        $scadaOrder->update(['order_id' => $newOrderId]);
+                        Log::warning("ScadaOrder actualizado a estado 5 con order_id: {$newOrderId}");
+
+                        return; // Salir del método
+                    }
+
+                    // Calcular el número de lotes necesarios, redondeando hacia arriba
+                    $batches = ceil($totalVolume / $mixerCapacity);
+                    Log::info("Total volumen de la orden: {$totalVolume} m3, dividido por capacidad de mezcladora {$mixerCapacity} m3 = Batches: {$batches}.");
+
+                    // Procesar cada lote
+                    for ($i = 0; $i < $batches; $i++) {
+                        // Determinar el volumen del lote actual
+                        if ($i < $batches - 1) {
+                            // Para todos los lotes excepto el último, usar la capacidad máxima de la mezcladora
+                            $batchVolume = $mixerCapacity;
+                        } else {
+                            // Para el último lote, usar el volumen restante
+                            $batchVolume = $totalVolume - ($mixerCapacity * ($batches - 1));
+                        }
+
+                        // Crear una nueva lista de orden para materiales automáticos (process = 0)
+                        $autoList = ScadaOrderList::create([
+                            'scada_order_id' => $scadaOrder->id,
+                            'process' => 0, // 0 = automático
+                        ]);
+
+                        // Crear una nueva lista de orden para materiales manuales (process = 1)
+                        $manualList = ScadaOrderList::create([
+                            'scada_order_id' => $scadaOrder->id,
+                            'process' => 1, // 1 = manual
+                        ]);
+
+                        // Procesar cada material almacenado en 'materialVolumes'
+                        foreach ($materialVolumes as $material) {
+                            // Obtener el objeto 'ScadaMaterialType' del material
+                            $materialType = $material['material_type'];
+
+                            // Calcular el volumen del material en este lote: proporcional al volumen del lote actual
+                            $materialBatchVolume = $material['volume'] * ($batchVolume / $totalVolume);
+
+                            // Convertir el volumen del material en peso (kg): peso = volumen (m3) * densidad (kg/m3)
+                            $materialBatchWeight = $materialBatchVolume * $material['density'];
+
+                            // Redondear el peso a 4 decimales
+                            $materialBatchWeight = round($materialBatchWeight, 4);
+
+                            // Determinar si el material es automático o manual según 'service_type' (0 = automático, 1 = manual)
+                            if ($materialType->service_type == 0) {
+                                // Material automático, crear entrada en 'ScadaOrderListProcess' correspondiente
+                                ScadaOrderListProcess::create([
+                                    'scada_order_list_id' => $autoList->id, // ID de la lista automática
+                                    'scada_material_type_id' => $materialType->id, // ID del material
+                                    'orden' => $material['level'], // Nivel u orden del material
+                                    'measure' => $material['measure'], // Unidad de medida (ej. 'Kg')
+                                    'value' => $materialBatchWeight, // Peso en kg para este lote
+                                ]);
+                            } else {
+                                // Material manual, crear entrada en 'ScadaOrderListProcess' correspondiente
+                                ScadaOrderListProcess::create([
+                                    'scada_order_list_id' => $manualList->id, // ID de la lista manual
+                                    'scada_material_type_id' => $materialType->id, // ID del material
+                                    'orden' => $material['level'], // Nivel u orden del material
+                                    'measure' => $material['measure'], // Unidad de medida
+                                    'value' => $materialBatchWeight, // Peso en kg para este lote
+                                ]);
                             }
                         }
-
-                        // Obtener la densidad del material desde 'scada_material_type'
-                        $density = $materialType->density;
-
-                        if (!$density || $density == 0) {
-                            // Si la densidad es nula o cero, actualizar estado a 5 y registrar en el log
-                            $scadaOrder->update(['status' => 5]);
-                            Log::warning("Densidad faltante para material: {$material['name']}. ScadaOrder actualizado a estado 5.");
-                            return; // Salir del método
-                        }
-
-                        // Calcular el volumen del material en metros cúbicos: volumen = peso total (kg) / densidad (kg/m3)
-                        $materialVolume = $material['total'] / $density;
-
-                        // Sumar el volumen del material al volumen total
-                        $totalVolume += $materialVolume;
-
-                        // Almacenar los datos del material para uso posterior
-                        $material['volume'] = $materialVolume; // Volumen en m3
-                        $material['density'] = $density; // Densidad en kg/m3
-                        $material['material_type'] = $materialType; // Objeto 'ScadaMaterialType'
-                        $material['value'] = $material['total']; // Peso total en kg
-                        $materialVolumes[] = $material; // Agregar al arreglo de materiales
-                    } else {
-                        // Si 'measure' no es 'Kg', ignorar este material y continuar con el siguiente
-                        continue;
                     }
                 }
-
-                // Verificar si no hay materiales válidos después del procesamiento
-                if (empty($materialVolumes)) {
-                    // Si no hay materiales para procesar, actualizar estado a 5 y registrar en el log
-                    $scadaOrder->update(['status' => 5]);
-                    Log::warning("No hay materiales válidos para procesar. ScadaOrder actualizado a estado 5.");
-                    return; // Salir del método
-                }
-
-                // Calcular el número de lotes necesarios, redondeando hacia arriba
-                $batches = ceil($totalVolume / $mixerCapacity);
-                Log::info("Total volumen de la orden: {$totalVolume} m3, dividido por capacidad de mezcladora {$mixerCapacity} m3 = Batches: {$batches}.");
-
-                // Procesar cada lote
-                for ($i = 0; $i < $batches; $i++) {
-                    // Determinar el volumen del lote actual
-                    if ($i < $batches - 1) {
-                        // Para todos los lotes excepto el último, usar la capacidad máxima de la mezcladora
-                        $batchVolume = $mixerCapacity;
-                    } else {
-                        // Para el último lote, usar el volumen restante
-                        $batchVolume = $totalVolume - ($mixerCapacity * ($batches - 1));
-                    }
-
-                    // Crear una nueva lista de orden para materiales automáticos (process = 0)
-                    $autoList = ScadaOrderList::create([
-                        'scada_order_id' => $scadaOrder->id,
-                        'process' => 0, // 0 = automático
-                    ]);
-
-                    // Crear una nueva lista de orden para materiales manuales (process = 1)
-                    $manualList = ScadaOrderList::create([
-                        'scada_order_id' => $scadaOrder->id,
-                        'process' => 1, // 1 = manual
-                    ]);
-
-                    // Procesar cada material almacenado en 'materialVolumes'
-                    foreach ($materialVolumes as $material) {
-                        // Obtener el objeto 'ScadaMaterialType' del material
-                        $materialType = $material['material_type'];
-
-                        // Calcular el volumen del material en este lote: proporcional al volumen del lote actual
-                        $materialBatchVolume = $material['volume'] * ($batchVolume / $totalVolume);
-
-                        // Convertir el volumen del material en peso (kg): peso = volumen (m3) * densidad (kg/m3)
-                        $materialBatchWeight = $materialBatchVolume * $material['density'];
-
-                        // Redondear el peso a 4 decimales
-                        $materialBatchWeight = round($materialBatchWeight, 4);
-
-                        // Determinar si el material es automático o manual según 'service_type' (0 = automático, 1 = manual)
-                        if ($materialType->service_type == 0) {
-                            // Material automático, crear entrada en 'ScadaOrderListProcess' correspondiente
-                            ScadaOrderListProcess::create([
-                                'scada_order_list_id' => $autoList->id, // ID de la lista automática
-                                'scada_material_type_id' => $materialType->id, // ID del material
-                                'orden' => $material['level'], // Nivel u orden del material
-                                'measure' => $material['measure'], // Unidad de medida (ej. 'Kg')
-                                'value' => $materialBatchWeight, // Peso en kg para este lote
-                            ]);
-                        } else {
-                            // Material manual, crear entrada en 'ScadaOrderListProcess' correspondiente
-                            ScadaOrderListProcess::create([
-                                'scada_order_list_id' => $manualList->id, // ID de la lista manual
-                                'scada_material_type_id' => $materialType->id, // ID del material
-                                'orden' => $material['level'], // Nivel u orden del material
-                                'measure' => $material['measure'], // Unidad de medida
-                                'value' => $materialBatchWeight, // Peso en kg para este lote
-                            ]);
-                        }
-                    }
-                }
+                // Borrar el campo 'order_notice' del barcode
+                $barcode->order_notice = null;
+                $barcode->save(); // Actualizar el barcode
             }
         }
     }

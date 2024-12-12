@@ -122,7 +122,7 @@
                     { data: 'name' }, // Nombre del material
                     { data: 'density' }, // Densidad
                     {
-                        data: 'cliente_id', // ID del ERP
+                        data: 'client_id', // ID del ERP
                         render: function(data) {
                             return data ? data : 'Sin ID Cliente';
                         }
@@ -137,7 +137,7 @@
                         data: null,
                         render: function (data) {
                             return `
-                                <button class="edit-btn" data-id="${data.id}" data-name="${data.name}" data-density="${data.density}" data-cliente_id="${data.cliente_id}" data-service_type="${data.service_type}">Editar</button>
+                                <button class="edit-btn" data-id="${data.id}" data-name="${data.name}" data-density="${data.density}" data-client_id="${data.client_id}" data-service_type="${data.service_type}">Editar</button>
                                 <button class="delete-btn" data-id="${data.id}">Eliminar</button>
                             `;
                         }
@@ -162,21 +162,21 @@
                     preConfirm: () => {
                         const name = $('#materialName').val();
                         const density = $('#materialDensity').val();
-                        const cliente_id = $('#clienteId').val();
+                        const client_id = $('#clienteId').val();
                         const service_type = $('#serviceType').val();
-                        if (!name || !density || !cliente_id || service_type === null) {
+                        if (!name || !density || !client_id || service_type === null) {
                             Swal.showValidationMessage('Todos los campos son obligatorios.');
                         }
-                        return { name, density, cliente_id, service_type: parseInt(service_type) };
+                        return { name, density, client_id, service_type: parseInt(service_type) };
                     }
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        const { name, density, cliente_id, service_type } = result.value;
+                        const { name, density, client_id, service_type } = result.value;
                         $.ajax({
                             url: apiUrl,
                             method: 'POST',
                             contentType: 'application/json',
-                            data: JSON.stringify({ name, density, cliente_id, service_type }),
+                            data: JSON.stringify({ name, density, client_id, service_type }),
                             success: function () {
                                 Swal.fire('Material añadido', '', 'success');
                                 table.ajax.reload();
@@ -197,7 +197,7 @@
                 const id = $(this).data('id');
                 const currentName = $(this).data('name');
                 const currentDensity = $(this).data('density');
-                const currentClienteId = $(this).data('cliente_id');
+                const currentClienteId = $(this).data('client_id');
                 const currentServiceType = $(this).data('service_type');
 
                 Swal.fire({
@@ -216,21 +216,21 @@
                     preConfirm: () => {
                         const name = $('#materialName').val();
                         const density = $('#materialDensity').val();
-                        const cliente_id = $('#clienteId').val();
+                        const client_id = $('#clienteId').val();
                         const service_type = $('#serviceType').val();
-                        if (!name || !density || !cliente_id || service_type === null) {
+                        if (!name || !density || !client_id || service_type === null) {
                             Swal.showValidationMessage('Todos los campos son obligatorios.');
                         }
-                        return { name, density, cliente_id, service_type: parseInt(service_type) };
+                        return { name, density, client_id, service_type: parseInt(service_type) };
                     }
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        const { name, density, cliente_id, service_type } = result.value;
+                        const { name, density, client_id, service_type } = result.value;
                         $.ajax({
                             url: `${apiUrl}/${id}`,
                             method: 'PUT',
                             contentType: 'application/json',
-                            data: JSON.stringify({ name, density, cliente_id, service_type }),
+                            data: JSON.stringify({ name, density, client_id, service_type }),
                             success: function () {
                                 Swal.fire('Material actualizado', '', 'success');
                                 table.ajax.reload();
