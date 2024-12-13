@@ -108,6 +108,7 @@
                 confirmButtonText: 'Entendido'
             });
         });
+
         const columns = {
             0: { id: 'pending', name: 'En Espera' },
             1: { id: 'started', name: 'Iniciado' },
@@ -129,14 +130,18 @@
             throw new Error('Token requerido para cargar los datos.');
         }
 
+        // Mapa para rastrear tarjetas existentes usando order.id como identificador único
+        const existingCards = new Map();
+
         async function loadKanbanData() {
             try {
                 const response = await fetch(`/api/scada-orders/${token}`);
                 if (!response.ok) throw new Error('Error al obtener datos de la API.');
+
                 const data = await response.json();
                 if (data.success) {
                     document.getElementById('scada-name').textContent = data.scada_name;
-                    renderKanbanBoard(data.orders);
+                    await updateKanbanBoard(data.orders);
                 } else {
                     Swal.fire({
                         icon: 'warning',
@@ -154,94 +159,174 @@
             }
         }
 
-        async function renderKanbanBoard(orders) {
-    const kanbanBoard = document.querySelector('.kanban-board');
-    kanbanBoard.innerHTML = '';
-    Object.entries(columns).forEach(([status, column]) => {
-        const columnElement = document.createElement('div');
-        columnElement.classList.add('column');
-        columnElement.id = column.id;
-        if (column.disabled) columnElement.classList.add('disabled');
-        columnElement.innerHTML = `<h3>${column.name}</h3>`;
-        kanbanBoard.appendChild(columnElement);
-    });
+        async function updateKanbanBoard(orders) {
+            const kanbanBoard = document.querySelector('.kanban-board');
 
-    for (const order of orders.sort((a, b) => a.orden - b.orden)) {
-        const columnId = columns[order.status].id;
-        const columnElement = document.getElementById(columnId);
-
-        const lineId = order.id || "No disponible";
-
-        const cardElement = document.createElement('div');
-        cardElement.classList.add('card');
-        cardElement.draggable = true;
-        cardElement.innerHTML = `
-            <span class="card-menu" onclick="showCardMenu('${order.order_id}', '${order.box}', ${order.units}, '${lineId}')">⋮</span>
-            <div>Order ID: ${order.order_id}</div>
-            <div>Box: ${order.box}</div>
-            <div>Units: ${order.units}</div>
-        `;
-
-        // Si la tarjeta está en "Iniciado", cargar los contadores
-        if (columnId === 'started') {
-            const { usedZero, usedOne } = await loadStartedCardData(order.id);
-            cardElement.innerHTML += `
-                <div>Pendientes: ${usedZero}</div>
-                <div>Realizados: ${usedOne}</div>
-            `;
-        }
-
-        cardElement.ondragstart = dragStart;
-        cardElement.ondragend = dragEnd;
-        cardElement.setAttribute('data-order-id', order.order_id);
-        columnElement.appendChild(cardElement);
-    }
-
-    document.querySelectorAll('.column:not(.disabled)').forEach(column => {
-        column.ondragover = dragOver;
-        column.ondrop = drop;
-    });
-}
-
-async function loadStartedCardData(id) {
-    try {
-        const response = await fetch(`/api/scada-orders/${id}/lines`);
-        if (!response.ok) throw new Error('Error al obtener datos de procesos.');
-
-        const data = await response.json();
-        if (!data.success) return { usedZero: 0, usedOne: 0 };
-
-        let usedZero = 0;
-        let usedOne = 0;
-
-        data.lines.forEach(line => {
-            line.processes.forEach(process => {
-                if (process.used === 0) {
-                    usedZero++;
-                } else if (process.used === 1) {
-                    usedOne++;
+            // Crear columnas si no existen
+            Object.entries(columns).forEach(([status, column]) => {
+                let columnElement = document.getElementById(column.id);
+                if (!columnElement) {
+                    columnElement = document.createElement('div');
+                    columnElement.classList.add('column');
+                    columnElement.id = column.id;
+                    if (column.disabled) columnElement.classList.add('disabled');
+                    columnElement.innerHTML = `<h3>${column.name}</h3>`;
+                    kanbanBoard.appendChild(columnElement);
                 }
             });
-        });
 
-        return { usedZero, usedOne };
-    } catch (error) {
-        console.error('Error:', error);
-        return { usedZero: 0, usedOne: 0 };
-    }
-}
+            // Preparar promesas para cargar los datos de procesos
+            const orderDataPromises = orders.map(async (order) => {
+                const { usedZero, usedOne, operators } = await loadStartedCardData(order.id);
+                return { order, usedZero, usedOne, operators };
+            });
 
+            // Esperar a que todas las promesas se resuelvan
+            const ordersWithData = await Promise.all(orderDataPromises);
 
+            // Crear un Set para rastrear las órdenes actualizadas
+            const updatedOrderIds = new Set();
 
-        function showCardMenu(orderId, box, units, lineId) {
-            Swal.fire({
-                title: 'Detalles de la Tarjeta',
-                html: `
-                    <p><strong>Order ID:</strong> ${orderId}</p>
+            for (const { order, usedZero, usedOne, operators } of ordersWithData.sort((a, b) => a.order.orden - b.order.orden)) {
+                const columnId = columns[order.status].id;
+                const columnElement = document.getElementById(columnId);
+
+                const lineId = order.id || "No disponible"; // order.id debe ser único por tarjeta
+
+                // Buscar si ya existe una tarjeta usando order.id
+                let cardElement = existingCards.get(order.id);
+
+                if (!cardElement) {
+                    // Crear una nueva tarjeta si no existe
+                    cardElement = document.createElement('div');
+                    cardElement.classList.add('card');
+                    cardElement.draggable = true;
+                    cardElement.setAttribute('data-unique-id', order.id); // Usar order.id como data-unique-id
+                    cardElement.setAttribute('data-order-id', order.order_id); // Usar order.order_id como data-order-id
+                    columnElement.appendChild(cardElement);
+
+                    // Configurar eventos de arrastre
+                    cardElement.ondragstart = dragStart;
+                    cardElement.ondragend = dragEnd;
+
+                    // Añadir al mapa de tarjetas existentes
+                    existingCards.set(order.id, cardElement);
+                } else {
+                    // Si la tarjeta existe pero está en una columna diferente, moverla
+                    const currentParent = cardElement.parentElement.id;
+                    if (currentParent !== columnId) {
+                        columnElement.appendChild(cardElement);
+                    }
+                }
+
+                // Construir el contenido completo de la tarjeta
+                let cardContent = `
+                    <span class="card-menu" onclick="showCardMenu('${order.order_id}', '${order.box}', ${order.units}, '${lineId}', '${columnId}')">⋮</span>
+                    <div>Order ID: ${order.order_id}</div>
+                    ${columnId !== 'issues' ? `<div>Box: ${order.box}</div>` : ''}
+                    ${columnId !== 'issues' ? `<div>Units: ${order.units}</div>` : ''}
+                `;
+
+                // Agregar información adicional según la columna
+                if (columnId === 'started' || columnId === 'paused' || columnId === 'cancelled' || columnId === 'completed') {
+                    if (columnId === 'started' || columnId === 'paused' || columnId === 'cancelled') {
+                        cardContent += `
+                            <div>Pendientes: ${usedZero}</div>
+                            <div>Realizados: ${usedOne}</div>
+                        `;
+                    }
+
+                    if (columnId === 'paused' || columnId === 'cancelled' || columnId === 'completed') {
+                        if (operators.length > 0) {
+                            cardContent += `
+                                <div>Operarios:</div>
+                                <ul>
+                                    ${operators.map(operator => `<li>${operator}</li>`).join('')}
+                                </ul>
+                            `;
+                        } else {
+                            cardContent += `<div>Operarios: No disponible</div>`;
+                        }
+                    }
+                }
+
+                // Actualizar el contenido de la tarjeta
+                cardElement.innerHTML = cardContent;
+
+                // Marcar esta orden como actualizada
+                updatedOrderIds.add(order.id);
+            }
+
+            // Eliminar tarjetas que ya no están en los datos
+            existingCards.forEach((cardElement, orderId) => {
+                if (!updatedOrderIds.has(orderId)) {
+                    cardElement.remove();
+                    existingCards.delete(orderId);
+                }
+            });
+
+            // Configurar eventos de arrastre en columnas
+            document.querySelectorAll('.column:not(.disabled)').forEach(column => {
+                column.ondragover = dragOver;
+                column.ondrop = drop;
+            });
+        }
+
+        async function loadStartedCardData(orderId) { // Cambiar el parámetro a orderId
+            try {
+                const response = await fetch(`/api/scada-orders/${orderId}/lines`); // Usar orderId (order.order_id)
+                if (!response.ok) throw new Error('Error al obtener datos de procesos.');
+
+                const data = await response.json();
+                if (!data.success) return { usedZero: 0, usedOne: 0, operators: [] };
+
+                let usedZero = 0;
+                let usedOne = 0;
+                let operators = new Set(); // Usamos un Set para evitar duplicados
+
+                data.lines.forEach(line => {
+                    line.processes.forEach(process => {
+                        if (process.used === 0) {
+                            usedZero++;
+                        } else if (process.used === 1) {
+                            usedOne++;
+                            if (process.operator_data && process.operator_data.name) {
+                                operators.add(process.operator_data.name); // Añadimos el nombre del operador
+                            }
+                        }
+                    });
+                });
+
+                return { usedZero, usedOne, operators: Array.from(operators) }; // Convertimos el Set en un Array
+            } catch (error) {
+                console.error('Error:', error);
+                return { usedZero: 0, usedOne: 0, operators: [] };
+            }
+        }
+
+        function showCardMenu(orderId, box, units, lineId, columnId) {
+            // Determinar si la tarjeta está en la columna "Con Incidencias"
+            const isIssue = columnId === 'issues';
+
+            // Construir el contenido del modal
+            let modalContent = `
+                <p><strong>Order ID:</strong> ${orderId}</p>
+            `;
+
+            if (!isIssue) {
+                modalContent += `
                     <p><strong>Box:</strong> ${box}</p>
                     <p><strong>Units:</strong> ${units}</p>
-                    <p><strong>Linea ID:</strong> ${lineId}</p>
-                `,
+                `;
+            }
+
+            modalContent += `
+                <p><strong>Linea ID:</strong> ${lineId}</p>
+            `;
+
+            Swal.fire({
+                title: 'Detalles de la Tarjeta',
+                html: modalContent,
                 icon: 'info',
                 showCancelButton: true,
                 showDenyButton: true,
@@ -263,7 +348,7 @@ async function loadStartedCardData(id) {
                                 const response = await fetch('/api/scada-orders/delete', {
                                     method: 'DELETE',
                                     headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ order_id: orderId }),
+                                    body: JSON.stringify({ order_id: orderId }), // orderId es order.order_id
                                 });
                                 const result = await response.json();
                                 if (result.success) {
@@ -273,8 +358,16 @@ async function loadStartedCardData(id) {
                                         text: `La orden con ID ${orderId} ha sido eliminada.`,
                                     });
 
-                                    // Recargar los datos del tablero
-                                    loadKanbanData();
+                                    // Eliminar la tarjeta del DOM y del mapa
+                                    const cardElement = Array.from(existingCards.values()).find(card => card.getAttribute('data-order-id') === orderId);
+                                    if (cardElement) {
+                                        cardElement.remove();
+                                        // Encontrar el order.id correspondiente y eliminar del mapa
+                                        const entry = Array.from(existingCards.entries()).find(([key, card]) => card === cardElement);
+                                        if (entry) {
+                                            existingCards.delete(entry[0]);
+                                        }
+                                    }
                                 } else {
                                     Swal.fire({
                                         icon: 'error',
@@ -339,7 +432,6 @@ async function loadStartedCardData(id) {
             if (!draggedCard || !targetColumn) return;
 
             // Verificar si la columna es "Iniciado"
-            const startedStatusKey = Object.entries(columns).find(([key, col]) => col.id === 'started')[0];
             if (targetColumn.id === 'started') {
                 // Checar si ya hay una tarjeta en "Iniciado"
                 const cardsInStarted = targetColumn.querySelectorAll('.card');
@@ -351,41 +443,39 @@ async function loadStartedCardData(id) {
                         text: 'No puedes colocar más de una tarjeta en "Iniciado".',
                     });
 
-                    // Devolver la tarjeta a su columna anterior (opcional)
+                    // Devolver la tarjeta a su columna anterior
                     loadKanbanData();
                     draggedCard = null;
                     return;
                 }
             }
 
-            const orderId = draggedCard.getAttribute('data-order-id');
-            const newStatus = Object.entries(columns).find(([key, col]) => col.id === targetColumn.id)[0];
+            const orderId = draggedCard.getAttribute('data-order-id'); // order.order_id
+            const newStatusKey = Object.entries(columns).find(([key, col]) => col.id === targetColumn.id)[0];
 
+            // Determinar el nuevo orden dentro de la columna
             const cardsInColumn = Array.from(targetColumn.querySelectorAll('.card'));
-            cardsInColumn.forEach((card, index) => {
-                card.setAttribute('data-orden', index + 1);
-            });
-
-            const newOrder = cardsInColumn.findIndex(card => card === draggedCard) + 1;
+            const newOrder = cardsInColumn.indexOf(draggedCard) + 1;
 
             try {
                 const response = await fetch('/api/scada-orders/update', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        order_id: orderId,
-                        status: parseInt(newStatus),
+                        order_id: orderId, // order.order_id
+                        status: parseInt(newStatusKey),
                         orden: newOrder,
                     }),
                 });
 
                 const result = await response.json();
                 if (result.success) {
+                    // Actualizar el estado del tablero sin recargar completamente
                     await loadKanbanData();
                     Swal.fire({
                         icon: 'success',
                         title: 'Éxito',
-                        text: `El Orden con Order ID: ${orderId} se ha movido a la columna ${columns[newStatus].name} en la posición ${newOrder}.`,
+                        text: `La orden con ID: ${orderId} se ha movido a la columna ${columns[newStatusKey].name} en la posición ${newOrder}.`,
                     });
                 } else {
                     Swal.fire({
@@ -418,8 +508,9 @@ async function loadStartedCardData(id) {
         updateClock();
         loadKanbanData();
 
-        // Refresco cada 5 minutos
-        setInterval(loadKanbanData, 10000);
+        // Refresco cada 5 minutos (300000 ms)
+        setInterval(loadKanbanData, 5000);
     </script>
+
 </body>
 </html>

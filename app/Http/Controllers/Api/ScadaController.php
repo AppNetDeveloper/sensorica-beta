@@ -40,7 +40,7 @@ class ScadaController extends Controller
         // Obtener el scada_name y scada_order de scada_order o valores predeterminados
         $scadaName = $scada->name;
         $scadaOrderValue =  $scadaOrder->order_id ?? 'N/A';
-        $scadaOrderUpdateDateTime = $scadaOrder ? $scadaOrder->updated_at->format('H:i:s d/m/Y') : '00:00:00 00/00/00';
+        $scadaOrderUpdateDateTime = $scadaOrder->updated_at ?? '0000-00-00 00:00:00';
         $scadaOrderId =  $scadaOrder->id ?? 'N/A';
 
         // Buscar en modbuses donde production_line_id coincida y model_name sea 'weight'

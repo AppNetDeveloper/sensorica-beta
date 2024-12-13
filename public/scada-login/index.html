@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logins SCADA</title>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        .header-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: #343a40;
+            color: white;
+            padding: 10px 20px;
+        }
+        .header-left img {
+            height: 50px;
+            width: auto;
+        }
+        .header-right {
+            font-size: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 5px;
+        }
+        .header-right small {
+            font-size: 1.1rem;
+            color: #ffc107;
+        }
+        .content {
+            padding: 20px;
+        }
+        table {
+            width: 100%;
+            margin-top: 20px;
+        }
+        button {
+            margin-bottom: 15px;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .btn-secondary {
+            background-color: #6c757d !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header-container">
+        <div class="header-left">
+            <img src="logo.png" alt="Logo">
+        </div>
+        <div class="header-right">
+            <div id="clock">--:--:--</div>
+            <small id="scada-name">Logins SCADA</small>
+        </div>
+    </header>
+
+    <!-- Content -->
+    <div class="content">
+        <h1>Registros de Login SCADA</h1>
+        <table id="loginsTable" class="display">
+            <thead>
+                <tr>
+                    <th>ID Operador</th>
+                    <th>Nombre del Operador</th>
+                    <th>Fecha de Login</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script>
+        $(document).ready(function () {
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token');
+
+            if (!token) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Token no proporcionado',
+                    text: 'No se ha especificado un token de SCADA en la URL.',
+                });
+                return;
+            }
+
+            const apiUrl = '/api/scada/get-logins';
+
+            $('#loginsTable').DataTable({
+            ajax: {
+                url: apiUrl,
+                method: 'POST',
+                contentType: 'application/json',
+                data: function () {
+                    return JSON.stringify({ token });
+                },
+                dataSrc: function (json) {
+                    console.log("Respuesta de la API:", json); // Mostrar la respuesta completa en consola
+                    if (!json.logs) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error en la API',
+                            text: 'No se encontraron logs. Contacta al administrador.',
+                        });
+                        return [];
+                    }
+                    return json.logs; // Acceder a los logs directamente
+                },
+                error: function (xhr) {
+                    console.error("Error al cargar datos:", xhr.responseJSON); // Log adicional para depurar errores
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error al Cargar Datos',
+                        text: `Status: ${xhr.status}. Mensaje: ${xhr.responseJSON?.error || 'Error desconocido'}`,
+                    });
+                },
+            },
+            columns: [
+                { data: 'operator_id', defaultContent: '-' },
+                { data: 'operator_name', defaultContent: '-' },
+                { data: 'logged_at', defaultContent: '-', render: function (data) {
+                    // Formatear la fecha para mostrarla más legible
+                    const date = new Date(data);
+                    return date.toLocaleString('es-ES', { timeZone: 'UTC' });
+                }},
+            ],
+        });
+
+        });
+
+        function updateClock() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            document.getElementById('clock').textContent = `${hours}:${minutes}:${seconds}`;
+        }
+
+        // Actualiza el reloj cada segundo
+        setInterval(updateClock, 1000);
+        updateClock(); // Llamada inicial
+    </script>
+
+</body>
+</html>

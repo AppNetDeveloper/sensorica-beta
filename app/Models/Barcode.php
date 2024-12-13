@@ -101,7 +101,7 @@ class Barcode extends Model
                 ]);
             } else {
                 // Si existe 'scada', proceder a crear un nuevo 'ScadaOrder', pero primero comprobar que no es duplicado
-
+                $fechaHora = date("Y/m/d-H:i:s");
                 // Obtener el último valor de 'orden' en 'scada_order' para asignar un nuevo orden secuencial
                 $lastOrder = ScadaOrder::max('orden');
                 $newOrder = $lastOrder ? $lastOrder + 1 : 1;
@@ -119,14 +119,14 @@ class Barcode extends Model
                         'box' => $box,
                         'units_box' => $units,
                         'units' => $box * $units,
-                        'order_id' => $orderId . "-Order-Duplicado", // Añadir "-Order-Duplicado" al order_id
+                        'order_id' => $orderId . "-Order-Duplicado-".$fechaHora, // Añadir "-Order-Duplicado" al order_id
                         'json' => $orderNotice, // Almacenar el JSON original
                         'status' => 5, // Estado 5 para indicar orden duplicada
                         'orden' => $newOrder, // Asignar el nuevo orden
                     ]);
 
                     Log::warning("Orden duplicada detectada. ScadaOrder creado con status 5 y order_id: {$orderId}-Order-Duplicado");
-                    
+
                     // Borrar el campo 'order_notice' del barcode
                     $barcode->order_notice = null;
                     $barcode->save(); // Actualizar el barcode
@@ -178,7 +178,7 @@ class Barcode extends Model
                                         Log::warning("Material : {$material['name']} (ID: {$material['id']}) No encontrado con id de cliente en NULL para poder ser actualizado. ScadaOrder actualizado a estado 5.");
 
                                                                 // Actualizar order_id con el valor actual + "-Falta-Materiales"
-                                        $newOrderId = $scadaOrder->order_id . "-Falta-Materiales";
+                                        $newOrderId = $scadaOrder->order_id . "-Falta-Materiales-".$fechaHora;
                                         $scadaOrder->update(['order_id' => $newOrderId]);
                                         Log::warning("ScadaOrder actualizado a estado 5 con order_id: {$newOrderId}");
                                         return; // Salir del método
@@ -190,7 +190,7 @@ class Barcode extends Model
                                     Log::warning("Material no encontrado: {$material['name']} (ID: {$material['id']}). ScadaOrder actualizado a estado 5.");
 
                                                             // Actualizar order_id con el valor actual + "-Falta-Materiales"
-                                    $newOrderId = $scadaOrder->order_id . "-Falta-Materiales";
+                                    $newOrderId = $scadaOrder->order_id . "-Falta-Materiales-".$fechaHora;
                                     $scadaOrder->update(['order_id' => $newOrderId]);
                                     Log::warning("ScadaOrder actualizado a estado 5 con order_id: {$newOrderId}");
                                     return; // Salir del método
@@ -203,7 +203,7 @@ class Barcode extends Model
                                     Log::warning("ID y nombre del material no coinciden: ID {$material['id']} tiene nombre {$materialType->name}, se esperaba {$material['name']}. ScadaOrder actualizado a estado 5.");
 
                                                             // Actualizar order_id con el valor actual + "-Falta-Materiales"
-                                    $newOrderId = $scadaOrder->order_id . "-Falta-Materiales";
+                                    $newOrderId = $scadaOrder->order_id . "-Falta-Materiales-".$fechaHora;
                                     $scadaOrder->update(['order_id' => $newOrderId]);
                                     Log::warning("ScadaOrder actualizado a estado 5 con order_id: {$newOrderId}");
                                     return; // Salir del método
@@ -219,7 +219,7 @@ class Barcode extends Model
                                 Log::warning("Densidad faltante para material: {$material['name']}. ScadaOrder actualizado a estado 5.");
 
                                 // Actualizar order_id con el valor actual + "-Falta-Materiales"
-                                $newOrderId = $scadaOrder->order_id . "-Falta-Materiales";
+                                $newOrderId = $scadaOrder->order_id . "-Falta-Materiales-".$fechaHora;
                                 $scadaOrder->update(['order_id' => $newOrderId]);
                                 Log::warning("ScadaOrder actualizado a estado 5 con order_id: {$newOrderId}");
                                 return; // Salir del método
@@ -250,7 +250,7 @@ class Barcode extends Model
                         Log::warning("No hay materiales válidos para procesar. ScadaOrder actualizado a estado 5.");
 
                             // Actualizar order_id con el valor actual + "-Falta-Materiales"
-                        $newOrderId = $scadaOrder->order_id . "-Falta-Materiales";
+                        $newOrderId = $scadaOrder->order_id . "-Falta-Materiales-".$fechaHora;
                         $scadaOrder->update(['order_id' => $newOrderId]);
                         Log::warning("ScadaOrder actualizado a estado 5 con order_id: {$newOrderId}");
 

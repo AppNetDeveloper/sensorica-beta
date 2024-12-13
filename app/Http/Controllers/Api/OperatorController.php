@@ -8,6 +8,11 @@ use App\Models\Operator;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Http;
+//anadir log
+use Illuminate\Support\Facades\Log;
+use App\Models\Scada;
+use App\Models\ScadaOperatorLog;
 
 class OperatorController extends Controller
 {
@@ -318,7 +323,7 @@ class OperatorController extends Controller
         }
 
         // Generar nueva contraseña aleatoria
-        $newPassword = Str::random(8);
+        $newPassword = substr(str_shuffle(str_repeat('0123456789', 8)), 0, 8);
         $operator->password = Hash::make($newPassword);
         $operator->save();
 
@@ -366,23 +371,69 @@ class OperatorController extends Controller
      */
     public function resetPasswordByWhatsapp(Request $request)
     {
+        Log::info('Request Data: ' . json_encode($request->all()));
+        // Validar la solicitud
+        $request->merge(['phone' => (string) $request->phone]);
         $validated = $request->validate([
             'phone' => 'required|string'
         ]);
-
+        // Buscar al operador por teléfono
         $operator = Operator::where('phone', $validated['phone'])->first();
-        if(!$operator) {
+
+        if (!$operator) {
+            Log::error('Operator not found with phone: ' . $validated['phone']);
             return response()->json(['error' => 'Operator not found'], 404);
+        }else{
+            Log::info('Operator found with phone: ' . $validated['phone']);
         }
 
-        // Generar nueva contraseña aleatoria
-        $newPassword = Str::random(8);
+        // Generar una nueva contraseña aleatoria
+        $newPassword = substr(str_shuffle(str_repeat('0123456789', 8)), 0, 8);
+        Log::info('Nueva contrasena: ' . $newPassword);
+        // Hashear y guardar la nueva contraseña
         $operator->password = Hash::make($newPassword);
         $operator->save();
+        Log::info('Contraseña guardada en db: ' . $newPassword);
 
-        // Aquí en el futuro se llamará a la API de WhatsApp para enviar el mensaje
-        // Por ahora, simplemente devolvemos un mensaje genérico
-        return response()->json(['message' => 'Password reset successfully. (WhatsApp message would be sent here)'], 200);
+        // Preparar el mensaje de WhatsApp
+        $phoneNumber = $operator->phone;
+        $message = "Tu contraseña se ha reseteado correctamente. Nueva contraseña: $newPassword";
+        Log::info('Generated WhatsApp message: ' . $message);
+
+        // URL de la API de WhatsApp
+        $apiUrl = rtrim(env('APP_URL'), '/') . "/api/send-message";
+        Log::info('WhatsApp API URL: ' . $apiUrl);
+
+        $requestData = [
+            'jid' => $phoneNumber . '@s.whatsapp.net',
+            'message' => $message,
+        ];
+
+        Log::info('Request Data to WhatsApp API: ' . json_encode($requestData));
+
+        try {
+            // Realizar la llamada a la API de WhatsApp
+            $response = Http::post($apiUrl, $requestData);
+
+            Log::info('WhatsApp API Response Status: ' . $response->status());
+            Log::info('WhatsApp API Response Body: ' . $response->body());
+
+            if ($response->successful()) {
+                return response()->json([
+                    'message' => 'Password reset successfully and sent via WhatsApp.'
+                ], 200);
+            }
+
+            return response()->json([
+                'error' => 'Failed to send WhatsApp message. Please try again.'
+            ], 500);
+        } catch (\Exception $e) {
+            Log::error('Exception when calling WhatsApp API: ' . $e->getMessage());
+            Log::error('Full exception details: ' . $e);
+            return response()->json([
+                'error' => 'Error connecting to the WhatsApp API. Please try again later.'
+            ], 500);
+        }
     }
     /**
  * @OA\Post(
@@ -428,5 +479,105 @@ public function verifyPassword(Request $request)
         } else {
             return response()->json(['valid' => false], 200);
         }
+    }
+    public function logScadaAccess(Request $request)
+    {
+        Log::info('Inicio del registro del login realizado por SCADA.');
+        Log::info('Datos recibidos en la solicitud:', $request->all());
+
+        // Mapear 'tokenscada' a 'token' si existe
+        if ($request->has('tokenscada')) {
+            $request->merge(['token' => $request->input('tokenscada')]);
+        }
+
+        // Validar los datos de entrada
+        try {
+            $validated = $request->validate([
+                'operator_id' => 'required|integer', // Esto es realmente el client_id del operador
+                'token' => 'required|string', // Token de SCADA
+            ]);
+            Log::info('Datos validados correctamente.', $validated);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('Error de validación:', $e->errors());
+            return response()->json(['error' => 'Validation error', 'details' => $e->errors()], 422);
+        }
+
+        // Buscar el operador por client_id
+        $operator = Operator::where('client_id', $validated['operator_id'])->first();
+        if (!$operator) {
+            Log::error('Operador no encontrado con client_id: ' . $validated['operator_id']);
+            return response()->json(['error' => 'Operator not found'], 404);
+        }
+        Log::info('Operador encontrado:', ['id' => $operator->id, 'client_id' => $operator->client_id, 'name' => $operator->name]);
+
+        // Buscar SCADA por token
+        $scada = Scada::where('token', $validated['token'])->first();
+        if (!$scada) {
+            Log::error('SCADA no encontrado con token: ' . $validated['token']);
+            return response()->json(['error' => 'SCADA not found'], 404);
+        }
+        Log::info('SCADA encontrado:', ['id' => $scada->id, 'name' => $scada->name]);
+
+        // Registrar en la tabla ScadaOperatorLog
+        try {
+            ScadaOperatorLog::create([
+                'operator_id' => $operator->id, // Usar el ID del operador encontrado
+                'scada_id' => $scada->id,
+            ]);
+            Log::info('Login registrado exitosamente.', ['operator_id' => $operator->id, 'scada_id' => $scada->id]);
+        } catch (\Exception $e) {
+            Log::error('Error al registrar el login:', ['message' => $e->getMessage()]);
+            return response()->json(['error' => 'Error logging access', 'details' => $e->getMessage()], 500);
+        }
+
+        return response()->json(['message' => 'Login registrado exitosamente'], 200);
+    }
+    public function getLoginsByScadaToken(Request $request)
+    {
+        Log::info('Inicio de búsqueda de logins por token de SCADA.');
+
+        // Validar el token recibido
+        $validated = $request->validate([
+            'token' => 'required|string',
+        ]);
+
+        Log::info('Token recibido:', ['token' => $validated['token']]);
+
+        // Buscar SCADA por token
+        $scada = Scada::where('token', $validated['token'])->first();
+
+        if (!$scada) {
+            Log::error('SCADA no encontrado con token: ' . $validated['token']);
+            return response()->json(['error' => 'SCADA not found'], 404);
+        }
+
+        Log::info('SCADA encontrado:', ['id' => $scada->id, 'name' => $scada->name]);
+
+        // Buscar los registros en ScadaOperatorLog por scada_id
+        $logs = ScadaOperatorLog::with('operator') // Cargar la relación con operadores
+            ->where('scada_id', $scada->id)
+            ->get();
+
+        if ($logs->isEmpty()) {
+            Log::info('No se encontraron registros de logins para SCADA con id: ' . $scada->id);
+            return response()->json(['message' => 'No login records found for this SCADA'], 200);
+        }
+
+        Log::info('Registros de logins encontrados:', ['count' => $logs->count()]);
+
+        // Devolver los registros encontrados
+        return response()->json([
+            'scada' => [
+                'id' => $scada->id,
+                'name' => $scada->name,
+            ],
+            'logs' => $logs->map(function ($log) {
+                return [
+                    'operator_id' => $log->operator_id,
+                    'operator_name' => $log->operator->name,
+                    'logged_at' => $log->created_at,
+                ];
+            }),
+        ], 200);
     }
 }

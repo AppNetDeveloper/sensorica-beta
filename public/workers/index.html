@@ -349,7 +349,7 @@
                 }).then((result) => {
                     if (result.isConfirmed) {
                         $.ajax({
-                            url: `${workersApiUrl}/reset-password-whatsapp`,
+                            url: `/api/workers/reset-password-whatsapp`,
                             method: 'POST',
                             contentType: 'application/json',
                             data: JSON.stringify({ phone }),

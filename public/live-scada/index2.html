@@ -1472,23 +1472,41 @@ async function esperarSwalCerrado(tiempoMs) {
     if (!operatorId) {
         isOperatorAuthenticated = false;
         return;
+    }else{
+        isSwalOpen = true; // si usas esta variable para controlar estados
     }
 
     // Pedir la contraseña
-    isSwalOpen = true; // si usas esta variable para controlar estados
+
     const { value: password } = await Swal.fire({
-        title: 'Confirmación de Operador',
-        text: 'Ingrese la contraseña del operador seleccionado',
-        input: 'password',
-        inputAttributes: {
+    title: 'Confirmación de Operador',
+    text: 'Ingrese la contraseña del operador seleccionado',
+    input: 'password',
+    inputAttributes: {
         autocapitalize: 'off',
-        autocorrect: 'off'
-        },
-        showCancelButton: true,
-        confirmButtonText: 'Confirmar',
-        cancelButtonText: 'Cancelar',
-        allowOutsideClick: false,
-        allowEscapeKey: false
+        autocorrect: 'off',
+        id: 'inputConfirm' // Añadimos un id único al input
+    },
+    showCancelButton: true,
+    confirmButtonText: 'Confirmar',
+    cancelButtonText: 'Cancelar',
+    allowOutsideClick: false,
+    allowEscapeKey: false,
+    didOpen: () => {
+        // Código que se ejecutará cuando la alerta se monte en el DOM
+        setTimeout(() => {
+        const input = document.getElementById('inputConfirm');
+        if (input) {
+            input.addEventListener('focus', () => {
+            // Mostrar el keypad al hacer focus o click
+            mostrarKeypad(input);
+            });
+            input.addEventListener('click', () => {
+            mostrarKeypad(input);
+            });
+        }
+        }, 100); // Aseguramos que el DOM esté listo
+    }
     });
 
     if (!password) {
@@ -1496,6 +1514,7 @@ async function esperarSwalCerrado(tiempoMs) {
         this.value = '';
         isOperatorAuthenticated = false;
         isSwalOpen = false;
+        cerrarKeypad();
         return;
     }
 
@@ -1518,8 +1537,28 @@ async function esperarSwalCerrado(tiempoMs) {
             timerProgressBar: true,
             willClose: () => {
             isSwalOpen = false;
+            cerrarKeypad();
             }
         });
+        function getQueryParameter(name) {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get(name);
+}
+        const tokenscada = getQueryParameter('token'); // Extraemos el token de la URL
+        // Llamar a la nueva API para registrar el acceso en la tabla
+        const logResponse = await fetch('/api/scada/log-access', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ operator_id: parseInt(operatorId), tokenscada })
+        });
+
+        if (logResponse.ok) {
+            console.log('Acceso a SCADA registrado correctamente.');
+        } else {
+            const logError = await logResponse.json();
+            console.error('Error al registrar el acceso a SCADA:', logError.error);
+        }
+
         isOperatorAuthenticated = true;
         } else {
         Swal.fire({
@@ -1531,6 +1570,7 @@ async function esperarSwalCerrado(tiempoMs) {
             timerProgressBar: true,
             willClose: () => {
             isSwalOpen = false;
+            cerrarKeypad();
             }
         }).then(() => {
             // Revertimos la selección
@@ -1549,6 +1589,7 @@ async function esperarSwalCerrado(tiempoMs) {
         timerProgressBar: true,
         willClose: () => {
             isSwalOpen = false;
+            cerrarKeypad();
         }
         });
         this.value = '';
@@ -1910,10 +1951,17 @@ async function esperarSwalCerrado(tiempoMs) {
           if (input) {
             input.focus();
             input.click(); // Forzar a que se abra el teclado en pantalla en dispositivos táctiles
+             // Agregar eventos para el keypad
+            input.addEventListener('focus', () => {
+            mostrarKeypad(input); // Mostrar el keypad
+            });
+            input.addEventListener('click', () => {
+            mostrarKeypad(input); // Mostrar el keypad al hacer clic
+            });
           }
         },
         preConfirm: (password) => {
-          if (password === '') {
+          if (password === '11223344') {
             return Promise.resolve();  // Contraseña correcta, continuar
           } else {
             Swal.showValidationMessage('Contraseña incorrecta');
@@ -1922,9 +1970,11 @@ async function esperarSwalCerrado(tiempoMs) {
         },
         willClose: () => {
           isSwalOpen = false;  // Volver a false cuando el Swal se cierre
+          cerrarKeypad();
         }
       }).then((result) => {
         if (result.isConfirmed) {
+            cerrarKeypad();
           mostrarOpciones(tolvaId, tolvaToken, tolvaLastValue, tolvaName);  // Llamar a mostrarOpciones si la contraseña es correcta
         }
       });
@@ -2149,6 +2199,8 @@ function descargaManual(tolvaId, tolvaToken, tolvaName, tolvaLastValue) {
     showCancelButton: true,
     confirmButtonText: 'Descargar',
     cancelButtonText: 'Cancelar',
+    allowOutsideClick: false,
+    allowEscapeKey: false,
     customClass: {
       confirmButton: "custom-confirm-button",
       cancelButton: "custom-cancel-button",
@@ -2280,6 +2332,8 @@ function mostrarKeypad(targetInput) {
             showCancelButton: true,
             confirmButtonText: 'Dosificar',
             cancelButtonText: 'Cancelar',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
             customClass: {
               confirmButton: "custom-confirm-button", // Clase personalizada para el botón de confirmación
               cancelButton: "custom-cancel-button",  // Clase personalizada para el botón de cancelación

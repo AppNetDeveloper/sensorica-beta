@@ -44,7 +44,7 @@ class ScadaOrderList extends Model
     {
         return $this->hasMany(ScadaOrderListProcess::class, 'scada_order_list_id');
     }
-    
+
     public function scadaOrder()
     {
         return $this->belongsTo(ScadaOrder::class, 'scada_order_id');

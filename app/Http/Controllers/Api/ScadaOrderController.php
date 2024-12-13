@@ -237,9 +237,9 @@ class ScadaOrderController extends Controller
      */
     public function getLinesStatusByScadaOrderId($scadaOrderId)
     {
-        // Obtener las líneas asociadas a este scada_order_id con sus procesos y materiales
+        // Obtener las líneas asociadas a este scada_order_id con sus procesos, materiales y operadores
         $lines = ScadaOrderList::where('scada_order_id', $scadaOrderId)
-            ->with(['processes.material']) // Cargar los procesos relacionados y sus materiales
+            ->with(['processes.material', 'processes.operator']) // Cargar procesos con materiales y operadores
             ->get();
 
         // Verificar si hay líneas asociadas
@@ -269,6 +269,17 @@ class ScadaOrderController extends Controller
 
                 // Agregar el nombre del material al proceso
                 $process->material_name = $process->material ? $process->material->name : 'No disponible';
+
+                // Agregar información del operador al proceso
+                if ($process->operator) {
+                    $process->operator_data = [
+                        'id' => $process->operator->id,
+                        'name' => $process->operator->name,
+                        'email' => $process->operator->email, // Asegúrate de que estos campos existan
+                    ];
+                } else {
+                    $process->operator_data = 'No disponible';
+                }
             }
 
             // Determinar el estado de esta línea
@@ -304,6 +315,7 @@ class ScadaOrderController extends Controller
             'lines' => $lines,
         ]);
     }
+
 
     /**
      * @OA\Post(

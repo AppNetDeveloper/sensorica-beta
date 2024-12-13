@@ -282,7 +282,7 @@ class WhatsAppController extends Controller
      */
     public function sendMessage(Request $request)
     {
-        // Obtener los parámetros `jid` y `message` desde la solicitud, ya sea GET o POST
+        // Obtener los parámetros `jid` y `message` desde la solicitud, ya sea GET o POST 
         $jid = $request->input('jid');       // Ejemplo: '34619929305@s.whatsapp.net'
         $message = $request->input('message');
 
