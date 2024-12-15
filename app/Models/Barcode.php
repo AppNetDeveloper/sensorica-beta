@@ -147,8 +147,10 @@ class Barcode extends Model
                         'orden' => $newOrder, // Asignar el nuevo orden
                     ]);
 
-                    // Obtener la capacidad de la mezcladora en metros cúbicos desde 'scada'
-                    $mixerCapacity = $scada->mixer_m3;
+                    // Obtener la capacidad de la mezcladora en metros cúbicos desde el JSON o desde 'scada'
+                    $mixerCapacity = isset($orderNotice['mixer_m3']) && is_numeric($orderNotice['mixer_m3']) && $orderNotice['mixer_m3'] > 0
+                    ? floatval($orderNotice['mixer_m3'])
+                    : $scada->mixer_m3;
 
                     // Inicializar variables para el volumen total y la detección de densidades faltantes
                     $totalVolume = 0;
