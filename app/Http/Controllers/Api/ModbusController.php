@@ -141,6 +141,8 @@ class ModbusController extends Controller
 
         // Publicar el mensaje MQTT y registrar en las tablas
         $this->publishMqttMessage($topic, $message);
+        //vamos a poner hora y fecha en este log
+        Log::info( date('Y-m-d H:i:s') . ' Message sent to MQTT topic: ' . $topic . ' with value: ' . $inValue); // Guardar en el log
 
         return response()->json(['message' => 'Dosage value sent successfully']);
     }
