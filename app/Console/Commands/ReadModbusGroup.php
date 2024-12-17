@@ -165,31 +165,30 @@ class ReadModbusGroup extends Command
         }
         $value /= $config->conversion_factor;
 
-        if (
-            (int)$value === 0 && (int)$config->last_value === 0 || 
-            (int)$value <= (int)$config->variacion_number && (int)$config->last_value === 0 || 
-            (int)$config->last_rep >= (int)$config->rep_number && (int)$value === (int)$config->last_value
-        ) {
-            $this->info("Datos ignorados: id={$id}, valor={$value}.");
-            return;
-        } else {
-            $start = "1";
+        // Verificamos que el model_name sea "weight"
+        if ($config->model_name === 'weight') {
+            // Define una tolerancia para valores cercanos a 0
+            $tolerance = 0.0001;
+
+            // Redondea el valor actual y el último valor para evitar problemas de precisión
+            $roundedValue = round($value, 4);
+            $roundedLastValue = round($config->last_value, 4);
+
+            if (
+                (abs($roundedValue) < $tolerance && abs($roundedLastValue) < $tolerance) || // Ambos valores son cercanos a 0
+                ($roundedValue <= $config->variacion_number && abs($roundedLastValue) < $tolerance) || // Dentro de variación y last_value es cercano a 0
+                ($config->last_rep >= $config->rep_number && $roundedValue === $roundedLastValue) // Se alcanzó el máximo de repeticiones
+            ) {
+                if ($roundedLastValue === $roundedValue) {
+                    $this->info("Datos ignorados: id={$id}, valor={$roundedValue}.");
+                    return;
+                }
+            }
         }
         
-       // if ((int)$value === 0 && (int)$config->last_value === 0 || $value <= $config->variacion_number && $config->last_value == '0' || $config->last_rep >= $config->rep_number  && $value == $config->last_value ) {
-         //   $this->info("Datos ignorados: id={$id}, valor={$value}.");
-           // return;
-        //}else{
-          //  $start="1";
-       // }
-
-
-       if ($value == '0' && $config->last_value == '0' || $value <= $config->variacion_number && $config->last_value == '0' || $config->last_rep >= $config->rep_number  && $value == $config->last_value){
-            $this->info("Datos ignorados Segundi filtro: id={$id}, valor=valor={$value}.");
-            return;
-        }else{
-            $start="1";
-        }
+        // Si no se cumplen las condiciones, procedemos
+        $start = "1";
+        
 
         if ($start == "1") {
             try {
