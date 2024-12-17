@@ -161,6 +161,12 @@ Route::post('/product-lists/replace-all', [ProductListController::class, 'replac
 
 Route::get('production-line/status/{token}', [ProductionLineStatusController::class, 'getStatusByToken']);
 
+//mosbus api
+Route::middleware(['throttle:3000,1'])->group(function () {
+    Route::post('/modbus-process-data-mqtt', [ModbusProcessController::class, 'processMqttData']);
+});
+
+
 Route::middleware('auth:api')->get('/user', function (Request $request) {
     return $request->user();
 });
