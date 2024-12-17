@@ -71,10 +71,23 @@ class ModbusProcessController extends Controller
                 }
             }
         }
+        Log::info("Mi valor:{$value}");
         
-        
-        // Procesar el valor
-        $this->processWeightModel($config, $value, $data);
+        // Verifica el valor del campo 'model_name' y llama al método correspondiente
+        if ($config['model_name'] === 'height') {
+            $this->processHeightModel($config, $value, $data);
+        } elseif ($config['model_name'] === 'weight') {
+            $this->processWeightModel($config, $value, $data);
+        } else {
+            // Manejo de casos no reconocidos
+            return response()->json([
+                'status' => 'error',
+                'message' => "No se encontró un Value válido.",
+            ], 200);
+        }
+
+
+
     
         return response()->json([
             'status' => 'success',
@@ -114,21 +127,15 @@ class ModbusProcessController extends Controller
             //Por momento no tengo logica de recalibrate por hRDWARE
         }
         
+        
         $mqttTopic = $config->mqtt_topic . '1/gross_weight';
         $mqttTopic2 = $config->mqtt_topic . '2/gross_weight';
        // Obtiene el último valor guardado
         $lastValue = $config->last_value;
       //  Log::info("Mi valor:{$lastValue}");
         // Actualiza el valor en la base de datos si ha cambiado
-        if ($updatedValue != $lastValue) {
-            $updateResponse = $config->update(['last_value' => $updatedValue]);
 
-            // Logea la respuesta de la actualización
-            if ($updateResponse) {
-               Log::info("Actualización exitosa. Valor original: {$lastValue}, Valor actualizado: {$updatedValue}");
-            } else {
-              Log::error("Error en la actualización de last_value. Valor original: {$lastValue}, Valor intentado actualizar: {$updatedValue}");
-            }
+            $updateResponse = $config->update(['last_value' => $updatedValue]);
 
             // Construye el mensaje
             $message = [
@@ -142,10 +149,24 @@ class ModbusProcessController extends Controller
             $this->publishMqttMessage($mqttTopic, $message);
             //OJO CON ESTO ES SOLO SI LA BASCULA TIENE UN SOLO CONTADOR OJO
             $this->publishMqttMessage($mqttTopic2, $message);
-        } else {
-            // Logea que el valor no ha cambiado y no se envía el mensaje MQTT
-         Log::info("Mismo valor no se manda MQTT: " . json_encode(['value' => $lastValue, 'time' => date('c')]));
-        }
+
+                // Comprueba si max_kg y value son ambos 0
+                
+            if ($config->max_kg == 0 && $value == 0) {
+                // Resetea campos específicos
+                $config->update([
+                    'max_kg' => 0,
+                    'last_kg' => 0,
+                    'demension' => 0,
+                    'rep_number' => 0
+                ]);
+
+                Log::info("Valores reseteados: max_kg, last_kg, demension y rep_number a 0.");
+
+                // No llamamos a processWeightData si se cumple la condición
+                return;
+            }
+
         $this->processWeightData($config, $updatedValue, $data);
     }
 
@@ -153,7 +174,7 @@ class ModbusProcessController extends Controller
     public function processHeightModel($config, $value, $data)
     {
         // Lógica para procesar datos de altura
-        Log::info("Procesando modelo de altura. Valor: {$value}");
+        Log::info("Procesando modelo de altura. Valor: {$value}"); 
 
         // Obtener valores relevantes de la configuración
         $dimensionDefault = $config->dimension_default;
@@ -400,7 +421,6 @@ class ModbusProcessController extends Controller
             'max_kg' => $maxKg,
             'last_kg' => $lastKg,
             'last_rep' => $lastRep,
-            'last_value' => $lastKg == 0 ? 0 : max(0.01, $lastKg), //POSIBLEMENTE HAY QUE BORARA ESTE 
             'dimension' => $dimensionFinal,
             'total_kg_order' => $totalKgOrder,
             'total_kg_shift' => $totalKgShift
