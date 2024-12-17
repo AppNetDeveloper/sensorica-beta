@@ -48,7 +48,11 @@ class Modbus extends Model
         'reduced_speed_time_multiplier', // Multiplicador para velocidad reducida
         'box_type', // nombre de cada cada que pasa tipo caja bulto etc
         'group', //grupos de 0 a 4 o mas para supervisor
-        'model_type',// modelo de la modbus aqui si es una bascula podemos sumar por peso acumulado o rechazos etc donde 0 es conteo de bascula 1 es rechazon 
+        'model_type',// modelo de la modbus aqui si es una bascula podemos sumar por peso acumulado o rechazos etc donde 0 es conteo de bascula 1 es rechazon
+        'dosage_order',//  para dosificar si se quiere usar un orden de descarga de las basculas
+        'box_width',// ancho de la caja se usa para calcular el cubo m3
+        'box_length',//largo de la caja
+         
     ];
 
     public $timestamps = true; // Habilitar el manejo automático de timestamps

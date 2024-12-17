@@ -72,6 +72,7 @@ class ControlWeightController extends Controller
             'box_number' => (int) ($modbus->rec_box + 1 ?? 0),
             'last_control_weight' => (float) ($latestControlWeight->last_control_weight ?? 0),
             'last_dimension' => (float) ($latestControlWeight->last_dimension ?? 0),
+            'box_m3' => (float) ($latestControlWeight->box_m3 ?? 0),
             'last_box_number' => (int) ($modbus->rec_box ?? 0),
             'last_barcoder' => (string) ($latestControlWeight->last_barcoder ?? ''),
             'box_type' => (string) ($modbus->box_type ?? 'Cultos'), // Asegúrate de que 'NoName' esté entre comillas,

@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <title>BOISOLO Autoconto</title>
+  <!-- jQuery (Requerido por Bootstrap) -->
+  <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
   <!-- Bootstrap CSS -->
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
   <!-- JsBarcode Library -->
@@ -286,7 +288,7 @@
           <p class="weight-display" id="weightDisplay">0.0 <b class="unit">Kg</b></p>
         </div>
         <div class="info-box">
-          <img src="medida.png" alt="Dimensions">
+          <img src="medida.png" alt="DimensionsLive">
           <p class="dimension-display" id="dimensionDisplay">0 <b class="unit">mm</b></p>
         </div>
         <div class="info-box">
@@ -354,6 +356,18 @@
 
     const token = getTokenFromUrl();
     const apiUrl = `/api/control-weight/${token}`;
+
+    // Detectar parámetro m3 en la URL
+    function hasM3Param() {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get('m3') === 'true';
+    }
+    const isM3Active = hasM3Param();
+    // Cambiar imagen si m3=true
+    if (isM3Active) {
+      const imageElements = document.querySelectorAll('img[alt="Dimensions"]');
+      imageElements.forEach(img => img.src = '8052211.png');
+    }
 
     var qrCodeElement = document.getElementById("qrCode");
     var qrCodeInstance = null;
@@ -440,7 +454,13 @@
         }
 
         document.getElementById('lastWeightDisplay').innerHTML = lastControlWeight.toFixed(2) + ' <b class="unit">Kg</b>';
-        document.getElementById('lastDimensionDisplay').innerHTML = data.last_dimension + ' <b class="unit">mm</b>';
+            // Mostrar `box_m3` si m3=true
+        if (isM3Active) {
+          document.getElementById('lastDimensionDisplay').innerHTML = data.box_m3 + ' <b class="unit">m³</b>';
+        } else {
+          document.getElementById('lastDimensionDisplay').innerHTML = data.last_dimension + ' <b class="unit">mm</b>';
+        }
+
         document.getElementById('lastBoxNumberDisplay').innerHTML = data.last_box_number + ' <b class="unit">'+ data.box_type +'</b>';
         document.getElementById('boxTypeModel').innerHTML =data.box_type;
 

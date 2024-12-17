@@ -71,7 +71,7 @@ class ModbusProcessController extends Controller
                 }
             }
         }
-        Log::info("Mi valor:{$value}");
+        //Log::info("Mi valor:{$value}");
         
         // Verifica el valor del campo 'model_name' y llama al método correspondiente
         if ($config['model_name'] === 'height') {
@@ -151,7 +151,7 @@ class ModbusProcessController extends Controller
             $this->publishMqttMessage($mqttTopic2, $message);
 
                 // Comprueba si max_kg y value son ambos 0
-                
+
             if ($config->max_kg == 0 && $value == 0) {
                 // Resetea campos específicos
                 $config->update([
@@ -198,24 +198,20 @@ class ModbusProcessController extends Controller
 
             Log::info("Nuevo dimension_max guardado en modbuses: {$currentValue}");
 
-            // Actualizar dimension en otros registros de Modbuses donde dimension_id = $config->id
-            Modbus::where('dimension_id', $config->id)
+
+
+        } else {
+            Log::info("No se actualiza dimension_max: Valor actual {$currentValue} no es mayor que dimension_max {$dimensionMax}, ID: {$config->id}");
+        }
+
+                    // Actualizar dimension en otros registros de Modbuses donde dimension_id = $config->id
+                Modbus::where('dimension_id', $config->id)
                     ->where('dimension', '<', $currentValue) // Verifica que el valor actual es mayor
                     ->where('max_kg', '!=', 0) // Verifica que max_kg no sea 0
                     ->update(['dimension' => $currentValue]);
 
 
         Log::info("dimension_max actualizado en otros registros de Modbuses donde dimension_id = {$config->id}");
-
-        } else {
-            Log::info("No se actualiza dimension_max: Valor actual {$currentValue} no es mayor que dimension_max {$dimensionMax}, ID: {$config->id}");
-            // Actualizar dimension en otros registros de Modbuses donde dimension_id = $config->id
-            Modbus::where('dimension_id', $config->id)
-                    ->where('dimension', '<', $currentValue) // Solo actualizar si el valor actual es mayor
-                    ->where('max_kg', '!=', 0) // Verifica que max_kg no sea 0
-                    ->update(['dimension' => $currentValue]);
-
-        }
 
         if (($value + $dimensionOffset) > ($dimensionDefault - $dimensionVariation) && $dimensionMax > ($dimensionOffset + $dimensionVariation)) {
              // Guardar el valor máximo actual antes de reiniciar
@@ -229,34 +225,9 @@ class ModbusProcessController extends Controller
         // Reiniciar dimension_max a 0
         $config->dimension_max = 0;
         $config->save();
-        Log::info("dimension_max reiniciado a 0 en modbuses.");
-
-            Log::info("Nuevo registro en control_heights guardado con currentValue. Valor: {$currentValue}, ID: {$config->id}");
+        Log::info("Nuevo registro en control_heights guardado con currentValue. Valor: {$currentValue}, ID: {$config->id}  Y dimension_max reiniciado a 0 en modbuses");
         }
 
-    }
-
-    public function lifeTraficMonitor($config, $value)
-    {
-        // Lógica para procesar datos del sensor
-        Log::info("Monitor de trafico. Valor: {$value}");
-
-        // Consultar el último valor guardado para este sensor
-        $lastRecord = LiveTrafficMonitor::where('modbus_id', $config->id)
-                                        ->orderBy('created_at', 'desc')
-                                        ->first();
-
-        // Comprobar si el nuevo valor es diferente al último valor registrado
-        if ($lastRecord && $lastRecord->value == $value) {
-            Log::info("El valor no ha cambiado. No se guarda el nuevo valor.");
-            return;
-        }
-
-        // Si el valor es diferente o no hay registros previos, se guarda el nuevo valor
-        $lifetraficMonitor = new LiveTrafficMonitor();
-        $lifetraficMonitor->modbus_id = $config->id;
-        $lifetraficMonitor->value = $value;
-        $lifetraficMonitor->save();
     }
 
 
@@ -518,7 +489,16 @@ class ModbusProcessController extends Controller
             'last_dimension' => $dimensionFinal,
             'last_barcoder' => $uniqueBarcoder,
             'used_value' => $apiQueue->value,
+            'box_m3' => (
+                isset($config->box_width, $config->box_length, $dimensionFinal) &&
+                $config->box_width > 0 &&
+                $config->box_length > 0 &&
+                $dimensionFinal > 0
+            )
+                ? ($config->box_width * $config->box_length * $dimensionFinal) / 1000
+                : 0, // Si algún campo es 0 o null, el valor será 0
         ];
+        
     
         $dataToSend2 = [
             'alto' => (string)$dimensionFinal,
