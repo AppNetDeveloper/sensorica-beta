@@ -7,7 +7,6 @@ use App\Models\Sensor;
 use PhpMqtt\Client\MqttClient;
 use PhpMqtt\Client\ConnectionSettings;
 
-
 class ReadSensors extends Command
 {
     protected $signature = 'sensors:read';
@@ -53,7 +52,7 @@ class ReadSensors extends Command
                 pcntl_signal_dispatch();
     
                 // Reducir la carga del sistema esperando un corto período
-                usleep(100000); // Esperar 0.1 segundos
+                usleep(10000); // Esperar 0.1 segundos
             }
     
             // Desconectar el cliente MQTT de forma segura
@@ -92,10 +91,32 @@ class ReadSensors extends Command
         foreach ($topics as $topic) {
             if (!in_array($topic, $this->subscribedTopics)) {
                 $mqtt->subscribe($topic, function ($topic, $message) {
-                    // Sacamos el id para identificar la línea, pero solo id para no cargar la RAM
-                    $id = Sensor::where('mqtt_topic_sensor', $topic)->value('id');
-                    // Llamamos a procesar el mensaje
-                    $this->processMessage($id, $message);
+                    // Sacamos el sensor completo para tener acceso a todas sus propiedades
+                    $sensor = Sensor::where('mqtt_topic_sensor', $topic)->first();
+
+                    // Validamos si el sensor existe
+                    if (!$sensor) {
+                        $this->error("[" . now() . "] Error: No se encontró un sensor asociado al tópico {$topic}");
+                        return;
+                    }
+
+                    // Extraemos el valor directamente del mensaje JSON
+                    $data = json_decode($message, true);
+                    $value = $data['value'] ?? null;
+
+                    // Si el sensor es del tipo 0 y el valor es 0, no procesamos el mensaje
+                    if ($sensor->sensor_type == 0 && $value == 0) {
+                        $this->info("[" . now() . "] Mensaje descartado para sensor {$sensor->id} (sensor_type=0, value=0)");
+                        return;
+                    }else{
+                        // Continuamos procesando el mensaje si cumple con que no es sensor type 0 y valor 0
+                    $this->info("[" . now() . "] Mensaje procesado para sensor {$sensor->id} con valor {$message}");
+                    $this->processMessage($sensor->id, $message);
+                    //$this->info("[" . now() . "] Mensaje finalizado para sensor {$sensor->id} con valor {$message}");
+                    }
+
+                    
+
                 }, 0);
 
                 $this->subscribedTopics[] = $topic;
@@ -174,7 +195,7 @@ class ReadSensors extends Command
                     $this->info("API call success for sensor {$id}: " . $response->getStatusCode());
                 },
                 function ($exception) use ($id) {
-                    $this->error("API call error for sensor {$id}: " . $exception->getMessage());
+                   $this->error("API call error for sensor {$id}: " . $exception->getMessage());
                 }
             );
     
@@ -185,7 +206,8 @@ class ReadSensors extends Command
             $this->error("Error al intentar llamar a la API: " . $e->getMessage());
         }
     
-        $this->info("Mensaje procesado para sensor {$id} con valor {$value}");
+       // $this->info("[" . now() . "] Mensaje procesado para sensor {$id} con valor {$value}");
+
     }
     
 

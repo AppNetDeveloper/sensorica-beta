@@ -153,8 +153,11 @@ class SensorController extends Controller
      *         )
      *     )
      * )
-     */public function sensorInsert(Request $request)
+     */
+    public function sensorInsert(Request $request)
     {
+            // Ignorar desconexión del cliente
+        ignore_user_abort(true);
         // Validar los datos de entrada
         $validated = $request->validate([
             'value' => 'required|integer',
@@ -177,17 +180,6 @@ class SensorController extends Controller
             $value = 1 - $value;
         }
 
-        $lastSensorCount = SensorCount::where('sensor_id', $sensor->id)
-            ->latest('id') // Ordena por ID descendente y toma el último
-            ->first();
-
-        if ($lastSensorCount && $lastSensorCount->value == $value) {
-            return response()->json([
-                'error' => 'El valor recibido ya está registrado como el último valor para este sensor',
-                'sensor' => $sensor->name,
-                'value' => $value,
-            ], 400);
-        }
 
 
         try {

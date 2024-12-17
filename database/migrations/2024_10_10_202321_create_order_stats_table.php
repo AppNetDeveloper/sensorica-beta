@@ -14,7 +14,7 @@ class CreateOrderStatsTable extends Migration
     public function up()
     {
         Schema::create('order_stats', function (Blueprint $table) {
-            // Clave primaria autoincremental, necesaria para identificar cada registro de manera única.
+            // Clave primaria autoincremental, necesaria para identificar cada registro de manera única. 
             $table->id();  
 
             // 'production_line_id' es una clave foránea que conecta con la tabla 'production_lines' para identificar a qué línea de producción pertenece.
@@ -86,6 +86,27 @@ class CreateOrderStatsTable extends Migration
 
             // 'oee' es el porcentaje de eficiencia operativa (Overall Equipment Effectiveness), y se expresa como un valor decimal que puede ser, por ejemplo, 95.50 (95.5% de eficiencia).
             $table->decimal('oee', 5, 2)->nullable();  // OEE (Overall Equipment Effectiveness) como porcentaje.
+
+               // Nuevas columnas para pesos denode se apunta el acumulado  por modelo de bascula, peso acumulaso y cantidad de cajas
+                $table->integer('weights_0_shiftNumber')->nullable();
+                $table->decimal('weights_0_shiftKg', 8, 2)->nullable();
+                $table->integer('weights_0_orderNumber')->nullable();
+                $table->decimal('weights_0_orderKg', 8, 2)->nullable();
+
+                $table->integer('weights_1_shiftNumber')->nullable();
+                $table->decimal('weights_1_shiftKg', 8, 2)->nullable();
+                $table->integer('weights_1_orderNumber')->nullable();
+                $table->decimal('weights_1_orderKg', 8, 2)->nullable();
+
+                $table->integer('weights_2_shiftNumber')->nullable();
+                $table->decimal('weights_2_shiftKg', 8, 2)->nullable();
+                $table->integer('weights_2_orderNumber')->nullable();
+                $table->decimal('weights_2_orderKg', 8, 2)->nullable();
+
+                $table->integer('weights_3_shiftNumber')->nullable();
+                $table->decimal('weights_3_shiftKg', 8, 2)->nullable();
+                $table->integer('weights_3_orderNumber')->nullable();
+                $table->decimal('weights_3_orderKg', 8, 2)->nullable();
 
             // Timestamps automáticos para 'created_at' y 'updated_at'.
             $table->timestamps();

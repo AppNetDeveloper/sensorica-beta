@@ -17,7 +17,6 @@ class Kernel extends ConsoleKernel
         // ... otros comandos ...
         Commands\MqttSubscriber::class,
         Commands\MqttSubscriberLocal::class,
-        Commands\ReadModbus::class,
         Commands\PublishToMqttServer1::class,
         Commands\PublishToMqttServer2::class,
         Commands\ReadSensors::class,
@@ -32,6 +31,7 @@ class Kernel extends ConsoleKernel
         commands\ReadBluetoothReadings::class,
         Commands\CheckBluetoothExit::class,
         Commands\MonitorConnections::class,
+        Commands\ReadModbusGroup::class,
         
     ];
 

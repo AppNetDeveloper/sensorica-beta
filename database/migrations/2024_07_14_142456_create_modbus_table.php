@@ -52,6 +52,7 @@ return new class extends Migration
             $table->integer('optimal_production_time')->nullable();
             $table->integer('reduced_speed_time_multiplier')->nullable();
             $table->string('box_type')->nullable();
+            $table->integer('model_type')->default(0); // Nueva columna añadida
             $table->timestamps();
         });
     }

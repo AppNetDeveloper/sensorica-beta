@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Modbus;
 use App\Models\ControlWeight;
 use Illuminate\Http\Request;
+use App\Models\OrderStat;
 
 class ControlWeightController extends Controller
 {
@@ -60,8 +61,10 @@ class ControlWeightController extends Controller
         $latestControlWeight = ControlWeight::where('modbus_id', $modbus->id)
             ->latest('created_at')
             ->first();
+            // Obtener datos adicionales de order_stats usando production_line_id
+        $orderStats = OrderStat::where('production_line_id', $modbus->production_line_id)->latest('created_at')->first();
 
-        // Prepara los datos para la respuesta
+        // Prepara los datos para la respuesta AQUI introducimos order y fecha de inicio de order
         $response = [
             'name' => (string) ($modbus->name ?? 'NoName'), // Asegúrate de que 'NoName' esté entre comillas
             'gross_weight' => (float) ($modbus->last_value ?? 0),
@@ -71,7 +74,10 @@ class ControlWeightController extends Controller
             'last_dimension' => (float) ($latestControlWeight->last_dimension ?? 0),
             'last_box_number' => (int) ($modbus->rec_box ?? 0),
             'last_barcoder' => (string) ($latestControlWeight->last_barcoder ?? ''),
-            'box_type' => (string) ($modbus->box_type ?? 'Cultos'), // Asegúrate de que 'NoName' esté entre comillas
+            'box_type' => (string) ($modbus->box_type ?? 'Cultos'), // Asegúrate de que 'NoName' esté entre comillas,
+            'order_id' => (string) ($orderStats->order_id ?? ''), // Se incluye directamente el order_id sin divisiones
+            'created_at' => (string) ($orderStats->created_at ?? ''), // created_at desde order_stats
+            'updated_at' => (string) ($orderStats->updated_at ?? ''), // updated_at desde order_stats
         ];
 
         return response()->json($response);

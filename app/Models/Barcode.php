@@ -68,10 +68,15 @@ class Barcode extends Model
         $orderNotice = json_decode($barcode->order_notice, true);
 
         if ($orderNotice && isset($orderNotice['orderId'], $orderNotice['quantity'])) {
-
-            $orderId = (string)$orderNotice['orderId'];
+            
+            // Extraer 'orderId' como cadena de texto completa
+            $orderId = (string)$orderNotice['orderId'];  // Convertir a string explícitamente
+            // Extraer 'quantity' del JSON esto no es necesario en string, por no tener caracteros raros
             $units = $orderNotice['quantity'];
-            $box = $orderNotice['refer']['groupLevel'][0]['total'];
+            // Extraer 'uds' del primer nivel dentro de 'groupLevel'
+            $box = $orderNotice['refer']['groupLevel'][0]['uds']; // Accede al valor de 'uds'
+            
+            // Extraer 'production_line_id' de la tabla 'barcodes'
             $productionLineId = $barcode->production_line_id;
 
             // Verificar si el barcoder_id ya existe en la tabla 'scada'

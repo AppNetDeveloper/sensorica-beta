@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard - Autoconto</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Cargar Google Charts -->
+  <script src="https://www.gstatic.com/charts/loader.js"></script>
+  <script>
+    google.charts.load('current', { packages: ['sankey'] });
+  </script>
   <style>
     .card-custom {
       background-color: #f8f9fa;
@@ -311,11 +316,10 @@
               <!-- Card de Gráfico y Estadísticas -->
               <div class="col-lg-8 mb-4">
                 <div class="card card-custom">
-                  <div class="card-header-custom">Turno Actual</div>
                   <div class="card-body">
                     <div class="grafico-container">
-                      <!-- Imagen o gráfico ficticio -->
-                      <img src="grafico.png" alt="Gráfico de flujo" style="width: 100%; max-width: 100%; height: auto;">
+                      <!-- Contenedor del Sankey Diagram -->
+                      <div id="sankey_chart" style="width: 100%; height: auto;"></div>
                     </div>
                   </div>
                 </div>
@@ -325,20 +329,26 @@
               <div class="col-lg-4 mb-4">
                 <div class="col-md-10">
                   <div class="small-card">
-                    <div class="metric">27</div>
+                    <div class="metric" id="box-finalized">--</div>
                     <div class="metric-label">Cajas Finalizadas</div>
                   </div>
                 </div>
                 <div class="col-md-10">
                   <div class="small-card">
-                    <div class="metric">732 kg</div>
+                    <div class="metric" id="total-weight">--%</div>
                     <div class="metric-label">Peso Acumulado</div>
                   </div>
                 </div>
-                <div class="pesaje-card">
+                <div class="col-md-10">
+                  <div class="small-card">
+                    <div class="metric" id="box-pending">--%</div>
+                    <div class="metric-label">Cajas Pendientes</div>
+                  </div>
+                </div>
+                <!-- <div class="pesaje-card">
                   <div class="pesaje-label">Pesaje</div>
-                  <div style="background-color: #28a745; width: 50px; height: 50px; margin: auto;"></div> <!-- Ícono cuadrado -->
-                </div>                
+                  <div style="background-color: #28a745; width: 50px; height: 50px; margin: auto;"></div> 
+                </div>   -->             
               </div>
             </div>
           </div>
@@ -411,7 +421,7 @@
       document.getElementById("sensor-stops-time").textContent = sensorStopsTimeFormatted;
 
       const slowTimeInUnits = data.slow_time;
-      const slowTimeInSeconds = slowTimeInUnits * data.seconds_per_unit_real - slowTimeInUnits * data.seconds_per_unit_theoretical;
+      const slowTimeInSeconds = data.units_delayed * data.seconds_per_unit_theoretical;
       document.getElementById("slow-time").textContent = formatTime(slowTimeInSeconds);
 
       const unidentifiedTimeDifference = (data.units_made_theoretical - data.units_made_real) * data.seconds_per_unit_theoretical;
@@ -434,6 +444,15 @@
 
       // Actualizar OEE con valor entero redondeado
       document.getElementById("oee-percentage").textContent = Math.round(data.oee) + "%";
+
+      //Actualizar numero de cajas 
+      document.getElementById("box-finalized").textContent = data.weights_0_orderNumber;
+
+      //Actualizar numero de cajas pendientes
+      document.getElementById("box-pending").textContent = data.box - data.weights_0_orderNumber;
+
+      //actualizar peso acumulado
+      document.getElementById("total-weight").textContent = data.weights_0_orderKg;
 
       // Calcular Disponibilidad
       // Tiempo total de paradas (Paradas Sensores + No Identificadas)
@@ -518,6 +537,68 @@
 
       // Actualizar la etiqueta con el tiempo de Paradas Sensores
       document.getElementById('quality-progress-bar-label').textContent = sensorStopsTimeFormatted;
+
+      //Sankey Diagram
+         // Calcular valores para el Sankey Diagram
+    const boxFinalized = parseFloat(data.weights_0_orderNumber || 0);
+    const totalWeightBoxFinalized = parseFloat(data.weights_0_orderKg || 0);
+    const unitsPerBox = parseFloat(data.units_box || 0);
+    const unitsMadeReal = parseFloat(data.units_made_real || 0);
+    const totalWeightBoxFinalized1= parseFloat(data.weights_1_orderKg|| 0);
+    const totalWeightBoxFinalized2 = parseFloat(data.weights_2_orderKg || 0);
+
+    const weightPerBox = totalWeightBoxFinalized / boxFinalized || 0;
+    const weightPerUnit = weightPerBox / unitsPerBox || 0;
+    const totalMaterialUsed = unitsMadeReal * weightPerUnit || 0;
+    const udsNotEnvasadas = Math.round(unitsMadeReal - (unitsPerBox * boxFinalized));
+    const totalWeightFromAllUnitsCreated = Math.round(unitsMadeReal * weightPerUnit) || 0;
+    const totalWeightFromAll = Math.round(totalWeightFromAllUnitsCreated  + totalWeightBoxFinalized1 + totalWeightBoxFinalized2 ) || 0;
+
+    // Dibujar Sankey Diagram
+    function drawChart() {
+      const dataTable = new google.visualization.DataTable();
+      dataTable.addColumn('string', 'From');
+      dataTable.addColumn('string', 'To');
+      dataTable.addColumn('number', 'Weight');
+      dataTable.addColumn({ type: 'string', role: 'tooltip' }); // Añade una columna de tooltip
+    
+      dataTable.addRows([
+        ['Peso Total', 'Uds', totalWeightFromAll, `Total Peso: ${totalWeightFromAll} kg`],
+        ['Uds', 'Rechazo', totalWeightBoxFinalized2, `Rechazo Peso: ${totalWeightBoxFinalized2} kg`],
+        ['Uds', 'Uds Fabricadas', Math.round(unitsMadeReal * weightPerUnit), `Fabricadas: ${unitsMadeReal} uds y ${Math.round(unitsMadeReal * weightPerUnit)} kg`],
+        ['Uds Fabricadas', 'Unidades Envasadas', totalWeightBoxFinalized, `Envasadas: ${unitsPerBox * boxFinalized} uds y ${totalWeightBoxFinalized} kg`],
+        [
+          'Uds Fabricadas',
+          'Unidades Sin Envasar',
+          Math.round((udsNotEnvasadas - (totalWeightBoxFinalized1 / weightPerUnit)) * weightPerUnit ),
+          `Sin Envasar: ${Math.round(udsNotEnvasadas - (totalWeightBoxFinalized1 / weightPerUnit))} uds y ${Math.round((udsNotEnvasadas - (totalWeightBoxFinalized1 / weightPerUnit)) * weightPerUnit )}  kg`
+        ],
+        [
+          'Uds Fabricadas',
+          'Rechazo',
+          totalWeightBoxFinalized1,
+          `Rechazo: ${Math.round(totalWeightBoxFinalized1 / weightPerUnit)} uds y ${totalWeightBoxFinalized1} kg`
+        ],
+      ]);
+
+      const options = {
+        width: '100%',
+        height: 400,
+        sankey: {
+          node: {
+            label: { fontSize: 12 },
+            colors: ['#FFA07A', '#87CEEB', '#FFD700'],
+          },
+          link: { colorMode: 'gradient', colors: ['#FFA07A', '#87CEEB'] },
+        },
+      };
+
+      const chart = new google.visualization.Sankey(document.getElementById('sankey_chart'));
+      chart.draw(dataTable, options);
+    }
+
+    // Cargar y dibujar el gráfico
+    google.charts.setOnLoadCallback(drawChart);
 
     } catch (error) {
       console.error("Error al obtener los datos:", error);

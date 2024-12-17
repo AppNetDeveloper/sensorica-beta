@@ -47,6 +47,8 @@ class Modbus extends Model
         'optimal_production_time', // Tiempo óptimo de producción de una caja
         'reduced_speed_time_multiplier', // Multiplicador para velocidad reducida
         'box_type', // nombre de cada cada que pasa tipo caja bulto etc
+        'group', //grupos de 0 a 4 o mas para supervisor
+        'model_type',// modelo de la modbus aqui si es una bascula podemos sumar por peso acumulado o rechazos etc donde 0 es conteo de bascula 1 es rechazon 
     ];
 
     public $timestamps = true; // Habilitar el manejo automático de timestamps

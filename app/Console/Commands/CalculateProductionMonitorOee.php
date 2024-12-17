@@ -282,28 +282,46 @@ class CalculateProductionMonitorOee extends Command
         $shiftTimeInSeconds = $this->shiftTimeToSeconds();
         
         //si orderstats existe y es diferente de valueMonitorOEE lo actualizamos y mandamos el mensaje MQTT
-        if ($orderStats && $diff > 0 && $diff < $shiftTimeInSeconds || $orderStats && $diff > 0 && $orderStats->units_made_real != $totalRealCajas) {
-            //guardamos cambio
+        if (
+            $orderStats && $diff > 0 && $diff < $shiftTimeInSeconds ||
+            $orderStats && $diff > 0 && $orderStats->units_made_real != $totalRealCajas
+        ) {
+            // Validamos que los valores sean numéricos antes de realizar cálculos
+            $units = is_numeric($orderStats->units) ? $orderStats->units : 0;
+            $realCajas = is_numeric($totalRealCajas) ? $totalRealCajas : 0;
+            $theoreticalSecondsPerBox = is_numeric($theoreticalSecondsPerBox) ? $theoreticalSecondsPerBox : 0;
+            $realSecondsPerBox = is_numeric($realSecondsPerBox) ? $realSecondsPerBox : 0;
+            $totalDowntimeCountSensorType0 = is_numeric($totalDowntimeCountSensorType0) ? $totalDowntimeCountSensorType0 : 0;
+            $totalLessThanOrEqualToOptimalTime = is_numeric($totalLessThanOrEqualToOptimalTime) ? $totalLessThanOrEqualToOptimalTime : 0;
+            $totalBetweenOptimalAndMaxTime = is_numeric($totalBetweenOptimalAndMaxTime) ? $totalBetweenOptimalAndMaxTime : 0;
+            $totalGreaterThanMaxTime = is_numeric($totalGreaterThanMaxTime) ? $totalGreaterThanMaxTime : 0;
+        
+            // Guardamos cambios
             $orderStats->oee = $valueMonitorOEE;
-            $orderStats->units_made_real = $totalRealCajas;
+            $orderStats->units_made_real = $realCajas;
             $orderStats->units_made_theoretical = $totalCajasTeoricas;
             $orderStats->units_per_minute_real = $totalRealProductionPerMinute;
             $orderStats->units_per_minute_theoretical = $totalTheoreticalProductionPerMinute;
-            $orderStats->seconds_per_unit_real=$realSecondsPerBox;
-            $orderStats->seconds_per_unit_theoretical=$theoreticalSecondsPerBox;
-            $orderStats->units_made=$totalRealCajas;
-            $orderStats->units_pending=$orderStats->units - $totalRealCajas;
-            $orderStats->units_delayed= $totalCajasTeoricas - $totalRealCajas;
-            $orderStats->production_stops_time=floor($totalDowntimeCountSensorType0 / 60);
-            $orderStats->fast_time=$totalLessThanOrEqualToOptimalTime;
-            $orderStats->slow_time=$totalBetweenOptimalAndMaxTime;
-            $orderStats->out_time=$totalGreaterThanMaxTime;
-            $orderStats->theoretical_end_time=(($orderStats->units - $totalRealCajas) * $theoreticalSecondsPerBox) / 60;
-            $orderStats->real_end_time=(($orderStats->units - $totalRealCajas) * $realSecondsPerBox) / 60;
+            $orderStats->seconds_per_unit_real = $realSecondsPerBox;
+            $orderStats->seconds_per_unit_theoretical = $theoreticalSecondsPerBox;
+            $orderStats->units_made = $realCajas;
+            $orderStats->units_pending = $units - $realCajas;
+            $orderStats->units_delayed = $totalCajasTeoricas - $realCajas;
+            $orderStats->production_stops_time = floor($totalDowntimeCountSensorType0 / 60);
+            $orderStats->fast_time = $totalLessThanOrEqualToOptimalTime;
+            $orderStats->slow_time = $totalBetweenOptimalAndMaxTime;
+            $orderStats->out_time = $totalGreaterThanMaxTime;
+        
+            // Calculamos valores teóricos y reales de finalización
+            $orderStats->theoretical_end_time = (($units - $realCajas) * $theoreticalSecondsPerBox) / 60;
+            $orderStats->real_end_time = (($units - $realCajas) * $realSecondsPerBox) / 60;
+        
             $orderStats->save();
+        
             // Publicar mensajes MQTT
             $this->publishMqttMessage($monitor->topic_oee . '/monitor_oee', $jsonMonitorOEE);
         }
+        
         
 
 

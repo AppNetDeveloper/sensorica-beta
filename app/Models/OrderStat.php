@@ -37,6 +37,22 @@ class OrderStat extends Model
         'theoretical_end_time',
         'real_end_time',
         'oee',
+        'weights_0_shiftNumber',
+        'weights_0_shiftKg',
+        'weights_0_orderNumber',
+        'weights_0_orderKg',
+        'weights_1_shiftNumber',
+        'weights_1_shiftKg',
+        'weights_1_orderNumber',
+        'weights_1_orderKg',
+        'weights_2_shiftNumber',
+        'weights_2_shiftKg',
+        'weights_2_orderNumber',
+        'weights_2_orderKg',
+        'weights_3_shiftNumber',
+        'weights_3_shiftKg',
+        'weights_3_orderNumber',
+        'weights_3_orderKg',
     ];
 
     // Asegúrate de que se gestionen las marcas de tiempo automáticamente.

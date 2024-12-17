@@ -177,6 +177,8 @@ class MqttSubscriberLocal extends Command
         try {
             $updated = Modbus::where('barcoder_id', $barcodeId)->update([
                 'rec_box' => 0,
+                'total_kg_order'=> 0,
+                'downtime_count'=> 0,
             ]);
     
             if ($updated > 0) {

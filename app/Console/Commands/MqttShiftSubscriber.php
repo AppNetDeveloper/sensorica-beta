@@ -238,6 +238,9 @@ class MqttShiftSubscriber extends Command
         $modbus->rec_box_shift = 0;
         $modbus->rec_box = 0;
         $modbus->downtime_count = 0;
+        $modbus->unic_code_order = uniqid();
+        $modbus->total_kg_order=0;
+        $modbus->total_kg_shift=0;
         $modbus->save();  // Guardar los cambios
     }
 
