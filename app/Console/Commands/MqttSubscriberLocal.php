@@ -8,6 +8,7 @@ use PhpMqtt\Client\MqttClient;
 use PhpMqtt\Client\ConnectionSettings;
 use App\Models\Sensor;
 use App\Models\Modbus;
+use Carbon\Carbon;
 
 class MqttSubscriberLocal extends Command
 {
@@ -126,7 +127,7 @@ class MqttSubscriberLocal extends Command
             $this->error("No barcodes found for topic: {$topic}");
             return;
         }else{
-            $this->info("barcodes found for topic: {$topic}");
+            $this->info("[" . Carbon::now()->toDateTimeString() . "] barcodes found for topic: {$topic}");
         }
 
     
