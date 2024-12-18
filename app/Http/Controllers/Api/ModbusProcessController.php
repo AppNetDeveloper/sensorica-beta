@@ -158,10 +158,10 @@ class ModbusProcessController extends Controller
                     'max_kg' => 0,
                     'last_kg' => 0,
                     'demension' => 0,
-                    'rep_number' => 0
+                    'last_rep' => 0
                 ]);
 
-                Log::info("Valores reseteados: max_kg, last_kg, demension y rep_number a 0.");
+                Log::info("Valores reseteados: max_kg, last_kg, demension y last_rep a 0.");
 
                 // No llamamos a processWeightData si se cumple la condición
                 return;

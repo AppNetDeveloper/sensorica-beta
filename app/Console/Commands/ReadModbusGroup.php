@@ -176,7 +176,7 @@ class ReadModbusGroup extends Command
 
             if (
                 (abs($roundedValue) < $tolerance && abs($roundedLastValue) < $tolerance) || // Ambos valores son cercanos a 0
-                ($roundedValue <= $config->variacion_number && abs($roundedLastValue) < $tolerance) || // Dentro de variación y last_value es cercano a 0
+                ($roundedValue <= $config->variacion_number && abs($roundedLastValue) < $tolerance) && $config->last_rep >= $config->rep_number|| // Dentro de variación y last_value es cercano a 0
                 ($config->last_rep >= $config->rep_number && $roundedValue === $roundedLastValue) // Se alcanzó el máximo de repeticiones
             ) {
                 if ($roundedLastValue === $roundedValue) {
