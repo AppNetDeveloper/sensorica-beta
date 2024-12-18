@@ -72,9 +72,9 @@ class Barcode extends Model
             // Extraer 'orderId' como cadena de texto completa
             $orderId = (string)$orderNotice['orderId'];  // Convertir a string explícitamente
             // Extraer 'quantity' del JSON esto no es necesario en string, por no tener caracteros raros
-            $units = $orderNotice['quantity'];
+            $box = $orderNotice['quantity'];
             // Extraer 'uds' del primer nivel dentro de 'groupLevel'
-            $box = $orderNotice['refer']['groupLevel'][0]['uds']; // Accede al valor de 'uds'
+            $units = $orderNotice['refer']['groupLevel'][0]['uds']; // Accede al valor de 'uds'
             
             // Extraer 'production_line_id' de la tabla 'barcodes'
             $productionLineId = $barcode->production_line_id;
