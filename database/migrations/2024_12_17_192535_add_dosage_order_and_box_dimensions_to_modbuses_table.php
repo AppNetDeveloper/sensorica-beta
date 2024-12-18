@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::table('modbuses', function (Blueprint $table) {
             $table->string('dosage_order')->nullable();
-            $table->decimal('box_width', 8, 2)->nullable();
-            $table->decimal('box_length', 8, 2)->nullable();
+            $table->decimal('box_width', 8, 2)->default(800)->nullable();
+            $table->decimal('box_length', 8, 2)->default(1200)->nullable();
         });        
     }
 
