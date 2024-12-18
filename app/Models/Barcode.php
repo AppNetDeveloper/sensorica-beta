@@ -4,9 +4,10 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Models\OrderStat;  // Asegúrate de importar el modelo OrderStat
+use App\Models\OrderStat; 
 use Illuminate\Support\Facades\Log;
 use App\Models\Scada;
+use App\Models\ScadaOrder; // si falla algo elimina esto
 
 class Barcode extends Model
 {
