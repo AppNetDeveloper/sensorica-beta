@@ -573,9 +573,20 @@
     let estadoActual = 'Buscando Comunicación'; // Variable global para almacenar el estado actual
 
 // Función para cargar el estado de comunicación
+// Función para extraer el token de la URL
+function obtenerTokenDeURL() {
+  const urlParams = new URLSearchParams(window.location.search);
+  return urlParams.get('token'); // Asumiendo que el token está en la query string como ?token=...
+}
+
+// Función principal para cargar el estado de comunicación
 async function cargarEstadoComunicacion() {
   try {
-    // Llamar a la API con el token
+    // Obtener el token desde la URL
+    const token = obtenerTokenDeURL();
+    if (!token) {
+      throw new Error('Token no encontrado en la URL.');
+    }
     const response = await fetch(`/api/production-line/status/${token}`);
     const data = await response.json();
 
