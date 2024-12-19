@@ -63,7 +63,7 @@
       display: flex;
       flex-direction: column;
       align-items: flex-end;
-      margin-left: auto;
+      margin-left: 10px;
     }
 
     .time {
@@ -409,20 +409,36 @@
     background: #fff;
     border: 1px solid #ccc;
     border-radius: 10px;
-    width: 300px;
-    z-index: 99999; /* Asegurar que esté por encima del SweetAlert */
-    box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    z-index: 99999;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
     padding: 10px;
-  }
+    transition: width 0.3s ease; /* Transición suave al cambiar el ancho */
+}
 
-  .custom-numpad-row {
+/* Ancho específico para cada tipo de teclado */
+.custom-numpad.numeric-mode {
+    width: 600px; /* Teclado numérico */
+}
+
+.custom-numpad.uppercase-mode,
+.custom-numpad.lowercase-mode {
+    width: 1600px; /* Teclado alfabético (mayúsculas y minúsculas) */
+}
+
+.custom-numpad.special-mode {
+    width: 1000px; /* Teclado de caracteres especiales */
+}
+
+/* Estilo para las filas de botones */
+.custom-numpad-row {
     display: flex;
     justify-content: space-between;
     margin-bottom: 10px;
-  }
+}
 
-  .custom-numpad-button {
-    width: 30%;
+/* Estilo para los botones */
+.custom-numpad-button {
+    width: 30%; /* Proporción estándar */
     padding: 15px 0;
     text-align: center;
     background: #eee;
@@ -430,19 +446,23 @@
     font-size: 1.5rem;
     cursor: pointer;
     user-select: none;
-    color: black; /* Esto establece el color del texto en negro */
-  }
+    color: black;
+}
 
-  .custom-numpad-button:active {
+/* Efecto activo en los botones */
+.custom-numpad-button:active {
     background: #ddd;
-  }
+}
 
-  .custom-numpad-close {
-    text-align: right;
+/* Barra superior para botones de cerrar y alternar */
+.custom-numpad-top-bar {
+    display: flex;
+    justify-content: space-between;
     margin-bottom: 10px;
-  }
+}
 
-  .custom-numpad-close-btn {
+/* Estilo para el botón de cerrar */
+.custom-numpad-close-btn {
     background: #f44336;
     color: #fff;
     border-radius: 50%;
@@ -453,7 +473,8 @@
     line-height: 30px;
     font-weight: bold;
     cursor: pointer;
-  }
+}
+
 
 /* Nuevos y modificados estilos CSS */
 
@@ -473,8 +494,8 @@
 .operator-container {
   display: flex;
   align-items: center;
-  margin-right: 20px;
-  margin-left: 20px;
+  margin-right: 0; /* Elimina márgenes adicionales a la derecha */
+  margin-left: auto; /* Asegura que se alinee automáticamente hacia la izquierda del siguiente elemento */
 }
 
 .operator-icon {
@@ -518,17 +539,19 @@
         <i class="fas fa-power-off"></i>
       </button>
     </div>
-    <div class="operator-container">
-        <i id="operatorIcon" class="fas fa-user operator-icon blinking"></i>
-        <select id="operatorSelect" class="operator-select">
-          <option value="">Seleccione Operador</option>
-        </select>
-    </div>
     <div class="header-center" onclick="if(checkOperatorSelected()){mostrarOpcionesOrdenesTrabajo();}" style="cursor: pointer;">
         <div id="order-id">Cargando...</div>
         <div id="created-at" style="font-size: 1rem;">Iniciada ...</div>
         <div id="order-id-intern-id" style="display: none;">Cargando...</div>
     </div>
+          <!-- Contenedor del operador -->
+  <div class="operator-container">
+    <i id="operatorIcon" class="fas fa-user operator-icon blinking"></i>
+    <select id="operatorSelect" class="operator-select">
+      <option value="">Seleccione Operador</option>
+    </select>
+
+  </div>
     <div class="time-container">
       <div class="time" id="timeDisplay">02:33:21</div>
       <div id="scaleName" class="center-name">Client Name</div>
@@ -1116,12 +1139,12 @@ function mostrarOpcionesOrdenesTrabajo() {
                                 <div>
                                     <strong>ID:</strong> ${process.id} |
                                     <strong>Material:</strong> ${requiredMaterial} |
-                                    <strong>Orden:</strong> ${process.orden} |
+                                    <strong hidden>Orden: ${process.orden} |</strong>
                                     <strong>Valor:</strong> ${process.value} ${process.measure} |
-                                    <strong>Tolva:</strong> ${tolvaDetails.name || 'No disponible'} |
-                                    <strong>ID Tolva:</strong> ${tolvaDetails.id || 'N/A'} |
-                                    <strong>Token Tolva:</strong> ${tolvaDetails.token || 'N/A'} |
-                                    <strong>Último Valor:</strong> ${tolvaDetails.last_value || 'N/A'}
+                                    <strong>Tolva:</strong> ${tolvaDetails.name || 'No disponible'}
+                                    <strong hidden>ID Tolva: ${tolvaDetails.id || 'N/A'} </strong>
+                                    <strong hidden>Token Tolva: ${tolvaDetails.token || 'N/A'}</strong>
+                                    <strong hidden>Último Valor: ${tolvaDetails.last_value || 'N/A'}</strong>
                                 </div>
                                 ${iniciarButton}
                                 ${usarActualButton}
@@ -1506,11 +1529,20 @@ async function esperarSwalCerrado(tiempoMs) {
             });
         }
         }, 100); // Aseguramos que el DOM esté listo
+
+    },
+    preConfirm: (inputValue) => {
+        if (!inputValue) {
+            // Si el input está vacío, devolvemos un valor por defecto (null o un string vacío)
+            return "nullo"; // Aquí puedes retornar cualquier valor, por ejemplo: 'DEFAULT' o null
+        }
+        return inputValue; // Si hay valor, se retorna normalmente
     }
     });
 
     if (!password) {
         // Si canceló o no ingresó contraseña, revertimos selección
+        alert('Operador no autenticado password: ' + password);
         this.value = '';
         isOperatorAuthenticated = false;
         isSwalOpen = false;
@@ -1925,6 +1957,13 @@ async function esperarSwalCerrado(tiempoMs) {
     }
 
     function solicitarContrasena(tolvaId, tolvaToken, tolvaLastValue, tolvaName) {
+        // Verificar si el enlace contiene &unlockSettings=true
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("unlockSettings") === "true") {
+        mostrarOpciones(tolvaId, tolvaToken, tolvaLastValue, tolvaName); // Llamar directamente a mostrarOpciones
+        return; // Salir de la función
+      }
+
       isSwalOpen = true;  // Establecer que el Swal está abierto
 
       Swal.fire({
@@ -2250,76 +2289,204 @@ function cerrarKeypad() {
 }
 
 function mostrarKeypad(targetInput) {
-  // Si ya existe un keypad en el DOM, lo removemos
   const existingKeypad = document.getElementById('customNumpad');
   if (existingKeypad) {
     existingKeypad.remove();
   }
 
-  // Crear el contenedor del keypad
   const keypad = document.createElement('div');
   keypad.id = 'customNumpad';
-  keypad.className = 'custom-numpad';
+  keypad.className = 'custom-numpad numeric-mode'; // Clase inicial para modo numérico
 
-  keypad.innerHTML = `
-    <div class="custom-numpad-close">
-      <span class="custom-numpad-close-btn" id="numpadCloseBtn">X</span>
-    </div>
-    <div class="custom-numpad-row">
-      <div class="custom-numpad-button">1</div>
-      <div class="custom-numpad-button">2</div>
-      <div class="custom-numpad-button">3</div>
-    </div>
-    <div class="custom-numpad-row">
-      <div class="custom-numpad-button">4</div>
-      <div class="custom-numpad-button">5</div>
-      <div class="custom-numpad-button">6</div>
-    </div>
-    <div class="custom-numpad-row">
-      <div class="custom-numpad-button">7</div>
-      <div class="custom-numpad-button">8</div>
-      <div class="custom-numpad-button">9</div>
-    </div>
-    <div class="custom-numpad-row">
-      <div class="custom-numpad-button">.</div>
-      <div class="custom-numpad-button">0</div>
-      <div class="custom-numpad-button" id="numpadDelete">←</div>
-    </div>
-  `;
+  let currentMode = 'numeric'; // Modos: numeric, uppercase, lowercase, special
+
+  const renderKeypad = () => {
+    keypad.innerHTML = '';
+
+    const topBar = document.createElement('div');
+    topBar.className = 'custom-numpad-top-bar';
+
+    // Botón para alternar entre modos
+    const toggleModeBtn = document.createElement('span');
+    toggleModeBtn.className = 'custom-numpad-close-btn';
+    toggleModeBtn.id = 'toggleModeBtn';
+    toggleModeBtn.textContent = currentMode === 'numeric' ? 'ABC' : currentMode === 'uppercase' ? 'abc' : currentMode === 'lowercase' ? '#!@' : '123';
+    toggleModeBtn.addEventListener('click', () => {
+      currentMode = currentMode === 'numeric' ? 'uppercase' :
+                    currentMode === 'uppercase' ? 'lowercase' :
+                    currentMode === 'lowercase' ? 'special' : 'numeric';
+      keypad.className = `custom-numpad ${currentMode}-mode`;
+      renderKeypad();
+    });
+    topBar.appendChild(toggleModeBtn);
+
+    // Botón para cerrar el keypad
+    const closeBtn = document.createElement('span');
+    closeBtn.className = 'custom-numpad-close-btn';
+    closeBtn.id = 'numpadCloseBtn';
+    closeBtn.textContent = 'X';
+    closeBtn.addEventListener('click', () => {
+      keypad.remove();
+    });
+    topBar.appendChild(closeBtn);
+
+    keypad.appendChild(topBar);
+
+    const rows = document.createElement('div');
+    rows.className = 'custom-numpad-rows';
+
+    // Renderiza las teclas según el modo actual
+    if (currentMode === 'numeric') {
+      rows.innerHTML = `
+        <div class="custom-numpad-row">
+          <div class="custom-numpad-button">1</div>
+          <div class="custom-numpad-button">2</div>
+          <div class="custom-numpad-button">3</div>
+        </div>
+        <div class="custom-numpad-row">
+          <div class="custom-numpad-button">4</div>
+          <div class="custom-numpad-button">5</div>
+          <div class="custom-numpad-button">6</div>
+        </div>
+        <div class="custom-numpad-row">
+          <div class="custom-numpad-button">7</div>
+          <div class="custom-numpad-button">8</div>
+          <div class="custom-numpad-button">9</div>
+        </div>
+        <div class="custom-numpad-row">
+          <div class="custom-numpad-button">.</div>
+          <div class="custom-numpad-button">0</div>
+          <div class="custom-numpad-button" id="numpadDelete">←</div>
+        </div>
+      `;
+    } else if (currentMode === 'uppercase') {
+      rows.innerHTML = `
+        <div class="custom-numpad-row">
+          <div class="custom-numpad-button">Q</div>
+          <div class="custom-numpad-button">W</div>
+          <div class="custom-numpad-button">E</div>
+          <div class="custom-numpad-button">R</div>
+          <div class="custom-numpad-button">T</div>
+          <div class="custom-numpad-button">Y</div>
+          <div class="custom-numpad-button">U</div>
+          <div class="custom-numpad-button">I</div>
+          <div class="custom-numpad-button">O</div>
+          <div class="custom-numpad-button">P</div>
+        </div>
+        <div class="custom-numpad-row">
+          <div class="custom-numpad-button">A</div>
+          <div class="custom-numpad-button">S</div>
+          <div class="custom-numpad-button">D</div>
+          <div class="custom-numpad-button">F</div>
+          <div class="custom-numpad-button">G</div>
+          <div class="custom-numpad-button">H</div>
+          <div class="custom-numpad-button">J</div>
+          <div class="custom-numpad-button">K</div>
+          <div class="custom-numpad-button">L</div>
+        </div>
+        <div class="custom-numpad-row">
+          <div class="custom-numpad-button">Z</div>
+          <div class="custom-numpad-button">X</div>
+          <div class="custom-numpad-button">C</div>
+          <div class="custom-numpad-button">V</div>
+          <div class="custom-numpad-button">B</div>
+          <div class="custom-numpad-button">N</div>
+          <div class="custom-numpad-button">M</div>
+          <div class="custom-numpad-button">.</div>
+          <div class="custom-numpad-button" id="numpadDelete">←</div>
+        </div>
+      `;
+    } else if (currentMode === 'lowercase') {
+      rows.innerHTML = `
+        <div class="custom-numpad-row">
+          <div class="custom-numpad-button">q</div>
+          <div class="custom-numpad-button">w</div>
+          <div class="custom-numpad-button">e</div>
+          <div class="custom-numpad-button">r</div>
+          <div class="custom-numpad-button">t</div>
+          <div class="custom-numpad-button">y</div>
+          <div class="custom-numpad-button">u</div>
+          <div class="custom-numpad-button">i</div>
+          <div class="custom-numpad-button">o</div>
+          <div class="custom-numpad-button">p</div>
+        </div>
+        <div class="custom-numpad-row">
+          <div class="custom-numpad-button">a</div>
+          <div class="custom-numpad-button">s</div>
+          <div class="custom-numpad-button">d</div>
+          <div class="custom-numpad-button">f</div>
+          <div class="custom-numpad-button">g</div>
+          <div class="custom-numpad-button">h</div>
+          <div class="custom-numpad-button">j</div>
+          <div class="custom-numpad-button">k</div>
+          <div class="custom-numpad-button">l</div>
+        </div>
+        <div class="custom-numpad-row">
+          <div class="custom-numpad-button">z</div>
+          <div class="custom-numpad-button">x</div>
+          <div class="custom-numpad-button">c</div>
+          <div class="custom-numpad-button">v</div>
+          <div class="custom-numpad-button">b</div>
+          <div class="custom-numpad-button">n</div>
+          <div class="custom-numpad-button">m</div>
+          <div class="custom-numpad-button">.</div>
+          <div class="custom-numpad-button" id="numpadDelete">←</div>
+        </div>
+      `;
+    } else if (currentMode === 'special') {
+      rows.innerHTML = `
+        <div class="custom-numpad-row">
+          <div class="custom-numpad-button">!</div>
+          <div class="custom-numpad-button">@</div>
+          <div class="custom-numpad-button">#</div>
+          <div class="custom-numpad-button">$</div>
+          <div class="custom-numpad-button">%</div>
+        </div>
+        <div class="custom-numpad-row">
+          <div class="custom-numpad-button">^</div>
+          <div class="custom-numpad-button">&</div>
+          <div class="custom-numpad-button">*</div>
+          <div class="custom-numpad-button">(</div>
+          <div class="custom-numpad-button">)</div>
+        </div>
+        <div class="custom-numpad-row">
+          <div class="custom-numpad-button">-</div>
+          <div class="custom-numpad-button">+</div>
+          <div class="custom-numpad-button">=</div>
+          <div class="custom-numpad-button">/</div>
+          <div class="custom-numpad-button">?</div>
+        </div>
+        <div class="custom-numpad-row">
+          <div class="custom-numpad-button">:</div>
+          <div class="custom-numpad-button">;</div>
+          <div class="custom-numpad-button">'</div>
+          <div class="custom-numpad-button">"</div>
+          <div class="custom-numpad-button">~</div>
+        </div>
+      `;
+    }
+
+    keypad.appendChild(rows);
+
+    const buttons = rows.querySelectorAll('.custom-numpad-button');
+    buttons.forEach(button => {
+      button.addEventListener('click', () => {
+        const val = button.textContent;
+        if (val === '←') {
+          targetInput.value = targetInput.value.slice(0, -1);
+        } else {
+          targetInput.value += val;
+        }
+      });
+    });
+  };
+
+  renderKeypad();
 
   document.body.appendChild(keypad);
-
-  // Posicionar el keypad. Como es fixed, simplemente se centra en bottom.
-  // Si quieres posicionarlo cerca del input, puedes calcular la posición absoluta
-  // basándote en getBoundingClientRect() del input, pero aquí lo dejamos fijo abajo.
-
-  // Evento para cerrar el keypad
-  document.getElementById('numpadCloseBtn').addEventListener('click', () => {
-    keypad.remove();
-  });
-
-  // Agregar eventos a los botones
-  const buttons = keypad.querySelectorAll('.custom-numpad-button');
-  buttons.forEach(button => {
-    button.addEventListener('click', () => {
-      const val = button.textContent;
-      if (val === '←') {
-        // Borrar último caracter
-        targetInput.value = targetInput.value.slice(0, -1);
-      } else {
-        // Agregar el caracter al valor
-        targetInput.value += val;
-      }
-    });
-  });
-
-  // Evitar que el keypad desaparezca si se hace click dentro del keypad
-  keypad.addEventListener('mousedown', (e) => {
-    e.preventDefault();
-  });
-
-  // Podrías agregar lógica extra para validación en tiempo real, etc.
 }
+
+
     async function mostrarSwalConValor(tolvaId, tolvaToken, tolvaName, tolvaLastValue, inputValue) {
 
     isSwalOpen = true; // Marcar que un Swal está abierto

@@ -10,6 +10,7 @@ use App\Models\MqttSendServer1;
 use App\Models\MqttSendServer2;
 use App\Models\SensorCount;
 use Illuminate\Support\Facades\Log;
+use Exception;
 
 class CalculateProductionDowntime extends Command
 {
@@ -49,7 +50,7 @@ class CalculateProductionDowntime extends Command
 
             // Obtener todos los sensores
             $sensors = Sensor::all();
-            
+
             foreach ($sensors as $sensor) {
                 // Manejar la lógica según el tipo de sensor
                 if ($sensor->sensor_type == 0) {
@@ -67,7 +68,7 @@ class CalculateProductionDowntime extends Command
 
             // Esperar 1 segundo antes de volver a ejecutar la lógica
             $this->info("Waiting for 1 second before the next run...");
-            sleep(1); // Pausar 1 segundos 
+            sleep(1); // Pausar 1 segundos
         }
 
         return 0;
@@ -282,7 +283,7 @@ class CalculateProductionDowntime extends Command
             MqttSendServer2::createRecord($topic, $message);
 
             $this->info("Stored message in both mqtt_send_server1 and mqtt_send_server2 tables.");
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error("Error storing message in databases: " . $e->getMessage());
         }
     }

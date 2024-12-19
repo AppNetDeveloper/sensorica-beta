@@ -462,24 +462,32 @@ class OperatorController extends Controller
  * )
  */
 public function verifyPassword(Request $request)
-    {
-        $validated = $request->validate([
-            'operator_id' => 'required|integer',
-            'password' => 'required|string'
-        ]);
+{
+    $validated = $request->validate([
+        'operator_id' => 'required|integer',
+        'password' => 'required|string'
+    ]);
 
-        // Si de verdad quieres buscar por client_id
-        $operator = Operator::where('client_id', $validated['operator_id'])->first();
-        if (!$operator) {
-            return response()->json(['error' => 'Operator not found'], 404);
-        }
-
-        if (Hash::check($validated['password'], $operator->password)) {
-            return response()->json(['valid' => true], 200);
-        } else {
-            return response()->json(['valid' => false], 200);
-        }
+    // Buscar al operador por client_id
+    $operator = Operator::where('client_id', $validated['operator_id'])->first();
+    if (!$operator) {
+        return response()->json(['error' => 'Operator not found'], 404);
     }
+
+    // Si la contraseña recibida es 'nullo' y el campo password en la DB es NULL
+    if ($validated['password'] === 'nullo' && is_null($operator->password)) {
+        return response()->json(['valid' => true], 200);
+    }
+
+    // Si la contraseña no es 'nullo', verificar normalmente usando Hash
+    if (!is_null($operator->password) && Hash::check($validated['password'], $operator->password)) {
+        return response()->json(['valid' => true], 200);
+    }
+
+    // En cualquier otro caso, la contraseña no es válida
+    return response()->json(['valid' => false], 200);
+}
+
     public function logScadaAccess(Request $request)
     {
         Log::info('Inicio del registro del login realizado por SCADA.');

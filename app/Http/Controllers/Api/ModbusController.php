@@ -144,6 +144,19 @@ class ModbusController extends Controller
         //vamos a poner hora y fecha en este log
         Log::info( date('Y-m-d H:i:s') . ' Message sent to MQTT topic: ' . $topic . ' with value: ' . $inValue); // Guardar en el log
 
+            // Preparar el segundo tópico MQTT y mensaje
+        $secondTopic = $modbus->mqtt_topic . '1/dosage';
+        $secondMessage = json_encode([
+            'value' => $inValue,
+            'time' => date('Y-m-d H:i:s')
+        ]);
+
+        // Publicar el segundo mensaje MQTT
+        $this->publishMqttMessage($secondTopic, $secondMessage);
+
+        // Log para el segundo mensaje
+        Log::info(date('Y-m-d H:i:s') . ' Second message sent to MQTT topic: ' . $secondTopic . ' with value: ' . $inValue . ' and time: ' . date('Y-m-d H:i:s'));
+
         return response()->json(['message' => 'Dosage value sent successfully']);
     }
 

@@ -4,6 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
+use App\Models\MqttSendServer1;
+use App\Models\MqttSendServer2;
 
 class ScadaOrder extends Model
 {
@@ -67,4 +70,63 @@ class ScadaOrder extends Model
     {
         return $this->belongsTo(Barcode::class, 'barcoder_id');
     }
+
+    /**
+     * Boot method to observe changes in the model.
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::saving(function ($model) {
+            // Only trigger if the status attribute is being updated
+            if ($model->isDirty('status')) {
+                $model->handleStatusChange();
+            }
+        });
+    }
+
+    /**
+     * Handle logic when status changes.
+     */
+    protected function handleStatusChange()
+    {
+        if ($this->barcoder_id) {
+            $barcode = $this->barcode;
+
+            if ($barcode && $barcode->mqtt_topic_barcodes) {
+                $newTopic = $barcode->mqtt_topic_barcodes . '/prod_order_mac';
+
+                $message = json_encode([
+                    'action' => $this->status,
+                    'orderId' => $this->order_id,
+                    'time' => now()->toDateTimeString(), //anadimos aqui time: con fecha y hora
+                ]);
+
+                $this->publishMqttMessage($newTopic, $message);
+            }
+        }
+    }
+
+    /**
+     * Publish an MQTT message.
+     *
+     * @param string $topic
+     * @param string $message
+     */
+    private function publishMqttMessage($topic, $message)
+    {
+        try {
+            // Insert into mqtt_send_server1
+            MqttSendServer1::createRecord($topic, $message);
+
+            // Insert into mqtt_send_server2
+            MqttSendServer2::createRecord($topic, $message);
+
+            Log::info("Stored message in both mqtt_send_server1 and mqtt_send_server2 tables from ScadaOrder.");
+        } catch (\Exception $e) {
+            Log::error("Error storing message in databases: " . $e->getMessage());
+        }
+    }
 }
+
