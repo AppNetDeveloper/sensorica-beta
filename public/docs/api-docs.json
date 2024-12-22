@@ -1531,6 +1531,205 @@ paths:
                   error: { type: string, example: 'An error occurred: Internal server error.' }
                   searched_token: { type: string, example: abcd1234 }
                 type: object
+  /api/production-orders:
+    get:
+      tags:
+        - ProductionOrders
+      summary: 'Listar órdenes de producción'
+      operationId: 785030f3274cb82f979c3f193d434b4d
+      parameters:
+        -
+          name: token
+          in: query
+          description: 'Token único de la línea de producción'
+          required: true
+          schema:
+            type: string
+            example: abcd1234
+        -
+          name: status
+          in: query
+          description: 'Filtrar por estado de la orden'
+          required: false
+          schema:
+            type: integer
+            example: 1
+        -
+          name: sort_by
+          in: query
+          description: 'Columna para ordenar'
+          required: false
+          schema:
+            type: string
+            example: orden
+        -
+          name: sort_direction
+          in: query
+          description: 'Dirección de ordenación (asc o desc)'
+          required: false
+          schema:
+            type: string
+            example: desc
+      responses:
+        '200':
+          description: 'Lista de órdenes de producción'
+          content:
+            application/json:
+              schema:
+                properties:
+                  current_page: { type: integer }
+                  data: { type: array, items: { properties: { id: { type: integer }, order_id: { type: string }, status: { type: integer }, box: { type: integer }, units_box: { type: integer }, orden: { type: integer } }, type: object } }
+                  total: { type: integer }
+                type: object
+        '400':
+          description: 'Token no proporcionado o no válido'
+    post:
+      tags:
+        - ProductionOrders
+      summary: 'Crear una nueva orden de producción'
+      operationId: bd9efecb678eb6de0df12ac1247f9897
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                production_line_id:
+                  type: integer
+                  example: 1
+                order_id:
+                  type: string
+                  example: '231118'
+                status:
+                  type: integer
+                  example: 1
+                box:
+                  type: integer
+                  example: 945
+                units_box:
+                  type: integer
+                  example: 30
+                units:
+                  type: integer
+                  example: 28350
+                orden:
+                  type: integer
+                  example: 0
+              type: object
+      responses:
+        '201':
+          description: 'Orden creada exitosamente'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean, example: true }
+                  message: { type: string, example: 'Orden creada exitosamente.' }
+                  data: { properties: { id: { type: integer } }, type: object }
+                type: object
+  '/api/production-orders/{id}':
+    get:
+      tags:
+        - ProductionOrders
+      summary: 'Obtener detalles de una orden específica'
+      operationId: 2c2876ad629eff25e357a29fc1d6dfbb
+      parameters:
+        -
+          name: id
+          in: path
+          description: 'ID de la orden de producción'
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 'Detalles de la orden de producción'
+          content:
+            application/json:
+              schema:
+                properties:
+                  id: { type: integer }
+                  order_id: { type: string }
+                  status: { type: integer }
+                  box: { type: integer }
+                  units_box: { type: integer }
+                  orden: { type: integer }
+                type: object
+        '404':
+          description: 'Orden no encontrada'
+    delete:
+      tags:
+        - ProductionOrders
+      summary: 'Eliminar una orden de producción'
+      operationId: 37fb0555e48a6c7920bb0fa8f1bdbf59
+      parameters:
+        -
+          name: id
+          in: path
+          description: 'ID de la orden de producción'
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 'Orden eliminada exitosamente'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean, example: true }
+                  message: { type: string, example: 'Orden eliminada exitosamente.' }
+                type: object
+        '404':
+          description: 'Orden no encontrada'
+    patch:
+      tags:
+        - ProductionOrders
+      summary: 'Actualizar orden o estado de una orden'
+      operationId: 3a9675b159d693bb4dc8028a9565b0e8
+      parameters:
+        -
+          name: id
+          in: path
+          description: 'ID de la orden de producción'
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                orden:
+                  description: 'Nuevo valor del orden'
+                  type: integer
+                  example: 5
+                status:
+                  description: 'Nuevo estado de la orden'
+                  type: integer
+                  example: 1
+              type: object
+      responses:
+        '200':
+          description: 'Orden actualizada correctamente'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean, example: true }
+                  message: { type: string, example: 'Orden actualizada exitosamente.' }
+                  data: { properties: { id: { type: integer } }, type: object }
+                type: object
+        '404':
+          description: 'Orden no encontrada'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean, example: false }
+                  message: { type: string, example: 'Orden no encontrada.' }
+                type: object
   '/api/scada/{token}/material-types':
     get:
       tags:
@@ -2144,6 +2343,9 @@ paths:
         -
           bearerAuth: []
 tags:
+  -
+    name: ProductionOrders
+    description: 'Operaciones relacionadas con las órdenes de producción'
   -
     name: Barcode
     description: Barcode

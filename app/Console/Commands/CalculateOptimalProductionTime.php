@@ -50,14 +50,9 @@ class CalculateOptimalProductionTime extends Command
             
             foreach ($sensors as $sensor) {
                 // Obtener el barcoder asociado
-                $barcode = Barcode::find($sensor->barcoder_id);
+                $modelProduct = $sensor->orderId;
 
-                if ($barcode && $barcode->order_notice) {
-                    // Decodificar el JSON del campo order_notice
-                    $orderNotice = json_decode($barcode->order_notice, true);
-
-                    // Obtener el model_product de refer->groupLevel->id
-                    $modelProduct = $orderNotice['refer']['groupLevel'][0]['id'] ?? null;
+                if ($modelProduct) {
 
                     if ($modelProduct) {
                         // Buscar el sensor_count correspondiente
@@ -101,7 +96,7 @@ class CalculateOptimalProductionTime extends Command
                         $sensor->save();
                     }
                 } else {
-                    $this->warn("No barcode or order_notice found for sensor: {$sensor->name}, paso a poder valor default. Media entre minimo y maximo");
+                    $this->warn("No order_notice found for sensor: {$sensor->name}, paso a poder valor default. Media entre minimo y maximo");
                         $minTime = env("PRODUCTION_MIN_TIME", 3);
                         $maxTime = env("PRODUCTION_MAX_TIME", 10);
                         // Actualizar el tiempo de producción óptimo en la tabla sensors
@@ -110,8 +105,8 @@ class CalculateOptimalProductionTime extends Command
                 }
             }
 
-            // Esperar 1 minutos antes de volver a ejecutar la lógica
-            $this->info("Waiting for 1 minutes before the next run...");
+            // Esperar 10 minutos antes de volver a ejecutar la lógica
+            $this->info("Waiting for 10 minutes before the next run...");
             sleep(600); // Pausar 10 minutos
         }
 

@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Production Order Kanban Control</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        .header-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: #343a40;
+            color: white;
+            padding: 10px 20px;
+        }
+        .header-left img {
+            height: 50px;
+            width: auto;
+        }
+        .header-right {
+            font-size: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 5px;
+        }
+        .header-right small {
+            font-size: 1.1rem;
+            color: #ffc107;
+        }
+        .kanban-board {
+            display: flex;
+            gap: 15px;
+            padding: 20px;
+            overflow-x: auto;
+        }
+        .column {
+            flex: 1;
+            background-color: #e0e0e0;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            min-width: 200px;
+        }
+        .column h3 {
+            background-color: #343a40;
+            color: white;
+            text-align: center;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        .card {
+            background-color: #ffffff;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            position: relative;
+            cursor: grab;
+        }
+        .card:hover {
+            background-color: #f1f1f1;
+        }
+        .card-menu {
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            font-size: 20px;
+            cursor: pointer;
+        }
+        .card.dragging {
+            opacity: 0.5;
+        }
+    </style>
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+    <header class="header-container">
+        <div class="header-left">
+            <img src="logo.png" alt="Logo">
+        </div>
+        <div class="header-right">
+            <div id="clock">--:--:--</div>
+            <small id="line-name">Loading Production Line...</small>
+        </div>
+    </header>
+
+    <div class="kanban-board"></div>
+    
+    <script>
+        const columns = {
+            0: { id: 'pending', name: 'Pending' },
+            1: { id: 'started', name: 'Started' },
+            2: { id: 'completed', name: 'Completed' },
+            3: { id: 'paused', name: 'Paused' },
+            4: { id: 'cancelled', name: 'Cancelled' },
+            5: { id: 'issues', name: 'Issues' }
+        };
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+
+        if (!token) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Token not provided in URL.',
+            });
+            throw new Error('Token required to load data.');
+        }
+
+        const existingCards = new Map();
+
+        async function loadKanbanData() {
+            try {
+                const response = await fetch(`/api/production-orders?token=${token}`);
+                if (!response.ok) throw new Error('Error fetching API data.');
+
+                const data = await response.json();
+                await updateKanbanBoard(data.data);
+            } catch (error) {
+                console.error('Error:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'An error occurred while loading Kanban data.',
+                });
+            }
+        }
+
+        async function updateKanbanBoard(orders) {
+            const kanbanBoard = document.querySelector('.kanban-board');
+
+            Object.entries(columns).forEach(([status, column]) => {
+                let columnElement = document.getElementById(column.id);
+                if (!columnElement) {
+                    columnElement = document.createElement('div');
+                    columnElement.classList.add('column');
+                    columnElement.id = column.id;
+                    columnElement.innerHTML = `<h3>${column.name}</h3>`;
+                    kanbanBoard.appendChild(columnElement);
+                }
+            });
+
+            const updatedOrderIds = new Set();
+
+            for (const order of orders.sort((a, b) => a.orden - b.orden)) {
+                const columnId = columns[order.status].id;
+                const columnElement = document.getElementById(columnId);
+
+                let cardElement = existingCards.get(order.id);
+
+                if (!cardElement) {
+                    cardElement = document.createElement('div');
+                    cardElement.classList.add('card');
+                    cardElement.draggable = true;
+                    cardElement.setAttribute('data-id', order.id);
+                    cardElement.setAttribute('data-order-id', order.order_id);
+                    columnElement.appendChild(cardElement);
+
+                    cardElement.ondragstart = dragStart;
+                    cardElement.ondragend = dragEnd;
+
+                    existingCards.set(order.id, cardElement);
+                } else {
+                    if (cardElement.parentElement.id !== columnId) {
+                        columnElement.appendChild(cardElement);
+                    }
+                }
+
+                cardElement.innerHTML = `
+                    <span class="card-menu" onclick="showCardMenu(${order.id})">⋮</span>
+                    <div>Order ID: ${order.order_id}</div>
+                    <div>Box: ${order.box}</div>
+                    <div>Units/Box: ${order.units_box}</div>
+                    <div>Order: ${order.orden}</div>
+                `;
+
+                updatedOrderIds.add(order.id);
+            }
+
+            existingCards.forEach((cardElement, orderId) => {
+                if (!updatedOrderIds.has(orderId)) {
+                    cardElement.remove();
+                    existingCards.delete(orderId);
+                }
+            });
+
+            document.querySelectorAll('.column').forEach(column => {
+                column.ondragover = dragOver;
+                column.ondrop = drop;
+            });
+        }
+
+        async function showCardMenu(orderId) {
+            try {
+                const response = await fetch(`/api/production-orders/${orderId}`);
+                const order = await response.json();
+
+                Swal.fire({
+                    title: 'Order Details',
+                    html: `
+                        <p><strong>Order ID:</strong> ${order.order_id}</p>
+                        <p><strong>Box:</strong> ${order.box}</p>
+                        <p><strong>Units/Box:</strong> ${order.units_box}</p>
+                        <p><strong>Order:</strong> ${order.orden}</p>
+                        <p><strong>Status:</strong> ${columns[order.status].name}</p>
+                    `,
+                    icon: 'info',
+                    showCancelButton: false,
+                    confirmButtonText: 'Close'
+                });
+            } catch (error) {
+                console.error('Error:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Could not load order details.',
+                });
+            }
+        }
+
+        let draggedCard = null;
+
+        function dragStart(event) {
+            draggedCard = event.target;
+            event.target.classList.add('dragging');
+        }
+
+        function dragEnd(event) {
+            event.target.classList.remove('dragging');
+        }
+
+        function dragOver(event) {
+            event.preventDefault();
+            const column = event.currentTarget;
+            const afterElement = getDragAfterElement(column, event.clientY);
+            const dragging = document.querySelector('.dragging');
+            if (!afterElement) {
+                column.appendChild(dragging);
+            } else {
+                column.insertBefore(dragging, afterElement);
+            }
+        }
+
+        function getDragAfterElement(container, y) {
+            const draggableElements = [...container.querySelectorAll('.card:not(.dragging)')];
+
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
+        }
+
+        async function drop(event) {
+            event.preventDefault();
+            const targetColumn = event.target.closest('.column');
+            if (!draggedCard || !targetColumn) return;
+
+            const orderId = draggedCard.getAttribute('data-id');
+            const newStatusKey = Object.entries(columns).find(([key, col]) => col.id === targetColumn.id)[0];
+            const cardsInColumn = Array.from(targetColumn.querySelectorAll('.card'));
+            const newOrder = cardsInColumn.indexOf(draggedCard) + 1;
+
+            try {
+                const response = await fetch(`/api/production-orders/${orderId}`, {
+                    method: 'PATCH',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        status: parseInt(newStatusKey),
+                        orden: newOrder
+                    })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    await loadKanbanData();
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success',
+                        text: `Order updated successfully.`,
+                    });
+                } else {
+                    throw new Error(result.message || 'Failed to update order');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Failed to update order status.',
+                });
+                await loadKanbanData();
+            }
+
+            draggedCard = null;
+        }
+
+        function updateClock() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            document.getElementById('clock').textContent = `${hours}:${minutes}:${seconds}`;
+        }
+
+        setInterval(updateClock, 1000);
+        updateClock();
+        loadKanbanData();
+
+        // Refresh every 5 seconds
+        setInterval(loadKanbanData, 5000);
+    </script>
+</body>
+</html>

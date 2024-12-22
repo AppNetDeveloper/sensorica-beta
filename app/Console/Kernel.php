@@ -32,6 +32,7 @@ class Kernel extends ConsoleKernel
         Commands\CheckBluetoothExit::class,
         Commands\MonitorConnections::class,
         Commands\ReadModbusGroup::class,
+        Commands\MqttSubscriberLocalMac::class,
         
     ];
 

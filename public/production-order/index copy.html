@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kanban Board</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f5f5f5;
+        }
+        .kanban-board {
+            display: flex;
+            gap: 10px;
+            width: 80%;
+        }
+        .column {
+            flex: 1;
+            background-color: #e0e0e0;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+        .column h3 {
+            text-align: center;
+        }
+        .card {
+            background-color: #ffffff;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+            cursor: grab;
+        }
+    </style>
+</head>
+<body>
+    <div class="kanban-board">
+        <div class="column" id="todo" ondrop="drop(event)" ondragover="allowDrop(event)">
+            <h3>To Do</h3>
+            <div class="card" draggable="true" ondragstart="drag(event)">Task 1</div>
+            <div class="card" draggable="true" ondragstart="drag(event)">Task 2</div>
+        </div>
+        <div class="column" id="in-progress" ondrop="drop(event)" ondragover="allowDrop(event)">
+            <h3>In Progress</h3>
+        </div>
+        <div class="column" id="done" ondrop="drop(event)" ondragover="allowDrop(event)">
+            <h3>Done</h3>
+        </div>
+    </div>
+
+    <script>
+        let draggedCard = null;
+
+        function drag(event) {
+            draggedCard = event.target; // Guarda la tarjeta arrastrada
+        }
+
+        function allowDrop(event) {
+            event.preventDefault(); // Permite soltar elementos
+        }
+
+        function drop(event) {
+            event.preventDefault(); // Evita el comportamiento por defecto
+
+            if (draggedCard) {
+                const targetColumn = event.target.closest('.column'); // Encuentra la columna de destino
+                targetColumn.appendChild(draggedCard); // Mueve la tarjeta a la columna
+
+                // Obtén el ID y el nombre de la columna
+                const columnId = targetColumn.id;
+                const columnName = targetColumn.querySelector('h3').textContent;
+
+                // Muestra un mensaje de alerta con el ID y el nombre de la columna
+                alert(`La tarjeta "${draggedCard.textContent}" fue movida a:\nID: "${columnId}"\nNombre: "${columnName}".`);
+            }
+        }
+    </script>
+</body>
+</html>

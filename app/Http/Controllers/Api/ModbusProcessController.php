@@ -205,7 +205,6 @@ class ModbusProcessController extends Controller
                 Modbus::where('dimension_id', $config->id)
                     ->where('dimension', '<', $currentValue) // Verifica que el valor actual es mayor
                     ->where('max_kg', '!=', 0) // Verifica que max_kg no sea 0
-                    ->whereRaw('last_value >= max_kg - variation_number')//borrar esta linea si falla // Verifica que last_value no sea más pequeño que max_kg - variation_number
                     ->update(['dimension' => $currentValue]);
                 
 

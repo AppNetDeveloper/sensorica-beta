@@ -12,6 +12,7 @@ class ProductList extends Model
     protected $fillable = [
         'client_id',
         'name',
+        'optimal_production_time',
     ];
 
     // Relationship with Client

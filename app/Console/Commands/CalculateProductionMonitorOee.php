@@ -112,16 +112,9 @@ class CalculateProductionMonitorOee extends Command
     {
         $this->info("Procesando sensor: {$sensor->name}");
 
-        // Obtener barcoder_id y buscar el registro en barcodes
-        $barcoder = Barcode::find($sensor->barcoder_id);
-
-        if ($barcoder) {
-            $this->info("Obteniendo order_notice del barcoder_id: {$barcoder->id}");
-
-            // Obtener order_notice (JSON) y extraer el orderId
-            $orderNotice = json_decode($barcoder->order_notice, true);
-            if (isset($orderNotice['orderId'])) {
-                $orderId = $orderNotice['orderId'];
+        if ($sensor->barcoder_id) {
+            if ($sensor->orderId) {
+                $orderId = $sensor->orderId;
                 $this->info("OrderId extraído: {$orderId} ");
 
                 // Extraer unic_code_order, optimal_production_time, y count_order_1 del sensor
@@ -170,10 +163,10 @@ class CalculateProductionMonitorOee extends Command
                     $this->info("No se encontró ningún registro coincidente en sensor_counts para orderId: {$orderId} y unic_code_order: {$unicCodeOrder}");
                 }
             } else {
-                $this->info("No se encontró un orderId en el JSON order_notice.");
+                $this->info("No se encontró un orderId .");
             }
         } else {
-            $this->info("No se encontró un barcoder para barcoder_id: {$sensor->barcoder_id}");
+            $this->info("No se encontró un barcoder para sensor id: {$sensor->barcoder_id}");
         }
 
         // Si no se encuentran datos, devolver 0
@@ -255,11 +248,6 @@ class CalculateProductionMonitorOee extends Command
                 }
             }
         }
-
-        // Al final, tendrás los tres contadores sumados correctamente:
-        $totalCajasConRetrasoMayor = $totalGreaterThanMaxTime;
-        $totalCajasConRetrasoModerado = $totalBetweenOptimalAndMaxTime;
-        $totalCajasEnTiempoOptimo = $totalLessThanOrEqualToOptimalTime;
 
         // Calcular los valores de segundos por caja
         $realSecondsPerBox = $totalRealProductionPerMinute > 0 ? number_format(60 / $totalRealProductionPerMinute, 2) : 0;
@@ -640,21 +628,11 @@ class CalculateProductionMonitorOee extends Command
     
         // Procesar cada sensor encontrado
         foreach ($sensors as $sensor) {
-            // Obtener el registro del barcode asociado al sensor
-            $barcode = Barcode::find($sensor->barcoder_id);
-    
-            if (!$barcode || !$barcode->order_notice) {
-                $this->info("No se encontró el registro del barcode o el campo order_notice está vacío para el sensor con ID: {$sensor->id}.");
-                Log::warning("No se encontró el registro del barcode o el campo order_notice está vacío para el sensor con ID: {$sensor->id}.");
-                continue;
-            }
-    
-            // Decodificar el JSON almacenado en order_notice
-            $orderNotice = json_decode($barcode->order_notice, true);
+
     
             // Extraer valores específicos del JSON
-            $unitsPerBox = $orderNotice['refer']['groupLevel'][0]['uds'] ?? null;
-    
+            $unitsPerBox = isset($sensor->uds) && is_numeric($sensor->uds) ? (int) $sensor->uds : 0;
+
             // Buscar en sensor_counts todas las producciones del sensor en el turno actual
             $unitsInShift = SensorCount::where('sensor_id', $sensor->id)
                 ->where('value', 1)
@@ -685,10 +663,7 @@ class CalculateProductionMonitorOee extends Command
         }
     
         // Devolvemos o guardamos los resultados en una tabla o un log si es necesario
-        $this->info("Unidades producidas en el turno: $totalUnitsShift");
-        $this->info("Cajas producidas en el turno: $boxesShift");
-        $this->info("Unidades producidas en la semana: $totalUnitsWeek");
-        $this->info("Cajas producidas en la semana: $boxesWeek");
+        $this->info("Unidades producidas en el turno: $totalUnitsShift Cajas producidas en el turno: $boxesShift Unidades producidas en la semana: $totalUnitsWeek Cajas producidas en la semana: $boxesWeek");
         
         // Crear los JSON con el downtime acumulado y el status correspondiente
         $jsonShift = json_encode(['value' => $totalUnitsShift, 'status' => 2]);

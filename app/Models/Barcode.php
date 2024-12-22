@@ -31,6 +31,7 @@ class Barcode extends Model
         'conexion_type',
         'iniciar_model',
         'sended',
+        'type', // Nuevo campo que es 0 automatico 1 con barcoder 2 con externo reciviendo por mqtt si es 3 se ignora esta funcion 
     ];
 
     protected static function boot()
@@ -84,27 +85,25 @@ class Barcode extends Model
             $scada = Scada::where('barcoder_id', $barcode->id)->first();
 
             if (!$scada) {
-                OrderStat::create([
-                    'production_line_id' => $productionLineId,
-                    'order_id' => $orderId,
-                    'box' => $box,
-                    'units_box' => $units,
-                    'units' => $box * $units,
-                    'units_per_minute_real' => null,
-                    'units_per_minute_theoretical' => null,
-                    'seconds_per_unit_real' => null,
-                    'seconds_per_unit_theoretical' => null,
-                    'units_made_real' => 0,
-                    'units_made_theoretical' => 0,
-                    'sensor_stops_count' => 0,
-                    'sensor_stops_time' => 0,
-                    'production_stops_time' => 0,
-                    'units_made' => 0,
-                    'units_pending' => 0,
-                    'units_delayed' => 0,
-                    'slow_time' => 0,
-                    'oee' => null,
-                ]);
+                try {
+                    // Crear un nuevo registro en ProductionOrder
+                    $productionOrder = ProductionOrder::create([
+                        'production_line_id' => $productionLineId,
+                        'barcoder_id' => $barcode->id,
+                        'order_id' => $orderId,
+                        'json' => $barcode->order_notice, // Guardar el JSON original
+                        'status' => 0, // 0 = En espera
+                        'units_box' => $units,
+                        'box' => $box,
+                        'units' => $box * $units,
+                    ]);
+        
+                    // Log de información
+                    Log::info("[ProcessOrderNotice] ProductionOrder creado correctamente. ID: {$productionOrder->id}, order_id: {$orderId}");
+                } catch (\Exception $e) {
+                    // Manejo de errores
+                    Log::error("[ProcessOrderNotice] Error creando ProductionOrder: " . $e->getMessage());
+                }
             } else {
                 // Si existe 'scada', proceder a crear un nuevo 'ScadaOrder', pero primero comprobar que no es duplicado
                 $fechaHora = date("Y/m/d-H:i:s");

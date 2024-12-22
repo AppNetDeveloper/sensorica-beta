@@ -33,6 +33,9 @@ class Modbus extends Model
         'rec_box_unlimited', // conteo de cajas sin limite
         'model_name',
         'name',
+        'orderId', //id del orden pero ojo el orderId no es el id interno si no el nombre 
+        'quantity', //cantidad de cajas
+        'uds', //unidades por caja
         'last_value', // último valor de la modbus
         'variacion_number',
         'dimension_default', // dimensión por defecto

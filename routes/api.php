@@ -23,6 +23,7 @@ use App\Http\Controllers\Api\OperatorController;
 use App\Http\Controllers\Api\ProductListController;
 use App\Http\Controllers\Api\ProductionLineStatusController;
 use App\Http\Controllers\Api\ScadaOrderController;
+use App\Http\Controllers\Api\ProductionOrderController;
 
 
 /*
@@ -186,6 +187,17 @@ Route::prefix('scada')->group(function () {
     Route::delete('/{token}/material-types/{id}', [ScadaMaterialTypeController::class, 'destroy']);
 });
 Route::get('scada-material/{token}', [ScadaMaterialTypeController::class, 'getScadaMaterialByToken']);
+
+
+// Orders API
+Route::prefix('production-orders')->group(function () {
+    Route::get('/', [ProductionOrderController::class, 'index']); // Obtener todas las órdenes
+    Route::get('/{id}', [ProductionOrderController::class, 'show']); // Obtener una orden específica
+    Route::patch('/{id}', [ProductionOrderController::class, 'updateOrder']); // Actualizar una orden
+    Route::post('/', [ProductionOrderController::class, 'store']); // Crear una nueva orden
+    Route::delete('/{id}', [ProductionOrderController::class, 'destroy']); // Eliminar una orden
+});
+
 
 Route::middleware('auth:api')->get('/user', function (Request $request) {
     return $request->user();
