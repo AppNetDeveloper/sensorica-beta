@@ -49,6 +49,7 @@ class Sensor extends Model
         'downtime_count', // tiempo no productivo, se debe resetear en cada cambio de turno o pedido
         'unic_code_order', // código de orden único, uso interno
         'shift_type', // tipo de turno
+        'productName', // nombre del producto
     ];
     
 

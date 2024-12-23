@@ -253,10 +253,14 @@ class SensorController extends Controller
     
     private function processModelFinal($config, $value, $barcode, $modelConfig)
     {
-        // Decodificar y extraer valores del JSON almacenado en order_notice
-        $orderNotice = $barcode && $barcode->order_notice ? json_decode($barcode->order_notice, true) : [];
-        $orderId = $orderNotice['orderId'] ?? '0';
-        $productName = $orderNotice['refer']['groupLevel'][0]['id'] ?? '0';
+        
+        $orderId = $config->orderId;
+        $productName = $config->productName;
+
+        if (!$orderId || !$productName) {
+            Log::warning("No se encontró el ID de pedido o el nombre del producto.");
+            return;
+        }
     
         // Incrementar los contadores
         try {

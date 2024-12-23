@@ -127,20 +127,33 @@ class MqttSubscriberLocalMac extends Command
                 $this->processOrderClose($cleanMessage, $barcode);
                 $this->saveOrderMac($barcode, $cleanMessage);
                 $this->logInfo("Orden cerrada para barcode ID: {$barcode->id}");
-
+ 
                 
             } elseif ($action === 0) { // Abrir orden
                 $this->logInfo("Iniciar Abrir orden para barcode ID: {$barcode->id}");
                 $this->saveOrderMac($barcode, $cleanMessage);
                 $this->logInfo("Sacar OrderId para barcode ID: {$barcode->id}");
-                $orderId = isset($cleanMessage['orderId']) ? trim($cleanMessage['orderId']) : null;
+                $this->logInfo("Contenido completo de cleanMessage: " . json_encode($cleanMessage, JSON_PRETTY_PRINT));
+
+                if (!isset($cleanMessage['orderId'])) {
+                    $this->logError("El campo 'orderId' no existe en cleanMessage.");
+                    return; // Detener el proceso si falta 'orderId'
+                }
+                
+                if (!is_numeric($cleanMessage['orderId'])) {
+                    $this->logError("El campo 'orderId' no es numérico. Valor actual: " . json_encode($cleanMessage['orderId']));
+                    return; // Detener el proceso si 'orderId' no es un número válido
+                }
+                
+                $orderId = trim((string) $cleanMessage['orderId']); // Convertir a cadena para asegurar consistencia
+                $this->logInfo("OrderId extraído correctamente: {$orderId}");
                 
                 if ($orderId) {
                     // Buscar el JSON completo en production_orders por order_id
                     $productionOrder = ProductionOrder::whereRaw('LOWER(order_id) = ?', [strtolower(trim($orderId))])->first();
-
+                    $this->logInfo("ProductionOrder encontrado para orderId={$orderId}");
                     if ($productionOrder) {
-                        $orderJson = json_decode($productionOrder->json, true);
+                        $orderJson = $productionOrder->json;
     
                         if (isset($orderJson['quantity'], $orderJson['refer']['groupLevel'][0]['uds'])) {
                             $box = (int) $orderJson['quantity'];
@@ -200,16 +213,46 @@ class MqttSubscriberLocalMac extends Command
 
         // Extraer valores del JSON
         $orderId = isset($message['orderId']) ? trim($message['orderId']) : null;
-
+        $this->logInfo("OrderId extraido: {$orderId}");
         // Buscar el JSON completo en production_orders por order_id
         $productionOrder = ProductionOrder::whereRaw('LOWER(order_id) = ?', [strtolower(trim($orderId))])->first();
 
         if (!$productionOrder) {
             $this->logError("ProductionOrder no encontrada para orderId={$orderId}");
             return; // Detener el proceso si no se encuentra
+        }else{
+            $this->logInfo("ProductionOrder encontrada para orderId={$orderId}");
         }
 
-        $jsonNew = json_decode($productionOrder->json, true);
+        try {
+            // Detectar si el campo ya está decodificado
+            if (is_array($productionOrder->json) || is_object($productionOrder->json)) {
+                // Ya está decodificado
+                $jsonNew = $productionOrder->json;
+                $this->logInfo("JSON ya estaba decodificado. Procesando directamente.");
+            } elseif (is_string($productionOrder->json)) {
+                // Intentar decodificar si es una cadena JSON
+                $jsonNew = json_decode($productionOrder->json, true);
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    throw new Exception("Error al decodificar JSON: " . json_last_error_msg());
+                }
+                $this->logInfo("JSON decodificado correctamente.");
+            } else {
+                // Tipo inesperado
+                throw new Exception("El campo 'json' tiene un tipo inesperado: " . gettype($productionOrder->json));
+            }
+        
+            // Procesar el JSON decodificado (array o objeto)
+            $this->logInfo("Contenido del JSON procesado: " . json_encode($jsonNew));
+        
+        } catch (Exception $e) {
+            // Manejar cualquier error en el proceso
+            $this->logError("Excepción capturada al procesar JSON: " . $e->getMessage());
+            return; // Detener el proceso si hay un error
+        }
+        
+
+        $this->logInfo("Json extraido"); // Este log solo se ejecutará si `json_decode` no falla silenciosamente
 
         if (json_last_error() !== JSON_ERROR_NONE) {
             $this->logError("Error al decodificar JSON de ProductionOrder: " . json_last_error_msg());
@@ -254,8 +297,8 @@ class MqttSubscriberLocalMac extends Command
             }
             
             // Reseteo de sensores y modbuses con los nuevos valores
-            $this->resetSensors($barcode->id, $optimalProductionTime, $orderId, $quantity, $uds);
-            $this->resetModbuses($barcode->id, $optimalProductionTime, $orderId, $quantity, $uds);
+            $this->resetSensors($barcode->id, $optimalProductionTime, $orderId, $quantity, $uds, $referId);
+            $this->resetModbuses($barcode->id, $optimalProductionTime, $orderId, $quantity, $uds, $referId);
         } else {
             $this->logError("Faltan campos en el JSON recibido para procesar sensores y modbuses. Valores recibidos: orderId={$orderId}, quantity={$quantity}, uds={$uds}, envase={$envase}");
         }
@@ -355,7 +398,7 @@ class MqttSubscriberLocalMac extends Command
         $this->error("[{$timestamp}] {$message}");
     }
 
-    private function resetSensors($barcodeId, $optimalProductionTime, $orderId, $quantity, $uds)
+    private function resetSensors($barcodeId, $optimalProductionTime, $orderId, $quantity, $uds, $referId)
     {
         $this->info("Iniciar reset de sensores con optimal_production_time={$optimalProductionTime}, orderId={$orderId}, quantity={$quantity}, uds={$uds} para barcode ID {$barcodeId}");
 
@@ -368,6 +411,7 @@ class MqttSubscriberLocalMac extends Command
                 'orderId' => $orderId,
                 'quantity' => $quantity,
                 'uds' => $uds,
+                'productName' => $referId,
             ]);
     
             if ($updated > 0) {
@@ -380,7 +424,7 @@ class MqttSubscriberLocalMac extends Command
         }
     }    
 
-    private function resetModbuses($barcodeId, $optimalProductionTime, $orderId, $quantity, $uds)
+    private function resetModbuses($barcodeId, $optimalProductionTime, $orderId, $quantity, $uds, $referId)
     {
         $this->info("Iniciar reset de modbuses con optimal_production_time={$optimalProductionTime}, orderId={$orderId}, quantity={$quantity}, uds={$uds} para barcode ID {$barcodeId}");
         try {
@@ -392,6 +436,7 @@ class MqttSubscriberLocalMac extends Command
                 'orderId' => $orderId,
                 'quantity' => $quantity,
                 'uds' => $uds,
+                'productName' => $referId,
             ]);
     
             if ($updated > 0) {

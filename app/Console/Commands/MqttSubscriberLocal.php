@@ -98,47 +98,60 @@ class MqttSubscriberLocal extends Command
         $this->info("[{$timestamp}] Subscribed to initial topics.");
     }
 
-    private function processMessage($topic, $message)
+    private function cleanAndValidateJson($rawJson)
     {
-        // Limpiar el mensaje JSON
-        $cleanMessage = json_decode($message, true);  // Convertir el JSON a un array
         $timestamp = Carbon::now()->format('Y-m-d H:i:s');
+
+        // Eliminar comillas iniciales y finales, si las hay
+        $trimmedJson = trim($rawJson, '"');
+
+        // Reemplazar barras invertidas
+        $cleanedJson = str_replace('\\', '', $trimmedJson);
+
+        // Validar que el JSON es válido
+        $decodedJson = json_decode($cleanedJson, true);
         if (json_last_error() !== JSON_ERROR_NONE) {
-            $this->error("[{$timestamp}]El JSON proporcionado no es válido: " . json_last_error_msg());
-            return;
+            $this->error("[{$timestamp}] El JSON proporcionado no es válido: " . json_last_error_msg());
+            return null;
         }
 
+        // Reconvertir a JSON limpio para su almacenamiento
+        return json_encode($decodedJson, JSON_UNESCAPED_SLASHES);
+    }
 
-        // Convertir de nuevo a JSON y remover barras invertidas
-        $cleanMessageJson = json_encode($cleanMessage, JSON_UNESCAPED_SLASHES);
+    private function processMessage($topic, $message)
+    {
+        $timestamp = Carbon::now()->format('Y-m-d H:i:s');
+
+        // Limpiar y validar el JSON
+        $cleanMessageJson = $this->cleanAndValidateJson($message);
+        if ($cleanMessageJson === null) {
+            return; // JSON inválido, salir
+        }
 
         $originalTopic = str_replace('/prod_order_notice', '', $topic);
         $barcodes = Barcode::where('mqtt_topic_barcodes', $originalTopic)->get();
-        
+
         if ($barcodes->isEmpty()) {
-            $this->error("[{$timestamp}]No barcodes found for topic: {$topic}");
+            $this->error("[{$timestamp}] No barcodes found for topic: {$topic}");
             return;
-        }else{
-            $this->info("[{$timestamp}] barcodes found for topic: {$topic}");
+        } else {
+            $this->info("[{$timestamp}] Barcodes found for topic: {$topic}");
         }
 
-    
         foreach ($barcodes as $barcode) {
-            $timestamp = Carbon::now()->format('Y-m-d H:i:s');
-            $this->info("[{$timestamp}]Verificando barcode ID: {$barcode->id}, sended: {$barcode->sended}");
-            
-                // Guardar el aviso de pedido
-                $barcode->order_notice = $cleanMessageJson;
-                $barcode->sended = 0;  // Después de guardar, poner `sended` a 0
-                try {
-                    $barcode->save();
-                    $this->info("[{$timestamp}]Código de barras guardado correctamente: {$barcode->id}");
-                } catch (\Exception $e) {
-                    $this->error("[{$timestamp}]Error al guardar el código de barras: {$e->getMessage()}");
-                }
+            $this->info("[{$timestamp}] Verificando barcode ID: {$barcode->id}, sended: {$barcode->sended}");
 
+            // Guardar el aviso de pedido
+            $barcode->order_notice = $cleanMessageJson;
+            $barcode->sended = 0; // Después de guardar, poner `sended` a 0
+            try {
+                $barcode->save();
+                $this->info("[{$timestamp}] Código de barras guardado correctamente: {$barcode->id}");
+            } catch (\Exception $e) {
+                $this->error("[{$timestamp}] Error al guardar el código de barras: {$e->getMessage()}");
+            }
         }
-        
     }
     
 }

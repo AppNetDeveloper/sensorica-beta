@@ -55,6 +55,7 @@ class Modbus extends Model
         'dosage_order',//  para dosificar si se quiere usar un orden de descarga de las basculas
         'box_width',// ancho de la caja se usa para calcular el cubo m3
         'box_length',//largo de la caja
+        'productName',//nombre del producto
          
     ];
 

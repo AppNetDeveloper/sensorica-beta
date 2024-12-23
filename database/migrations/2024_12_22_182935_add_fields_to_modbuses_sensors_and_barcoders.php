@@ -18,6 +18,7 @@ class AddFieldsToModbusesSensorsAndBarcoders extends Migration
             $table->string('orderId')->nullable()->after('name'); // Reemplaza 'some_existing_column' con la columna previa
             $table->integer('quantity')->nullable()->after('orderId');
             $table->integer('uds')->nullable()->after('quantity');
+            $table->string('productName')->nullable()->after('uds');
         });
 
         // Agregar campos a la tabla sensors
@@ -25,6 +26,7 @@ class AddFieldsToModbusesSensorsAndBarcoders extends Migration
             $table->string('orderId')->nullable()->after('name');
             $table->integer('quantity')->nullable()->after('orderId');
             $table->integer('uds')->nullable()->after('quantity');
+            $table->string('productName')->nullable()->after('uds');
         });
 
     }

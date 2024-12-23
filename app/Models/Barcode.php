@@ -8,6 +8,7 @@ use App\Models\OrderStat;
 use Illuminate\Support\Facades\Log;
 use App\Models\Scada;
 use App\Models\ScadaOrder; // si falla algo elimina esto
+use Exception;
 
 class Barcode extends Model
 {
@@ -86,21 +87,24 @@ class Barcode extends Model
 
             if (!$scada) {
                 try {
-                    // Crear un nuevo registro en ProductionOrder
+
+                    // Crear un nuevo registro en ProductionOrder con el 'order_id' actualizado si era duplicado
                     $productionOrder = ProductionOrder::create([
                         'production_line_id' => $productionLineId,
                         'barcoder_id' => $barcode->id,
                         'order_id' => $orderId,
-                        'json' => $barcode->order_notice, // Guardar el JSON original
+                        'json' => $orderNotice, // Guardar el JSON original
                         'status' => 0, // 0 = En espera
                         'units_box' => $units,
                         'box' => $box,
                         'units' => $box * $units,
                     ]);
-        
+                    // Borrar el campo 'order_notice' del barcode
+                   // $barcode->order_notice = null;
+                    //$barcode->save(); // Actualizar el barcode
                     // Log de información
                     Log::info("[ProcessOrderNotice] ProductionOrder creado correctamente. ID: {$productionOrder->id}, order_id: {$orderId}");
-                } catch (\Exception $e) {
+                } catch (Exception $e) {
                     // Manejo de errores
                     Log::error("[ProcessOrderNotice] Error creando ProductionOrder: " . $e->getMessage());
                 }
