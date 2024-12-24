@@ -3,11 +3,11 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use App\Models\Sensor;
-use App\Models\Barcode;
 use App\Models\SensorCount;
+use App\Models\ProductList;
+use Exception;
 
 class CalculateOptimalProductionTime extends Command
 {
@@ -50,7 +50,7 @@ class CalculateOptimalProductionTime extends Command
             
             foreach ($sensors as $sensor) {
                 // Obtener el barcoder asociado
-                $modelProduct = $sensor->orderId;
+                $modelProduct = $sensor->productName;
 
                 if ($modelProduct) {
 
@@ -64,11 +64,12 @@ class CalculateOptimalProductionTime extends Command
                             ->where('time_11', '>', 0) // Asegurarse de que time_11 sea mayor a 0
                             ->orderBy('time_11', 'asc') // Obtener el más pequeño
                             ->first();
-
+                        $this->info("Sensor count: {$sensorCount}");
+                        
 
                         // Establecer un valor por defecto de 30 si time_11 es nulo, 0 o no se encuentra ningún registro
                         $optimalProductionTime = ($sensorCount && $sensorCount->time_11 > 0) ? $sensorCount->time_11 : 30;
-
+                        $this->info("Sensor count time_11: {$optimalProductionTime}");
                         // Si optimalProductionTime es inferior a PRODUCTION_MIN_TIM ponemos su valor minimo si es mayor a PRODUCTION_MAX_TIM ponemos su valor maxima
                         $minTime = env("PRODUCTION_MIN_TIME", 3);
                         $maxTime = env("PRODUCTION_MAX_TIME", 10);
@@ -79,14 +80,36 @@ class CalculateOptimalProductionTime extends Command
                         } elseif ($optimalProductionTime > $maxTime) {
                             $optimalProductionTime = $maxTime;
                         }
-                                                
-
+                        $this->info("Nuevo Sensor count time_11: {$optimalProductionTime}");                     
 
                         // Actualizar el tiempo de producción óptimo en la tabla sensors
                         $sensor->optimal_production_time = $optimalProductionTime;
                         $sensor->save();
 
-                        $this->info("Updated optimal production time for sensor: {$sensor->name} (Product: {$modelProduct})(tiempo sacado: {$optimalProductionTime})");
+                        // Buscar el registro en product_lists por client_id
+                        $productName = $sensor->productName; // Asegúrate de que 'productName' sea una columna en la tabla 'sensors'
+
+                        $productList = ProductList::where('client_id', $productName)->first();
+
+                        if ($productList) {
+                            if ($optimalProductionTime < $productList->optimal_production_time) {
+                                // Actualizar en product_lists si el nuevo tiempo es menor
+                                $productList->optimal_production_time = $optimalProductionTime;
+                                $productList->save();
+                                $lastValue = $optimalProductionTime;
+                            } else {
+                                // Usar el valor de productList para actualizar en sensors si no es menor
+                                $sensor->optimal_production_time = $productList->optimal_production_time;
+                                $sensor->save();
+                                $lastValue = $productList->optimal_production_time;
+                            }
+                        } else {
+                            // Manejar el caso en que no se encuentra el registro en product_lists
+                            throw new Exception("No se encontró ningún registro en product_lists con client_id: $productName");
+                        }
+
+
+                        $this->info("Updated optimal production time for sensor: {$sensor->name} (Product: {$modelProduct})(tiempo sacado: {$lastValue})");
                     } else {
                         $this->warn("No model_product found in order_notice for sensor: {$sensor->name}, modelo : {$modelProduct}, paso a poder valor default. Media entre minimo y maximo");
                         $minTime = env("PRODUCTION_MIN_TIME", 3);
@@ -94,6 +117,7 @@ class CalculateOptimalProductionTime extends Command
                         // Actualizar el tiempo de producción óptimo en la tabla sensors
                         $sensor->optimal_production_time = ($minTime + $maxTime) / 2;
                         $sensor->save();
+                        $this->info("Updated optimal production time for sensor: {$sensor->name} (Product: {$modelProduct})");
                     }
                 } else {
                     $this->warn("No order_notice found for sensor: {$sensor->name}, paso a poder valor default. Media entre minimo y maximo");
@@ -102,6 +126,7 @@ class CalculateOptimalProductionTime extends Command
                         // Actualizar el tiempo de producción óptimo en la tabla sensors
                         $sensor->optimal_production_time = ($minTime + $maxTime) / 2;
                         $sensor->save();
+                        $this->info("Updated optimal production time for sensor: {$sensor->name} (Product: {$modelProduct})");
                 }
             }
 

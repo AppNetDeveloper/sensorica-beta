@@ -50,6 +50,8 @@ class Sensor extends Model
         'unic_code_order', // código de orden único, uso interno
         'shift_type', // tipo de turno
         'productName', // nombre del producto
+        'count_week_0', // contador de la semana 0
+        'count_week_1', // contador de la semana 1
     ];
     
 

@@ -231,6 +231,7 @@ class SensorController extends Controller
             'shift' => 'count_shift_0',
             'total' => 'count_total_0',
             'order' => 'count_order_0',
+            'week' => 'count_week_0',
             'time_0' => 'time_00',
             'time_1' => 'time_10',
             'function_model' => $config->function_model_0,
@@ -244,6 +245,7 @@ class SensorController extends Controller
             'shift' => 'count_shift_1',
             'total' => 'count_total_1',
             'order' => 'count_order_1',
+            'week' => 'count_week_1',
             'time_0' => 'time_01',
             'time_1' => 'time_11',
             'function_model' => $config->function_model_1,
@@ -267,6 +269,7 @@ class SensorController extends Controller
             $config->increment($modelConfig['shift']);
             $config->increment($modelConfig['total']);
             $config->increment($modelConfig['order']);
+            $config->increment($modelConfig['week']);
             Log::info("Contadores incrementados correctamente para el modelo.");
         } catch (\Exception $e) {
             Log::error("Error al incrementar los contadores: " . $e->getMessage());
@@ -358,6 +361,7 @@ class SensorController extends Controller
         // Determinar el estado basado en tiempos
         $optimalTime = $config->optimal_production_time;
         $reducedSpeedMultiplier = $config->reduced_speed_time_multiplier;
+        Log::debug("Calculando estado para el sensor {$config->name} (ID: {$config->id}) con lastTime: $lastTime, optimalTime: $optimalTime, reducedSpeedMultiplier: $reducedSpeedMultiplier");
         $status = $this->determineStatus($lastTime, $optimalTime, $reducedSpeedMultiplier);
     
         // Crear mensajes JSON y publicar a MQTT
@@ -391,19 +395,24 @@ class SensorController extends Controller
     
     private function determineStatus($lastTime, $optimalTime, $reducedSpeedMultiplier)
     {
+        Log::debug("Tiempos: lastTime: $lastTime, optimalTime: $optimalTime, reducedSpeedMultiplier: $reducedSpeedMultiplier");
         // Determinar el estado según los tiempos
         if (!is_numeric($lastTime)) {
-            return 3; // Sin datos
+            Log::warning("Tiempos no numéricos: lastTime: $lastTime, optimalTime: $optimalTime, reducedSpeedMultiplier: $reducedSpeedMultiplier");
+            return 3; // Sin datos 
         }
     
         if ($lastTime <= $optimalTime) {
+            Log::info("Buen estado: lastTime: $lastTime, optimalTime: $optimalTime, reducedSpeedMultiplier: $reducedSpeedMultiplier");
             return 2; // Buen estado
         }
     
         if ($lastTime <= $optimalTime * $reducedSpeedMultiplier) {
+            Log::info("Velocidad reducida: lastTime: $lastTime, optimalTime: $optimalTime, reducedSpeedMultiplier: $reducedSpeedMultiplier");
             return 1; // Velocidad reducida
         }
     
+        Log::info("Parada: lastTime: $lastTime, optimalTime: $optimalTime, reducedSpeedMultiplier: $reducedSpeedMultiplier");
         return 0; // Parada
     }
     

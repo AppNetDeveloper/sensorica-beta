@@ -80,6 +80,10 @@ class CalculateProductionDowntime extends Command
         $optimalTime = $sensor->optimal_production_time ?? 30;
         $multiplier = $sensor->reduced_speed_time_multiplier ?? 1;
         $maxTime = $optimalTime * $multiplier;
+        $lastInfinite= $sensor->count_total_1 ?? 0;
+        $lastShift= $sensor->count_shift_1 ?? 0;
+        $lastOrder= $sensor->count_order_1 ?? 0;
+        $topicBase = $sensor->mqtt_topic_1;
 
         // Buscar el último registro en sensor_counts con value = 1
         $sensorCount = SensorCount::where('sensor_id', $sensor->id)
@@ -97,6 +101,36 @@ class CalculateProductionDowntime extends Command
                 $this->info("Sensor {$sensor->name} is in downtime.");
                 $this->incrementDowntime($sensor, $timeDifference - $maxTime);
                 $this->sendMqttMessage($sensor, 0, 0); // status 0 para ampliado, tipo 0
+                $status= 0;
+                // Crear el mensaje JSON cuando esta parado mas del tiempo lento
+                $message = json_encode([
+                    'value' => $lastInfinite,
+                    'status' =>  $status, // status = 0 cuando se amplía, status = 2 cuando es estable
+                ]);
+                $message2 = json_encode([
+                    'value' => $lastOrder,
+                    'status' =>  $status, // status = 0 cuando se amplía, status = 2 cuando es estable
+                ]);
+
+                // Publicar el mensaje MQTT usando la función de publicación
+                $this->publishMqttMessage($topicBase . "/infinite_counter", $message);
+                $this->publishMqttMessage($topicBase, $message2);
+
+            }elseif($timeDifference < $maxTime && $timeDifference > $optimalTime){
+                $status= 1;
+                // Crear el mensaje JSON cuando esta parado mas del tiempo lento
+                $message = json_encode([
+                    'value' => $lastInfinite,
+                    'status' =>  $status, // status = 0 cuando se amplía, status = 2 cuando es estable
+                ]);
+                $message2 = json_encode([
+                    'value' => $lastOrder,
+                    'status' =>  $status, // status = 0 cuando se amplía, status = 2 cuando es estable
+                ]);
+                
+                // Publicar el mensaje MQTT usando la función de publicación
+                $this->publishMqttMessage($topicBase . "/infinite_counter", $message);
+                $this->publishMqttMessage($topicBase, $message2);
             } else {
                 // Estable (no se amplía), mandamos mensaje con status=2
                 $this->info("Sensor {$sensor->name} is stable.");

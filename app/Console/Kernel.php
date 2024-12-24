@@ -33,6 +33,7 @@ class Kernel extends ConsoleKernel
         Commands\MonitorConnections::class,
         Commands\ReadModbusGroup::class,
         Commands\MqttSubscriberLocalMac::class,
+        Commands\ResetWeeklyCounts::class,
         
     ];
 

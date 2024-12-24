@@ -8,7 +8,6 @@ use App\Models\Modbus;
 use App\Models\MonitorOee;
 use Carbon\Carbon;
 use App\Models\SensorCount;
-use App\Models\Barcode;
 use App\Models\MqttSendServer1;
 use App\Models\MqttSendServer2;
 use App\Models\OrderStat;
@@ -81,7 +80,7 @@ class CalculateProductionMonitorOee extends Command
 
                 //calcular inactividad por turno total
                 $this->calcInactiveTimeShift($monitor);
-                //calcular inactividad por turno total
+                //calcular inactividad por otder total
                 $this->calcInactiveTimeOrder($monitor);
                 //calcula UDS semana y turno
                 $this->calcUdsShiftAndWeek($monitor);
@@ -613,9 +612,6 @@ class CalculateProductionMonitorOee extends Command
         // Obtener el ID de la línea de producción desde el monitor
         $production_line_id = $monitor->production_line_id;
     
-        // Obtener el tiempo de inicio de turno desde el monitor
-        $time_start_shift = $monitor->time_start_shift;
-    
         // Buscar todos los sensores asociados a la línea de producción
         $sensors = Sensor::where('production_line_id', $production_line_id)->get();
     
@@ -628,29 +624,12 @@ class CalculateProductionMonitorOee extends Command
     
         // Procesar cada sensor encontrado
         foreach ($sensors as $sensor) {
-
-    
-            // Extraer valores específicos del JSON
+            // Extraer valores de sensor
             $unitsPerBox = isset($sensor->uds) && is_numeric($sensor->uds) ? (int) $sensor->uds : 0;
-
-            // Buscar en sensor_counts todas las producciones del sensor en el turno actual
-            $unitsInShift = SensorCount::where('sensor_id', $sensor->id)
-                ->where('value', 1)
-                ->where('created_at', '>=', $time_start_shift)
-                ->sum('value'); // Sumamos todas las producciones del turno
-    
             // Sumar las unidades producidas en este turno
-            $totalUnitsShift += $unitsInShift;
-    
-            // Buscar en sensor_counts todas las producciones del sensor en la semana actual
-            $currentWeekStart = now()->startOfWeek();
-            $unitsInWeek = SensorCount::where('sensor_id', $sensor->id)
-                ->where('value', 1)
-                ->whereBetween('created_at', [$currentWeekStart, now()])
-                ->sum('value'); // Sumamos todas las producciones de la semana
-    
+            $totalUnitsShift += $sensor->count_shift_1;
             // Sumar las unidades producidas en esta semana
-            $totalUnitsWeek += $unitsInWeek;
+            $totalUnitsWeek += $sensor->count_week_1;
         }
     
         // Cálculo de cajas (paquetes) completas por turno y semana
@@ -665,6 +644,7 @@ class CalculateProductionMonitorOee extends Command
         // Devolvemos o guardamos los resultados en una tabla o un log si es necesario
         $this->info("Unidades producidas en el turno: $totalUnitsShift Cajas producidas en el turno: $boxesShift Unidades producidas en la semana: $totalUnitsWeek Cajas producidas en la semana: $boxesWeek");
         
+
         // Crear los JSON con el downtime acumulado y el status correspondiente
         $jsonShift = json_encode(['value' => $totalUnitsShift, 'status' => 2]);
         $jsonWeek = json_encode(['value' => $totalUnitsWeek, 'status' => 2]);

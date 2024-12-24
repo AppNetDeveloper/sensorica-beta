@@ -56,6 +56,8 @@ class Modbus extends Model
         'box_width',// ancho de la caja se usa para calcular el cubo m3
         'box_length',//largo de la caja
         'productName',//nombre del producto
+        'count_week_0', // contador de la semana 0
+        'count_week_1', // contador de la semana 1
          
     ];
 
