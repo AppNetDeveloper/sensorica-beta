@@ -520,20 +520,14 @@ class CalculateProductionMonitorOee extends Command
         //sacar todo el tiempo de inactividad de la linea de produccion si no es null
         if ($monitor->production_line_id != null) {
 
-            $downTimeProductionLine = Sensor::where('production_line_id', $monitor->production_line_id)
-                                ->where('sensor_type', '=', 0)
-                                ->sum('downtime_count');
-
-
-            // Obtenemos el downtime de la línea de producción por production_line_id y sumamos los valores
-             $downTimeSensorStop = Sensor::where('production_line_id', $monitor->production_line_id)
-                                ->where('sensor_type', '!=', 0)
-                                ->sum('downtime_count');
-            
-            $numberSensorStop = Sensor::where('production_line_id', $monitor->production_line_id)
-                                ->where('sensor_type', '!=', 0)
-                                ->sum('count_order_0');                   
-
+            $result = Sensor::where('production_line_id', $monitor->production_line_id)
+                ->where('sensor_type', '!=', 0)
+                ->selectRaw('SUM(downtime_count) as total_downtime, SUM(count_order_0) as total_count_order')
+                ->first();
+               
+                $downTimeSensorStop = $result->total_downtime;
+                $numberSensorStop = $result->total_count_order;
+                
             
              // Convertimos el tiempo de inactividad en formato de horas, minutos y segundos (H:i:s)
              $formattedDownTimeSensorStop = gmdate("H:i:s", $downTimeSensorStop);

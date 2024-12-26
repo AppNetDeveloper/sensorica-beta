@@ -15,7 +15,7 @@ class AddFieldsToModbusesSensorsAndBarcoders extends Migration
     {
         // Agregar campos a la tabla modbuses
         Schema::table('modbuses', function (Blueprint $table) {
-            $table->string('orderId')->nullable()->after('name'); // Reemplaza 'some_existing_column' con la columna previa
+            $table->string('orderId')->nullable(); // Reemplaza 'some_existing_column' con la columna previa
             $table->integer('quantity')->nullable()->after('orderId');
             $table->integer('uds')->nullable()->after('quantity');
             $table->string('productName')->nullable()->after('uds')->default('123456');
@@ -25,7 +25,7 @@ class AddFieldsToModbusesSensorsAndBarcoders extends Migration
 
         // Agregar campos a la tabla sensors
         Schema::table('sensors', function (Blueprint $table) {
-            $table->string('orderId')->nullable()->after('name');
+            $table->string('orderId')->nullable();
             $table->integer('quantity')->nullable()->after('orderId');
             $table->integer('uds')->nullable()->after('quantity');
             $table->string('productName')->nullable()->after('uds')->default('123456');
