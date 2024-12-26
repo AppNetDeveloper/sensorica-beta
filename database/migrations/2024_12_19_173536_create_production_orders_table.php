@@ -28,7 +28,7 @@ class CreateProductionOrdersTable extends Migration
 
             // Relaciones
             $table->foreign('production_line_id')->references('id')->on('production_lines')->onDelete('cascade');
-            $table->foreign('barcode_id')->references('id')->on('barcodes')->onDelete('cascade');
+            $table->foreign('barcoder_id')->references('id')->on('barcodes')->onDelete('cascade');
         });
     }
 
