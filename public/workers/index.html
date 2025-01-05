@@ -3,11 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión de Trabajadores SCADA</title>
+    <title>Gestión de Trabajadores</title>
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -45,7 +50,7 @@
             width: 100%;
             margin-top: 20px;
         }
-        button {
+        button, input[type="file"] {
             margin-bottom: 15px;
             padding: 10px 20px;
             background-color: #007bff;
@@ -71,6 +76,9 @@
         .btn-danger {
             background-color: #dc3545 !important;
         }
+        input[type="file"] {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -89,6 +97,8 @@
     <div class="content">
         <h1>Gestión de Trabajadores</h1>
         <button id="addWorker">Añadir Trabajador</button>
+        <button id="importExcel">Importar Excel</button>
+        <input type="file" id="excelFileInput" accept=".xlsx">
         <table id="workersTable" class="display">
             <thead>
                 <tr>
@@ -96,6 +106,7 @@
                     <th>Nombre</th>
                     <th>Email</th>
                     <th>Teléfono</th>
+                    <th>Contraseña</th>
                     <th>Acciones</th>
                 </tr>
             </thead>
@@ -114,7 +125,7 @@
                     error: function (xhr) {
                         Swal.fire({
                             icon: 'error',
-                            title: 'Error al Cargar Datos',
+                            title: 'Error al cargar datos',
                             text: `Status: ${xhr.status}. Mensaje: ${xhr.responseJSON?.error || 'Error desconocido'}`
                         });
                     }
@@ -124,20 +135,40 @@
                     { data: 'name' },
                     { data: 'email', defaultContent: '' },
                     { data: 'phone', defaultContent: '' },
+                    { data: null, defaultContent: '', render: () => '' },
                     {
                         data: null,
                         render: function (data) {
                             return `
-                                <button class="edit-btn btn-secondary" data-id="${data.id}" data-name="${data.name}" data-email="${data.email||''}" data-phone="${data.phone||''}">Editar</button>
+                                <button class="edit-btn btn-secondary" data-id="${data.id}" data-name="${data.name}" data-email="${data.email || ''}" data-phone="${data.phone || ''}">Editar</button>
                                 <button class="delete-btn btn-danger" data-id="${data.id}">Eliminar</button>
-                                <button class="reset-email-btn btn-warning" data-email="${data.email||''}">Reset Pass Email</button>
-                                <button class="reset-whatsapp-btn btn-success" data-phone="${data.phone||''}">Reset Pass WhatsApp</button>
+                                <button class="reset-email-btn btn-warning" data-email="${data.email || ''}">Reset Pass Email</button>
+                                <button class="reset-whatsapp-btn btn-success" data-phone="${data.phone || ''}">Reset Pass WhatsApp</button>
                             `;
+                        }
+                    }
+                ],
+                dom: 'Bfrtip',
+                buttons: [
+                    {
+                        extend: 'excelHtml5',
+                        text: 'Exportar a Excel',
+                        title: null, // Evitamos incluir "Trabajadores" como encabezado
+                        className: 'btn btn-success',
+                        exportOptions: {
+                            columns: [0, 1, 2, 3, 4],
+                            format: {
+                                body: function (data, row, column) {
+                                    if (column === 4) return ''; // Contraseña vacía
+                                    return data;
+                                }
+                            }
                         }
                     }
                 ]
             });
 
+            // Añadir trabajador
             $('#addWorker').click(function () {
                 Swal.fire({
                     title: 'Añadir Trabajador',
@@ -192,6 +223,7 @@
                 });
             });
 
+            // Editar trabajador
             $('#workersTable tbody').on('click', '.edit-btn', function () {
                 const currentId = $(this).data('id');
                 const currentName = $(this).data('name');
@@ -215,7 +247,7 @@
                         const name = $('#workerName').val();
                         const email = $('#workerEmail').val() || null;
                         const phone = $('#workerPhone').val() || null;
-                        const password = $('#workerPassword').val(); // si está vacío, no actualizamos contraseña
+                        const password = $('#workerPassword').val();
                         if (!id || !name) {
                             Swal.showValidationMessage('ID y Nombre son obligatorios.');
                             return false;
@@ -256,6 +288,7 @@
                 });
             });
 
+            // Eliminar trabajador
             $('#workersTable tbody').on('click', '.delete-btn', function () {
                 const id = $(this).data('id');
                 Swal.fire({
@@ -286,10 +319,10 @@
                 });
             });
 
-            // Reset password por email
-            $('#workersTable tbody').on('click', '.reset-email-btn', function() {
+            // Resetear contraseña por email
+            $('#workersTable tbody').on('click', '.reset-email-btn', function () {
                 const email = $(this).data('email');
-                if(!email) {
+                if (!email) {
                     Swal.fire({
                         icon: 'warning',
                         title: 'Sin email',
@@ -327,10 +360,10 @@
                 });
             });
 
-            // Reset password por WhatsApp
-            $('#workersTable tbody').on('click', '.reset-whatsapp-btn', function() {
+            // Resetear contraseña por WhatsApp
+            $('#workersTable tbody').on('click', '.reset-whatsapp-btn', function () {
                 const phone = $(this).data('phone');
-                if(!phone) {
+                if (!phone) {
                     Swal.fire({
                         icon: 'warning',
                         title: 'Sin teléfono',
@@ -354,7 +387,7 @@
                             contentType: 'application/json',
                             data: JSON.stringify({ phone }),
                             success: function () {
-                                Swal.fire('Contraseña reseteada, se enviará por WhatsApp (futuro)', '', 'success');
+                                Swal.fire('Contraseña reseteada, se enviará por WhatsApp', '', 'success');
                             },
                             error: function (xhr) {
                                 Swal.fire({
@@ -368,6 +401,119 @@
                 });
             });
 
+            // Importar Excel
+            $('#importExcel').click(() => $('#excelFileInput').click());
+
+            $('#excelFileInput').change(function (e) {
+                const file = e.target.files[0];
+                if (!file) return;
+            
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheetName = workbook.SheetNames[0];
+                    const sheet = workbook.Sheets[sheetName];
+                    let rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+            
+                    if (!rows || rows.length === 0) {
+                        Swal.fire('Error', 'El archivo está vacío o tiene un formato incorrecto.', 'error');
+                        $('#excelFileInput').val(''); // Restablecer el input
+                        return;
+                    }
+            
+                    // Verificar encabezados
+                    console.log('Encabezados reales detectados:', rows[0]);
+                    const expectedHeaders = ['ID Cliente', 'Nombre', 'Email', 'Teléfono', 'Contraseña'];
+                    const actualHeaders = rows[0].map(header => String(header).trim());
+                    const missingHeaders = expectedHeaders.filter(header => !actualHeaders.includes(header));
+                    if (missingHeaders.length > 0) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: `El archivo no tiene los encabezados esperados. Faltan: ${missingHeaders.join(', ')}`,
+                            footer: 'Asegúrate de que los encabezados estén correctos en el archivo.'
+                        });
+                        console.warn('Encabezados reales:', actualHeaders);
+                        $('#excelFileInput').val(''); // Restablecer el input
+                        return;
+                    }
+            
+                    // Ignorar la primera fila (encabezados)
+                    rows = rows.slice(1);
+            
+                    const formattedRows = rows.map((row, index) => {
+                        const formattedRow = {
+                            id: parseInt(row[0]) || null,
+                            name: row[1] ? String(row[1]).trim() : null,
+                            email: row[2] ? String(row[2]).trim() || null : null,
+                            phone: row[3] ? String(row[3]).trim() || null : null,
+                            password: row[4] ? String(row[4]).trim() || null : null
+                        };
+            
+                        // Log para cada fila extraída
+                        console.log(`Fila ${index + 1} extraída:`, formattedRow);
+            
+                        return formattedRow;
+                    });
+            
+                    const invalidRows = formattedRows.filter(row => !row.id || !row.name);
+            
+                    if (invalidRows.length > 0) {
+                        console.warn('Filas inválidas:', invalidRows);
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Error en el archivo',
+                            text: `Se ignoraron ${invalidRows.length} filas con datos incompletos.`,
+                            footer: 'ID Cliente y Nombre son obligatorios.'
+                        });
+                    }
+            
+                    const validRows = formattedRows.filter(row => row.id && row.name);
+            
+                    if (validRows.length === 0) {
+                        Swal.fire('Error', 'No se encontraron filas válidas para procesar.', 'error');
+                        $('#excelFileInput').val(''); // Restablecer el input
+                        return;
+                    }
+            
+                    console.log('Filas válidas para procesar:', validRows);
+            
+                    Swal.fire({
+                        title: 'Procesando archivo',
+                        text: 'Esto puede tardar unos segundos.',
+                        allowOutsideClick: false,
+                        didOpen: () => Swal.showLoading()
+                    });
+            
+                    // Enviar cada fila válida al servidor
+                    const promises = validRows.map(row => {
+                        return $.ajax({
+                            url: `${workersApiUrl}/update-or-insert`,
+                            method: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify(row)
+                        }).fail(xhr => {
+                            console.error('Error en la fila:', row, 'Respuesta del servidor:', xhr.responseText);
+                        });
+                    });
+            
+                    Promise.all(promises)
+                        .then(() => {
+                            Swal.fire('Éxito', 'El archivo fue procesado correctamente.', 'success');
+                            table.ajax.reload(); // Recargar la tabla
+                            $('#excelFileInput').val(''); // Restablecer el input
+                        })
+                        .catch(() => {
+                            Swal.fire('Error', 'Ocurrió un error al procesar el archivo.', 'error');
+                            $('#excelFileInput').val(''); // Restablecer el input
+                        });
+                };
+            
+                reader.readAsArrayBuffer(file);
+            });
+            
+            
         });
 
         function updateClock() {
@@ -378,9 +524,8 @@
             document.getElementById('clock').textContent = `${hours}:${minutes}:${seconds}`;
         }
 
-        // Actualiza el reloj cada segundo
         setInterval(updateClock, 1000);
-        updateClock(); // Llamada inicial
+        updateClock();
     </script>
 </body>
 </html>
