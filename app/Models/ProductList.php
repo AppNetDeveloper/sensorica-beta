@@ -10,9 +10,10 @@ class ProductList extends Model
     use HasFactory;
 
     protected $fillable = [
-        'client_id',
-        'name',
-        'optimal_production_time',
+        'client_id', //id del tipo de confeccion, este id viene del erp 
+        'name', //nombre de la confeccion
+        'optimal_production_time', //tiempo optimo para la fabricacion
+        'box_kg', //kg por cada caja fabricados.
     ];
 
     // Relationship with Client

@@ -353,7 +353,7 @@ class Barcode extends Model
             } else {
                 Log::channel('supervisor')->error("Error al reiniciar supervisor: " . implode("\n", $output));
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::channel('supervisor')->error("Excepción al reiniciar supervisor: " . $e->getMessage());
         }
     }

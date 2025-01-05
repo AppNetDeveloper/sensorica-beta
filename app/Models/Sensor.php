@@ -7,8 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-
-
+use Carbon\Carbon;
 class Sensor extends Model
 {
     use HasFactory;
@@ -49,7 +48,7 @@ class Sensor extends Model
         'downtime_count', // tiempo no productivo, se debe resetear en cada cambio de turno o pedido
         'unic_code_order', // código de orden único, uso interno
         'shift_type', // tipo de turno
-        'productName', // nombre del producto
+        'productName', // nombre del producto o mejor dicho el id  client_id en productList
         'count_week_0', // contador de la semana 0
         'count_week_1', // contador de la semana 1
     ];
@@ -94,9 +93,24 @@ class Sensor extends Model
     {
         return $this->belongsTo(Barcode::class, 'barcoder_id');
     }
+    /**
+     * Relación con la tabla sensor_counts.
+     */
     public function sensorCounts()
     {
         return $this->hasMany(SensorCount::class, 'sensor_id');
+    }
+    /**
+     * Define la relación con el modelo ProductList.
+     *
+     * Un sensor pertenece a un ProductList (a través de productName <-> client_id).
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
+    public function productList()
+    {
+        // Ajusta 'productName' y 'client_id' si los nombres de las columnas son diferentes.
+        return $this->belongsTo(ProductList::class, 'productName', 'client_id');
     }
     /**
      * Métodos del ciclo de vida del modelo para reiniciar Supervisor
@@ -123,23 +137,18 @@ class Sensor extends Model
             self::restartSupervisor();
         });
     }
-    
+    /**
+     * generar codigo unico .
+     */
     public function generateUniqueCode()
     {
-        // Obtener el id de la línea de producción
         $lineId = $this->production_line_id;
-    
-        // Obtener el id del sensor
         $sensorId = $this->id;
+        $timestamp = Carbon::now()->format('YmdHis');
     
-        // Obtener la fecha y hora actual en formato numérico
-        $timestamp = Carbon::now()->format('YmdHis'); // Formato: YYYYMMDDHHMMSS
-    
-        // Concatenar el id de la línea, el id del sensor y el timestamp
-        return $lineId . '_' . $sensorId . '_' . $timestamp;
+        return "{$lineId}_{$sensorId}_{$timestamp}";
     }
     
-
     /**
      * Método para reiniciar el Supervisor.
      */

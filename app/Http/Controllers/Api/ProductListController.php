@@ -8,7 +8,7 @@ use App\Models\ProductList;
 
 class ProductListController extends Controller
 {
-        /**
+    /**
      * @OA\Post(
      *     path="/api/product-lists/update-or-insert",
      *     summary="Update or insert a single product list item",
@@ -18,7 +18,9 @@ class ProductListController extends Controller
      *         @OA\JsonContent(
      *             type="object",
      *             @OA\Property(property="id", type="integer", description="Client ID"),
-     *             @OA\Property(property="name", type="string", description="Product name")
+     *             @OA\Property(property="name", type="string", description="Product name"),
+     *             @OA\Property(property="optimal_production_time", type="integer", description="Optimal production time"),
+     *             @OA\Property(property="box_kg", type="number", format="float", description="Box weight in kilograms")
      *         )
      *     ),
      *     @OA\Response(
@@ -44,24 +46,32 @@ class ProductListController extends Controller
         $validated = $request->validate([
             'id' => 'required|integer',
             'name' => 'required|string',
+            'optimal_production_time' => 'nullable|integer',
+            'box_kg' => 'nullable|numeric',
         ]);
 
         $productList = ProductList::where('client_id', $validated['id'])->first();
 
         if ($productList) {
             // Update if exists
-            $productList->update(['name' => $validated['name']]);
+            $productList->update([
+                'name' => $validated['name'],
+                'optimal_production_time' => $validated['optimal_production_time'],
+                'box_kg' => $validated['box_kg'],
+            ]);
         } else {
             // Insert if not exists
             ProductList::create([
                 'client_id' => $validated['id'],
                 'name' => $validated['name'],
+                'optimal_production_time' => $validated['optimal_production_time'],
+                'box_kg' => $validated['box_kg'],
             ]);
         }
 
         return response()->json(['message' => 'Product list updated or inserted successfully'], 200);
     }
-        /**
+    /**
      * @OA\Post(
      *     path="/api/product-lists/replace-all",
      *     summary="Replace all product lists",
@@ -72,7 +82,9 @@ class ProductListController extends Controller
      *             type="array",
      *             @OA\Items(
      *                 @OA\Property(property="id", type="integer", description="Client ID"),
-     *                 @OA\Property(property="name", type="string", description="Product name")
+     *                 @OA\Property(property="name", type="string", description="Product name"),
+     *                 @OA\Property(property="optimal_production_time", type="integer", description="Optimal production time"),
+     *                 @OA\Property(property="box_kg", type="number", format="float", description="Box weight in kilograms")
      *             )
      *         )
      *     ),
@@ -99,6 +111,8 @@ class ProductListController extends Controller
         $validated = $request->validate([
             '*.id' => 'required|integer',
             '*.name' => 'required|string',
+            '*.optimal_production_time' => 'nullable|integer',
+            '*.box_kg' => 'nullable|numeric',
         ]);
 
         // Delete all current records
@@ -109,6 +123,8 @@ class ProductListController extends Controller
             ProductList::create([
                 'client_id' => $item['id'],
                 'name' => $item['name'],
+                'optimal_production_time' => $item['optimal_production_time'],
+                'box_kg' => $item['box_kg'],
             ]);
         }
 

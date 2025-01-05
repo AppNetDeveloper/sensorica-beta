@@ -1435,6 +1435,13 @@ paths:
                 name:
                   description: 'Product name'
                   type: string
+                optimal_production_time:
+                  description: 'Optimal production time'
+                  type: integer
+                box_kg:
+                  description: 'Box weight in kilograms'
+                  type: number
+                  format: float
               type: object
       responses:
         '200':
@@ -1469,6 +1476,8 @@ paths:
                 properties:
                   id: { description: 'Client ID', type: integer }
                   name: { description: 'Product name', type: string }
+                  optimal_production_time: { description: 'Optimal production time', type: integer }
+                  box_kg: { description: 'Box weight in kilograms', type: number, format: float }
                 type: object
       responses:
         '200':

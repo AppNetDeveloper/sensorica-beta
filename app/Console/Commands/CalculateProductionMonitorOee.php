@@ -50,6 +50,14 @@ class CalculateProductionMonitorOee extends Command
                 if ($monitor->sensor_active == 1) {
                     $this->info("Obteniendo sensores con sensor_type = 0 para la línea de producción ID {$monitor->production_line_id}");
 
+                    $result = Sensor::where('production_line_id', $monitor->production_line_id)
+                    ->where('sensor_type', '!=', 0)
+                    ->selectRaw('SUM(downtime_count) as total_downtime, SUM(count_order_0) as total_count_order')
+                    ->first();
+                   
+                    $downTimeSensorStop = $result->total_downtime;
+                    $numberSensorStop = $result->total_count_order;
+
                     // Filtrar los sensores por production_line_id y sensor_type = 0
                     $sensors = Sensor::where('production_line_id', $monitor->production_line_id)
                         ->where('sensor_type', 0)
@@ -79,9 +87,9 @@ class CalculateProductionMonitorOee extends Command
                 }
 
                 //calcular inactividad por turno total
-                $this->calcInactiveTimeShift($monitor);
+                $this->calcInactiveTimeShift($monitor, $downTimeSensorStop);
                 //calcular inactividad por otder total
-                $this->calcInactiveTimeOrder($monitor);
+                $this->calcInactiveTimeOrder($monitor, $downTimeSensorStop, $numberSensorStop);
                 //calcula UDS semana y turno
                 $this->calcUdsShiftAndWeek($monitor);
             }
@@ -463,11 +471,9 @@ class CalculateProductionMonitorOee extends Command
         $this->info("Teorica (cajas/minuto): {$theoreticalMessage} en {$mqttTopicTeorica}");
     }
 
-    public function calcInactiveTimeShift($monitor) {
+    public function calcInactiveTimeShift($monitor, $downTime) {
         //sacar todo el tiempo de inactividad de la linea de produccion si no es null
         if ($monitor->production_line_id != null) {
-            // Obtenemos el downtime de la línea de producción por production_line_id y sumamos los valores
-             $downTime = Sensor::where('production_line_id', $monitor->production_line_id)->sum('downtime_count');
 
              // Convertimos el tiempo de inactividad en formato de horas, minutos y segundos (H:i:s)
              $formattedDownTime = gmdate("H:i:s", $downTime);
@@ -516,19 +522,10 @@ class CalculateProductionMonitorOee extends Command
              }
          }
     }
-    public function calcInactiveTimeOrder($monitor) {
+    public function calcInactiveTimeOrder($monitor, $downTimeSensorStop, $numberSensorStop) {
         //sacar todo el tiempo de inactividad de la linea de produccion si no es null
         if ($monitor->production_line_id != null) {
 
-            $result = Sensor::where('production_line_id', $monitor->production_line_id)
-                ->where('sensor_type', '!=', 0)
-                ->selectRaw('SUM(downtime_count) as total_downtime, SUM(count_order_0) as total_count_order')
-                ->first();
-               
-                $downTimeSensorStop = $result->total_downtime;
-                $numberSensorStop = $result->total_count_order;
-                
-            
              // Convertimos el tiempo de inactividad en formato de horas, minutos y segundos (H:i:s)
              $formattedDownTimeSensorStop = gmdate("H:i:s", $downTimeSensorStop);
              $this->info("Tiempo de inactividad: " . $formattedDownTimeSensorStop);

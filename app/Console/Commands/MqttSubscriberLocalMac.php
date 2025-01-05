@@ -46,7 +46,7 @@ class MqttSubscriberLocalMac extends Command
 
                 $mqtt->disconnect();
                 $this->logInfo("MQTT Subscriber stopped gracefully.");
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 $this->logError("Error connecting or processing MQTT client: " . $e->getMessage());
                 sleep(5);
                 $this->logInfo("Reconnecting to MQTT...");
@@ -269,6 +269,11 @@ class MqttSubscriberLocalMac extends Command
             ? (int) $jsonNew['refer']['groupLevel'][0]['uds'] 
             : null;
 
+        // Extraer y validar `total` de `groupLevel`
+        $boxKg = isset($jsonNew['refer']['groupLevel'][0]['total']) && is_numeric($jsonNew['refer']['groupLevel'][0]['total'])
+                ? round((float)$jsonNew['refer']['groupLevel'][0]['total'], 2)
+                : null;
+
         // Extraer y normalizar `envase`
         $envase = isset($jsonNew['refer']['descrip']) && $jsonNew['refer']['descrip'] !== '' 
             ? trim(Normalizer::normalize($jsonNew['refer']['descrip'], Normalizer::FORM_C)) 
@@ -288,7 +293,7 @@ class MqttSubscriberLocalMac extends Command
             $this->logInfo("Envase actualizado en ope_id para barcode ID: {$barcode->id}");
     
             // Procesar product_lists y obtener optimal_production_time
-            $optimalProductionTime = $this->processProductList($referId, $envase);
+            $optimalProductionTime = $this->processProductList($referId, $envase, $boxKg);
 
             if ($optimalProductionTime === null) {
                 $this->logError("optimalProductionTime es null después de llamar a processProductList");
@@ -303,7 +308,7 @@ class MqttSubscriberLocalMac extends Command
             $this->logError("Faltan campos en el JSON recibido para procesar sensores y modbuses. Valores recibidos: orderId={$orderId}, quantity={$quantity}, uds={$uds}, envase={$envase}");
         }
     }
-    private function processProductList($referId, $envase)
+    private function processProductList($referId, $envase, $boxKg)
     {
         if (!$referId || !$envase) {
             $this->logError("Faltan datos para procesar product_lists: referId={$referId}, envase={$envase}");
@@ -320,6 +325,7 @@ class MqttSubscriberLocalMac extends Command
                     'client_id' => $referId,
                     'name' => $envase,
                     'optimal_production_time' => 2, // Valor predeterminado
+                    'box_kg' => $boxKg,
                 ]);
 
                 $this->logInfo("Nuevo registro creado en product_lists: client_id={$referId}, name={$envase}");
