@@ -1417,6 +1417,61 @@ paths:
                 type: object
         '404':
           description: 'Worker not found'
+  /api/product-lists:
+    get:
+      tags:
+        - 'Product Lists'
+      summary: 'Get all product list items'
+      operationId: 97793f6354c780d20363e9e013dc997f
+      responses:
+        '200':
+          description: 'Returns all product list items'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  properties: { id: { description: 'Client ID', type: integer }, name: { description: 'Product name', type: string }, optimal_production_time: { description: 'Optimal production time', type: integer }, box_kg: { description: 'Box weight in kilograms', type: number, format: float } }
+                  type: object
+        '500':
+          description: 'Internal server error'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { description: 'Error message', type: string }
+                type: object
+  '/api/product-lists/{id}':
+    delete:
+      tags:
+        - 'Product Lists'
+      summary: 'Delete a product list item'
+      operationId: f19e776913eed334e4c566296def5a4a
+      parameters:
+        -
+          name: id
+          in: path
+          description: 'ID of the product to delete'
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 'Product deleted successfully'
+          content:
+            application/json:
+              schema:
+                properties:
+                  message: { type: string }
+                type: object
+        '404':
+          description: 'Product not found'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string }
+                type: object
   /api/product-lists/update-or-insert:
     post:
       tags:
