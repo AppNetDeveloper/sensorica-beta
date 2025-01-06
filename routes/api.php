@@ -158,6 +158,11 @@ Route::delete('/workers/{id}', [OperatorController::class, 'destroy']);
 // Routes for Product Lists
 Route::post('/product-lists/update-or-insert', [ProductListController::class, 'updateOrInsertSingle']);
 Route::post('/product-lists/replace-all', [ProductListController::class, 'replaceAll']);
+Route::get('/product-lists/list-all', [ProductListController::class, 'listAll']);
+Route::delete('/product-lists/{id}', [ProductListController::class, 'destroy']);
+
+
+
 
 //ver el ultimo status de comunicacion
 
