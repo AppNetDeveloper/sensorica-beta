@@ -147,13 +147,14 @@ Route::get('/workers/{id}', [OperatorController::class, 'show']);
 Route::post('/workers/reset-password-email', [OperatorController::class, 'resetPasswordByEmail']);
 Route::post('/workers/reset-password-whatsapp', [OperatorController::class, 'resetPasswordByWhatsapp']);
 Route::post('/workers/verify-password', [OperatorController::class, 'verifyPassword']);
+// Ruta para eliminar un operador por ID
+Route::delete('/workers/{id}', [OperatorController::class, 'destroy']);
 Route::post('/scada/log-access', [OperatorController::class, 'logScadaAccess']);
 //mostrar los login de scada
 Route::post('/scada/get-logins', [OperatorController::class, 'getLoginsByScadaToken']);
 
 
-// Ruta para eliminar un operador por ID
-Route::delete('/workers/{id}', [OperatorController::class, 'destroy']);
+
 
 // Routes for Product Lists
 Route::post('/product-lists/update-or-insert', [ProductListController::class, 'updateOrInsertSingle']);

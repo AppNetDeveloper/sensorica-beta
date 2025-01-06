@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Producción - Tarjetas</title>
+    <!-- Hoja de estilos SweetAlert2 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <!-- Font Awesome para íconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Script SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Script SheetJS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        .header-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: #343a40;
+            color: white;
+            padding: 10px 20px;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .header-left img {
+            height: 50px;
+            width: auto;
+        }
+        .header-left .icon {
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #28a745;
+            transition: color 0.3s ease;
+        }
+        .header-left .icon:hover {
+            color: #218838;
+        }
+        .header-right {
+            font-size: 1.2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 5px;
+        }
+        .header-right small {
+            font-size: 0.9rem;
+            color: #ffc107;
+        }
+        .content {
+            padding: 20px;
+        }
+        .card-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
+        .card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            width: calc(100% / 5 - 20px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            transition: transform 0.3s;
+        }
+        .card:hover {
+            transform: scale(1.05);
+        }
+        .card h3 {
+            margin: 0;
+            font-size: var(--nameSize, 1rem);
+            color: #343a40;
+        }
+        .card .stats-container {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+        .card .stat {
+            text-align: center;
+            flex: 1;
+        }
+        .card .stat span {
+            display: block;
+            font-size: var(--labelSize, 0.9rem);
+            color: #555;
+        }
+        .card .stat .value {
+            font-size: var(--numberSize, 1.8rem);
+            font-weight: bold;
+        }
+        .red {
+            color: red;
+        }
+        .yellow {
+            color: orange;
+        }
+        .green {
+            color: green;
+        }
+        @media (max-width: 1200px) {
+            .card {
+                width: calc(100% / 4 - 20px);
+            }
+        }
+        @media (max-width: 768px) {
+            .card {
+                width: calc(100% / 3 - 20px);
+            }
+        }
+        @media (max-width: 480px) {
+            .card {
+                width: calc(100% / 2 - 20px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header-container">
+        <div class="header-left">
+            <img src="logo.png" alt="Logo">
+            <!-- Ícono de exportar a Excel -->
+            <i class="fa fa-file-excel icon" id="exportExcel" title="Exportar a Excel"></i>
+        </div>
+        <div class="header-right">
+            <div id="clock">--:--:--</div>
+            <small id="scada-name">Gestión de Producción</small>
+        </div>
+    </header>
+
+    <!-- Content -->
+    <div class="content">
+        <div class="card-container" id="cardContainer">
+            <!-- Las tarjetas se llenarán dinámicamente aquí -->
+        </div>
+    </div>
+
+    <script>
+        const workersApiUrl = '/api/workers';
+
+        // Obtener parámetros de la URL con valores predeterminados
+        function getUrlParams() {
+            const params = new URLSearchParams(window.location.search);
+            return {
+                shift: params.get('shift') === 'true',
+                order: params.get('order') === 'true',
+                name: params.get('name') === 'true',
+                id: params.get('id') === 'true',
+                nameSize: params.get('nameSize') || '1rem',
+                numberSize: params.get('numberSize') || '1.8rem',
+                idSize: params.get('idSize') || '1rem',
+                labelSize: params.get('labelSize') || '0.9rem',
+            };
+        }
+
+        const config = getUrlParams();
+
+        document.documentElement.style.setProperty('--nameSize', config.nameSize);
+        document.documentElement.style.setProperty('--numberSize', config.numberSize);
+        document.documentElement.style.setProperty('--labelSize', config.labelSize);
+
+        function updateClock() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            document.getElementById('clock').textContent = `${hours}:${minutes}:${seconds}`;
+        }
+
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        let operatorsData = [];
+
+        function loadOperators() {
+            $.ajax({
+                url: `${workersApiUrl}/list-all`,
+                method: 'GET',
+                success: function (operators) {
+                    operatorsData = operators; // Guardar los datos para exportar
+                    const container = $('#cardContainer');
+                    container.empty();
+
+                    if (operators.length === 0) {
+                        container.append('<p>No hay operadores disponibles.</p>');
+                        return;
+                    }
+
+                    const maxTurn = Math.max(...operators.map(o => o.produced_units_turn || 0));
+                    const maxOrder = Math.max(...operators.map(o => o.produced_units_order || 0));
+
+                    operators.forEach(operator => {
+                        const turnValue = operator.produced_units_turn || 0;
+                        const orderValue = operator.produced_units_order || 0;
+
+                        const turnClass = turnValue === 0
+                            ? 'red'
+                            : turnValue === maxTurn
+                                ? 'green'
+                                : 'yellow';
+
+                        const orderClass = orderValue === 0
+                            ? 'red'
+                            : orderValue === maxOrder
+                                ? 'green'
+                                : 'yellow';
+
+                        const card = `
+                            <div class="card">
+                                ${config.name ? `<h3>${operator.name}</h3>` : ''}
+                                ${config.id ? `<p style="font-size: ${config.idSize};"><span>ID:</span> ${operator.id}</p>` : ''}
+                                <div class="stats-container">
+                                    ${config.shift ? `
+                                        <div class="stat">
+                                            <span>Turno</span>
+                                            <div class="value ${turnClass}">${turnValue}</div>
+                                        </div>` : ''}
+                                    ${config.order ? `
+                                        <div class="stat">
+                                            <span>Orden</span>
+                                            <div class="value ${orderClass}">${orderValue}</div>
+                                        </div>` : ''}
+                                </div>
+                            </div>
+                        `;
+                        container.append(card);
+                    });
+                },
+                error: function (xhr) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error al cargar operadores',
+                        text: `Status: ${xhr.status}. Mensaje: ${xhr.responseJSON?.error || 'Error desconocido'}`,
+                    });
+                },
+            });
+        }
+
+        function exportToExcel() {
+            if (operatorsData.length === 0) {
+                Swal.fire('Error', 'No hay datos para exportar.', 'error');
+                return;
+            }
+
+            const rows = operatorsData.map(operator => ({
+                ...(config.name && { Nombre: operator.name }),
+                ...(config.id && { ID: operator.id }),
+                ...(config.shift && { Turno: operator.produced_units_turn || 0 }),
+                ...(config.order && { Orden: operator.produced_units_order || 0 }),
+            }));
+
+            const worksheet = XLSX.utils.json_to_sheet(rows);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Operadores');
+
+            XLSX.writeFile(workbook, 'operadores.xlsx');
+        }
+
+        $(document).ready(function () {
+            loadOperators();
+            setInterval(loadOperators, 5000);
+            $('#exportExcel').click(exportToExcel);
+        });
+    </script>
+</body>
+</html>

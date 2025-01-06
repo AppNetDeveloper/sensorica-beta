@@ -15,7 +15,9 @@ class Operator extends Model
         'name',
         'password',
         'email',
-        'phone'
+        'phone',
+        'produced_units_turn',
+        'produced_units_order',
     ];
 
     // Relationship with Client
