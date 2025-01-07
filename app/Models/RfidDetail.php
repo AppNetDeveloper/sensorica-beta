@@ -16,7 +16,6 @@ class RfidDetail extends Model
         'token',               // Token único para cada entrada
         'production_line_id',  // ID de la línea de producción
         'rfid_reading_id',     // Relación con el modelo RfidReading
-        'rfid_ant_id', // Este debe estar incluido si es una clave foránea
         'rfid_type',           // Tipo de RFID
         'count_total',         // Contador total de lecturas
         'count_total_0',       // Contador total de lecturas inactivas
