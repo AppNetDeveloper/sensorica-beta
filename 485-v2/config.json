@@ -1,0 +1,20 @@
+{
+    "mqtt_broker": "localhost",
+    "mqtt_base_topic": "sensorica/bascula/peso",
+    "mqtt_status_topic": "sensorica/bascula/status",
+    "mqtt_dosificador_topic": "sensorica/bascula/dosifica",
+    "mqtt_zero_topic": "sensorica/bascula/zero",
+    "mqtt_tara_topic": "sensorica/bascula/tara",
+    "modbus": {
+        "port": "/dev/ttyUSB0",
+        "baudrate": 9600,
+        "timeout": 0.5,
+        "stopbits": 1,
+        "bytesize": 8,
+        "parity": "N"
+    },
+    "modbus_address_range": {"start": 2, "end": 7},
+    "batch_size": 10,
+    "scan_interval": 60,
+    "reconnect_interval": 5
+}

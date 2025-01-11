@@ -2717,7 +2717,7 @@ function mostrarKeypad(targetInput) {
           if (result.dismiss === Swal.DismissReason.cancel) {
               (async () => {
                   let pesoActual2 = await obtenerTolvaLastValue(tolvaToken); // Peso actual inicial
-                  const nuevoInputValue = parseFloat(pesoActual - pesoActual2).toFixed(1); // Diferencia entre el peso actual y el objetivo
+                  const nuevoInputValue = parseFloat(pesoActual2 - objetivo).toFixed(1); // Diferencia entre el peso actual y el objetivo
                   mostrarSwalConValor(tolvaId, tolvaToken, tolvaName, tolvaLastValue, nuevoInputValue); // Llamar de nuevo con el nuevo inputValue
               })();
           }

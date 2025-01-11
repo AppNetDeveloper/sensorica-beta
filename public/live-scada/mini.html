@@ -360,8 +360,8 @@
     }
 
     function actualizarValoresTolva(tolva) {
-      $('#liveWeightValue').text(tolva.last_value - tolva.tara);
-      $('#taraValue').text(tolva.tara);
+        $('#liveWeightValue').text((tolva.last_value - tolva.tara).toFixed(2));
+        $('#taraValue').text(tolva.tara);
     }
 
     async function actualizarTablaMateriales() {

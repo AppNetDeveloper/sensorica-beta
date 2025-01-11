@@ -15,7 +15,7 @@ echo "Guardando cambios locales en Git..."
 
 # Hacer pull con rebase
 echo "Actualizando el repositorio con rebase..."
-git pull --rebase origin main || { echo "Error: Falló el pull con rebase."; exit 1; }
+#git pull --rebase origin main || { echo "Error: Falló el pull con rebase."; exit 1; }
 
 # Resolver conflictos si los hay
 #git rebase --continue || echo "No hay conflictos de rebase o ya fueron resueltos."
