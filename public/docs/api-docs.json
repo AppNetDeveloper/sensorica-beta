@@ -1417,6 +1417,125 @@ paths:
                 type: object
         '404':
           description: 'Worker not found'
+  /api/operator-rfid:
+    get:
+      tags:
+        - OperatorRfid
+      summary: 'List all operator-rfid relations'
+      operationId: 054b1679dc356b9d0befba3a0b4536f5
+      responses:
+        '200':
+          description: 'List of relations'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OperatorRfid'
+    post:
+      tags:
+        - OperatorRfid
+      summary: 'Create a new operator-rfid relation'
+      operationId: 5e2bd7da0d330745550717c816639e41
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - client_id
+                - rfid_reading_id
+              properties:
+                client_id:
+                  type: integer
+                  example: 1
+                rfid_reading_id:
+                  type: integer
+                  example: 2
+              type: object
+      responses:
+        '201':
+          description: 'Relation created successfully'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperatorRfid'
+  '/api/operator-rfid/{id}':
+    get:
+      tags:
+        - OperatorRfid
+      summary: 'Get a specific operator-rfid relation'
+      operationId: 66b70bae333705ed0bb4975bd1cb93da
+      parameters:
+        -
+          name: id
+          in: path
+          description: 'Relation ID'
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 'Relation details'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperatorRfid'
+    put:
+      tags:
+        - OperatorRfid
+      summary: 'Update an operator-rfid relation'
+      operationId: da742e1ea894e98ffbae6086ef5fdf17
+      parameters:
+        -
+          name: id
+          in: path
+          description: 'Relation ID'
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                operator_id:
+                  type: integer
+                  example: 1
+                rfid_reading_id:
+                  type: integer
+                  example: 2
+              type: object
+      responses:
+        '200':
+          description: 'Relation updated successfully'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperatorRfid'
+    delete:
+      tags:
+        - OperatorRfid
+      summary: 'Delete an operator-rfid relation'
+      operationId: cfbb3041c3f628ddf644e9a9ceb77a74
+      parameters:
+        -
+          name: id
+          in: path
+          description: 'Relation ID'
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 'Relation deleted successfully'
+          content:
+            application/json:
+              schema:
+                properties:
+                  message: { type: string }
+                type: object
   /api/product-lists:
     get:
       tags:
@@ -1551,6 +1670,113 @@ paths:
                 properties:
                   error: { type: string }
                 type: object
+  /api/product-list-rfids:
+    get:
+      tags:
+        - ProductListRfid
+      summary: 'Listar todas las relaciones'
+      operationId: 07b8966df6d91bc9d8a6c28437fe7a4a
+      responses:
+        '200':
+          description: 'Lista de relaciones'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProductListRfid'
+    post:
+      tags:
+        - ProductListRfid
+      summary: 'Crear una nueva relación'
+      operationId: 8c84b04cd88aa97b0da76c49229a209a
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - client_id
+                - rfid_reading_id
+              properties:
+                client_id:
+                  type: integer
+                  example: 23613092
+                rfid_reading_id:
+                  type: integer
+                  example: 2
+              type: object
+      responses:
+        '201':
+          description: 'Relación creada correctamente'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductListRfid'
+  '/api/product-list-rfids/{id}':
+    get:
+      tags:
+        - ProductListRfid
+      summary: 'Obtener una relación específica'
+      operationId: 2ea5d5ec4a91f0c789e2babae4cc0355
+      parameters:
+        -
+          name: id
+          in: path
+          description: 'ID de la relación'
+          required: true
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: 'Detalles de la relación'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductListRfid'
+    put:
+      tags:
+        - ProductListRfid
+      summary: 'Actualizar una relación existente'
+      operationId: 69acc08b94b09aab0ff210744e2f6aaa
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                product_list_id:
+                  type: integer
+                  example: 1
+                rfid_reading_id:
+                  type: integer
+                  example: 2
+              type: object
+      responses:
+        '200':
+          description: 'Relación actualizada correctamente'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductListRfid'
+    delete:
+      tags:
+        - ProductListRfid
+      summary: 'Eliminar una relación'
+      operationId: a186e2dd6c3d8a3f8e019705d44183ce
+      parameters:
+        -
+          name: id
+          in: path
+          description: 'ID de la relación'
+          required: true
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: 'Relación eliminada correctamente'
   '/api/production-line/status/{token}':
     get:
       tags:
@@ -1793,6 +2019,167 @@ paths:
                 properties:
                   success: { type: boolean, example: false }
                   message: { type: string, example: 'Orden no encontrada.' }
+                type: object
+  /api/rfid-readings:
+    get:
+      tags:
+        - 'RFID Readings'
+      summary: 'Listar todas las lecturas RFID'
+      operationId: e6820e609f71245cbe9c6abde6b77c07
+      responses:
+        '200':
+          description: 'Lista de lecturas RFID'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  properties: { id: { description: 'ID de la lectura RFID', type: integer }, epc: { description: 'Código EPC único', type: string }, name: { description: 'Nombre del RFID', type: string }, production_line_id: { description: 'ID de la línea de producción', type: integer, nullable: true } }
+                  type: object
+    post:
+      tags:
+        - 'RFID Readings'
+      summary: 'Crear una nueva lectura RFID'
+      operationId: 58146e1cd3090e0635db32c8ff1cb5d1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - epc
+              properties:
+                epc:
+                  description: 'Código EPC único'
+                  type: string
+                name:
+                  description: 'Nombre del RFID'
+                  type: string
+                  nullable: true
+                production_line_id:
+                  description: 'ID de la línea de producción'
+                  type: integer
+                  nullable: true
+              type: object
+      responses:
+        '201':
+          description: 'RFID creado correctamente'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RfidReading'
+        '422':
+          description: 'Error de validación'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { description: 'Mensaje de error', type: string }
+                type: object
+  '/api/rfid-readings/{id}':
+    get:
+      tags:
+        - 'RFID Readings'
+      summary: 'Obtener una lectura RFID específica'
+      operationId: 0d466732954c28816144d7e2721e7537
+      parameters:
+        -
+          name: id
+          in: path
+          description: 'ID de la lectura RFID'
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 'Detalles de la lectura RFID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RfidReading'
+        '404':
+          description: 'RFID no encontrado'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { description: 'Mensaje de error', type: string }
+                type: object
+    put:
+      tags:
+        - 'RFID Readings'
+      summary: 'Actualizar una lectura RFID existente'
+      operationId: bf97cb124e128dd1edba470c85d242f2
+      parameters:
+        -
+          name: id
+          in: path
+          description: 'ID de la lectura RFID'
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                epc:
+                  description: 'Código EPC único'
+                  type: string
+                name:
+                  description: 'Nombre del RFID'
+                  type: string
+                  nullable: true
+                production_line_id:
+                  description: 'ID de la línea de producción'
+                  type: integer
+                  nullable: true
+              type: object
+      responses:
+        '200':
+          description: 'RFID actualizado correctamente'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RfidReading'
+        '404':
+          description: 'RFID no encontrado'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { description: 'Mensaje de error', type: string }
+                type: object
+    delete:
+      tags:
+        - 'RFID Readings'
+      summary: 'Eliminar una lectura RFID'
+      operationId: a9b280440c9439aa2f4f356ef5f4a924
+      parameters:
+        -
+          name: id
+          in: path
+          description: 'ID de la lectura RFID'
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 'RFID eliminado correctamente'
+          content:
+            application/json:
+              schema:
+                properties:
+                  message: { description: 'Mensaje de éxito', type: string }
+                type: object
+        '404':
+          description: 'RFID no encontrado'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { description: 'Mensaje de error', type: string }
                 type: object
   '/api/scada/{token}/material-types':
     get:
@@ -2450,11 +2837,20 @@ tags:
     name: Workers
     description: Workers
   -
+    name: OperatorRfid
+    description: OperatorRfid
+  -
     name: 'Product Lists'
     description: 'Product Lists'
   -
+    name: ProductListRfid
+    description: ProductListRfid
+  -
     name: Dispositivos
     description: Dispositivos
+  -
+    name: 'RFID Readings'
+    description: 'RFID Readings'
   -
     name: 'Scada Material Types'
     description: 'Scada Material Types'

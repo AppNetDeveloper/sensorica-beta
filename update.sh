@@ -10,19 +10,19 @@ sudo supervisorctl stop all
 
 # Guardar cambios locales en Git antes de hacer un rebase
 echo "Guardando cambios locales en Git..."
-git add .
-git commit -m "Guardando cambios locales antes de rebase"
+#git add .
+#git commit -m "Guardando cambios locales antes de rebase"
 
 # Hacer pull con rebase
 echo "Actualizando el repositorio con rebase..."
 git pull --rebase origin main || { echo "Error: Falló el pull con rebase."; exit 1; }
 
 # Resolver conflictos si los hay
-git rebase --continue || echo "No hay conflictos de rebase o ya fueron resueltos."
+#git rebase --continue || echo "No hay conflictos de rebase o ya fueron resueltos."
 
 # Empujar los cambios al repositorio
 echo "Empujando los cambios al repositorio remoto..."
-git push origin main || { echo "Error: Falló el push al repositorio remoto."; exit 1; }
+#git push origin main || { echo "Error: Falló el push al repositorio remoto."; exit 1; }
 
 # Ejecutar migraciones de Laravel
 echo "Ejecutando migraciones..."

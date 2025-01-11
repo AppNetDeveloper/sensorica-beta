@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Relaciones Operadores y RFID</title>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        .header-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: #343a40;
+            color: white;
+            padding: 10px 20px;
+        }
+        .header-left img {
+            height: 50px;
+            width: auto;
+        }
+        .header-right {
+            font-size: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 5px;
+        }
+        .header-right small {
+            font-size: 1.1rem;
+            color: #ffc107;
+        }
+        .content {
+            padding: 20px;
+        }
+        table {
+            width: 100%;
+            margin-top: 20px;
+        }
+        button {
+            margin-bottom: 15px;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header-container">
+        <div class="header-left">
+            <img src="logo.png" alt="Logo">
+        </div>
+        <div class="header-right">
+            <div id="clock">--:--:--</div>
+            <small id="scada-name">Gestión de Relaciones Operadores y RFID</small>
+        </div>
+    </header>
+
+    <!-- Content -->
+    <div class="content">
+        <button id="addRelation">Añadir Relación</button>
+        <table id="relationsTable" class="display">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Operador</th>
+                    <th>RFID</th>
+                    <th>Fecha Inicio</th>
+                    <th>Fecha Fin</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script>
+        const relationsApiUrl = '/api/operator-rfid';
+        const operatorsApiUrl = '/api/workers/list-all';
+        const rfidsApiUrl = '/api/rfid-readings';
+    
+        $(document).ready(function () {
+            const table = $('#relationsTable').DataTable({
+                ajax: {
+                    url: relationsApiUrl,
+                    dataSrc: '',
+                    error: function (xhr) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error al cargar datos',
+                            text: `Status: ${xhr.status}. Mensaje: ${xhr.responseJSON?.error || 'Error desconocido'}`,
+                        });
+                    },
+                },
+                columns: [
+                    { data: 'id' },
+                    { data: 'operator.name', defaultContent: 'Sin asignar' },
+                    { data: 'rfid_reading.epc', defaultContent: 'Sin asignar' },
+                    {
+                        data: 'created_at',
+                        render: function (data) {
+                            const date = new Date(data);
+                            return date.toLocaleString('es-ES');
+                        },
+                    },
+                    {
+                        data: 'updated_at',
+                        render: function (data) {
+                            return data === null ? 'En curso' : new Date(data).toLocaleString('es-ES');
+                        },
+                    },
+                    {
+                        data: null,
+                        render: function (data) {
+                            return `
+                                <button class="edit-btn btn-secondary" data-id="${data.id}" data-operator_id="${data.operator_id}" data-rfid_reading_id="${data.rfid_reading_id}">Editar</button>
+                                <button class="delete-btn btn-danger" data-id="${data.id}">Eliminar</button>
+                            `;
+                        },
+                    },
+                ],
+                dom: 'Bfrtip',
+                buttons: [
+                    {
+                        extend: 'excelHtml5',
+                        text: 'Exportar a Excel',
+                        className: 'btn btn-success',
+                        exportOptions: {
+                            columns: [0, 1, 2, 3, 4],
+                        },
+                    },
+                ],
+                order: [[0, 'desc']], // Ordenar por la primera columna en orden descendente
+            });
+    
+            // Evento para editar una relación
+            $('#relationsTable tbody').on('click', '.edit-btn', function () {
+                const currentId = $(this).data('id');
+                const currentOperatorId = $(this).data('operator_id');
+                const currentRfidReadingId = $(this).data('rfid_reading_id');
+    
+                Promise.all([
+                    $.get(operatorsApiUrl),
+                    $.get(rfidsApiUrl)
+                ]).then(([operatorsData, rfidsData]) => {
+                    const operatorOptions = operatorsData.map(operator =>
+                        `<option value="${operator.id}" ${operator.id == currentOperatorId ? 'selected' : ''}>${operator.name}</option>`
+                    ).join('');
+                    const rfidOptions = rfidsData.map(rfid =>
+                        `<option value="${rfid.id}" ${rfid.id == currentRfidReadingId ? 'selected' : ''}>${rfid.epc}</option>`
+                    ).join('');
+    
+                    Swal.fire({
+                        title: 'Editar Relación',
+                        html: `
+                            <input id="relationId" class="swal2-input" value="${currentId}" readonly>
+                            <label for="operatorId">Operador:</label>
+                            <select id="operatorId" class="swal2-input">${operatorOptions}</select>
+                            <label for="rfidReadingId">RFID:</label>
+                            <select id="rfidReadingId" class="swal2-input">${rfidOptions}</select>
+                        `,
+                        confirmButtonText: 'Actualizar',
+                        showCancelButton: true,
+                        preConfirm: () => {
+                            const id = $('#relationId').val();
+                            const operator_id = $('#operatorId').val();
+                            const rfid_reading_id = $('#rfidReadingId').val();
+                            if (!id || !operator_id || !rfid_reading_id) {
+                                Swal.showValidationMessage('Todos los campos son obligatorios.');
+                                return false;
+                            }
+                            return {
+                                id: parseInt(id),
+                                operator_id: parseInt(operator_id),
+                                rfid_reading_id: parseInt(rfid_reading_id),
+                            };
+                        },
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            $.ajax({
+                                url: `${relationsApiUrl}/${result.value.id}`,
+                                method: 'PUT',
+                                contentType: 'application/json',
+                                data: JSON.stringify(result.value),
+                                success: function () {
+                                    Swal.fire('Éxito', 'Relación actualizada correctamente.', 'success');
+                                    table.ajax.reload();
+                                },
+                                error: function (xhr) {
+                                    Swal.fire('Error', `No se pudo actualizar. ${xhr.responseJSON?.error || 'Error desconocido'}`, 'error');
+                                },
+                            });
+                        }
+                    });
+                }).catch(error => {
+                    Swal.fire('Error', 'No se pudieron cargar las opciones.', 'error');
+                });
+            });
+    
+            // Añadir Relación
+            $('#addRelation').click(function () {
+                Promise.all([
+                    $.get(operatorsApiUrl),
+                    $.get(rfidsApiUrl)
+                ]).then(([operatorsData, rfidsData]) => {
+                    const operatorOptions = operatorsData.map(operator => `<option value="${operator.id}">${operator.name}</option>`).join('');
+                    const rfidOptions = rfidsData.map(rfid => `<option value="${rfid.id}">${rfid.epc}</option>`).join('');
+    
+                    Swal.fire({
+                        title: 'Añadir Relación',
+                        html: `
+                            <label for="operatorId">Operador:</label>
+                            <select id="operatorId" class="swal2-input">${operatorOptions}</select>
+                            <label for="rfidReadingId">RFID:</label>
+                            <select id="rfidReadingId" class="swal2-input">${rfidOptions}</select>
+                        `,
+                        confirmButtonText: 'Añadir',
+                        showCancelButton: true,
+                        preConfirm: () => {
+                            const client_id = $('#operatorId').val();
+                            const rfid_reading_id = $('#rfidReadingId').val();
+                            if (!client_id || !rfid_reading_id) {
+                                Swal.showValidationMessage('Operador y RFID son obligatorios.');
+                                return false;
+                            }
+                            return {
+                                client_id: parseInt(client_id),
+                                rfid_reading_id: parseInt(rfid_reading_id),
+                            };
+                        },
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            $.ajax({
+                                url: relationsApiUrl,
+                                method: 'POST',
+                                contentType: 'application/json',
+                                data: JSON.stringify(result.value),
+                                success: function () {
+                                    Swal.fire('Éxito', 'Relación añadida.', 'success');
+                                    table.ajax.reload();
+                                },
+                                error: function (xhr) {
+                                    Swal.fire('Error', `No se pudo añadir. ${xhr.responseJSON?.error || ''}`, 'error');
+                                },
+                            });
+                        }
+                    });
+                }).catch(error => {
+                    Swal.fire('Error', 'No se pudieron cargar las opciones.', 'error');
+                });
+            });
+    
+            // Eliminar Relación
+            $('#relationsTable tbody').on('click', '.delete-btn', function () {
+                const id = $(this).data('id');
+    
+                Swal.fire({
+                    title: '¿Estás seguro?',
+                    text: 'Esta acción no se puede deshacer.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sí, eliminar',
+                    cancelButtonText: 'Cancelar',
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: `${relationsApiUrl}/${id}`,
+                            method: 'DELETE',
+                            success: function () {
+                                Swal.fire('Éxito', 'Relación eliminada correctamente.', 'success');
+                                table.ajax.reload();
+                            },
+                            error: function (xhr) {
+                                Swal.fire('Error', `No se pudo eliminar. ${xhr.responseJSON?.error || 'Error desconocido'}`, 'error');
+                            },
+                        });
+                    }
+                });
+            });
+    
+            // Actualizar la tabla cada 10 segundos
+            setInterval(() => {
+                table.ajax.reload(null, false);
+            }, 10000);
+    
+            // Reloj en tiempo real
+            function updateClock() {
+                const now = new Date();
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                const seconds = String(now.getSeconds()).padStart(2, '0');
+                document.getElementById('clock').textContent = `${hours}:${minutes}:${seconds}`;
+            }
+    
+            updateClock();
+            setInterval(updateClock, 1000);
+        });
+    </script>
+    
+</body>
+</html>

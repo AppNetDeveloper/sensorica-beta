@@ -24,7 +24,9 @@ use App\Http\Controllers\Api\ProductListController;
 use App\Http\Controllers\Api\ProductionLineStatusController;
 use App\Http\Controllers\Api\ScadaOrderController;
 use App\Http\Controllers\Api\ProductionOrderController;
-
+use App\Http\Controllers\Api\ProductListRfidController;
+use App\Http\Controllers\Api\RfidReadingController;
+use App\Http\Controllers\Api\OperatorRfidController;
 
 /*
 |--------------------------------------------------------------------------
@@ -204,6 +206,53 @@ Route::prefix('production-orders')->group(function () {
     Route::delete('/{id}', [ProductionOrderController::class, 'destroy']); // Eliminar una orden
 });
 
+
+// ProductListRfid API
+
+// Obtener todas las relaciones entre ProductList y RFID
+Route::get('product-list-rfids', [ProductListRfidController::class, 'index']);
+
+// Crear una nueva relación entre ProductList y RFID
+Route::post('product-list-rfids', [ProductListRfidController::class, 'store']);
+
+// Obtener una relación específica entre ProductList y RFID
+Route::get('product-list-rfids/{id}', [ProductListRfidController::class, 'show']);
+
+// Actualizar una relación específica entre ProductList y RFID
+Route::put('product-list-rfids/{id}', [ProductListRfidController::class, 'update']);
+
+// Eliminar una relación específica entre ProductList y RFID
+Route::delete('product-list-rfids/{id}', [ProductListRfidController::class, 'destroy']);
+
+
+
+
+
+// Listar todos los RFID Readings
+Route::get('rfid-readings', [RfidReadingController::class, 'index']);
+
+// Crear un nuevo RFID Reading
+Route::post('rfid-readings', [RfidReadingController::class, 'store']);
+
+// Obtener un RFID Reading específico
+Route::get('rfid-readings/{id}', [RfidReadingController::class, 'show']);
+
+// Actualizar un RFID Reading existente
+Route::put('rfid-readings/{id}', [RfidReadingController::class, 'update']);
+
+// Eliminar un RFID Reading
+Route::delete('rfid-readings/{id}', [RfidReadingController::class, 'destroy']);
+
+
+
+
+
+// Rutas para las relaciones entre operadores y RFID readings
+Route::get('operator-rfid', [OperatorRfidController::class, 'index']);
+Route::post('operator-rfid', [OperatorRfidController::class, 'store']);
+Route::get('operator-rfid/{id}', [OperatorRfidController::class, 'show']);
+Route::put('operator-rfid/{id}', [OperatorRfidController::class, 'update']);
+Route::delete('operator-rfid/{id}', [OperatorRfidController::class, 'destroy']);
 
 Route::middleware('auth:api')->get('/user', function (Request $request) {
     return $request->user();

@@ -21,4 +21,9 @@ class ProductList extends Model
     {
         return $this->belongsTo(Client::class);
     }
+    public function rfidReadings()
+    {
+        return $this->hasMany(ProductListRfid::class);
+    }
+
 }

@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Relaciones Productos y RFID</title>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        .header-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: #343a40;
+            color: white;
+            padding: 10px 20px;
+        }
+        .header-left img {
+            height: 50px;
+            width: auto;
+        }
+        .header-right {
+            font-size: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 5px;
+        }
+        .header-right small {
+            font-size: 1.1rem;
+            color: #ffc107;
+        }
+        .content {
+            padding: 20px;
+        }
+        table {
+            width: 100%;
+            margin-top: 20px;
+        }
+        button {
+            margin-bottom: 15px;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header-container">
+        <div class="header-left">
+            <img src="logo.png" alt="Logo">
+        </div>
+        <div class="header-right">
+            <div id="clock">--:--:--</div>
+            <small id="scada-name">Gestión de Relaciones Productos y RFID</small>
+        </div>
+    </header>
+
+    <!-- Content -->
+    <div class="content">
+        <button id="addRelation">Añadir Relación</button>
+        <table id="relationsTable" class="display">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Producto</th>
+                    <th>RFID</th>
+                    <th>Fecha Inicio</th>
+                    <th>Fecha Fin</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script>
+        const relationsApiUrl = '/api/product-list-rfids';
+        const productsApiUrl = '/api/product-lists/list-all';
+        const rfidsApiUrl = '/api/rfid-readings';
+    
+        let productListOptions = '';
+        let rfidOptions = '';
+    
+        // Declaramos la variable table en un ámbito superior para su acceso fuera de $(document).ready()
+        let table;
+    
+        // Cargar opciones para ProductList y RFID desde las APIs
+        function loadSelectOptions() {
+            // Obtener lista de productos
+            $.get(productsApiUrl)
+                .done((data) => {
+                    productListOptions = data.map(product => `<option value="${product.id}">${product.name}</option>`).join('');
+                    console.log('Opciones de productos cargadas:', productListOptions);
+                })
+                .fail((xhr) => {
+                    console.error('Error al cargar opciones de productos:', xhr.responseText);
+                    Swal.fire('Error', 'No se pudieron cargar las opciones de productos.', 'error');
+                });
+    
+            // Obtener lista de RFID readings
+            $.get(rfidsApiUrl)
+                .done((data) => {
+                    rfidOptions = data.map(rfid => `<option value="${rfid.id}">${rfid.epc}</option>`).join('');
+                    console.log('Opciones de RFID cargadas:', rfidOptions);
+                })
+                .fail((xhr) => {
+                    console.error('Error al cargar opciones de RFID:', xhr.responseText);
+                    Swal.fire('Error', 'No se pudieron cargar las opciones de RFID.', 'error');
+                });
+        }
+    
+        $(document).ready(function () {
+            loadSelectOptions();
+    
+            table = $('#relationsTable').DataTable({
+                ajax: {
+                    url: relationsApiUrl,
+                    dataSrc: '',
+                    error: function (xhr) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error al cargar datos',
+                            text: `Status: ${xhr.status}. Mensaje: ${xhr.responseJSON?.error || 'Error desconocido'}`,
+                        });
+                    },
+                },
+                columns: [
+                    { data: 'id' },
+                    { data: 'product_list.name', defaultContent: 'Sin asignar' },
+                    { data: 'rfid_reading.epc', defaultContent: 'Sin asignar' },
+                    { 
+                        data: 'created_at',
+                        render: function(data) {
+                            const date = new Date(data);
+                            return date.toLocaleString('es-ES');
+                        }
+                    },
+                    { 
+                        data: 'updated_at',
+                        render: function(data) {
+                            if (data === null) {
+                                return 'En curso'; // Mostrar "En curso" si es null
+                            }
+                            const date = new Date(data);
+                            return date.toLocaleString('es-ES');
+                        }
+                    },
+                    {
+                        data: null,
+                        render: function (data) {
+                            return `
+                                <button class="edit-btn btn-secondary" data-id="${data.id}" data-product_list_id="${data.product_list_id}" data-rfid_reading_id="${data.rfid_reading_id}">Editar</button>
+                                <button class="delete-btn btn-danger" data-id="${data.id}">Eliminar</button>
+                            `;
+                        },
+                    },
+                ],
+                dom: 'Bfrtip',
+                buttons: [
+                    {
+                        extend: 'excelHtml5',
+                        text: 'Exportar a Excel',
+                        className: 'btn btn-success',
+                        exportOptions: {
+                            columns: [0, 1, 2, 3, 4],
+                        },
+                    },
+                ],
+                order: [[0, 'desc']], // Ordenar por la primera columna en orden descendente
+            });
+    
+            // Añadir Relación
+            $('#addRelation').click(function () {
+                Swal.fire({
+                    title: 'Añadir Relación',
+                    html: `
+                        <label for="productListId">Producto:</label>
+                        <select id="productListId" class="swal2-input">${productListOptions}</select>
+                        <label for="rfidReadingId">RFID:</label>
+                        <select id="rfidReadingId" class="swal2-input">${rfidOptions}</select>
+                    `,
+                    confirmButtonText: 'Añadir',
+                    showCancelButton: true,
+                    preConfirm: () => {
+                        const client_id = $('#productListId').val();
+                        const rfid_reading_id = $('#rfidReadingId').val();
+                        if (!client_id || !rfid_reading_id) {
+                            Swal.showValidationMessage('Producto y RFID son obligatorios.');
+                            return false;
+                        }
+                        return {
+                            client_id: parseInt(client_id),
+                            rfid_reading_id: parseInt(rfid_reading_id),
+                        };
+                    },
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: relationsApiUrl,
+                            method: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify(result.value),
+                            success: function () {
+                                Swal.fire('Éxito', 'Relación añadida.', 'success');
+                                table.ajax.reload();
+                            },
+                            error: function (xhr) {
+                                Swal.fire('Error', `No se pudo añadir. ${xhr.responseJSON?.error || ''}`, 'error');
+                            },
+                        });
+                    }
+                });                
+            });
+    
+            // Eliminar Relación
+            $('#relationsTable tbody').on('click', '.delete-btn', function () {
+                const id = $(this).data('id');
+    
+                Swal.fire({
+                    title: '¿Estás seguro?',
+                    text: 'Esta acción no se puede deshacer.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sí, eliminar',
+                    cancelButtonText: 'Cancelar',
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: `${relationsApiUrl}/${id}`,
+                            method: 'DELETE',
+                            success: function () {
+                                Swal.fire('Éxito', 'Relación eliminada correctamente.', 'success');
+                                table.ajax.reload();
+                            },
+                            error: function (xhr) {
+                                console.error('Error al eliminar relación:', xhr.responseText);
+                                Swal.fire('Error', `No se pudo eliminar. ${xhr.responseJSON?.error || 'Error desconocido'}`, 'error');
+                            },
+                        });
+                    }
+                });
+            });
+    
+            // Editar Relación
+            $('#relationsTable tbody').on('click', '.edit-btn', function () {
+                const currentId = $(this).data('id');
+                const currentProductListId = $(this).data('product_list_id');
+                const currentRfidReadingId = $(this).data('rfid_reading_id');
+    
+                Swal.fire({
+                    title: 'Editar Relación',
+                    html: `
+                        <input id="relationId" class="swal2-input" value="${currentId}" readonly>
+                        <label for="productListId">Producto:</label>
+                        <select id="productListId" class="swal2-input">${productListOptions}</select>
+                        <label for="rfidReadingId">RFID:</label>
+                        <select id="rfidReadingId" class="swal2-input">${rfidOptions}</select>
+                    `,
+                    confirmButtonText: 'Actualizar',
+                    showCancelButton: true,
+                    didOpen: () => {
+                        $('#productListId').val(currentProductListId);
+                        $('#rfidReadingId').val(currentRfidReadingId);
+                    },
+                    preConfirm: () => {
+                        const id = $('#relationId').val();
+                        const product_list_id = $('#productListId').val();
+                        const rfid_reading_id = $('#rfidReadingId').val();
+                        if (!id || !product_list_id || !rfid_reading_id) {
+                            Swal.showValidationMessage('Todos los campos son obligatorios.');
+                            return false;
+                        }
+                        return {
+                            id: parseInt(id),
+                            product_list_id: parseInt(product_list_id),
+                            rfid_reading_id: parseInt(rfid_reading_id),
+                        };
+                    },
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: `${relationsApiUrl}/${result.value.id}`,
+                            method: 'PUT',
+                            contentType: 'application/json',
+                            data: JSON.stringify(result.value),
+                            success: function () {
+                                Swal.fire('Éxito', 'Relación actualizada.', 'success');
+                                table.ajax.reload();
+                            },
+                            error: function (xhr) {
+                                console.error('Error al actualizar relación:', xhr.responseText);
+                                Swal.fire('Error', `No se pudo actualizar. ${xhr.responseJSON?.error || 'Error desconocido'}`, 'error');
+                            },
+                        });
+                    }
+                });
+            });
+    
+            // Configurar el intervalo para actualizar la tabla cada 10 segundos
+            setInterval(() => {
+                table.ajax.reload(null, false);
+            }, 10000);
+    
+            // Actualización y visualización del reloj
+            function updateClock() {
+                const now = new Date();
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                const seconds = String(now.getSeconds()).padStart(2, '0');
+                document.getElementById('clock').textContent = `${hours}:${minutes}:${seconds}`;
+            }
+    
+            updateClock();
+            setInterval(updateClock, 1000);
+        });
+    </script>    
+</body>
+</html>
