@@ -10,7 +10,8 @@ sudo supervisorctl stop all
 
 # Guardar cambios locales en Git antes de hacer un rebase
 echo "Guardando cambios locales en Git..."
-#git add .
+git add .
+git pull origin main
 #git commit -m "Guardando cambios locales antes de rebase"
 
 # Hacer pull con rebase
