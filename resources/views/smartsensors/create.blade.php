@@ -1,18 +1,18 @@
 @extends('layouts.admin')
-@section('title', 'Crear Sensor')
+@section('title', __('Create Sensor'))
 @section('content')
 <div class="container">
-    <h1>Crear Nuevo Sensor</h1>
+    <h1>{{ __('Create New Sensor') }}</h1>
     <form action="{{ route('smartsensors.store', ['production_line_id' => $production_line_id]) }}" method="POST">
         @csrf
         
         <div class="form-group">
-            <label for="name">Nombre del Sensor</label>
+            <label for="name">{{ __('Sensor Name') }}</label>
             <input type="text" name="name" class="form-control" required>
         </div>
 
         <div class="form-group">
-            <label for="barcoder_id">Barcoder</label>
+            <label for="barcoder_id">{{ __('Barcoder') }}</label>
             <select name="barcoder_id" class="form-control" required>
                 @foreach ($barcoders as $barcoder)
                     <option value="{{ $barcoder->id }}">{{ $barcoder->name }}</option>
@@ -21,111 +21,111 @@
         </div>
 
         <div class="form-group">
-            <label for="sensor_type">Tipo de Sensor</label>
+            <label for="sensor_type">{{ __('Sensor Type') }}</label>
             <select name="sensor_type" class="form-control" required>
-                <option value="0">Conteo</option>
-                <option value="1">Consumibles Tipo mallas Papel etc</option>
-                <option value="2">Consumibles Tipo pegatinas tinta</option>
-                <option value="3">Materia prima Tipo vuelca Palot deposito </option>
-                <option value="4">Avería en Proceso</option>
+                <option value="0">{{ __('Counting') }}</option>
+                <option value="1">{{ __('Consumables Type Nets Paper etc') }}</option>
+                <option value="2">{{ __('Consumables Type Stickers Ink') }}</option>
+                <option value="3">{{ __('Raw Material Type Tipping Palot Deposit') }}</option>
+                <option value="4">{{ __('Process Breakdown') }}</option>
             </select>
         </div>
 
         <div class="form-group">
-            <label for="optimal_production_time">Tiempo Óptimo de Producción</label>
+            <label for="optimal_production_time">{{ __('Optimal Production Time') }}</label>
             <input type="number" name="optimal_production_time" class="form-control" min="0">
         </div>
 
         <div class="form-group">
-            <label for="reduced_speed_time_multiplier">Multiplicador de Velocidad Reducida</label>
+            <label for="reduced_speed_time_multiplier">{{ __('Reduced Speed Time Multiplier') }}</label>
             <input type="number" name="reduced_speed_time_multiplier" class="form-control" min="0">
         </div>
 
         <div class="form-group">
-            <label for="json_api">JSON API</label>
+            <label for="json_api">{{ __('JSON API') }}</label>
             <textarea name="json_api" class="form-control" rows="3"></textarea>
         </div>
 
         <div class="form-group">
-            <label for="mqtt_topic_sensor">MQTT Topic Sensor</label>
+            <label for="mqtt_topic_sensor">{{ __('MQTT Topic Sensor') }}</label>
             <input type="text" name="mqtt_topic_sensor" class="form-control" required>
         </div>
 
         <div class="form-group">
-            <label for="mqtt_topic_1">MQTT Topic Envío (Ejemplo: c/cliente/pli/PLI03/sta/PLI03STA01/mac/PLI03STA01MAC03)</label>
+            <label for="mqtt_topic_1">{{ __('MQTT Topic Send (Example: c/cliente/pli/PLI03/sta/PLI03STA01/mac/PLI03STA01MAC03)') }}</label>
             <input type="text" name="mqtt_topic_1" class="form-control" required>
         </div>
 
         <div class="form-group">
-            <label for="function_model_0">Función Modelo 0</label>
+            <label for="function_model_0">{{ __('Function Model 0') }}</label>
             <select name="function_model_0" class="form-control" required>
-                <option value="sendMqttValue0">sendMqttValue0</option>
-                <option value="none">none</option>
+                <option value="sendMqttValue0">{{ __('sendMqttValue0') }}</option>
+                <option value="none">{{ __('none') }}</option>
             </select>
         </div>
 
         <div class="form-group">
-            <label for="function_model_1">Función Modelo 1</label>
+            <label for="function_model_1">{{ __('Function Model 1') }}</label>
             <select name="function_model_1" class="form-control" required>
-                <option value="sendMqttValue1">sendMqttValue1</option>
-                <option value="none">none</option>
+                <option value="sendMqttValue1">{{ __('sendMqttValue1') }}</option>
+                <option value="none">{{ __('none') }}</option>
             </select>
         </div>
 
         <div class="form-group">
-            <label for="count_total">Contador Total</label>
+            <label for="count_total">{{ __('Total Counter') }}</label>
             <input type="number" name="count_total" class="form-control" value="0" min="0">
         </div>
 
         <div class="form-group">
-            <label for="count_total_0">Contador Total 0</label>
+            <label for="count_total_0">{{ __('Total Counter 0') }}</label>
             <input type="number" name="count_total_0" class="form-control" value="0" min="0">
         </div>
 
         <div class="form-group">
-            <label for="count_total_1">Contador Total 1</label>
+            <label for="count_total_1">{{ __('Total Counter 1') }}</label>
             <input type="number" name="count_total_1" class="form-control" value="0" min="0">
         </div>
 
         <div class="form-group">
-            <label for="count_shift_0">Contador Turno 0</label>
+            <label for="count_shift_0">{{ __('Shift Counter 0') }}</label>
             <input type="number" name="count_shift_0" class="form-control" value="0" min="0">
         </div>
 
         <div class="form-group">
-            <label for="count_shift_1">Contador Turno 1</label>
+            <label for="count_shift_1">{{ __('Shift Counter 1') }}</label>
             <input type="number" name="count_shift_1" class="form-control" value="0" min="0">
         </div>
 
         <div class="form-group">
-            <label for="count_order_0">Contador Pedido 0</label>
+            <label for="count_order_0">{{ __('Order Counter 0') }}</label>
             <input type="number" name="count_order_0" class="form-control" value="0" min="0">
         </div>
 
         <div class="form-group">
-            <label for="count_order_1">Contador Pedido 1</label>
+            <label for="count_order_1">{{ __('Order Counter 1') }}</label>
             <input type="number" name="count_order_1" class="form-control" value="0" min="0">
         </div>
 
         <div class="form-group">
-            <label for="invers_sensors">Sensor Inverso</label>
+            <label for="invers_sensors">{{ __('Inverse Sensor') }}</label>
             <select name="invers_sensors" class="form-control">
-                <option value="0">No</option>
-                <option value="1">Sí</option>
+                <option value="0">{{ __('No') }}</option>
+                <option value="1">{{ __('Yes') }}</option>
             </select>
         </div>
 
         <div class="form-group">
-            <label for="downtime_count">Tiempo de Inactividad</label>
+            <label for="downtime_count">{{ __('Downtime Count') }}</label>
             <input type="number" name="downtime_count" class="form-control" value="0" min="0">
         </div>
 
         <div class="form-group">
-            <label for="unic_code_order">Código Único de Orden</label>
+            <label for="unic_code_order">{{ __('Unique Order Code') }}</label>
             <input type="text" name="unic_code_order" class="form-control">
         </div>
 
-        <button type="submit" class="btn btn-success">Crear Sensor</button>
+        <button type="submit" class="btn btn-success">{{ __('Create Sensor') }}</button>
     </form>
 </div>
 @endsection

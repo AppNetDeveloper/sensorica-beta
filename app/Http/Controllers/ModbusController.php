@@ -23,42 +23,19 @@ class ModbusController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            // Añadir validaciones adicionales para otros campos según sea necesario
+            // Añadir validaciones para todos los campos necesarios. Aquí solo se muestra 'name' por brevedad.
+            // Debes ajustar según tus necesidades, por ejemplo:
+            'max_kg' => 'nullable|numeric',
+            'min_kg' => 'nullable|numeric',
+            'downtime_count' => 'nullable|integer',
+            // etc...
         ]);
 
         if ($validator->fails()) {
             return redirect()->back()->withErrors($validator)->withInput();
         }
 
-        Modbus::create([
-            'production_line_id' => $production_line_id,
-            'name' => $request->name,
-            'json_api' => $request->json_api,
-            'mqtt_topic_modbus' => $request->mqtt_topic_modbus,
-            'mqtt_topic_gross' => $request->mqtt_topic_gross,
-            'mqtt_topic_control' => $request->mqtt_topic_control,
-            'mqtt_topic_boxcontrol' => $request->mqtt_topic_boxcontrol,
-            'token' => $request->token,
-            'dimension_id' => $request->dimension_id,
-            'dimension' => $request->dimension,
-            'max_kg' => $request->max_kg,
-            'rep_number' => $request->rep_number,
-            'tara' => $request->tara,
-            'tara_calibrate' => $request->tara_calibrate,
-            'calibration_type' => $request->calibration_type,
-            'min_kg' => $request->min_kg,
-            'last_kg' => $request->last_kg,
-            'last_rep' => $request->last_rep,
-            'rec_box' => $request->rec_box,
-            'last_value' => $request->last_value,
-            'variacion_number' => $request->variacion_number,
-            'model_name' => $request->model_name,
-            'dimension_default' => $request->dimension_default,
-            'dimension_max' => $request->dimension_max,
-            'dimension_variacion' => $request->dimension_variacion,
-            'offset_meter' => $request->offset_meter,
-            'printer_id' => $request->printer_id,
-        ]);
+        $modbus = Modbus::create(array_merge($request->all(), ['production_line_id' => $production_line_id]));
 
         return redirect()->route('modbuses.index', $production_line_id)->with('success', 'Modbus creado correctamente.');
     }
@@ -73,7 +50,12 @@ class ModbusController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            // Añadir validaciones adicionales para otros campos según sea necesario
+            // Añadir validaciones para todos los campos necesarios. Aquí solo se muestra 'name' por brevedad.
+            // Debes ajustar según tus necesidades, por ejemplo:
+            'max_kg' => 'nullable|numeric',
+            'min_kg' => 'nullable|numeric',
+            'downtime_count' => 'nullable|integer',
+            // etc...
         ]);
 
         if ($validator->fails()) {

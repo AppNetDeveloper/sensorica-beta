@@ -96,8 +96,7 @@
     <!-- Content -->
     <div class="content">
         <h1>Gestión de Trabajadores</h1>
-        <button id="addWorker">Añadir Trabajador</button>
-        <button id="importExcel">Importar Excel</button>
+
         <input type="file" id="excelFileInput" accept=".xlsx">
         <table id="workersTable" class="display">
             <thead>
@@ -151,15 +150,79 @@
                 dom: 'Bfrtip',
                 buttons: [
                     {
+                        text: 'Añadir Trabajador',
+                        className: 'btn btn-success',
+                        action: function (e, dt, node, config) {
+                            Swal.fire({
+                                title: 'Añadir Trabajador',
+                                html: `
+                                    <input id="workerId" class="swal2-input" placeholder="ID Cliente (Obligatorio)">
+                                    <input id="workerName" class="swal2-input" placeholder="Nombre del Trabajador">
+                                    <input id="workerEmail" class="swal2-input" placeholder="Email (Opcional)">
+                                    <input id="workerPhone" class="swal2-input" placeholder="Teléfono (Opcional)">
+                                    <input id="workerPassword" type="password" class="swal2-input" placeholder="Contraseña (Opcional)">
+                                `,
+                                confirmButtonText: 'Añadir',
+                                showCancelButton: true,
+                                preConfirm: () => {
+                                    const id = $('#workerId').val();
+                                    const name = $('#workerName').val();
+                                    const email = $('#workerEmail').val();
+                                    const phone = $('#workerPhone').val();
+                                    const password = $('#workerPassword').val();
+                                    if (!id || !name) {
+                                        Swal.showValidationMessage('ID y Nombre son obligatorios.');
+                                        return false;
+                                    }
+                                    return {
+                                        id: parseInt(id),
+                                        name,
+                                        email: email || null,
+                                        phone: phone || null,
+                                        password: password || null
+                                    };
+                                }
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    const { id, name, email, phone, password } = result.value;
+                                    $.ajax({
+                                        url: `${workersApiUrl}/update-or-insert`,
+                                        method: 'POST',
+                                        contentType: 'application/json',
+                                        data: JSON.stringify({ id, name, email, phone, password }),
+                                        success: function () {
+                                            Swal.fire('Trabajador añadido o actualizado', '', 'success');
+                                            table.ajax.reload();
+                                        },
+                                        error: function (xhr) {
+                                            Swal.fire({
+                                                icon: 'error',
+                                                title: 'Error al Añadir',
+                                                text: `Status: ${xhr.status}. Mensaje: ${xhr.responseJSON?.error || 'Error desconocido'}`
+                                            });
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                    },
+                    {
+                        text: 'Importar Excel',
+                        className: 'btn btn-success',
+                        action: function (e, dt, node, config) {
+                            $('#excelFileInput').click();
+                        }
+                    },
+                    {
                         extend: 'excelHtml5',
                         text: 'Exportar a Excel',
-                        title: null, // Evitamos incluir "Trabajadores" como encabezado
+                        title: null,
                         className: 'btn btn-success',
                         exportOptions: {
                             columns: [0, 1, 2, 3, 4],
                             format: {
                                 body: function (data, row, column) {
-                                    if (column === 4) return ''; // Contraseña vacía
+                                    if (column === 4) return ''; 
                                     return data;
                                 }
                             }
@@ -168,60 +231,7 @@
                 ]
             });
 
-            // Añadir trabajador
-            $('#addWorker').click(function () {
-                Swal.fire({
-                    title: 'Añadir Trabajador',
-                    html: `
-                        <input id="workerId" class="swal2-input" placeholder="ID Cliente (Obligatorio)">
-                        <input id="workerName" class="swal2-input" placeholder="Nombre del Trabajador">
-                        <input id="workerEmail" class="swal2-input" placeholder="Email (Opcional)">
-                        <input id="workerPhone" class="swal2-input" placeholder="Teléfono (Opcional)">
-                        <input id="workerPassword" type="password" class="swal2-input" placeholder="Contraseña (Opcional)">
-                    `,
-                    confirmButtonText: 'Añadir',
-                    showCancelButton: true,
-                    preConfirm: () => {
-                        const id = $('#workerId').val();
-                        const name = $('#workerName').val();
-                        const email = $('#workerEmail').val();
-                        const phone = $('#workerPhone').val();
-                        const password = $('#workerPassword').val();
-                        if (!id || !name) {
-                            Swal.showValidationMessage('ID y Nombre son obligatorios.');
-                            return false;
-                        }
-                        return {
-                            id: parseInt(id),
-                            name,
-                            email: email || null,
-                            phone: phone || null,
-                            password: password || null
-                        };
-                    }
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        const { id, name, email, phone, password } = result.value;
-                        $.ajax({
-                            url: `${workersApiUrl}/update-or-insert`,
-                            method: 'POST',
-                            contentType: 'application/json',
-                            data: JSON.stringify({ id, name, email, phone, password }),
-                            success: function () {
-                                Swal.fire('Trabajador añadido o actualizado', '', 'success');
-                                table.ajax.reload();
-                            },
-                            error: function (xhr) {
-                                Swal.fire({
-                                    icon: 'error',
-                                    title: 'Error al Añadir',
-                                    text: `Status: ${xhr.status}. Mensaje: ${xhr.responseJSON?.error || 'Error desconocido'}`
-                                });
-                            }
-                        });
-                    }
-                });
-            });
+    
 
             // Editar trabajador
             $('#workersTable tbody').on('click', '.edit-btn', function () {

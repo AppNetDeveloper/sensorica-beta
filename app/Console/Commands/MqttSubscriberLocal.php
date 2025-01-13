@@ -149,7 +149,7 @@ class MqttSubscriberLocal extends Command
                 $barcode->save();
                 $this->info("[{$timestamp}] Código de barras guardado correctamente: {$barcode->id}");
             } catch (\Exception $e) {
-                $this->error("[{$timestamp}] Error al guardar el código de barras: {$e->getMessage()}");
+                $this->error("[{$timestamp}] Error al guardar el código de barras: {$e->getMessage()} json: {$cleanMessageJson}");
             }
         }
     }

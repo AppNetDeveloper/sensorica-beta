@@ -25,7 +25,12 @@
                                 <label for="mqtt_topic_modbus">{{ __('MQTT Topic Modbus') }}</label>
                                 <input type="text" class="form-control" id="mqtt_topic_modbus" name="mqtt_topic_modbus" value="{{ $modbus->mqtt_topic_modbus }}">
                             </div>
-                            
+
+                            <div class="form-group">
+                                <label for="mqtt_topic">{{ __('MQTT Topic') }}</label>
+                                <input type="text" class="form-control" id="mqtt_topic" name="mqtt_topic" value="{{ $modbus->mqtt_topic }}">
+                            </div>
+
                             <div class="form-group">
                                 <label for="token">{{ __('Token') }}</label>
                                 <input type="text" class="form-control" id="token" name="token" value="{{ $modbus->token }}">
@@ -40,7 +45,22 @@
                                 <label for="dimension">{{ __('Dimension') }}</label>
                                 <input type="text" class="form-control" id="dimension" name="dimension" value="{{ $modbus->dimension }}">
                             </div>
-                            
+
+                            <div class="form-group">
+                                <label for="conversion_factor">{{ __('Conversion Factor') }}</label>
+                                <input type="text" class="form-control" id="conversion_factor" name="conversion_factor" value="{{ $modbus->conversion_factor }}">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="total_kg_order">{{ __('Total KG Order') }}</label>
+                                <input type="text" class="form-control" id="total_kg_order" name="total_kg_order" value="{{ $modbus->total_kg_order }}">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="total_kg_shift">{{ __('Total KG Shift') }}</label>
+                                <input type="text" class="form-control" id="total_kg_shift" name="total_kg_shift" value="{{ $modbus->total_kg_shift }}">
+                            </div>
+
                             <div class="form-group">
                                 <label for="max_kg">{{ __('Max KG') }}</label>
                                 <input type="text" class="form-control" id="max_kg" name="max_kg" value="{{ $modbus->max_kg }}">
@@ -88,6 +108,16 @@
                             <div class="form-group">
                                 <label for="rec_box">{{ __('Rec Box') }}</label>
                                 <input type="text" class="form-control" id="rec_box" name="rec_box" value="{{ $modbus->rec_box }}">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="rec_box_shift">{{ __('Rec Box Shift') }}</label>
+                                <input type="text" class="form-control" id="rec_box_shift" name="rec_box_shift" value="{{ $modbus->rec_box_shift }}">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="rec_box_unlimited">{{ __('Rec Box Unlimited') }}</label>
+                                <input type="text" class="form-control" id="rec_box_unlimited" name="rec_box_unlimited" value="{{ $modbus->rec_box_unlimited }}">
                             </div>
 
                             <div class="form-group">
@@ -162,6 +192,71 @@
                             <div class="form-group">
                                 <label for="reduced_speed_time_multiplier">{{ __('Reduced Speed Time Multiplier') }}</label>
                                 <input type="number" class="form-control" id="reduced_speed_time_multiplier" name="reduced_speed_time_multiplier" value="{{ $modbus->reduced_speed_time_multiplier }}">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="barcoder_id">{{ __('Barcoder ID') }}</label>
+                                <input type="text" class="form-control" id="barcoder_id" name="barcoder_id" value="{{ $modbus->barcoder_id }}">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="orderId">{{ __('Order ID') }}</label>
+                                <input type="text" class="form-control" id="orderId" name="orderId" value="{{ $modbus->orderId }}">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="quantity">{{ __('Quantity') }}</label>
+                                <input type="number" class="form-control" id="quantity" name="quantity" value="{{ $modbus->quantity }}">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="uds">{{ __('Units Per Box') }}</label>
+                                <input type="number" class="form-control" id="uds" name="uds" value="{{ $modbus->uds }}">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="box_type">{{ __('Box Type') }}</label>
+                                <input type="text" class="form-control" id="box_type" name="box_type" value="{{ $modbus->box_type }}">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="group">{{ __('Group') }}</label>
+                                <input type="number" class="form-control" id="group" name="group" value="{{ $modbus->group }}">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="model_type">{{ __('Model Type') }}</label>
+                                <input type="number" class="form-control" id="model_type" name="model_type" value="{{ $modbus->model_type }}">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="dosage_order">{{ __('Dosage Order') }}</label>
+                                <input type="text" class="form-control" id="dosage_order" name="dosage_order" value="{{ $modbus->dosage_order }}">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="box_width">{{ __('Box Width') }}</label>
+                                <input type="number" class="form-control" id="box_width" name="box_width" value="{{ $modbus->box_width }}">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="box_length">{{ __('Box Length') }}</label>
+                                <input type="number" class="form-control" id="box_length" name="box_length" value="{{ $modbus->box_length }}">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="productName">{{ __('Product Name') }}</label>
+                                <input type="text" class="form-control" id="productName" name="productName" value="{{ $modbus->productName }}">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="count_week_0">{{ __('Count Week 0') }}</label>
+                                <input type="number" class="form-control" id="count_week_0" name="count_week_0" value="{{ $modbus->count_week_0 }}">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="count_week_1">{{ __('Count Week 1') }}</label>
+                                <input type="number" class="form-control" id="count_week_1" name="count_week_1" value="{{ $modbus->count_week_1 }}">
                             </div>
 
                             <button type="submit" class="btn btn-primary">{{ __('Save') }}</button>

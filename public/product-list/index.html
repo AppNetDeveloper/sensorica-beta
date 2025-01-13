@@ -82,9 +82,7 @@
 
     <!-- Content -->
     <div class="content">
-        <button id="addProduct">Añadir Confeccione</button>
-        <button id="importExcel">Importar Excel</button>
-        <input type="file" id="excelFileInput" accept=".xlsx">
+        <input type="file" id="excelFileInput" accept=".xlsx" style="display: none;">
         <table id="productsTable" class="display">
             <thead>
                 <tr>
@@ -133,9 +131,65 @@
                 dom: 'Bfrtip',
                 buttons: [
                     {
+                        text: 'Añadir Confeccione',
+                        className: 'btn btn-success',
+                        action: function (e, dt, node, config) {
+                            Swal.fire({
+                                title: 'Añadir Producto',
+                                html: `
+                                    <input id="productId" class="swal2-input" placeholder="ID Cliente">
+                                    <input id="productName" class="swal2-input" placeholder="Nombre del Producto">
+                                    <input id="productOptimalTime" class="swal2-input" placeholder="Tiempo Óptimo (opcional)">
+                                    <input id="productBoxKg" class="swal2-input" placeholder="Kg por Caja (opcional)">
+                                `,
+                                confirmButtonText: 'Añadir',
+                                showCancelButton: true,
+                                preConfirm: () => {
+                                    const id = $('#productId').val();
+                                    const name = $('#productName').val();
+                                    const optimal_production_time = $('#productOptimalTime').val();
+                                    const box_kg = $('#productBoxKg').val();
+                                    if (!id || !name) {
+                                        Swal.showValidationMessage('ID y Nombre son obligatorios.');
+                                        return false;
+                                    }
+                                    return {
+                                        id: parseInt(id),
+                                        name,
+                                        optimal_production_time: optimal_production_time ? parseInt(optimal_production_time) : null,
+                                        box_kg: box_kg ? parseFloat(box_kg) : null,
+                                    };
+                                },
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    $.ajax({
+                                        url: `${productsApiUrl}/update-or-insert`,
+                                        method: 'POST',
+                                        contentType: 'application/json',
+                                        data: JSON.stringify(result.value),
+                                        success: function () {
+                                            Swal.fire('Éxito', 'Producto añadido o actualizado.', 'success');
+                                            table.ajax.reload();
+                                        },
+                                        error: function (xhr) {
+                                            Swal.fire('Error', `No se pudo añadir. ${xhr.responseJSON?.error || ''}`, 'error');
+                                        },
+                                    });
+                                }
+                            });
+                        }
+                    },
+                    {
+                        text: 'Importar Excel',
+                        className: 'btn btn-success',
+                        action: function (e, dt, node, config) {
+                            $('#excelFileInput').click();
+                        }
+                    },
+                    {
                         extend: 'excelHtml5',
                         text: 'Exportar a Excel',
-                        title: null, // Evitamos incluir "Trabajadores" como encabezado
+                        title: null,
                         className: 'btn btn-success',
                         exportOptions: {
                             columns: [0, 1, 2, 3],
@@ -144,52 +198,7 @@
                 ],
             });
 
-            // Añadir Producto
-            $('#addProduct').click(function () {
-                Swal.fire({
-                    title: 'Añadir Producto',
-                    html: `
-                        <input id="productId" class="swal2-input" placeholder="ID Cliente">
-                        <input id="productName" class="swal2-input" placeholder="Nombre del Producto">
-                        <input id="productOptimalTime" class="swal2-input" placeholder="Tiempo Óptimo (opcional)">
-                        <input id="productBoxKg" class="swal2-input" placeholder="Kg por Caja (opcional)">
-                    `,
-                    confirmButtonText: 'Añadir',
-                    showCancelButton: true,
-                    preConfirm: () => {
-                        const id = $('#productId').val();
-                        const name = $('#productName').val();
-                        const optimal_production_time = $('#productOptimalTime').val();
-                        const box_kg = $('#productBoxKg').val();
-                        if (!id || !name) {
-                            Swal.showValidationMessage('ID y Nombre son obligatorios.');
-                            return false;
-                        }
-                        return {
-                            id: parseInt(id),
-                            name,
-                            optimal_production_time: optimal_production_time ? parseInt(optimal_production_time) : null,
-                            box_kg: box_kg ? parseFloat(box_kg) : null,
-                        };
-                    },
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        $.ajax({
-                            url: `${productsApiUrl}/update-or-insert`,
-                            method: 'POST',
-                            contentType: 'application/json',
-                            data: JSON.stringify(result.value),
-                            success: function () {
-                                Swal.fire('Éxito', 'Producto añadido o actualizado.', 'success');
-                                table.ajax.reload();
-                            },
-                            error: function (xhr) {
-                                Swal.fire('Error', `No se pudo añadir. ${xhr.responseJSON?.error || ''}`, 'error');
-                            },
-                        });
-                    }
-                });
-            });
+            table.buttons().container().appendTo('#productsTable_wrapper .col-md-6:eq(0)');
 
             // Editar Producto
             $('#productsTable tbody').on('click', '.edit-btn', function () {
@@ -271,8 +280,6 @@
             });            
 
             // Importar Excel
-            $('#importExcel').click(() => $('#excelFileInput').click());
-
             $('#excelFileInput').change(function (e) {
                 const file = e.target.files[0];
                 if (!file) return;
@@ -378,22 +385,18 @@
                 // Restablecer el input de archivo para permitir otra carga
                 $(this).val('');
             });
-        });
-        function updateClock() {
-            const now = new Date();
-            const hours = String(now.getHours()).padStart(2, '0');
-            const minutes = String(now.getMinutes()).padStart(2, '0');
-            const seconds = String(now.getSeconds()).padStart(2, '0');
-            document.getElementById('clock').textContent = `${hours}:${minutes}:${seconds}`;
-        }        
 
-        $(document).ready(function () {
+            function updateClock() {
+                const now = new Date();
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                const seconds = String(now.getSeconds()).padStart(2, '0');
+                document.getElementById('clock').textContent = `${hours}:${minutes}:${seconds}`;
+            }
+
             updateClock();
             setInterval(updateClock, 1000);
         });
-        
     </script>
 </body>
 </html>
-
-                

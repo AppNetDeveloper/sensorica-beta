@@ -130,6 +130,11 @@ class MqttSubscriberLocalMac extends Command
  
                 
             } elseif ($action === 0) { // Abrir orden
+                //primero buscamos todos los odernes que tienen el campo status en 1 y los cambiamos a 2 y otro where solo para la barcoder_id = barcode->id
+                $orders = ProductionOrder::where('status', 1)->where('barcoder_id', $barcode->id)->get();
+                foreach ($orders as $o) {
+                    $this->updateProductionOrderStatus( 2, $barcode->id, $o->id);
+                }
                 $this->logInfo("Iniciar Abrir orden para barcode ID: {$barcode->id}");
                 $this->saveOrderMac($barcode, $cleanMessage);
                 $this->logInfo("Sacar OrderId para barcode ID: {$barcode->id}");
@@ -142,7 +147,7 @@ class MqttSubscriberLocalMac extends Command
                 
                 if (!is_numeric($cleanMessage['orderId'])) {
                     $this->logError("El campo 'orderId' no es numérico. Valor actual: " . json_encode($cleanMessage['orderId']));
-                    return; // Detener el proceso si 'orderId' no es un número válido
+                   // return; // Detener el proceso si 'orderId' no es un número válido
                 }
                 
                 $orderId = trim((string) $cleanMessage['orderId']); // Convertir a cadena para asegurar consistencia
@@ -195,7 +200,9 @@ class MqttSubscriberLocalMac extends Command
             $this->logError("OrderId {$orderId} no encontrado en ProductionOrders.");
             return;
         }
+        //aqui pasamos el status a 2 para que no se vuelva a abrir
 
+        $this->updateProductionOrderStatus( 2, $barcode->id, $order->id);
         $jsonData = json_decode($order->json, true);
         $this->logInfo("Orden encontrada. JSON almacenado: " . json_encode($jsonData, JSON_PRETTY_PRINT));
     }
@@ -377,6 +384,17 @@ class MqttSubscriberLocalMac extends Command
         }
     }
 
+/**
+ * Updates the status of a production order.
+ *
+ * @param int $status The new status to set for the production order.
+ * @param int $barcodeId The ID of the barcode, which might be used for logging or additional processing.
+ * @param int $productionOrderId The ID of the production order to be updated.
+ *
+ * Logs a message indicating whether the update was successful or if the production order was not found. 
+ * Logs an error message if an exception occurs during the update process.
+ */
+
     private function updateProductionOrderStatus($status, $barcodeId, $productionOrderId)
     {
         try {
@@ -434,24 +452,24 @@ class MqttSubscriberLocalMac extends Command
     {
         $this->info("Iniciar reset de modbuses con optimal_production_time={$optimalProductionTime}, orderId={$orderId}, quantity={$quantity}, uds={$uds} para barcode ID {$barcodeId}");
         try {
-            $updated = Modbus::where('barcoder_id', $barcodeId)->update([
+            $updatedCount = Modbus::where('barcoder_id', $barcodeId)->update([
                 'rec_box' => 0,
                 'total_kg_order' => 0,
                 'downtime_count' => 0,
-                'optimal_production_time' => $optimalProductionTime, // Asignar el valor
+                'optimal_production_time' => $optimalProductionTime,
                 'orderId' => $orderId,
                 'quantity' => $quantity,
                 'uds' => $uds,
                 'productName' => $referId,
             ]);
     
-            if ($updated > 0) {
-                $this->info("Reset realizado para {$updated} modbuses con optimal_production_time={$optimalProductionTime}, orderId={$orderId}, quantity={$quantity}, uds={$uds} para barcode ID {$barcodeId}");
+            if ($updatedCount > 0) {
+                $this->info("Reset realizado para {$updatedCount} modbuses con optimal_production_time={$optimalProductionTime}, orderId={$orderId}, quantity={$quantity}, uds={$uds} para barcode ID {$barcodeId}");
             } else {
                 $this->error("Modbus no encontrado para barcode ID: {$barcodeId}");
             }
         } catch (Exception $e) {
             $this->error("Error actualizando Modbus: " . $e->getMessage());
         }
-    }     
+    }
 }

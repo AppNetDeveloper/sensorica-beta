@@ -104,11 +104,11 @@ class ProductionOrderController extends Controller
 
         if ($request->has('sort_by')) {
             $sortBy = $request->input('sort_by');
-            $sortDirection = $request->input('sort_direction', 'asc');
+            $sortDirection = $request->input('sort_direction', 'desc');
             $query->orderBy($sortBy, $sortDirection);
         }
 
-        $orders = $query->paginate(10);
+        $orders = $query->paginate(100);
 
         return response()->json($orders);
     }
