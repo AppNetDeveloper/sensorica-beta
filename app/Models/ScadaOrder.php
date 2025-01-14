@@ -104,6 +104,15 @@ class ScadaOrder extends Model
                 ]);
 
                 $this->publishMqttMessage($newTopic, $message);
+                 // Si el estado es 2, enviamos otro mensaje a /order_finish
+                if ($this->status == 2) {
+                    $finishTopic = $barcode->mqtt_topic_barcodes . '/order_finish';
+                    $finishMessage = json_encode([
+                        'orderId' => $this->order_id,
+                    ]);
+
+                    $this->publishMqttMessage($finishTopic, $finishMessage);
+                }
             }
         }
     }
