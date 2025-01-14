@@ -480,6 +480,59 @@ class ModbusProcessController extends Controller
         $apiQueue->used = true;
         $apiQueue->save(); 
         
+        if ($apiQueue->url_back === 'tcp') {
+            $baseUrl = env('APP_URL');
+            if (substr($baseUrl, -1) === '/') {
+                $baseUrl = rtrim($baseUrl, '/');
+            }
+            $apiQueue->url_back = $baseUrl . '/api/publish-message';
+            $useMethod = 'POST'; 
+    
+            $box_m3 = (
+                isset($config->box_width, $config->box_length, $dimensionFinal) &&
+                $config->box_width > 0 &&
+                $config->box_length > 0 &&
+                $dimensionFinal > 0
+            ) ? ($config->box_width * $config->box_length * $dimensionFinal) / 1000 : 0;
+    
+            $message = "'token': '{$apiQueue->token_back}', ";
+            $message .= "'value': '{$apiQueue->value}', ";
+            $message .= "'rec_box': '{$newBoxNumber}', ";
+            $message .= "'max_kg': '{$maxKg}', ";
+            $message .= "'last_dimension': '{$dimensionFinal}', ";
+            $message .= "'last_barcoder': '{$uniqueBarcoder}', ";
+            $message .= "'used_value': '{$apiQueue->value}', ";
+            $message .= "'box_m3': '{$box_m3}'";
+    
+            $dataForTcp = [
+                'message' => $message
+            ];
+    
+            $ch = curl_init($apiQueue->url_back);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $useMethod);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($dataForTcp));
+    
+            Log::info("Enviando datos con cURL a {$apiQueue->url_back}. Datos: " . json_encode($dataForTcp));
+            
+            $responseBody = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    
+            if ($responseBody === false) {
+                Log::error("Error en la petición cURL: " . curl_error($ch));
+            } else {
+                if ($httpCode >= 200 && $httpCode < 300) {
+                    Log::info("Respuesta de la API externa (cURL) para TCP: " . $responseBody);
+                } else {
+                    Log::error("Error en la respuesta de la API externa (cURL) para TCP. Código de estado: " . $httpCode . ", Cuerpo: " . $responseBody);
+                }
+            }
+            curl_close($ch);
+    
+            return;
+        }
+        
         $dataToSend = [
             'token' => $apiQueue->token_back,
             'rec_box' => $newBoxNumber,

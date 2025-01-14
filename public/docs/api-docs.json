@@ -2793,6 +2793,35 @@ paths:
       security:
         -
           bearerAuth: []
+  /api/publish-message:
+    post:
+      tags:
+        - 'TCP Operations'
+      summary: 'Publica un mensaje en el servidor TCP'
+      operationId: 86e3f0ac0439f87f0b8dfa8b9e82eb7a
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - message
+              properties:
+                message:
+                  type: string
+                  example: "'model': 'api_queue_print','token': 'bbc3d2fd39027b9fsdsdsd', 'value':'1', 'url_back': 'tcp', 'token_back': 'TU-BARCODER-O-LO-QUE-NECESITAS_IDENTIFICADOR'"
+              type: object
+      responses:
+        '200':
+          description: 'Mensaje enviado correctamente'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: string, example: 'Mensaje enviado correctamente' }
+                type: object
+        '500':
+          description: 'Hubo un error al enviar el mensaje'
 tags:
   -
     name: ProductionOrders
@@ -2863,4 +2892,7 @@ tags:
   -
     name: Supervisor
     description: Supervisor
+  -
+    name: 'TCP Operations'
+    description: 'TCP Operations'
 

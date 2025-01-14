@@ -27,6 +27,9 @@ use App\Http\Controllers\Api\ProductionOrderController;
 use App\Http\Controllers\Api\ProductListRfidController;
 use App\Http\Controllers\Api\RfidReadingController;
 use App\Http\Controllers\Api\OperatorRfidController;
+use App\Http\Controllers\Api\TcpPublishController;
+
+
 
 /*
 |--------------------------------------------------------------------------
@@ -253,6 +256,10 @@ Route::post('operator-rfid', [OperatorRfidController::class, 'store']);
 Route::get('operator-rfid/{id}', [OperatorRfidController::class, 'show']);
 Route::put('operator-rfid/{id}', [OperatorRfidController::class, 'update']);
 Route::delete('operator-rfid/{id}', [OperatorRfidController::class, 'destroy']);
+
+//publicar tcp mesaje
+
+Route::post('/publish-message', [TcpPublishController::class, 'publishMessage']);
 
 Route::middleware('auth:api')->get('/user', function (Request $request) {
     return $request->user();
