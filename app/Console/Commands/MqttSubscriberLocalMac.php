@@ -155,7 +155,9 @@ class MqttSubscriberLocalMac extends Command
                 
                 if ($orderId) {
                     // Buscar el JSON completo en production_orders por order_id
-                    $productionOrder = ProductionOrder::whereRaw('LOWER(order_id) = ?', [strtolower(trim($orderId))])->first();
+                    //$productionOrder = ProductionOrder::whereRaw('LOWER(order_id) = ?', [strtolower(trim($orderId))])->first();
+                    // Intentar encontrar la ProductionOrder con un retry
+                    $productionOrder = $this->tryFindProductionOrder($orderId, 1); // 1 segundo de espera
                     $this->logInfo("ProductionOrder encontrado para orderId={$orderId}");
                     if ($productionOrder) {
                         $orderJson = $productionOrder->json;
@@ -182,6 +184,24 @@ class MqttSubscriberLocalMac extends Command
                 $this->logError("Acción desconocida recibida: {$action}");
             }
         }
+    }// Nueva función para intentar encontrar ProductionOrder con reintento
+    private function tryFindProductionOrder($orderId, $waitSeconds)
+    {
+        $maxAttempts = 2; // Intentos máximos
+        $attempts = 0;
+
+        while ($attempts < $maxAttempts) {
+            $productionOrder = ProductionOrder::whereRaw('LOWER(order_id) = ?', [strtolower(trim($orderId))])->first();
+            if ($productionOrder) {
+                return $productionOrder;
+            }
+            $this->logInfo("ProductionOrder no encontrada, intentando de nuevo en {$waitSeconds} segundos.");
+            sleep($waitSeconds); // Esperar antes de intentar de nuevo
+            $attempts++;
+        }
+
+        $this->logError("ProductionOrder no encontrada para orderId={$orderId} después de {$maxAttempts} intentos.");
+        return null;
     }
     
 
