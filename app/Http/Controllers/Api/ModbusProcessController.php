@@ -71,7 +71,15 @@ class ModbusProcessController extends Controller
                 }
             }
         }
-        //Log::info("Mi valor:{$value}");
+        
+        // Nuevo chequeo para valores por debajo de cero
+        if ($value !== null && $value <= 0) {
+            $this->makeZero($config, $value);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Zero action taken.',
+            ]);
+        }
         
         // Verifica el valor del campo 'model_name' y llama al método correspondiente
         if ($config['model_name'] === 'height') {
@@ -106,6 +114,29 @@ class ModbusProcessController extends Controller
             }
         }
         return null;
+    }
+    
+    private function makeZero($config, $value)
+    {
+        $this->info("Making zero for Modbus ID: {$config->id}, current value: {$value}");
+        
+        // Generar el nuevo tópico cambiando 'peso' por 'zero'
+        $topicParts = explode('/', $config->topic);
+        
+        if (in_array('peso', $topicParts)) {
+            $topicZero = str_replace('peso', 'zero', implode('/', $topicParts));
+        } else {
+            // Si 'peso' no está en el tópico, usar el tópico original
+            $topicZero = $config->topic;
+        }
+        
+        // Definir el mensaje JSON
+        $messageZero = json_encode(['value' => true]);
+        
+        // Publicar el mensaje MQTT
+        $this->publishMqttMessage($topicZero, $messageZero);
+        
+        $this->info("Zero command sent for Modbus ID: {$config->id} on topic: {$topicZero}");
     }
 
     public function processWeightModel($config, $value, $data)
@@ -495,11 +526,17 @@ class ModbusProcessController extends Controller
                 $dimensionFinal > 0
             ) ? ($config->box_width * $config->box_length * $dimensionFinal) / 1000 : 0;
     
+            //para poner a la izcherda relleno de 8 digitos siempre
+            $maxKgPadded = str_pad($maxKg, 8, '0', STR_PAD_LEFT);
+            $maxKgInt = intval($maxKgPadded ); // Esto convierte 10.5 a 10
+            $maxKgInt = str_pad($maxKgInt, 8, '0', STR_PAD_LEFT);
+            $dimensionFinalPadded = str_pad($dimensionFinal, 4, '0', STR_PAD_LEFT);
+
             $message = "'token': '{$apiQueue->token_back}', ";
             $message .= "'value': '{$apiQueue->value}', ";
             $message .= "'rec_box': '{$newBoxNumber}', ";
-            $message .= "'max_kg': '{$maxKg}', ";
-            $message .= "'last_dimension': '{$dimensionFinal}', ";
+            $message .= "'max_kg': '{$maxKgInt}', ";
+            $message .= "'last_dimension': '{$dimensionFinalPadded}', ";
             $message .= "'last_barcoder': '{$uniqueBarcoder}', ";
             $message .= "'used_value': '{$apiQueue->value}', ";
             $message .= "'box_m3': '{$box_m3}'";

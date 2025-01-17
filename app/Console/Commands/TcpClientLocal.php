@@ -83,10 +83,16 @@ class TcpClientlocal extends Command
             }
 
             // Insert into the database using the model
-            if (isset($data['model']) && $data['model'] == "api_queue_print") {
-                $this->insertIntoQueueUsingModel($data);
+            if (isset($data['model'])) {
+                if ($data['model'] == "api_queue_print") {
+                    $this->insertIntoQueueUsingModel($data);
+                } elseif ($data['model'] == "reset") {
+                    $this->resetQueueUsingModel($data);
+                } else {
+                    $this->info("Mensaje no válido o sin modelo reconocido, ignorando.");
+                }
             } else {
-                $this->info("Mensaje no válido o sin modelo 'api_queue_print', ignorando.");
+                $this->info("Mensaje no válido, no tiene un modelo especificado, ignorando.");
             }
         } else {
             $this->info("Mensaje vacío recibido, ignorando.");
@@ -117,6 +123,25 @@ class TcpClientlocal extends Command
         } catch (\Exception $e) {
             $this->error("Error al insertar en la base de datos: " . $e->getMessage());
             Log::error("Error al insertar en api_queue_prints usando modelo: " . $e->getMessage());
+        }
+    }
+    private function resetQueueUsingModel($data)
+    {
+        try {
+            // Buscar el modbus_id usando el token
+            $modbus = Modbus::where('token', $data['token'])->first();
+    
+            if (!$modbus) {
+                throw new \Exception("No se encontró ningún modbus con el token proporcionado para reset.");
+            }
+    
+            // Borrar todas las entradas que correspondan al modbus_id en ApiQueuePrint
+            $deleted = ApiQueuePrint::where('modbus_id', $modbus->id)->delete();
+    
+            $this->info("{$deleted} entradas eliminadas de api_queue_prints usando modelo para reset.");
+        } catch (\Exception $e) {
+            $this->error("Error al resetear la cola en la base de datos: " . $e->getMessage());
+            Log::error("Error al resetear la cola usando modelo: " . $e->getMessage());
         }
     }
 }
