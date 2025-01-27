@@ -448,5 +448,8 @@
     "Server": "Servidor",
     "Settings Stats Upload": "Ajustes Stats Upload",
     "Server Action": "Acciones del Servidor",
-    "Shift": "Turnos"
+    "Shift": "Turnos",
+    "Worker Post": "Asignar Puesto",
+    "Anadir Relacion": "Anadir Relacion",
+    "Rfid Post": "Asociar Rfid Confec"
 }

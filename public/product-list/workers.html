@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión de Relaciones Operadores y RFID</title>
+    <title>Gestión de Relaciones Operadores y Puestos</title>
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -72,7 +72,7 @@
         </div>
         <div class="header-right">
             <div id="clock">--:--:--</div>
-            <small id="scada-name">Gestión de Relaciones Operadores y RFID</small>
+            <small id="scada-name">Gestión de Relaciones Operadores y Puestos</small>
         </div>
     </header>
 
@@ -85,6 +85,9 @@
                     <th>ID</th>
                     <th>Operador</th>
                     <th>RFID</th>
+                    <th>Sensor</th>
+                    <th>Modbus</th>
+                    <th>Contador</th>
                     <th>Fecha Inicio</th>
                     <th>Fecha Fin</th>
                     <th>Acciones</th>
@@ -95,10 +98,12 @@
     </div>
 
     <script>
-        const relationsApiUrl = '/api/operator-rfid';
+        const relationsApiUrl = '/api/operator-post';
         const operatorsApiUrl = '/api/workers/list-all';
         const rfidsApiUrl = '/api/rfid-readings';
-    
+        const sensorsApiUrl = '/api/sensors';
+        const modbusesApiUrl = '/api/modbuses';
+
         $(document).ready(function () {
             const table = $('#relationsTable').DataTable({
                 ajax: {
@@ -116,6 +121,9 @@
                     { data: 'id' },
                     { data: 'operator.name', defaultContent: 'Sin asignar' },
                     { data: 'rfid_reading.epc', defaultContent: 'Sin asignar' },
+                    { data: 'sensor.name', defaultContent: 'Sin asignar' },
+                    { data: 'modbus.name', defaultContent: 'Sin asignar' },
+                    { data: 'count', defaultContent: '0' },
                     {
                         data: 'created_at',
                         render: function (data) {
@@ -133,7 +141,7 @@
                         data: null,
                         render: function (data) {
                             return `
-                                <button class="edit-btn btn-secondary" data-id="${data.id}" data-operator_id="${data.operator_id}" data-rfid_reading_id="${data.rfid_reading_id}">Editar</button>
+                                <button class="edit-btn btn-secondary" data-id="${data.id}">Editar</button>
                                 <button class="delete-btn btn-danger" data-id="${data.id}">Eliminar</button>
                             `;
                         },
@@ -146,164 +154,168 @@
                         text: 'Exportar a Excel',
                         className: 'btn btn-success',
                         exportOptions: {
-                            columns: [0, 1, 2, 3, 4],
+                            columns: [0, 1, 2, 3, 4, 5, 6, 7],
                         },
                     },
                 ],
-                order: [[0, 'desc']], // Ordenar por la primera columna en orden descendente
+                order: [[0, 'desc']],
             });
-    
-            // Evento para editar una relación
-            $('#relationsTable tbody').on('click', '.edit-btn', function () {
-                const currentId = $(this).data('id');
-                const currentOperatorId = $(this).data('operator_id');
-                const currentRfidReadingId = $(this).data('rfid_reading_id');
-    
-                Promise.all([
-                    $.get(operatorsApiUrl),
-                    $.get(rfidsApiUrl)
-                ]).then(([operatorsData, rfidsData]) => {
-                    const operatorOptions = operatorsData.map(operator =>
-                        `<option value="${operator.id}" ${operator.id == currentOperatorId ? 'selected' : ''}>${operator.name}</option>`
-                    ).join('');
-                    const rfidOptions = rfidsData.map(rfid =>
-                        `<option value="${rfid.id}" ${rfid.id == currentRfidReadingId ? 'selected' : ''}>${rfid.epc}</option>`
-                    ).join('');
-    
-                    Swal.fire({
-                        title: 'Editar Relación',
-                        html: `
-                            <input id="relationId" class="swal2-input" value="${currentId}" readonly>
-                            <label for="operatorId">Operador:</label>
-                            <select id="operatorId" class="swal2-input">${operatorOptions}</select>
-                            <label for="rfidReadingId">RFID:</label>
-                            <select id="rfidReadingId" class="swal2-input">${rfidOptions}</select>
-                        `,
-                        confirmButtonText: 'Actualizar',
-                        showCancelButton: true,
-                        preConfirm: () => {
-                            const id = $('#relationId').val();
-                            const operator_id = $('#operatorId').val();
-                            const rfid_reading_id = $('#rfidReadingId').val();
-                            if (!id || !operator_id || !rfid_reading_id) {
-                                Swal.showValidationMessage('Todos los campos son obligatorios.');
-                                return false;
-                            }
-                            return {
-                                id: parseInt(id),
-                                operator_id: parseInt(operator_id),
-                                rfid_reading_id: parseInt(rfid_reading_id),
-                            };
-                        },
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            $.ajax({
-                                url: `${relationsApiUrl}/${result.value.id}`,
-                                method: 'PUT',
-                                contentType: 'application/json',
-                                data: JSON.stringify(result.value),
-                                success: function () {
-                                    Swal.fire('Éxito', 'Relación actualizada correctamente.', 'success');
-                                    table.ajax.reload();
-                                },
-                                error: function (xhr) {
-                                    Swal.fire('Error', `No se pudo actualizar. ${xhr.responseJSON?.error || 'Error desconocido'}`, 'error');
-                                },
-                            });
-                        }
-                    });
-                }).catch(error => {
-                    Swal.fire('Error', 'No se pudieron cargar las opciones.', 'error');
-                });
-            });
-    
+
             // Añadir Relación
             $('#addRelation').click(function () {
                 Promise.all([
                     $.get(operatorsApiUrl),
-                    $.get(rfidsApiUrl)
-                ]).then(([operatorsData, rfidsData]) => {
-                    const operatorOptions = operatorsData.map(operator => `<option value="${operator.id}">${operator.name}</option>`).join('');
-                    const rfidOptions = rfidsData.map(rfid => `<option value="${rfid.id}">${rfid.epc}</option>`).join('');
-    
+                    $.get(rfidsApiUrl),
+                    $.get(sensorsApiUrl),
+                    $.get(modbusesApiUrl),
+                ]).then(([operators, rfids, sensors, modbuses]) => {
+                    const operatorOptions = operators.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
+                    const rfidOptions = rfids.map(r => `<option value="${r.id}">${r.epc}</option>`).join('');
+                    const sensorOptions = sensors.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+                    const modbusOptions = modbuses.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+
                     Swal.fire({
                         title: 'Añadir Relación',
                         html: `
-                            <label for="operatorId">Operador:</label>
+                            <label>Operador:</label>
                             <select id="operatorId" class="swal2-input">${operatorOptions}</select>
-                            <label for="rfidReadingId">RFID:</label>
-                            <select id="rfidReadingId" class="swal2-input">${rfidOptions}</select>
+                            <label>RFID:</label>
+                            <select id="rfidId" class="swal2-input">${rfidOptions}</select>
+                            <label>Sensor:</label>
+                            <select id="sensorId" class="swal2-input">${sensorOptions}</select>
+                            <label>Modbus:</label>
+                            <select id="modbusId" class="swal2-input">${modbusOptions}</select>
                         `,
-                        confirmButtonText: 'Añadir',
-                        showCancelButton: true,
+                        confirmButtonText: 'Guardar',
                         preConfirm: () => {
-                            const client_id = $('#operatorId').val();
-                            const rfid_reading_id = $('#rfidReadingId').val();
-                            if (!client_id || !rfid_reading_id) {
+                            const operator_id = $('#operatorId').val();
+                            const rfid_id = $('#rfidId').val();
+                            const sensor_id = $('#sensorId').val();
+                            const modbus_id = $('#modbusId').val();
+
+                            if (!operator_id || !rfid_id) {
                                 Swal.showValidationMessage('Operador y RFID son obligatorios.');
                                 return false;
                             }
+
                             return {
-                                client_id: parseInt(client_id),
-                                rfid_reading_id: parseInt(rfid_reading_id),
+                                operator_id,
+                                rfid_reading_id: rfid_id,
+                                sensor_id,
+                                modbus_id,
                             };
                         },
-                    }).then((result) => {
+                    }).then(result => {
                         if (result.isConfirmed) {
                             $.ajax({
                                 url: relationsApiUrl,
                                 method: 'POST',
-                                contentType: 'application/json',
                                 data: JSON.stringify(result.value),
-                                success: function () {
-                                    Swal.fire('Éxito', 'Relación añadida.', 'success');
+                                contentType: 'application/json',
+                                success: () => {
+                                    Swal.fire('Éxito', 'Relación añadida correctamente.', 'success');
                                     table.ajax.reload();
                                 },
-                                error: function (xhr) {
-                                    Swal.fire('Error', `No se pudo añadir. ${xhr.responseJSON?.error || ''}`, 'error');
+                                error: xhr => {
+                                    Swal.fire('Error', `No se pudo añadir la relación: ${xhr.responseText}`, 'error');
                                 },
                             });
                         }
                     });
-                }).catch(error => {
-                    Swal.fire('Error', 'No se pudieron cargar las opciones.', 'error');
                 });
             });
-    
+
+            // Editar Relación
+            $('#relationsTable tbody').on('click', '.edit-btn', function () {
+                const id = $(this).data('id');
+                $.get(`${relationsApiUrl}/${id}`, relation => {
+                    Promise.all([
+                        $.get(operatorsApiUrl),
+                        $.get(rfidsApiUrl),
+                        $.get(sensorsApiUrl),
+                        $.get(modbusesApiUrl),
+                    ]).then(([operators, rfids, sensors, modbuses]) => {
+                        const operatorOptions = operators.map(o =>
+                            `<option value="${o.id}" ${o.id === relation.operator_id ? 'selected' : ''}>${o.name}</option>`
+                        ).join('');
+                        const rfidOptions = rfids.map(r =>
+                            `<option value="${r.id}" ${r.id === relation.rfid_reading_id ? 'selected' : ''}>${r.epc}</option>`
+                        ).join('');
+                        const sensorOptions = sensors.map(s =>
+                            `<option value="${s.id}" ${s.id === relation.sensor_id ? 'selected' : ''}>${s.name}</option>`
+                        ).join('');
+                        const modbusOptions = modbuses.map(m =>
+                            `<option value="${m.id}" ${m.id === relation.modbus_id ? 'selected' : ''}>${m.name}</option>`
+                        ).join('');
+
+                        Swal.fire({
+                            title: 'Editar Relación',
+                            html: `
+                                <label>Operador:</label>
+                                <select id="operatorId" class="swal2-input">${operatorOptions}</select>
+                                <label>RFID:</label>
+                                <select id="rfidId" class="swal2-input">${rfidOptions}</select>
+                                <label>Sensor:</label>
+                                <select id="sensorId" class="swal2-input">${sensorOptions}</select>
+                                <label>Modbus:</label>
+                                <select id="modbusId" class="swal2-input">${modbusOptions}</select>
+                            `,
+                            confirmButtonText: 'Actualizar',
+                            preConfirm: () => {
+                                const operator_id = $('#operatorId').val();
+                                const rfid_reading_id = $('#rfidId').val();
+                                const sensor_id = $('#sensorId').val();
+                                const modbus_id = $('#modbusId').val();
+
+                                return { operator_id, rfid_reading_id, sensor_id, modbus_id };
+                            },
+                        }).then(result => {
+                            if (result.isConfirmed) {
+                                $.ajax({
+                                    url: `${relationsApiUrl}/${id}`,
+                                    method: 'PUT',
+                                    data: JSON.stringify(result.value),
+                                    contentType: 'application/json',
+                                    success: () => {
+                                        Swal.fire('Éxito', 'Relación actualizada.', 'success');
+                                        table.ajax.reload();
+                                    },
+                                    error: xhr => {
+                                        Swal.fire('Error', `No se pudo actualizar: ${xhr.responseText}`, 'error');
+                                    },
+                                });
+                            }
+                        });
+                    });
+                });
+            });
+
             // Eliminar Relación
             $('#relationsTable tbody').on('click', '.delete-btn', function () {
                 const id = $(this).data('id');
-    
                 Swal.fire({
                     title: '¿Estás seguro?',
                     text: 'Esta acción no se puede deshacer.',
                     icon: 'warning',
                     showCancelButton: true,
                     confirmButtonText: 'Sí, eliminar',
-                    cancelButtonText: 'Cancelar',
-                }).then((result) => {
+                }).then(result => {
                     if (result.isConfirmed) {
                         $.ajax({
                             url: `${relationsApiUrl}/${id}`,
                             method: 'DELETE',
-                            success: function () {
-                                Swal.fire('Éxito', 'Relación eliminada correctamente.', 'success');
+                            success: () => {
+                                Swal.fire('Éxito', 'Relación eliminada.', 'success');
                                 table.ajax.reload();
                             },
-                            error: function (xhr) {
-                                Swal.fire('Error', `No se pudo eliminar. ${xhr.responseJSON?.error || 'Error desconocido'}`, 'error');
+                            error: xhr => {
+                                Swal.fire('Error', `No se pudo eliminar: ${xhr.responseText}`, 'error');
                             },
                         });
                     }
                 });
             });
-    
-            // Actualizar la tabla cada 10 segundos
-            setInterval(() => {
-                table.ajax.reload(null, false);
-            }, 10000);
-    
-            // Reloj en tiempo real
+
             function updateClock() {
                 const now = new Date();
                 const hours = String(now.getHours()).padStart(2, '0');
@@ -311,11 +323,10 @@
                 const seconds = String(now.getSeconds()).padStart(2, '0');
                 document.getElementById('clock').textContent = `${hours}:${minutes}:${seconds}`;
             }
-    
+
             updateClock();
             setInterval(updateClock, 1000);
         });
     </script>
-    
 </body>
 </html>

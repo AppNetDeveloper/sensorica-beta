@@ -9,7 +9,7 @@ class OperatorPost extends Model
 {
     use HasFactory;
 
-    protected $table = 'operator_rfid';
+    protected $table = 'operator_post';
 
     protected $fillable = [
         'operator_id',

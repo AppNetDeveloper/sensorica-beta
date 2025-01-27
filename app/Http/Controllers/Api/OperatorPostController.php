@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\OperatorPost; // Cambiado a OperatorPost
+use App\Models\OperatorPost; // Modelo actualizado
 use App\Models\Operator;
 use App\Models\RfidReading;
 use Illuminate\Http\Request;
@@ -14,7 +14,7 @@ use Illuminate\Http\Request;
  *     version="1.0.0"
  * )
  */
-class OperatorPostController extends Controller // Cambiado a OperatorPostController
+class OperatorPostController extends Controller
 {
     /**
      * @OA\Get(
@@ -59,20 +59,18 @@ class OperatorPostController extends Controller // Cambiado a OperatorPostContro
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'client_id' => 'required|exists:operators,client_id', // Validar client_id en lugar de operator_id
+            'client_id' => 'required|exists:operators,client_id',
             'rfid_reading_id' => 'required|exists:rfid_readings,id',
             'sensor_id' => 'nullable|exists:sensors,id',
             'modbus_id' => 'nullable|exists:modbuses,id',
         ]);
 
-        // Obtener el operador correspondiente al client_id
         $operator = Operator::where('client_id', $validated['client_id'])->first();
 
         if (!$operator) {
             return response()->json(['error' => 'No se encontró un operador asociado al client_id.'], 404);
         }
 
-        // Crear la relación utilizando el ID del operador encontrado
         $relation = OperatorPost::create([
             'operator_id' => $operator->id,
             'rfid_reading_id' => $validated['rfid_reading_id'],

@@ -140,15 +140,31 @@ $settings = Utility::settings();
                 @endrole
 
                 @role('admin')
-                <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
-                    <a class="dash-link" href="{{ route('shift.index') }}">
-                        <span class="dash-micon"><i class="ti laptop-file"></i></span>
-                        <span class="dash-mtext custom-weight">{{ __('Shift') }}</span>
-                    </a>
-                </li>
-            @endrole
+                    <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
+                        <a class="dash-link" href="{{ route('shift.index') }}">
+                            <span class="dash-micon"><i class="ti laptop-file"></i></span>
+                            <span class="dash-mtext custom-weight">{{ __('Shift') }}</span>
+                        </a>
+                    </li>
+                @endrole
 
-            
+                @role('admin')
+                    <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
+                        <a class="dash-link" href="{{ route('worker-post.index') }}">
+                            <span class="dash-micon"><i class="ti laptop-file"></i></span>
+                            <span class="dash-mtext custom-weight">{{ __('Worker Post') }}</span>
+                        </a>
+                    </li>
+                @endrole
+
+                @role('admin')
+                    <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
+                        <a class="dash-link" href="{{ route('rfid.post.index') }}">
+                            <span class="dash-micon"><i class="ti laptop-file"></i></span>
+                            <span class="dash-mtext custom-weight">{{ __('Rfid Post') }}</span>
+                        </a>
+                    </li>
+                @endrole
                 @include('layouts.menu')
             </ul>
         </div>

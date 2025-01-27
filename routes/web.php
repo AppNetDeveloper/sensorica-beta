@@ -33,7 +33,8 @@ use App\Http\Controllers\ScadaOrderController;
 use App\Http\Controllers\ProductionOrderController;
 use App\Http\Controllers\ServerController;
 use App\Http\Controllers\ShiftManagementController;
-
+use App\Http\Controllers\OperatorPostController;
+use App\Http\Controllers\RfidPostController;
 
 /*
 |--------------------------------------------------------------------------
@@ -93,11 +94,32 @@ Route::delete('smartsensors/{sensor}', [SensorController::class, 'destroy'])->na
 
 
 
-// Rutas para gestionar turnos
-Route::get('/shift-lists', [ShiftManagementController::class, 'index'])->name('shift.index'); // Listar turnos
-Route::post('/shift-lists', [ShiftManagementController::class, 'store'])->name('shift.store'); // Crear turno
-Route::put('/shift-lists/{id}', [ShiftManagementController::class, 'update'])->name('shift.update'); // Editar turno
-Route::delete('/shift-lists/{id}', [ShiftManagementController::class, 'destroy'])->name('shift.destroy'); // Eliminar turno
+
+Route::get('/shift-lists', [ShiftManagementController::class, 'index'])->name('shift.index');
+Route::get('/shift-lists/api', [ShiftManagementController::class, 'getShiftsData'])->name('shift.api');
+Route::post('/shift-lists', [ShiftManagementController::class, 'store'])->name('shift.store');
+Route::put('/shift-lists/{id}', [ShiftManagementController::class, 'update'])->name('shift.update');
+Route::delete('/shift-lists/{id}', [ShiftManagementController::class, 'destroy'])->name('shift.destroy');
+
+
+//rfid select confection
+Route::get('/rfid/post', [RfidPostController::class, 'index'])->name('rfid.post.index');
+
+
+Route::prefix('worker-post')->group(function () {
+    // GET que carga la VISTA
+    Route::get('/', [OperatorPostController::class, 'index'])->name('worker-post.index');
+
+    // GET que retorna JSON para DataTables
+    Route::get('/api', [OperatorPostController::class, 'apiIndex'])->name('worker-post.api');
+
+    // Rutas para las operaciones CRUD
+    Route::post('/', [OperatorPostController::class, 'store'])->name('worker-post.store');
+    Route::get('/create', [OperatorPostController::class, 'create'])->name('worker-post.create');
+    Route::get('/{id}/edit', [OperatorPostController::class, 'edit'])->name('worker-post.edit');
+    Route::put('/{id}', [OperatorPostController::class, 'update'])->name('worker-post.update');
+    Route::delete('/{id}', [OperatorPostController::class, 'destroy'])->name('worker-post.destroy');
+});
 
 
 //kanban scada
