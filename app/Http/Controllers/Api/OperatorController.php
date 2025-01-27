@@ -401,7 +401,7 @@ class OperatorController extends Controller
         Log::info('Generated WhatsApp message: ' . $message);
 
         // URL de la API de WhatsApp
-        $apiUrl = rtrim(env('APP_URL'), '/') . "/api/send-message";
+        $apiUrl = rtrim(env('LOCAL_SERVER'), '/') . "/api/send-message";
         Log::info('WhatsApp API URL: ' . $apiUrl);
 
         $requestData = [

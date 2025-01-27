@@ -160,117 +160,126 @@
         }
 
         async function updateKanbanBoard(orders) {
-            const kanbanBoard = document.querySelector('.kanban-board');
+    const kanbanBoard = document.querySelector('.kanban-board');
 
-            // Crear columnas si no existen
-            Object.entries(columns).forEach(([status, column]) => {
-                let columnElement = document.getElementById(column.id);
-                if (!columnElement) {
-                    columnElement = document.createElement('div');
-                    columnElement.classList.add('column');
-                    columnElement.id = column.id;
-                    if (column.disabled) columnElement.classList.add('disabled');
-                    columnElement.innerHTML = `<h3>${column.name}</h3>`;
-                    kanbanBoard.appendChild(columnElement);
-                }
-            });
-
-            // Preparar promesas para cargar los datos de procesos
-            const orderDataPromises = orders.map(async (order) => {
-                const { usedZero, usedOne, operators } = await loadStartedCardData(order.id);
-                return { order, usedZero, usedOne, operators };
-            });
-
-            // Esperar a que todas las promesas se resuelvan
-            const ordersWithData = await Promise.all(orderDataPromises);
-
-            // Crear un Set para rastrear las órdenes actualizadas
-            const updatedOrderIds = new Set();
-
-            for (const { order, usedZero, usedOne, operators } of ordersWithData.sort((a, b) => a.order.orden - b.order.orden)) {
-                const columnId = columns[order.status].id;
-                const columnElement = document.getElementById(columnId);
-
-                const lineId = order.id || "No disponible"; // order.id debe ser único por tarjeta
-
-                // Buscar si ya existe una tarjeta usando order.id
-                let cardElement = existingCards.get(order.id);
-
-                if (!cardElement) {
-                    // Crear una nueva tarjeta si no existe
-                    cardElement = document.createElement('div');
-                    cardElement.classList.add('card');
-                    cardElement.draggable = true;
-                    cardElement.setAttribute('data-unique-id', order.id); // Usar order.id como data-unique-id
-                    cardElement.setAttribute('data-order-id', order.order_id); // Usar order.order_id como data-order-id
-                    columnElement.appendChild(cardElement);
-
-                    // Configurar eventos de arrastre
-                    cardElement.ondragstart = dragStart;
-                    cardElement.ondragend = dragEnd;
-
-                    // Añadir al mapa de tarjetas existentes
-                    existingCards.set(order.id, cardElement);
-                } else {
-                    // Si la tarjeta existe pero está en una columna diferente, moverla
-                    const currentParent = cardElement.parentElement.id;
-                    if (currentParent !== columnId) {
-                        columnElement.appendChild(cardElement);
-                    }
-                }
-
-                // Construir el contenido completo de la tarjeta
-                let cardContent = `
-                    <span class="card-menu" onclick="showCardMenu('${order.order_id}', '${order.box}', ${order.units}, '${lineId}', '${columnId}')">⋮</span>
-                    <div>Order ID: ${order.order_id}</div>
-                    ${columnId !== 'issues' ? `<div>Box: ${order.box}</div>` : ''}
-                    ${columnId !== 'issues' ? `<div>Units: ${order.units}</div>` : ''}
-                `;
-
-                // Agregar información adicional según la columna
-                if (columnId === 'started' || columnId === 'paused' || columnId === 'cancelled' || columnId === 'completed') {
-                    if (columnId === 'started' || columnId === 'paused' || columnId === 'cancelled') {
-                        cardContent += `
-                            <div>Pendientes: ${usedZero}</div>
-                            <div>Realizados: ${usedOne}</div>
-                        `;
-                    }
-
-                    if (columnId === 'paused' || columnId === 'cancelled' || columnId === 'completed') {
-                        if (operators.length > 0) {
-                            cardContent += `
-                                <div>Operarios:</div>
-                                <ul>
-                                    ${operators.map(operator => `<li>${operator}</li>`).join('')}
-                                </ul>
-                            `;
-                        } else {
-                            cardContent += `<div>Operarios: No disponible</div>`;
-                        }
-                    }
-                }
-
-                // Actualizar el contenido de la tarjeta
-                cardElement.innerHTML = cardContent;
-
-                // Marcar esta orden como actualizada
-                updatedOrderIds.add(order.id);
-            }
-
-            // Eliminar tarjetas que ya no están en los datos
-            existingCards.forEach((cardElement, orderId) => {
-                if (!updatedOrderIds.has(orderId)) {
-                    cardElement.remove();
-                    existingCards.delete(orderId);
-                }
-            });
-
-            // Configurar eventos de arrastre en columnas
-            document.querySelectorAll('.column:not(.disabled)').forEach(column => {
-                column.ondragover = dragOver;
-                column.ondrop = drop;
-            });
+    // Crear columnas si no existen
+    Object.entries(columns).forEach(([status, column]) => {
+        let columnElement = document.getElementById(column.id);
+        if (!columnElement) {
+            columnElement = document.createElement('div');
+            columnElement.classList.add('column');
+            columnElement.id = column.id;
+            if (column.disabled) columnElement.classList.add('disabled');
+            columnElement.innerHTML = `<h3>${column.name}</h3>`;
+            kanbanBoard.appendChild(columnElement);
         }
+    });
+
+    // Preparar promesas para cargar los datos de procesos solo para las columnas que lo requieran
+    const orderDataPromises = orders.filter(order => columns[order.status].id !== 'issues')
+        .map(async (order) => {
+            const { usedZero, usedOne, operators } = await loadStartedCardData(order.id);
+            return { order, usedZero, usedOne, operators };
+        });
+
+    // Esperar a que todas las promesas se resuelvan
+    const ordersWithData = await Promise.all(orderDataPromises);
+
+    // Crear un Set para rastrear las órdenes actualizadas
+    const updatedOrderIds = new Set();
+
+    // Procesar todas las órdenes, pero solo usar datos adicionales para las columnas que no son 'issues'
+    for (const order of orders) {
+        const columnId = columns[order.status].id;
+        const columnElement = document.getElementById(columnId);
+
+        const lineId = order.id || "No disponible"; // order.id debe ser único por tarjeta
+
+        // Buscar si ya existe una tarjeta usando order.id
+        let cardElement = existingCards.get(order.id);
+
+        if (!cardElement) {
+            // Crear una nueva tarjeta si no existe
+            cardElement = document.createElement('div');
+            cardElement.classList.add('card');
+            cardElement.draggable = true;
+            cardElement.setAttribute('data-unique-id', order.id); // Usar order.id como data-unique-id
+            cardElement.setAttribute('data-order-id', order.order_id); // Usar order.order_id como data-order-id
+            columnElement.appendChild(cardElement);
+
+            // Configurar eventos de arrastre
+            cardElement.ondragstart = dragStart;
+            cardElement.ondragend = dragEnd;
+
+            // Añadir al mapa de tarjetas existentes
+            existingCards.set(order.id, cardElement);
+        } else {
+            // Si la tarjeta existe pero está en una columna diferente, moverla
+            const currentParent = cardElement.parentElement.id;
+            if (currentParent !== columnId) {
+                columnElement.appendChild(cardElement);
+            }
+        }
+
+        // Construir el contenido completo de la tarjeta
+        let cardContent = `
+            <span class="card-menu" onclick="showCardMenu('${order.order_id}', '${order.box}', ${order.units}, '${lineId}', '${columnId}')">⋮</span>
+            <div>Order ID: ${order.order_id}</div>
+        `;
+
+        // Solo añadir información adicional si la tarjeta no está en la columna "Con Incidencias"
+        if (columnId !== 'issues') {
+            cardContent += `
+                <div>Box: ${order.box}</div>
+                <div>Units: ${order.units}</div>
+            `;
+
+            // Encontrar los datos adicionales solo si la columna lo requiere
+            const orderData = ordersWithData.find(data => data.order.id === order.id);
+            if (orderData && ['started', 'paused', 'cancelled', 'completed'].includes(columnId)) {
+                if (columnId === 'started' || columnId === 'paused' || columnId === 'cancelled') {
+                    cardContent += `
+                        <div>Pendientes: ${orderData.usedZero}</div>
+                        <div>Realizados: ${orderData.usedOne}</div>
+                    `;
+                }
+
+                if (columnId === 'paused' || columnId === 'cancelled' || columnId === 'completed') {
+                    if (orderData.operators.length > 0) {
+                        cardContent += `
+                            <div>Operarios:</div>
+                            <ul>
+                                ${orderData.operators.map(operator => `<li>${operator}</li>`).join('')}
+                            </ul>
+                        `;
+                    } else {
+                        cardContent += `<div>Operarios: No disponible</div>`;
+                    }
+                }
+            }
+        }
+
+        // Actualizar el contenido de la tarjeta
+        cardElement.innerHTML = cardContent;
+
+        // Marcar esta orden como actualizada
+        updatedOrderIds.add(order.id);
+    }
+
+    // Eliminar tarjetas que ya no están en los datos
+    existingCards.forEach((cardElement, orderId) => {
+        if (!updatedOrderIds.has(orderId)) {
+            cardElement.remove();
+            existingCards.delete(orderId);
+        }
+    });
+
+    // Configurar eventos de arrastre en columnas
+    document.querySelectorAll('.column:not(.disabled)').forEach(column => {
+        column.ondragover = dragOver;
+        column.ondrop = drop;
+    });
+}
 
         async function loadStartedCardData(orderId) { // Cambiar el parámetro a orderId
             try {
@@ -509,7 +518,7 @@
         loadKanbanData();
 
         // Refresco cada 5 minutos (300000 ms)
-        setInterval(loadKanbanData, 5000);
+        setInterval(loadKanbanData, 10000);
     </script>
 
 </body>

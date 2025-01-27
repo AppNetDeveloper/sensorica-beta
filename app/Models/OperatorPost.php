@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class OperatorRfid extends Model
+class OperatorPost extends Model
 {
     use HasFactory;
 
@@ -14,6 +14,10 @@ class OperatorRfid extends Model
     protected $fillable = [
         'operator_id',
         'rfid_reading_id',
+        'sensor_id',
+        'modbus_id',
+        'count',
+        'rfid',
     ];
 
     public $timestamps = true; // Permitir timestamps, pero manejarlos de forma personalizada
@@ -24,6 +28,17 @@ class OperatorRfid extends Model
     public function operator()
     {
         return $this->belongsTo(Operator::class);
+    }
+    // Relación con Sensor
+    public function sensor()
+    {
+        return $this->belongsTo(Sensor::class);
+    }
+
+    // Relación con Modbus
+    public function modbus()
+    {
+        return $this->belongsTo(Modbus::class);
     }
 
     /**

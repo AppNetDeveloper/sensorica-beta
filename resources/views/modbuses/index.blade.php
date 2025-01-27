@@ -34,6 +34,7 @@
 
                                         
                                         <a href="/live-weight/live.html?token={{ $modbus->token }}" class="btn btn-sm btn-primary">Live View</a>
+                                        <a href="/modbuses/queue-print?token={{ $modbus->token }}" class="btn btn-sm btn-primary">Api Call List</a>
                                     </td>
                                 </tr>
                                 @endforeach

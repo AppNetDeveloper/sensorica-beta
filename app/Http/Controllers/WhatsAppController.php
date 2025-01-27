@@ -12,7 +12,7 @@ class WhatsAppController extends Controller
      */
     public function sendNotification()
     {
-        $apiUrl = rtrim(env('APP_URL'), '/') . '/api/whatsapp-qr/base64';
+        $apiUrl = rtrim(env('LOCAL_SERVER'), '/') . '/api/whatsapp-qr/base64';
 
         try {
             $response = Http::get($apiUrl);
@@ -38,7 +38,7 @@ class WhatsAppController extends Controller
     public function disconnect()
     {
         try {
-            Http::post(rtrim(env('APP_URL'), '/') . '/api/whatsapp-disconnect');
+            Http::post(rtrim(env('LOCAL_SERVER'), '/') . '/api/whatsapp-disconnect');
             return redirect()->route('whatsapp.notifications')->with('status', 'WhatsApp desconectado exitosamente.');
         } catch (\Exception $e) {
             return redirect()->route('whatsapp.notifications')->with('error', 'Error al desconectar WhatsApp.');
@@ -81,7 +81,7 @@ class WhatsAppController extends Controller
 
         $phoneNumber = $request->input('test_phone_number');
         $message = $request->input('test_message');
-        $apiUrl = rtrim(env('APP_URL'), '/') . "/api/send-message";
+        $apiUrl = rtrim(env('LOCAL_SERVER'), '/') . "/api/send-message";
 
         try {
             $response = Http::get($apiUrl, [

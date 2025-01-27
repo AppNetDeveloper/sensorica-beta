@@ -16,6 +16,7 @@
                 'csrfToken' => csrf_token(),
             ]); ?>
         </script>
+        @laravelPWA
     </head>
     <body>
         <div class="master">

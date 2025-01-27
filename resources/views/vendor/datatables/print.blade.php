@@ -11,6 +11,7 @@
         <style>
             body {margin: 20px}
         </style>
+        @laravelPWA
     </head>
     <body>
         <table class="table table-bordered table-condensed table-striped">

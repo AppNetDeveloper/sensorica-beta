@@ -43,4 +43,9 @@ class ProductionLine extends Model
     {
         return $this->hasMany(Sensor::class, 'production_line_id');
     }
+    // Relación inversa con OrderStat (opcional)
+    public function orderStats()
+    {
+        return $this->hasMany(OrderStat::class, 'production_line_id');
+    }
 }

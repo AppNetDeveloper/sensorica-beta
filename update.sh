@@ -54,7 +54,12 @@ COMMANDS=(
     "/usr/bin/supervisorctl update"
     "/usr/bin/supervisorctl status"
     "/bin/systemctl restart 485.service"
+    "/bin/systemctl is-active 485.service"
+    "/bin/systemctl daemon-reload"
+    "/bin/systemctl enable 485.service"
+    "/bin/systemctl start 485.service"
 )
+
 
 for COMMAND in "${COMMANDS[@]}"; do
     if sudo grep -Fxq "$USER ALL=(ALL) NOPASSWD: $COMMAND" /etc/sudoers; then
@@ -94,6 +99,9 @@ declare -A ENV_VARS=(
     ["TOKEN_SYSTEM"]="ZZBSFSIOHJHLKLKJHIJJAHSTG"
     ["TCP_SERVER"]="127.0.0.1"
     ["TCP_PORT"]="8000"
+    ["LOCAL_SERVER"]="http://127.0.0.1/"
+    ["PRODUCTION_MIN_TIME_WEIGHT"]="30"
+    ["CLEAR_DB_DAY"]="30"
 )
 
 ENV_FILE=".env"

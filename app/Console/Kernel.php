@@ -35,6 +35,7 @@ class Kernel extends ConsoleKernel
         Commands\MqttSubscriberLocalMac::class,
         Commands\ResetWeeklyCounts::class,
         Commands\TcpClientlocal::class,
+        Commands\ClearOldRecords::class,
         
     ];
 

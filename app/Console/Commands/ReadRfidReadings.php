@@ -121,7 +121,7 @@ class ReadRfidReadings extends Command
     
     private function sendToApi($epc, $rssi, $serialno, $tid, $ant, $antennaName)
     {
-        $apiUrl = rtrim(env('APP_URL'), '/') . '/api/rfid-insert';
+        $apiUrl = rtrim(env('LOCAL_SERVER'), '/') . '/api/rfid-insert';
         $client = new Client([
             'timeout' => 0.1,
             'http_errors' => false,

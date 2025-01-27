@@ -42,6 +42,19 @@ return [
             'prefix' => '',
             'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
         ],
+        'external' => [
+            'driver' => 'mysql',
+            'host' => env('MYSQL_SERVER', '127.0.0.1'),
+            'port' => env('MYSQL_PORT', '3306'),
+            'database' => env('MYSQL_DB', 'forge'),
+            'username' => env('MYSQL_USER', 'forge'),
+            'password' => env('MYSQL_PASSWORD', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'strict' => true,
+            'engine' => null,
+        ],
 
         'mysql' => [
             'driver' => 'mysql',

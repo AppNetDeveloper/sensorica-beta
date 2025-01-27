@@ -1065,6 +1065,48 @@ paths:
                   status: { type: string }
                   message: { type: string }
                 type: object
+  /api/modbus/cancel:
+    post:
+      tags:
+        - Modbus
+      summary: 'Cancel ongoing dosage for a Modbus'
+      operationId: 1fdf1ef6bce37f8013cb4702c59ece1c
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                id:
+                  type: integer
+                token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'Cancellation command sent successfully'
+          content:
+            application/json:
+              schema:
+                properties:
+                  message: { type: string }
+                type: object
+        '400':
+          description: 'Token not provided'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string }
+                type: object
+        '404':
+          description: 'Invalid token or Modbus not found'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string }
+                type: object
   /api/modbus/tara:
     post:
       tags:
@@ -2793,6 +2835,317 @@ paths:
       security:
         -
           bearerAuth: []
+  /api/supervisor-status:
+    get:
+      tags:
+        - Supervisor
+      summary: 'Obtener el estado de todos los procesos de Supervisor'
+      operationId: 5e9a53ef2290b0eab6eb69166b77219e
+      responses:
+        '200':
+          description: 'Estado de Supervisor obtenido con éxito.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  status: { type: string, example: success }
+                  supervisor_status: { type: array, items: { type: string, example: 'program_name RUNNING pid 1234' } }
+                type: object
+        '403':
+          description: 'Token de autorización inválido.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string, example: 'Token de autorización inválido.' }
+                type: object
+        '500':
+          description: 'Error al obtener el estado de Supervisor.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string, example: 'Error al obtener el estado de Supervisor.' }
+                type: object
+      security:
+        -
+          bearerAuth: []
+  /api/check-485-service:
+    get:
+      tags:
+        - Dispositivos
+      summary: 'Verificar el estado del servicio 485.service'
+      operationId: 3d0a7f182b068a8490c610c430426e07
+      responses:
+        '200':
+          description: 'Estado del servicio 485.service obtenido con éxito.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  status: { type: string, example: success }
+                  message: { type: string, example: 'Servicio encontrado' }
+                  service_status: { type: string, example: active }
+                type: object
+        '403':
+          description: 'Token de autorización inválido.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string, example: 'Token de autorización inválido.' }
+                type: object
+        '500':
+          description: 'Error al verificar el estado del servicio.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string, example: 'Error al verificar el estado del servicio.' }
+                type: object
+      security:
+        -
+          bearerAuth: []
+  /api/install-485-service:
+    post:
+      tags:
+        - Dispositivos
+      summary: 'Crear y arrancar el servicio 485.service'
+      operationId: 772a5b8c661cf6208d67fe54fb036770
+      responses:
+        '200':
+          description: 'Servicio 485 creado y arrancado con éxito.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  status: { type: string, example: success }
+                  message: { type: string, example: 'Servicio creado y arrancado con éxito.' }
+                type: object
+        '403':
+          description: 'Token de autorización inválido.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string, example: 'Token de autorización inválido.' }
+                type: object
+        '500':
+          description: 'Error al crear o arrancar el servicio.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string, example: 'Error al crear o arrancar el servicio.' }
+                type: object
+      security:
+        -
+          bearerAuth: []
+  /api/app-update:
+    post:
+      tags:
+        - Aplicación
+      summary: 'Actualizar la aplicación ejecutando el script update.sh'
+      operationId: 232e815f537ea26d2e79bfd1c0c3cb1c
+      responses:
+        '200':
+          description: 'Actualización iniciada correctamente.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  status: { type: string, example: success }
+                  message: { type: string, example: 'Script de actualización ejecutado correctamente.' }
+                type: object
+        '403':
+          description: 'Token de autorización inválido.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string, example: 'Token de autorización inválido.' }
+                type: object
+        '500':
+          description: 'Error al ejecutar el script de actualización.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string, example: 'Error al ejecutar el script de actualización.' }
+                type: object
+      security:
+        -
+          bearerAuth: []
+  /api/server-ips:
+    get:
+      tags:
+        - Servidor
+      summary: 'Obtener las direcciones IP del servidor'
+      operationId: 85fe1fd26387af25ef683bd0f765406c
+      responses:
+        '200':
+          description: 'Direcciones IP obtenidas con éxito.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  status: { type: string, example: success }
+                  ips: { type: array, items: { type: string, example: 192.168.1.100 } }
+                type: object
+        '403':
+          description: 'Token de autorización inválido.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string, example: 'Token de autorización inválido.' }
+                type: object
+        '500':
+          description: 'Error al obtener las direcciones IP.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string, example: 'Error al obtener las direcciones IP.' }
+                type: object
+      security:
+        -
+          bearerAuth: []
+  /api/update-env:
+    post:
+      tags:
+        - Servidor
+      summary: 'Actualizar configuraciones en el archivo .env'
+      operationId: ba9b4ffd37b595a053c38165f22618d4
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                mysql_server:
+                  type: string
+                  example: 127.0.0.1
+                mysql_port:
+                  type: string
+                  example: '3306'
+                mysql_db:
+                  type: string
+                  example: my_database
+                mysql_user:
+                  type: string
+                  example: root
+                mysql_password:
+                  type: string
+                  example: secure_password
+              type: object
+      responses:
+        '200':
+          description: 'Configuración actualizada correctamente.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  status: { type: string, example: success }
+                  message: { type: string, example: 'Configuración actualizada correctamente.' }
+                type: object
+        '403':
+          description: 'Token de autorización inválido.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string, example: 'Token de autorización inválido.' }
+                type: object
+        '500':
+          description: 'Error al actualizar el archivo .env.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string, example: 'Error al actualizar el archivo .env.' }
+                type: object
+      security:
+        -
+          bearerAuth: []
+  /api/check-db-connection:
+    post:
+      tags:
+        - 'Base de Datos'
+      summary: 'Verificar la conexión a la base de datos MySQL'
+      operationId: 1886d2ecdd7d3a9e8e0443975b4a18b8
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                mysql_server:
+                  type: string
+                  example: 127.0.0.1
+                mysql_port:
+                  type: string
+                  example: '3306'
+                mysql_db:
+                  type: string
+                  example: my_database
+                mysql_user:
+                  type: string
+                  example: root
+                mysql_password:
+                  type: string
+                  example: secure_password
+              type: object
+      responses:
+        '200':
+          description: 'Conexión realizada con éxito.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  status: { type: string, example: success }
+                  message: { type: string, example: 'Conexión realizada con éxito.' }
+                type: object
+        '500':
+          description: 'Error al conectar con la base de datos.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  status: { type: string, example: error }
+                  message: { type: string, example: 'No se pudo conectar a la base de datos.' }
+                type: object
+      security:
+        -
+          bearerAuth: []
+  /api/verify-and-sync-database:
+    post:
+      tags:
+        - 'Base de Datos'
+      summary: 'Verificar y sincronizar la base de datos externa'
+      operationId: bb5d150d9b5e3a77a717e66fe24493b5
+      responses:
+        '200':
+          description: 'Sincronización realizada con éxito.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  status: { type: string, example: success }
+                  message: { type: string, example: 'Base de datos verificada y sincronizada correctamente.' }
+                type: object
+        '500':
+          description: 'Error al verificar o sincronizar la base de datos.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  status: { type: string, example: error }
+                  message: { type: string, example: 'Detalles del error.' }
+                type: object
+      security:
+        -
+          bearerAuth: []
   /api/publish-message:
     post:
       tags:
@@ -2892,6 +3245,15 @@ tags:
   -
     name: Supervisor
     description: Supervisor
+  -
+    name: Aplicación
+    description: Aplicación
+  -
+    name: Servidor
+    description: Servidor
+  -
+    name: 'Base de Datos'
+    description: 'Base de Datos'
   -
     name: 'TCP Operations'
     description: 'TCP Operations'

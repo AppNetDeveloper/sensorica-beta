@@ -1148,7 +1148,7 @@ function mostrarOpcionesOrdenesTrabajo() {
                                 flex-direction: column;
                             ">
                                 <div>
-                                    <strong>ID:</strong> ${process.id} |
+                                    <strong hidden>ID: ${process.id} |</strong>
                                     <strong>Material:</strong> ${requiredMaterial} |
                                     <strong hidden>Orden: ${process.orden} |</strong>
                                     <strong>Valor:</strong> ${process.value} ${process.measure} |
@@ -1208,7 +1208,7 @@ function mostrarOpcionesOrdenesTrabajo() {
                         font-size: 1.5rem;
                     ">
                         <div style="font-weight: bold; color: ${parentStatusColor}; margin-bottom: 10px;">
-                            ID: ${line.id} | Estado: ${line.status} | Proceso: ${processType}
+                            <strong hidden>ID:${line.id} | </strong> Estado: ${line.status} | Proceso: ${processType}
                         </div>
                         <div style="margin-left: 20px;">
                             ${childHtml}
@@ -1218,8 +1218,11 @@ function mostrarOpcionesOrdenesTrabajo() {
                 `;
             });
 
+            const orderIdElement = document.getElementById("order-id");
+            let orderId = orderIdElement ? orderIdElement.textContent.trim() : "Órdenes de Trabajo";
+
             Swal.fire({
-                title: "Órdenes de Trabajo",
+                title: `Orden: ${orderId}`,
                 html: `
                     <div style="
                         max-height: 500px;
@@ -2102,7 +2105,7 @@ async function esperarSwalCerrado(tiempoMs) {
           popup: "swal-wide"                     // Clase para el contenedor del popup
         },
         html: `
-          <button class="btn btn-danger btn-lg big-button" style="margin: 40px;" onclick="confirmarVaciado('${tolvaId}', '${tolvaToken}', '${tolvaLastValue}', '${tolvaName}')">VACIAR</button>
+          <button class="btn btn-danger btn-lg big-button" style="margin: 40px;" onclick="mostrarSwalConValor('${tolvaId}', '${tolvaToken}', '${tolvaName}', '${tolvaLastValue}','${tolvaLastValue}')">VACIAR</button>
           <button class="btn btn-warning btn-lg big-button" style="margin: 40px;" onclick="descargaManual('${tolvaId}', '${tolvaToken}', '${tolvaName}', '${tolvaLastValue}')">MANUAL</button>
           <button class="btn btn-info btn-lg big-button" style="margin: 40px;" onclick="zeroManual('${tolvaId}', '${tolvaToken}', '${tolvaName}')">ZERO</button>
 
@@ -2191,90 +2194,6 @@ async function esperarSwalCerrado(tiempoMs) {
       });
     }
 
-    // Nueva función para confirmar el vaciado
-    function confirmarVaciado(tolvaId, tolvaToken, tolvaLastValue, tolvaName) {
-      Swal.fire({
-        title: 'Confirmación de Dosificacion: '+ tolvaName+'',
-        html: '<span style="font-size: 3.5rem;">¿Está seguro que desea dosificar: '+tolvaLastValue+'Kg?</strong></span>',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: '<span style="color: white;">Vaciar</span>',
-        cancelButtonText: 'Cancelar',
-        customClass: {
-          confirmButton: "custom-confirm-button", // Clase personalizada para el botón de confirmación
-          cancelButton: "custom-cancel-button",  // Clase personalizada para el botón de cancelación
-          popup: "swal-wide"                     // Clase para el contenedor del popup
-        },
-      }).then((result) => {
-        if (result.isConfirmed) {
-          // Cuando el usuario confirma, enviar el valor de tolvaLastValue a la API
-          fetch(`/api/modbus/send`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              id: tolvaId,         // ID de la tolva
-              token: tolvaToken,        // Token de la tolva
-              value: tolvaLastValue     // Valor que representa el último valor de la tolva
-            })
-          })
-          .then(response => response.json())
-          .then(data => {
-            if (data.error) {
-              Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: `Hubo un problema: ${data.error}`,
-                timer: 5000,
-                customClass: {
-                  confirmButton: "custom-confirm-button", // Clase personalizada para el botón de confirmación
-                  cancelButton: "custom-cancel-button",  // Clase personalizada para el botón de cancelación
-                  popup: "swal-wide"                     // Clase para el contenedor del popup
-                },
-                timerProgressBar: true
-              }).then(() => {
-                isSwalOpen = false;  // Cerrar el modal cuando el error se muestre
-              });
-            } else {
-              Swal.fire({
-                icon: 'success',
-                title: 'Éxito',
-                text: 'Tolva vaciada correctamente.',
-                timer: 5000,
-                customClass: {
-                  confirmButton: "custom-confirm-button", // Clase personalizada para el botón de confirmación
-                  cancelButton: "custom-cancel-button",  // Clase personalizada para el botón de cancelación
-                  popup: "swal-wide"                     // Clase para el contenedor del popup
-                },
-                timerProgressBar: true
-              }).then(() => {
-                isSwalOpen = false;  // Cerrar el modal cuando se confirme el éxito
-              });
-            }
-          })
-          .catch(error => {
-            Swal.fire({
-              icon: 'error',
-              title: 'Error',
-              text: `No se pudo vaciar la tolva. Error: ${error.message}`,
-              timer: 5000,
-              customClass: {
-                confirmButton: "custom-confirm-button", // Clase personalizada para el botón de confirmación
-                cancelButton: "custom-cancel-button",  // Clase personalizada para el botón de cancelación
-                popup: "swal-wide"                     // Clase para el contenedor del popup
-              },
-              timerProgressBar: true
-            }).then(() => {
-              isSwalOpen = false;  // Cerrar el modal cuando se muestre el error
-            });
-          });
-        } else {
-          isSwalOpen = false;
-          Swal.close();
-        }
-      });
-    }
 //obtener el ultimo valor tolva en live
     async function obtenerTolvaLastValue(tolvaToken) {
         try {

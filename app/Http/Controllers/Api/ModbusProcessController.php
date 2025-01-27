@@ -36,7 +36,7 @@ class ModbusProcessController extends Controller
         
 
         $config = Modbus::where('id', $id)->first();
-        $topic= $config->topic;
+        $topic= $config->mqtt_topic_modbus;
         // Verificar que $config exista
         if (!$config) {
             return response()->json([
@@ -72,14 +72,7 @@ class ModbusProcessController extends Controller
             }
         }
         
-        // Nuevo chequeo para valores por debajo de cero
-        if ($value !== null && $value <= 0) {
-            $this->makeZero($config, $value);
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Zero action taken.',
-            ]);
-        }
+        
         
         // Verifica el valor del campo 'model_name' y llama al método correspondiente
         if ($config['model_name'] === 'height') {
@@ -95,7 +88,14 @@ class ModbusProcessController extends Controller
         }
 
 
-
+        $numericValue = floatval($value); // Usamos floatval para manejar tanto enteros como decimales
+        if ($numericValue <= 0) {
+            $this->makeZero($config, $value);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Zero action taken.',
+            ]);
+        }
     
         return response()->json([
             'status' => 'success',
@@ -118,16 +118,16 @@ class ModbusProcessController extends Controller
     
     private function makeZero($config, $value)
     {
-        $this->info("Making zero for Modbus ID: {$config->id}, current value: {$value}");
-        
+        Log::info("Making zero for Modbus ID: {$config->id}, current value: {$value}");
+        $topic= $config->mqtt_topic_modbus;
         // Generar el nuevo tópico cambiando 'peso' por 'zero'
-        $topicParts = explode('/', $config->topic);
+        $topicParts = explode('/', $topic);
         
         if (in_array('peso', $topicParts)) {
             $topicZero = str_replace('peso', 'zero', implode('/', $topicParts));
         } else {
             // Si 'peso' no está en el tópico, usar el tópico original
-            $topicZero = $config->topic;
+            $topicZero = $topic . '/zero';
         }
         
         // Definir el mensaje JSON
@@ -136,7 +136,7 @@ class ModbusProcessController extends Controller
         // Publicar el mensaje MQTT
         $this->publishMqttMessage($topicZero, $messageZero);
         
-        $this->info("Zero command sent for Modbus ID: {$config->id} on topic: {$topicZero}");
+        Log::info("Zero command sent for Modbus ID: {$config->id} on topic: {$topicZero}");
     }
 
     public function processWeightModel($config, $value, $data)
@@ -512,7 +512,7 @@ class ModbusProcessController extends Controller
         $apiQueue->save(); 
         
         if ($apiQueue->url_back === 'tcp') {
-            $baseUrl = env('APP_URL');
+            $baseUrl = env('LOCAL_SERVER');
             if (substr($baseUrl, -1) === '/') {
                 $baseUrl = rtrim($baseUrl, '/');
             }

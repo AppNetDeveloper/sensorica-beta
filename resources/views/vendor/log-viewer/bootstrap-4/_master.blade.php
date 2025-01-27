@@ -215,6 +215,7 @@
             overflow-wrap: anywhere;
         }
     </style>
+    @laravelPWA
 </head>
 <body>
     <nav class="navbar navbar-expand-md navbar-dark sticky-top bg-dark p-0">

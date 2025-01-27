@@ -15,7 +15,7 @@ return [
 
             'servers' => [
                 [
-                    'url' => env('APP_URL'),
+                    'url' => env('LOCAL_SERVER'),
                     'description' => null,
                     'variables' => [],
                 ],

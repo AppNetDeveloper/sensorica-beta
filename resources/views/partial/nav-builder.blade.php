@@ -58,8 +58,8 @@ $settings = Utility::settings();
                 
                 @can('manage-role')
                     <li class="dash-item dash-hasmenu {{ request()->is('roles*') ? 'active' : '' }}">
-                        <a class="dash-link" href="{{ route('roles.index') }}">
-                            <span class="dash-micon"><i class="ti ti-key"></i></span>
+                        <a class="dash-link" href="{{ route('manage-role.index') }}">
+                            <span class="dash-micon"><i class="ti ti-briefcase"></i></span>
                             <span class="dash-mtext custom-weight">{{ __('Roles') }}</span>
                         </a>
                     </li>
@@ -67,21 +67,13 @@ $settings = Utility::settings();
                 
                 @can('manage-permission')
                     <li class="dash-item dash-hasmenu {{ request()->is('permission*') ? 'active' : '' }}">
-                        <a class="dash-link" href="{{ route('permission.index') }}">
+                        <a class="dash-link" href="{{ route('manage-permission.index') }}">
                             <span class="dash-micon"><i class="ti ti-lock"></i></span>
                             <span class="dash-mtext custom-weight">{{ __('Permissions') }}</span>
                         </a>
                     </li>
                 @endcan
                 
-                @can('manage-module')
-                    <li class="dash-item dash-hasmenu {{ request()->is('modules*') ? 'active' : '' }}">
-                        <a class="dash-link" href="{{ route('modules.index') }}">
-                            <span class="dash-micon"><i class="ti ti-subtask"></i></span>
-                            <span class="dash-mtext custom-weight">{{ __('Modules') }}</span>
-                        </a>
-                    </li>
-                @endcan
                 
                 @role('admin')
                     <li class="dash-item dash-hasmenu {{ request()->is('settings*') ? 'active' : '' }}">
@@ -101,24 +93,62 @@ $settings = Utility::settings();
                     </li>
                 @endcan
 
+
                 @role('admin')
                     <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
-                        <a class="dash-link" href="{{ route('io_generator_builder') }}">
-                            <span class="dash-micon"><i class="ti ti-3d-cube-sphere"></i></span>
-                            <span class="dash-mtext custom-weight">{{ __('Crud') }}</span>
+                        <a class="dash-link" href="{{ route('customers.index') }}">
+                            <span class="dash-micon"><i class="ti building"></i>></span>
+                            <span class="dash-mtext custom-weight">{{ __('Customers') }}</span>
                         </a>
                     </li>
                 @endrole
 
                 @role('admin')
                     <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
-                        <a class="dash-link" href="{{ route('customers.index') }}">
-                            <span class="dash-micon"><i class="ti ti-list-outline"></i></span>
-                            <span class="dash-mtext custom-weight">{{ __('Customers') }}</span>
+                        <a class="dash-link" href="{{ route('workers-admin.index') }}">
+                            <span class="dash-micon"><i class="ti user-nurse"></i></span>
+                            <span class="dash-mtext custom-weight">{{ __('Workers') }}</span>
                         </a>
                     </li>
                 @endrole
-                
+
+                @role('admin')
+                    <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
+                        <a class="dash-link" href="{{ route('confections.index') }}">
+                            <span class="dash-micon"><i class="ti laptop-file"></i></span>
+                            <span class="dash-mtext custom-weight">{{ __('Confections') }}</span>
+                        </a>
+                    </li>
+                @endrole
+
+                @role('admin')
+                    <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
+                        <a class="dash-link" href="{{ route('server.index') }}">
+                            <span class="dash-micon"><i class="ti laptop-file"></i></span>
+                            <span class="dash-mtext custom-weight">{{ __('Server') }}</span>
+                        </a>
+                    </li>
+                @endrole
+
+                @role('admin')
+                    <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
+                        <a class="dash-link" href="{{ route('server.uploadstats') }}">
+                            <span class="dash-micon"><i class="ti laptop-file"></i></span>
+                            <span class="dash-mtext custom-weight">{{ __('Settings Stats Upload') }}</span>
+                        </a>
+                    </li>
+                @endrole
+
+                @role('admin')
+                <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
+                    <a class="dash-link" href="{{ route('shift.index') }}">
+                        <span class="dash-micon"><i class="ti laptop-file"></i></span>
+                        <span class="dash-mtext custom-weight">{{ __('Shift') }}</span>
+                    </a>
+                </li>
+            @endrole
+
+            
                 @include('layouts.menu')
             </ul>
         </div>

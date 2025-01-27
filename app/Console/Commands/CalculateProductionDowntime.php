@@ -11,6 +11,7 @@ use App\Models\MqttSendServer2;
 use App\Models\SensorCount;
 use Illuminate\Support\Facades\Log;
 use Exception;
+use App\Models\OrderStat;
 
 class CalculateProductionDowntime extends Command
 {
@@ -38,6 +39,9 @@ class CalculateProductionDowntime extends Command
         parent::__construct();
     }
 
+    private $downtimeStartTimes = []; // Array para guardar tiempos de inicio por línea de producción
+
+
     /**
      * Execute the console command.
      *
@@ -48,22 +52,7 @@ class CalculateProductionDowntime extends Command
         while (true) {
             $this->info("Starting the calculation of production downtime...");
 
-            // Obtener todos los sensores
-            $sensors = Sensor::all();
-
-            foreach ($sensors as $sensor) {
-                // Validar los datos del sensor
-                if (!$this->validateSensorData($sensor)) {
-                    $this->error("Skipping sensor {$sensor->name} due to invalid data.");
-                    continue;
-                }
-                // Manejar la lógica según el tipo de sensor
-                if ($sensor->sensor_type == 0) {
-                    $this->handleType0DowntimeLogic($sensor);
-                } else {
-                    $this->handleGenericDowntimeLogic($sensor);
-                }
-            }
+            $this->calculateProductionDowntime();
 
             // Esperar 1 segundo antes de volver a ejecutar la lógica
             $this->info("Waiting for 1 second before the next run...");
@@ -73,20 +62,106 @@ class CalculateProductionDowntime extends Command
         return 0;
     }
     private function validateSensorData($sensor)
-{
-    if (!$sensor->mqtt_topic_1) {
-        $this->error("Sensor {$sensor->name} does not have an MQTT topic configured.");
-        return false;
+    {
+        if (!$sensor->mqtt_topic_1) {
+            $this->error("Sensor {$sensor->name} does not have an MQTT topic configured.");
+            return false;
+        }
+
+        if (!$sensor->production_line_id) {
+            $this->error("Sensor {$sensor->name} does not have a production line ID.");
+            return false;
+        }
+
+        return true;
     }
 
-    if (!$sensor->production_line_id) {
-        $this->error("Sensor {$sensor->name} does not have a production line ID.");
-        return false;
+    private function calculateProductionDowntime()
+    {
+        // Obtener todos los sensores donde el event sea "start"
+        $sensors = Sensor::where('event', 'start')->get();
+    
+        $this->info("Processing {$sensors->count()} sensors...");
+    
+        // Agrupar sensores por línea de producción y tipo
+        $sensorsByLineAndType = $sensors->groupBy(function ($sensor) {
+            return $sensor->production_line_id . '_' . $sensor->sensor_type;
+        });
+    
+        foreach ($sensorsByLineAndType as $groupKey => $lineSensors) {
+            [$productionLineId, $sensorType] = explode('_', $groupKey);
+    
+            $allInDowntime = true;
+    
+            foreach ($lineSensors as $sensor) {
+                // Validar los datos del sensor
+                if (!$this->validateSensorData($sensor)) {
+                    $this->error("Skipping sensor {$sensor->name} due to invalid data.");
+                    continue;
+                }
+    
+                // Manejar la lógica según el tipo de sensor
+                if ($sensor->sensor_type == 0) {
+                    $this->handleType0DowntimeLogic($sensor);
+                } else {
+                    $this->handleGenericDowntimeLogic($sensor);
+                }
+    
+                // Verificar si algún sensor no está en downtime
+                $downtime = DowntimeSensor::where('sensor_id', $sensor->id)
+                    ->whereNull('end_time')
+                    ->first();
+                if (!$downtime) {
+                    $allInDowntime = false; // Al menos un sensor no está en downtime
+                }
+            }
+    
+            // Manejar el estado de downtime por tipo de sensor
+            if ($allInDowntime) {
+                if (!isset($this->downtimeStartTimes[$groupKey])) {
+                    $this->downtimeStartTimes[$groupKey] = Carbon::now();
+                    if ($sensorType == 0) {
+                        $this->info("All sensors of type 0 in production line {$productionLineId} are offline. Timer started.");
+                    } else {
+                        $this->info("All sensors of type {$sensorType} in production line {$productionLineId} are offline. Timer started.");
+                    }
+                }
+            } else {
+                if (isset($this->downtimeStartTimes[$groupKey])) {
+                    $downtimeDuration = Carbon::now()->diffInSeconds($this->downtimeStartTimes[$groupKey]);
+    
+                    // Actualizar order_stats con el tiempo acumulado
+                    if ($sensorType == 0) {
+                        $this->info("Sensors of type 0 in production line {$productionLineId} are no longer all offline. Total downtime duration: {$downtimeDuration} seconds.");
+                        $this->updateOrderStatsDowntime($productionLineId, $downtimeDuration);
+                    }
+    
+                    unset($this->downtimeStartTimes[$groupKey]); // Resetear el tiempo de downtime
+                }
+    
+                // Mensaje adicional si los sensores de tipo 0 no están todos en downtime
+                if ($sensorType == 0) {
+                    $this->info("Sensors of type 0 in production line {$productionLineId} are not all in downtime.");
+                }
+            }
+        }
     }
+    private function updateOrderStatsDowntime($productionLineId, $downtimeDuration)
+    {
+        $orderStat = OrderStat::where('production_line_id', $productionLineId)
+                                            ->latest('id') // Más legible y hace lo mismo que orderBy('id', 'desc')
+                                            ->first();
 
-    return true;
-}
 
+        if ($orderStat) {
+            $orderStat->down_time += $downtimeDuration;
+            $orderStat->save();
+            $this->info("Updated downtime in order_stats for production line {$productionLineId}: +{$downtimeDuration} seconds.");
+        } else {
+            $this->error("No order_stats record found for production line {$productionLineId}.");
+        }
+    }
+    
 
     private function handleType0DowntimeLogic($sensor)
     {

@@ -33,7 +33,7 @@ class ShiftList extends Model
     {
         return $this->belongsTo(ProductionLine::class);
     }
-
+    
     /**
      * Métodos del ciclo de vida del modelo para reiniciar Supervisor
      * cuando se actualizan ciertos campos.

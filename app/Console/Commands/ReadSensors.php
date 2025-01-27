@@ -167,7 +167,7 @@ class ReadSensors extends Command
         }
     
         // Llamada asíncrona a la API
-        $appUrl = rtrim(env('APP_URL'), '/');
+        $appUrl = rtrim(env('LOCAL_SERVER'), '/');
         $apiUrl = $appUrl . '/api/sensor-insert';
     
         // Configurar cliente Guzzle para operaciones asíncronas

@@ -117,7 +117,7 @@ class ReadModbuBackup extends Command
         //$this->info("Llamada a la API externa para el Modbus ID: {$config->id} y valor: {$value}");
     
         // Construir la URL de la API
-        $appUrl = rtrim(env('APP_URL'), '/');
+        $appUrl = rtrim(env('LOCAL_SERVER'), '/');
         $apiUrl = $appUrl . '/api/modbus-process-data-mqtt';
     
         // Configurar el cliente HTTP (Guzzle)

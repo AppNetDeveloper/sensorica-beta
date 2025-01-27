@@ -25,5 +25,9 @@ class ProductList extends Model
     {
         return $this->hasMany(ProductListRfid::class);
     }
-
+    // Relación inversa con OrderStat (opcional)
+    public function orderStats()
+    {
+        return $this->hasMany(OrderStat::class, 'production_line_id');
+    }
 }

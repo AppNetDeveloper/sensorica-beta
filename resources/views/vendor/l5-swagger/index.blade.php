@@ -25,6 +25,7 @@
       background: #fafafa;
     }
     </style>
+    @laravelPWA
 </head>
 
 <body>

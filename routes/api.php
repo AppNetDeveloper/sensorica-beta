@@ -26,8 +26,9 @@ use App\Http\Controllers\Api\ScadaOrderController;
 use App\Http\Controllers\Api\ProductionOrderController;
 use App\Http\Controllers\Api\ProductListRfidController;
 use App\Http\Controllers\Api\RfidReadingController;
-use App\Http\Controllers\Api\OperatorRfidController;
+use App\Http\Controllers\Api\OperatorPostController;
 use App\Http\Controllers\Api\TcpPublishController;
+use App\Http\Controllers\Api\TransferExternalDbController;
 
 
 
@@ -96,6 +97,7 @@ Route::post('/modbus/zero', [ModbusController::class, 'setZero']);
 
 Route::post('/modbus/tara', [ModbusController::class, 'setTara']);
 Route::post('/modbus/tara/reset', [ModbusController::class, 'resetTara']);
+Route::post('/modbus/cancel', [ModbusController::class, 'sendCancel']);
 
 
 
@@ -140,6 +142,14 @@ Route::post('/restart-supervisor', [SystemController::class, 'restartSupervisor'
 Route::post('/stop-supervisor', [SystemController::class, 'stopSupervisor']);
 Route::post('/start-supervisor', [SystemController::class, 'startSupervisor']);
 Route::post('/restart-485-Swift', [SystemController::class, 'restart485Swift']);
+Route::get('/supervisor-status', [SystemController::class, 'getSupervisorStatus']);
+Route::get('/check-485-service', [SystemController::class, 'check485Service']);
+Route::post('/install-485-service', [SystemController::class, 'install485Service']);
+Route::post('/app-update', [SystemController::class, 'appUpdate']);
+Route::get('/server-ips', [SystemController::class, 'getServerIps']);
+Route::post('/update-env', [SystemController::class, 'updateEnv']);
+Route::post('/check-db-connection', [SystemController::class, 'checkDbConnection']);
+Route::post('/verify-and-sync-database', [SystemController::class, 'verifyAndSyncDatabase']);
 Route::post('/run-update', [SystemController::class, 'runUpdateScript']);
 
 // Routes for Operators
@@ -247,15 +257,19 @@ Route::put('rfid-readings/{id}', [RfidReadingController::class, 'update']);
 Route::delete('rfid-readings/{id}', [RfidReadingController::class, 'destroy']);
 
 
+//Transfer to external DB
+Route::post('/transfer-external-db', [TransferExternalDbController::class, 'transferDataToExternal']);
 
 
 
-// Rutas para las relaciones entre operadores y RFID readings
-Route::get('operator-rfid', [OperatorRfidController::class, 'index']);
-Route::post('operator-rfid', [OperatorRfidController::class, 'store']);
-Route::get('operator-rfid/{id}', [OperatorRfidController::class, 'show']);
-Route::put('operator-rfid/{id}', [OperatorRfidController::class, 'update']);
-Route::delete('operator-rfid/{id}', [OperatorRfidController::class, 'destroy']);
+
+// Rutas para las relaciones entre operadores y sus puestos
+Route::get('operator-post', [OperatorPostController::class, 'index']);
+Route::post('operator-post', [OperatorPostController::class, 'store']);
+Route::get('operator-post/{id}', [OperatorPostController::class, 'show']);
+Route::put('operator-post/{id}', [OperatorPostController::class, 'update']);
+Route::delete('operator-post/{id}', [OperatorPostController::class, 'destroy']);
+
 
 //publicar tcp mesaje
 

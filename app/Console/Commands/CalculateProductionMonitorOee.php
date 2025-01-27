@@ -55,8 +55,22 @@ class CalculateProductionMonitorOee extends Command
                     ->selectRaw('SUM(downtime_count) as total_downtime, SUM(count_order_0) as total_count_order')
                     ->first();
                    
-                    $downTimeSensorStop = $result->total_downtime;
+                    
                     $numberSensorStop = $result->total_count_order;
+
+                    // Obtener el último registro de order_stats para la línea de producción
+                    $orderStat = OrderStat::where('production_line_id', $monitor->production_line_id)
+                    ->latest('id') // Obtener el último registro
+                    ->first();
+
+                    if ($orderStat) {
+                    $downTimeSensorStop = $orderStat->down_time; // Obtener el downtime acumulado
+                    $this->info("Downtime: {$downTimeSensorStop}, Number of sensor stops: {$numberSensorStop}.");
+                    } else {
+                    $this->error("No order_stats record found for production line {$monitor->production_line_id}.");
+                    $downTimeSensorStop = 0;
+                    }
+
 
                     // Filtrar los sensores por production_line_id y sensor_type = 0
                     $sensors = Sensor::where('production_line_id', $monitor->production_line_id)

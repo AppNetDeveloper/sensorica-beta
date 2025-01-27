@@ -81,6 +81,7 @@ else{
     {{--  <link href="{{ asset('css/style.css') }}" rel="stylesheet">  --}}
 
     @stack('style')
+    @laravelPWA
 </head>
 
 <body class="{{ $color }}">

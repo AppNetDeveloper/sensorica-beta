@@ -57,7 +57,7 @@ if (isset($settings['color'])) {
     {{-- <link rel="stylesheet" href="{{ asset('assets/css/style.css') }}" id="main-style-link"> --}}
     <link rel="stylesheet" href="{{ asset('assets/css/customizer.css') }}">
     <link href="{{ asset('css/custom.css') }}" rel="stylesheet">
-
+    @laravelPWA
 </head>
 
 <body class="{{ $color }}">

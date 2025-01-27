@@ -14,6 +14,7 @@ class OrderStat extends Model
 
     // Permite la asignación masiva de estos campos.
     protected $fillable = [
+        'product_list_id',
         'production_line_id',
         'order_id',
         'box',
@@ -53,8 +54,20 @@ class OrderStat extends Model
         'weights_3_shiftKg',
         'weights_3_orderNumber',
         'weights_3_orderKg',
+        'down_time',
     ];
 
     // Asegúrate de que se gestionen las marcas de tiempo automáticamente.
     public $timestamps = true;
+    // Relación con ProductionLine
+    public function productionLine()
+    {
+        return $this->belongsTo(ProductionLine::class, 'production_line_id');
+    }
+
+    // Relación con ProductList
+    public function productList()
+    {
+        return $this->belongsTo(ProductList::class, 'product_list_id');
+    }
 }

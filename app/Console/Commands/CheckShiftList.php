@@ -65,11 +65,32 @@ class CheckShiftList extends Command
                         $jsonMessage = json_encode([
                             'shift_type' => 'Turno Programado',
                             'event' => 'start',
-                            'duration' => 406
+                            'duration' => 480 // Duración del turno en minutos
                         ]);
 
                         // Publicar el mensaje MQTT
                         $this->publishMqttMessage($mqttTopic, $jsonMessage);
+                    }
+                }
+
+                // Buscar en la tabla shift_list los turnos que coincidan con la hora actual
+                $shiftFins = ShiftList::where('end', $currentTime)->get();
+
+                foreach ($shiftFins as $shiftFin) {
+                    // Buscar el registro en barcodes con el mismo production_line_id
+                    $barcodeFin = Barcode::where('production_line_id', $shiftFin->production_line_id)->first();
+
+                    if ($barcodeFin) {
+                        // Crear el topic y el mensaje JSON
+                        $mqttTopicFin = $barcodeFin->mqtt_topic_barcodes . '/shift';
+                        $jsonMessageFin = json_encode([
+                            'shift_type' => 'Turno Programado',
+                            'event' => 'stop',
+                            'duration' => 0
+                        ]);
+
+                        // Publicar el mensaje MQTT
+                        $this->publishMqttMessage($mqttTopicFin, $jsonMessageFin);
                     }
                 }
             }

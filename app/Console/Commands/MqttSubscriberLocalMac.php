@@ -15,6 +15,8 @@ use Carbon\Carbon;
 use Normalizer;
 use App\Models\ProductList; 
 use Exception;
+use App\Models\ModbusHistory;
+use App\Models\SensorHistory;
 
 class MqttSubscriberLocalMac extends Command
 {
@@ -48,7 +50,7 @@ class MqttSubscriberLocalMac extends Command
                 $this->logInfo("MQTT Subscriber stopped gracefully.");
             } catch (Exception $e) {
                 $this->logError("Error connecting or processing MQTT client: " . $e->getMessage());
-                sleep(5);
+                sleep(0.5);
                 $this->logInfo("Reconnecting to MQTT...");
             }
         }
@@ -102,6 +104,10 @@ class MqttSubscriberLocalMac extends Command
             $this->logError("El JSON proporcionado no es válido: " . json_last_error_msg());
             return;
         }
+        if (!isset($cleanMessage['orderId'])) {
+            $this->logError("El campo 'orderId' no existe en cleanMessage JSON. DETENGO PROCESO");
+            return; // Detener el proceso si falta 'orderId'
+        }
     
         $originalTopic = str_replace('/prod_order_mac', '', $topic);
         $barcodes = Barcode::where('mqtt_topic_barcodes', $originalTopic)->get();
@@ -122,10 +128,23 @@ class MqttSubscriberLocalMac extends Command
             }
     
             $action = $cleanMessage['action'] ?? null;
+            $orderId = $cleanMessage['orderId'] ?? null;
+
+            // Buscar el JSON completo en production_orders por order_id
+            $productionOrder = $this->tryFindProductionOrder($orderId, 1); // 1 segundo de espera
+            $jsonNew = $productionOrder ? $productionOrder->json : null;
+            // Extraer y normalizar `envase`
+            $referId = isset($jsonNew['refer']['id']) && $jsonNew['refer']['id'] !== '' 
+                ? trim(Normalizer::normalize($jsonNew['refer']['id'], Normalizer::FORM_C)) 
+                : null;
+
+            $this->logInfo("ReferId: {$referId}");
     
             if ($action === 1) { // Finalizar orden
+                $this->saveOrderMac($barcode, $cleanMessage, $action);
+                // Transferir sensores a la base de datos externa antes del reset
+                $this->transferSensorsToExternal($barcode->id, $orderId);
                 $this->processOrderClose($cleanMessage, $barcode);
-                $this->saveOrderMac($barcode, $cleanMessage);
                 $this->logInfo("Orden cerrada para barcode ID: {$barcode->id}");
  
                 
@@ -136,14 +155,11 @@ class MqttSubscriberLocalMac extends Command
                     $this->updateProductionOrderStatus( 2, $barcode->id, $o->id);
                 }
                 $this->logInfo("Iniciar Abrir orden para barcode ID: {$barcode->id}");
-                $this->saveOrderMac($barcode, $cleanMessage);
+                $this->saveOrderMac($barcode, $cleanMessage, $action);
+                $this->procesOrderOpen($barcode, $cleanMessage);
                 $this->logInfo("Sacar OrderId para barcode ID: {$barcode->id}");
                 $this->logInfo("Contenido completo de cleanMessage: " . json_encode($cleanMessage, JSON_PRETTY_PRINT));
 
-                if (!isset($cleanMessage['orderId'])) {
-                    $this->logError("El campo 'orderId' no existe en cleanMessage.");
-                    return; // Detener el proceso si falta 'orderId'
-                }
                 
                 if (!is_numeric($cleanMessage['orderId'])) {
                     $this->logError("El campo 'orderId' no es numérico. Valor actual: " . json_encode($cleanMessage['orderId']));
@@ -167,7 +183,7 @@ class MqttSubscriberLocalMac extends Command
                             $units = (int) $orderJson['refer']['groupLevel'][0]['uds'];
     
                             if ($box > 0 && $units > 0) {
-                                $this->createOrderStat($barcode, $orderId, $box, $units, $productionOrder->id);
+                                $this->createOrderStat($barcode, $orderId, $box, $units, $productionOrder->id, $referId);
                             } else {
                                 $this->logError("Valores inválidos en JSON de ProductionOrder: box={$box}, units={$units}, orderId={$orderId}");
                             }
@@ -184,6 +200,7 @@ class MqttSubscriberLocalMac extends Command
                 $this->logError("Acción desconocida recibida: {$action}");
             }
         }
+        $this->logInfo("-------------FIN--------------");
     }// Nueva función para intentar encontrar ProductionOrder con reintento
     private function tryFindProductionOrder($orderId, $waitSeconds)
     {
@@ -192,6 +209,7 @@ class MqttSubscriberLocalMac extends Command
 
         while ($attempts < $maxAttempts) {
             $productionOrder = ProductionOrder::whereRaw('LOWER(order_id) = ?', [strtolower(trim($orderId))])->first();
+            
             if ($productionOrder) {
                 return $productionOrder;
             }
@@ -227,22 +245,40 @@ class MqttSubscriberLocalMac extends Command
         $this->logInfo("Orden encontrada. JSON almacenado: " . json_encode($jsonData, JSON_PRETTY_PRINT));
     }
 
-    private function saveOrderMac($barcode, $message)
+    private function saveOrderMac($barcode, $message, $action)
     {
+
+        // Extraer valores del JSON
+        $orderId = isset($message['orderId']) ? trim($message['orderId']) : null;
+        $quantity = isset($message['quantity']) ? intval($message['quantity']) : 0;
+        $machineId = isset($message['machineId']) ? trim($message['machineId']) : null;
+        $opeId = isset($message['opeId']) ? trim($message['opeId']) : null;
+    
+
+        $this->logInfo("Valores extraidos: orderId={$orderId}, quantity={$quantity}, machineId={$machineId}, opeId={$opeId}, opeId={$action}");
         // Crear el registro en OrderMac
         OrderMac::create([
             'barcoder_id' => $barcode->id,
             'production_line_id' => $barcode->production_line_id,
-            'json' => $message,
+            'json' => json_encode($message), // Guardar el JSON completo como respaldo
+            'orderId' => $orderId,
+            'action' => $action,
+            'quantity' => $quantity,
+            'machineId' => $machineId,
+            'opeId' => $opeId,
         ]);
     
         $this->logInfo("OrderMac creada para barcode ID: {$barcode->id}");
+    }
 
+    private function procesOrderOpen($barcode, $message)
+    {
         // Extraer valores del JSON
         $orderId = isset($message['orderId']) ? trim($message['orderId']) : null;
         $this->logInfo("OrderId extraido: {$orderId}");
         // Buscar el JSON completo en production_orders por order_id
-        $productionOrder = ProductionOrder::whereRaw('LOWER(order_id) = ?', [strtolower(trim($orderId))])->first();
+        $productionOrder = $this->tryFindProductionOrder($orderId, 1);
+        //$productionOrder = ProductionOrder::whereRaw('LOWER(order_id) = ?', [strtolower(trim($orderId))])->first();
 
         if (!$productionOrder) {
             $this->logError("ProductionOrder no encontrada para orderId={$orderId}");
@@ -328,6 +364,7 @@ class MqttSubscriberLocalMac extends Command
                 $this->logInfo("optimalProductionTime obtenido: {$optimalProductionTime}");
             }
             
+
             // Reseteo de sensores y modbuses con los nuevos valores
             $this->resetSensors($barcode->id, $optimalProductionTime, $orderId, $quantity, $uds, $referId);
             $this->resetModbuses($barcode->id, $optimalProductionTime, $orderId, $quantity, $uds, $referId);
@@ -369,12 +406,24 @@ class MqttSubscriberLocalMac extends Command
     }
     
 
-    private function createOrderStat($barcode, $orderId, $box, $units, $productionOrderId)
+    private function createOrderStat($barcode, $orderId, $box, $units, $productionOrderId, $referId)
     {
         $productionLineId = $barcode->production_line_id;
-
+    
+        // Obtenemos el id de la product_list
+        $productList = ProductList::where('client_id', $referId)->first();
+    
+        if ($productList) {
+            $productListId = $productList->id;
+            $this->logInfo("ProductList ID encontrado para referId: {$referId}");
+        } else {
+            $productListId = null;
+            $this->logError("No se encontró el product_list_id para el referId: {$referId}");
+        }
+    
         try {
             $orderStat = OrderStat::create([
+                'product_list_id' => $productListId,
                 'production_line_id' => $productionLineId,
                 'order_id' => $orderId,
                 'box' => $box,
@@ -395,14 +444,15 @@ class MqttSubscriberLocalMac extends Command
                 'slow_time' => 0,
                 'oee' => null,
             ]);
-
+    
             $this->logInfo("OrderStat creada correctamente para orderId: {$orderId}");
-
-            $this->updateProductionOrderStatus( 1, $barcode->id, $productionOrderId);
+    
+            $this->updateProductionOrderStatus(1, $barcode->id, $productionOrderId);
         } catch (Exception $e) {
             $this->logError("Error creando OrderStat: " . $e->getMessage());
         }
     }
+    
 
 /**
  * Updates the status of a production order.
@@ -442,36 +492,121 @@ class MqttSubscriberLocalMac extends Command
         $this->error("[{$timestamp}] {$message}");
     }
 
+    private function transferSensorsToExternal($barcodeId, $actualOrderId)
+    {
+        $this->info("Iniciarando transferencia de sensores a API para el Barcode ID {$barcodeId}");
+        // Construir la URL de la API
+        $appUrl = rtrim(env('LOCAL_SERVER'), '/');
+        $apiUrl = $appUrl . '/api/transfer-external-db';
+    
+        // Configurar el cliente HTTP (Guzzle)
+        $client = new \GuzzleHttp\Client([
+            'timeout' => 0.1,
+            'http_errors' => false,
+            'verify' => false,
+        ]);
+    
+        $dataToSend = [
+            'barcodeId' => $barcodeId,
+            'orderId' => $actualOrderId, // Decodificar el JSON si es un string
+        ];
+    
+        try {
+            // Enviar solicitud POST y manejar respuesta en la promesa
+            $promise = $client->postAsync($apiUrl, [
+                'json' => $dataToSend,
+            ]);
+    
+            // Manejar el resultado de la promesa
+            $promise->then(
+                function ($response) use ($barcodeId) {
+                    $responseBody = $response->getBody()->getContents(); // Captura la respuesta
+                    $this->info("Respuesta de la API para el Barcode ID {$barcodeId}: {$responseBody}");
+                },
+                function ($exception) use ($barcodeId) {
+                    $this->error("Error en la llamada a la API para el Barcode ID {$barcodeId}: " . $exception->getMessage());
+                }
+            );
+    
+            // Resolver la promesa en el siguiente ciclo del event loop
+            $promise->wait(false);
+    
+        } catch (\Exception $e) {
+            $this->error("Error al intentar llamar a la API: " . $e->getMessage());
+        }
+    }
     private function resetSensors($barcodeId, $optimalProductionTime, $orderId, $quantity, $uds, $referId)
     {
         $this->info("Iniciar reset de sensores con optimal_production_time={$optimalProductionTime}, orderId={$orderId}, quantity={$quantity}, uds={$uds} para barcode ID {$barcodeId}");
-
+    
         try {
+            // Obtener sensores relacionados con el barcodeId
+            $sensors = Sensor::where('barcoder_id', $barcodeId)->get();
+    
+            if ($sensors->isEmpty()) {
+                $this->error("No se encontraron sensores para barcode ID: {$barcodeId}");
+                return;
+            }
+    
+            // Guardar datos en la tabla `sensor_history`
+            foreach ($sensors as $sensor) {
+                SensorHistory::create([
+                    'sensor_id' => $sensor->id,
+                    'count_shift_1' => $sensor->count_shift_1,
+                    'count_shift_0' => $sensor->count_shift_0,
+                    'count_order_0' => $sensor->count_order_0,
+                    'count_order_1' => $sensor->count_order_1,
+                    'downtime_count' => $sensor->downtime_count,
+                    'unic_code_order' => $sensor->unic_code_order,
+                    'orderId' => $sensor->orderId,
+                ]);
+            }
+    
+            // Actualizar sensores
             $updated = Sensor::where('barcoder_id', $barcodeId)->update([
                 'count_order_0' => 0,
                 'count_order_1' => 0,
                 'downtime_count' => 0,
-                'optimal_production_time' => $optimalProductionTime, // Asignar el valor
+                'optimal_production_time' => $optimalProductionTime,
                 'orderId' => $orderId,
                 'quantity' => $quantity,
                 'uds' => $uds,
                 'productName' => $referId,
             ]);
     
-            if ($updated > 0) {
-                $this->info("Reset realizado para {$updated} sensores con optimal_production_time={$optimalProductionTime}, orderId={$orderId}, quantity={$quantity}, uds={$uds} para barcode ID {$barcodeId}");
-            } else {
-                $this->error("Sensor no encontrado para barcode ID: {$barcodeId}");
-            }
+            $this->info("Reset realizado para {$updated} sensores con optimal_production_time={$optimalProductionTime}, orderId={$orderId}, quantity={$quantity}, uds={$uds} para barcode ID {$barcodeId}");
         } catch (Exception $e) {
             $this->error("Error actualizando sensores: " . $e->getMessage());
         }
-    }    
-
+    }
+    
     private function resetModbuses($barcodeId, $optimalProductionTime, $orderId, $quantity, $uds, $referId)
     {
         $this->info("Iniciar reset de modbuses con optimal_production_time={$optimalProductionTime}, orderId={$orderId}, quantity={$quantity}, uds={$uds} para barcode ID {$barcodeId}");
+    
         try {
+            // Obtener modbuses relacionados con el barcodeId
+            $modbuses = Modbus::where('barcoder_id', $barcodeId)->get();
+    
+            if ($modbuses->isEmpty()) {
+                $this->error("No se encontraron modbuses para barcode ID: {$barcodeId}");
+                return;
+            }
+    
+            // Guardar datos en la tabla `modbus_history`
+            foreach ($modbuses as $modbus) {
+                ModbusHistory::create([
+                    'modbus_id' => $modbus->id,
+                    'rec_box_shift' => $modbus->rec_box_shift,
+                    'rec_box' => $modbus->rec_box,
+                    'downtime_count' => $modbus->downtime_count,
+                    'unic_code_order' => $modbus->unic_code_order,
+                    'total_kg_order' => $modbus->total_kg_order,
+                    'total_kg_shift' => $modbus->total_kg_shift,
+                ]);
+            }
+    
+            // Actualizar modbuses
             $updatedCount = Modbus::where('barcoder_id', $barcodeId)->update([
                 'rec_box' => 0,
                 'total_kg_order' => 0,
@@ -483,13 +618,10 @@ class MqttSubscriberLocalMac extends Command
                 'productName' => $referId,
             ]);
     
-            if ($updatedCount > 0) {
-                $this->info("Reset realizado para {$updatedCount} modbuses con optimal_production_time={$optimalProductionTime}, orderId={$orderId}, quantity={$quantity}, uds={$uds} para barcode ID {$barcodeId}");
-            } else {
-                $this->error("Modbus no encontrado para barcode ID: {$barcodeId}");
-            }
+            $this->info("Reset realizado para {$updatedCount} modbuses con optimal_production_time={$optimalProductionTime}, orderId={$orderId}, quantity={$quantity}, uds={$uds} para barcode ID {$barcodeId}");
         } catch (Exception $e) {
-            $this->error("Error actualizando Modbus: " . $e->getMessage());
+            $this->error("Error actualizando modbuses: " . $e->getMessage());
         }
     }
+    
 }

@@ -47,7 +47,7 @@ class MqttSubscriberLocal extends Command
                 $timestamp = Carbon::now()->format('Y-m-d H:i:s');
                 $this->error("[{$timestamp}]Error connecting or processing MQTT client: " . $e->getMessage());
                 // Esperar un poco antes de intentar reconectar
-                sleep(5);
+                sleep(0.5);
                 $this->info("[{$timestamp}]Reconnecting to MQTT...");
             }
         }

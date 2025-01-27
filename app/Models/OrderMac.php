@@ -25,6 +25,11 @@ class OrderMac extends Model
         'barcoder_id',
         'production_line_id',
         'json',
+        'orderId',
+        'action',
+        'quantity',
+        'machineId',
+        'opeId',
     ];
 
     /**

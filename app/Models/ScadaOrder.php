@@ -97,9 +97,41 @@ class ScadaOrder extends Model
             if ($barcode && $barcode->mqtt_topic_barcodes) {
                 $newTopic = $barcode->mqtt_topic_barcodes . '/prod_order_mac';
 
+                // Si el estado es 5, enviamos otro mensaje a /order_error
+                if ($this->status == 5) {
+                    // Dividir en dos partes: antes y después del primer '-'
+                    $orderIdParts = explode('-', $this->order_id, 2);
+                    $cleanOrderId = $orderIdParts[0]; // Parte limpia antes del primer '-'
+
+                    // Obtener la parte eliminada (después del primer '-')
+                    $removedPart = isset($orderIdParts[1]) ? $orderIdParts[1] : '';
+
+                    // Comprobar si contiene "Order-" y eliminarlo
+                    if (str_starts_with($removedPart, 'Order-')) {
+                        $removedPart = substr($removedPart, strlen('Order-'));
+                    }
+
+                    // Extraer la segunda palabra
+                    $msgParts = explode('-', $removedPart);
+                    $msg = isset($msgParts[0]) ? $msgParts[0] : ''; // La segunda palabra después de "Order-"
+
+                    // Preparar el mensaje JSON
+                    $finishMessage = json_encode([
+                        'orderId' => $cleanOrderId,
+                        'msg' => $msg, // Segunda palabra después de "Order-"
+                        'time' => now()->toDateTimeString(), // Fecha y hora actuales
+                    ], JSON_UNESCAPED_SLASHES); // Evitar escapar barras normales
+
+                    // Preparar el tópico y publicar el mensaje
+                    $finishTopic = $barcode->mqtt_topic_barcodes . '/order_error';
+                    $this->publishMqttMessage($finishTopic, $finishMessage);
+                }else{
+                    $cleanOrderId=$this->order_id;
+                }
+
                 $message = json_encode([
                     'action' => $this->status,
-                    'orderId' => $this->order_id,
+                    'orderId' => $cleanOrderId,
                     'time' => now()->toDateTimeString(), //anadimos aqui time: con fecha y hora
                 ]);
 
@@ -113,6 +145,43 @@ class ScadaOrder extends Model
 
                     $this->publishMqttMessage($finishTopic, $finishMessage);
                 }
+                 // Si el estado es 4, enviamos otro mensaje a /order_cancel
+                 if ($this->status == 4) {
+                    $finishTopic = $barcode->mqtt_topic_barcodes . '/order_cancel';
+                    $finishMessage = json_encode([
+                        'orderId' => $this->order_id,
+                    ]);
+
+                    $this->publishMqttMessage($finishTopic, $finishMessage);
+                }
+                // Si el estado es 3, enviamos otro mensaje a /order_paused
+                if ($this->status == 3) {
+                    $finishTopic = $barcode->mqtt_topic_barcodes . '/order_paused';
+                    $finishMessage = json_encode([
+                        'orderId' => $this->order_id,
+                    ]);
+
+                    $this->publishMqttMessage($finishTopic, $finishMessage);
+                }
+                // Si el estado es 1, enviamos otro mensaje a /order_started
+                if ($this->status == 1) {
+                    $finishTopic = $barcode->mqtt_topic_barcodes . '/order_started';
+                    $finishMessage = json_encode([
+                        'orderId' => $this->order_id,
+                    ]);
+
+                    $this->publishMqttMessage($finishTopic, $finishMessage);
+                }
+                // Si el estado es 0, enviamos otro mensaje a /order_pending
+                if ($this->status == 0) {
+                    $finishTopic = $barcode->mqtt_topic_barcodes . '/order_pending';
+                    $finishMessage = json_encode([
+                        'orderId' => $this->order_id,
+                    ]);
+
+                    $this->publishMqttMessage($finishTopic, $finishMessage);
+                }
+
             }
         }
     }

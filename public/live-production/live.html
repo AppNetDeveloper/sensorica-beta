@@ -424,7 +424,7 @@
       const slowTimeInSeconds = data.units_delayed * data.seconds_per_unit_theoretical;
       document.getElementById("slow-time").textContent = formatTime(slowTimeInSeconds);
 
-      const unidentifiedTimeDifference = (data.units_made_theoretical - data.units_made_real) * data.seconds_per_unit_theoretical;
+      const unidentifiedTimeDifference = data.down_time;
       document.getElementById("unidentified-time").textContent = formatTime(unidentifiedTimeDifference);
 
       // Calcular Tiempo en Producción usando updatedAt

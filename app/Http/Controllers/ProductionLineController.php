@@ -18,25 +18,30 @@ class ProductionLineController extends Controller
     public function getProductionLines(Request $request, $customer_id, DataTables $dataTables)
     {
         $query = ProductionLine::where('customer_id', $customer_id);
-
+    
         return DataTables::of($query)
             ->addColumn('action', function ($line) {
                 $editUrl = route('productionlines.edit', $line->id);
                 $sensorListUrl = route('sensors.index', $line->id);
                 $deleteUrl = route('productionlines.destroy', $line->id);
+                $ordersUrl = "/production-order-kanban?token={$line->token}";
+                $liveViewUrl = "/live-production/live.html?token={$line->token}";
                 $csrfToken = csrf_token();
-
+    
                 return "<a href='$editUrl' class='btn btn-sm btn-primary'>Editar</a>
                         <a href='$sensorListUrl' class='btn btn-sm btn-info'>Ver Sensores</a>
-                    <form action='$deleteUrl' method='POST' style='display:inline;'>
-                        <input type='hidden' name='_token' value='$csrfToken'>
-                        <input type='hidden' name='_method' value='DELETE'>
-                        <button type='submit' class='btn btn-sm btn-danger' onclick='return confirm(\"¿Estás seguro?\")'>Eliminar</button>
-                    </form>";
+                        <a href='$ordersUrl' class='btn btn-sm btn-warning'>Orders</a>
+                        <a href='$liveViewUrl' class='btn btn-sm btn-secondary'>Live View</a>
+                        <form action='$deleteUrl' method='POST' style='display:inline;'>
+                            <input type='hidden' name='_token' value='$csrfToken'>
+                            <input type='hidden' name='_method' value='DELETE'>
+                            <button type='submit' class='btn btn-sm btn-danger' onclick='return confirm(\"¿Estás seguro?\")'>Eliminar</button>
+                        </form>";
             })
-            ->rawColumns(['action'])
+            ->rawColumns(['action']) // Permitir HTML en la columna 'action'
             ->make(true);
     }
+    
 
     public function edit($id)
     {
@@ -97,6 +102,8 @@ class ProductionLineController extends Controller
     return redirect()->route('productionlines.index', $request->customer_id)->with('success', 'Nueva línea de producción creada correctamente.');
 }
 
-
-
+    public function listStats()
+    {
+        return view('productionlines.liststats');
+    }
 }

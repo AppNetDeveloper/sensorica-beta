@@ -7,13 +7,15 @@ use App\Models\Sensor;
 use App\Models\Modbus;
 use PhpMqtt\Client\MqttClient;
 use PhpMqtt\Client\ConnectionSettings;
-use Carbon\Carbon; // Asegúrate de importar Carbon para el timestamp
+use Carbon\Carbon;
 use App\Models\MqttSendServer1;
 use App\Models\MqttSendServer2;
 use App\Models\MonitorOee;
 use Illuminate\Support\Facades\Log;
 use App\Models\OrderStat;
 use App\Models\Barcode;
+use App\Models\SensorHistory;
+use App\Models\ModbusHistory;
 
 class MqttShiftSubscriber extends Command
 {
@@ -37,7 +39,7 @@ class MqttShiftSubscriber extends Command
         $this->shouldContinue = true;
 
         // Inicializar el cliente MQTT
-        $mqtt = $this->initializeMqttClient(env('MQTT_SERVER'), intval(env('MQTT_PORT')));
+        $mqtt = $this->initializeMqttClient(env('MQTT_SENSORICA_SERVER'), intval(env('MQTT_SENSORICA_PORT')));
 
         // Suscribirse a los tópicos
         $this->subscribeToAllTopics($mqtt);
@@ -147,6 +149,8 @@ class MqttShiftSubscriber extends Command
 
             // Obtener los sensores asociados a esta línea de producción
             $sensors = Sensor::where('production_line_id', $productionLineId)->get();
+            // Obtener los modbuses asociados a esta línea de producción
+            $modbuses = Modbus::where('production_line_id', $productionLineId)->get();
 
             foreach ($sensors as $sensor) {
                 $this->info("Processing sensor ID {$sensor->id}");
@@ -191,13 +195,30 @@ class MqttShiftSubscriber extends Command
                 $this->info("Cambios NO realizados en ordeStatus y OEE. Para la linea de produccion: {$productionLineId}");
             }
 
-            //Administramos el Modbus
-
              // Obtener los modbus asociados a esta línea de producción
              $mosbuses = Modbus::where('production_line_id', $productionLineId)->get();
 
              foreach ($mosbuses as $modbus) {
-                 $this->info("Processing modbus ID {$modbus->id}");
+                $this->info("Processing sensor ID {$modbus->id}");
+
+                // Verificar si el JSON contiene shift_type y event
+                if (isset($data['shift_type'])) {
+                    $modbus->shift_type = $data['shift_type'];
+                    $this->info("Shift type set to: {$data['shift_type']}");
+                } else {
+                    $this->warn("Shift type missing in the message.");
+                }
+
+                if (isset($data['event'])) {
+                    $modbus->event = $data['event'];
+                    $this->info("Event set to: {$data['event']}");
+                } else {
+                    $this->warn("Event missing in the message.");
+                }
+
+                // Guardar los cambios en el sensor
+                $modbus->save();
+                
                     // Si el shift_type se ha puesto Turno Programado y event es start, se resetean los contadores
                  if ($data['shift_type'] == 'Turno Programado' && $data['event'] == 'start') {
                      $this->resetModbusCounters($modbus);
@@ -216,7 +237,19 @@ class MqttShiftSubscriber extends Command
     private function resetSensorCounters($sensor)
     {
         $this->info("Resetting counters for sensor ID {$sensor->id}.");
-
+    
+        // Guardar la información actual del sensor en la tabla `sensor_history`
+        SensorHistory::create([
+            'sensor_id' => $sensor->id,
+            'count_shift_1' => $sensor->count_shift_1,
+            'count_shift_0' => $sensor->count_shift_0,
+            'count_order_0' => $sensor->count_order_0,
+            'count_order_1' => $sensor->count_order_1,
+            'downtime_count' => $sensor->downtime_count,
+            'unic_code_order' => $sensor->unic_code_order,
+            'orderId' => $sensor->orderId,
+        ]);
+    
         // Reseteo de los contadores del sensor
         $sensor->count_shift_1 = 0;
         $sensor->count_shift_0 = 0;
@@ -224,25 +257,38 @@ class MqttShiftSubscriber extends Command
         $sensor->count_order_1 = 0;
         $sensor->downtime_count = 0;
         $sensor->unic_code_order = uniqid(); // Generar un nuevo código único para el pedido
-
+    
         // Guardar los cambios en el sensor
         $sensor->save();
-
     }
-
+    
     private function resetModbusCounters($modbus)
     {
-        $this->info("Resetting modbus counters for sensor ID {$modbus->id}.");
-
+        $this->info("Resetting modbus counters for modbus ID {$modbus->id}.");
+    
+        // Guardar la información actual del modbus en la tabla `modbus_history`
+        ModbusHistory::create([
+            'modbus_id' => $modbus->id,
+            'rec_box_shift' => $modbus->rec_box_shift,
+            'rec_box' => $modbus->rec_box,
+            'downtime_count' => $modbus->downtime_count,
+            'unic_code_order' => $modbus->unic_code_order,
+            'total_kg_order' => $modbus->total_kg_order,
+            'total_kg_shift' => $modbus->total_kg_shift,
+        ]);
+    
         // Reseteo de los contadores del modbus
         $modbus->rec_box_shift = 0;
         $modbus->rec_box = 0;
         $modbus->downtime_count = 0;
         $modbus->unic_code_order = uniqid();
-        $modbus->total_kg_order=0;
-        $modbus->total_kg_shift=0;
-        $modbus->save();  // Guardar los cambios
+        $modbus->total_kg_order = 0;
+        $modbus->total_kg_shift = 0;
+    
+        // Guardar los cambios en el modbus
+        $modbus->save();
     }
+    
 
     private function changeDataTimeOee($production_line_id)
     {

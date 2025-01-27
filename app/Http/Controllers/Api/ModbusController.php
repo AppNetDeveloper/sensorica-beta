@@ -110,56 +110,131 @@ class ModbusController extends Controller
      *     )
      * )
      */
-    public function sendDosage(Request $request)
-    {
-        // Obtener los datos del request
-        $id = $request->input('id');
-        $token = trim($request->input('token')); // Eliminar espacios en blanco y caracteres no visibles
-        $inValue = $request->input('value'); // El valor ingresado
-        $inValue = is_numeric($inValue) ? $inValue + 0 : 0;  // Convierte a número, si no es numérico, será 0
 
-        // Validación básica
-        if (!$token) {
-            return response()->json(['error' => 'Token not provided'], 400);
-        }
-
-        // Buscar el modbus utilizando el token
-        $modbus = Modbus::where('token', $token)
-                        ->where('id', $id)
-                        ->first();
-
-        if (!$modbus) {
-            return response()->json(['error' => 'Invalid token or Modbus not found'], 404);
-        }
-
-
-        // Modificar el tópico MQTT de peso a dosificación
-        $topic = str_replace('peso', 'dosifica', $modbus->mqtt_topic_modbus);
-
-        // Crear el JSON con el valor de dosificación
-        $message = json_encode(['value' => $inValue]);
-
-        // Publicar el mensaje MQTT y registrar en las tablas
-        $this->publishMqttMessage($topic, $message);
-        //vamos a poner hora y fecha en este log
-        Log::info( date('Y-m-d H:i:s') . ' Message sent to MQTT topic: ' . $topic . ' with value: ' . $inValue); // Guardar en el log
-
-            // Preparar el segundo tópico MQTT y mensaje
-        $secondTopic = $modbus->mqtt_topic . '1/dosage';
-        $secondMessage = json_encode([
-            'value' => $inValue,
-            'time' => date('Y-m-d H:i:s')
-        ]);
-
-        // Publicar el segundo mensaje MQTT
-        $this->publishMqttMessage($secondTopic, $secondMessage);
-
-        // Log para el segundo mensaje
-        Log::info(date('Y-m-d H:i:s') . ' Second message sent to MQTT topic: ' . $secondTopic . ' with value: ' . $inValue . ' and time: ' . date('Y-m-d H:i:s'));
-
-        return response()->json(['message' => 'Dosage value sent successfully']);
-    }
-
+     public function sendDosage(Request $request)
+     {
+         // Obtener los datos del request
+         $id = $request->input('id');
+         $token = trim($request->input('token')); // Eliminar espacios en blanco y caracteres no visibles
+         $inValue = $request->input('value'); // El valor ingresado
+         $inValue = is_numeric($inValue) ? $inValue + 0 : 0;  // Convierte a número, si no es numérico, será 0
+ 
+         // Validación básica
+         if (!$token) {
+             return response()->json(['error' => 'Token not provided'], 400);
+         }
+ 
+         // Buscar el modbus utilizando el token
+         $modbus = Modbus::where('token', $token)
+                         ->where('id', $id)
+                         ->first();
+ 
+         if (!$modbus) {
+             return response()->json(['error' => 'Invalid token or Modbus not found'], 404);
+         }
+ 
+         // Primero, enviar el comando de cancelación
+         $cancelResponse = $this->sendCancel($request);
+         if ($cancelResponse->status() !== 200) {
+             return $cancelResponse;
+         }
+ 
+         // Modificar el tópico MQTT de peso a dosificación
+         $topic = str_replace('peso', 'dosifica', $modbus->mqtt_topic_modbus);
+ 
+         // Crear el JSON con el valor de dosificación
+         $message = json_encode(['value' => $inValue]);
+ 
+         // Publicar el mensaje MQTT y registrar en las tablas
+         $this->publishMqttMessage($topic, $message);
+         //vamos a poner hora y fecha en este log
+         Log::info( date('Y-m-d H:i:s') . ' Message sent to MQTT topic: ' . $topic . ' with value: ' . $inValue); // Guardar en el log
+ 
+             // Preparar el segundo tópico MQTT y mensaje
+         $secondTopic = $modbus->mqtt_topic . '1/dosage';
+         $secondMessage = json_encode([
+             'value' => $inValue,
+             'time' => date('Y-m-d H:i:s')
+         ]);
+ 
+         // Publicar el segundo mensaje MQTT
+         $this->publishMqttMessage($secondTopic, $secondMessage);
+ 
+         // Log para el segundo mensaje
+         Log::info(date('Y-m-d H:i:s') . ' Second message sent to MQTT topic: ' . $secondTopic . ' with value: ' . $inValue . ' and time: ' . date('Y-m-d H:i:s'));
+ 
+         return response()->json(['message' => 'Dosage value sent successfully']);
+     }
+     /**
+     * @OA\Post(
+     *     path="/api/modbus/cancel",
+     *     summary="Cancel ongoing dosage for a Modbus",
+     *     tags={"Modbus"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="id", type="integer"),
+     *             @OA\Property(property="token", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Cancellation command sent successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Token not provided",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="error", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Invalid token or Modbus not found",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="error", type="string")
+     *         )
+     *     )
+     * )
+     */
+     public function sendCancel(Request $request)
+     {
+         // Obtener los datos del request
+         $id = $request->input('id');
+         $token = trim($request->input('token')); // Eliminar espacios en blanco y caracteres no visibles
+ 
+         // Validación básica
+         if (!$token) {
+             return response()->json(['error' => 'Token not provided'], 400);
+         }
+ 
+         // Buscar el modbus utilizando el token
+         $modbus = Modbus::where('token', $token)
+                         ->where('id', $id)
+                         ->first();
+ 
+         if (!$modbus) {
+             return response()->json(['error' => 'Invalid token or Modbus not found'], 404);
+         }
+ 
+         // Modificar el tópico MQTT para cancelar dosificación
+         $cancelTopic = str_replace('peso', 'cancel', $modbus->mqtt_topic_modbus);
+ 
+         // Crear el JSON con el comando de cancelación
+         $cancelMessage = json_encode(['value' => true]);
+ 
+         // Publicar el mensaje de cancelación MQTT
+         $this->publishMqttMessage($cancelTopic, $cancelMessage);
+         Log::info(date('Y-m-d H:i:s') . ' Cancelation message sent to MQTT topic: ' . $cancelTopic);
+        //poner pausa 1 segundo
+        sleep(1);
+ 
+         return response()->json(['message' => 'Cancelation command sent successfully']);
+     }
+ 
 
     public function setZero(Request $request)
     {

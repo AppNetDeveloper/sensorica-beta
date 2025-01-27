@@ -76,4 +76,13 @@ class ModbusController extends Controller
     
         return redirect()->route('modbuses.index', $production_line_id)->with('success', 'Modbus eliminado con éxito');
     }
+    public function queuePrint()
+    {
+        return view('modbuses.queueprint');
+    }
+    public function listStats()
+    {
+        return view('modbuses.liststats');
+    }
+
 }

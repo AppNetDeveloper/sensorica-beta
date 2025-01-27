@@ -122,7 +122,7 @@ class ReadBluetoothReadings extends Command
     
     private function sendToApi($mac, $rssi, $change, $antennaName)
     {
-        $apiUrl = rtrim(env('APP_URL'), '/') . '/api/bluetooth/insert';
+        $apiUrl = rtrim(env('LOCAL_SERVER'), '/') . '/api/bluetooth/insert';
         $client = new Client([
             'timeout' => 3,
             'http_errors' => false,

@@ -25,6 +25,14 @@ use App\Http\Controllers\WhatsAppController;
 use App\Http\Controllers\RfidController;
 use App\Http\Controllers\RfidCategoryController;
 use App\Http\Controllers\RfidDeviceController;
+use App\Http\Controllers\WorkerController;
+use App\Http\Controllers\ConfectionController;
+use App\Http\Controllers\RoleManageController;
+use App\Http\Controllers\PermissionManageController;
+use App\Http\Controllers\ScadaOrderController;
+use App\Http\Controllers\ProductionOrderController;
+use App\Http\Controllers\ServerController;
+use App\Http\Controllers\ShiftManagementController;
 
 
 /*
@@ -85,7 +93,23 @@ Route::delete('smartsensors/{sensor}', [SensorController::class, 'destroy'])->na
 
 
 
+// Rutas para gestionar turnos
+Route::get('/shift-lists', [ShiftManagementController::class, 'index'])->name('shift.index'); // Listar turnos
+Route::post('/shift-lists', [ShiftManagementController::class, 'store'])->name('shift.store'); // Crear turno
+Route::put('/shift-lists/{id}', [ShiftManagementController::class, 'update'])->name('shift.update'); // Editar turno
+Route::delete('/shift-lists/{id}', [ShiftManagementController::class, 'destroy'])->name('shift.destroy'); // Eliminar turno
 
+
+//kanban scada
+Route::get('/scada-order', [ScadaOrderController::class, 'index'])->name('scada.order');
+
+//kanban production linea de production
+
+Route::get('/production-order-kanban', [ProductionOrderController::class, 'index'])->name('production.order');
+
+//server controller
+Route::get('/server', [ServerController::class, 'index'])->name('server.index');
+Route::get('/server/edit/upload/stats', [ServerController::class, 'showUploadStatsConfig'])->name('server.uploadstats');
 
 // Rutas para las líneas de producción
 Route::get('customers/{customer_id}/productionlines', [ProductionLineController::class, 'index'])->name('productionlines.index');
@@ -145,12 +169,19 @@ Route::get('modbuses/{id}/edit', [ModbusController::class, 'edit'])->name('modbu
 // Ruta para actualizar el Modbus
 Route::put('modbuses/{id}', [ModbusController::class, 'update'])->name('modbuses.update');
 
+Route::get('modbuses/queue-print', [ModbusController::class, 'queuePrint'])->name('modbuses.queueprint');
+
+// Ruta para mostrar la vista de estadísticas de Modbus
+Route::get('/modbuses/liststats/weight', [ModbusController::class, 'listStats'])->name('modbuses.liststats');
+
 // Ruta para eliminar el Modbus
 Route::resource('oee', MonitorOeeController::class);
 
 Route::get('logs', [LogController::class, 'view'])->name('logs.view');
 
 
+//ruta para estadistica de productionline
+Route::get('/productionlines/liststats', [ProductionLineController::class, 'listStats'])->name('productionlines.liststats');
 
 
 Route::get('/', [HomeController::class, 'index'])->name('home')->middleware(['auth', 'XSS', '2fa']);
@@ -226,6 +257,46 @@ Route::post('rfid', [RfidController::class, 'store'])->name('rfid.store');
 Route::get('rfid/{id}/edit', [RfidController::class, 'edit'])->name('rfid.edit');
 Route::put('rfid/{id}', [RfidController::class, 'update'])->name('rfid.update');
 Route::delete('rfid/{id}', [RfidController::class, 'destroy'])->name('rfid.destroy');
+
+Route::get('workers-admin', [WorkerController::class, 'index'])->name('workers-admin.index');
+
+
+
+
+// Vista principal de usuarios (Blade con DataTables manual)
+Route::get('users', [UserController::class, 'index'])->name('users.index');
+
+// AJAX para listar todos
+Route::get('users/list-all/json', [UserController::class, 'listAllJson'])->name('users.listAllJson');
+
+// AJAX para crear / actualizar
+Route::post('users/store-or-update/ajax', [UserController::class, 'storeOrUpdateAjax'])->name('users.storeOrUpdateAjax');
+
+// AJAX para eliminar
+Route::delete('users/delete/ajax/{id}', [UserController::class, 'deleteAjax'])->name('users.deleteAjax');
+
+Route::get('confections', [ConfectionController::class, 'index'])->name('confections.index');
+
+
+
+
+// Mostrar la vista con DataTables
+Route::get('manage-role', [RoleManageController::class, 'index'])->name('manage-role.index');
+
+// Opcionalmente, AJAX:
+Route::get('manage-role/list-all', [RoleManageController::class, 'listAll'])->name('manage-role.listAll');
+Route::post('manage-role/store-or-update', [RoleManageController::class, 'storeOrUpdate'])->name('manage-role.storeOrUpdate');
+Route::delete('manage-role/delete/{id}', [RoleManageController::class, 'delete'])->name('manage-role.delete');
+Route::post('manage-role/update-permissions/{id}', [RoleManageController::class, 'updatePermissions'])->name('manage-role.updatePermissions');
+
+
+
+Route::get('manage-permission', [PermissionManageController::class, 'index'])->name('manage-permission.index');
+
+// AJAX
+Route::get('manage-permission/list-all', [PermissionManageController::class, 'listAll'])->name('manage-permission.listAll');
+Route::post('manage-permission/store-or-update', [PermissionManageController::class, 'storeOrUpdate'])->name('manage-permission.storeOrUpdate');
+Route::delete('manage-permission/delete/{id}', [PermissionManageController::class, 'delete'])->name('manage-permission.delete');
 
 Route::prefix('rfid-categories')->group(function () {
     Route::get('/{production_line_id}', [RfidCategoryController::class, 'index'])->name('rfid.categories.index');

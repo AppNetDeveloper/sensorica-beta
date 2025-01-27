@@ -53,14 +53,28 @@ class ScadaOrderController extends Controller
             ], 404);
         }
 
-        // Obtener los órdenes asociados al SCADA
-        $orders = ScadaOrder::where('scada_id', $scada->id)->get();
+         // Obtener primero los órdenes con status diferente a 5 de los últimos 15 días
+        $fifteenDaysAgo = now()->subDays(15);
+        $otherOrders = ScadaOrder::where('scada_id', $scada->id)
+            ->where('status', '!=', 5)
+            ->whereDate('created_at', '>=', $fifteenDaysAgo)
+            ->get();
+
+        // Obtener los órdenes con status 5, limitando a 5
+        $statusFiveOrders = ScadaOrder::where('scada_id', $scada->id)
+            ->where('status', 5)
+            ->orderBy('id', 'desc')
+            ->limit(10)
+            ->get();
+
+        // Combinar las dos colecciones
+        $orders = $otherOrders->merge($statusFiveOrders);
 
         // Formatear la respuesta JSON con el nombre de la SCADA
         return response()->json([
             'success' => true,
             'scada_id' => $scada->id,
-            'scada_name' => $scada->name, // Agregar el nombre de la SCADA
+            'scada_name' => $scada->name,
             'orders' => $orders,
         ]);
     }
