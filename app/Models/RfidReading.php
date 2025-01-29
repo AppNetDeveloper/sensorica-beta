@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Carbon\Carbon;
 
 class RfidReading extends Model
@@ -19,6 +20,7 @@ class RfidReading extends Model
         'epc',               // Identificador único del grupo RFID
         'token',             // Token único de la lectura o dispositivo
         'production_line_id', // ID de la línea de producción
+        'rfid_color_id',     // ID del color del RFID
     ];
 
     protected $casts = [
@@ -32,7 +34,12 @@ class RfidReading extends Model
     {
         return $this->belongsTo(ProductionLine::class);
     }
+    
 
+    public function rfidColor(): BelongsTo
+    {
+        return $this->belongsTo(RfidColor::class, 'rfid_color_id');
+    }
     /**
      * Relación con la tabla Modbus.
      */

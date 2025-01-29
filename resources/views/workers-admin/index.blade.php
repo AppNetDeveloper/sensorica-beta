@@ -31,7 +31,7 @@
                         <table id="workersTable" class="display table table-striped table-bordered" style="width:100%">
                             <thead>
                                 <tr>
-                                    <th>ID Cliente</th>
+                                    <th>Codigo Trabajador</th>
                                     <th>Nombre</th>
                                     <th>Email</th>
                                     <th>Teléfono</th>
@@ -154,18 +154,61 @@
                 dom: 'Bfrtip',
                 buttons: [
                     {
-                        text: 'Añadir Trabajador',
-                        className: 'btn btn-success',
+                        text: '<i class="fas fa-user-plus"></i> Añadir Trabajador',
+                        className: 'btn btn-success btn-lg',
+                        style: 'font-size: 1.2rem; padding: 0.75rem 1.5rem;',
                         action: function () {
                             Swal.fire({
                                 title: 'Añadir Trabajador',
                                 html: `
-                                    <input id="workerId" class="swal2-input" placeholder="ID Cliente (Obligatorio)">
-                                    <input id="workerName" class="swal2-input" placeholder="Nombre del Trabajador">
-                                    <input id="workerEmail" class="swal2-input" placeholder="Email (Opcional)">
-                                    <input id="workerPhone" class="swal2-input" placeholder="Teléfono (Opcional)">
-                                    <input id="workerPassword" type="password" class="swal2-input" placeholder="Contraseña (Opcional)">
+                                    <input id="workerId" class="swal2-input" placeholder="Codigo Trabajador (Obligatorio)" style="
+                                        width: 550px; 
+                                        background: transparent; 
+                                        color: black; 
+                                        text-shadow: 1px 1px 2px white; 
+                                        border: 1px solid #ccc;
+                                        padding: 0.5em;
+                                        border-radius: 4px;
+                                    ">
+                                    <input id="workerName" class="swal2-input" placeholder="Nombre del Trabajador" style="
+                                        width: 550px; 
+                                        background: transparent; 
+                                        color: black; 
+                                        text-shadow: 1px 1px 2px white; 
+                                        border: 1px solid #ccc;
+                                        padding: 0.5em;
+                                        border-radius: 4px;
+                                    ">
+                                    <input id="workerEmail" class="swal2-input" placeholder="Email (Opcional)" style="
+                                        width: 550px; 
+                                        background: transparent; 
+                                        color: black; 
+                                        text-shadow: 1px 1px 2px white; 
+                                        border: 1px solid #ccc;
+                                        padding: 0.5em;
+                                        border-radius: 4px;
+                                    ">
+                                    <input id="workerPhone" class="swal2-input" placeholder="Teléfono (Opcional)" style="
+                                        width: 550px; 
+                                        background: transparent; 
+                                        color: black; 
+                                        text-shadow: 1px 1px 2px white; 
+                                        border: 1px solid #ccc;
+                                        padding: 0.5em;
+                                        border-radius: 4px;
+                                    ">
+                                    <input id="workerPassword" type="password" class="swal2-input" placeholder="Contraseña (Opcional)" style="
+                                        width: 550px; 
+                                        background: transparent; 
+                                        color: black; 
+                                        text-shadow: 1px 1px 2px white; 
+                                        border: 1px solid #ccc;
+                                        padding: 0.5em;
+                                        border-radius: 4px;
+                                    ">
                                 `,
+                                width: '800px', // Aumenta el ancho
+                                padding: '2em', // Aumenta el padding
                                 confirmButtonText: 'Añadir',
                                 showCancelButton: true,
                                 preConfirm: () => {

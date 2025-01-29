@@ -17,6 +17,8 @@ use App\Models\MqttSendServer1;
 use App\Models\MqttSendServer2;
 use App\Models\OrderStat;
 use App\Models\Modbus;
+use App\Models\OperatorPost;
+use App\Models\Operator;
 
 class ModbusProcessController extends Controller
 {
@@ -356,6 +358,34 @@ class ModbusProcessController extends Controller
         } catch (\Exception $e) {
             // Log de errores al intentar guardar los datos
             Log::info("Error al guardar datos en control_weight, el Modbus ID: {$config->id}");
+        }
+        // Añadimos la lógica para buscar en operator_post y actualizar en operators
+        try {
+            $operatorPost = OperatorPost::where('updated_at', null)
+                ->where('modbus_id', $config->id)
+                ->first();
+
+            if ($operatorPost) {
+                $operatorId = $operatorPost->operator_id;
+
+                // Buscar el operador por ID
+                $operator = Operator::find($operatorId);
+
+                if ($operator) {
+                    // Incrementar los valores de count_shift y count_order
+                    $operator->increment('count_shift');
+                    $operator->increment('count_order');
+
+                    Log::info("Operador actualizado: count_shift y count_order incrementados para el Operator ID: {$operatorId}");
+                } else {
+                    Log::info("No se encontró el operador con ID: {$operatorId}");
+                }
+            } else {
+                Log::info("No se encontró ningún registro en operator_post con updated_at NULL y modbus_id: {$config->id}");
+            }
+        } catch (\Exception $e) {
+            // Log de errores al intentar actualizar los datos
+            Log::info("Error al procesar datos de operator_post y operators para el Modbus ID: {$config->id}");
         }
 
             $totalKgShift=$maxKg + $totalKgShift;

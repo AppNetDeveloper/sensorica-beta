@@ -186,10 +186,15 @@ class OperatorController extends Controller
      */
     public function listAll(Request $request)
     {
-        $operators = Operator::all(['client_id as id', 'name', 'email', 'phone']);
-        return response()->json($operators, 200);
+        // Obtener todos los operadores
+        $operators = Operator::all(['client_id as id', 'name', 'email', 'phone', 'count_shift', 'count_order'])->toArray();
+    
+        // Obtener todos los colores RFID
+        $rfidColors = \App\Models\RfidColor::all(['id', 'name']);
+    
+        // Fusionar los datos, manteniendo los operadores como el JSON original y agregando rfid_colors al final
+        return response()->json(array_merge($operators, [['rfid_colors' => $rfidColors]]), 200);
     }
-
     /**
      * @OA\Get(
      *     path="/api/workers/{id}",

@@ -16,6 +16,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 use Exception;
+use App\Models\ModbusHistory;
+use App\Models\SensorHistory;
+use App\Models\ShiftList;
 
 
 class TransferExternalDbController extends Controller
@@ -179,7 +182,7 @@ class TransferExternalDbController extends Controller
      */
     private function getOrderMacUmaQuantity($orderId)
     {
-        $orderMac = OrderMac::where('order_id', $orderId)
+        $orderMac = OrderMac::where('orderId', $orderId)
             ->where('action', 1)
             ->first();
     
@@ -194,8 +197,8 @@ class TransferExternalDbController extends Controller
      */
     private function extractOrderUnit($orderStats)
     {
-        //suma de unidades del campo weights_0_shiftNumber
-        $orderUnitModbuses = $orderStats->sum('weights_0_shiftNumber');
+        //suma de unidades del campo weights_0_orderNumber
+        $orderUnitModbuses = $orderStats->sum('weights_0_orderNumber');
         //suma de unidades del campo units
         $orderUnitSensors = $orderStats->sum('units');
         //suma de la tiempo lento
@@ -292,24 +295,73 @@ class TransferExternalDbController extends Controller
     private function calculateTimeDifferences($orderStats)
     {
         $totalDifferenceInSeconds = 0;
-
+    
         for ($i = 0; $i < $orderStats->count() - 1; $i++) {
             $currentStat = $orderStats[$i];
             $nextStat = $orderStats[$i + 1];
-
+    
+            // Ajustar los timestamps de ambos registros antes de calcular diferencias
+            $currentStat = $this->validateAndAdjustTimestamps(clone $currentStat);
+            $nextStat = $this->validateAndAdjustTimestamps(clone $nextStat);
+    
             $updatedAt = Carbon::parse($currentStat->updated_at);
             $createdAt = Carbon::parse($nextStat->created_at);
-
+    
             $difference = $updatedAt->diffInSeconds($createdAt);
             $totalDifferenceInSeconds += $difference;
-
+    
             Log::info("Diferencia entre ID {$currentStat->id} y ID {$nextStat->id}: {$difference} segundos.");
         }
-
+    
         $totalDifferenceFormatted = gmdate('H:i:s', $totalDifferenceInSeconds);
         Log::info("Diferencia total de tiempo: {$totalDifferenceFormatted} ({$totalDifferenceInSeconds} segundos).");
-
+    
         return [$totalDifferenceInSeconds, $totalDifferenceFormatted];
+    }
+    private function validateAndAdjustTimestamps($model)
+    {
+        $updatedAt = Carbon::parse($model->updated_at);
+        $createdAt = Carbon::parse($model->created_at);
+        $productionLineId = $model->production_line_id ?? null;
+
+        if (!$productionLineId) {
+            throw new \Exception("El modelo no tiene un production_line_id especificado.");
+        }
+
+        // Buscar el turno correspondiente basado en la fecha de created_at
+        $applicableShift = ShiftList::where('production_line_id', $productionLineId)
+            ->where('start', '<=', $createdAt->format('H:i:s'))
+            ->where('end', '>=', $createdAt->format('H:i:s'))
+            ->whereDate('created_at', '<=', $createdAt)
+            ->orderByDesc('created_at')
+            ->first();
+
+        if ($applicableShift) {
+            $shiftStart = Carbon::createFromFormat('H:i:s', $applicableShift->start);
+            $shiftEnd = Carbon::createFromFormat('H:i:s', $applicableShift->end);
+
+            // Ajustar created_at si está fuera del intervalo del turno
+            if ($createdAt->isBefore($shiftStart)) {
+                $model->created_at = $updatedAt->copy()->setTime($shiftStart->hour, $shiftStart->minute, $shiftStart->second);
+            } elseif ($createdAt->isAfter($shiftEnd)) {
+                $model->created_at = $updatedAt->copy()->setTime($shiftEnd->hour, $shiftEnd->minute, $shiftEnd->second);
+            }
+
+            // Ajustar updated_at si es mayor que end
+            if ($updatedAt->isAfter($shiftEnd)) {
+                $model->updated_at = $createdAt->copy()->setTime($shiftEnd->hour, $shiftEnd->minute, $shiftEnd->second);
+            }
+
+            // Asegurando que created_at no sea mayor que end después de ajustes
+            if ($createdAt->gt($shiftEnd)) {
+                $model->created_at = $updatedAt->copy()->setTime($shiftEnd->hour, $shiftEnd->minute, $shiftEnd->second);
+            }
+        } else {
+            // Si no hay turnos aplicables, no hacemos ajustes
+            Log::info("No se encontraron turnos aplicables para la línea de producción con id: {$productionLineId}. Los timestamps se mantienen sin cambios.");
+        }
+
+        return $model;
     }
 
     /**
@@ -437,6 +489,9 @@ class TransferExternalDbController extends Controller
 
                 $productionLineName = $sensor->productionLine->name ?? 'Desconocido';
 
+                $brutoPeso=$sensorCount * $unitValue;
+                $brutoPeso=number_format($brutoPeso, 2, '.', '');
+
                 // Preparar datos para la base de datos externa
                 $data = [
                     'IdOrder' => $sensor->orderId,
@@ -455,8 +510,10 @@ class TransferExternalDbController extends Controller
                     'TimeSlow' => $onlySlowTimeFormatted,
                     'SensorCount' => $sensorCount,
                     'SensorUnitCount' => $modelEnvase,
-                    'SensorWeight' => $unitValue,
+                    'SensorWeight' => $brutoPeso, // calcularlo
                     'SensorUnitWeight' => $modelMeasure,
+                    'GrossWeight01' => $unitValue, // Nuevo campo
+                    'GrossWeight02' => '0.0',  // Nuevo campo
                 ];
 
                 // Insertar datos
@@ -493,6 +550,15 @@ class TransferExternalDbController extends Controller
                     ->whereBetween('created_at', [$startAt, $finishAt])
                     ->count();
 
+                    //$modbusCount = ModbusHistory::where('modbus_id', $modbus->id) 
+                    //->where('orderId', $orderId) // Condición adicional para orderId
+                   // ->sum('rec_box'); // Sumar el campo rec_box
+                $modbusSum = ControlWeight::where('modbus_id', $modbus->id)
+                   ->whereBetween('created_at', [$startAt, $finishAt])
+                   ->sum('last_control_weight');
+
+                $formattedSum = number_format($modbusSum, 2, '.', '');
+                
                 $timeDifferences = ControlWeight::selectRaw('TIMESTAMPDIFF(SECOND, LAG(created_at) OVER (ORDER BY created_at), created_at) AS interval_diff')
                     ->where('modbus_id', $modbus->id)
                     ->whereBetween('created_at', [$startAt, $finishAt])
@@ -529,8 +595,10 @@ class TransferExternalDbController extends Controller
                     'TimeSlow' => $timeSlowFormattedModbus,
                     'SensorCount' => $modbusCount,
                     'SensorUnitCount' => $modelUnit,
-                    'SensorWeight' => $totalWeight,
+                    'SensorWeight' => $formattedSum,
                     'SensorUnitWeight' => $modelMeasure,
+                    'GrossWeight01' => '0.0', // Nuevo campo
+                    'GrossWeight02' => $totalWeight,  // Nuevo campo
                 ];
 
                 // Insertar datos

@@ -16,6 +16,7 @@ use App\Models\OrderStat;
 use App\Models\Barcode;
 use App\Models\SensorHistory;
 use App\Models\ModbusHistory;
+use App\Models\Operator;
 
 class MqttShiftSubscriber extends Command
 {
@@ -176,7 +177,7 @@ class MqttShiftSubscriber extends Command
                 // Si el shift_type se ha puesto Turno Programado y event es start, se resetean los contadores
                 if ($data['shift_type'] == 'Turno Programado' && $data['event'] == 'start') {
                     $this->resetSensorCounters($sensor);
-                    
+                    $this->resetOperators();
                     $this->changeOrderStatus($sensor->production_line_id);
                     $this->sendMqttTo0($sensor);
                     $this->info("Sensor ID {$sensor->id} updated with shift_type, event, and counters reset.");
@@ -222,6 +223,7 @@ class MqttShiftSubscriber extends Command
                     // Si el shift_type se ha puesto Turno Programado y event es start, se resetean los contadores
                  if ($data['shift_type'] == 'Turno Programado' && $data['event'] == 'start') {
                      $this->resetModbusCounters($modbus);
+                     $this->resetOperators();
                      //$this->sendMqttTo0($modbus);
                      $this->info("Modbus ID {$modbus->id} updated with shift_type, event, and counters reset.");
                  } else {
@@ -269,6 +271,7 @@ class MqttShiftSubscriber extends Command
         // Guardar la información actual del modbus en la tabla `modbus_history`
         ModbusHistory::create([
             'modbus_id' => $modbus->id,
+            'orderId' => $modbus->orderId,
             'rec_box_shift' => $modbus->rec_box_shift,
             'rec_box' => $modbus->rec_box,
             'downtime_count' => $modbus->downtime_count,
@@ -287,6 +290,34 @@ class MqttShiftSubscriber extends Command
     
         // Guardar los cambios en el modbus
         $modbus->save();
+    }
+
+    public function resetOperators()
+    {
+        try {
+            // Reseteamos todos los operadores a 0
+            Operator::query()->update([
+                'count_shift' => 0,
+                'count_order' => 0,
+            ]);
+
+            // Log para confirmar la operación
+            Log::info("Todos los contadores de operadores han sido reseteados a 0.");
+
+            return response()->json([
+                'message' => 'Todos los contadores de operadores han sido reseteados a 0.',
+                'status' => 'success'
+            ], 200);
+        } catch (\Exception $e) {
+            // Log del error en caso de fallo
+            Log::error("Error al resetear los contadores de operadores: " . $e->getMessage());
+
+            return response()->json([
+                'message' => 'Error al resetear los contadores de operadores.',
+                'status' => 'error',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
     
 

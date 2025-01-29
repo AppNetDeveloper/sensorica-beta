@@ -17,7 +17,7 @@
             {{-- Card principal sin borde y con sombra (mismo estilo) --}}
             <div class="card border-0 shadow">
                 <div class="card-header border-0">
-                    <h4 class="card-title">Gestión de Confecciones</h4>
+                    
                 </div>
                 <div class="card-body">
                     {{-- Botón (oculto) para subir Excel --}}
@@ -29,7 +29,7 @@
                         <table id="productsTable" class="display table table-striped table-bordered" style="width:100%">
                             <thead>
                                 <tr>
-                                    <th>ID Cliente</th>
+                                    <th>Codigo Confection</th>
                                     <th>Nombre</th>
                                     <th>Tiempo Óptimo</th>
                                     <th>Kg por Caja</th>
@@ -141,13 +141,47 @@
                             Swal.fire({
                                 title: 'Añadir Producto',
                                 html: `
-                                    <input id="productId" class="swal2-input" placeholder="ID Cliente">
-                                    <input id="productName" class="swal2-input" placeholder="Nombre del Producto">
-                                    <input id="productOptimalTime" class="swal2-input" placeholder="Tiempo Óptimo (opcional)">
-                                    <input id="productBoxKg" class="swal2-input" placeholder="Kg por Caja (opcional)">
+                                    <input id="productId" class="swal2-input" placeholder="Codigo Confection"style="
+                                        width: 550px; 
+                                        background: transparent; 
+                                        color: black; 
+                                        text-shadow: 1px 1px 2px white; 
+                                        border: 1px solid #ccc;
+                                        padding: 0.5em;
+                                        border-radius: 4px;
+                                    ">
+                                    <input id="productName" class="swal2-input" placeholder="Nombre del Producto"style="
+                                        width: 550px; 
+                                        background: transparent; 
+                                        color: black; 
+                                        text-shadow: 1px 1px 2px white; 
+                                        border: 1px solid #ccc;
+                                        padding: 0.5em;
+                                        border-radius: 4px;
+                                    ">
+                                    <input id="productOptimalTime" class="swal2-input" placeholder="Tiempo Óptimo (opcional)"style="
+                                        width: 550px; 
+                                        background: transparent; 
+                                        color: black; 
+                                        text-shadow: 1px 1px 2px white; 
+                                        border: 1px solid #ccc;
+                                        padding: 0.5em;
+                                        border-radius: 4px;
+                                    ">
+                                    <input id="productBoxKg" class="swal2-input" placeholder="Kg por Caja (opcional)"style="
+                                        width: 550px; 
+                                        background: transparent; 
+                                        color: black; 
+                                        text-shadow: 1px 1px 2px white; 
+                                        border: 1px solid #ccc;
+                                        padding: 0.5em;
+                                        border-radius: 4px;
+                                    ">
                                 `,
                                 confirmButtonText: 'Añadir',
                                 showCancelButton: true,
+                                width: '800px', // Aumenta el ancho
+                                padding: '2em',  // Aumenta el espacio interno
                                 preConfirm: () => {
                                     const id      = $('#productId').val();
                                     const name    = $('#productName').val();
@@ -212,6 +246,8 @@
 
                 Swal.fire({
                     title: 'Editar Producto',
+                    width: '600px', // Aumenta el ancho
+                    padding: '2em',  // Aumenta el espacio interno
                     html: `
                         <input id="productId" class="swal2-input" value="${currentId}" readonly>
                         <input id="productName" class="swal2-input" value="${currentName}">

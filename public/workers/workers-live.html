@@ -201,12 +201,12 @@
                         return;
                     }
 
-                    const maxTurn = Math.max(...operators.map(o => o.produced_units_turn || 0));
-                    const maxOrder = Math.max(...operators.map(o => o.produced_units_order || 0));
+                    const maxTurn = Math.max(...operators.map(o => o.count_shift || 0));
+                    const maxOrder = Math.max(...operators.map(o => o.count_order || 0));
 
                     operators.forEach(operator => {
-                        const turnValue = operator.produced_units_turn || 0;
-                        const orderValue = operator.produced_units_order || 0;
+                        const turnValue = operator.count_shift || 0;
+                        const orderValue = operator.count_order || 0;
 
                         const turnClass = turnValue === 0
                             ? 'red'
@@ -260,8 +260,8 @@
             const rows = operatorsData.map(operator => ({
                 ...(config.name && { Nombre: operator.name }),
                 ...(config.id && { ID: operator.id }),
-                ...(config.shift && { Turno: operator.produced_units_turn || 0 }),
-                ...(config.order && { Orden: operator.produced_units_order || 0 }),
+                ...(config.shift && { Turno: operator.count_shift || 0 }),
+                ...(config.order && { Orden: operator.count_order || 0 }),
             }));
 
             const worksheet = XLSX.utils.json_to_sheet(rows);

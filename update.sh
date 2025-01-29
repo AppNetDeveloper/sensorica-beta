@@ -58,6 +58,7 @@ COMMANDS=(
     "/bin/systemctl daemon-reload"
     "/bin/systemctl enable 485.service"
     "/bin/systemctl start 485.service"
+    "/var/www/html/verne.sh"
 )
 
 

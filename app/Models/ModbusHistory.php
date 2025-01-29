@@ -19,6 +19,7 @@ class ModbusHistory extends Model
         'unic_code_order',
         'total_kg_order',
         'total_kg_shift',
+        'orderId',
     ];
 
     /**

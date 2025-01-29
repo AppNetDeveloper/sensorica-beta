@@ -25,6 +25,7 @@
                     <button id="stop-supervisor" class="btn btn-secondary mb-2">Detener Supervisor</button>
                     <button id="restart-485" class="btn btn-primary mb-2">Reiniciar 485</button>
                     <button id="update-app" class="btn btn-dark mb-2">Actualizar Aplicación</button>
+                    <button id="verne-app" class="btn btn-danger mb-2">Instalar Verne</button>
                 </div>
             </div>
 
@@ -206,6 +207,10 @@
 
         document.getElementById('update-app').addEventListener('click', async () => {
             await apiCall('/api/app-update');
+            alert('Aplicación actualizada con éxito.');
+        });
+        document.getElementById('verne-app').addEventListener('click', async () => {
+            await apiCall('/api/verne-update');
             alert('Aplicación actualizada con éxito.');
         });
 

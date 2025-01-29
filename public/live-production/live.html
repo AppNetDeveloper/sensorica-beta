@@ -416,7 +416,7 @@
       document.getElementById("theoretical-cycle-time").textContent = data.seconds_per_unit_theoretical;
       document.getElementById("real-cycle-time").textContent = data.seconds_per_unit_real;
 
-      const sensorStopsTimeInSeconds = data.sensor_stops_time * 60;
+      const sensorStopsTimeInSeconds = data.production_stops_time;
       const sensorStopsTimeFormatted = formatTime(sensorStopsTimeInSeconds);
       document.getElementById("sensor-stops-time").textContent = sensorStopsTimeFormatted;
 

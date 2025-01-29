@@ -20,13 +20,13 @@
                 <thead>
                     <tr>
                         <th>ID</th>
-                        <th>Operador</th>
+                        <th>Trabajador</th>
                         <th>RFID</th>
                         <th>Sensor</th>
-                        <th>Modbus</th>
+                        <th>Bascula</th>
                         <th>Contador</th>
-                        <th>Creado</th>
-                        <th>Actualizado</th>
+                        <th>Hora Inicio</th>
+                        <th>Hora Fin</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
@@ -117,25 +117,55 @@
                             // Lógica para añadir relación
                             Swal.fire({
                                 title: 'Añadir Relación',
-                                html: `
-                                    <label for="operatorId">Operador:</label>
-                                    <select id="operatorId" class="swal2-input">
-                                        <option value="">Seleccione un operador</option>
+                                width: '800px', // Aumenta el ancho
+                                padding: '2em', // Aumenta el padding
+                                html: ` 
+                                    <select id="operatorId" class="swal2-input" style="
+                                        width: 550px; 
+                                        background: transparent; 
+                                        color: black; 
+                                        text-shadow: 1px 1px 7px white; 
+                                        border: 1px solid #ccc;
+                                        padding: 0.5em;
+                                        border-radius: 4px;
+                                    ">
+                                        <option value="">Seleccione Trabajador</option>
                                         ${operators.map(op => `<option value="${op.id}">${op.name}</option>`).join('')}
                                     </select>
-                                    <label for="rfidId">RFID:</label>
-                                    <select id="rfidId" class="swal2-input">
-                                        <option value="">Seleccione un RFID</option>
+                                    <select id="rfidId" class="swal2-input" style="
+                                        width: 550px; 
+                                        background: transparent; 
+                                        color: black; 
+                                        text-shadow: 1px 1px 7px white; 
+                                        border: 1px solid #ccc;
+                                        padding: 0.5em;
+                                        border-radius: 4px;
+                                    ">
+                                        <option value="">Seleccione Tarjeta Rfid</option>
                                         ${rfids.map(rfid => `<option value="${rfid.id}">${rfid.epc}</option>`).join('')}
                                     </select>
-                                    <label for="sensorId">Sensor:</label>
-                                    <select id="sensorId" class="swal2-input">
-                                        <option value="">Seleccione un Sensor</option>
+                                    <select id="sensorId" class="swal2-input" style="
+                                        width: 550px; 
+                                        background: transparent; 
+                                        color: black; 
+                                        text-shadow: 1px 1px 7px white; 
+                                        border: 1px solid #ccc;
+                                        padding: 0.5em;
+                                        border-radius: 4px;
+                                    ">
+                                        <option value="">Seleciona Sensor Conteo</option>
                                         ${sensors.map(sensor => `<option value="${sensor.id}">${sensor.name}</option>`).join('')}
                                     </select>
-                                    <label for="modbusId">Modbus:</label>
-                                    <select id="modbusId" class="swal2-input">
-                                        <option value="">Seleccione un Modbus</option>
+                                    <select id="modbusId" class="swal2-input" style="
+                                        width: 550px; 
+                                        background: transparent; 
+                                        color: black; 
+                                        text-shadow: 1px 1px 7px white; 
+                                        border: 1px solid #ccc;
+                                        padding: 0.5em;
+                                        border-radius: 4px;
+                                    ">
+                                        <option value="">Seleccione una Bascula</option>
                                         ${modbuses.map(modbus => `<option value="${modbus.id}">${modbus.name}</option>`).join('')}
                                     </select>
                                 `,

@@ -17,6 +17,7 @@ use App\Models\ProductList;
 use Exception;
 use App\Models\ModbusHistory;
 use App\Models\SensorHistory;
+use App\Models\Operator;
 
 class MqttSubscriberLocalMac extends Command
 {
@@ -142,9 +143,16 @@ class MqttSubscriberLocalMac extends Command
     
             if ($action === 1) { // Finalizar orden
                 $this->saveOrderMac($barcode, $cleanMessage, $action);
+               
+                
+                $this->logInfo("Orden cerrada para barcode ID: {$barcode->id}");
+                $this->sensorHistorics($barcode->id);
+                $this->logInfo("Historico de sensores para barcode ID: {$barcode->id}");
+                $this->modbusHistorics($barcode->id);
+                $this->logInfo("Historico de modbus para barcode ID: {$barcode->id}");
                 // Transferir sensores a la base de datos externa antes del reset
                 $this->transferSensorsToExternal($barcode->id, $orderId);
-                $this->processOrderClose($cleanMessage, $barcode);
+                $this->processOrderClose($cleanMessage, $barcode); 
                 $this->logInfo("Orden cerrada para barcode ID: {$barcode->id}");
  
                 
@@ -368,6 +376,7 @@ class MqttSubscriberLocalMac extends Command
             // Reseteo de sensores y modbuses con los nuevos valores
             $this->resetSensors($barcode->id, $optimalProductionTime, $orderId, $quantity, $uds, $referId);
             $this->resetModbuses($barcode->id, $optimalProductionTime, $orderId, $quantity, $uds, $referId);
+            $this->resetOperators();
         } else {
             $this->logError("Faltan campos en el JSON recibido para procesar sensores y modbuses. Valores recibidos: orderId={$orderId}, quantity={$quantity}, uds={$uds}, envase={$envase}");
         }
@@ -597,6 +606,7 @@ class MqttSubscriberLocalMac extends Command
             foreach ($modbuses as $modbus) {
                 ModbusHistory::create([
                     'modbus_id' => $modbus->id,
+                    'orderId' => $modbus->orderId,
                     'rec_box_shift' => $modbus->rec_box_shift,
                     'rec_box' => $modbus->rec_box,
                     'downtime_count' => $modbus->downtime_count,
@@ -619,6 +629,95 @@ class MqttSubscriberLocalMac extends Command
             ]);
     
             $this->info("Reset realizado para {$updatedCount} modbuses con optimal_production_time={$optimalProductionTime}, orderId={$orderId}, quantity={$quantity}, uds={$uds} para barcode ID {$barcodeId}");
+        } catch (Exception $e) {
+            $this->error("Error actualizando modbuses: " . $e->getMessage());
+        }
+    }
+    public function resetOperators()
+    {
+        try {
+            // Reseteamos todos los operadores a 0
+            Operator::query()->update([
+                'count_order' => 0,
+            ]);
+
+            // Log para confirmar la operación
+            $this->info("Todos los contadores de operadores han sido reseteados a 0.");
+
+            return response()->json([
+                'message' => 'Todos los contadores de operadores han sido reseteados a 0.',
+                'status' => 'success'
+            ], 200);
+        } catch (\Exception $e) {
+            // Log del error en caso de fallo
+            $this->error("Error al resetear los contadores de operadores: " . $e->getMessage());
+
+            return response()->json([
+                'message' => 'Error al resetear los contadores de operadores.',
+                'status' => 'error',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    private function sensorHistorics($barcodeId)
+    {
+        try {
+            // Obtener sensores relacionados con el barcodeId
+            $sensors = Sensor::where('barcoder_id', $barcodeId)->get();
+    
+            if ($sensors->isEmpty()) {
+                $this->error("No se encontraron sensores para barcode ID: {$barcodeId}");
+                return;
+            }
+    
+            // Guardar datos en la tabla `sensor_history`
+            foreach ($sensors as $sensor) {
+                SensorHistory::create([
+                    'sensor_id' => $sensor->id,
+                    'count_shift_1' => $sensor->count_shift_1,
+                    'count_shift_0' => $sensor->count_shift_0,
+                    'count_order_0' => $sensor->count_order_0,
+                    'count_order_1' => $sensor->count_order_1,
+                    'downtime_count' => $sensor->downtime_count,
+                    'unic_code_order' => $sensor->unic_code_order,
+                    'orderId' => $sensor->orderId,
+                ]);
+            }
+            $this->info("Se ha guardado el historial para el sensor id: {$sensor->id}");
+        } catch (Exception $e) {
+            $this->error("Error actualizando sensores: " . $e->getMessage());
+        }
+    }
+    
+    private function modbusHistorics($barcodeId)
+    {
+        
+        try {
+            // Obtener modbuses relacionados con el barcodeId
+            $modbuses = Modbus::where('barcoder_id', $barcodeId)->get();
+    
+            if ($modbuses->isEmpty()) {
+                $this->error("No se encontraron modbuses para barcode ID: {$barcodeId}");
+                return;
+            }
+    
+            // Guardar datos en la tabla `modbus_history`
+            foreach ($modbuses as $modbus) {
+                ModbusHistory::create([
+                    'modbus_id' => $modbus->id,
+                    'orderId' => $modbus->orderId,
+                    'rec_box_shift' => $modbus->rec_box_shift,
+                    'rec_box' => $modbus->rec_box,
+                    'downtime_count' => $modbus->downtime_count,
+                    'unic_code_order' => $modbus->unic_code_order,
+                    'total_kg_order' => $modbus->total_kg_order,
+                    'total_kg_shift' => $modbus->total_kg_shift,
+                ]);
+            }
+    
+           
+            $this->info("Se ha guardado el historial del mosbus id {$modbus->id}");
         } catch (Exception $e) {
             $this->error("Error actualizando modbuses: " . $e->getMessage());
         }

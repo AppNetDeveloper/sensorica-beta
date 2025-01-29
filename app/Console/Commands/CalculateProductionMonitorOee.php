@@ -316,7 +316,7 @@ class CalculateProductionMonitorOee extends Command
             $orderStats->units_made = $realCajas;
             $orderStats->units_pending = $units - $realCajas;
             $orderStats->units_delayed = $totalCajasTeoricas - $realCajas;
-            $orderStats->production_stops_time = floor($totalDowntimeCountSensorType0 / 60);
+           // $orderStats->production_stops_time = floor($totalDowntimeCountSensorType0 / 60);
             $orderStats->fast_time = $totalLessThanOrEqualToOptimalTime;
             $orderStats->slow_time = $totalBetweenOptimalAndMaxTime;
             $orderStats->out_time = $totalGreaterThanMaxTime;

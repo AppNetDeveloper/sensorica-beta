@@ -849,6 +849,69 @@ class SystemController extends Controller
             ], 500);
         }
     }
+/**
+ * @OA\Post(
+ *     path="/api/verne-update",
+ *     summary="Actualizar VerneMQ ejecutando el script verne.sh",
+ *     tags={"Aplicación"},
+ *     security={{"bearerAuth": {}}},
+ *     @OA\Response(
+ *         response=200,
+ *         description="Actualización de VerneMQ iniciada correctamente.",
+ *         @OA\JsonContent(
+ *             type="object",
+ *             @OA\Property(property="status", type="string", example="success"),
+ *             @OA\Property(property="message", type="string", example="Script de actualización de VerneMQ ejecutado correctamente.")
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=403,
+ *         description="Token de autorización inválido.",
+ *         @OA\JsonContent(
+ *             type="object",
+ *             @OA\Property(property="error", type="string", example="Token de autorización inválido.")
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=500,
+ *         description="Error al ejecutar el script de actualización de VerneMQ.",
+ *         @OA\JsonContent(
+ *             type="object",
+ *             @OA\Property(property="error", type="string", example="Error al ejecutar el script de actualización de VerneMQ.")
+ *         )
+ *     )
+ * )
+ */
+    public function verneUpdate(Request $request)
+    {
+        $validation = $this->validateToken($request);
+        if ($validation) {
+            return $validation;
+        }
+
+        try {
+            $command = 'sudo /var/www/html/verne.sh';
+            $process = Process::fromShellCommandline($command);
+            $process->setTimeout(600); // Configurar tiempo máximo para el script
+            $process->run();
+
+            if (!$process->isSuccessful()) {
+                throw new ProcessFailedException($process);
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Script de actualización de VerneMQ ejecutado correctamente.',
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Error al ejecutar el script de actualización de VerneMQ: " . $e->getMessage());
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
     /**
      * @OA\Get(
      *     path="/api/server-ips",
@@ -1176,6 +1239,8 @@ class SystemController extends Controller
                 'SensorUnitCount' => 'VARCHAR(255)',
                 'SensorWeight' => 'DECIMAL(10,2)',
                 'SensorUnitWeight' => 'VARCHAR(255)',
+                'GrossWeight01' => 'DECIMAL(10,2)', // Nuevo campo
+                'GrossWeight02' => 'DECIMAL(10,2)'  // Nuevo campo
             ]
         ];
     
@@ -1245,10 +1310,14 @@ class SystemController extends Controller
             if (!$schema->hasColumn($table, $column)) {
                 $schema->table($table, function ($tableBlueprint) use ($column, $definition) {
                     // Analizar el tipo de dato del esquema
-                    $type = explode(' ', $definition)[0];
-                    switch (strtoupper($type)) {
+                    $type = strtoupper(explode('(', $definition)[0]);
+                    switch ($type) {
                         case 'VARCHAR':
-                            $tableBlueprint->string($column)->nullable();
+                            $length = 255; // Longitud predeterminada
+                            if (preg_match('/\((\d+)\)/', $definition, $matches)) {
+                                $length = (int) $matches[1];
+                            }
+                            $tableBlueprint->string($column, $length)->nullable();
                             break;
                         case 'INT':
                             $tableBlueprint->integer($column)->nullable();
@@ -1269,11 +1338,11 @@ class SystemController extends Controller
                             $tableBlueprint->time($column)->nullable();
                             break;
                         default:
-                            throw new Exception("Tipo de dato no soportado: $type");
+                            throw new \Exception("Tipo de dato no soportado: $type");
                     }
                 });
                 Log::info("Columna agregada: $column en la tabla $table");
             }
         }
-    }       
+    }      
 }

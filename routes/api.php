@@ -24,7 +24,7 @@ use App\Http\Controllers\Api\ProductListController;
 use App\Http\Controllers\Api\ProductionLineStatusController;
 use App\Http\Controllers\Api\ScadaOrderController;
 use App\Http\Controllers\Api\ProductionOrderController;
-use App\Http\Controllers\Api\ProductListRfidController;
+use App\Http\Controllers\Api\ProductListSelectedsController;
 use App\Http\Controllers\Api\RfidReadingController;
 use App\Http\Controllers\Api\OperatorPostController;
 use App\Http\Controllers\Api\TcpPublishController;
@@ -146,6 +146,7 @@ Route::get('/supervisor-status', [SystemController::class, 'getSupervisorStatus'
 Route::get('/check-485-service', [SystemController::class, 'check485Service']);
 Route::post('/install-485-service', [SystemController::class, 'install485Service']);
 Route::post('/app-update', [SystemController::class, 'appUpdate']);
+Route::post('/verne-update', [SystemController::class, 'verneUpdate']);
 Route::get('/server-ips', [SystemController::class, 'getServerIps']);
 Route::post('/update-env', [SystemController::class, 'updateEnv']);
 Route::post('/check-db-connection', [SystemController::class, 'checkDbConnection']);
@@ -220,23 +221,16 @@ Route::prefix('production-orders')->group(function () {
 });
 
 
-// ProductListRfid API
 
-// Obtener todas las relaciones entre ProductList y RFID
-Route::get('product-list-rfids', [ProductListRfidController::class, 'index']);
-
-// Crear una nueva relación entre ProductList y RFID
-Route::post('product-list-rfids', [ProductListRfidController::class, 'store']);
-
-// Obtener una relación específica entre ProductList y RFID
-Route::get('product-list-rfids/{id}', [ProductListRfidController::class, 'show']);
-
-// Actualizar una relación específica entre ProductList y RFID
-Route::put('product-list-rfids/{id}', [ProductListRfidController::class, 'update']);
-
-// Eliminar una relación específica entre ProductList y RFID
-Route::delete('product-list-rfids/{id}', [ProductListRfidController::class, 'destroy']);
-
+Route::prefix('/product-list-selecteds')->group(function() {
+    Route::get('/', [ProductListSelectedsController::class, 'index']);
+    Route::post('/', [ProductListSelectedsController::class, 'store']);
+    Route::get('/modbuses', [ProductListSelectedsController::class, 'listModbuses']);
+    Route::get('/sensors', [ProductListSelectedsController::class, 'listSensors']);
+    Route::get('/{id}', [ProductListSelectedsController::class, 'show']);
+    Route::put('/{id}', [ProductListSelectedsController::class, 'update']);
+    Route::delete('/{id}', [ProductListSelectedsController::class, 'destroy']);
+});
 
 
 

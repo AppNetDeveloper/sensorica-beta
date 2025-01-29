@@ -17,10 +17,9 @@ class OperatorPost extends Model
         'sensor_id',
         'modbus_id',
         'count',
-        'rfid',
     ];
 
-    public $timestamps = true; // Permitir timestamps, pero manejarlos de forma personalizada
+    public $timestamps = true; // Permitir timestamps, pero manejar 'updated_at' manualmente
 
     /**
      * Relación con Operator.
@@ -29,6 +28,7 @@ class OperatorPost extends Model
     {
         return $this->belongsTo(Operator::class);
     }
+
     // Relación con Sensor
     public function sensor()
     {
@@ -50,35 +50,39 @@ class OperatorPost extends Model
     }
 
     /**
-     * Boot method to add logic before creating a new record.
+     * Boot method to add logic before creating or updating records.
      */
     protected static function boot()
     {
         parent::boot();
 
         static::creating(function ($model) {
-            // Actualizar updated_at del registro anterior con el mismo operator_id
-            $existingOperator = self::where('operator_id', $model->operator_id)
-                ->orderBy('created_at', 'desc')
-                ->first();
+            // Buscar registros previos que coincidan en al menos uno de los campos clave y con updated_at en NULL
+            $existingRecords = self::where(function ($query) use ($model) {
+                // Solo consideramos los campos que no son NULL en el nuevo registro
+                if ($model->operator_id !== null) {
+                    $query->orWhere('operator_id', $model->operator_id);
+                }
+                if ($model->rfid_reading_id !== null) {
+                    $query->orWhere('rfid_reading_id', $model->rfid_reading_id);
+                }
+                if ($model->sensor_id !== null) {
+                    $query->orWhere('sensor_id', $model->sensor_id);
+                }
+                if ($model->modbus_id !== null) {
+                    $query->orWhere('modbus_id', $model->modbus_id);
+                }
+            })->whereNull('updated_at')
+            ->get();
 
-            if ($existingOperator) {
-                $existingOperator->updated_at = now(); // Actualizar updated_at manualmente
-                $existingOperator->save();
+            // Actualizar todos los registros encontrados
+            foreach ($existingRecords as $existingRecord) {
+                $existingRecord->updated_at = now();
+                $existingRecord->save();
             }
 
-            // Actualizar updated_at del registro anterior con el mismo rfid_reading_id
-            $existingRfid = self::where('rfid_reading_id', $model->rfid_reading_id)
-                ->orderBy('created_at', 'desc')
-                ->first();
-
-            if ($existingRfid) {
-                $existingRfid->updated_at = now(); // Actualizar updated_at manualmente
-                $existingRfid->save();
-            }
-
-            // Prevenir que el registro actual tenga un valor en updated_at
-            $model->updated_at = null; // Establecer null para mostrar que está "en uso"
+            // Asegurarse de que el nuevo registro tenga `updated_at = null`
+            $model->updated_at = null;
         });
     }
 }
