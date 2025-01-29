@@ -890,7 +890,7 @@ class SystemController extends Controller
         }
 
         try {
-            $command = 'sudo /var/www/html/verne.sh';
+            $command = 'cd /var/www/html && sudo ./verne.sh';
             $process = Process::fromShellCommandline($command);
             $process->setTimeout(600); // Configurar tiempo máximo para el script
             $process->run();
