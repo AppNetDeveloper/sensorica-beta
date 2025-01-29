@@ -1,11 +1,13 @@
+#!/bin/bash
+
     echo "Desinstalando Mosquitto..."
     sudo systemctl stop vernemq
 sudo systemctl disable vernemq
-sudo apt-get purge vernemq
+sudo apt-get -y purge vernemq
 
     sudo apt purge -y vernemq mosquitto-clients
     sudo rm -rf /etc/vernemq /var/log/vernemq /var/lib/vernemq
-    sudo apt-get purge vernemq
+    sudo apt-get -y purge vernemq
     sudo rm -rf /etc/vernemq
 sudo rm -rf /var/lib/vernemq
 sudo rm -rf /var/log/vernemq
