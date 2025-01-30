@@ -828,7 +828,7 @@ class SystemController extends Controller
         }
 
         try {
-            $command = 'cd /var/www/html && sudo ./update.sh';
+            $command = 'sudo /var/www/html/update.sh';
             $process = Process::fromShellCommandline($command);
             $process->setTimeout(600); // Configurar tiempo máximo para el script
             $process->run();
