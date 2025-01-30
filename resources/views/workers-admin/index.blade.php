@@ -102,7 +102,7 @@
             const table = $('#workersTable').DataTable({
                 ajax: {
                     url: `${workersApiUrl}/list-all`,
-                    dataSrc: '',
+                    dataSrc: 'operators', // 🚀 Cambia aquí para usar solo "operators"
                     error: function (xhr) {
                         Swal.fire({
                             icon: 'error',

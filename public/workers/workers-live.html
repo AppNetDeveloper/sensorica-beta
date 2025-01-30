@@ -127,6 +127,21 @@
                 width: calc(100% / 2 - 20px);
             }
         }
+        .rfid-container {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .rfid-item {
+            font-size: 1rem;
+            font-weight: bold;
+            background: rgba(0, 0, 0, 0.1);
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+        
     </style>
 </head>
 <body>
@@ -191,50 +206,65 @@
             $.ajax({
                 url: `${workersApiUrl}/list-all`,
                 method: 'GET',
-                success: function (operators) {
-                    operatorsData = operators; // Guardar los datos para exportar
+                success: function (response) {
+                    const operators = response.operators; // 📌 Extraer "operators"
+                    const rfidColors = response.rfid_colors; // 📌 Extraer "rfid_colors"
+        
+                    operatorsData = operators; // Guardar operadores para exportar
+        
                     const container = $('#cardContainer');
                     container.empty();
-
-                    if (operators.length === 0) {
+        
+                    if (!operators || operators.length === 0) {
                         container.append('<p>No hay operadores disponibles.</p>');
                         return;
                     }
-
+        
                     const maxTurn = Math.max(...operators.map(o => o.count_shift || 0));
                     const maxOrder = Math.max(...operators.map(o => o.count_order || 0));
-
+        
                     operators.forEach(operator => {
                         const turnValue = operator.count_shift || 0;
                         const orderValue = operator.count_order || 0;
-
+        
                         const turnClass = turnValue === 0
                             ? 'red'
                             : turnValue === maxTurn
                                 ? 'green'
                                 : 'yellow';
-
+        
                         const orderClass = orderValue === 0
                             ? 'red'
                             : orderValue === maxOrder
                                 ? 'green'
                                 : 'yellow';
-
+        
+                        // ✅ Generar la lista de colores RFID en la misma línea
+                        let rfidHtml = '';
+                        if (rfidColors && rfidColors.length > 0) {
+                            rfidHtml = rfidColors.map(color => `
+                                <div class="rfid-item" style="color: ${color.name};">
+                                    ${color.name}: <strong>0</strong>
+                                </div>
+                            `).join('');
+                        }
+        
                         const card = `
                             <div class="card">
                                 ${config.name ? `<h3>${operator.name}</h3>` : ''}
                                 ${config.id ? `<p style="font-size: ${config.idSize};"><span>ID:</span> ${operator.id}</p>` : ''}
                                 <div class="stats-container">
-                                    ${config.shift ? `
-                                        <div class="stat">
-                                            <span>Turno</span>
-                                            <div class="value ${turnClass}">${turnValue}</div>
-                                        </div>` : ''}
-                                    ${config.order ? `
-                                        <div class="stat">
-                                            <span>Orden</span>
-                                            <div class="value ${orderClass}">${orderValue}</div>
-                                        </div>` : ''}
+                                    <div class="stat">
+                                        <span>Turno</span>
+                                        <div class="value ${turnClass}">${turnValue}</div>
+                                    </div>
+                                    <div class="stat">
+                                        <span>Orden</span>
+                                        <div class="value ${orderClass}">${orderValue}</div>
+                                    </div>
+                                </div>
+                                <div class="stats-container">
+                                    ${rfidHtml} <!-- ✅ Insertamos los colores en la misma línea -->
                                 </div>
                             </div>
                         `;
@@ -250,6 +280,7 @@
                 },
             });
         }
+        
 
         function exportToExcel() {
             if (operatorsData.length === 0) {
