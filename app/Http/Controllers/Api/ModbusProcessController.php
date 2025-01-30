@@ -554,7 +554,7 @@ class ModbusProcessController extends Controller
                 $config->box_width > 0 &&
                 $config->box_length > 0 &&
                 $dimensionFinal > 0
-            ) ? ($config->box_width * $config->box_length * $dimensionFinal) / 1000 : 0;
+            ) ? ($config->box_width * $config->box_length * $dimensionFinal) / 1000000000 : 0;
     
             //para poner a la izcherda relleno de 8 digitos siempre
             $maxKgPadded = str_pad($maxKg, 8, '0', STR_PAD_LEFT);
