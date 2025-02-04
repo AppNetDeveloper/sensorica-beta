@@ -33,6 +33,8 @@ class MqttSubscriberLocal extends Command
             try {
                 $timestamp = Carbon::now()->format('Y-m-d H:i:s');
                 $mqtt = $this->initializeMqttClient(env('MQTT_SENSORICA_SERVER'), intval(env('MQTT_SENSORICA_PORT')));
+                // 🔹 Limpiar la lista de tópicos suscritos después de reconectar
+                $this->subscribedTopics = [];
                 $this->subscribeToAllTopics($mqtt);
     
                 while ($this->shouldContinue) {

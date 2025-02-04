@@ -109,7 +109,10 @@ def cancelar_dosificacion(direccion_modbus):
     with modbus_lock:
         try:
             print(f"Cancelando dosificación en dirección Modbus {direccion_modbus}.")
-            client.write_register(1000, 100, slave=direccion_modbus)  # Código para cancelar el proceso
+            # Enviar 12 primero
+            client.write_register(1000, 12, slave=direccion_modbus)
+            # Luego enviar 15
+            client.write_register(1000, 15, slave=direccion_modbus)
             print(f"Dosificación cancelada en dirección Modbus {direccion_modbus}.")
             publicar_estado_operacion(direccion_modbus, "cancel", "Finalizado")
         except Exception as e:

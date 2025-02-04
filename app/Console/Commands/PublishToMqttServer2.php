@@ -14,9 +14,7 @@ class PublishToMqttServer2 extends Command
 {
     protected $signature = 'mqtt:publish-server2';
     protected $description = 'Publishes data to MQTT Server 2 based on mqtt_send_server2 table';
-
-    protected $mqtt;
-    private $maxReconnectAttempts = 5;
+    protected $mqtt; // Definición de la propiedad MQTT
 
     public function __construct()
     {
@@ -25,47 +23,38 @@ class PublishToMqttServer2 extends Command
 
     public function handle()
     {
-        $this->initializeMqttClient();
+        if ($this->initializeMqttClient()) { // Inicializar la conexión al inicio
 
-        while (true) {
-            try {
-                $mqttEntries = MqttSendServer2::all();
+            while (true) {
+                try {
+                    $mqttEntries = MqttSendServer2::all();
 
-                foreach ($mqttEntries as $entry) {
-                    if ($this->publishToMqtt($entry)) {
-                        $entry->delete(); // Elimina la entrada después de publicarla exitosamente
+                    foreach ($mqttEntries as $entry) {
+                        // Intentamos publicar, si falla, se marcará para reconectar
+                        if ($this->publishToMqtt($entry)) {
+                            $entry->delete(); // Elimina la entrada después de publicarla exitosamente
+                        } else {
+                            // Si falla la publicación, forzamos una reconexión y salimos del foreach para reiniciar el ciclo
+                            throw new \Exception("Error al publicar el mensaje. Se requiere reconexión.");
+                        }
                     }
+
+                    usleep(100000); // Pausa para evitar sobrecarga
+
+                } catch (\Exception $e) {
+                    Log::error("Error en el loop de publicación a MQTT Server 2: " . $e->getMessage());
+                    $this->reconnectClient(); // Intentar reconectar si hay un error
                 }
-
-                usleep(100000);
-
-            } catch (DataTransferException $e) {
-                $this->error("Data transfer error on MQTT Server 2: " . $e->getMessage());
-                Log::error("Data transfer error on MQTT Server 2: " . $e->getMessage());
-                
-                // Desconecta y fuerza la reconexión
-                $this->disconnectMqttClient();
-                $this->reconnectClient();
-
-            } catch (ConnectionException $e) {
-                $this->error("Connection error in MQTT Server 2: " . $e->getMessage());
-                Log::error("Connection error in MQTT Server 2: " . $e->getMessage());
-
-                // Forzar la reconexión en caso de error de conexión
-                $this->disconnectMqttClient();
-                $this->reconnectClient();
-
-            } catch (\Exception $e) {
-                Log::error("Unexpected error in MQTT Server 2 publish loop: " . $e->getMessage());
-                sleep(1);
             }
+
+            //$this->disconnectMqttClient(); // Desconectar al final del proceso (no se alcanza en este loop infinito)
         }
     }
 
     private function initializeMqttClient()
     {
         $connectionSettings = new ConnectionSettings();
-        $connectionSettings->setKeepAliveInterval(20);
+        $connectionSettings->setKeepAliveInterval(20); // Mantener viva la conexión
         $connectionSettings->setUseTls(false);
         $connectionSettings->setTlsSelfSignedAllowed(false);
 
@@ -73,66 +62,55 @@ class PublishToMqttServer2 extends Command
 
         try {
             $this->mqtt->connect($connectionSettings, true);
-            $this->info("Successfully connected to MQTT Server 2");
+            $this->info("Conectado a MQTT Server 2");
+            return true;
         } catch (ConnectionException $e) {
-            $this->error("Connection error on MQTT Server 2: " . $e->getMessage());
+            $this->error("Error de conexión con MQTT Server 2: " . $e->getMessage());
+            return false;
         }
     }
 
     private function publishToMqtt($entry)
     {
-        // Verifica si la conexión está activa antes de publicar
-        if (!$this->mqtt->isConnected()) {
-            $this->error("MQTT client is not connected. Attempting reconnection...");
-            $this->reconnectClient();
-        }
-
         try {
-            $this->mqtt->publish($entry->topic, $entry->json_data, 0);
-            $this->info("Successfully published to MQTT Server 2: " . $entry->topic);
+            $this->mqtt->publish($entry->topic, $entry->json_data, 0); // Publicar con QoS 0
+            $this->info("Mensaje enviado a MQTT Server 2 - Tópico: " . $entry->topic . " | Datos: " . $entry->json_data);
             return true;
         } catch (DataTransferException $e) {
-            $this->error("Data transfer error on MQTT Server 2: " . $e->getMessage());
-            $this->disconnectMqttClient();
+            $this->error("Error de transferencia de datos en MQTT Server 2: " . $e->getMessage());
             return false;
+        }
+    }
+
+    private function disconnectMqttClient()
+    {
+        if ($this->mqtt) {
+            try {
+                $this->mqtt->disconnect();
+                $this->info("Desconectado del servidor MQTT 2");
+            } catch (\Exception $e) {
+                $this->error("Error al desconectar el cliente MQTT: " . $e->getMessage());
+            }
         }
     }
 
     private function reconnectClient()
     {
-        $attempts = 0;
-        while ($attempts < $this->maxReconnectAttempts) {
-            try {
-                $this->initializeMqttClient();
-                $this->info("Successfully reconnected to MQTT Server 2");
-                return;
-            } catch (\Exception $e) {
-                $attempts++;
-                Log::error("Reconnection attempt {$attempts} failed: " . $e->getMessage());
-                sleep(2);
+        try {
+            $this->disconnectMqttClient();
+            sleep(2); // Pausa antes de intentar reconectar
+            if ($this->initializeMqttClient()) {
+                $this->info("Reconectado exitosamente a MQTT Server 2");
+            } else {
+                $this->error("No se pudo reconectar a MQTT Server 2. Se intentará nuevamente.");
             }
-        }
-
-        Log::error("Max reconnection attempts reached. Exiting for Supervisor restart.");
-        exit(1); // Permite que Supervisor lo reinicie
-    }
-
-    private function disconnectMqttClient()
-    {
-        if ($this->mqtt && $this->mqtt->isConnected()) {
-            try {
-                $this->mqtt->disconnect();
-                $this->info("Disconnected from MQTT Server 2");
-            } catch (\Exception $e) {
-                $this->error("Error while disconnecting MQTT client: " . $e->getMessage());
-                exit(1); // Forzar salida para que Supervisor reinicie
-            }
+        } catch (\Exception $e) {
+            Log::error("Fallo al reconectar con MQTT Server 2: " . $e->getMessage());
         }
     }
 
     public function __destruct()
     {
-        $this->disconnectMqttClient();
+        $this->disconnectMqttClient(); // Asegurar la desconexión al finalizar el script
     }
 }
-

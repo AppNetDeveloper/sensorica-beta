@@ -613,7 +613,7 @@ class ModbusProcessController extends Controller
                 $config->box_length > 0 &&
                 $dimensionFinal > 0
             )
-                ? ($config->box_width * $config->box_length * $dimensionFinal) / 1000
+                ? ($config->box_width * $config->box_length * $dimensionFinal) / 1000000000
                 : 0, // Si algún campo es 0 o null, el valor será 0
         ];
         

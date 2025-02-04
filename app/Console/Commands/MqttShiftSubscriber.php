@@ -28,7 +28,6 @@ class MqttShiftSubscriber extends Command
 
     public function handle()
     {
-        // Manejo de señales para una terminación controlada
         pcntl_async_signals(true);
         pcntl_signal(SIGTERM, function () {
             $this->shouldContinue = false;
@@ -36,34 +35,51 @@ class MqttShiftSubscriber extends Command
         pcntl_signal(SIGINT, function () {
             $this->shouldContinue = false;
         });
-
+    
         $this->shouldContinue = true;
-
-        // Inicializar el cliente MQTT
-        $mqtt = $this->initializeMqttClient(env('MQTT_SENSORICA_SERVER'), intval(env('MQTT_SENSORICA_PORT')));
-
-        // Suscribirse a los tópicos
-        $this->subscribeToAllTopics($mqtt);
-
-        // Bucle principal para verificar y suscribirse a nuevos tópicos
+        $retryDelay = 1; // Tiempo de espera inicial en segundos
+    
         while ($this->shouldContinue) {
-            // Verificar y suscribir a nuevos tópicos
-            $this->checkAndSubscribeNewTopics($mqtt);
-
-            // Mantener la conexión activa y procesar mensajes MQTT
-            $mqtt->loop(true);
-
-            // Permitir que el sistema maneje señales
-            pcntl_signal_dispatch();
-
-            // Reducir la carga del sistema esperando un corto período
-            usleep(100000); // Esperar 0.1 segundos
+            try {
+                $this->info("Intentando conectar con MQTT...");
+    
+                // Inicializar el cliente MQTT
+                $mqtt = $this->initializeMqttClient(env('MQTT_SENSORICA_SERVER'), intval(env('MQTT_SENSORICA_PORT')));
+                // 🔹 Limpiar la lista de tópicos suscritos después de reconectar
+                $this->subscribedTopics = [];
+                // Suscribirse a los tópicos actuales
+                $this->subscribeToAllTopics($mqtt);
+    
+                // Resetear el tiempo de espera después de una conexión exitosa
+                $retryDelay = 1;
+    
+                // Bucle principal para procesar los mensajes MQTT
+                while ($this->shouldContinue) {
+                    $this->checkAndSubscribeNewTopics($mqtt);
+                    $mqtt->loop(true);
+    
+                    // Manejo de señales para cierre seguro
+                    pcntl_signal_dispatch();
+    
+                    // Reducir la carga del sistema
+                    usleep(100000);
+                }
+    
+                $mqtt->disconnect();
+                $this->info("MQTT Subscriber detenido correctamente.");
+    
+            } catch (\Exception $e) {
+                $this->error("Error en la conexión MQTT: " . $e->getMessage());
+    
+                // Espera antes de reintentar (con aumento progresivo hasta un máximo de 30s)
+                sleep($retryDelay);
+                $retryDelay = min($retryDelay * 2, 30); // Incremento progresivo hasta 30s máximo
+    
+                $this->warn("Intentando reconectar en {$retryDelay} segundos...");
+            }
         }
-
-        // Desconectar el cliente MQTT de forma segura
-        $mqtt->disconnect();
-        $this->info("MQTT Subscriber stopped gracefully.");
     }
+    
 
 
     private function initializeMqttClient($server, $port)

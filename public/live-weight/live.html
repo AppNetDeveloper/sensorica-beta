@@ -456,7 +456,8 @@
         document.getElementById('lastWeightDisplay').innerHTML = lastControlWeight.toFixed(2) + ' <b class="unit">Kg</b>';
             // Mostrar `box_m3` si m3=true
         if (isM3Active) {
-          document.getElementById('lastDimensionDisplay').innerHTML = data.box_m3 + ' <b class="unit">m³</b>';
+          document.getElementById('lastDimensionDisplay').innerHTML = (data.box_m3 / 1000000).toFixed(2) + ' <b class="unit">m³</b>';
+
         } else {
           document.getElementById('lastDimensionDisplay').innerHTML = data.last_dimension + ' <b class="unit">mm</b>';
         }

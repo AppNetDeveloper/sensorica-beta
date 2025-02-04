@@ -167,8 +167,11 @@
 
     <script>
         const workersApiUrl = '/api/workers';
-
-        // Obtener parámetros de la URL con valores predeterminados
+    
+        // 📌 Variable global para almacenar los colores RFID
+        let rfidColorsGlobal = [];
+    
+        // 📌 Obtener parámetros de la URL con valores predeterminados
         function getUrlParams() {
             const params = new URLSearchParams(window.location.search);
             return {
@@ -182,13 +185,15 @@
                 labelSize: params.get('labelSize') || '0.9rem',
             };
         }
-
+    
         const config = getUrlParams();
-
+    
+        // Aplicar estilos dinámicos a la página
         document.documentElement.style.setProperty('--nameSize', config.nameSize);
         document.documentElement.style.setProperty('--numberSize', config.numberSize);
         document.documentElement.style.setProperty('--labelSize', config.labelSize);
-
+    
+        // 📌 Función para actualizar el reloj en la cabecera
         function updateClock() {
             const now = new Date();
             const hours = String(now.getHours()).padStart(2, '0');
@@ -196,59 +201,55 @@
             const seconds = String(now.getSeconds()).padStart(2, '0');
             document.getElementById('clock').textContent = `${hours}:${minutes}:${seconds}`;
         }
-
+    
         setInterval(updateClock, 1000);
         updateClock();
-
+    
+        // 📌 Variable global para almacenar los operadores
         let operatorsData = [];
-
+    
+        // 📌 Función para cargar operadores y colores RFID desde la API
         function loadOperators() {
             $.ajax({
                 url: `${workersApiUrl}/list-all`,
                 method: 'GET',
                 success: function (response) {
-                    const operators = response.operators; // 📌 Extraer "operators"
-                    const rfidColors = response.rfid_colors; // 📌 Extraer "rfid_colors"
-        
-                    operatorsData = operators; // Guardar operadores para exportar
-        
+                    const operators = response.operators; 
+                    rfidColorsGlobal = response.rfid_colors || []; // 📌 Guardamos los colores RFID globalmente
+    
+                    operatorsData = operators; 
+    
                     const container = $('#cardContainer');
                     container.empty();
-        
+    
                     if (!operators || operators.length === 0) {
                         container.append('<p>No hay operadores disponibles.</p>');
                         return;
                     }
-        
+    
                     const maxTurn = Math.max(...operators.map(o => o.count_shift || 0));
                     const maxOrder = Math.max(...operators.map(o => o.count_order || 0));
-        
+    
                     operators.forEach(operator => {
                         const turnValue = operator.count_shift || 0;
                         const orderValue = operator.count_order || 0;
-        
-                        const turnClass = turnValue === 0
-                            ? 'red'
-                            : turnValue === maxTurn
-                                ? 'green'
-                                : 'yellow';
-        
-                        const orderClass = orderValue === 0
-                            ? 'red'
-                            : orderValue === maxOrder
-                                ? 'green'
-                                : 'yellow';
-        
-                        // ✅ Generar la lista de colores RFID en la misma línea
+    
+                        const turnClass = turnValue === 0 ? 'red' : turnValue === maxTurn ? 'green' : 'yellow';
+                        const orderClass = orderValue === 0 ? 'red' : orderValue === maxOrder ? 'green' : 'yellow';
+    
                         let rfidHtml = '';
-                        if (rfidColors && rfidColors.length > 0) {
-                            rfidHtml = rfidColors.map(color => `
-                                <div class="rfid-item" style="color: ${color.name};">
-                                    ${color.name}: <strong>0</strong>
+                        if (rfidColorsGlobal.length > 0) {
+                            rfidHtml = `
+                                <div class="rfid-container">
+                                    ${rfidColorsGlobal.map(color => `
+                                        <div class="rfid-item" style="color: ${color.name};">
+                                            ${color.name}: <strong>0</strong>
+                                        </div>
+                                    `).join('')}
                                 </div>
-                            `).join('');
+                            `;
                         }
-        
+    
                         const card = `
                             <div class="card">
                                 ${config.name ? `<h3>${operator.name}</h3>` : ''}
@@ -263,9 +264,7 @@
                                         <div class="value ${orderClass}">${orderValue}</div>
                                     </div>
                                 </div>
-                                <div class="stats-container">
-                                    ${rfidHtml} <!-- ✅ Insertamos los colores en la misma línea -->
-                                </div>
+                                ${rfidHtml}
                             </div>
                         `;
                         container.append(card);
@@ -280,33 +279,50 @@
                 },
             });
         }
-        
-
+    
+        // 📌 Función para exportar datos a Excel
         function exportToExcel() {
             if (operatorsData.length === 0) {
                 Swal.fire('Error', 'No hay datos para exportar.', 'error');
                 return;
             }
-
-            const rows = operatorsData.map(operator => ({
-                ...(config.name && { Nombre: operator.name }),
-                ...(config.id && { ID: operator.id }),
-                ...(config.shift && { Turno: operator.count_shift || 0 }),
-                ...(config.order && { Orden: operator.count_order || 0 }),
-            }));
-
+    
+            // 📌 Obtener la lista de nombres de colores RFID para generar columnas dinámicamente
+            const rfidColorNames = rfidColorsGlobal.map(color => color.name);
+    
+            // 📌 Generar las filas para exportación
+            const rows = operatorsData.map(operator => {
+                let row = {
+                    ...(config.name && { Nombre: operator.name }),
+                    ...(config.id && { ID: operator.id }),
+                    ...(config.shift && { Turno: operator.count_shift || 0 }),
+                    ...(config.order && { Orden: operator.count_order || 0 }),
+                };
+    
+                // 📌 Agregar cada color RFID como una columna separada con valor inicial en 0
+                rfidColorNames.forEach(color => {
+                    row[color] = 0; // ✅ Valor por defecto para cada color
+                });
+    
+                return row;
+            });
+    
+            // 📌 Crear la hoja de cálculo
             const worksheet = XLSX.utils.json_to_sheet(rows);
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, 'Operadores');
-
+    
+            // 📌 Descargar el archivo Excel
             XLSX.writeFile(workbook, 'operadores.xlsx');
         }
-
+    
+        // 📌 Inicializar la carga de operadores y la exportación a Excel
         $(document).ready(function () {
             loadOperators();
             setInterval(loadOperators, 5000);
             $('#exportExcel').click(exportToExcel);
         });
     </script>
+    
 </body>
 </html>

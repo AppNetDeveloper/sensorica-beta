@@ -24,46 +24,50 @@ class ReadSensors extends Command
 
     public function handle()
     {
-        try {
-            // Manejo de señales para una terminación controlada
-            pcntl_async_signals(true);
-            pcntl_signal(SIGTERM, function () {
-                $this->shouldContinue = false;
-            });
-            pcntl_signal(SIGINT, function () {
-                $this->shouldContinue = false;
-            });
+        pcntl_async_signals(true);
+        pcntl_signal(SIGTERM, function () {
+            $this->shouldContinue = false;
+        });
+        pcntl_signal(SIGINT, function () {
+            $this->shouldContinue = false;
+        });
     
-            $this->shouldContinue = true;
+        $this->shouldContinue = true;
     
-            // Inicializar el cliente MQTT
-            $mqtt = $this->initializeMqttClient(env('MQTT_SENSORICA_SERVER'), intval(env('MQTT_SENSORICA_PORT')));
-            
-            // Suscribirse a los tópicos
-            $this->subscribeToAllTopics($mqtt);
+        while ($this->shouldContinue) {
+            try {
+                // 🔹 Intentar conectar MQTT
+                $mqtt = $this->initializeMqttClient(env('MQTT_SENSORICA_SERVER'), intval(env('MQTT_SENSORICA_PORT')));
+                // 🔹 Limpiar la lista de tópicos suscritos después de reconectar
+                $this->subscribedTopics = [];
+                // 🔹 Suscribirse a los tópicos después de cada reconexión
+                $this->subscribeToAllTopics($mqtt);
     
-            // Bucle principal para verificar y suscribirse a nuevos tópicos
-            while ($this->shouldContinue) {
+                // 🔹 Bucle para procesar mensajes
+                while ($this->shouldContinue) {
+                    $mqtt->loop(true);
     
-                // Mantener la conexión activa y procesar mensajes MQTT
-                $mqtt->loop(true);
+                    // 🔹 Verificar señales del sistema
+                    pcntl_signal_dispatch();
     
-                // Permitir que el sistema maneje señales
-                pcntl_signal_dispatch();
+                    usleep(100000); // Espera 0.1s para reducir carga en CPU
+                }
     
-                // Reducir la carga del sistema esperando un corto período
-                usleep(10000); // Esperar 0.1 segundos
+                // 🔹 Desconectar MQTT si el proceso se detiene
+                $mqtt->disconnect();
+                $this->info("MQTT Subscriber stopped gracefully.");
+    
+            } catch (\Exception $e) {
+                // 🔹 Cambiar `$this->logError()` por `$this->error()`
+                $this->error("Error en MQTT: " . $e->getMessage());
+    
+                // 🔹 Esperar 2 segundos antes de intentar reconectar
+                sleep(2);
+                $this->info("Reintentando conexión a MQTT...");
             }
-    
-            // Desconectar el cliente MQTT de forma segura
-            $mqtt->disconnect();
-            $this->info("MQTT Subscriber stopped gracefully.");
-    
-        } catch (\Exception $e) {
-            // Capturar cualquier excepción y registrarla en los logs
-            $this->error("Error en el comando sensors:read: " . $e->getMessage());
         }
     }
+    
     
 
     private function initializeMqttClient($server, $port)

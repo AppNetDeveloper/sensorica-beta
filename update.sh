@@ -1,5 +1,38 @@
 #!/bin/bash
 
+# Verificar si pip está instalado
+if ! command -v pip &> /dev/null
+then
+    echo "Error: pip no está instalado. Instálalo primero."
+    exit 1
+fi
+
+# Obtener la versión actual de pymodbus
+CURRENT_VERSION=$(pip show pymodbus | grep Version | awk '{print $2}')
+
+echo "Versión actual de pymodbus: $CURRENT_VERSION"
+
+# Verificar si pymodbus está instalado y si la versión es superior a 3.7.4
+if [ -z "$CURRENT_VERSION" ]; then
+    echo "pymodbus no está instalado. Instalando pymodbus 3.7.4..."
+    pip install --break-system-packages pymodbus==3.7.4
+elif [ "$CURRENT_VERSION" != "3.7.4" ]; then
+    echo "Desinstalando pymodbus versión $CURRENT_VERSION..."
+    pip uninstall -y --break-system-packages pymodbus
+    echo "Instalando pymodbus versión 3.7.4..."
+    pip install --break-system-packages pymodbus==3.7.4
+else
+    echo "pymodbus ya está en la versión 3.7.4, no es necesario actualizar."
+fi
+
+# Verificar la instalación
+echo "Verificación de la instalación..."
+pip show pymodbus
+
+
+
+
+
 # Cambiar al directorio del proyecto
 echo "Cambiando al directorio /var/www/html..."
 cd /var/www/html || { echo "Error: No se pudo cambiar al directorio /var/www/html"; exit 1; }
@@ -59,6 +92,7 @@ COMMANDS=(
     "/bin/systemctl enable 485.service"
     "/bin/systemctl start 485.service"
     "/var/www/html/verne.sh"
+    "/var/www/html/reset-sensor.sh"
 )
 
 
