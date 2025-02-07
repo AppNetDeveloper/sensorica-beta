@@ -263,7 +263,7 @@ class SensorController extends Controller
 
         if (!$orderId || !$productName) {
             Log::warning("No se encontró el ID de pedido o el nombre del producto.");
-            return;
+            //return;
         }
     
         // Incrementar los contadores

@@ -11,7 +11,7 @@
     <div class="row">
         <div class="col-lg-12">
         <div class="mb-3">
-            <a href="{{ route('customers.create') }}" class="btn btn-primary">Agregar nuevo customer</a>
+            <a href="{{ route('customers.create') }}" class="btn btn-primary">{{ __('Add Customers') }}</a>
         </div>
 
             <div class="card">

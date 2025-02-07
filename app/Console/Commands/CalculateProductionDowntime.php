@@ -98,7 +98,9 @@ class CalculateProductionDowntime extends Command
 
             if ($allStopped) {
                 $this->info("Todos los sensores de la línea de producción {$productionLineId} tienen el downtime abierto (end_time=NULL) y están parados.");
-                $this->downTimeLine($productionLineId, $sensors);
+                $this->downTimeLine($productionLineId);
+            }else{
+                $this->info("Línea de producción {$productionLineId} tiene al menos un sensor activo de conteo.");
             }
         }
         //FIN MONITOR DOWNTIME LINEA
@@ -136,12 +138,24 @@ class CalculateProductionDowntime extends Command
             }
         }
         
+        // Obtener el último registro de OrderStats para la línea de producción
+        $orderStat = OrderStat::where('production_line_id', $productionLineId)
+                                ->orderBy('id', 'desc')
+                                ->first();
+    
         if ($atLeastOneStopped) {
             $this->info("La línea de producción con ID {$productionLineId} está parada con al menos un sensor de tipo non 0 activo.");
+            if ($orderStat) {
+                $orderStat->increment('down_time');
+            }
         } else {
             $this->info("La línea de producción con ID {$productionLineId} está parada sin ningún sensor de tipo non 0 activo.");
+            if ($orderStat) {
+                $orderStat->increment('production_stops_time');
+            }
         }
     }
+    
     
  
 

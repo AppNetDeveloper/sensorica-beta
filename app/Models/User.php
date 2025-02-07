@@ -41,7 +41,17 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'name'=>'string'
     ];
-
+    
+    /**
+     * Asigna el rol "user" inmediatamente después de crear al usuario.
+     */
+    protected static function booted()
+    {
+        static::created(function ($user) {
+            // Asignar rol por nombre (asegúrate de que el rol "user" ya exista)
+            $user->assignRole('user');
+        });
+    }
     public function creatorId()
     {
 

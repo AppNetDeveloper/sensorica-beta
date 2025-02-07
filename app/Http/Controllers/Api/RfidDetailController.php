@@ -25,18 +25,25 @@ class RfidDetailController extends Controller
                 'serialno' => 'required|string',
                 'tid' => 'required|string',
             ]);
-    
+            //poner log para identificar donde estamos  pero
+            Log::info("Estamos en el metodo store de RfidDetailController");
             if ($validator->fails()) {
+                //tenemos el log pero mostramos los datos que faltan en el log interno
+                // Registrar en el log de Laravel los errores de validación detallados
+            Log::warning('Fallo de validación en store RfidDetailController', [
+                'datos_recibidos' => $request->all()
+            ]);
                 return response()->json([
                     'success' => false,
                     'message' => 'Datos inválidos',
                     'errors' => $validator->errors()
                 ], 422);
             }
-    
+            Log::info("RfidDetailController a validado los datos");
             // 2. Obtener la antena RFID
             $rfidAnt = RfidAnt::where('name',$request->input('antenna_name'))->first();
             if (!$rfidAnt) {
+                Log::info("Ninguna antena RfidDetailController");
                 return response()->json([
                     'success' => false,
                     'message' => 'Antena RFID no encontrada'
@@ -46,6 +53,7 @@ class RfidDetailController extends Controller
             // 3. Obtener el rfid_reading usando el epc
             $rfidReading = RfidReading::where('epc', $request->input('epc'))->first();
             if (!$rfidReading) {
+                Log::info("Ningunrfid_reading encontrado RfidDetailController");
                 return response()->json([
                     'success' => false,
                     'message' => 'RFID reading no encontrado para el EPC proporcionado'

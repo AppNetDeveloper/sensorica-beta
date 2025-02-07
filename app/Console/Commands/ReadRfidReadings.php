@@ -105,7 +105,7 @@ class ReadRfidReadings extends Command
         foreach ($dataArray as $data) {
             $epc = $data['epc'] ?? null;
             $rssi = $data['rssi'] ?? null;
-            $serialno = $data['serialno'] ?? null;
+            $serialno = $data['serialno'] ?? "0";
             $tid = $data['tid'] ?? null;
             $ant = $data['ant'] ?? null;
     

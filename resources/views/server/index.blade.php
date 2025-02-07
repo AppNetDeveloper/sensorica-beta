@@ -24,8 +24,9 @@
                     <button id="start-supervisor" class="btn btn-success mb-2">Iniciar Supervisor</button>
                     <button id="stop-supervisor" class="btn btn-secondary mb-2">Detener Supervisor</button>
                     <button id="restart-485" class="btn btn-primary mb-2">Reiniciar 485</button>
-                    <button id="update-app" class="btn btn-dark mb-2">Actualizar Aplicación</button>
+                    <button id="update-app" class="btn btn-dark mb-2">Actualizar Software</button>
                     <button id="verne-app" class="btn btn-danger mb-2">Instalar Verne</button>
+                    <button id="logs" class="btn btn-info mb-2">Ver Log</button>
                 </div>
             </div>
 
@@ -219,9 +220,9 @@
             apiCall('/api/install-485-service').then(check485Service);
         });
 
-        //document.getElementById('update-app').addEventListener('click', () => {
-         //   apiCall('/api/app-update');
-        //});
+        document.getElementById('logs').addEventListener('click', () => {
+            window.location.href = '/log-viewer?file=laravel.log';
+        });
 
         document.getElementById('get-ips').addEventListener('click', getServerIps);
 

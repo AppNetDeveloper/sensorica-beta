@@ -9,8 +9,6 @@ use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
-
-
 class DatabaseSeeder extends Seeder
 {
     /**
@@ -18,8 +16,7 @@ class DatabaseSeeder extends Seeder
      *
      * @return void
      */
-
-        public function run()
+    public function run()
     {
         $permissions = [
             'manage-permission','create-permission','edit-permission','delete-permission',
@@ -28,48 +25,54 @@ class DatabaseSeeder extends Seeder
             'manage-module','create-module','delete-module','show-module','edit-module',
             'manage-setting',
             'manage-crud',
-            'manage-langauge','create-langauge','delete-langauge','show-langauge','edit-langauge',
+            'manage-langauge','create-langauge','delete-langauge','show-langauge','edit-langauge', 
+            'customer-show', 'customer-create', 'customer-edit', 'customer-delete',
+            'workers-show', 'workers-create', 'workers-edit', 'workers-delete',
+            'product-show', 'product-create', 'product-edit', 'product-delete',
+            'server-show', 'server-create', 'server-edit', 'server-delete',
+            'db-upload-show', 'db-upload-create', 'db-upload-edit', 'db-upload-delete',
+            'shift-show', 'shift-create', 'shift-edit', 'shift-delete',
+            'worker-post-show', 'worker-post-create', 'worker-post-edit', 'worker-post-delete',
+            'rfid-post-show', 'rfid-post-create', 'rfid-post-edit', 'rfid-post-delete',
+            'rfid-show', 'rfid-create', 'rfid-edit', 'rfid-delete',
         ];
 
         $modules = [
             'user','role','module','setting','crud','langauge','permission',
         ];
 
-        foreach($permissions as $permission){
-            Permission::create([
-                'name'=>$permission
-            ]);
+        // Crear o encontrar los permisos sin duplicar
+        foreach ($permissions as $permission) {
+            Permission::firstOrCreate(['name' => $permission]);
         }
 
-        $role = Role::create([
-            'name'=>'admin'
-        ]);
-        Role::create([
-            'name'=>'user'
-        ]);
+        // Crear o encontrar roles
+        $adminRole = Role::firstOrCreate(['name' => 'admin']);
+        Role::firstOrCreate(['name' => 'user']);
 
-        foreach($permissions as $permission){
-            $per = Permission::findByName($permission);
-            $role->givePermissionTo($per);
-        }
+        // Asignar todos los permisos al rol "admin"
+        // Puedes pasar el array de nombres directamente a givePermissionTo()
+        $adminRole->syncPermissions($permissions);
 
-        $user = User::create([
-            'name' => 'Liviu Diaconu',
-            'email' => 'dev@boisolo.dev',
-            'password' => Hash::make('admin'),
-            'avatar' => ('avatar.png'),
-            'type'=>'admin',
-            'lang'=>'en',
-            'created_by'=>'0',
-        ]);
+        // Crear o encontrar el usuario admin
+        $user = User::firstOrCreate(
+            ['email' => 'dev@boisolo.com'], // criterio para buscar el usuario
+            [
+                'name'       => 'Boisolo Developer',
+                'password'   => Hash::make('@BSLserveriot***'),
+                'avatar'     => 'avatar.png',
+                'type'       => 'admin',
+                'lang'       => 'es',
+                'created_by' => '0',
+            ]
+        );
 
-        $user->assignRole($role->id);
+        // Asignar el rol "admin" al usuario
+        $user->assignRole($adminRole);
 
-        foreach($modules as $module){
-            Modual::create([
-                'name'=>$module
-            ]);
+        // Crear o encontrar cada módulo
+        foreach ($modules as $module) {
+            Modual::firstOrCreate(['name' => $module]);
         }
     }
 }
-

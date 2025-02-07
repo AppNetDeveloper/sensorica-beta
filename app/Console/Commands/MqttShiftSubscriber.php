@@ -417,6 +417,7 @@ class MqttShiftSubscriber extends Command
             // Crear una nueva línea con los campos necesarios y los demás vacíos o en 0
             OrderStat::create([
                 'production_line_id' => $productionLineId,
+                'product_list_id'   => $lastOrderStat ? $lastOrderStat->product_list_id : null,
                 'order_id' => $lastOrderStat ? $lastOrderStat->order_id : null,
                 'box' => $lastOrderStat ? $lastOrderStat->box : null,
                 'units_box' => $lastOrderStat ? $lastOrderStat->units_box : null,

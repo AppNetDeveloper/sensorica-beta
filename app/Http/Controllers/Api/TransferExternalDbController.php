@@ -119,7 +119,7 @@ class TransferExternalDbController extends Controller
             $orderUnit = $this->getOrderMacUmaQuantity($orderId);
             
             // Procesar y transferir sensores y modbuses
-            $this->processSensors($sensors, $externalConnection, $startAt, $finishAt, $totalTime, $modelEnvase, $modelMeasure, $unitValue, $totalWeight);
+            $this->processSensors($sensors, $externalConnection, $startAt, $finishAt, $totalTime, $modelEnvase, $modelMeasure, $unitValue, $totalWeight, $orderId);
             $this->processModbuses($modbuses, $externalConnection, $startAt, $finishAt, $totalTime, $modelUnit, $modelMeasure, $totalWeight, $orderId);
 
             // Insertar datos ficticios en linea_por_orden utilizando Eloquent
@@ -436,50 +436,62 @@ class TransferExternalDbController extends Controller
      * @param mixed $totalWeight
      * @return void
      */
-    private function processSensors($sensors, $externalConnection, $startAt, $finishAt, $totalTime, $modelEnvase, $modelMeasure, $unitValue, $totalWeight)
+    private function processSensors($sensors, $externalConnection, $startAt, $finishAt, $totalTime, $modelEnvase, $modelMeasure, $unitValue, $totalWeight, $orderId)
     {
         foreach ($sensors as $sensor) {
             try {
-                $sensorCountQuery = SensorCount::where('sensor_id', $sensor->id)
-                    ->whereBetween('created_at', [$startAt, $finishAt]);
 
-                // Condiciones basadas en sensor_type
-                if ($sensor->sensor_type === 0) {
-                    $sensorCountQuery->where('value', 1);
-                    Log::info("Tiempo de trabajo quitado el tiempo de paradas noches fines de semana: {$totalTime} segundos.");
-                    $minTime = max($sensorCountQuery->min('time_11'), env('PRODUCTION_MIN_TIME', 1));
+                
+
+
+                //sumar cuantas veces se a activado el sensor por el orden usamos la sensor_history , para ser mas ligero en consulta.
+                 // Hacemos una sola consulta para obtener ambos SUM
+                $sums = SensorHistory::where('sensor_id', $sensor->id)
+                    ->where('orderId', $orderId)
+                    ->selectRaw('
+                    SUM(count_order_1) as total_count_order_1,
+                    SUM(downtime_count) as total_downtime_count
+                    ')
+                    ->first();
+
+                // Asignamos valores, usando ?? 0 para evitar nulos si no hay registros
+                $sensorCount = $sums->total_count_order_1 ?? 0;
+                $timeDownSeconds = $sums->total_downtime_count ?? 0;
+
+                Log::info("Tiempo de parada: {$timeDownSeconds} segundos.");
+                Log::info("Contador activación sensor: {$sensorCount}");
+                // Calcular tiempo sin pausas
+                $timeDownSecondsWithNotStop = max(0, $timeDownSeconds - $totalTime);
+                Log::info("Tiempo de parada sin pausa: {$timeDownSecondsWithNotStop} segundos para sensor {$sensor->name}");
+
+                // Validar tiempo de parada
+                if (is_null($timeDownSecondsWithNotStop) ||  $timeDownSecondsWithNotStop === '' ||  $timeDownSecondsWithNotStop > ($totalTime - $timeDownSecondsWithNotStop) || ($sensorCount == 0 && $sensor->sensor_type > 0))
+                {
+                    $timeDownSecondsWithNotStop = 0;
+                }
+
+                // Consultar la tabla sensor_count para obtener el tiempo de trabajo
+                $aggregates = SensorCount::where('sensor_id', $sensor->id)
+                                        ->whereBetween('created_at', [$startAt, $finishAt])
+                                        ->selectRaw('MIN(time_00) AS min_time_00, MIN(time_11) AS min_time_11')
+                                        ->first();
+
+                // Evitamos valores nulos con ??
+                $minTime00 = $aggregates->min_time_00 ?? 0;
+                $minTime11 = $aggregates->min_time_11 ?? 0;
+
+                // Elegimos qué mínimo usar dependiendo del sensor_type
+                if ((int)$sensor->sensor_type === 0) {
+                Log::info("Tiempo de trabajo quitado el tiempo de paradas noches fines de semana: {$totalTime} segundos.");
+                $minTime = max($minTime11, (int)env('PRODUCTION_MIN_TIME', 1));
                 } else {
-                    $sensorCountQuery->where('value', 0);
-                    $minTime = $sensorCountQuery->min('time_00');
+                $minTime = $minTime00;
                 }
 
                 $optimalProductionTime = $sensor->optimal_production_time;
                 $reducedSpeedTimeMultiplier = $sensor->reduced_speed_time_multiplier;
                 $slowTime = $optimalProductionTime * $reducedSpeedTimeMultiplier;
                 Log::info("Mayor que este tiempo en segundos es parada: {$slowTime}");
-
-                $sensorCount = $sensorCountQuery->count();
-                Log::info("Contador activacion sensor: {$sensorCount}");
-
-                $timeDownSeconds = DowntimeSensor::where('sensor_id', $sensor->id)
-                    ->whereBetween('created_at', [$startAt, $finishAt])
-                    ->sum(DB::raw('TIMESTAMPDIFF(SECOND, created_at, updated_at)'));
-
-                Log::info("Tiempo de parada: {$timeDownSeconds} segundos.");
-
-                // Calcular tiempo sin pausas
-                $timeDownSecondsWithNotStop = max(0, $timeDownSeconds - $totalTime);
-                Log::info("Tiempo de parada sin pausa: {$timeDownSecondsWithNotStop} segundos para sensor {$sensor->name}");
-
-                // Validar tiempo de parada
-                if (
-                    is_null($timeDownSecondsWithNotStop) || 
-                    $timeDownSecondsWithNotStop === '' || 
-                    $timeDownSecondsWithNotStop > ($totalTime - $timeDownSecondsWithNotStop) || 
-                    ($sensorCount == 0 && $sensor->sensor_type > 0)
-                ) {
-                    $timeDownSecondsWithNotStop = 0;
-                }
 
                 $timeDownWithNotStop = gmdate('H:i:s', $timeDownSecondsWithNotStop);
                 $realTimeUnit = $sensorCount > 0 ? ($totalTime - $timeDownSecondsWithNotStop) / $sensorCount : 0;
@@ -494,7 +506,7 @@ class TransferExternalDbController extends Controller
 
                 // Preparar datos para la base de datos externa
                 $data = [
-                    'IdOrder' => $sensor->orderId,
+                    'IdOrder' => $orderId,
                     'IdReference' => $sensor->productName,
                     'StartAt' => $startAt,
                     'FinishAt' => $finishAt,
@@ -546,16 +558,14 @@ class TransferExternalDbController extends Controller
             try {
                 Log::info("Modbus ID {$modbus->id} iniciando cálculos para transferencia db externa.");
 
-                $modbusCount = ControlWeight::where('modbus_id', $modbus->id)
-                    ->whereBetween('created_at', [$startAt, $finishAt])
-                    ->count();
 
-                    //$modbusCount = ModbusHistory::where('modbus_id', $modbus->id) 
-                    //->where('orderId', $orderId) // Condición adicional para orderId
-                   // ->sum('rec_box'); // Sumar el campo rec_box
-                $modbusSum = ControlWeight::where('modbus_id', $modbus->id)
-                   ->whereBetween('created_at', [$startAt, $finishAt])
-                   ->sum('last_control_weight');
+                $resultado = ModbusHistory::where('modbus_id', $modbus->id)
+                    ->where('orderId', $orderId)
+                    ->selectRaw('SUM(rec_box) as suma_rec_box, SUM(total_kg_order) as suma_total_kg_order')
+                    ->first();
+
+                $modbusCount =$resultado->suma_rec_box;// suma total del campo rec_box.
+                $modbusSum = $resultado->suma_total_kg_order;// suma total del campo total_kg_order.
 
                 $formattedSum = number_format($modbusSum, 2, '.', '');
                 
@@ -579,7 +589,7 @@ class TransferExternalDbController extends Controller
                 $productionLineName = $modbus->productionLine->name ?? 'Desconocido';
                 // Preparar datos para la base de datos externa
                 $data = [
-                    'IdOrder' => $modbus->orderId,
+                    'IdOrder' => $orderId,
                     'IdReference' => $modbus->productName,
                     'StartAt' => $startAt,
                     'FinishAt' => $finishAt,

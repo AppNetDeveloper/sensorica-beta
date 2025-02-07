@@ -23,16 +23,16 @@ $settings = Utility::settings();
                     @if ($settings['dark_mode'] == 'on')
                         <img class="c-sidebar-brand-full pt-3 mt-2 mb-1"
                              src="{{ $logo . (!empty($company_logo) ? $company_logo : 'light_logo.png') }}"
-                             height="46" class="navbar-brand-img">
+                             height="66" class="navbar-brand-img">
                     @else
                         <img class="c-sidebar-brand-full pt-3 mt-2 mb-1"
                              src="{{ $logo . (!empty($company_logo) ? $company_logo : 'dark_logo.png') }}"
-                             height="46" class="navbar-brand-img">
+                             height="66" class="navbar-brand-img">
                     @endif
                 @else
                     <img class="c-sidebar-brand-full pt-3 mt-2 mb-1"
                          src="{{ $logo . (!empty($company_logo) ? $company_logo : 'dark_logo.png') }}"
-                         height="46" class="navbar-brand-img">
+                         height="66" class="navbar-brand-img">
                 @endif
             </a>
         </div>
@@ -94,77 +94,78 @@ $settings = Utility::settings();
                 @endcan
 
 
-                @role('admin')
+                @if (auth()->user()->hasRole('admin') || auth()->user()->can('customer-show'))
                     <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
                         <a class="dash-link" href="{{ route('customers.index') }}">
                             <span class="dash-micon"><i class="ti building"></i>></span>
                             <span class="dash-mtext custom-weight">{{ __('Customers') }}</span>
                         </a>
                     </li>
-                @endrole
+                @endif
 
-                @role('admin')
+                @if (auth()->user()->hasRole('admin') || auth()->user()->can('workers-show'))
                     <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
                         <a class="dash-link" href="{{ route('workers-admin.index') }}">
                             <span class="dash-micon"><i class="ti user-nurse"></i></span>
                             <span class="dash-mtext custom-weight">{{ __('Workers') }}</span>
                         </a>
                     </li>
-                @endrole
+                @endif
 
-                @role('admin')
+                @if (auth()->user()->hasRole('admin') || auth()->user()->can('product-show'))
                     <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
                         <a class="dash-link" href="{{ route('confections.index') }}">
                             <span class="dash-micon"><i class="ti laptop-file"></i></span>
                             <span class="dash-mtext custom-weight">{{ __('Confections') }}</span>
                         </a>
                     </li>
-                @endrole
+                @endif
 
-                @role('admin')
+                @if (auth()->user()->hasRole('admin') || auth()->user()->can('server-show'))
                     <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
                         <a class="dash-link" href="{{ route('server.index') }}">
                             <span class="dash-micon"><i class="ti laptop-file"></i></span>
                             <span class="dash-mtext custom-weight">{{ __('Server') }}</span>
                         </a>
                     </li>
-                @endrole
+                @endif
 
-                @role('admin')
+                @if (auth()->user()->hasRole('admin') || auth()->user()->can('db-upload-show'))
                     <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
                         <a class="dash-link" href="{{ route('server.uploadstats') }}">
                             <span class="dash-micon"><i class="ti laptop-file"></i></span>
                             <span class="dash-mtext custom-weight">{{ __('Settings Stats Upload') }}</span>
                         </a>
                     </li>
-                @endrole
+                @endif
 
-                @role('admin')
+                @if (auth()->user()->hasRole('admin') || auth()->user()->can('shift-show'))
                     <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
                         <a class="dash-link" href="{{ route('shift.index') }}">
                             <span class="dash-micon"><i class="ti laptop-file"></i></span>
                             <span class="dash-mtext custom-weight">{{ __('Shift') }}</span>
                         </a>
                     </li>
-                @endrole
+                @endif
 
-                @role('admin')
+                @if (auth()->user()->hasRole('admin') || auth()->user()->can('worker-post-show'))
                     <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
                         <a class="dash-link" href="{{ route('worker-post.index') }}">
                             <span class="dash-micon"><i class="ti laptop-file"></i></span>
                             <span class="dash-mtext custom-weight">{{ __('Worker Post') }}</span>
                         </a>
                     </li>
-                @endrole
+                @endif
 
-                @role('admin')
+                @if (auth()->user()->hasRole('admin') || auth()->user()->can('rfid-post-show'))
                     <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
                         <a class="dash-link" href="{{ route('rfid.post.index') }}">
                             <span class="dash-micon"><i class="ti laptop-file"></i></span>
                             <span class="dash-mtext custom-weight">{{ __('Rfid Post') }}</span>
                         </a>
                     </li>
-                @endrole
+                @endif
+            
                 @include('layouts.menu')
             </ul>
         </div>
