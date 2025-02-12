@@ -6,6 +6,8 @@ use App\Models\RfidDetail;
 use App\Models\RfidReading;
 use App\Models\RfidAnt;
 use Illuminate\Http\Request;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Imports\RfidDeviceImport;
 
 class RfidDeviceController extends Controller
 {
@@ -72,6 +74,8 @@ class RfidDeviceController extends Controller
             'search_out' => 'nullable|boolean',
             'last_ant_detect' => 'nullable|string|max:255',
             'last_status_detect' => 'nullable|string|max:255',
+            // Agregar la validación del nuevo campo
+            'invers_sensors' => 'nullable|boolean',
         ]);
 
         RfidDetail::create($request->all());
@@ -133,6 +137,8 @@ class RfidDeviceController extends Controller
             'search_out' => 'nullable|boolean',
             'last_ant_detect' => 'nullable|string|max:255',
             'last_status_detect' => 'nullable|string|max:255',
+            // Agregar la validación del nuevo campo
+            'invers_sensors' => 'nullable|boolean',
         ]);
 
         $rfidDevice->update($request->all());
@@ -153,5 +159,25 @@ class RfidDeviceController extends Controller
 
         return redirect()->route('rfid.devices.index', $productionLineId)
             ->with('status', __('Dispositivo RFID eliminado exitosamente.'));
+    }
+        /**
+     * Importa un archivo Excel para actualizar o agregar dispositivos RFID.
+     *
+     * Se utiliza el campo TID como identificador único.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @param int $production_line_id
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function import(Request $request, $production_line_id)
+    {
+        $request->validate([
+            'excel_file' => 'required|file|mimes:xlsx,xls,ods',
+        ]);
+    
+        Excel::import(new RfidDeviceImport($production_line_id), $request->file('excel_file'));
+    
+        return redirect()->route('rfid.devices.index', $production_line_id)
+            ->with('status', __('Archivo Excel importado exitosamente.'));
     }
 }

@@ -151,7 +151,15 @@
                 <label for="reduced_speed_time_multiplier">{{ __('Multiplicador de Velocidad Reducida') }}</label>
                 <input type="number" name="reduced_speed_time_multiplier" id="reduced_speed_time_multiplier" class="form-control" value="{{ old('reduced_speed_time_multiplier', $rfidDevice->reduced_speed_time_multiplier) }}">
             </div>
-
+            
+            <div class="form-group mt-3">
+                <label for="invers_sensors">{{ __('Inversión de Sensores') }}</label>
+                <select name="invers_sensors" id="invers_sensors" class="form-control">
+                    <option value="0" {{ old('invers_sensors', $rfidDevice->invers_sensors) == 0 ? 'selected' : '' }}>{{ __('No') }}</option>
+                    <option value="1" {{ old('invers_sensors', $rfidDevice->invers_sensors) == 1 ? 'selected' : '' }}>{{ __('Sí') }}</option>
+                </select>
+            </div>
+            
             <div class="form-group mt-3">
                 <label for="send_alert">{{ __('Enviar Alerta') }}</label>
                 <select name="send_alert" id="send_alert" class="form-control">

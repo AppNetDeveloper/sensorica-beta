@@ -35,7 +35,7 @@ use App\Http\Controllers\ServerController;
 use App\Http\Controllers\ShiftManagementController;
 use App\Http\Controllers\OperatorPostController;
 use App\Http\Controllers\RfidPostController;
-
+use App\Http\Controllers\RfidColorController;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -68,7 +68,7 @@ Route::get('customers/getCustomers', [CustomerController::class, 'getCustomers']
 Route::get('customers', [CustomerController::class, 'index'])->name('customers.index');
 Route::resource('customers', CustomerController::class)->except(['edit', 'update', 'destroy']);
 
-
+Route::resource('production-lines/{production_line_id}/rfid/colors', RfidColorController::class)->names('rfid.colors');
 
 // Ruta para la página principal de sensores
 Route::get('sensors/{id}', [SensorController::class, 'listSensors'])->name('sensors.index');
@@ -311,7 +311,9 @@ Route::post('manage-role/store-or-update', [RoleManageController::class, 'storeO
 Route::delete('manage-role/delete/{id}', [RoleManageController::class, 'delete'])->name('manage-role.delete');
 Route::post('manage-role/update-permissions/{id}', [RoleManageController::class, 'updatePermissions'])->name('manage-role.updatePermissions');
 
+Route::post('rfid/categories/{production_line_id}/import', [RfidCategoryController::class, 'import'])->name('rfid.categories.import');
 
+Route::post('rfid/devices/{production_line_id}/import', [RfidDeviceController::class, 'import'])->name('rfid.devices.import');
 
 Route::get('manage-permission', [PermissionManageController::class, 'index'])->name('manage-permission.index');
 

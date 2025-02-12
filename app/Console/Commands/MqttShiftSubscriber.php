@@ -103,7 +103,7 @@ class MqttShiftSubscriber extends Command
         $topics = Barcode::pluck('mqtt_topic_barcodes')->toArray();
 
         foreach ($topics as $topic) {
-            $topicWithShift = "{$topic}/shift"; // Añadir '/shift' al tópico
+            $topicWithShift = "{$topic}/timeline_event"; // Añadir '/timeline_event' al tópico
 
             if (!in_array($topicWithShift, $this->subscribedTopics)) {
                 $mqtt->subscribe($topicWithShift, function ($topic, $message) {
@@ -125,7 +125,7 @@ class MqttShiftSubscriber extends Command
 
         // Comparar con los tópicos a los que ya estamos suscritos
         foreach ($currentTopics as $topic) {
-            $topicWithShift = "{$topic}/shift"; // Añadir '/shift' al tópico
+            $topicWithShift = "{$topic}/timeline_event"; // Añadir '/timeline_event' al tópico
 
             if (!in_array($topicWithShift, $this->subscribedTopics)) {
                 // Suscribirse al nuevo tópico
@@ -154,8 +154,8 @@ class MqttShiftSubscriber extends Command
 
         $this->info("Message decoded: " . json_encode($data));
 
-        // Buscar el modbus que coincide con el tópico (sin '/shift')
-        $baseTopic = str_replace('/shift', '', $topic);
+        // Buscar el modbus que coincide con el tópico (sin '/timeline_event')
+        $baseTopic = str_replace('/timeline_event', '', $topic);
         $barcode = Barcode::where('mqtt_topic_barcodes', $baseTopic)->first();
 
         if ($barcode) {
@@ -166,46 +166,53 @@ class MqttShiftSubscriber extends Command
 
             // Obtener los sensores asociados a esta línea de producción
             $sensors = Sensor::where('production_line_id', $productionLineId)->get();
-            // Obtener los modbuses asociados a esta línea de producción
-            $modbuses = Modbus::where('production_line_id', $productionLineId)->get();
 
             foreach ($sensors as $sensor) {
                 $this->info("Processing sensor ID {$sensor->id}");
 
-                // Verificar si el JSON contiene shift_type y event
-                if (isset($data['shift_type'])) {
-                    $sensor->shift_type = $data['shift_type'];
-                    $this->info("Shift type set to: {$data['shift_type']}");
-                } else {
-                    $this->warn("Shift type missing in the message.");
+                try {
+                    // Verificar si el JSON contiene 'type'
+                    if (isset($data['type'])) {
+                        $sensor->shift_type = $data['type'];
+                        $this->info("Shift type set to: {$data['type']}");
+                    } else {
+                        $this->warn("Shift type missing in the message.");
+                    }
+                
+                    // Verificar si el JSON contiene 'action'
+                    if (isset($data['action'])) {
+                        $sensor->event = $data['action'];
+                        $this->info("Action set to: {$data['action']}");
+                    } else {
+                        $this->warn("Action missing in the message.");
+                    }
+                
+                    // Guardar los cambios en el sensor
+                    $sensor->save();
+                } catch (\Exception $e) {
+                    // Manejo de la excepción
+                    $this->error("Error al procesar el sensor: " . $e->getMessage());
+                    // Si es necesario, se puede relanzar la excepción:
+                    // throw $e;
                 }
+                
 
-                if (isset($data['event'])) {
-                    $sensor->event = $data['event'];
-                    $this->info("Event set to: {$data['event']}");
-                } else {
-                    $this->warn("Event missing in the message.");
-                }
-
-                // Guardar los cambios en el sensor
-                $sensor->save();
-
-                // Si el shift_type se ha puesto Turno Programado y event es start, se resetean los contadores
-                if ($data['shift_type'] == 'Turno Programado' && $data['event'] == 'start') {
+                // Si el type se ha puesto shift y action es start, se resetean los contadores
+                if ($data['type'] == 'shift' && $data['action'] == 'start') {
                     $this->resetSensorCounters($sensor);
                     $this->resetOperators();
-                    $this->changeOrderStatus($sensor->production_line_id);
+                    //$this->changeOrderStatus($sensor->production_line_id);
                     $this->sendMqttTo0($sensor);
-                    $this->info("Sensor ID {$sensor->id} updated with shift_type, event, and counters reset.");
+                    $this->info("Sensor ID {$sensor->id} updated with type, action, and counters reset.");
                 } else {
-                    $this->info("Sensor ID {$sensor->id} updated with shift_type and event. No need to reset counters.");
+                    $this->info("Sensor ID {$sensor->id} updated with type and action. No need to reset counters.");
                 }
             }
 
-            // Si el shift_type se ha puesto Turno Programado y event es start, se cambia el ordenStatus
-            if ($data['shift_type'] == 'Turno Programado' && $data['event'] == 'start') {
-                $this->changeOrderStatus($productionLineId);
-                $this->info("Cambios en ordeStatus para la linea de produccion: {$productionLineId}");
+            // Si el type se ha puesto shift y action es start, se cambia datatime de OEE
+            if ($data['type'] == 'shift' && $data['action'] == 'start') {
+                //$this->changeOrderStatus($productionLineId);
+                //$this->info("Cambios en ordeStatus para la linea de produccion: {$productionLineId}");
                 $this->changeDataTimeOee($productionLineId);
                 $this->info("Cambios en OEE para la linea de produccion: {$productionLineId}");
             } else {
@@ -218,32 +225,32 @@ class MqttShiftSubscriber extends Command
              foreach ($mosbuses as $modbus) {
                 $this->info("Processing sensor ID {$modbus->id}");
 
-                // Verificar si el JSON contiene shift_type y event
-                if (isset($data['shift_type'])) {
-                    $modbus->shift_type = $data['shift_type'];
-                    $this->info("Shift type set to: {$data['shift_type']}");
+                // Verificar si el JSON contiene type y action
+                if (isset($data['type'])) {
+                    $modbus->shift_type = $data['type'];
+                    $this->info("Shift type set to: {$data['type']}");
                 } else {
                     $this->warn("Shift type missing in the message.");
                 }
 
-                if (isset($data['event'])) {
-                    $modbus->event = $data['event'];
-                    $this->info("Event set to: {$data['event']}");
+                if (isset($data['action'])) {
+                    $modbus->event = $data['action'];
+                    $this->info("action set to: {$data['action']}");
                 } else {
-                    $this->warn("Event missing in the message.");
+                    $this->warn("action missing in the message.");
                 }
 
                 // Guardar los cambios en el sensor
                 $modbus->save();
                 
-                    // Si el shift_type se ha puesto Turno Programado y event es start, se resetean los contadores
-                 if ($data['shift_type'] == 'Turno Programado' && $data['event'] == 'start') {
+                    // Si el type se ha puesto shift y action es start, se resetean los contadores
+                 if ($data['type'] == 'shift' && $data['action'] == 'start') {
                      $this->resetModbusCounters($modbus);
                      $this->resetOperators();
                      //$this->sendMqttTo0($modbus);
-                     $this->info("Modbus ID {$modbus->id} updated with shift_type, event, and counters reset.");
+                     $this->info("Modbus ID {$modbus->id} updated with type, action, and counters reset.");
                  } else {
-                     $this->info("Modbus ID {$modbus->id} updated with shift_type and event. No need to reset counters.");
+                     $this->info("Modbus ID {$modbus->id} updated with type and action. No need to reset counters.");
                  }
              }
         } else {
@@ -271,8 +278,8 @@ class MqttShiftSubscriber extends Command
         // Reseteo de los contadores del sensor
         $sensor->count_shift_1 = 0;
         $sensor->count_shift_0 = 0;
-        $sensor->count_order_0 = 0;
-        $sensor->count_order_1 = 0;
+       // $sensor->count_order_0 = 0;
+       // $sensor->count_order_1 = 0;
         $sensor->downtime_count = 0;
         $sensor->unic_code_order = uniqid(); // Generar un nuevo código único para el pedido
     
@@ -298,10 +305,10 @@ class MqttShiftSubscriber extends Command
     
         // Reseteo de los contadores del modbus
         $modbus->rec_box_shift = 0;
-        $modbus->rec_box = 0;
+       // $modbus->rec_box = 0;
         $modbus->downtime_count = 0;
         $modbus->unic_code_order = uniqid();
-        $modbus->total_kg_order = 0;
+       // $modbus->total_kg_order = 0;
         $modbus->total_kg_shift = 0;
     
         // Guardar los cambios en el modbus
@@ -314,7 +321,7 @@ class MqttShiftSubscriber extends Command
             // Reseteamos todos los operadores a 0
             Operator::query()->update([
                 'count_shift' => 0,
-                'count_order' => 0,
+                //'count_order' => 0,
             ]);
 
             // Log para confirmar la operación

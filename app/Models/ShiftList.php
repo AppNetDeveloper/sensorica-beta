@@ -26,6 +26,7 @@ class ShiftList extends Model
         'production_line_id',
         'start',
         'end',
+        'active',
     ];
 
     // Definir la relación con la producción

@@ -523,7 +523,8 @@ class MqttSubscriberLocalMac extends Command
             'barcodeId' => $barcodeId,
             'orderId' => $actualOrderId, // Decodificar el JSON si es un string
         ];
-    
+     //ponemos en log la url que llama y la json 
+        $this->info("Llamando a la API con URL: {$apiUrl} y JSON: " . json_encode($dataToSend));
         try {
             // Enviar solicitud POST y manejar respuesta en la promesa
             $promise = $client->postAsync($apiUrl, [

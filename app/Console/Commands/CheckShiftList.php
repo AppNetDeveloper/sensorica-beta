@@ -61,9 +61,52 @@ class CheckShiftList extends Command
 
                 // Solo se seleccionarán los registros cuyo updated_at sea mayor a 2 segundos atrás.
                 $twoSecondsAgo = Carbon::now()->subSeconds(2);
+                
+                    // Procesar turnos que finalizan (campo 'end')
+                    $this->info("Buscando shifts con end igual a {$currentTime}");
+                    $shiftFins = ShiftList::where('end', $currentTime)
+                        ->where('updated_at', '<', $twoSecondsAgo)
+                        ->get();
+                    $this->info("Shifts encontrados para 'end': " . $shiftFins->count());
+
+                    foreach ($shiftFins as $shiftFin) {
+                        $this->info("Procesando shift id: {$shiftFin->id} con end: {$shiftFin->end}");
+                        // Buscar el registro en barcodes con el mismo production_line_id
+                        $barcodeFin = Barcode::where('production_line_id', $shiftFin->production_line_id)->first();
+
+                        if ($barcodeFin) {
+                            $this->info("Barcode encontrado para production_line_id: {$shiftFin->production_line_id}");
+                            // Crear el topic y el mensaje JSON
+                            $mqttTopicFin = $barcodeFin->mqtt_topic_barcodes . '/timeline_event';
+                            $jsonMessageFin = json_encode([
+                                'type' => 'shift',
+                                'action'      => 'end',
+                                'description'   => 'Turno' // Duración del turno en minutos
+                            ]);
+                            $this->info("Publicando mensaje MQTT en topic: {$mqttTopicFin} | Mensaje: {$jsonMessageFin}");
+
+                            // Publicar el mensaje MQTT
+                            $this->publishMqttMessage($mqttTopicFin, $jsonMessageFin);
+
+                            // Actualizar el campo updated_at para marcar que se ha procesado
+                            $shiftFin->update(['updated_at' => Carbon::now()]);
+                        } else {
+                            $this->info("No se encontró barcode para production_line_id: {$shiftFin->production_line_id}");
+                        }
+                    }
+                } else {
+                    $this->info("No es un día laboral. Día: {$dayOfWeek}");
+                }
+                //Procesamos turno de start
                 $shifts = ShiftList::whereBetween('start', [$startLowerBound, $startUpperBound])
-                    ->where('updated_at', '<', $twoSecondsAgo)
-                    ->get();
+                                    ->where('updated_at', '<', $twoSecondsAgo)
+                                    ->where(function ($query) {
+                                        $query->where('active', '!=', 0)
+                                            ->orWhereNull('active');
+                                    })
+                                    ->get();
+            
+
                 $this->info("Shifts encontrados para 'start': " . $shifts->count());
 
                 foreach ($shifts as $shift) {
@@ -74,11 +117,11 @@ class CheckShiftList extends Command
                     if ($barcode) {
                         $this->info("Barcode encontrado para production_line_id: {$shift->production_line_id}");
                         // Crear el topic y el mensaje JSON
-                        $mqttTopic = $barcode->mqtt_topic_barcodes . '/shift';
+                        $mqttTopic = $barcode->mqtt_topic_barcodes . '/timeline_event';
                         $jsonMessage = json_encode([
-                            'shift_type' => 'Turno Programado',
-                            'event'      => 'start',
-                            'duration'   => 480 // Duración del turno en minutos
+                            'type' => 'shift',
+                            'action'      => 'start',
+                            'description'   => 'Turno' // Duración del turno en minutos
                         ]);
                         $this->info("Publicando mensaje MQTT en topic: {$mqttTopic} | Mensaje: {$jsonMessage}");
 
@@ -92,41 +135,7 @@ class CheckShiftList extends Command
                     }
                 }
 
-                // Procesar turnos que finalizan (campo 'end')
-                $this->info("Buscando shifts con end igual a {$currentTime}");
-                $shiftFins = ShiftList::where('end', $currentTime)
-                    ->where('updated_at', '<', $twoSecondsAgo)
-                    ->get();
-                $this->info("Shifts encontrados para 'end': " . $shiftFins->count());
 
-                foreach ($shiftFins as $shiftFin) {
-                    $this->info("Procesando shift id: {$shiftFin->id} con end: {$shiftFin->end}");
-                    // Buscar el registro en barcodes con el mismo production_line_id
-                    $barcodeFin = Barcode::where('production_line_id', $shiftFin->production_line_id)->first();
-
-                    if ($barcodeFin) {
-                        $this->info("Barcode encontrado para production_line_id: {$shiftFin->production_line_id}");
-                        // Crear el topic y el mensaje JSON
-                        $mqttTopicFin = $barcodeFin->mqtt_topic_barcodes . '/shift';
-                        $jsonMessageFin = json_encode([
-                            'shift_type' => 'Turno Programado',
-                            'event'      => 'stop',
-                            'duration'   => 0
-                        ]);
-                        $this->info("Publicando mensaje MQTT en topic: {$mqttTopicFin} | Mensaje: {$jsonMessageFin}");
-
-                        // Publicar el mensaje MQTT
-                        $this->publishMqttMessage($mqttTopicFin, $jsonMessageFin);
-
-                        // Actualizar el campo updated_at para marcar que se ha procesado
-                        $shiftFin->update(['updated_at' => Carbon::now()]);
-                    } else {
-                        $this->info("No se encontró barcode para production_line_id: {$shiftFin->production_line_id}");
-                    }
-                }
-            } else {
-                $this->info("No es un día laboral. Día: {$dayOfWeek}");
-            }
 
             // Esperar 1 segundo antes de la próxima verificación
             sleep(1);

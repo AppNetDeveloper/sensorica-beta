@@ -445,18 +445,20 @@ class TransferExternalDbController extends Controller
 
 
                 //sumar cuantas veces se a activado el sensor por el orden usamos la sensor_history , para ser mas ligero en consulta.
-                 // Hacemos una sola consulta para obtener ambos SUM
-                $sums = SensorHistory::where('sensor_id', $sensor->id)
+                $sensorHistory = SensorHistory::where('sensor_id', $sensor->id)
                     ->where('orderId', $orderId)
-                    ->selectRaw('
-                    SUM(count_order_1) as total_count_order_1,
-                    SUM(downtime_count) as total_downtime_count
-                    ')
+                    ->orderBy('created_at', 'desc') // O bien 'id' si prefieres usar el identificador
                     ->first();
-
-                // Asignamos valores, usando ?? 0 para evitar nulos si no hay registros
-                $sensorCount = $sums->total_count_order_1 ?? 0;
-                $timeDownSeconds = $sums->total_downtime_count ?? 0;
+                
+                if ($sensorHistory) {
+                    $sensorCount = (string) $sensorHistory->count_order_1;
+                    $timeDownSeconds = (string) $sensorHistory->downtime_count;
+                } else {
+                    // En caso de no encontrar registros, se asignan valores por defecto
+                    $sensorCount = '0';
+                    $timeDownSeconds = '0';
+                }
+            
 
                 Log::info("Tiempo de parada: {$timeDownSeconds} segundos.");
                 Log::info("Contador activación sensor: {$sensorCount}");
@@ -561,11 +563,19 @@ class TransferExternalDbController extends Controller
 
                 $resultado = ModbusHistory::where('modbus_id', $modbus->id)
                     ->where('orderId', $orderId)
-                    ->selectRaw('SUM(rec_box) as suma_rec_box, SUM(total_kg_order) as suma_total_kg_order')
+                    ->orderBy('created_at', 'desc') // o 'id' si prefieres usar el ID para determinar el último registro
                     ->first();
 
-                $modbusCount =$resultado->suma_rec_box;// suma total del campo rec_box.
-                $modbusSum = $resultado->suma_total_kg_order;// suma total del campo total_kg_order.
+                if ($resultado) {
+                    // Se obtienen los valores directamente del último registro
+                    $modbusCount = (string) $resultado->rec_box;
+                    $modbusSum   = (string) $resultado->total_kg_order;
+                } else {
+                    // Manejo de caso en el que no se encuentra ningún registro
+                    $modbusCount = '0';
+                    $modbusSum   = '0';
+                }
+
 
                 $formattedSum = number_format($modbusSum, 2, '.', '');
                 

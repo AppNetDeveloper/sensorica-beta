@@ -387,11 +387,18 @@ class TcpClient extends Command
                     $barcode->last_barcode = "PAUSAR";
                     $barcode->save();
 
-        } elseif ($barcodeValue === 'Turno Programado') {
+        } elseif ($barcodeValue === 'Turno Programado Start') {
             // Case 5: barcodeValue is Turno Programado
             $comando = [
-                "shift_type" => "Turno Programado",
-                "event" => "start"
+                "shift" => "shift",
+                "action" => "start"
+            ];
+            $this->publishMqttMessage($mqttTopicShift, $comando);
+        } elseif ($barcodeValue === 'Turno Programado Stop') {
+            // Case 5: barcodeValue is Turno Programado
+            $comando = [
+                "shift" => "shift",
+                "action" => "stop"
             ];
             $this->publishMqttMessage($mqttTopicShift, $comando);
         }else {

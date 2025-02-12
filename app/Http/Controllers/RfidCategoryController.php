@@ -4,6 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\RfidReading;
 use Illuminate\Http\Request;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Imports\RfidReadingImport;
+use App\Models\ProductionLine;
+use App\Models\RfidColor;
 
 class RfidCategoryController extends Controller
 {
@@ -23,13 +27,30 @@ class RfidCategoryController extends Controller
     /**
      * Muestra el formulario para crear una nueva categoría RFID.
      */
+
+    
     public function create($production_line_id)
     {
         return view('rfid.categories.form', [
             'rfidReading' => new RfidReading(),
             'production_line_id' => $production_line_id,
+            'productionLines' => ProductionLine::all(),
+            'rfidColors' => RfidColor::all(),
         ]);
     }
+    
+    public function edit($id)
+    {
+        $rfidReading = RfidReading::findOrFail($id);
+    
+        return view('rfid.categories.form', [
+            'rfidReading' => $rfidReading,
+            'production_line_id' => $rfidReading->production_line_id,
+            'productionLines' => ProductionLine::all(),
+            'rfidColors' => RfidColor::all(),
+        ]);
+    }
+    
 
     /**
      * Almacena una nueva categoría RFID en la base de datos.
@@ -48,18 +69,6 @@ class RfidCategoryController extends Controller
             ->with('status', __('Categoría RFID creada exitosamente.'));
     }
 
-    /**
-     * Muestra el formulario para editar una categoría RFID existente.
-     */
-    public function edit($id)
-    {
-        $rfidReading = RfidReading::findOrFail($id);
-
-        return view('rfid.categories.form', [
-            'rfidReading' => $rfidReading,
-            'production_line_id' => $rfidReading->production_line_id,
-        ]);
-    }
 
     /**
      * Actualiza una categoría RFID existente en la base de datos.
@@ -91,5 +100,30 @@ class RfidCategoryController extends Controller
 
         return redirect()->route('rfid.categories.index', $productionLineId)
             ->with('status', __('Categoría RFID eliminada exitosamente.'));
+    }
+    /**
+     * Importa un archivo Excel para actualizar o agregar categorías RFID.
+     *
+     * Se espera que el archivo tenga el mismo formato que el exportado:
+     *  - Columna 0: ID (opcional)
+     *  - Columna 1: Nombre
+     *  - Columna 2: EPC
+     *
+     * @param \Illuminate\Http\Request $request
+     * @param int $production_line_id
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function import(Request $request, $production_line_id)
+    {
+        // Validar que se haya enviado un archivo y que sea del tipo adecuado
+        $request->validate([
+            'excel_file' => 'required|file|mimes:xlsx,xls,ods',
+        ]);
+
+        // Realizar la importación usando la clase RfidReadingImport
+        Excel::import(new RfidReadingImport($production_line_id), $request->file('excel_file'));
+
+        return redirect()->route('rfid.categories.index', $production_line_id)
+            ->with('status', __('Archivo Excel importado exitosamente.'));
     }
 }

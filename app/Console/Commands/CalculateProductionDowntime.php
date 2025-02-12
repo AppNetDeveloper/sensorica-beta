@@ -65,9 +65,19 @@ class CalculateProductionDowntime extends Command
     private function calculateProductionDowntime()
     {
         // Obtener todos los sensores donde el evento sea "start" y sensor_type sea 0
-        $sensors = Sensor::where('event', 'start')
-                         ->where('sensor_type', 0)
-                         ->get();
+        $sensors = Sensor::where('sensor_type', 0)
+                            ->where(function ($query) {
+                                $query->where(function ($q) {
+                                    $q->where('event', 'start')
+                                    ->where('shift_type', 'shift');
+                                })
+                                ->orWhere(function ($q) {
+                                    $q->where('event', 'end')
+                                    ->where('shift_type', 'stop');
+                                });
+                            })
+                            ->get();
+
     
         // Recorrer cada sensor y aplicar la lógica de downtime para sensor_type 0
         foreach ($sensors as $sensor) {

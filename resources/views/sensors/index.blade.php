@@ -109,7 +109,7 @@
                             <img src="/necesarios/rfid_categories.webp" class="card-img-top img-card" alt="RFID Categories">
                             <div class="card-body">
                                 <h5 class="card-title">RFID Categorías</h5>
-                                <p class="card-text">Administrar categorías y lecturas de RFID.</p>
+                                <p class="card-text">Grupos de EPC RFID (Para poder hacer un paquete!).</p>
                                 <a href="{{ route('rfid.categories.index', ['production_line_id' => request()->route('id')]) }}"
                                    class="btn btn-primary">
                                    Ver más
@@ -125,7 +125,7 @@
                             <img src="/necesarios/rfid_devices.webp" class="card-img-top img-card" alt="RFID Devices">
                             <div class="card-body">
                                 <h5 class="card-title">RFID Dispositivos</h5>
-                                <p class="card-text">Administrar dispositivos y detalles de RFID.</p>
+                                <p class="card-text">Cada EPC es una confection o dispozitivo identificado por RFID.</p>
                                 <a href="{{ route('rfid.devices.index', ['production_line_id' => request()->route('id')]) }}"
                                    class="btn btn-primary">
                                    Ver más
@@ -134,6 +134,22 @@
                         </div>
                     </div>
                     {{-- Fin card Dispositivos RFID --}}
+
+                    {{-- Card Confecciones (Nuevo Recurso: RfidColor) --}}
+                    <div class="col">
+                        <div class="card h-100">
+                            <img src="/necesarios/color.webp" class="card-img-top img-card" alt="Confecciones">
+                            <div class="card-body">
+                                <h5 class="card-title">Colores Confecciones</h5>
+                                <p class="card-text">Administrar listado de Colores RFID.</p>
+                                <a href="{{ route('rfid.colors.index', ['production_line_id' => request()->route('id')]) }}"
+                                   class="btn btn-primary">
+                                   Ver más
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {{-- Fin card Confecciones --}}
 
                     {{-- Card Monitor OEE --}}
                     <div class="col">

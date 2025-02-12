@@ -98,7 +98,7 @@ class OrderStatsController extends Controller
         }
 
         // Encuentra la última línea de 'order_stats' para la línea de producción encontrada.
-        $lastOrderStat = OrderStat::where('production_line_id', $productionLine->id)->orderBy('created_at', 'desc')->first();
+        $lastOrderStat = OrderStat::where('production_line_id', $productionLine->id)->orderBy('id', 'desc')->first();
 
         if (!$lastOrderStat) {
             return response()->json(['error' => 'No order stats found for the production line'], 404);

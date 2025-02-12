@@ -12,6 +12,7 @@ use App\Models\MqttSendServer1;
 use App\Models\MqttSendServer2;
 use App\Models\OrderStat;
 use Illuminate\Support\Facades\Log;
+use App\Models\ShiftList; // Asegúrate de que la ruta del modelo sea la correcta
 
 class CalculateProductionMonitorOee extends Command
 {
@@ -277,7 +278,7 @@ class CalculateProductionMonitorOee extends Command
         //sacar el orderstats
         $orderStats = $this->getOrderStatsByProductionLineId($monitor->production_line_id);
         
-        $totalCajasTeoricas = $this->getTotalBoxForProdLineFromOrder($monitor->time_start_shift, $orderStats->created_at, $totalTheoreticalProductionPerMinute);
+        $totalCajasTeoricas = $this->getTotalBoxForProdLineFromOrder($monitor->time_start_shift, $orderStats->created_at, $totalTheoreticalProductionPerMinute, $monitor->production_line_id);
         
         //OEE monitor
         $valueMonitorOEE=$this->calcMonitorOEE($totalCajasTeoricas, $totalRealCajas);
@@ -718,19 +719,80 @@ class CalculateProductionMonitorOee extends Command
         return $realMessage;
     }
 
-    private function getTotalBoxForProdLineFromOrder($time_start_shift, $createdAt, $totalTheoreticalProductionPerMinute)   {
-        // Calcular el número de cajas teóricas producidas
+    private function getTotalBoxForProdLineFromOrder($time_start_shift, $createdAt, $totalTheoreticalProductionPerMinute, $productionLineId)
+    {
         if ($time_start_shift) {
-            //sacando desde la tabla order_stats la created_at por la production_line_id = $monitor->production_line_id
-            $timeStartOderId = Carbon::createFromTimestamp(strtotime($createdAt));
-            $shiftTimeDifferenceMinutes = Carbon::now()->diffInMinutes($timeStartOderId); // Diferencia en minutos, sin decimales
-            $totalCajasTeoricas = $totalTheoreticalProductionPerMinute * $shiftTimeDifferenceMinutes;
-        }else{
+            // Convertir la fecha de inicio de la orden a objeto Carbon
+            $orderStart = Carbon::parse($createdAt);
+            // Se realiza el cálculo hasta el momento actual
+            $orderEnd   = Carbon::now();
+        
+            // Obtener los turnos activos para la línea de producción indicada (active=1 o NULL)
+            $shifts = ShiftList::where('production_line_id', $productionLineId)->get();
+        
+            $totalEffectiveMinutes = 0;
+        
+            // Iterar día a día desde el inicio de la orden hasta el momento actual
+            for ($currentDay = $orderStart->copy()->startOfDay(); $currentDay->lte($orderEnd); $currentDay->addDay()) {
+                
+                // Si el día actual es fin de semana, se salta (se supone que la producción no se cuenta en fin de semana)
+                if ($currentDay->isWeekend()) {
+                    continue;
+                }
+        
+                // Procesar cada turno definido para la línea de producción
+                foreach ($shifts as $shift) {
+                    // Si el turno NO cruza la medianoche (por ejemplo, de 06:00 a 14:00 o de 14:00 a 22:00)
+                    if ($shift->start < $shift->end) {
+                        $shiftStart = $currentDay->copy()->setTimeFromTimeString($shift->start);
+                        $shiftEnd   = $currentDay->copy()->setTimeFromTimeString($shift->end);
+        
+                        // Calcular el solapamiento entre el turno y el período de la orden
+                        $effectiveStart = $orderStart->greaterThan($shiftStart) ? $orderStart->copy() : $shiftStart;
+                        $effectiveEnd   = $orderEnd->lessThan($shiftEnd) ? $orderEnd->copy() : $shiftEnd;
+        
+                        if ($effectiveStart < $effectiveEnd) {
+                            $totalEffectiveMinutes += $effectiveEnd->diffInMinutes($effectiveStart);
+                        }
+                    } else {
+                        // El turno cruza la medianoche (por ejemplo, de 22:00 a 06:00)
+        
+                        // --- Segmento 1: desde el turno hasta el fin del día actual ---
+                        $segment1Start = $currentDay->copy()->setTimeFromTimeString($shift->start);
+                        $segment1End   = $currentDay->copy()->endOfDay(); // Hasta 23:59:59
+        
+                        // Se procesa este segmento si el día actual es laborable (ya se comprobó con isWeekend)
+                        $effectiveStart1 = $orderStart->greaterThan($segment1Start) ? $orderStart->copy() : $segment1Start;
+                        $effectiveEnd1   = $orderEnd->lessThan($segment1End) ? $orderEnd->copy() : $segment1End;
+                        if ($effectiveStart1 < $effectiveEnd1) {
+                            $totalEffectiveMinutes += $effectiveEnd1->diffInMinutes($effectiveStart1);
+                        }
+        
+                        // --- Segmento 2: desde el inicio del día siguiente hasta la hora final del turno ---
+                        $nextDay = $currentDay->copy()->addDay();
+                        // Sólo se procesa si el siguiente día es laborable
+                        if (!$nextDay->isWeekend()) {
+                            $segment2Start = $nextDay->copy()->startOfDay(); // 00:00:00
+                            $segment2End   = $nextDay->copy()->setTimeFromTimeString($shift->end);
+        
+                            $effectiveStart2 = $orderStart->greaterThan($segment2Start) ? $orderStart->copy() : $segment2Start;
+                            $effectiveEnd2   = $orderEnd->lessThan($segment2End) ? $orderEnd->copy() : $segment2End;
+                            if ($effectiveStart2 < $effectiveEnd2) {
+                                $totalEffectiveMinutes += $effectiveEnd2->diffInMinutes($effectiveStart2);
+                            }
+                        }
+                    }
+                }
+            }
+        
+            // Calcular el total de cajas teóricas: producción teórica por minuto * minutos efectivos
+            $totalCajasTeoricas = $totalTheoreticalProductionPerMinute * $totalEffectiveMinutes;
+        } else {
             $totalCajasTeoricas = 0;
         }
+        
         return $totalCajasTeoricas;
     }
-
     private function shiftTimeToSeconds() {
         $shiftTime = env('SHIFT_TIME', '08:00:00'); // '00:00:00' es el valor por defecto si no se define en el archivo .env
         list($hours, $minutes, $seconds) = explode(':', $shiftTime);

@@ -4,13 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard - Autoconto</title>
+  <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
   <!-- Cargar Google Charts -->
   <script src="https://www.gstatic.com/charts/loader.js"></script>
   <script>
     google.charts.load('current', { packages: ['sankey'] });
   </script>
   <style>
+    /* Estilos generales */
     .card-custom {
       background-color: #f8f9fa;
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
@@ -30,10 +34,9 @@
       transform: translateY(-50%);
       color: white;
       font-weight: bold;
-      font-size: 1.25rem; /* Tamaño del texto más grande */
-      text-align: right; /* Asegura que el texto esté alineado a la derecha */
+      font-size: 1.25rem;
+      text-align: right;
     }
-    
     .progress {
       position: relative;
       height: 25px;
@@ -59,11 +62,13 @@
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
       color: #333;
     }
-    .small-card .metric, .small-card-white .metric {
+    .small-card .metric, 
+    .small-card-white .metric {
       font-size: 2rem;
       color: #f39c12;
     }
-    .small-card .metric-label, .small-card-white .metric-label {
+    .small-card .metric-label, 
+    .small-card-white .metric-label {
       font-size: 1rem;
       font-weight: 600;
       margin-top: 5px;
@@ -76,7 +81,7 @@
     }
     .header-container {
       width: 100%;
-      background-color: #343a40; /* Color gris oscuro */
+      background-color: #343a40;
       color: white;
       padding: 10px 30px;
       display: flex;
@@ -152,7 +157,7 @@
   <!-- Contenedor Principal -->
   <div class="container-fluid mt-4">
     <div class="row">
-      <!-- Card 1 (Grande) que contiene 6 cards pequeños en 2 filas de 3 cards -->
+      <!-- Card 1: 3 filas de pequeños cards -->
       <div class="col-lg-6 mb-4">
         <div class="card card-custom">
           <div class="card-body">
@@ -199,7 +204,7 @@
               </div>
             </div>
             <div class="row">
-              <!-- Fila 2 -->
+              <!-- Fila 3 -->
               <div class="col-md-4">
                 <div class="small-card-white">
                   <div class="metric" id="real-cycle-time">--</div>
@@ -223,7 +228,7 @@
         </div>
       </div>
 
-      <!-- Card 2 (Grande) que contiene métricas de Producción y Ciclo -->
+      <!-- Card 2: Métricas de Producción y Ciclo -->
       <div class="col-lg-6 mb-4">
         <div class="card card-custom">
           <div class="card-body">
@@ -251,7 +256,7 @@
               <div class="col-md-4">
                 <div class="small-card-white">
                   <div class="metric" id="time-box">--:--:--</div>
-                  <div class="metric-label">TC Teorico/Caja</div>
+                  <div class="metric-label">TC Teórico/Caja</div>
                 </div>
               </div>
               <div class="col-md-4">
@@ -271,13 +276,11 @@
         </div>
       </div>
 
-      <!-- Parte Inferior: Eficiencia y Disponibilidad -->
+      <!-- Card 3: Eficiencia y Disponibilidad -->
       <div class="col-lg-6 mb-4">
-        <!-- Tarjeta PADRE -->
         <div class="card card-custom">
           <div class="card-body d-flex">
-            
-            <!-- Tarjeta HIJA 1: Barras (Disponibilidad, Rendimiento, Calidad) -->
+            <!-- Barras de Disponibilidad, Rendimiento y Calidad -->
             <div class="card card-custom flex-grow-1 me-3">
               <div class="card-body">
                 <!-- Disponibilidad -->
@@ -289,7 +292,6 @@
                     <span id="availability-progress-bar-label" class="progress-bar-label">--:--:--</span>
                   </div>
                 </div>
-                
                 <!-- Rendimiento -->
                 <div class="mb-4">
                   <div class="metric-label" style="text-align: left;">Rendimiento</div>
@@ -299,7 +301,6 @@
                     <span id="performance-progress-bar-label" class="progress-bar-label">--:--:--</span>
                   </div>
                 </div>
-                
                 <!-- Calidad -->
                 <div class="mb-4">
                   <div class="metric-label" style="text-align: left;">Calidad</div>
@@ -311,38 +312,47 @@
                 </div>
               </div>
             </div>
-            
-            <!-- Tarjeta HIJA 2: OEE -->
-            <div class="card card-custom" style="width: 250px;"> 
+            <!-- Tarjeta de OEE -->
+            <div class="card card-custom" style="width: 250px;">
               <div class="card-body d-flex flex-column align-items-center justify-content-center" style="height: 100%;">
                 <div style="font-size:1.2rem; font-weight:bold;">EFECTIVIDAD / OEE</div>
-                <div class="oee-percentage" id="oee-percentage" style="font-size:3rem; color: #f39c12;">--%</div>
+                <div class="oee-percentage" id="oee-percentage" style="font-size:5rem; color: #f39c12;">--%</div>
                 <div class="small-text">ORDEN ACTUAL</div>
               </div>
             </div>
-            
-          </div> <!-- fin card-body d-flex -->
-        </div>   <!-- fin card padre -->
+          </div>
+        </div>
       </div>
 
-      <!-- Card Turnos y Producción -->
+      <!-- Card 4: Turnos y Producción con el Sankey Diagram -->
       <div class="col-lg-6 mb-4">
         <div class="card card-custom">
           <div class="card-body">
             <div class="row">
-              <!-- Card de Gráfico y Estadísticas -->
+              <!-- Área del Sankey -->
               <div class="col-lg-9 mb-4">
                 <div class="card card-custom">
                   <div class="card-body">
                     <div class="grafico-container">
-                      <!-- Contenedor del Sankey Diagram -->
-                      <div id="sankey_chart" style="width: 100%; height: auto;"></div>
+                      <!-- Contenedor del Sankey con botones para fullscreen -->
+                      <div id="sankey_fullscreen_container" style="position: relative;">
+                        <!-- Botón para entrar en fullscreen (icono de flechas) -->
+                        <button id="enter_fullscreen" onclick="enterFullScreen()" 
+                                style="position: absolute; top: 10px; right: 10px; z-index: 1000; background: transparent; border: none;">
+                          <i class="bi bi-arrows-fullscreen" style="font-size: 1.5rem; color: #333;"></i>
+                        </button>
+                        <!-- Botón para salir del fullscreen (icono de X) -->
+                        <button id="exit_fullscreen" onclick="exitFullScreen()" 
+                                style="position: absolute; top: 10px; right: 10px; z-index: 1000; background: transparent; border: none; display: none;">
+                          <i class="bi bi-x-lg" style="font-size: 1.5rem; color: #333;"></i>
+                        </button>
+                        <div id="sankey_chart" style="width: 100%; height: 400px;"></div>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-        
-              <!-- Cards de Pesaje a la derecha -->
+              <!-- Tarjetas de Pesaje (u otros elementos) -->
               <div class="col-lg-3 mb-4">
                 <div class="col-md-10">
                   <div class="small-card-white">
@@ -362,305 +372,296 @@
                     <div class="metric-label">Cajas Pendientes</div>
                   </div>
                 </div>
-                <!-- <div class="pesaje-card">
-                  <div class="pesaje-label">Pesaje</div>
-                  <div style="background-color: #28a745; width: 50px; height: 50px; margin: auto;"></div> 
-                </div>   -->             
               </div>
             </div>
           </div>
         </div>
       </div>
-      
+
     </div>
   </div>
 
   <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 
-<!-- Asegúrate de que este script esté dentro de tu archivo HTML, justo antes del cierre de la etiqueta </body> -->
-<script>
-  function updateClock() {
-    const now = new Date();
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    const seconds = String(now.getSeconds()).padStart(2, '0');
-    document.getElementById('clock').textContent = `${hours}:${minutes}:${seconds}`;
-  }
-  setInterval(updateClock, 1000);
-  updateClock();
+  <!-- Funciones JS: Reloj, fullscreen y actualización de datos -->
+  <script>
+    // Actualizar el reloj cada segundo
+    function updateClock() {
+      const now = new Date();
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const seconds = String(now.getSeconds()).padStart(2, '0');
+      document.getElementById('clock').textContent = `${hours}:${minutes}:${seconds}`;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
 
-  function formatTime(seconds) {
-    const hrs = Math.floor(seconds / 3600).toString().padStart(2, '0');
-    const mins = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
-    const secs = Math.floor(seconds % 60).toString().padStart(2, '0');
-    return `${hrs}:${mins}:${secs}`;
-  }
+    // Función para formatear segundos a hh:mm:ss
+    function formatTime(seconds) {
+      const hrs = Math.floor(seconds / 3600).toString().padStart(2, '0');
+      const mins = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+      const secs = Math.floor(seconds % 60).toString().padStart(2, '0');
+      return `${hrs}:${mins}:${secs}`;
+    }
 
-  async function fetchProductionData() {
-    try {
+    // Funciones para entrar y salir de fullscreen
+    function enterFullScreen() {
+      const container = document.getElementById('sankey_fullscreen_container');
+      if (container.requestFullscreen) {
+        container.requestFullscreen();
+      } else if (container.mozRequestFullScreen) {
+        container.mozRequestFullScreen();
+      } else if (container.webkitRequestFullscreen) {
+        container.webkitRequestFullscreen();
+      } else if (container.msRequestFullscreen) {
+        container.msRequestFullscreen();
+      }
+    }
+    function exitFullScreen() {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      } else if (document.mozCancelFullScreen) {
+        document.mozCancelFullScreen();
+      } else if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
+      } else if (document.msExitFullscreen) {
+        document.msExitFullscreen();
+      }
+    }
+
+    // Escuchar cambios en el estado fullscreen para ajustar estilos
+    document.addEventListener("fullscreenchange", function() {
+      const container = document.getElementById('sankey_fullscreen_container');
+      if (document.fullscreenElement) {
+        document.getElementById('enter_fullscreen').style.display = 'none';
+        document.getElementById('exit_fullscreen').style.display = 'block';
+        // Establece display flex, centra contenido y asigna fondo y padding lateral
+        container.style.display = 'flex';
+        container.style.justifyContent = 'center';
+        container.style.alignItems = 'center';
+        container.style.flexDirection = 'column';
+        container.style.height = '100vh';
+        container.style.backgroundColor = 'white';
+        container.style.padding = '0 20px';
+        document.getElementById('sankey_chart').style.height = '80vh';
+      } else {
+        document.getElementById('enter_fullscreen').style.display = 'block';
+        document.getElementById('exit_fullscreen').style.display = 'none';
+        container.style.display = 'block';
+        container.style.height = 'auto';
+        container.style.backgroundColor = 'transparent';
+        container.style.padding = '0';
+        document.getElementById('sankey_chart').style.height = '400px';
+      }
+    });
+
+    // Función para actualizar datos (ejemplo de obtención de datos desde API)
+    async function fetchProductionData() {
+      try {
         // Obtén el token de la URL
         const urlParams = new URLSearchParams(window.location.search);
         const token = urlParams.get('token');
         if (!token) {
-            throw new Error('Token no encontrado en la URL');
+          throw new Error('Token no encontrado en la URL');
         }
-        
-        // Usamos comillas invertidas para la interpolación de variables
         const response = await fetch(`/api/order-stats?token=${token}`);
-      const data = await response.json();
+        const data = await response.json();
 
-      document.getElementById("production-line-name").textContent = data.production_line_name;
-      document.getElementById("order-id").textContent = data.order_id;
+        // Actualizar datos en los elementos correspondientes
+        document.getElementById("production-line-name").textContent = data.production_line_name;
+        document.getElementById("order-id").textContent = data.order_id;
 
-      const createdAt = new Date(data.created_at);
-      const updatedAt = new Date(data.updated_at);
-      const formattedDate = createdAt.toLocaleDateString('es-ES', { year: 'numeric', month: '2-digit', day: '2-digit' });
-      const formattedTime = createdAt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-      document.getElementById("created-at").textContent = `Iniciada ${formattedDate} ${formattedTime}`;
+        const createdAt = new Date(data.created_at);
+        const updatedAt = new Date(data.updated_at);
+        const formattedDate = createdAt.toLocaleDateString('es-ES', { year: 'numeric', month: '2-digit', day: '2-digit' });
+        const formattedTime = createdAt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+        document.getElementById("created-at").textContent = `Iniciada ${formattedDate} ${formattedTime}`;
 
-      document.getElementById("units-made-real").textContent = data.units_made_real;
-      document.getElementById("units-pending").textContent = data.units_pending;
-      document.getElementById("units-delayed").textContent = data.units_delayed;
+        document.getElementById("units-made-real").textContent = data.units_made_real;
+        document.getElementById("units-pending").textContent = data.units_pending;
+        document.getElementById("units-delayed").textContent = data.units_delayed;
 
-      // Actualizar los campos de Cajas Pedido, Uds Caja y Uds a Fabricar
-      document.getElementById("box").textContent = data.box;
-      document.getElementById("units-box").textContent = data.units_box;
-      document.getElementById("units").textContent = data.units;
+        document.getElementById("box").textContent = data.box;
+        document.getElementById("units-box").textContent = data.units_box;
+        document.getElementById("units").textContent = data.units;
 
-      const slowTimeInUnits = data.slow_time;
-      const slowTimeInSeconds = data.units_delayed * data.seconds_per_unit_theoretical;
-      document.getElementById("slow-time").textContent = formatTime(slowTimeInSeconds);
+        const slowTimeInSeconds = data.units_delayed * data.seconds_per_unit_theoretical;
+        document.getElementById("slow-time").textContent = formatTime(slowTimeInSeconds);
 
-      // Actualizar los nuevos campos
-      const totalStopsTimeInSeconds = data.production_stops_time + data.down_time + slowTimeInSeconds;
-      document.getElementById("total-downtime").textContent = formatTime(totalStopsTimeInSeconds);; // Valor fijo
-      document.getElementById("theoretical-cycle-time").textContent = data.seconds_per_unit_theoretical;
-      document.getElementById("real-cycle-time").textContent = data.seconds_per_unit_real;
+        const totalStopsTimeInSeconds = data.production_stops_time + data.down_time + slowTimeInSeconds;
+        document.getElementById("total-downtime").textContent = formatTime(totalStopsTimeInSeconds);
+        document.getElementById("theoretical-cycle-time").textContent = data.seconds_per_unit_theoretical;
+        document.getElementById("real-cycle-time").textContent = data.seconds_per_unit_real;
 
-      const sensorStopsTimeInSeconds = data.production_stops_time;
-      const sensorStopsTimeFormatted = formatTime(sensorStopsTimeInSeconds);
-      document.getElementById("sensor-stops-time").textContent = sensorStopsTimeFormatted;
+        const sensorStopsTimeInSeconds = data.production_stops_time;
+        document.getElementById("sensor-stops-time").textContent = formatTime(sensorStopsTimeInSeconds);
 
+        document.getElementById("unidentified-time").textContent = formatTime(data.down_time);
 
+        const timeDifferenceInSeconds = Math.floor((updatedAt - createdAt) / 1000);
+        const timeOneBox = timeDifferenceInSeconds / data.weights_0_orderNumber;
+        document.getElementById("time-box").textContent = formatTime(timeOneBox);
 
-      const unidentifiedTimeDifference = data.down_time;
-      document.getElementById("unidentified-time").textContent = formatTime(unidentifiedTimeDifference);
+        const theoreticalEndTimeInSeconds = data.theoretical_end_time * 60;
+        document.getElementById("theoretical-end-time").textContent = formatTime(theoreticalEndTimeInSeconds);
 
-      // Calcular Tiempo en Producción usando updatedAt
-      const timeDifferenceInSeconds = Math.floor((updatedAt - createdAt) / 1000);
-      const timeOneBox = timeDifferenceInSeconds / data.weights_0_orderNumber;
-      const productionTime = formatTime(timeDifferenceInSeconds);
-      document.getElementById("time-box").textContent =  formatTime(timeOneBox);
+        const realEndTimeInSeconds = data.real_end_time * 60;
+        document.getElementById("real-end-time").textContent = formatTime(realEndTimeInSeconds);
 
-      // Calcular Tiempo Teórico Fin
-      const theoreticalEndTimeInSeconds = data.theoretical_end_time * 60;
-      const theoreticalEndTimeFormatted = formatTime(theoreticalEndTimeInSeconds);
-      document.getElementById("theoretical-end-time").textContent = theoreticalEndTimeFormatted;
+        document.getElementById("oee-percentage").textContent = Math.round(data.oee);
 
-      // Calcular Tiempo Estimado Fin
-      const realEndTimeInSeconds = data.real_end_time * 60;
-      const realEndTimeFormatted = formatTime(realEndTimeInSeconds);
-      document.getElementById("real-end-time").textContent = realEndTimeFormatted;
+        document.getElementById("box-finalized").textContent = data.weights_0_orderNumber;
+        document.getElementById("box-pending").textContent = data.box - data.weights_0_orderNumber;
+        document.getElementById("total-weight").textContent = data.weights_0_orderKg;
 
-      // Actualizar OEE con valor entero redondeado
-      document.getElementById("oee-percentage").textContent = Math.round(data.oee) + "%";
+        const totalStopTimeInSeconds = sensorStopsTimeInSeconds + data.down_time;
+        let availabilityPercentage = 0;
+        let stopPercentage = 0;
+        if (timeDifferenceInSeconds > 0) {
+          availabilityPercentage = ((timeDifferenceInSeconds - totalStopTimeInSeconds) / timeDifferenceInSeconds) * 100;
+          stopPercentage = (totalStopTimeInSeconds / timeDifferenceInSeconds) * 100;
+        }
+        availabilityPercentage = availabilityPercentage.toFixed(2);
+        stopPercentage = stopPercentage.toFixed(2);
 
-      //Actualizar numero de cajas 
-      document.getElementById("box-finalized").textContent = data.weights_0_orderNumber;
+        document.getElementById('availability-progress-bar').style.width = availabilityPercentage + '%';
+        document.getElementById('availability-progress-bar-stop').style.width = stopPercentage + '%';
+        document.getElementById('availability-progress-bar-label').textContent = formatTime(totalStopTimeInSeconds);
 
-      //Actualizar numero de cajas pendientes
-      document.getElementById("box-pending").textContent = data.box - data.weights_0_orderNumber;
+        const timeWithoutStopsInSeconds = timeDifferenceInSeconds - totalStopTimeInSeconds;
+        document.getElementById('performance-progress-container').style.width = availabilityPercentage + '%';
+        document.getElementById('performance-progress-container').style.margin = '0';
 
-      //actualizar peso acumulado
-      document.getElementById("total-weight").textContent = data.weights_0_orderKg;
+        let performancePercentage = 0;
+        let slowPercentage = 0;
+        if (timeWithoutStopsInSeconds > 0) {
+          performancePercentage = ((timeWithoutStopsInSeconds - slowTimeInSeconds) / timeWithoutStopsInSeconds) * 100;
+          slowPercentage = (slowTimeInSeconds / timeWithoutStopsInSeconds) * 100;
+        }
+        performancePercentage = performancePercentage.toFixed(2);
+        slowPercentage = slowPercentage.toFixed(2);
 
-      // Calcular Disponibilidad
-      // Tiempo total de paradas (Paradas Sensores + No Identificadas)
-      const totalStopTimeInSeconds = sensorStopsTimeInSeconds + unidentifiedTimeDifference;
+        document.getElementById('performance-progress-bar').style.width = performancePercentage + '%';
+        document.getElementById('performance-progress-bar-slow').style.width = slowPercentage + '%';
+        document.getElementById('performance-progress-bar-label').textContent = formatTime(slowTimeInSeconds);
 
-      // Evitar división por cero
-      let availabilityPercentage = 0;
-      let stopPercentage = 0;
-      if (timeDifferenceInSeconds > 0) {
-        availabilityPercentage = ((timeDifferenceInSeconds - totalStopTimeInSeconds) / timeDifferenceInSeconds) * 100;
-        stopPercentage = (totalStopTimeInSeconds / timeDifferenceInSeconds) * 100;
+        const timeAtTheoreticalSpeedInSeconds = timeWithoutStopsInSeconds - slowTimeInSeconds;
+        const calidadBarWidth = (availabilityPercentage * performancePercentage) / 100;
+        document.getElementById('quality-progress-container').style.width = calidadBarWidth + '%';
+        document.getElementById('quality-progress-container').style.margin = '0';
+
+        let qualityPercentage = 0;
+        let sensorStopsPercentage = 0;
+        if (timeAtTheoreticalSpeedInSeconds > 0) {
+          qualityPercentage = ((timeAtTheoreticalSpeedInSeconds - sensorStopsTimeInSeconds) / timeAtTheoreticalSpeedInSeconds) * 100;
+          sensorStopsPercentage = (sensorStopsTimeInSeconds / timeAtTheoreticalSpeedInSeconds) * 100;
+        }
+        qualityPercentage = qualityPercentage.toFixed(2);
+        sensorStopsPercentage = sensorStopsPercentage.toFixed(2);
+
+        document.getElementById('quality-progress-bar').style.width = qualityPercentage + '%';
+        document.getElementById('quality-progress-bar-defects').style.width = sensorStopsPercentage + '%';
+        document.getElementById('quality-progress-bar-label').textContent = formatTime(sensorStopsTimeInSeconds);
+
+        // Cálculos para el Sankey Diagram
+        const boxFinalized = parseFloat(data.weights_0_orderNumber || 0);
+        const totalWeightBoxFinalized = parseFloat(data.weights_0_orderKg || 0);
+        const unitsPerBox = parseFloat(data.units_box || 0);
+        const unitsMadeReal = parseFloat(data.units_made_real || 0);
+        const totalWeightBoxFinalized1 = parseFloat(data.weights_1_orderKg || 0);
+        const totalWeightBoxFinalized2 = parseFloat(data.weights_2_orderKg || 0);
+
+        const weightPerBox = totalWeightBoxFinalized / boxFinalized || 0;
+        const weightPerUnit = weightPerBox / unitsPerBox || 0;
+        const totalMaterialUsed = unitsMadeReal * weightPerUnit || 0;
+        const udsNotEnvasadas = Math.round(unitsMadeReal - (unitsPerBox * boxFinalized));
+        const totalWeightFromAllUnitsCreated = Math.round(unitsMadeReal * weightPerUnit) || 0;
+        const totalWeightFromAll = Math.round(totalWeightFromAllUnitsCreated  + totalWeightBoxFinalized1 + totalWeightBoxFinalized2 ) || 0;
+
+        function drawChart() {
+          const dataTable = new google.visualization.DataTable();
+          dataTable.addColumn('string', 'From');
+          dataTable.addColumn('string', 'To');
+          dataTable.addColumn('number', 'Weight');
+          dataTable.addColumn({ type: 'string', role: 'tooltip' });
+          
+          dataTable.addRows([
+            ['Peso Total', 'Uds', totalWeightFromAll, `Total Peso: ${totalWeightFromAll} kg`],
+            ['Uds', 'Rechazo', totalWeightBoxFinalized2, `Rechazo Peso: ${totalWeightBoxFinalized2} kg`],
+            ['Uds', 'Uds Fabricadas', Math.round(unitsMadeReal * weightPerUnit), `Fabricadas: ${unitsMadeReal} uds y ${Math.round(unitsMadeReal * weightPerUnit)} kg`],
+            ['Uds Fabricadas', 'Unidades Envasadas', totalWeightBoxFinalized, `Envasadas: ${unitsPerBox * boxFinalized} uds y ${totalWeightBoxFinalized} kg`],
+            [
+              'Uds Fabricadas',
+              'Unidades Sin Envasar',
+              Math.round((udsNotEnvasadas - (totalWeightBoxFinalized1 / weightPerUnit)) * weightPerUnit),
+              `Sin Envasar: ${Math.round(udsNotEnvasadas - (totalWeightBoxFinalized1 / weightPerUnit))} uds y ${Math.round((udsNotEnvasadas - (totalWeightBoxFinalized1 / weightPerUnit)) * weightPerUnit)} kg`
+            ],
+            [
+              'Uds Fabricadas',
+              'Rechazo',
+              totalWeightBoxFinalized1,
+              `Rechazo: ${Math.round(totalWeightBoxFinalized1 / weightPerUnit)} uds y ${totalWeightBoxFinalized1} kg`
+            ]
+          ]);
+
+          const options = {
+            width: '100%',
+            height: 400,
+            sankey: {
+              node: {
+                label: { fontSize: 12 },
+                colors: ['#FFA07A', '#87CEEB', '#FFD700'],
+              },
+              link: { colorMode: 'gradient', colors: ['#FFA07A', '#87CEEB'] },
+            },
+          };
+
+          const chart = new google.visualization.Sankey(document.getElementById('sankey_chart'));
+          chart.draw(dataTable, options);
+        }
+
+        google.charts.setOnLoadCallback(drawChart);
+
+      } catch (error) {
+        console.error("Error al obtener los datos:", error);
+        // Valores por defecto en caso de error
+        document.getElementById("production-line-name").textContent = "Error al cargar";
+        document.getElementById("order-id").textContent = "Error al cargar";
+        document.getElementById("created-at").textContent = "Error al cargar";
+        document.getElementById("units-made-real").textContent = "--";
+        document.getElementById("units-pending").textContent = "--";
+        document.getElementById("units-delayed").textContent = "--";
+        document.getElementById("box").textContent = "--";
+        document.getElementById("units-box").textContent = "--";
+        document.getElementById("units").textContent = "--";
+        document.getElementById("total-downtime").textContent = "--";
+        document.getElementById("theoretical-cycle-time").textContent = "--";
+        document.getElementById("real-cycle-time").textContent = "--";
+        document.getElementById("sensor-stops-time").textContent = "--:--";
+        document.getElementById("slow-time").textContent = "--:--";
+        document.getElementById("unidentified-time").textContent = "--:--";
+        document.getElementById("time-box").textContent = "--:--:--";
+        document.getElementById("theoretical-end-time").textContent = "--:--:--";
+        document.getElementById("real-end-time").textContent = "--:--:--";
+        document.getElementById("oee-percentage").textContent = "--%";
+        document.getElementById('availability-progress-bar').style.width = '0%';
+        document.getElementById('availability-progress-bar-stop').style.width = '0%';
+        document.getElementById('availability-progress-bar-label').textContent = '--:--:--';
+        document.getElementById('performance-progress-bar').style.width = '0%';
+        document.getElementById('performance-progress-bar-slow').style.width = '0%';
+        document.getElementById('performance-progress-container').style.width = '0%';
+        document.getElementById('performance-progress-bar-label').textContent = '--:--:--';
+        document.getElementById('quality-progress-bar').style.width = '0%';
+        document.getElementById('quality-progress-bar-defects').style.width = '0%';
+        document.getElementById('quality-progress-container').style.width = '0%';
+        document.getElementById('quality-progress-bar-label').textContent = '--:--:--';
       }
-
-      // Asegurarse de que las sumas den 100%
-      availabilityPercentage = availabilityPercentage.toFixed(2);
-      stopPercentage = stopPercentage.toFixed(2);
-
-      // Actualizar las barras de progreso de Disponibilidad
-      document.getElementById('availability-progress-bar').style.width = availabilityPercentage + '%';
-      document.getElementById('availability-progress-bar-stop').style.width = stopPercentage + '%';
-
-      // Actualizar la etiqueta con el tiempo total de paradas
-      const totalStopTimeFormatted = formatTime(totalStopTimeInSeconds);
-      document.getElementById('availability-progress-bar-label').textContent = totalStopTimeFormatted;
-
-      // Calcular Rendimiento
-      // Tiempo sin paradas (la longitud total de la barra de Rendimiento)
-      const timeWithoutStopsInSeconds = timeDifferenceInSeconds - totalStopTimeInSeconds;
-
-      // Ajustar el ancho de la barra de Rendimiento para que coincida con la parte gris de Disponibilidad
-      const availabilityBarWidth = availabilityPercentage; // En porcentaje
-      document.getElementById('performance-progress-container').style.width = availabilityBarWidth + '%';
-      // Alineamos a la izquierda
-      document.getElementById('performance-progress-container').style.margin = '0';
-
-      // Evitar división por cero
-      let performancePercentage = 0;
-      let slowPercentage = 0;
-      if (timeWithoutStopsInSeconds > 0) {
-        performancePercentage = ((timeWithoutStopsInSeconds - slowTimeInSeconds) / timeWithoutStopsInSeconds) * 100;
-        slowPercentage = (slowTimeInSeconds / timeWithoutStopsInSeconds) * 100;
-      }
-
-      // Asegurarse de que las sumas den 100%
-      performancePercentage = performancePercentage.toFixed(2);
-      slowPercentage = slowPercentage.toFixed(2);
-
-      // Actualizar las barras de progreso de Rendimiento
-      document.getElementById('performance-progress-bar').style.width = performancePercentage + '%';
-      document.getElementById('performance-progress-bar-slow').style.width = slowPercentage + '%';
-
-      // Actualizar la etiqueta con el tiempo lento
-      const slowTimeFormatted = formatTime(slowTimeInSeconds);
-      document.getElementById('performance-progress-bar-label').textContent = slowTimeFormatted;
-
-      // Calcular Calidad
-      // Tiempo productivo a velocidad teórica (longitud de la parte gris de Rendimiento)
-      const timeAtTheoreticalSpeedInSeconds = timeWithoutStopsInSeconds - slowTimeInSeconds;
-
-      // Ajustar el ancho de la barra de Calidad para que coincida con la parte gris de Rendimiento
-      const calidadBarWidth = (availabilityPercentage * performancePercentage) / 100; // Porcentaje total
-      document.getElementById('quality-progress-container').style.width = calidadBarWidth + '%';
-      // Alineamos a la izquierda
-      document.getElementById('quality-progress-container').style.margin = '0';
-
-      // En esta barra, el verde representa Paradas Sensores
-      // Calculamos el porcentaje que representa el tiempo de Paradas Sensores dentro del tiempo a velocidad teórica
-      let qualityPercentage = 0;
-      let sensorStopsPercentage = 0;
-      if (timeAtTheoreticalSpeedInSeconds > 0) {
-        qualityPercentage = ((timeAtTheoreticalSpeedInSeconds - sensorStopsTimeInSeconds) / timeAtTheoreticalSpeedInSeconds) * 100;
-        sensorStopsPercentage = (sensorStopsTimeInSeconds / timeAtTheoreticalSpeedInSeconds) * 100;
-      }
-
-      // Asegurarse de que las sumas den 100%
-      qualityPercentage = qualityPercentage.toFixed(2);
-      sensorStopsPercentage = sensorStopsPercentage.toFixed(2);
-
-      // Actualizar las barras de progreso de Calidad
-      document.getElementById('quality-progress-bar').style.width = qualityPercentage + '%';
-      document.getElementById('quality-progress-bar-defects').style.width = sensorStopsPercentage + '%';
-
-      // Actualizar la etiqueta con el tiempo de Paradas Sensores
-      document.getElementById('quality-progress-bar-label').textContent = sensorStopsTimeFormatted;
-
-      //Sankey Diagram
-         // Calcular valores para el Sankey Diagram
-    const boxFinalized = parseFloat(data.weights_0_orderNumber || 0);
-    const totalWeightBoxFinalized = parseFloat(data.weights_0_orderKg || 0);
-    const unitsPerBox = parseFloat(data.units_box || 0);
-    const unitsMadeReal = parseFloat(data.units_made_real || 0);
-    const totalWeightBoxFinalized1= parseFloat(data.weights_1_orderKg|| 0);
-    const totalWeightBoxFinalized2 = parseFloat(data.weights_2_orderKg || 0);
-
-    const weightPerBox = totalWeightBoxFinalized / boxFinalized || 0;
-    const weightPerUnit = weightPerBox / unitsPerBox || 0;
-    const totalMaterialUsed = unitsMadeReal * weightPerUnit || 0;
-    const udsNotEnvasadas = Math.round(unitsMadeReal - (unitsPerBox * boxFinalized));
-    const totalWeightFromAllUnitsCreated = Math.round(unitsMadeReal * weightPerUnit) || 0;
-    const totalWeightFromAll = Math.round(totalWeightFromAllUnitsCreated  + totalWeightBoxFinalized1 + totalWeightBoxFinalized2 ) || 0;
-
-    // Dibujar Sankey Diagram
-    function drawChart() {
-      const dataTable = new google.visualization.DataTable();
-      dataTable.addColumn('string', 'From');
-      dataTable.addColumn('string', 'To');
-      dataTable.addColumn('number', 'Weight');
-      dataTable.addColumn({ type: 'string', role: 'tooltip' }); // Añade una columna de tooltip
-    
-      dataTable.addRows([
-        ['Peso Total', 'Uds', totalWeightFromAll, `Total Peso: ${totalWeightFromAll} kg`],
-        ['Uds', 'Rechazo', totalWeightBoxFinalized2, `Rechazo Peso: ${totalWeightBoxFinalized2} kg`],
-        ['Uds', 'Uds Fabricadas', Math.round(unitsMadeReal * weightPerUnit), `Fabricadas: ${unitsMadeReal} uds y ${Math.round(unitsMadeReal * weightPerUnit)} kg`],
-        ['Uds Fabricadas', 'Unidades Envasadas', totalWeightBoxFinalized, `Envasadas: ${unitsPerBox * boxFinalized} uds y ${totalWeightBoxFinalized} kg`],
-        [
-          'Uds Fabricadas',
-          'Unidades Sin Envasar',
-          Math.round((udsNotEnvasadas - (totalWeightBoxFinalized1 / weightPerUnit)) * weightPerUnit ),
-          `Sin Envasar: ${Math.round(udsNotEnvasadas - (totalWeightBoxFinalized1 / weightPerUnit))} uds y ${Math.round((udsNotEnvasadas - (totalWeightBoxFinalized1 / weightPerUnit)) * weightPerUnit )}  kg`
-        ],
-        [
-          'Uds Fabricadas',
-          'Rechazo',
-          totalWeightBoxFinalized1,
-          `Rechazo: ${Math.round(totalWeightBoxFinalized1 / weightPerUnit)} uds y ${totalWeightBoxFinalized1} kg`
-        ],
-      ]);
-
-      const options = {
-        width: '100%',
-        height: 400,
-        sankey: {
-          node: {
-            label: { fontSize: 12 },
-            colors: ['#FFA07A', '#87CEEB', '#FFD700'],
-          },
-          link: { colorMode: 'gradient', colors: ['#FFA07A', '#87CEEB'] },
-        },
-      };
-
-      const chart = new google.visualization.Sankey(document.getElementById('sankey_chart'));
-      chart.draw(dataTable, options);
     }
 
-    // Cargar y dibujar el gráfico
-    google.charts.setOnLoadCallback(drawChart);
-
-    } catch (error) {
-      console.error("Error al obtener los datos:", error);
-      document.getElementById("production-line-name").textContent = "Error al cargar";
-      document.getElementById("order-id").textContent = "Error al cargar";
-      document.getElementById("created-at").textContent = "Error al cargar";
-      document.getElementById("units-made-real").textContent = "--";
-      document.getElementById("units-pending").textContent = "--";
-      document.getElementById("units-delayed").textContent = "--";
-      document.getElementById("box").textContent = "--";
-      document.getElementById("units-box").textContent = "--";
-      document.getElementById("units").textContent = "--";
-      document.getElementById("total-downtime").textContent = "--";
-      document.getElementById("theoretical-cycle-time").textContent = "--";
-      document.getElementById("real-cycle-time").textContent = "--";
-      document.getElementById("sensor-stops-time").textContent = "--:--";
-      document.getElementById("slow-time").textContent = "--:--";
-      document.getElementById("unidentified-time").textContent = "--:--";
-      document.getElementById("time-box").textContent = "--:--:--";
-      document.getElementById("theoretical-end-time").textContent = "--:--:--";
-      document.getElementById("real-end-time").textContent = "--:--:--";
-      document.getElementById("oee-percentage").textContent = "--%";
-      document.getElementById('availability-progress-bar').style.width = '0%';
-      document.getElementById('availability-progress-bar-stop').style.width = '0%';
-      document.getElementById('availability-progress-bar-label').textContent = '--:--:--';
-
-      document.getElementById('performance-progress-bar').style.width = '0%';
-      document.getElementById('performance-progress-bar-slow').style.width = '0%';
-      document.getElementById('performance-progress-container').style.width = '0%';
-      document.getElementById('performance-progress-bar-label').textContent = '--:--:--';
-
-      document.getElementById('quality-progress-bar').style.width = '0%';
-      document.getElementById('quality-progress-bar-defects').style.width = '0%';
-      document.getElementById('quality-progress-container').style.width = '0%';
-      document.getElementById('quality-progress-bar-label').textContent = '--:--:--';
-    }
-  }
-
-  setInterval(fetchProductionData, 1000); // Actualiza cada segundo
-  fetchProductionData();
-</script>
+    setInterval(fetchProductionData, 1000);
+    fetchProductionData();
+  </script>
 
 </body>
 </html>
