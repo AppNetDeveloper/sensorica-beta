@@ -40,7 +40,7 @@ class RfidReadingController extends Controller
      */
     public function index()
     {
-        $rfidReadings = RfidReading::select('id', 'epc', 'name', 'production_line_id')->get();
+        $rfidReadings = RfidReading::with('rfidColor')->get();
         return response()->json($rfidReadings, 200);
     }
 

@@ -141,7 +141,7 @@
             $.get(rfidsApiUrl)
                 .done((data) => {
                     rfidOptions = data.map(rfid =>
-                        `<option value="${rfid.id}">${rfid.name}</option>`
+                        `<option value="${rfid.id}">${rfid.name}${rfid.rfid_color && rfid.rfid_color.name ? ' - ' + rfid.rfid_color.name : ''}</option>`
                     ).join('');
                 })
                 .fail(() => { Swal.fire('Error', 'No se pudieron cargar RFIDs.', 'error'); });

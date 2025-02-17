@@ -271,13 +271,13 @@
                     { data: 'modbus.name', defaultContent: 'Sin asignar' },
                     { data: 'count', defaultContent: '0' },
                     { data: 'created_at' },
-                    { data: 'updated_at', defaultContent: 'En curso' },
+                    { data: 'finish_at', defaultContent: 'En curso' },
                     {
                         data: null,
                         render: function (data) {
                             return `@role('admin')
-                                        <button data-id="${'${data.id}'}" class="btn-sm btn btn-warning edit-btn">Editar</button>
-                                        <button data-id="${'${data.id}'}" class="btn-sm btn btn-danger delete-btn">Eliminar</button>
+                                        <button data-id="${data.id}" class="btn-sm btn btn-warning edit-btn">Editar</button>
+                                        <button data-id="${data.id}" class="btn-sm btn btn-danger delete-btn">Eliminar</button>
                                     @else
                                         <!-- Sin acciones -->
                                     @endrole`;
