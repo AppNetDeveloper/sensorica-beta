@@ -399,13 +399,6 @@
                         text: 'Exportar a Excel',
                         className: 'btn btn-success',
                         exportOptions: { columns: [0,1,2,3,4,5,6] },
-                    },
-                    {
-                        text: 'QR Puesto',
-                        className: 'btn btn-info',
-                        action: function(e, dt, node, config) {
-                            window.location.href = "{{ route('scan-post.index') }}";
-                        }
                     }
                 ],
                 order: [[0, 'desc']],

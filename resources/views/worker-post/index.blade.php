@@ -246,13 +246,6 @@
                         extend: 'excel',
                         text: 'Exportar a Excel',
                         className: 'btn btn-success'
-                    },
-                    {
-                        text: 'QR Puesto',
-                        className: 'btn btn-info',
-                        action: function (e, dt, node, config) {
-                            window.location.href = "{{ route('scan-post.index') }}";
-                        }
                     }
                 ],
                 order: [[0, 'desc']],
