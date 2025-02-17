@@ -36,6 +36,10 @@ use App\Http\Controllers\ShiftManagementController;
 use App\Http\Controllers\OperatorPostController;
 use App\Http\Controllers\RfidPostController;
 use App\Http\Controllers\RfidColorController;
+use App\Http\Controllers\ScanPostController;
+
+
+
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -68,7 +72,28 @@ Route::get('customers/getCustomers', [CustomerController::class, 'getCustomers']
 Route::get('customers', [CustomerController::class, 'index'])->name('customers.index');
 Route::resource('customers', CustomerController::class)->except(['edit', 'update', 'destroy']);
 
-Route::resource('production-lines/{production_line_id}/rfid/colors', RfidColorController::class)->names('rfid.colors');
+// Rutas para colores RFID
+// Rutas para colores RFID
+Route::get('production-lines/{production_line_id}/rfid/colors', [RfidColorController::class, 'index'])
+    ->name('rfid.colors.index');
+
+Route::get('production-lines/{production_line_id}/rfid/colors/create', [RfidColorController::class, 'create'])
+    ->name('rfid.colors.create');
+
+Route::post('production-lines/{production_line_id}/rfid/colors', [RfidColorController::class, 'store'])
+    ->name('rfid.colors.store');
+
+Route::get('production-lines/{production_line_id}/rfid/colors/{rfidColor}/edit', [RfidColorController::class, 'edit'])
+    ->name('rfid.colors.edit');
+
+Route::put('production-lines/{production_line_id}/rfid/colors/{rfidColor}', [RfidColorController::class, 'update'])
+    ->name('rfid.colors.update');
+
+Route::delete('production-lines/{production_line_id}/rfid/colors/{rfidColor}', [RfidColorController::class, 'destroy'])
+    ->name('rfid.colors.destroy');
+
+
+
 
 // Ruta para la página principal de sensores
 Route::get('sensors/{id}', [SensorController::class, 'listSensors'])->name('sensors.index');
@@ -121,6 +146,8 @@ Route::prefix('worker-post')->group(function () {
     Route::delete('/{id}', [OperatorPostController::class, 'destroy'])->name('worker-post.destroy');
 });
 
+//usar el qr para asignar puesto operario confeccion
+Route::get('/scan-post', [ScanPostController::class, 'index'])->name('scan-post.index');
 
 //kanban scada
 Route::get('/scada-order', [ScadaOrderController::class, 'index'])->name('scada.order');

@@ -124,7 +124,7 @@ $settings = Utility::settings();
                 @if (auth()->user()->hasRole('admin') || auth()->user()->can('server-show'))
                     <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
                         <a class="dash-link" href="{{ route('server.index') }}">
-                            <span class="dash-micon"><i class="ti laptop-file"></i></span>
+                            <span class="dash-micon"><i class="fa-solid fa-gears"></i></span>
                             <span class="dash-mtext custom-weight">{{ __('Server') }}</span>
                         </a>
                     </li>
@@ -133,7 +133,7 @@ $settings = Utility::settings();
                 @if (auth()->user()->hasRole('admin') || auth()->user()->can('db-upload-show'))
                     <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
                         <a class="dash-link" href="{{ route('server.uploadstats') }}">
-                            <span class="dash-micon"><i class="ti laptop-file"></i></span>
+                            <span class="dash-micon"><i class="fa-regular fa-database"></i></span>
                             <span class="dash-mtext custom-weight">{{ __('Settings Stats Upload') }}</span>
                         </a>
                     </li>
@@ -142,7 +142,7 @@ $settings = Utility::settings();
                 @if (auth()->user()->hasRole('admin') || auth()->user()->can('shift-show'))
                     <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
                         <a class="dash-link" href="{{ route('shift.index') }}">
-                            <span class="dash-micon"><i class="ti laptop-file"></i></span>
+                            <span class="dash-micon"><i class="fa-regular fa-person-digging"></i></span>
                             <span class="dash-mtext custom-weight">{{ __('Shift') }}</span>
                         </a>
                     </li>
@@ -151,7 +151,7 @@ $settings = Utility::settings();
                 @if (auth()->user()->hasRole('admin') || auth()->user()->can('worker-post-show'))
                     <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
                         <a class="dash-link" href="{{ route('worker-post.index') }}">
-                            <span class="dash-micon"><i class="ti laptop-file"></i></span>
+                            <span class="dash-micon"><i class="fa-solid fa-arrows-to-circle"></i></span>
                             <span class="dash-mtext custom-weight">{{ __('Worker Post') }}</span>
                         </a>
                     </li>
@@ -160,12 +160,18 @@ $settings = Utility::settings();
                 @if (auth()->user()->hasRole('admin') || auth()->user()->can('rfid-post-show'))
                     <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
                         <a class="dash-link" href="{{ route('rfid.post.index') }}">
-                            <span class="dash-micon"><i class="ti laptop-file"></i></span>
+                            <span class="dash-micon"><i class="fa-solid fa-briefcase"></i></span>
                             <span class="dash-mtext custom-weight">{{ __('Rfid Post') }}</span>
                         </a>
                     </li>
                 @endif
-            
+                <li class="dash-item">
+                    <div class="btn btn-custom d-block text-center" style="cursor: default;">
+                        <!-- Contenido que desees, por ejemplo, un texto o icono -->
+                       
+                    </div>
+                </li>
+                    
                 @include('layouts.menu')
             </ul>
         </div>

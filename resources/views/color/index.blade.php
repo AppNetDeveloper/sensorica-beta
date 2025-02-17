@@ -53,11 +53,11 @@
                                             <td>{{ $color->id }}</td>
                                             <td>{{ $color->name }}</td>
                                             <td>
-                                                <a href="{{ route('rfid.colors.edit', ['production_line_id' => $production_line_id, 'color' => $color->id]) }}"
+                                                <a href="{{ route('rfid.colors.edit', ['production_line_id' => $production_line_id, 'rfidColor' => $color->id]) }}"
                                                     class="btn btn-sm btn-primary">
                                                      {{ __('Editar') }}
                                                  </a>
-                                                 <form action="{{ route('rfid.colors.destroy', ['production_line_id' => $production_line_id, 'color' => $color->id]) }}"
+                                                 <form action="{{ route('rfid.colors.destroy', ['production_line_id' => $production_line_id, 'rfidColor' => $color->id]) }}"
                                                        method="POST" style="display:inline;">
                                                      @csrf
                                                      @method('DELETE')
