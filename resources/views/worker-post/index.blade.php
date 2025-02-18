@@ -208,7 +208,7 @@
             box-sizing: border-box;
         }
         .select2-container--default .select2-results__options {
-            min-height: 200px; /* Ajusta este valor según lo que necesites */
+            min-height: 10px; /* Ajusta este valor según lo que necesites */
             max-height: 500px !important; /* Ajusta este valor según lo que necesites */
             overflow-y: auto;
         }
