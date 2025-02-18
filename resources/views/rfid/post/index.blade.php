@@ -99,35 +99,33 @@
             width: 100%;
         }
         /* Para select2 de selección única */
-.select2-container--default .select2-selection--single {
-    height: 50px; /* Ajusta la altura según lo que necesites */
-    padding: 6px 12px;
-    line-height: 50px; /* Centra verticalmente el texto */
-}
+        .select2-container--default .select2-selection--single {
+            height: 50px; /* Ajusta la altura según lo que necesites */
+            padding: 6px 12px;
+            line-height: 50px; /* Centra verticalmente el texto */
+        }
 
-/* Para select2 de selección múltiple */
-.select2-container--default .select2-selection--multiple {
-    min-height: 50px; /* Ajusta la altura mínima */
-    padding: 6px; /* Opcional: modifica el padding si lo requieres */
-}
+        /* Para select2 de selección múltiple */
+        .select2-container--default .select2-selection--multiple {
+            min-height: 50px; /* Ajusta la altura mínima */
+            padding: 6px; /* Opcional: modifica el padding si lo requieres */
+        }
 
-/* Aumenta el tamaño del contenedor de la flecha en un select2 de selección única */
-.select2-container--default .select2-selection--single .select2-selection__arrow {
-    width: 20px;  /* Ajusta el ancho según necesites */
-}
+        /* Aumenta el tamaño del contenedor de la flecha en un select2 de selección única */
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            width: 20px;  /* Ajusta el ancho según necesites */
+        }
 
-/* Ajusta el tamaño de la flecha en sí (la flecha se dibuja con bordes) */
-.select2-container--default .select2-selection--single .select2-selection__arrow b {
-    border-width: 14px 11px 0 11px; /* Modifica estos valores para agrandar la flecha */
-}
+        /* Ajusta el tamaño de la flecha en sí (la flecha se dibuja con bordes) */
+        .select2-container--default .select2-selection--single .select2-selection__arrow b {
+            border-width: 14px 11px 0 11px; /* Modifica estos valores para agrandar la flecha */
+        }
 
-/* Mover la flecha hacia la izquierda y ajustar su tamaño */
-.select2-container--default .select2-selection--single .select2-selection__arrow {
-    width: 50px;              /* Ancho deseado */
-    margin-left: -50px;       /* Mueve la flecha 10px hacia la izquierda; ajusta este valor según convenga */
-}
-
-
+        /* Mover la flecha hacia la izquierda y ajustar su tamaño */
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            width: 50px;              /* Ancho deseado */
+            margin-left: -50px;       /* Mueve la flecha 10px hacia la izquierda; ajusta este valor según convenga */
+        }
 
         /* Plantilla para cada opción (tarjeta) */
         .rfid-option-card {
@@ -150,12 +148,12 @@
         }
         /* Opcional: resaltar las opciones seleccionadas en el dropdown */
         .select2-container--default .select2-results__option--selected {
-            background-color: #91575d !important;
+            background-color: #DADADA!important;
             color: #fff !important;
         }
         /* Estilos para los "tags" (opciones seleccionadas) con color info */
         .select2-container--default .select2-selection--multiple .select2-selection__choice {
-            background-color: #17a2b8 !important;
+            background-color: #395458 !important;
             border: 1px solid #17a2b8 !important;
             color: #fff !important;
         }
@@ -194,30 +192,52 @@
         .my-swal-popup {
             height: 500px !important; /* Ajusta el valor según lo que necesites */
         }
-        /* Estilos para el texto en el desplegable de Select2 */
-.select2-container--default .select2-results__option {
-    font-size: 17px;  /* Ajusta el tamaño según necesites */
-    font-weight: bold; /* Para que se muestre en negrita */
-}
-.select2-container--default .select2-results__options {
-    display: flex;
-    flex-wrap: wrap;
-    max-height: 500px;
-    overflow-y: auto;
-}
+                /* Estilos para el texto en el desplegable de Select2 */
+        .select2-container--default .select2-results__option {
+            font-size: 17px;  /* Ajusta el tamaño según necesites */
+            font-weight: bold; /* Para que se muestre en negrita */
+        }
+        .select2-container--default .select2-results__options {
+            display: flex;
+            flex-wrap: wrap;
+            max-height: 500px;
+            overflow-y: auto;
+        }
 
-.select2-container--default .select2-results__option {
-    width: 33.33%;
-    box-sizing: border-box;
-}
-.select2-container--default .select2-results__options {
-    min-height: 300px; /* Ajusta este valor según lo que necesites */
-    max-height: 900px !important; /* Ajusta este valor según lo que necesites */
-    overflow-y: auto;
-}
+        .select2-container--default .select2-results__option {
+            width: 33.33%;
+            box-sizing: border-box;
+        }
+        .select2-container--default .select2-results__options {
+            min-height: 200px; /* Ajusta este valor según lo que necesites */
+            max-height: 500px !important; /* Ajusta este valor según lo que necesites */
+            overflow-y: auto;
+        }
 
+        .swal2-deny-button i {
+            vertical-align: middle;
+        }
 
+        /* Asegúrate de que el contenedor de acciones utilice flexbox */
+        .swal2-actions {
+        display: flex;
+        flex-direction: row;
+        }
 
+        /* Asigna un orden a cada botón: 
+        - Cancel se muestra a la izquierda (order: 1)
+        - Confirm en medio (order: 2)
+        - Deny a la derecha (order: 3)
+        */
+        .swal2-cancel {
+        order: 2;
+        }
+        .swal2-confirm {
+        order: 1;
+        }
+        .swal2-deny {
+        order: 3;
+        }
     </style>
 @endpush
 
@@ -420,7 +440,7 @@
                         action: function(e, dt, node, config) {
                             // Construimos el HTML del modal de forma dinámica
                             var productSelectHtml = `<select id="productListId" class="swal2-input custom-select-style">
-                                                        <option value="" disabled selected>-- Seleccione Producto --</option>
+                                                        <option value="" disabled selected style="text-align: left; text-align-last: left;">-- Seleccione Producto --</option>
                                                         ${productListOptions}
                                                      </select>`;
                             var rfidSelectHtml = rfidOptions.trim() !== '' ?
@@ -430,134 +450,134 @@
                             var sensorSelectHtml = sensorOptions.trim() !== '' ?
                                 `<select id="sensorId" class="swal2-input custom-select-style" multiple>${sensorOptions}</select>` : '';
 
-                            Swal.fire({
-                                title: 'Asignar Confección',
-                                width: '800px',
-                                padding: '2em',
-                                html: `
-                                    ${productSelectHtml}
-                                    <div style="position: relative;">
+                                Swal.fire({
+                                    title: 'Asignar Confección',
+                                    width: '800px',
+                                    padding: '2em',
+                                    html: `
+                                        ${productSelectHtml}
                                         ${rfidSelectHtml}
-                                        <button id="scanQrBtn" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); border: none; background: none; cursor: pointer;">
-                                            <i class="fa fa-qrcode" style="font-size: 1.5em; color: #333;"></i>
-                                        </button>
-                                    </div>
-                                    ${modbusSelectHtml}
-                                    ${sensorSelectHtml}
-                                    <div id="qr-reader" style="width:300px; margin: 1em auto; display: none;"></div>
-                                `,
-                                showCancelButton: true,
-                                confirmButtonText: 'Añadir',
-                                cancelButtonText: 'Cancelar',
-                                customClass: {
-                                    confirmButton: 'btn btn-custom-success',
-                                    cancelButton: 'btn btn-custom-danger',
-                                    popup: 'my-swal-popup',
-                                },
-                                didOpen: () => {
-                                    $('#productListId').select2({
-                                        dropdownParent: Swal.getPopup(),
-                                        width: 'resolve',
-                                        templateResult: formatProductOption,
-                                        templateSelection: formatProductSelection
-                                    });
-                                    if(rfidSelectHtml !== '') {
-                                        $('#rfidReadingId').select2({
-                                            dropdownParent: Swal.getPopup(),
-                                            width: 'resolve',
-                                            placeholder: '-- Seleccione --',
-                                            closeOnSelect: false,
-                                            hideSelected: true,
-                                            templateResult: formatOption,
-                                            templateSelection: formatSelection
-                                        });
-                                        $('#rfidReadingId').on('select2:closing', function(e) {
-                                            if (e.originalEvent && $(e.originalEvent.target).closest('.select2-results__option').length) {
-                                                e.preventDefault();
-                                            }
-                                        });
-                                    }
-                                    if(modbusSelectHtml !== '') {
-                                        $('#modbusId').select2({
-                                            dropdownParent: Swal.getPopup(),
-                                            width: 'resolve',
-                                            placeholder: '-- Seleccione --',
-                                            closeOnSelect: false,
-                                            hideSelected: true,
-                                            templateResult: formatOption,
-                                            templateSelection: formatSelection
-                                        });
-                                        $('#modbusId').on('select2:closing', function(e) {
-                                            if (e.originalEvent && $(e.originalEvent.target).closest('.select2-results__option').length) {
-                                                e.preventDefault();
-                                            }
-                                        });
-                                    }
-                                    if(sensorSelectHtml !== '') {
-                                        $('#sensorId').select2({
-                                            dropdownParent: Swal.getPopup(),
-                                            width: 'resolve',
-                                            placeholder: '-- Seleccione --',
-                                            closeOnSelect: false,
-                                            hideSelected: true,
-                                            templateResult: formatOption,
-                                            templateSelection: formatSelection
-                                        });
-                                        $('#sensorId').on('select2:closing', function(e) {
-                                            if (e.originalEvent && $(e.originalEvent.target).closest('.select2-results__option').length) {
-                                                e.preventDefault();
-                                            }
-                                        });
-                                    }
-                                    $('#productListId').val('').trigger('change');
-                                    $('#scanQrBtn').on('click', function(e) {
-                                        e.preventDefault();
+                                        ${modbusSelectHtml}
+                                        ${sensorSelectHtml}
+                                        <div id="qr-reader" style="width:300px; margin: 1em auto; display: none;"></div>
+                                    `,
+                                    showCancelButton: true,
+                                    showDenyButton: true,
+                                    confirmButtonText: '<i class="bi bi-check-square"></i> &nbsp;AÑADIR',
+                                    cancelButtonText: '<i class="bi bi-x-square"></i> &nbsp;CANCELAR',
+                                    denyButtonText: '<i class="bi bi-qr-code"></i> &nbsp;ESCANEAR',
+                                    customClass: {
+                                        confirmButton: 'btn btn-success',
+                                        denyButton: 'btn btn-primary',
+                                        cancelButton: 'btn btn-danger',
+                                    },
+                                    buttonsStyling: false,
+                                    // Al pulsar el botón deny, ejecutamos el escáner y evitamos cerrar el modal
+                                    preDeny: () => {
                                         startQrScanner();
-                                    });
-                                },
-                                preConfirm: () => {
-                                    const product_list_id = $('#productListId').val();
-                                    const rfid_reading_ids = rfidSelectHtml !== '' ? $('#rfidReadingId').val() : [];
-                                    const modbus_ids = modbusSelectHtml !== '' ? $('#modbusId').val() : [];
-                                    const sensor_ids = sensorSelectHtml !== '' ? $('#sensorId').val() : [];
-                                    if (!product_list_id) {
-                                        Swal.showValidationMessage('Producto es obligatorio.');
-                                        return false;
-                                    }
-                                    if (
-                                        (!rfid_reading_ids || rfid_reading_ids.length === 0) &&
-                                        (!bascula_ids || bascula_ids.length === 0) &&
-                                        (!sensor_ids || sensor_ids.length === 0)
-                                    ) {
-                                        Swal.showValidationMessage('Debe seleccionar al menos una báscula, o un sensor, o un RFID.');
-                                        return false;
-                                    }
-
-                                    return {
-                                        client_id: parseInt(product_list_id),
-                                        rfid_reading_ids: rfid_reading_ids.map(id => parseInt(id)),
-                                        modbus_ids: modbus_ids ? modbus_ids.map(id => parseInt(id)) : [],
-                                        sensor_ids: sensor_ids ? sensor_ids.map(id => parseInt(id)) : []
-                                    };
-                                }
-                            }).then((result) => {
-                                if (result.isConfirmed) {
-                                    $.ajax({
-                                        url: relationsApiUrl,
-                                        method: 'POST',
-                                        contentType: 'application/json',
-                                        data: JSON.stringify(result.value),
-                                        success: function() {
-                                            Swal.fire('Éxito', 'Relación añadida.', 'success');
-                                            table.ajax.reload();
-                                        },
-                                        error: function(xhr) {
-                                            let errorMsg = xhr.responseJSON ? JSON.stringify(xhr.responseJSON) : xhr.responseText;
-                                            Swal.fire('Error', errorMsg, 'error');
+                                        return false; // Evita que se cierre la alerta
+                                    },
+                                    didOpen: () => {
+                                        $('#productListId').select2({
+                                            dropdownParent: Swal.getPopup(),
+                                            width: 'resolve',
+                                            templateResult: formatProductOption,
+                                            templateSelection: formatProductSelection
+                                        });
+                                        if(rfidSelectHtml !== '') {
+                                            $('#rfidReadingId').select2({
+                                                dropdownParent: Swal.getPopup(),
+                                                width: 'resolve',
+                                                placeholder: '-- Seleccione --',
+                                                closeOnSelect: false,
+                                                hideSelected: true,
+                                                templateResult: formatOption,
+                                                templateSelection: formatSelection
+                                            });
+                                            $('#rfidReadingId').on('select2:closing', function(e) {
+                                                if (e.originalEvent && $(e.originalEvent.target).closest('.select2-results__option').length) {
+                                                    e.preventDefault();
+                                                }
+                                            });
                                         }
-                                    });
-                                }
-                            });
+                                        if(modbusSelectHtml !== '') {
+                                            $('#modbusId').select2({
+                                                dropdownParent: Swal.getPopup(),
+                                                width: 'resolve',
+                                                placeholder: '-- Seleccione --',
+                                                closeOnSelect: false,
+                                                hideSelected: true,
+                                                templateResult: formatOption,
+                                                templateSelection: formatSelection
+                                            });
+                                            $('#modbusId').on('select2:closing', function(e) {
+                                                if (e.originalEvent && $(e.originalEvent.target).closest('.select2-results__option').length) {
+                                                    e.preventDefault();
+                                                }
+                                            });
+                                        }
+                                        if(sensorSelectHtml !== '') {
+                                            $('#sensorId').select2({
+                                                dropdownParent: Swal.getPopup(),
+                                                width: 'resolve',
+                                                placeholder: '-- Seleccione --',
+                                                closeOnSelect: false,
+                                                hideSelected: true,
+                                                templateResult: formatOption,
+                                                templateSelection: formatSelection
+                                            });
+                                            $('#sensorId').on('select2:closing', function(e) {
+                                                if (e.originalEvent && $(e.originalEvent.target).closest('.select2-results__option').length) {
+                                                    e.preventDefault();
+                                                }
+                                            });
+                                        }
+                                        $('#productListId').val('').trigger('change');
+                                    },
+                                    preConfirm: () => {
+                                        const product_list_id = $('#productListId').val();
+                                        const rfid_reading_ids = rfidSelectHtml !== '' ? $('#rfidReadingId').val() : [];
+                                        const modbus_ids = modbusSelectHtml !== '' ? $('#modbusId').val() : [];
+                                        const sensor_ids = sensorSelectHtml !== '' ? $('#sensorId').val() : [];
+                                        if (!product_list_id) {
+                                            Swal.showValidationMessage('Producto es obligatorio.');
+                                            return false;
+                                        }
+                                        if (
+                                            (!rfid_reading_ids || rfid_reading_ids.length === 0) &&
+                                            (!bascula_ids || bascula_ids.length === 0) &&
+                                            (!sensor_ids || sensor_ids.length === 0)
+                                        ) {
+                                            Swal.showValidationMessage('Debe seleccionar al menos una báscula, o un sensor, o un RFID.');
+                                            return false;
+                                        }
+
+                                        return {
+                                            client_id: parseInt(product_list_id),
+                                            rfid_reading_ids: rfid_reading_ids.map(id => parseInt(id)),
+                                            modbus_ids: modbus_ids ? modbus_ids.map(id => parseInt(id)) : [],
+                                            sensor_ids: sensor_ids ? sensor_ids.map(id => parseInt(id)) : []
+                                        };
+                                    }
+                                }).then((result) => {
+                                    if (result.isConfirmed) {
+                                        $.ajax({
+                                            url: relationsApiUrl,
+                                            method: 'POST',
+                                            contentType: 'application/json',
+                                            data: JSON.stringify(result.value),
+                                            success: function() {
+                                                Swal.fire('Éxito', 'Relación añadida.', 'success');
+                                                table.ajax.reload();
+                                            },
+                                            error: function(xhr) {
+                                                let errorMsg = xhr.responseJSON ? JSON.stringify(xhr.responseJSON) : xhr.responseText;
+                                                Swal.fire('Error', errorMsg, 'error');
+                                            }
+                                        });
+                                    }
+                                });
+
                         }
                     }
                 ],
