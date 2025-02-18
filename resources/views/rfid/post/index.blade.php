@@ -90,7 +90,7 @@
             right: 8px;
             top: 50%;
             transform: translateY(-50%);
-            color: #582727;
+            color: #a56f6f;
             pointer-events: none;
             font-size: 1.2em;
         }
@@ -119,7 +119,7 @@
         }
         /* Opcional: resaltar las opciones seleccionadas en el dropdown */
         .select2-container--default .select2-results__option--selected {
-            background-color: #dc3545 !important;
+            background-color: #91575d !important;
             color: #fff !important;
         }
         /* Estilos para los "tags" (opciones seleccionadas) con color info */
@@ -439,10 +439,15 @@
                                         Swal.showValidationMessage('Producto es obligatorio.');
                                         return false;
                                     }
-                                    if (rfidSelectHtml !== '' && (!rfid_reading_ids || rfid_reading_ids.length === 0)) {
-                                        Swal.showValidationMessage('Debe seleccionar al menos un RFID.');
+                                    if (
+                                        (!rfid_reading_ids || rfid_reading_ids.length === 0) &&
+                                        (!bascula_ids || bascula_ids.length === 0) &&
+                                        (!sensor_ids || sensor_ids.length === 0)
+                                    ) {
+                                        Swal.showValidationMessage('Debe seleccionar al menos una báscula, o un sensor, o un RFID.');
                                         return false;
                                     }
+
                                     return {
                                         client_id: parseInt(product_list_id),
                                         rfid_reading_ids: rfid_reading_ids.map(id => parseInt(id)),
