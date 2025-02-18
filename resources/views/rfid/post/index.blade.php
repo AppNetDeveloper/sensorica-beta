@@ -48,7 +48,7 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.4.1/css/responsive.dataTables.min.css">
     <!-- CSS Select2 -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-    <!-- FontAwesome (para ícono QR) -->
+    <!-- FontAwesome (para ícono QR y otros) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
 
     <style>
@@ -59,7 +59,7 @@
         }
         /* Estilo personalizado para los selects */
         .custom-select-style {
-            width: 550px;
+            width: 88%;
             background: transparent;
             color: black;
             text-shadow: 1px 1px 7px white;
@@ -77,13 +77,13 @@
                 width: 100% !important;
             }
         }
-        /* Ícono QR en el campo de búsqueda de Select2 usando FontAwesome */
+        /* Ícono QR en el campo de búsqueda de Select2 */
         .select2-container--default .select2-search--dropdown .select2-search__field {
             position: relative;
-            padding-right: 2em; /* Espacio para el ícono */
+            padding-right: 2em;
         }
         .select2-container--default .select2-search--dropdown .select2-search__field::after {
-            content: "\f029"; /* fa-qrcode */
+            content: "\f029";
             font-family: "Font Awesome 5 Free";
             font-weight: 900;
             position: absolute;
@@ -98,7 +98,7 @@
             text-align: center !important;
             width: 100%;
         }
-        /* Estilos para mostrar cada RFID como tarjeta en grid */
+        /* Plantilla para cada opción (tarjeta) */
         .rfid-option-card {
             display: grid;
             grid-template-columns: auto 1fr;
@@ -111,6 +111,7 @@
         }
         .rfid-option-card .rfid-icon {
             font-size: 1.5em;
+            /* Color base; se sobreescribe en línea según data-color */
             color: #007bff;
         }
         .rfid-option-card .rfid-text {
@@ -121,17 +122,22 @@
             background-color: #dc3545 !important;
             color: #fff !important;
         }
-        /* Estilos para los "tags" (opciones seleccionadas en el input) con color info */
+        /* Estilos para los "tags" (opciones seleccionadas) con color info */
         .select2-container--default .select2-selection--multiple .select2-selection__choice {
             background-color: #17a2b8 !important;
             border: 1px solid #17a2b8 !important;
             color: #fff !important;
         }
-        /* Mostrar opciones en dos columnas en el dropdown */
+        /* Dropdown en dos columnas con scroll vertical */
         .select2-container--default .select2-results__options {
-            -webkit-column-count: 2;
-            -moz-column-count: 2;
-            column-count: 2;
+            display: flex;
+            flex-wrap: wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .select2-container--default .select2-results__option {
+            width: 50%;
+            box-sizing: border-box;
         }
     </style>
 @endpush
@@ -167,20 +173,53 @@
         let sensorOptions = '';
         let table;
 
-        // Funciones para formatear las opciones del RFID como tarjeta (grid)
-        function formatRFIDOption(option) {
-            if (!option.id) {
-                return option.text;
+        // Funciones para formatear las opciones para multiselect (RFID, Básculas y Sensores)
+        function formatOption(option) {
+            if (!option.id) return option.text;
+            let color = option.element ? option.element.getAttribute('data-color') : '';
+            let colorMap = {
+                red: "#dc3545",
+                blue: "#007bff",
+                yellow: "#ffc107",
+                green: "#28a745"
+            };
+            if (colorMap.hasOwnProperty(color)) {
+                var iconColor = colorMap[color];
+                return $(`
+                    <div class="rfid-option-card">
+                        <div class="rfid-icon" style="color: ${iconColor};">
+                            <i class="fa fa-id-card"></i>
+                        </div>
+                        <div class="rfid-text">${option.text}</div>
+                    </div>
+                `);
+            } else {
+                return $(`
+                    <div class="rfid-option-card">
+                        <div class="rfid-icon" style="color: #007bff;">
+                            <i class="fa fa-id-card"></i>
+                        </div>
+                        <div class="rfid-text">${option.text} - ${color}</div>
+                    </div>
+                `);
             }
-            var $option = $(`
+        }
+        function formatSelection(option) {
+            return option.text;
+        }
+        // Para Producto (single select) con icono distinto (fa-box)
+        function formatProductOption(option) {
+            if (!option.id) return option.text;
+            return $(`
                 <div class="rfid-option-card">
-                    <div class="rfid-icon"><i class="fa fa-id-card"></i></div>
+                    <div class="rfid-icon" style="color: #17a2b8;">
+                        <i class="fa fa-box"></i>
+                    </div>
                     <div class="rfid-text">${option.text}</div>
                 </div>
             `);
-            return $option;
         }
-        function formatRFIDSelection(option) {
+        function formatProductSelection(option) {
             return option.text;
         }
 
@@ -196,7 +235,9 @@
             $.get(rfidsApiUrl)
                 .done((data) => {
                     rfidOptions = data.map(rfid =>
-                        `<option value="${rfid.id}">${rfid.name}${rfid.rfid_color && rfid.rfid_color.name ? ' - ' + rfid.rfid_color.name : ''}</option>`
+                        `<option value="${rfid.id}" data-color="${rfid.rfid_color && rfid.rfid_color.name ? rfid.rfid_color.name.toLowerCase() : ''}">
+                            ${rfid.name}
+                        </option>`
                     ).join('');
                 })
                 .fail(() => { Swal.fire('Error', 'No se pudieron cargar RFIDs.', 'error'); });
@@ -207,7 +248,7 @@
                         `<option value="${mb.id}">${mb.name}</option>`
                     ).join('');
                 })
-                .fail(() => { Swal.fire('Error', 'No se pudieron cargar Modbuses.', 'error'); });
+                .fail(() => { Swal.fire('Error', 'No se pudieron cargar básculas.', 'error'); });
 
             $.get(sensorsApiUrl)
                 .done((data) => {
@@ -215,7 +256,7 @@
                         `<option value="${sn.id}">${sn.name}</option>`
                     ).join('');
                 })
-                .fail(() => { Swal.fire('Error', 'No se pudieron cargar Sensores.', 'error'); });
+                .fail(() => { Swal.fire('Error', 'No se pudieron cargar sensores.', 'error'); });
         }
 
         $(document).ready(function() {
@@ -242,14 +283,27 @@
                         render: function(data) {
                             if (data && data.name && data.rfid_color && data.rfid_color.name) {
                                 var colorMap = {
+                                    red: "#dc3545",
                                     blue: "#007bff",
                                     yellow: "#ffc107",
-                                    red: "#dc3545",
+                                    green: "#28a745"
                                 };
                                 var colorName = data.rfid_color.name.toLowerCase();
-                                var colorHex = colorMap[colorName] || '#ccc';
-                                return data.name + ' - ' +
-                                    '<span style="display:inline-block;width:12px;height:12px;background-color:' + colorHex + ';margin-left:5px;border:1px solid #000;"></span>';
+                                if (colorMap.hasOwnProperty(colorName)) {
+                                    return `<div class="rfid-option-card">
+                                                <div class="rfid-icon" style="color: ${colorMap[colorName]};">
+                                                    <i class="fa fa-id-card"></i>
+                                                </div>
+                                                <div class="rfid-text">${data.name}</div>
+                                            </div>`;
+                                } else {
+                                    return `<div class="rfid-option-card">
+                                                <div class="rfid-icon" style="color: #007bff;">
+                                                    <i class="fa fa-id-card"></i>
+                                                </div>
+                                                <div class="rfid-text">${data.name} - ${data.rfid_color.name}</div>
+                                            </div>`;
+                                }
                             }
                             return 'Sin asignar';
                         },
@@ -285,139 +339,92 @@
                         text: 'Añadir Relación',
                         className: 'btn btn-primary',
                         action: function(e, dt, node, config) {
+                            // Construimos el HTML del modal de forma dinámica
+                            var productSelectHtml = `<select id="productListId" class="swal2-input custom-select-style">
+                                                        <option value="" disabled selected>-- Seleccione Producto --</option>
+                                                        ${productListOptions}
+                                                     </select>`;
+                            var rfidSelectHtml = rfidOptions.trim() !== '' ?
+                                `<select id="rfidReadingId" class="swal2-input custom-select-style" multiple>${rfidOptions}</select>` : '';
+                            var modbusSelectHtml = modbusOptions.trim() !== '' ?
+                                `<select id="modbusId" class="swal2-input custom-select-style" multiple>${modbusOptions}</select>` : '';
+                            var sensorSelectHtml = sensorOptions.trim() !== '' ?
+                                `<select id="sensorId" class="swal2-input custom-select-style" multiple>${sensorOptions}</select>` : '';
+
                             Swal.fire({
                                 title: 'Añadir Relación',
                                 width: '800px',
                                 padding: '2em',
                                 html: `
-                                    <select id="productListId" class="swal2-input custom-select-style">
-                                        <option value="" disabled selected>-- Seleccione Producto --</option>
-                                        ${productListOptions}
-                                    </select>
+                                    ${productSelectHtml}
                                     <div style="position: relative;">
-                                        <!-- Select RFID en modo multiselección con grid -->
-                                        <select id="rfidReadingId" class="swal2-input custom-select-style" multiple>
-                                            ${rfidOptions}
-                                        </select>
-                                        <!-- Botón QR sobrepuesto -->
+                                        ${rfidSelectHtml}
                                         <button id="scanQrBtn" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); border: none; background: none; cursor: pointer;">
                                             <i class="fa fa-qrcode" style="font-size: 1.5em; color: #333;"></i>
                                         </button>
                                     </div>
-                                    <div id="checkboxes" style="display:none; margin: 10px 0;">
-                                        <div>
-                                            <label>
-                                                <input type="checkbox" id="modifyAll" style="margin-right: 10px;">
-                                                Modificar para todas las tarjetas del mismo color.
-                                            </label>
-                                        </div>
-                                        <div>
-                                            <label>
-                                                <input type="checkbox" id="modifyLine" style="margin-right: 10px;" disabled>
-                                                Solo en esta Línea de production (RFID).
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <select id="modbusId" class="swal2-input custom-select-style">
-                                        <option value="" disabled selected>-- Seleccione Báscula --</option>
-                                        ${modbusOptions}
-                                    </select>
-                                    <div id="checkboxModbus" style="display:none; margin: 10px 0;">
-                                        <label>
-                                            <input type="checkbox" id="modifyAllModbusLine" style="margin-right: 10px;">
-                                            Todas las básculas de la misma línea.
-                                        </label>
-                                    </div>
-                                    <select id="sensorId" class="swal2-input custom-select-style">
-                                        <option value="" disabled selected>-- Seleccione Sensor --</option>
-                                        ${sensorOptions}
-                                    </select>
-                                    <div id="checkboxSensor" style="display:none; margin: 10px 0;">
-                                        <label>
-                                            <input type="checkbox" id="modifyAllSensorLine" style="margin-right: 10px;">
-                                            Todos los sensores de la misma línea.
-                                        </label>
-                                    </div>
-                                    <!-- Contenedor para el escáner QR (oculto inicialmente) -->
+                                    ${modbusSelectHtml}
+                                    ${sensorSelectHtml}
                                     <div id="qr-reader" style="width:300px; margin: 1em auto; display: none;"></div>
                                 `,
                                 showCancelButton: true,
                                 confirmButtonText: 'Añadir',
                                 didOpen: () => {
-                                    // Inicializar Select2 en los selects del modal
                                     $('#productListId').select2({
                                         dropdownParent: Swal.getPopup(),
-                                        width: 'resolve'
-                                    });
-                                    $('#rfidReadingId').select2({
-                                        dropdownParent: Swal.getPopup(),
                                         width: 'resolve',
-                                        placeholder: '-- Seleccione RFID --',
-                                        closeOnSelect: false,
-                                        hideSelected: true,
-                                        templateResult: formatRFIDOption,
-                                        templateSelection: formatRFIDSelection
+                                        templateResult: formatProductOption,
+                                        templateSelection: formatProductSelection
                                     });
-                                    $('#modbusId, #sensorId').select2({
-                                        dropdownParent: Swal.getPopup(),
-                                        width: 'resolve'
-                                    });
-
-                                    function disableOthers(selected, others) {
-                                        if (selected.val()) {
-                                            others.prop('disabled', true).val(null).trigger('change');
-                                        } else {
-                                            others.prop('disabled', false);
-                                        }
+                                    if(rfidSelectHtml !== '') {
+                                        $('#rfidReadingId').select2({
+                                            dropdownParent: Swal.getPopup(),
+                                            width: 'resolve',
+                                            placeholder: '-- Seleccione --',
+                                            closeOnSelect: false,
+                                            hideSelected: true,
+                                            templateResult: formatOption,
+                                            templateSelection: formatSelection
+                                        });
+                                        $('#rfidReadingId').on('select2:closing', function(e) {
+                                            if (e.originalEvent && $(e.originalEvent.target).closest('.select2-results__option').length) {
+                                                e.preventDefault();
+                                            }
+                                        });
                                     }
-
-                                    // Si se selecciona RFID, deshabilitar Báscula y Sensor
-                                    $('#rfidReadingId').on('change', function() {
-                                        if ($(this).val() && $(this).val().length > 0) {
-                                            $('#checkboxes').show();
-                                            disableOthers($(this), $('#modbusId, #sensorId'));
-                                        } else {
-                                            $('#checkboxes').hide();
-                                            $('#modifyAll, #modifyLine').prop('checked', false);
-                                            $('#modifyLine').prop('disabled', true);
-                                            $('#modbusId, #sensorId').prop('disabled', false);
-                                        }
-                                    });
-
-                                    // Si se selecciona una Báscula, deshabilitar RFID y Sensor
-                                    $('#modbusId').on('change', function() {
-                                        if ($(this).val()) {
-                                            $('#checkboxModbus').show();
-                                            disableOthers($(this), $('#rfidReadingId, #sensorId'));
-                                        } else {
-                                            $('#checkboxModbus').hide();
-                                            $('#modifyAllModbusLine').prop('checked', false);
-                                            $('#rfidReadingId, #sensorId').prop('disabled', false);
-                                        }
-                                    });
-
-                                    // Si se selecciona un Sensor, deshabilitar RFID y Báscula
-                                    $('#sensorId').on('change', function() {
-                                        if ($(this).val()) {
-                                            $('#checkboxSensor').show();
-                                            disableOthers($(this), $('#rfidReadingId, #modbusId'));
-                                        } else {
-                                            $('#checkboxSensor').hide();
-                                            $('#modifyAllSensorLine').prop('checked', false);
-                                            $('#rfidReadingId, #modbusId').prop('disabled', false);
-                                        }
-                                    });
-
-                                    // Control para RFID: si se marca "Modificar para todas", habilitar "Solo en esta Línea"
-                                    $('#modifyAll').on('change', function() {
-                                        if ($(this).is(':checked')) {
-                                            $('#modifyLine').prop('disabled', false);
-                                        } else {
-                                            $('#modifyLine').prop('checked', false).prop('disabled', true);
-                                        }
-                                    });
-
-                                    // Evento para el botón "Escanear QR"
+                                    if(modbusSelectHtml !== '') {
+                                        $('#modbusId').select2({
+                                            dropdownParent: Swal.getPopup(),
+                                            width: 'resolve',
+                                            placeholder: '-- Seleccione --',
+                                            closeOnSelect: false,
+                                            hideSelected: true,
+                                            templateResult: formatOption,
+                                            templateSelection: formatSelection
+                                        });
+                                        $('#modbusId').on('select2:closing', function(e) {
+                                            if (e.originalEvent && $(e.originalEvent.target).closest('.select2-results__option').length) {
+                                                e.preventDefault();
+                                            }
+                                        });
+                                    }
+                                    if(sensorSelectHtml !== '') {
+                                        $('#sensorId').select2({
+                                            dropdownParent: Swal.getPopup(),
+                                            width: 'resolve',
+                                            placeholder: '-- Seleccione --',
+                                            closeOnSelect: false,
+                                            hideSelected: true,
+                                            templateResult: formatOption,
+                                            templateSelection: formatSelection
+                                        });
+                                        $('#sensorId').on('select2:closing', function(e) {
+                                            if (e.originalEvent && $(e.originalEvent.target).closest('.select2-results__option').length) {
+                                                e.preventDefault();
+                                            }
+                                        });
+                                    }
+                                    $('#productListId').val('').trigger('change');
                                     $('#scanQrBtn').on('click', function(e) {
                                         e.preventDefault();
                                         startQrScanner();
@@ -425,32 +432,22 @@
                                 },
                                 preConfirm: () => {
                                     const product_list_id = $('#productListId').val();
-                                    const rfid_reading_ids = $('#rfidReadingId').val(); // Array de IDs
-                                    const modifyAll = $('#modifyAll').is(':checked');
-                                    const modifyLine = $('#modifyLine').is(':checked');
-                                    const modbus_id = $('#modbusId').val();
-                                    const sensor_id = $('#sensorId').val();
-                                    const modifyAllModbusLine = $('#modifyAllModbusLine').is(':checked');
-                                    const modifyAllSensorLine = $('#modifyAllSensorLine').is(':checked');
-
+                                    const rfid_reading_ids = rfidSelectHtml !== '' ? $('#rfidReadingId').val() : [];
+                                    const modbus_ids = modbusSelectHtml !== '' ? $('#modbusId').val() : [];
+                                    const sensor_ids = sensorSelectHtml !== '' ? $('#sensorId').val() : [];
                                     if (!product_list_id) {
                                         Swal.showValidationMessage('Producto es obligatorio.');
                                         return false;
                                     }
-                                    if (!rfid_reading_ids || rfid_reading_ids.length === 0) {
+                                    if (rfidSelectHtml !== '' && (!rfid_reading_ids || rfid_reading_ids.length === 0)) {
                                         Swal.showValidationMessage('Debe seleccionar al menos un RFID.');
                                         return false;
                                     }
-
                                     return {
                                         client_id: parseInt(product_list_id),
                                         rfid_reading_ids: rfid_reading_ids.map(id => parseInt(id)),
-                                        modify_all: modifyAll,
-                                        modify_line: modifyAll ? modifyLine : false,
-                                        modbus_id: modbus_id ? parseInt(modbus_id) : null,
-                                        sensor_id: sensor_id ? parseInt(sensor_id) : null,
-                                        modify_all_modbus_line: modbus_id ? modifyAllModbusLine : false,
-                                        modify_all_sensor_line: sensor_id ? modifyAllSensorLine : false
+                                        modbus_ids: modbus_ids ? modbus_ids.map(id => parseInt(id)) : [],
+                                        sensor_ids: sensor_ids ? sensor_ids.map(id => parseInt(id)) : []
                                     };
                                 }
                             }).then((result) => {
@@ -514,74 +511,124 @@
                 const currentModbusId = $(this).data('modbus_id');
                 const currentSensorId = $(this).data('sensor_id');
 
+                // Construir dinámicamente los selects, omitiendo aquellos sin opciones.
+                var productSelectHtml = `<select id="productListId" class="swal2-input custom-select-style">
+                                              <option value="" disabled selected>-- Seleccione Producto --</option>
+                                              ${productListOptions}
+                                          </select>`;
+                var rfidSelectHtml = rfidOptions.trim() !== '' ?
+                    `<select id="rfidReadingId" class="swal2-input custom-select-style" multiple>${rfidOptions}</select>` : '';
+                var modbusSelectHtml = modbusOptions.trim() !== '' ?
+                    `<select id="modbusId" class="swal2-input custom-select-style" multiple>${modbusOptions}</select>` : '';
+                var sensorSelectHtml = sensorOptions.trim() !== '' ?
+                    `<select id="sensorId" class="swal2-input custom-select-style" multiple>${sensorOptions}</select>` : '';
+
                 Swal.fire({
                     title: 'Editar Relación',
                     html: `
                         <input id="relationId" class="swal2-input custom-select-style" value="${currentId}" readonly>
                         <label for="productListId">Producto:</label>
-                        <select id="productListId" class="swal2-input custom-select-style">
-                            ${productListOptions}
-                        </select>
-                        <label for="rfidReadingId">RFID:</label>
-                        <!-- Select RFID como multiselección con grid -->
-                        <select id="rfidReadingId" class="swal2-input custom-select-style" multiple>
-                            ${rfidOptions}
-                        </select>
-                        <label for="modbusId">Modbus:</label>
-                        <select id="modbusId" class="swal2-input custom-select-style">
-                            <option value="" disabled>-- Seleccione --</option>
-                            ${modbusOptions}
-                        </select>
-                        <label for="sensorId">Sensor:</label>
-                        <select id="sensorId" class="swal2-input custom-select-style">
-                            <option value="" disabled>-- Seleccione --</option>
-                            ${sensorOptions}
-                        </select>
+                        ${productSelectHtml}
+                        ${rfidSelectHtml !== '' ? '<label for="rfidReadingId">RFID:</label>' + rfidSelectHtml : ''}
+                        ${modbusSelectHtml !== '' ? '<label for="modbusId">Báscula:</label>' + modbusSelectHtml : ''}
+                        ${sensorSelectHtml !== '' ? '<label for="sensorId">Sensor:</label>' + sensorSelectHtml : ''}
                     `,
                     showCancelButton: true,
                     confirmButtonText: 'Actualizar',
                     didOpen: () => {
-                        $('#productListId, #modbusId, #sensorId').select2({
-                            dropdownParent: Swal.getPopup(),
-                            width: 'resolve'
-                        });
-                        // Inicializar RFID con configuración completa
-                        $('#rfidReadingId').select2({
+                        $('#productListId').select2({
                             dropdownParent: Swal.getPopup(),
                             width: 'resolve',
-                            placeholder: '-- Seleccione RFID --',
-                            closeOnSelect: false,
-                            hideSelected: true,
-                            templateResult: formatRFIDOption,
-                            templateSelection: formatRFIDSelection
+                            templateResult: formatProductOption,
+                            templateSelection: formatProductSelection
                         });
-                        $('#productListId').val(currentProductListId).trigger('change');
-                        let rfidValue = currentRfidReadingId;
-                        if (!Array.isArray(rfidValue)) {
-                            rfidValue = rfidValue ? [rfidValue] : [];
+                        if(rfidSelectHtml !== '') {
+                            $('#rfidReadingId').select2({
+                                dropdownParent: Swal.getPopup(),
+                                width: 'resolve',
+                                placeholder: '-- Seleccione --',
+                                closeOnSelect: false,
+                                hideSelected: true,
+                                templateResult: formatOption,
+                                templateSelection: formatSelection
+                            });
+                            $('#rfidReadingId').on('select2:closing', function(e) {
+                                if (e.originalEvent && $(e.originalEvent.target).closest('.select2-results__option').length) {
+                                    e.preventDefault();
+                                }
+                            });
                         }
-                        $('#rfidReadingId').val(rfidValue).trigger('change');
-                        $('#modbusId').val(currentModbusId).trigger('change');
-                        $('#sensorId').val(currentSensorId).trigger('change');
+                        if(modbusSelectHtml !== '') {
+                            $('#modbusId').select2({
+                                dropdownParent: Swal.getPopup(),
+                                width: 'resolve',
+                                placeholder: '-- Seleccione --',
+                                closeOnSelect: false,
+                                hideSelected: true,
+                                templateResult: formatOption,
+                                templateSelection: formatSelection
+                            });
+                            $('#modbusId').on('select2:closing', function(e) {
+                                if (e.originalEvent && $(e.originalEvent.target).closest('.select2-results__option').length) {
+                                    e.preventDefault();
+                                }
+                            });
+                        }
+                        if(sensorSelectHtml !== '') {
+                            $('#sensorId').select2({
+                                dropdownParent: Swal.getPopup(),
+                                width: 'resolve',
+                                placeholder: '-- Seleccione --',
+                                closeOnSelect: false,
+                                hideSelected: true,
+                                templateResult: formatOption,
+                                templateSelection: formatSelection
+                            });
+                            $('#sensorId').on('select2:closing', function(e) {
+                                if (e.originalEvent && $(e.originalEvent.target).closest('.select2-results__option').length) {
+                                    e.preventDefault();
+                                }
+                            });
+                        }
+                        $('#productListId').val(currentProductListId).trigger('change');
+                        if(rfidSelectHtml !== '') {
+                            let rfidValue = currentRfidReadingId;
+                            if (!Array.isArray(rfidValue)) {
+                                rfidValue = rfidValue ? [rfidValue] : [];
+                            }
+                            $('#rfidReadingId').val(rfidValue).trigger('change');
+                        }
+                        if(modbusSelectHtml !== '') {
+                            let modbusValue = currentModbusId;
+                            if (!Array.isArray(modbusValue)) {
+                                modbusValue = modbusValue ? [modbusValue] : [];
+                            }
+                            $('#modbusId').val(modbusValue).trigger('change');
+                        }
+                        if(sensorSelectHtml !== '') {
+                            let sensorValue = currentSensorId;
+                            if (!Array.isArray(sensorValue)) {
+                                sensorValue = sensorValue ? [sensorValue] : [];
+                            }
+                            $('#sensorId').val(sensorValue).trigger('change');
+                        }
                     },
                     preConfirm: () => {
                         const id = $('#relationId').val();
                         const product_list_id = $('#productListId').val();
-                        const rfid_reading_ids = $('#rfidReadingId').val();
-                        const modbus_id = $('#modbusId').val();
-                        const sensor_id = $('#sensorId').val();
-
-                        if (!id || !product_list_id || !rfid_reading_ids || rfid_reading_ids.length === 0) {
-                            Swal.showValidationMessage('Producto, RFID e ID son obligatorios.');
+                        const rfid_reading_ids = rfidSelectHtml !== '' ? $('#rfidReadingId').val() : [];
+                        const modbus_ids = modbusSelectHtml !== '' ? $('#modbusId').val() : [];
+                        const sensor_ids = sensorSelectHtml !== '' ? $('#sensorId').val() : [];
+                        if (!id || !product_list_id || (rfidSelectHtml !== '' && (!rfid_reading_ids || rfid_reading_ids.length === 0))) {
+                            Swal.showValidationMessage('Producto y al menos un RFID son obligatorios.');
                             return false;
                         }
-
                         return {
                             id: parseInt(id),
                             product_list_id: parseInt(product_list_id),
                             rfid_reading_ids: rfid_reading_ids.map(id => parseInt(id)),
-                            modbus_id: modbus_id ? parseInt(modbus_id) : null,
-                            sensor_id: sensor_id ? parseInt(sensor_id) : null,
+                            modbus_ids: modbus_ids ? modbus_ids.map(id => parseInt(id)) : [],
+                            sensor_ids: sensor_ids ? sensor_ids.map(id => parseInt(id)) : []
                         };
                     }
                 }).then((result) => {
@@ -612,7 +659,7 @@
 
         // Función para iniciar el escáner QR con html5-qrcode
         function startQrScanner() {
-            if(window.html5QrCodeInstance) return;
+            if (window.html5QrCodeInstance) return;
             window.html5QrCodeInstance = new Html5Qrcode("qr-reader");
             $('#qr-reader').show();
             const config = { fps: 10, qrbox: 250 };
