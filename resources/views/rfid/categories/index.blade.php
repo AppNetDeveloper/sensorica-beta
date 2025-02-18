@@ -48,6 +48,7 @@
                                         <th>{{ __('ID') }}</th>
                                         <th>{{ __('Nombre') }}</th>
                                         <th>{{ __('EPC') }}</th>
+                                        <th>{{ __('COLOR') }}</th>
                                         <th>{{ __('Acciones') }}</th>
                                     </tr>
                                 </thead>
@@ -57,6 +58,9 @@
                                             <td>{{ $category->id }}</td>
                                             <td>{{ $category->name }}</td>
                                             <td>{{ $category->epc }}</td>
+                                            <td>
+                                                {{ $category->rfidColor ? $category->rfidColor->name : __('Sin color asignado') }}
+                                            </td>
                                             <td>
                                                 <a href="{{ route('rfid.categories.edit', $category->id) }}" 
                                                    class="btn btn-sm btn-primary">
@@ -144,8 +148,8 @@
                         extend: 'excelHtml5',
                         text: 'Exportar a Excel',
                         exportOptions: {
-                            // Se exportan únicamente las columnas 0, 1 y 2 (omitiendo la columna de Acciones)
-                            columns: [0, 1, 2]
+                            // Se exportan las columnas: ID, Nombre, EPC y COLOR (índices 0, 1, 2 y 3)
+                            columns: [0, 1, 2, 3]
                         }
                     }
                 ],

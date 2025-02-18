@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
 {{-- Título de la página --}}
-@section('title', 'Gestión de Relaciones Operador - Puesto')
+@section('title', 'Gestión de Relaciones Trabajador - Puesto')
 
 {{-- Migas de pan (opcional) --}}
 @section('breadcrumb')
@@ -21,7 +21,6 @@
                 <table id="workerPostTable" class="table table-bordered table-striped" style="width:100%;">
                     <thead>
                         <tr>
-                            <th>ID</th>
                             <th>Trabajador</th>
                             <th>RFID</th>
                             <th>Sensor</th>
@@ -241,14 +240,9 @@
                                 }
                             });
                         }
-                    },
-                    {
-                        extend: 'excel',
-                        text: 'Exportar a Excel',
-                        className: 'btn btn-success'
                     }
                 ],
-                order: [[0, 'desc']],
+                order: [[5, 'desc']],
                 ajax: {
                     url: apiIndexUrl,
                     dataSrc: 'data',
@@ -257,13 +251,21 @@
                     }
                 },
                 columns: [
-                    { data: 'id' },
                     { data: 'operator.name', defaultContent: 'Sin asignar' },
                     { data: 'rfid_reading.name', defaultContent: 'Sin asignar' },
                     { data: 'sensor.name', defaultContent: 'Sin asignar' },
                     { data: 'modbus.name', defaultContent: 'Sin asignar' },
                     { data: 'count', defaultContent: '0' },
-                    { data: 'created_at' },
+                    {    
+                        data: 'created_at',
+                        render: function (data, type, row) {
+                            if (data) {
+                                // Formatea la fecha al formato DD/MM/YYYY HH:mm:ss
+                                return moment(data).format('DD/MM/YYYY HH:mm:ss');
+                            }
+                            return '';
+                        }
+                    },
                     { data: 'finish_at', defaultContent: 'En curso' },
                     {
                         data: null,
