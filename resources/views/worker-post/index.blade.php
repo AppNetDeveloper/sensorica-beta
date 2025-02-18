@@ -429,18 +429,18 @@
                                         templateSelection: formatSelection
                                     });
 
-                                    // Si alguno no tiene más opciones (aparte del placeholder) se oculta
-                                    if ($('#rfidId option').length <= 1) {
-                                        $('#rfidId').hide();
+                                    // Ocultar el select si no tiene opciones válidas (excluyendo el placeholder)
+                                    if ($('#rfidId option[value!=""]').length === 0) {
+                                        $('#rfidId').closest('.select2-container').hide();
                                     }
-                                    if ($('#sensorId option').length <= 1) {
-                                        $('#sensorId').hide();
+                                    if ($('#sensorId option[value!=""]').length === 0) {
+                                        $('#sensorId').closest('.select2-container').hide();
                                     }
-                                    if ($('#modbusId option').length <= 1) {
-                                        $('#modbusId').hide();
+                                    if ($('#modbusId option[value!=""]').length === 0) {
+                                        $('#modbusId').closest('.select2-container').hide();
                                     }
 
-                                    // Eventos: Al seleccionar un valor en uno, deshabilitar los otros dos
+                                    // Eventos: al seleccionar un valor en uno, deshabilitar los otros dos
                                     $('#rfidId').on('change', function() {
                                         if ($(this).val()) {
                                             $('#sensorId').prop('disabled', true);
@@ -469,6 +469,7 @@
                                         }
                                     });
                                 },
+
 
                                 preConfirm: () => {
                                     const data = {
