@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
 {{-- Título de la página --}}
-@section('title', 'Gestión de Relaciones Confección')
+@section('title', 'Listado de asignacion')
 
 {{-- Migas de pan (opcional) --}}
 @section('breadcrumb')
@@ -25,7 +25,7 @@
                 <thead>
                     <tr>
                         <th>Confección</th>
-                        <th>RFID</th>
+                        <th>Puesto</th>
                         <th>Fecha Inicio</th>
                         <th>Fecha Fin</th>
                         <th>Báscula</th>
@@ -98,6 +98,37 @@
             text-align: center !important;
             width: 100%;
         }
+        /* Para select2 de selección única */
+.select2-container--default .select2-selection--single {
+    height: 50px; /* Ajusta la altura según lo que necesites */
+    padding: 6px 12px;
+    line-height: 50px; /* Centra verticalmente el texto */
+}
+
+/* Para select2 de selección múltiple */
+.select2-container--default .select2-selection--multiple {
+    min-height: 50px; /* Ajusta la altura mínima */
+    padding: 6px; /* Opcional: modifica el padding si lo requieres */
+}
+
+/* Aumenta el tamaño del contenedor de la flecha en un select2 de selección única */
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    width: 20px;  /* Ajusta el ancho según necesites */
+}
+
+/* Ajusta el tamaño de la flecha en sí (la flecha se dibuja con bordes) */
+.select2-container--default .select2-selection--single .select2-selection__arrow b {
+    border-width: 14px 11px 0 11px; /* Modifica estos valores para agrandar la flecha */
+}
+
+/* Mover la flecha hacia la izquierda y ajustar su tamaño */
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    width: 50px;              /* Ancho deseado */
+    margin-left: -50px;       /* Mueve la flecha 10px hacia la izquierda; ajusta este valor según convenga */
+}
+
+
+
         /* Plantilla para cada opción (tarjeta) */
         .rfid-option-card {
             display: grid;
@@ -132,13 +163,61 @@
         .select2-container--default .select2-results__options {
             display: flex;
             flex-wrap: wrap;
-            max-height: 300px;
+            max-height: 500px;
             overflow-y: auto;
         }
         .select2-container--default .select2-results__option {
             width: 50%;
             box-sizing: border-box;
         }
+        .btn-custom-success {
+            background-color: green !important;
+            border-color: green !important;
+            color: #fff !important;
+        }
+
+        .btn-custom-danger {
+            background-color: #dc3545 !important;
+            border-color: #dc3545 !important;
+            color: #fff !important;
+        }
+        .rfid-option-card {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            align-items: center;
+            gap: 10px;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin: 2px 0;
+        }
+        .my-swal-popup {
+            height: 500px !important; /* Ajusta el valor según lo que necesites */
+        }
+        /* Estilos para el texto en el desplegable de Select2 */
+.select2-container--default .select2-results__option {
+    font-size: 17px;  /* Ajusta el tamaño según necesites */
+    font-weight: bold; /* Para que se muestre en negrita */
+}
+.select2-container--default .select2-results__options {
+    display: flex;
+    flex-wrap: wrap;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.select2-container--default .select2-results__option {
+    width: 33.33%;
+    box-sizing: border-box;
+}
+.select2-container--default .select2-results__options {
+    min-height: 300px; /* Ajusta este valor según lo que necesites */
+    max-height: 900px !important; /* Ajusta este valor según lo que necesites */
+    overflow-y: auto;
+}
+
+
+
     </style>
 @endpush
 
@@ -291,17 +370,17 @@
                                 var colorName = data.rfid_color.name.toLowerCase();
                                 if (colorMap.hasOwnProperty(colorName)) {
                                     return `<div class="rfid-option-card">
+                                                <div class="rfid-text">${data.name}</div>
                                                 <div class="rfid-icon" style="color: ${colorMap[colorName]};">
                                                     <i class="fa fa-id-card"></i>
                                                 </div>
-                                                <div class="rfid-text">${data.name}</div>
                                             </div>`;
                                 } else {
                                     return `<div class="rfid-option-card">
+                                                <div class="rfid-text">${data.name} - ${data.rfid_color.name}</div>
                                                 <div class="rfid-icon" style="color: #007bff;">
                                                     <i class="fa fa-id-card"></i>
                                                 </div>
-                                                <div class="rfid-text">${data.name} - ${data.rfid_color.name}</div>
                                             </div>`;
                                 }
                             }
@@ -336,7 +415,7 @@
                 dom: 'Bfrtip',
                 buttons: [
                     {
-                        text: 'Añadir Relación',
+                        text: 'Asignar Confección',
                         className: 'btn btn-primary',
                         action: function(e, dt, node, config) {
                             // Construimos el HTML del modal de forma dinámica
@@ -352,7 +431,7 @@
                                 `<select id="sensorId" class="swal2-input custom-select-style" multiple>${sensorOptions}</select>` : '';
 
                             Swal.fire({
-                                title: 'Añadir Relación',
+                                title: 'Asignar Confección',
                                 width: '800px',
                                 padding: '2em',
                                 html: `
@@ -369,6 +448,12 @@
                                 `,
                                 showCancelButton: true,
                                 confirmButtonText: 'Añadir',
+                                cancelButtonText: 'Cancelar',
+                                customClass: {
+                                    confirmButton: 'btn btn-custom-success',
+                                    cancelButton: 'btn btn-custom-danger',
+                                    popup: 'my-swal-popup',
+                                },
                                 didOpen: () => {
                                     $('#productListId').select2({
                                         dropdownParent: Swal.getPopup(),
@@ -476,7 +561,7 @@
                         }
                     }
                 ],
-                order: [[2, 'desc']],
+                order: [[3, 'desc'],[1, 'desc']],
                 responsive: true
             });
 

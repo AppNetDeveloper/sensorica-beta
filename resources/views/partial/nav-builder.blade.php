@@ -13,7 +13,6 @@ $logo = asset(Storage::url('uploads/logo/'));
 $settings = Utility::settings();
 @endphp
 
-
 <nav class="dash-sidebar light-sidebar transprent-bg">
     <div class="navbar-wrapper">
         <div class="m-header">
@@ -45,6 +44,43 @@ $settings = Utility::settings();
                         <span class="dash-mtext custom-weight">{{ __('Dashboard') }}</span>
                     </a>
                 </li>
+
+                @role('admin')
+                    <li class="dash-item dash-hasmenu {{ request()->is('settings*') ? 'active' : '' }}">
+                        <a class="dash-link" href="{{ route('settings.index') }}">
+                            <span class="dash-micon"><i class="ti ti-settings"></i></span>
+                            <span class="dash-mtext custom-weight">{{ __('Settings') }}</span>
+                        </a>
+                    </li>
+                @endrole
+                
+                @can('manage-langauge')
+                    <li class="dash-item dash-hasmenu {{ request()->is('index') ? 'active' : '' }}">
+                        <a class="dash-link" href="{{ route('index') }}">
+                            <span class="dash-micon"><i class="ti ti-world"></i></span>
+                            <span class="dash-mtext custom-weight">{{ __('Language') }}</span>
+                        </a>
+                    </li>
+                @endcan
+                
+
+                @if (auth()->user()->hasRole('admin') || auth()->user()->can('server-show'))
+                    <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
+                        <a class="dash-link" href="{{ route('server.index') }}">
+                            <span class="dash-micon"><i class="fa-solid fa-server"></i></span>
+                            <span class="dash-mtext custom-weight">{{ __('Server') }}</span>
+                        </a>
+                    </li>
+                @endif
+
+                @if (auth()->user()->hasRole('admin') || auth()->user()->can('db-upload-show'))
+                    <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
+                        <a class="dash-link" href="{{ route('server.uploadstats') }}">
+                            <span class="dash-micon"><i class="fa-regular fa-circle-up"></i></span>
+                            <span class="dash-mtext custom-weight">{{ __('Settings Stats Upload') }}</span>
+                        </a>
+                    </li>
+                @endif
                 
                 <!-- Gestión de usuarios, roles y permisos según permisos del usuario -->
                 @can('manage-user')
@@ -73,31 +109,12 @@ $settings = Utility::settings();
                         </a>
                     </li>
                 @endcan
-                
-                
-                @role('admin')
-                    <li class="dash-item dash-hasmenu {{ request()->is('settings*') ? 'active' : '' }}">
-                        <a class="dash-link" href="{{ route('settings.index') }}">
-                            <span class="dash-micon"><i class="ti ti-settings"></i></span>
-                            <span class="dash-mtext custom-weight">{{ __('Settings') }}</span>
-                        </a>
-                    </li>
-                @endrole
-                
-                @can('manage-langauge')
-                    <li class="dash-item dash-hasmenu {{ request()->is('index') ? 'active' : '' }}">
-                        <a class="dash-link" href="{{ route('index') }}">
-                            <span class="dash-micon"><i class="ti ti-world"></i></span>
-                            <span class="dash-mtext custom-weight">{{ __('Language') }}</span>
-                        </a>
-                    </li>
-                @endcan
 
 
                 @if (auth()->user()->hasRole('admin') || auth()->user()->can('customer-show'))
                     <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
                         <a class="dash-link" href="{{ route('customers.index') }}">
-                            <span class="dash-micon"><i class="ti building"></i>></span>
+                            <span class="dash-micon"><i class="fa-regular fa-building"></i></span>
                             <span class="dash-mtext custom-weight">{{ __('Customers') }}</span>
                         </a>
                     </li>
@@ -106,7 +123,7 @@ $settings = Utility::settings();
                 @if (auth()->user()->hasRole('admin') || auth()->user()->can('workers-show'))
                     <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
                         <a class="dash-link" href="{{ route('workers-admin.index') }}">
-                            <span class="dash-micon"><i class="ti user-nurse"></i></span>
+                            <span class="dash-micon"><i class="fa-regular fa-user"></i></span>
                             <span class="dash-mtext custom-weight">{{ __('Workers') }}</span>
                         </a>
                     </li>
@@ -115,26 +132,8 @@ $settings = Utility::settings();
                 @if (auth()->user()->hasRole('admin') || auth()->user()->can('product-show'))
                     <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
                         <a class="dash-link" href="{{ route('confections.index') }}">
-                            <span class="dash-micon"><i class="ti laptop-file"></i></span>
+                            <span class="dash-micon"><i class="fa-regular fa-lemon"></i></span>
                             <span class="dash-mtext custom-weight">{{ __('Confections') }}</span>
-                        </a>
-                    </li>
-                @endif
-
-                @if (auth()->user()->hasRole('admin') || auth()->user()->can('server-show'))
-                    <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
-                        <a class="dash-link" href="{{ route('server.index') }}">
-                            <span class="dash-micon"><i class="fa-solid fa-gears"></i></span>
-                            <span class="dash-mtext custom-weight">{{ __('Server') }}</span>
-                        </a>
-                    </li>
-                @endif
-
-                @if (auth()->user()->hasRole('admin') || auth()->user()->can('db-upload-show'))
-                    <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
-                        <a class="dash-link" href="{{ route('server.uploadstats') }}">
-                            <span class="dash-micon"><i class="fa-regular fa-database"></i></span>
-                            <span class="dash-mtext custom-weight">{{ __('Settings Stats Upload') }}</span>
                         </a>
                     </li>
                 @endif
@@ -142,7 +141,7 @@ $settings = Utility::settings();
                 @if (auth()->user()->hasRole('admin') || auth()->user()->can('shift-show'))
                     <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
                         <a class="dash-link" href="{{ route('shift.index') }}">
-                            <span class="dash-micon"><i class="fa-regular fa-person-digging"></i></span>
+                            <span class="dash-micon"><i class="fa-regular fa-clock"></i></span>
                             <span class="dash-mtext custom-weight">{{ __('Shift') }}</span>
                         </a>
                     </li>
@@ -151,7 +150,7 @@ $settings = Utility::settings();
                 @if (auth()->user()->hasRole('admin') || auth()->user()->can('worker-post-show'))
                     <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
                         <a class="dash-link" href="{{ route('worker-post.index') }}">
-                            <span class="dash-micon"><i class="fa-solid fa-arrows-to-circle"></i></span>
+                            <span class="dash-micon"><i class="fa-regular fa-address-book"></i></span>
                             <span class="dash-mtext custom-weight">{{ __('Worker Post') }}</span>
                         </a>
                     </li>
@@ -160,8 +159,8 @@ $settings = Utility::settings();
                 @if (auth()->user()->hasRole('admin') || auth()->user()->can('rfid-post-show'))
                     <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
                         <a class="dash-link" href="{{ route('rfid.post.index') }}">
-                            <span class="dash-micon"><i class="fa-solid fa-briefcase"></i></span>
-                            <span class="dash-mtext custom-weight">{{ __('Rfid Post') }}</span>
+                            <span class="dash-micon"><i class="fa-regular fa-id-card"></i></span>
+                            <span class="dash-mtext custom-weight">{{ __('Asignar Confeccion') }}</span>
                         </a>
                     </li>
                 @endif
