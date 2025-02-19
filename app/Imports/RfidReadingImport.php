@@ -3,6 +3,7 @@
 namespace App\Imports;
 
 use App\Models\RfidReading;
+use App\Models\RfidColor;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\ToCollection;
 
@@ -32,35 +33,46 @@ class RfidReadingImport implements ToCollection
      *  - Columna 0: ID (puede ignorarse)
      *  - Columna 1: Nombre
      *  - Columna 2: EPC
+     *  - Columna 3: COLOR
      *
      * @param \Illuminate\Support\Collection $rows
      */
     public function collection(Collection $rows)
     {
-        // Removemos la fila de encabezado
         // Eliminamos las dos primeras filas: título y encabezado.
         $rows->shift(); // Quita la primera fila (título)
         $rows->shift(); // Quita la segunda fila (encabezados)
 
         foreach ($rows as $row) {
-            // Asegurarse de tener los datos necesarios. Se asume que el EPC es obligatorio.
-            $name = trim($row[1] ?? '');
-            $epc  = trim($row[2] ?? '');
+            // Obtenemos los valores de cada columna
+            $name  = trim($row[1] ?? '');
+            $epc   = trim($row[2] ?? '');
+            $color = trim($row[3] ?? '');
 
-            if (empty($epc)) {
-                continue; // Omitir filas sin EPC
+            // Validación: se asume que EPC y COLOR son obligatorios.
+            if (empty($epc) || empty($color)) {
+                continue; // Omitir filas incompletas
             }
 
-            // Buscar un registro existente que corresponda al EPC para la línea de producción indicada
+            // Buscar en la tabla rfid_colors utilizando la columna 'name'
+            $rfidColor = RfidColor::where('name', $color)->first();
+
+            // Si no se encuentra el color, se omite la fila
+            if (!$rfidColor) {
+                continue;
+            }
+            $rfidColorId = $rfidColor->id;
+
+            // Buscar un registro existente en rfid_readings para el EPC y la línea de producción indicados
             $rfidReading = RfidReading::where('epc', $epc)
                 ->where('production_line_id', $this->production_line_id)
                 ->first();
 
             if ($rfidReading) {
-                // Si existe, se actualiza el nombre u otros campos según sea necesario
+                // Si existe, se actualiza el nombre y el id del color
                 $rfidReading->update([
-                    'name' => $name,
-                    // No es necesario actualizar 'epc' ni 'production_line_id' si no cambian
+                    'name'           => $name,
+                    'rfid_color_id'  => $rfidColorId,
                 ]);
             } else {
                 // Si no existe, se crea un nuevo registro
@@ -68,6 +80,7 @@ class RfidReadingImport implements ToCollection
                     'name'                => $name,
                     'epc'                 => $epc,
                     'production_line_id'  => $this->production_line_id,
+                    'rfid_color_id'       => $rfidColorId,
                 ]);
             }
         }
