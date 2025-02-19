@@ -27,6 +27,7 @@
                             <th>Sensor</th>
                             <th>Báscula</th>
                             <th>Contador</th>
+                            <th>Confeccion</th>
                             <th>Hora Inicio</th>
                             <th>Hora Fin</th>
                             <th>Acciones</th>
@@ -505,7 +506,7 @@
                         }
                     }
                 ],
-                order: [[6, 'desc'], [0, 'desc'], [1, 'desc']],
+                order: [[7, 'desc'], [0, 'desc'], [1, 'desc']],
                 ajax: {
                     url: apiIndexUrl,
                     dataSrc: 'data',
@@ -519,6 +520,7 @@
                     { data: 'sensor.name', defaultContent: 'Sin asignar' },
                     { data: 'modbus.name', defaultContent: 'Sin asignar' },
                     { data: 'count', defaultContent: '0' },
+                    { data: 'product_list_id ', defaultContent: 'Sin asignar' },
                     {    
                         data: 'created_at',
                         render: function (data) {
