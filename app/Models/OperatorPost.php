@@ -17,6 +17,8 @@ class OperatorPost extends Model
         'sensor_id',
         'modbus_id',
         'count',
+        'product_list_selected_id',
+        'product_list_id',
         'finish_at', // Agregado para asignación masiva
     ];
 

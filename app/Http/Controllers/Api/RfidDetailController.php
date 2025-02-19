@@ -12,132 +12,231 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 use GuzzleHttp\Client;
+use App\Models\OperatorPost;  // Asegúrate de tener este modelo
+use App\Models\Operator;      // Asegúrate de tener este modelo
 
 class RfidDetailController extends Controller
-{
+{ 
     public function store(Request $request)
     {
         try {
             // 1. Validación básica de los datos recibidos
             $validator = Validator::make($request->all(), [
-                'epc' => 'required|string',
-                'rssi' => 'required|integer',
-                'serialno' => 'required|string',
-                'tid' => 'required|string',
+                'epc'           => 'required|string',
+                'rssi'          => 'required|integer',
+                'serialno'      => 'required|string',
+                'tid'           => 'required|string',
+                'antenna_name'  => 'required|string'
             ]);
-            //poner log para identificar donde estamos  pero
-            Log::info("Estamos en el metodo store de RfidDetailController");
+    
+            Log::info("Estamos en el método store de RfidDetailController");
+    
             if ($validator->fails()) {
-                //tenemos el log pero mostramos los datos que faltan en el log interno
-                // Registrar en el log de Laravel los errores de validación detallados
-            Log::warning('Fallo de validación en store RfidDetailController', [
-                'datos_recibidos' => $request->all()
-            ]);
+                Log::warning('Fallo de validación en store RfidDetailController', [
+                    'datos_recibidos' => $request->all()
+                ]);
                 return response()->json([
                     'success' => false,
                     'message' => 'Datos inválidos',
-                    'errors' => $validator->errors()
+                    'errors'  => $validator->errors()
                 ], 422);
             }
-            Log::info("RfidDetailController a validado los datos");
+            Log::info("RfidDetailController ha validado los datos");
+    
             // 2. Obtener la antena RFID
-            $rfidAnt = RfidAnt::where('name',$request->input('antenna_name'))->first();
+            $rfidAnt = RfidAnt::where('name', $request->input('antenna_name'))->first();
             if (!$rfidAnt) {
-                Log::info("Ninguna antena RfidDetailController");
+                Log::info("Antena RFID no encontrada en RfidDetailController");
                 return response()->json([
                     'success' => false,
                     'message' => 'Antena RFID no encontrada'
                 ], 404);
             }
     
-            // 3. Obtener el rfid_reading usando el epc
-            $rfidReading = RfidReading::where('epc', $request->input('epc'))->first();
+            // 3. Obtener el rfid_reading usando el EPC (grupo único para varias TID)
+            $epcInput = $request->input('epc');
+            $rfidReading = RfidReading::where('epc', $epcInput)->first();
             if (!$rfidReading) {
-                Log::info("Ningunrfid_reading encontrado RfidDetailController");
+                // Si no se encuentra, quitar ceros iniciales y buscar de nuevo
+                $epcSinZeros = ltrim($epcInput, '0');
+                $epcInput = $epcSinZeros;
+                $epcSinZeros = ltrim($epcInput, '0');
+                $rfidReading = RfidReading::where('epc', $epcSinZeros)->first();
+            }
+            if (!$rfidReading) {
+                Log::info("RFID reading no encontrado para el EPC: " . $epcInput);
                 return response()->json([
                     'success' => false,
                     'message' => 'RFID reading no encontrado para el EPC proporcionado'
                 ], 404);
             }
     
-            // 4. Obtener el rfid_detail
-        // 4. Intentar obtener el rfid_detail con manejo de errores
-        try {
-            $rfidDetail = RfidDetail::where('tid', $request->input('tid'))->first();
-
-            if (!$rfidDetail) {
+            // 4. Obtener o crear el rfid_detail según el TID
+            try {
+                $rfidDetail = RfidDetail::where('tid', $request->input('tid'))->first();
+    
+                if (!$rfidDetail) {
+                    // Solo se crea el registro si RFID_AUTO_ADD está habilitado en el env
+                    if (env('RFID_AUTO_ADD', false)) {
+                        $rfidDetail = RfidDetail::create([
+                            'name'                     => $request->input('tid'),
+                            'token'                    => bin2hex(random_bytes(16)),
+                            'production_line_id'       => $rfidAnt->production_line_id,
+                            'rfid_reading_id'          => $rfidReading->id,
+                            'rfid_type'                => 'default',
+                            'count_total'              => 0,
+                            'count_total_0'            => 0,
+                            'count_total_1'            => 0,
+                            'count_shift_0'            => 0,
+                            'count_shift_1'            => 0,
+                            'count_order_0'            => 0,
+                            'count_order_1'            => 0,
+                            'mqtt_topic_1'             => 'rfid/' . $request->input('tid'),
+                            'function_model_0'         => 'none',
+                            'function_model_1'         => 'sendMqttValue1',
+                            'invers_sensors'           => 0,
+                            'unic_code_order'          => uniqid(),
+                            'shift_type'               => 'shift',
+                            'event'                    => null,
+                            'downtime_count'           => 0,
+                            'optimal_production_time'  => 50,
+                            'reduced_speed_time_multiplier' => 5,
+                            'epc'                      => $request->input('epc'),
+                            'tid'                      => $request->input('tid'),
+                            'rssi'                     => $request->input('rssi'),
+                            'serialno'                 => $request->input('serialno'),
+                            'send_alert'               => 0,
+                            'search_out'               => 0,
+                            'last_ant_detect'          => $request->input('antenna_name'),
+                            'last_status_detect'       => '0'
+                        ]);
+                        Log::info("Nuevo RfidDetail creado para TID: " . $request->input('tid'));
+                    } else {
+                        Log::info("RFID Detail no encontrado y RFID_AUTO_ADD está deshabilitado.");
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'RFID Detail no encontrado y la creación automática está deshabilitada'
+                        ], 404);
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::error("Error al obtener/crear RfidDetail: " . $e->getMessage());
                 return response()->json([
                     'success' => false,
-                    'message' => 'EPC o TID no coinciden con los registros en RFID details. EPC: ' . $request->input('epc') . ' TID: ' . $request->input('tid')
-                ], 404);
+                    'message' => 'Error al obtener o crear RfidDetail',
+                    'error'   => $e->getMessage(),
+                ], 500);
             }
-        } catch (\Exception $e) {
-            Log::error("Error al obtener rfid_detail: " . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al intentar obtener rfid_detail',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
     
-            // 5. Actualizar contadores
+            // 5. Actualizar contadores del rfid_detail
             $rfidDetail->increment('count_total');
             $rfidDetail->increment('count_total_1');
             $rfidDetail->increment('count_shift_1');
             $rfidDetail->increment('count_order_1');
-            
+    
+            // --- Bloque: Actualizar contadores en Operators ---
+            try {
+                // Buscar en operator_post registros con el mismo rfid_reading_id y finish_at nulo o vacío
+                $operatorPost = OperatorPost::where('rfid_reading_id', $rfidReading->id)
+                    ->where(function($query) {
+                        $query->whereNull('finish_at')
+                              ->orWhere('finish_at', '=', '');
+                    })->first();
+    
+                if ($operatorPost) {
+                    $operatorId = $operatorPost->operator_id;
+                    $operator = Operator::find($operatorId);
+                    if ($operator) {
+                        $operator->increment('count_shift');
+                        $operator->increment('count_order');
+                    } else {
+                        Log::warning("No se encontró operator con id: {$operatorId}");
+                    }
+                } else {
+                    Log::info("No se encontró registro en operator_post para rfid_reading_id: " . $rfidReading->id);
+                }
+            } catch (\Exception $e) {
+                Log::error("Error al actualizar contadores en operators: " . $e->getMessage());
+            }
+    
+            // --- Nuevo Bloque: Actualizar el campo 'count' en operator_post ---
+            try {
+                // Se verifica que $operatorId esté definido
+                if (isset($operatorId)) {
+                    $operatorPostToUpdate = OperatorPost::where('operator_id', $operatorId)
+                                                        ->where('rfid_reading_id', $rfidReading->id)
+                                                        ->where(function($query) {
+                                                            $query->whereNull('finish_at')
+                                                                ->orWhere('finish_at', '');
+                                                        })->first();
+
+                    if ($operatorPostToUpdate) {
+                        $operatorPostToUpdate->increment('count');
+                    } else {
+                        Log::info("No se encontró registro en operator_post para operator_id: {$operatorId} y rfid_reading_id: {$rfidReading->id}");
+                    }
+                } else {
+                    Log::warning("No se tiene definido operatorId para actualizar el campo count en operator_post");
+                }
+            } catch (\Exception $e) {
+                Log::error("Error al actualizar el contador 'count' en operator_post: " . $e->getMessage());
+            }
+            // --- Fin Bloque ---
     
             // 6. Crear el registro en rfid_list
             $rfidList = RfidList::create([
-                'name' => $rfidDetail->name,
-                'value' => '1',
-                'production_line_id' => $rfidAnt->production_line_id, // Usar el production_line_id de la antena
-                'rfid_detail_id' => $rfidDetail->id,
-                'rfid_reading_id' => $rfidReading->id,
-                'rfid_ant_name' => $request->input('antenna_name'),
-                'model_product' => '1',
-                'orderId' => $rfidDetail->orderId,
-                'count_total' => $rfidDetail->count_total,
-                'count_total_1' => $rfidDetail->count_total_1,
-                'count_shift_1' => $rfidDetail->count_shift_1,
-                'count_order_1' => $rfidDetail->count_order_1,
-                'time_11' => $rfidDetail->time_11,
-                'epc' => $request->input('epc'),
-                'tid' => $request->input('tid'),
-                'rssi' => $request->input('rssi'),
-                'serialno' => $request->input('serialno'),
-                'ant' => $request->input('ant')
+                'name'                => $rfidDetail->name,
+                'value'               => '1',
+                'production_line_id'  => $rfidAnt->production_line_id,
+                'rfid_detail_id'      => $rfidDetail->id,
+                'rfid_reading_id'     => $rfidReading->id,
+                'rfid_ant_name'       => $request->input('antenna_name'),
+                'model_product'       => '1',
+                'orderId'             => $rfidDetail->orderId,
+                'count_total'         => $rfidDetail->count_total,
+                'count_total_1'       => $rfidDetail->count_total_1,
+                'count_shift_1'       => $rfidDetail->count_shift_1,
+                'count_order_1'       => $rfidDetail->count_order_1,
+                'time_11'             => $rfidDetail->time_11,
+                'epc'                 => $epcInput,
+                'tid'                 => $request->input('tid'),
+                'rssi'                => $request->input('rssi'),
+                'serialno'            => $request->input('serialno'),
+                'ant'                 => $request->input('ant')
             ]);
-
-            
-                        // Llamar a la función `sendAlert` si `send_alert` está habilitado
-                        if ($rfidDetail->send_alert && $rfidDetail->last_status_detect == "0" || $rfidDetail->send_alert && $rfidDetail->last_ant_detect !== $request->input('antenna_name')) {
-                            $this->sendAlert($rfidDetail, $request->input('antenna_name'));
-                        }
-                        // Actualizar los campos `last_status_detect` y `last_ant_detect`
-                        $rfidDetail->update([
-                            'last_status_detect' => '1',  // Marcado como conectado
-                            'last_ant_detect' => $request->input('antenna_name')  // Guardamos el nombre de la antena
-                        ]);
+    
+            // Llamar a la función sendAlert si es necesario
+            if (
+                $rfidDetail->send_alert &&
+                ($rfidDetail->last_status_detect == "0" ||
+                 $rfidDetail->last_ant_detect !== $request->input('antenna_name'))
+            ) {
+                $this->sendAlert($rfidDetail, $request->input('antenna_name'));
+            }
+            // Actualizar los campos last_status_detect y last_ant_detect
+            $rfidDetail->update([
+                'last_status_detect' => '1',  // Marcado como conectado
+                'last_ant_detect'    => $request->input('antenna_name')
+            ]);
     
             return response()->json([
-                'success' => true,
-                'message' => 'Registro insertado en RFID list con éxito',
+                'success'   => true,
+                'message'   => 'Registro insertado en RFID list con éxito',
                 'rfid_list' => $rfidList
             ], 201);
-    
         } catch (\Exception $e) {
             Log::error("Error en el método store: " . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Error al procesar la solicitud',
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'error'   => $e->getMessage(),
+                'trace'   => $e->getTraceAsString()
             ], 500);
         }
     }
-
-       /**
+    
+    
+    /**
      * Función para enviar alertas cuando un dispositivo se detecta
      *
      * @param \App\Models\RfidDetail $detail
@@ -145,63 +244,62 @@ class RfidDetailController extends Controller
      */
     protected function sendAlert(RfidDetail $detail, $antenaName)
     {
-                // Obtiene la URL de la API y el número de teléfono desde las variables de entorno
-                $apiUrl = rtrim(env('WHATSAPP_LINK'), '/') . '/send-message';
-                $phoneNumber = env('WHATSAPP_PHONE_NOT');
-                $dateTime=Carbon::now()->format('Y-m-d H:i:s');
-                
-                // Configura el cliente HTTP
-                $client = new Client([
-                    'timeout' => 3,
-                    'http_errors' => false,
-                    'verify' => false,
-                ]);
+        // Obtiene la URL de la API y el número de teléfono desde las variables de entorno
+        $apiUrl = rtrim(env('WHATSAPP_LINK'), '/') . '/send-message';
+        $phoneNumber = env('WHATSAPP_PHONE_NOT');
+        $dateTime = Carbon::now()->format('Y-m-d H:i:s');
         
-                // Datos para enviar el mensaje de alerta
-                $dataToSend = [
-                    'jid' => "{$phoneNumber}@s.whatsapp.net",
-                    'message' => "Alerta: Punto de Control {$antenaName} ha detectado: {$detail->name}. Fecha: {$dateTime}",
-                ];
+        // Configura el cliente HTTP
+        $client = new Client([
+            'timeout'      => 3,
+            'http_errors'  => false,
+            'verify'       => false,
+        ]);
         
-                try {
-                    // Llamada asíncrona a la API
-                    $promise = $client->postAsync($apiUrl, [
-                        'json' => $dataToSend,
-                    ]);
+        // Datos para enviar el mensaje de alerta
+        $dataToSend = [
+            'jid'     => "{$phoneNumber}@s.whatsapp.net",
+            'message' => "Alerta: Punto de Control {$antenaName} ha detectado: {$detail->name}. Fecha: {$dateTime}",
+        ];
         
-                    // Maneja la respuesta de la API
-                    $promise->then(
-                        function ($response) {
-                            Log::info("Mensaje de alerta enviado correctamente: " . $response->getStatusCode());
-                        },
-                        function ($exception) {
-                            Log::error("Error al enviar mensaje de alerta: " . $exception->getMessage());
-                        }
-                    );
+        try {
+            // Llamada asíncrona a la API
+            $promise = $client->postAsync($apiUrl, [
+                'json' => $dataToSend,
+            ]);
         
-                    // Inicia el proceso sin bloquear el flujo principal
-                    $promise->wait(false);
-        
-                } catch (\Exception $e) {
-                    Log::error("Error en la llamada a la API de WhatsApp: " . $e->getMessage());
+            // Maneja la respuesta de la API
+            $promise->then(
+                function ($response) {
+                    Log::info("Mensaje de alerta enviado correctamente: " . $response->getStatusCode());
+                },
+                function ($exception) {
+                    Log::error("Error al enviar mensaje de alerta: " . $exception->getMessage());
                 }
-    
+            );
+        
+            // Inicia el proceso sin bloquear el flujo principal
+            $promise->wait(false);
+        
+        } catch (\Exception $e) {
+            Log::error("Error en la llamada a la API de WhatsApp: " . $e->getMessage());
+        }
     }
-
+    
     public function getHistoryRfid(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'epc' => 'nullable|string',
+            'epc'        => 'nullable|string',
             'date_start' => 'nullable|date',
-            'date_end' => 'nullable|date',
-            'show' => 'nullable|in:all,10,latest'
+            'date_end'   => 'nullable|date',
+            'show'       => 'nullable|in:all,10,latest'
         ]);
     
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Datos inválidos',
-                'errors' => $validator->errors()
+                'errors'  => $validator->errors()
             ], 422);
         }
     
@@ -246,22 +344,21 @@ class RfidDetailController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Listado de RFID filtrado con éxito',
-            'data' => $rfidLists
+            'data'    => $rfidLists
         ]);
     }
     
     public function getFilters()
     {
         $antennas = RfidAnt::select('name')->get(); // Solo obtén el nombre de la antena
-        $epcs = RfidDetail::select('epc')->distinct()->pluck('epc');
-        $tids = RfidDetail::select('tid')->distinct()->pluck('tid');
+        $epcs     = RfidDetail::select('epc')->distinct()->pluck('epc');
+        $tids     = RfidDetail::select('tid')->distinct()->pluck('tid');
     
         return response()->json([
-            'success' => true,
+            'success'  => true,
             'antennas' => $antennas,
-            'epcs' => $epcs,
-            'tids' => $tids
+            'epcs'     => $epcs,
+            'tids'     => $tids
         ]);
     }
-        
 }

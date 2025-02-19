@@ -49,10 +49,10 @@ class ReadRfidReadings extends Command
             }
 
             $mqtt->disconnect();
-            $this->info("MQTT Subscriber stopped gracefully.");
+            $this->logInfo("MQTT Subscriber stopped gracefully.");
 
         } catch (\Exception $e) {
-            $this->error("Error en el comando rfid:read: " . $e->getMessage());
+            $this->logError("Error en el comando rfid:read: " . $e->getMessage());
         }
     }
 
@@ -82,15 +82,15 @@ class ReadRfidReadings extends Command
 
             if (!in_array($topic, $this->subscribedTopics)) {
                 $mqtt->subscribe($topic, function ($topic, $message) use ($antenna) {
-                    $this->processMessage($topic, $message, $antenna->name); // Pasar el name
+                    $this->processMessage($topic, $message, $antenna->name);
                 }, 0);
 
                 $this->subscribedTopics[] = $topic;
-                $this->info("Subscribed to topic: {$topic}");
+                $this->logInfo("Subscribed to topic: {$topic}");
             }
         }
 
-        $this->info('Subscribed to initial topics.');
+        $this->logInfo('Subscribed to initial topics.');
     }
 
     private function processMessage($topic, $message, $antennaName)
@@ -98,7 +98,7 @@ class ReadRfidReadings extends Command
         $dataArray = json_decode($message, true);
     
         if (is_null($dataArray) || !is_array($dataArray)) {
-            $this->error("Error: El mensaje recibido no es un JSON válido.");
+            $this->logError("Error: El mensaje recibido no es un JSON válido.");
             return;
         }
 
@@ -110,7 +110,7 @@ class ReadRfidReadings extends Command
             $ant = $data['ant'] ?? null;
     
             if (is_null($epc) || is_null($rssi) || is_null($serialno) || is_null($tid)) {
-                $this->error("Error: Faltan datos en el JSON para uno de los objetos.");
+                $this->logError("Error: Faltan datos en el JSON para uno de los objetos.");
                 continue;
             }
     
@@ -123,18 +123,18 @@ class ReadRfidReadings extends Command
     {
         $apiUrl = rtrim(env('LOCAL_SERVER'), '/') . '/api/rfid-insert';
         $client = new Client([
-            'timeout' => 0.1,
+            'timeout'     => 0.1,
             'http_errors' => false,
-            'verify' => false,
+            'verify'      => false,
         ]);
     
         $dataToSend = [
-            'epc' => $epc,
-            'rssi' => $rssi,
-            'serialno' => $serialno,
-            'tid' => $tid,
-            'ant' => $ant,
-            'antenna_name' => $antennaName, // Incluye el ID de la antena
+            'epc'           => $epc,
+            'rssi'          => $rssi,
+            'serialno'      => $serialno,
+            'tid'           => $tid,
+            'ant'           => $ant,
+            'antenna_name'  => $antennaName,
         ];
     
         try {
@@ -144,10 +144,10 @@ class ReadRfidReadings extends Command
     
             $promise->then(
                 function ($response) use ($epc) {
-                    $this->info("API call success for EPC {$epc}: " . $response->getStatusCode());
+                    $this->logInfo("API call success for EPC {$epc}: " . $response->getStatusCode());
                 },
                 function ($exception) use ($epc) {
-                    $this->error("API call error for EPC {$epc}: " . $exception->getMessage());
+                    $this->logError("API call error for EPC {$epc}: " . $exception->getMessage());
                 }
             );
     
@@ -155,9 +155,24 @@ class ReadRfidReadings extends Command
             $promise->wait(false);
     
         } catch (\Exception $e) {
-            $this->error("Error al intentar llamar a la API para EPC {$epc}: " . $e->getMessage());
+            $this->logError("Error al intentar llamar a la API para EPC {$epc}: " . $e->getMessage());
         }
     
-        $this->info("Mensaje procesado para EPC {$epc}, RSSI {$rssi}, SerialNo {$serialno}, TID {$tid}, Antena: {$antennaName}");
+        $this->logInfo("Mensaje procesado para EPC {$epc}, RSSI {$rssi}, SerialNo {$serialno}, TID {$tid}, Antena: {$antennaName}");
+    }
+
+    /**
+     * Métodos auxiliares para log con fecha y hora
+     */
+    private function logInfo($message)
+    {
+        $timestamp = date('Y-m-d H:i:s');
+        $this->info("[$timestamp] $message");
+    }
+
+    private function logError($message)
+    {
+        $timestamp = date('Y-m-d H:i:s');
+        $this->error("[$timestamp] $message");
     }
 }

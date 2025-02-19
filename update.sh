@@ -137,6 +137,7 @@ declare -A ENV_VARS=(
     ["LOCAL_SERVER"]="http://127.0.0.1/"
     ["PRODUCTION_MIN_TIME_WEIGHT"]="30"
     ["CLEAR_DB_DAY"]="30"
+    ["RFID_AUTO_ADD=true"]="false"
 )
 
 ENV_FILE=".env"

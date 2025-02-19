@@ -153,8 +153,8 @@
         }
         /* Estilos para los "tags" (opciones seleccionadas) con color info */
         .select2-container--default .select2-selection--multiple .select2-selection__choice {
-            background-color: #395458 !important;
-            border: 1px solid #17a2b8 !important;
+            background-color: #ffffff !important;
+            border: 1px solid #808080 !important;
             color: #fff !important;
         }
         /* Dropdown en dos columnas con scroll vertical */
@@ -192,7 +192,7 @@
         .my-swal-popup {
             height: 500px !important; /* Ajusta el valor según lo que necesites */
         }
-                /* Estilos para el texto en el desplegable de Select2 */
+        /* Estilos para el texto en el desplegable de Select2 */
         .select2-container--default .select2-results__option {
             font-size: 17px;  /* Ajusta el tamaño según necesites */
             font-weight: bold; /* Para que se muestre en negrita */
@@ -200,7 +200,7 @@
         .select2-container--default .select2-results__options {
             display: flex;
             flex-wrap: wrap;
-            max-height: 500px;
+            max-height: 400px;
             overflow-y: auto;
         }
 
@@ -210,7 +210,7 @@
         }
         .select2-container--default .select2-results__options {
             min-height: 10px; /* Ajusta este valor según lo que necesites */
-            max-height: 500px !important; /* Ajusta este valor según lo que necesites */
+            max-height: 400px !important; /* Ajusta este valor según lo que necesites */
             overflow-y: auto;
         }
 
@@ -220,23 +220,28 @@
 
         /* Asegúrate de que el contenedor de acciones utilice flexbox */
         .swal2-actions {
-        display: flex;
-        flex-direction: row;
+            display: flex;
+            flex-direction: row;
         }
 
         /* Asigna un orden a cada botón: 
-        - Cancel se muestra a la izquierda (order: 1)
-        - Confirm en medio (order: 2)
-        - Deny a la derecha (order: 3)
+           - Cancel se muestra a la izquierda (order: 1)
+           - Confirm en medio (order: 2)
+           - Deny a la derecha (order: 3)
         */
         .swal2-cancel {
-        order: 2;
+            order: 2;
         }
         .swal2-confirm {
-        order: 1;
+            order: 1;
         }
         .swal2-deny {
-        order: 3;
+            order: 3;
+        }
+        @media (max-width: 576px) {
+            .select2-container--default .select2-results__option {
+                width: 50%;
+            }
         }
     </style>
 @endpush
@@ -259,6 +264,32 @@
     <script src="https://unpkg.com/html5-qrcode"></script>
 
     <script>
+        // Variable global para guardar el color del primer RFID seleccionado
+        let selectedRfidColor = null;
+
+        // Función matcher para filtrar las opciones según el color seleccionado
+        function rfidMatcher(params, data) {
+            // Asegurarse de que el elemento exista
+            if (!data.element) {
+                return data;
+            }
+            // Si ya se seleccionó un color, filtrar las opciones que no coincidan
+            if (selectedRfidColor) {
+                let optionColor = $(data.element).data('color');
+                if (!optionColor || optionColor.toLowerCase() !== selectedRfidColor.toLowerCase()) {
+                    return null;
+                }
+            }
+            // Si se escribe algo en la búsqueda, aplicar también el filtro por texto
+            if ($.trim(params.term) === '') {
+                return data;
+            }
+            if (data.text.toLowerCase().indexOf(params.term.toLowerCase()) > -1) {
+                return data;
+            }
+            return null;
+        }
+
         // Rutas API
         const relationsApiUrl = '/api/product-list-selecteds';
         const productsApiUrl  = '/api/product-lists/list-all';
@@ -320,6 +351,23 @@
         }
         function formatProductSelection(option) {
             return option.text;
+        }
+        // Función para formatear la selección del RFID con el color correspondiente
+        function formatRfidSelection(option) {
+            if (!option.id) return option.text;
+            let color = option.element ? option.element.getAttribute('data-color') : '';
+            let colorMap = {
+                red: "#dc3545",
+                blue: "#007bff",
+                yellow: "#ffc107",
+                green: "#28a745"
+            };
+            let iconColor = colorMap[color] || "#007bff"; // Color predeterminado si no existe
+            return $(`
+                <span style="color: ${iconColor};">
+                    <i class="fa fa-id-card"></i> ${option.text}
+                </span>
+            `);
         }
 
         function loadSelectOptions() {
@@ -472,10 +520,9 @@
                                         cancelButton: 'btn btn-danger',
                                     },
                                     buttonsStyling: false,
-                                    // Al pulsar el botón deny, ejecutamos el escáner y evitamos cerrar el modal
                                     preDeny: () => {
                                         startQrScanner();
-                                        return false; // Evita que se cierre la alerta
+                                        return false;
                                     },
                                     didOpen: () => {
                                         $('#productListId').select2({
@@ -492,11 +539,24 @@
                                                 closeOnSelect: false,
                                                 hideSelected: true,
                                                 templateResult: formatOption,
-                                                templateSelection: formatSelection
+                                                templateSelection: formatRfidSelection,
+                                                matcher: rfidMatcher
                                             });
                                             $('#rfidReadingId').on('select2:closing', function(e) {
                                                 if (e.originalEvent && $(e.originalEvent.target).closest('.select2-results__option').length) {
                                                     e.preventDefault();
+                                                }
+                                            });
+                                            $('#rfidReadingId').on('change', function() {
+                                                let selectedValues = $(this).val();
+                                                if (selectedValues && selectedValues.length > 0) {
+                                                    let firstSelectedOption = $(this).find(`option[value="${selectedValues[0]}"]`);
+                                                    selectedRfidColor = firstSelectedOption.data('color');
+                                                } else {
+                                                    selectedRfidColor = null;
+                                                }
+                                                if ($(this).data('select2').isOpen()) {
+                                                    $(this).select2('close').select2('open');
                                                 }
                                             });
                                         }
@@ -545,7 +605,7 @@
                                         }
                                         if (
                                             (!rfid_reading_ids || rfid_reading_ids.length === 0) &&
-                                            (!bascula_ids || bascula_ids.length === 0) &&
+                                            (!modbus_ids || modbus_ids.length === 0) &&
                                             (!sensor_ids || sensor_ids.length === 0)
                                         ) {
                                             Swal.showValidationMessage('Debe seleccionar al menos una báscula, o un sensor, o un RFID.');
@@ -558,6 +618,10 @@
                                             modbus_ids: modbus_ids ? modbus_ids.map(id => parseInt(id)) : [],
                                             sensor_ids: sensor_ids ? sensor_ids.map(id => parseInt(id)) : []
                                         };
+                                    },
+                                    didClose: () => {
+                                        // Reiniciamos el color al cerrar el modal
+                                        selectedRfidColor = null;
                                     }
                                 }).then((result) => {
                                     if (result.isConfirmed) {
@@ -577,7 +641,6 @@
                                         });
                                     }
                                 });
-
                         }
                     }
                 ],
@@ -660,11 +723,24 @@
                                 closeOnSelect: false,
                                 hideSelected: true,
                                 templateResult: formatOption,
-                                templateSelection: formatSelection
+                                templateSelection: formatRfidSelection,
+                                matcher: rfidMatcher
                             });
                             $('#rfidReadingId').on('select2:closing', function(e) {
                                 if (e.originalEvent && $(e.originalEvent.target).closest('.select2-results__option').length) {
                                     e.preventDefault();
+                                }
+                            });
+                            $('#rfidReadingId').on('change', function() {
+                                let selectedValues = $(this).val();
+                                if (selectedValues && selectedValues.length > 0) {
+                                    let firstSelectedOption = $(this).find(`option[value="${selectedValues[0]}"]`);
+                                    selectedRfidColor = firstSelectedOption.data('color');
+                                } else {
+                                    selectedRfidColor = null;
+                                }
+                                if ($(this).data('select2').isOpen()) {
+                                    $(this).select2('close').select2('open');
                                 }
                             });
                         }
@@ -740,6 +816,10 @@
                             modbus_ids: modbus_ids ? modbus_ids.map(id => parseInt(id)) : [],
                             sensor_ids: sensor_ids ? sensor_ids.map(id => parseInt(id)) : []
                         };
+                    },
+                    didClose: () => {
+                        // Reiniciamos el color al cerrar el modal
+                        selectedRfidColor = null;
                     }
                 }).then((result) => {
                     if (result.isConfirmed) {

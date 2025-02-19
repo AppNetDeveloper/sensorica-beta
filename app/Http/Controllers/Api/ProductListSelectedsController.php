@@ -9,6 +9,7 @@ use App\Models\ProductList;
 use App\Models\Modbus;
 use App\Models\Sensor;
 use App\Models\RfidReading;
+use App\Models\OperatorPost;
 use Carbon\Carbon;
 
 /**
@@ -78,14 +79,43 @@ class ProductListSelectedsController extends Controller
                 ProductListSelecteds::where('rfid_reading_id', $rfidId)
                     ->whereNull('finish_at')
                     ->update(['finish_at' => \Carbon\Carbon::now()]);
+                
                 // Crear nueva asignación para este RFID.
-                ProductListSelecteds::create([
+                $productListSelected = ProductListSelecteds::create([
                     'product_list_id' => $productList->id,
                     'rfid_reading_id' => $rfidId,
-                    // Si existen modbus o sensor, usamos el primer valor seleccionado (puedes ajustar según lo necesites).
+                    // Si existen modbus o sensor, usamos el primer valor seleccionado (ajustable según necesidades).
                     'modbus_id'       => !empty($validated['modbus_ids']) ? $validated['modbus_ids'][0] : null,
                     'sensor_id'       => !empty($validated['sensor_ids']) ? $validated['sensor_ids'][0] : null,
                 ]);
+    
+                // NUEVA LÓGICA: Buscar en operator_post por rfid_reading_id con finish_at null.
+                $operatorPost = OperatorPost::where('rfid_reading_id', $rfidId)
+                                            ->where(function ($query) {
+                                                $query->whereNull('finish_at')
+                                                    ->orWhere('finish_at', '');
+                                            })
+                                            ->first();
+
+    
+                if ($operatorPost) {
+                    // Actualizar finish_at de la entrada encontrada.
+                    $operatorPost->update(['finish_at' => \Carbon\Carbon::now()]);
+                    
+                    // Duplicar la entrada: copiamos los datos, eliminamos el id para crear un nuevo registro,
+                    // dejamos finish_at en null y reiniciamos count a 0.
+                    $newData = $operatorPost->toArray();
+                    unset($newData['id']); // Aseguramos que se genere un nuevo ID.
+                    $newData['finish_at'] = null;
+                    $newData['count'] = 0;
+                    //anadimos $newData['product_list_selected_id']=  donde se guarda el id de la nueva asignación para este RFID. de la esta create $productListSelected
+                    $newData['product_list_selected_id'] = $productListSelected->id;          
+                    $newData['product_list_id']= $productList->id;
+                    
+                    // Opcional: Si necesitas relacionar el nuevo registro con la asignación creada, podrías
+                    // asignar 'product_list_selected_id' => $productListSelected->id en $newData.
+                    OperatorPost::create($newData);
+                }
             }
             $message = ['message' => 'Asignaciones creadas para los RFID seleccionados.'];
         } elseif (!empty($validated['modbus_ids'])) {
@@ -114,7 +144,7 @@ class ProductListSelectedsController extends Controller
             }
             $message = ['message' => 'Asignaciones creadas para los sensores seleccionados.'];
         } else {
-            // Caso por defecto (si se envían combinaciones no contempladas)
+            // Caso por defecto (si se envían combinaciones no contempladas).
             $relation = ProductListSelecteds::create([
                 'product_list_id' => $productList->id,
             ]);
@@ -123,6 +153,7 @@ class ProductListSelectedsController extends Controller
     
         return response()->json($message, 201);
     }
+    
     
     /**
      * Ver una relación por ID.

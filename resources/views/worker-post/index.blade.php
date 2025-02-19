@@ -209,7 +209,7 @@
         }
         .select2-container--default .select2-results__options {
             min-height: 10px; /* Ajusta este valor según lo que necesites */
-            max-height: 500px !important; /* Ajusta este valor según lo que necesites */
+            max-height: 400px !important; /* Ajusta este valor según lo que necesites */
             overflow-y: auto;
         }
 
@@ -237,6 +237,12 @@
         .swal2-deny {
         order: 3;
         }
+        @media (max-width: 576px) {
+            .select2-container--default .select2-results__option {
+                width: 50%;
+            }
+        }
+
     </style>
 @endpush
 

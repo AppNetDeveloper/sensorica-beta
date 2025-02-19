@@ -183,7 +183,7 @@ class OperatorController extends Controller
      *         )
      *     )
      * )
-     */
+     */ 
     public function listAll(Request $request)
     {
         // Obtener todos los operadores como array indexado
