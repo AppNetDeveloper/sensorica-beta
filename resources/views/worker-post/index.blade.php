@@ -515,19 +515,28 @@
                     }
                 },
                 columns: [
-                    { data: 'operator.name', defaultContent: 'Sin asignar' },
-                    { data: 'rfid_reading.name', defaultContent: 'Sin asignar' },
-                    { data: 'sensor.name', defaultContent: 'Sin asignar' },
-                    { data: 'modbus.name', defaultContent: 'Sin asignar' },
+                    { data: 'operator.name', defaultContent: '<i class="bi bi-ban"></i>' },
+                    { data: 'rfid_reading.name', defaultContent: '<i class="bi bi-ban"></i>' },
+                    { data: 'sensor.name', defaultContent: '<i class="bi bi-ban"></i>' },
+                    { data: 'modbus.name', defaultContent: '<i class="bi bi-ban"></i>' },
                     { data: 'count', defaultContent: '0' },
-                    { data: 'product_list_id ', defaultContent: 'Sin asignar' },
+                    {
+                        data: 'product_list',
+                        defaultContent: 'Sin asignar',
+                        render: function(data, type, row) {
+                            if(data && data.name) {
+                                return '<b>' + data.name + '</b>';
+                            }
+                            return '<span style="color: red;"><i class="bi bi-ban"></i></span>';
+                        }
+                    },
                     {    
                         data: 'created_at',
                         render: function (data) {
                             return data ? moment(data).format('DD/MM/YYYY HH:mm:ss') : '';
                         }
                     },
-                    { data: 'finish_at', defaultContent: 'En curso' },
+                    { data: 'finish_at', defaultContent: '<b>En curco</b>' },
                     {
                         data: null,
                         render: function (data) {

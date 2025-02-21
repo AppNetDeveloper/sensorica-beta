@@ -140,9 +140,17 @@ class OperatorPostController extends Controller
      */
     public function apiIndex()
     {
-        $relations = OperatorPost::with(['operator', 'rfidReading', 'sensor', 'modbus'])->get();
+        $relations = OperatorPost::with([
+            'operator', 
+            'rfidReading', 
+            'sensor', 
+            'modbus', 
+            'productList' // Agregamos la relación aquí
+        ])->get();
+    
         return response()->json([
             'data' => $relations // DataTables espera una clave 'data'
         ]);
     }
+    
 }

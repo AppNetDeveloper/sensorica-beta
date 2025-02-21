@@ -56,5 +56,11 @@ class OperatorPost extends Model
         return $this->belongsTo(RfidReading::class);
     }
 
+    public function productList()
+    {
+        return $this->belongsTo(ProductList::class, 'product_list_id', 'id');
+    }
+
+
     // Se ha removido el método boot para que la lógica se maneje en el controlador o en otro lugar
 }
