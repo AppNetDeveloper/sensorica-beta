@@ -5,7 +5,6 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use App\Models\OperatorPost;
 use Carbon\Carbon;
-use Log;
 
 class FinalizeOperatorPosts extends Command
 {
@@ -30,76 +29,81 @@ class FinalizeOperatorPosts extends Command
      */
     public function handle()
     {
-        // Bucle infinito para que se ejecute continuamente
+        // Bucle infinito que ejecuta cada 20 segundos
         while (true) {
             try {
                 // Obtener la fecha y hora actual
                 $currentDate = Carbon::now();
 
-                // Buscar todos los registros de OperatorPost que no tengan finish_at
-                $operatorPosts = OperatorPost::whereNull('finish_at')->get();
+                // Buscar solo los registros que no están finalizados (finish_at es null o vacío) y cuya fecha de creación no sea mayor que ahora
+                $operatorPosts = OperatorPost::whereNull('finish_at')
+                    ->orWhere('finish_at', '')
+                    ->where('created_at', '<', Carbon::now()) // Filtramos para que 'created_at' no sea mayor a la fecha actual
+                    ->get();
 
                 foreach ($operatorPosts as $operatorPost) {
-                    // Obtiene el created_at del registro
+                    // Obtener el 'created_at' del registro y convertirlo a objeto Carbon
                     $createdAt = Carbon::parse($operatorPost->created_at);
 
-                    // Si el created_at es del mismo día, finalizarlo con 23:59:59
-                    if ($createdAt->isToday()) {
-                        // Finalizar el registro con la hora 23:59:59
+                    // Si la fecha de 'created_at' es anterior a la fecha actual, cerramos y duplicamos
+                    if ($createdAt->toDateString() < $currentDate->toDateString()) {
+                        // Si es antes de la fecha actual, se cierra el registro con la hora 23:59:59
                         $operatorPost->update([
                             'finish_at' => $createdAt->copy()->setTime(23, 59, 59),
                         ]);
 
-                        // Duplicar la entrada para el siguiente día
+                        // Duplicamos el registro con la fecha del siguiente día a las 00:00:01
                         $newData = $operatorPost->toArray();
-                        unset($newData['id']); // Aseguramos que se cree un nuevo ID.
-                        $newData['finish_at'] = null;
-                        $newData['created_at'] = $createdAt->copy()->addDay()->setTime(0, 0, 1);
+                        unset($newData['id']); // Eliminar el campo 'id' para crear un nuevo registro
+                        $newData['count'] = 0; // Reiniciar el contador a 0 para el nuevo registro
+                        $newData['finish_at'] = null; // Dejar finish_at como null para el nuevo registro
+                        $newData['created_at'] = $createdAt->copy()->addDay()->setTime(0, 0, 1); // Fecha de mañana a las 00:00:01
 
                         // Crear el nuevo registro duplicado
                         OperatorPost::create($newData);
 
-                        // Log para la operación
-                        Log::info("Se ha finalizado el operador post ID {$operatorPost->id} y duplicado para el siguiente día.");
+                        // Mostrar mensaje en la consola
+                        $this->info("Se ha finalizado el operador post ID {$operatorPost->id} y duplicado para el siguiente día.");
+                    } else {
+                        $this->info("El operador post ID {$operatorPost->id} No necesita ser finalizado porque ya está en la fecha correcta.");
+                    }
+
+                    // Si el 'created_at' es de hoy y despues de 23:59:00, lo cerramos a las 23:59:59
+                    if ($createdAt->isToday() && $createdAt->format('H:i:s') >= '23:59:00' && $createdAt->format('H:i:s') < '23:59:59') {
+                        // Cerrar el registro a las 23:59:59
+                        $operatorPost->update([
+                            'finish_at' => $createdAt->copy()->setTime(23, 59, 59),
+                        ]);
+
+                        // Duplicamos el registro para el siguiente día a las 00:00:01
+                        $newData = $operatorPost->toArray();
+                        unset($newData['id']); // Eliminar el campo 'id' para crear un nuevo registro
+                        $newData['count'] = 0; // Reiniciar el contador a 0 para el nuevo registro
+                        $newData['finish_at'] = null; // Dejar finish_at como null para el nuevo registro
+                        $newData['created_at'] = $createdAt->copy()->addDay()->setTime(0, 0, 1); // Fecha de mañana a las 00:00:01
+
+                        // Crear el nuevo registro duplicado
+                        OperatorPost::create($newData);
+
+                        // Mostrar mensaje en la consola
+                        $this->info("Se ha finalizado el operador post ID {$operatorPost->id} y duplicado para el siguiente día.");
+                    }
+
+                    // Si la fecha de 'created_at' es del día siguiente (mañana), la ignoramos
+                    if ($createdAt->isTomorrow()) {
+                        $this->info("Se ha ignorado el operador post ID {$operatorPost->id} porque su fecha es de mañana.");
                     }
                 }
 
-                // Si es después de medianoche, duplicamos todos los registros con la fecha del siguiente día
-                if ($currentDate->isAfter($currentDate->copy()->endOfDay())) {
-                    $this->duplicateOperatorPostsForNewDay();
-                }
-
-                // Log para indicar que el ciclo se ha completado exitosamente
-                Log::info('Ciclo de finalización de registros de operadores completado.');
-
+                // Confirmación en consola de que el ciclo ha terminado sin errores
+                $this->info('Ciclo de finalización de registros de operadores completado.');
             } catch (\Exception $e) {
-                // Log del error para poder manejar cualquier fallo
-                Log::error("Error en el ciclo de finalización de registros: " . $e->getMessage());
+                // Si ocurre un error, se captura y se muestra en consola
+                $this->error("Error al procesar los registros de operadores: " . $e->getMessage());
             }
 
-            // Dormir por 60 segundos antes de volver a comprobar
-            sleep(60);
-        }
-    }
-
-    /**
-     * Duplicar los registros de OperatorPost para el siguiente día.
-     */
-    private function duplicateOperatorPostsForNewDay()
-    {
-        $operatorPosts = OperatorPost::whereNull('finish_at')->get();
-
-        foreach ($operatorPosts as $operatorPost) {
-            $newData = $operatorPost->toArray();
-            unset($newData['id']); // Aseguramos que se cree un nuevo ID.
-            $newData['finish_at'] = null;
-            $newData['created_at'] = Carbon::today()->addDay()->setTime(0, 0, 1);
-
-            // Crear el nuevo registro duplicado
-            OperatorPost::create($newData);
-
-            // Log para la duplicación
-            Log::info("Se ha duplicado el operador post ID {$operatorPost->id} para el siguiente día.");
+            // Dormir 20 segundos antes de ejecutar el siguiente ciclo
+            usleep(20000000); // 20 segundos (en microsegundos)
         }
     }
 }
