@@ -51,6 +51,11 @@
             </div>
 
             <div class="form-group mt-3">
+                <label for="epc">{{ __('Rfid Point Reser') }} 1= YES 0 = NO</label>
+                <input type="text" name="reset" id="reset" class="form-control" value="{{ old('reset', $rfidDevice->reset) }}" required>
+            </div>
+
+            <div class="form-group mt-3">
                 <label for="tid">{{ __('TID') }}</label>
                 <input type="text" name="tid" id="tid" class="form-control" value="{{ old('tid', $rfidDevice->tid) }}" required>
             </div>

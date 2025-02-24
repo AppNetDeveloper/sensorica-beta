@@ -452,5 +452,6 @@
     "Shift": "Turnos",
     "Worker Post": "Asignar Puesto",
     "Anadir Relacion": "Anadir Relacion",
-    "Rfid Post": "Asociar RFID"
+    "Rfid Post": "Asociar RFID",
+    "Rfid Point Reser":  "Reservar Punto RFID"
 }
