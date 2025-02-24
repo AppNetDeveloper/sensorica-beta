@@ -41,7 +41,11 @@ class PublishToMqttServer2 extends Command
      */
     public function handleSignal(int $signal)
     {
-        $this->info("Señal de terminación recibida ($signal). Cerrando el proceso...");
+        if ($this->output) {
+            $this->info("Señal de terminación recibida ($signal). Cerrando el proceso...");
+        } else {
+            Log::info("Señal de terminación recibida ($signal). Cerrando el proceso...");
+        }
         $this->shouldStop = true;
     }
 

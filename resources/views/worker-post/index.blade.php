@@ -504,6 +504,11 @@
                                 }
                             });
                         }
+                    },
+                    {
+                        extend: 'excelHtml5',
+                        text: 'Exportar a Excel',
+                        className: 'btn btn-success'
                     }
                 ],
                 order: [[7, 'desc'], [0, 'desc'], [1, 'desc']],
@@ -540,12 +545,14 @@
                     {
                         data: null,
                         render: function (data) {
-                            return `@role('admin')
-                                        <button data-id="${data.id}" class="btn-sm btn btn-warning edit-btn">Editar</button>
-                                        <button data-id="${data.id}" class="btn-sm btn btn-danger delete-btn">Eliminar</button>
-                                    @else
-                                        <!-- Sin acciones -->
-                                    @endrole`;
+                            return `
+                                @can('workers-edit')
+                                    <button data-id="${data.id}" class="btn-sm btn btn-warning edit-btn">Editar</button>
+                                @endcan
+                                @can('workers-delete')
+                                    <button data-id="${data.id}" class="btn-sm btn btn-danger delete-btn">Eliminar</button>
+                                @endcan
+                            `;
                         }
                     }
                 ],

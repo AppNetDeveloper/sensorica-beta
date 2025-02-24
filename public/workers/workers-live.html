@@ -112,6 +112,16 @@
         .green {
             color: green;
         }
+        @media (max-width: 1800px) {
+            .card {
+                width: calc(100% / 6 - 20px);
+            }
+        }
+        @media (max-width: 1500px) {
+            .card {
+                width: calc(100% / 5 - 20px);
+            }
+        }
         @media (max-width: 1200px) {
             .card {
                 width: calc(100% / 4 - 20px);
@@ -207,7 +217,7 @@
     
         // 📌 Variable global para almacenar los operadores
         let operatorsData = [];
-    
+
         // 📌 Función para cargar operadores y colores RFID desde la API
         function loadOperators() {
             $.ajax({
@@ -216,40 +226,78 @@
                 success: function (response) {
                     const operators = response.operators; 
                     rfidColorsGlobal = response.rfid_colors || []; // 📌 Guardamos los colores RFID globalmente
-    
+
                     operatorsData = operators; 
-    
+
                     const container = $('#cardContainer');
                     container.empty();
-    
+
                     if (!operators || operators.length === 0) {
                         container.append('<p>No hay operadores disponibles.</p>');
                         return;
                     }
-    
+
                     const maxTurn = Math.max(...operators.map(o => o.count_shift || 0));
                     const maxOrder = Math.max(...operators.map(o => o.count_order || 0));
-    
+
                     operators.forEach(operator => {
                         const turnValue = operator.count_shift || 0;
                         const orderValue = operator.count_order || 0;
-    
+
                         const turnClass = turnValue === 0 ? 'red' : turnValue === maxTurn ? 'green' : 'yellow';
                         const orderClass = orderValue === 0 ? 'red' : orderValue === maxOrder ? 'green' : 'yellow';
-    
+
+                        // 📌 Creamos un objeto para almacenar los productos por color RFID
                         let rfidHtml = '';
+                        let rfidProducts = {};
+
+                        operator.operator_posts.forEach(post => {
+                            const colorName = post.rfid_color_name; // El color RFID
+                            const productName = post.product_list_name; // El nombre del producto
+                            const count = post.count; // El valor de count
+
+                            // Si no existe, inicializamos el arreglo para este color
+                            if (!rfidProducts[colorName]) {
+                                rfidProducts[colorName] = [];
+                            }
+
+                            // Agregamos el producto al color correspondiente
+                            rfidProducts[colorName].push({
+                                productName: productName,
+                                count: count,
+                            });
+                        });
+
+                        // Ahora generamos el HTML para mostrar los productos bajo cada color RFID
                         if (rfidColorsGlobal.length > 0) {
                             rfidHtml = `
                                 <div class="rfid-container">
-                                    ${rfidColorsGlobal.map(color => `
-                                        <div class="rfid-item" style="color: ${color.name};">
-                                            ${color.name}: <strong>0</strong>
-                                        </div>
-                                    `).join('')}
+                                    ${rfidColorsGlobal.map(color => {
+                                        const products = rfidProducts[color.name] || [];
+                                        const colorHtml = products.map(product => {
+                                            // Comprobar si el nombre del producto no es nulo o vacío
+                                            const productNameHtml = product.productName && product.productName.trim() !== "" ? `
+                                                <div class="rfid-item" style="color: ${color.name};">
+                                                    ${product.productName}: <strong style="color: black;">${product.count}</strong>
+                                                </div>
+                                            ` : ''; // Si está vacío o nulo, no muestra nada
+
+                                            return productNameHtml;
+                                        }).join('');
+
+                                        // Mostrar el nombre del color si no hay productos asociados
+                                        return colorHtml ? `
+                                                ${colorHtml}
+                                        ` : `
+                                            <div class="rfid-item" style="color: ${color.name};">
+                                                <strong>${color.name}</strong>
+                                            </div>
+                                        `;
+                                    }).join('')}
                                 </div>
                             `;
                         }
-    
+
                         const card = `
                             <div class="card">
                                 ${config.name ? `<h3>${operator.name}</h3>` : ''}
@@ -279,6 +327,7 @@
                 },
             });
         }
+
     
         // 📌 Función para exportar datos a Excel
         function exportToExcel() {

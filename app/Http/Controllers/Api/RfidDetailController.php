@@ -16,7 +16,7 @@ use App\Models\OperatorPost;  // Asegúrate de tener este modelo
 use App\Models\Operator;      // Asegúrate de tener este modelo
 
 class RfidDetailController extends Controller
-{ 
+{
     public function store(Request $request)
     {
         try {
@@ -28,9 +28,9 @@ class RfidDetailController extends Controller
                 'tid'           => 'required|string',
                 'antenna_name'  => 'required|string'
             ]);
-    
+
             Log::info("Estamos en el método store de RfidDetailController");
-    
+
             if ($validator->fails()) {
                 Log::warning('Fallo de validación en store RfidDetailController', [
                     'datos_recibidos' => $request->all()
@@ -42,7 +42,7 @@ class RfidDetailController extends Controller
                 ], 422);
             }
             Log::info("RfidDetailController ha validado los datos");
-    
+
             // 2. Obtener la antena RFID
             $rfidAnt = RfidAnt::where('name', $request->input('antenna_name'))->first();
             if (!$rfidAnt) {
@@ -52,7 +52,7 @@ class RfidDetailController extends Controller
                     'message' => 'Antena RFID no encontrada'
                 ], 404);
             }
-    
+
             // 3. Obtener el rfid_reading usando el EPC (grupo único para varias TID)
             $epcInput = $request->input('epc');
             $rfidReading = RfidReading::where('epc', $epcInput)->first();
@@ -70,11 +70,11 @@ class RfidDetailController extends Controller
                     'message' => 'RFID reading no encontrado para el EPC proporcionado'
                 ], 404);
             }
-    
+
             // 4. Obtener o crear el rfid_detail según el TID
             try {
                 $rfidDetail = RfidDetail::where('tid', $request->input('tid'))->first();
-    
+
                 if (!$rfidDetail) {
                     // Solo se crea el registro si RFID_AUTO_ADD está habilitado en el env
                     if (env('RFID_AUTO_ADD', false)) {
@@ -127,13 +127,13 @@ class RfidDetailController extends Controller
                     'error'   => $e->getMessage(),
                 ], 500);
             }
-    
+
             // 5. Actualizar contadores del rfid_detail
             $rfidDetail->increment('count_total');
             $rfidDetail->increment('count_total_1');
             $rfidDetail->increment('count_shift_1');
             $rfidDetail->increment('count_order_1');
-    
+
             // --- Bloque: Actualizar contadores en Operators ---
             try {
                 // Buscar en operator_post registros con el mismo rfid_reading_id y finish_at nulo o vacío
@@ -142,7 +142,7 @@ class RfidDetailController extends Controller
                         $query->whereNull('finish_at')
                               ->orWhere('finish_at', '=', '');
                     })->first();
-    
+
                 if ($operatorPost) {
                     $operatorId = $operatorPost->operator_id;
                     $operator = Operator::find($operatorId);
@@ -158,7 +158,7 @@ class RfidDetailController extends Controller
             } catch (\Exception $e) {
                 Log::error("Error al actualizar contadores en operators: " . $e->getMessage());
             }
-    
+
             // --- Nuevo Bloque: Actualizar el campo 'count' en operator_post ---
             try {
                 // Se verifica que $operatorId esté definido
@@ -182,7 +182,67 @@ class RfidDetailController extends Controller
                 Log::error("Error al actualizar el contador 'count' en operator_post: " . $e->getMessage());
             }
             // --- Fin Bloque ---
-    
+
+            // --- Bloque: Filtrado por reset (tarjeta maestra) antes de crear el registro en rfid_list ---
+
+            // Buscar la tarjeta maestra (reset = 1) para este grupo de rfid_reading
+            $masterReset = RfidDetail::where('rfid_reading_id', $rfidReading->id)
+            ->where('reset', 1)
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+            if ($masterReset) {
+                // Si se encontró la tarjeta maestra, diferenciamos según el TID recibido
+                $currentTid = $request->input('tid');
+
+                // Buscar el último registro insertado en rfid_list para la tarjeta maestra
+                $lastMasterRecord = RfidList::where('tid', $masterReset->tid)
+                    ->orderBy('created_at', 'desc')
+                    ->first();
+
+                if ($currentTid !== $masterReset->tid) {
+                    // Caso: La tarjeta leída NO es la maestra
+                    if ($lastMasterRecord) {
+                        // Verificar si ya se ha insertado la tarjeta actual desde el último registro de la maestra
+                        $registroExistente = RfidList::where('tid', $currentTid)
+                            ->where('created_at', '>=', $lastMasterRecord->created_at)
+                            ->exists();
+
+                        if ($registroExistente) {
+                            Log::info("La tarjeta con TID {$currentTid} ya fue registrada después del último reset.");
+                            return response()->json([
+                                'success' => false,
+                                'message' => 'La tarjeta ya fue registrada en este ciclo.'
+                            ], 200);
+                        }
+                    }
+                } else {
+                    // Caso: La tarjeta leída ES la maestra (reset)
+                    if ($lastMasterRecord) {
+                        // Verificar que, después de la última inserción de la tarjeta maestra,
+                        // se haya insertado al menos otro registro (de otra tarjeta)
+                        $otroRegistroExiste = RfidList::where('rfid_reading_id', $rfidReading->id)
+                            ->where('tid', '<>', $masterReset->tid)
+                            ->where('created_at', '>', $lastMasterRecord->created_at)
+                            ->exists();
+
+                        // Calcular la diferencia en minutos desde la última inserción de la tarjeta maestra
+                        $minutosTranscurridos = Carbon::now()->diffInMinutes(Carbon::parse($lastMasterRecord->created_at));
+
+                        if (!$otroRegistroExiste || $minutosTranscurridos < 1) {
+                            Log::info("Condiciones para reinsertar la tarjeta maestra no cumplidas: " .
+                                "otro registro insertado = " . ($otroRegistroExiste ? 'sí' : 'no') .
+                                ", minutos transcurridos = {$minutosTranscurridos}.");
+                            return response()->json([
+                                'success' => false,
+                                'message' => 'La tarjeta maestra ya fue registrada recientemente o no se ha reiniciado el ciclo.'
+                            ], 200);
+                        }
+                    }
+                }
+            }
+
+
             // 6. Crear el registro en rfid_list
             $rfidList = RfidList::create([
                 'name'                => $rfidDetail->name,
@@ -204,7 +264,7 @@ class RfidDetailController extends Controller
                 'serialno'            => $request->input('serialno'),
                 'ant'                 => $request->input('ant')
             ]);
-    
+
             // Llamar a la función sendAlert si es necesario
             if (
                 $rfidDetail->send_alert &&
@@ -218,7 +278,7 @@ class RfidDetailController extends Controller
                 'last_status_detect' => '1',  // Marcado como conectado
                 'last_ant_detect'    => $request->input('antenna_name')
             ]);
-    
+
             return response()->json([
                 'success'   => true,
                 'message'   => 'Registro insertado en RFID list con éxito',
@@ -234,8 +294,8 @@ class RfidDetailController extends Controller
             ], 500);
         }
     }
-    
-    
+
+
     /**
      * Función para enviar alertas cuando un dispositivo se detecta
      *
@@ -248,26 +308,26 @@ class RfidDetailController extends Controller
         $apiUrl = rtrim(env('WHATSAPP_LINK'), '/') . '/send-message';
         $phoneNumber = env('WHATSAPP_PHONE_NOT');
         $dateTime = Carbon::now()->format('Y-m-d H:i:s');
-        
+
         // Configura el cliente HTTP
         $client = new Client([
             'timeout'      => 3,
             'http_errors'  => false,
             'verify'       => false,
         ]);
-        
+
         // Datos para enviar el mensaje de alerta
         $dataToSend = [
             'jid'     => "{$phoneNumber}@s.whatsapp.net",
             'message' => "Alerta: Punto de Control {$antenaName} ha detectado: {$detail->name}. Fecha: {$dateTime}",
         ];
-        
+
         try {
             // Llamada asíncrona a la API
             $promise = $client->postAsync($apiUrl, [
                 'json' => $dataToSend,
             ]);
-        
+
             // Maneja la respuesta de la API
             $promise->then(
                 function ($response) {
@@ -277,15 +337,15 @@ class RfidDetailController extends Controller
                     Log::error("Error al enviar mensaje de alerta: " . $exception->getMessage());
                 }
             );
-        
+
             // Inicia el proceso sin bloquear el flujo principal
             $promise->wait(false);
-        
+
         } catch (\Exception $e) {
             Log::error("Error en la llamada a la API de WhatsApp: " . $e->getMessage());
         }
     }
-    
+
     public function getHistoryRfid(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -294,7 +354,7 @@ class RfidDetailController extends Controller
             'date_end'   => 'nullable|date',
             'show'       => 'nullable|in:all,10,latest'
         ]);
-    
+
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
@@ -302,26 +362,26 @@ class RfidDetailController extends Controller
                 'errors'  => $validator->errors()
             ], 422);
         }
-    
+
         $query = RfidList::query();
-    
+
         // Aplicar filtros solo si `antenna_name` no es `all`
         if ($request->filled('antenna_name') && $request->antenna_name !== 'all') {
             $query->where('rfid_ant_name', $request->antenna_name);
         }
-    
+
         if ($request->filled('epc') && $request->epc !== 'all') {
             $query->where('epc', $request->epc);
         }
-    
+
         if ($request->filled('date_start') && $request->date_start !== 'all') {
             $query->whereDate('created_at', '>=', Carbon::parse($request->date_start));
         }
-    
+
         if ($request->filled('date_end') && $request->date_end !== 'all') {
             $query->whereDate('created_at', '<=', Carbon::parse($request->date_end));
         }
-    
+
         if ($request->filled('show')) {
             switch ($request->show) {
                 case '10':
@@ -338,22 +398,22 @@ class RfidDetailController extends Controller
         } else {
             $query->orderBy('created_at', 'desc');
         }
-    
+
         $rfidLists = $query->get();
-    
+
         return response()->json([
             'success' => true,
             'message' => 'Listado de RFID filtrado con éxito',
             'data'    => $rfidLists
         ]);
     }
-    
+
     public function getFilters()
     {
         $antennas = RfidAnt::select('name')->get(); // Solo obtén el nombre de la antena
         $epcs     = RfidDetail::select('epc')->distinct()->pluck('epc');
         $tids     = RfidDetail::select('tid')->distinct()->pluck('tid');
-    
+
         return response()->json([
             'success'  => true,
             'antennas' => $antennas,

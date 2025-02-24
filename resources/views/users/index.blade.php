@@ -91,16 +91,10 @@
 
     <script>
         // Ajusta estos endpoints según tus rutas
-        // 1) GET /users/list-all/json  (retorna JSON con usuarios)
         const listAllUrl       = 'users/list-all/json';
-
-        // 2) POST /users/store-or-update/ajax  (crear/actualizar usuario)
         const storeOrUpdateUrl = 'users/store-or-update/ajax';
 
-        // 3) DELETE /users/delete/ajax/{id} (eliminar usuario)
-
         $(document).ready(function () {
-            // Inicializamos DataTables
             const table = $('#usersTable').DataTable({
                 ajax: {
                     url: listAllUrl,
@@ -131,7 +125,8 @@
                                         data-id="${data.id}"
                                         data-name="${data.name}"
                                         data-email="${data.email || ''}"
-                                        data-phone="${data.phone || ''}">
+                                        data-phone="${data.phone || ''}"
+                                        data-role="${data.role || ''}">
                                     Editar
                                 </button>
                                 <button class="delete-btn btn btn-sm btn-danger"
@@ -150,53 +145,66 @@
                         text: 'Añadir Usuario',
                         className: 'btn btn-success',
                         action: function () {
-                            Swal.fire({
-                                title: 'Añadir Usuario',
-                                html: `
-                                    <input id="userId" class="swal2-input" placeholder="ID Usuario" readonly>
-                                    <input id="userName" class="swal2-input" placeholder="Nombre">
-                                    <input id="userEmail" class="swal2-input" placeholder="Email">
-                                    <input id="userPhone" class="swal2-input" placeholder="Teléfono (opcional)">
-                                    <input id="userPassword" type="password" class="swal2-input" placeholder="Contraseña">
-                                `,
-                                confirmButtonText: 'Guardar',
-                                showCancelButton: true,
-                                preConfirm: () => {
-                                    const id       = $('#userId').val() || null;
-                                    const name     = $('#userName').val();
-                                    const email    = $('#userEmail').val();
-                                    const phone    = $('#userPhone').val();
-                                    const password = $('#userPassword').val();
+                            $.ajax({
+                                url: '/roles/list', // Ruta para obtener los roles
+                                method: 'GET',
+                                success: function (roles) {
+                                    const rolesOptions = roles.map(role => `<option value="${role.id}">${role.name}</option>`).join('');
+                                    Swal.fire({
+                                        title: 'Añadir Usuario',
+                                        html: `
+                                            <input id="userId" class="swal2-input" placeholder="ID Usuario" readonly>
+                                            <input id="userName" class="swal2-input" placeholder="Nombre">
+                                            <input id="userEmail" class="swal2-input" placeholder="Email">
+                                            <input id="userPhone" class="swal2-input" placeholder="Teléfono (opcional)">
+                                            <input id="userPassword" type="password" class="swal2-input" placeholder="Contraseña">
+                                            <select id="userRole" class="swal2-input">
+                                                <option value="">Seleccionar rol</option>
+                                                ${rolesOptions}
+                                            </select>
+                                        `,
+                                        confirmButtonText: 'Guardar',
+                                        showCancelButton: true,
+                                        preConfirm: () => {
+                                            const id       = $('#userId').val() || null;
+                                            const name     = $('#userName').val();
+                                            const email    = $('#userEmail').val();
+                                            const phone    = $('#userPhone').val();
+                                            const password = $('#userPassword').val();
+                                            const role     = $('#userRole').val();
 
-                                    if (!name || !email || !password) {
-                                        Swal.showValidationMessage('Nombre, Email y Contraseña son obligatorios.');
-                                        return false;
-                                    }
-                                    return {
-                                        id: (id ? parseInt(id) : null),
-                                        name,
-                                        email,
-                                        phone: phone || null,
-                                        password: password || null,
-                                    };
-                                }
-                            }).then((result) => {
-                                if (result.isConfirmed) {
-                                    const payload = result.value;
-                                    $.ajax({
-                                        url: storeOrUpdateUrl,
-                                        method: 'POST',
-                                        contentType: 'application/json',
-                                        data: JSON.stringify(payload),
-                                        success: function () {
-                                            Swal.fire('Usuario guardado correctamente', '', 'success');
-                                            table.ajax.reload();
-                                        },
-                                        error: function (xhr) {
-                                            Swal.fire({
-                                                icon: 'error',
-                                                title: 'Error al guardar',
-                                                text: `Status: ${xhr.status}. ${xhr.responseJSON?.error || 'Error desconocido'}`
+                                            if (!name || !email || !password || !role) {
+                                                Swal.showValidationMessage('Nombre, Email, Contraseña y Rol son obligatorios.');
+                                                return false;
+                                            }
+                                            return {
+                                                id: (id ? parseInt(id) : null),
+                                                name,
+                                                email,
+                                                phone: phone || null,
+                                                password: password || null,
+                                                role
+                                            };
+                                        }
+                                    }).then((result) => {
+                                        if (result.isConfirmed) {
+                                            const payload = result.value;
+                                            $.ajax({
+                                                url: storeOrUpdateUrl,
+                                                method: 'POST',
+                                                contentType: 'application/json',
+                                                data: JSON.stringify(payload),
+                                                success: function () {
+                                                    Swal.fire('Usuario guardado correctamente', '', 'success');
+                                                    table.ajax.reload();
+                                                },
+                                                error: function (xhr) {
+                                                    Swal.fire({
+                                                        icon: 'error',
+                                                        title: 'Error al guardar',
+                                                        text: `Status: ${xhr.status}. ${xhr.responseJSON?.error || 'Error desconocido'}`
+                                                    });
+                                                }
                                             });
                                         }
                                     });
@@ -222,54 +230,67 @@
                 const currentName  = $(this).data('name');
                 const currentEmail = $(this).data('email');
                 const currentPhone = $(this).data('phone');
+                const currentRole  = $(this).data('role');
 
-                Swal.fire({
-                    title: 'Editar Usuario',
-                    html: `
-                        <input id="userId" class="swal2-input" value="${currentId}" readonly>
-                        <input id="userName" class="swal2-input" value="${currentName}">
-                        <input id="userEmail" class="swal2-input" placeholder="Email" value="${currentEmail}">
-                        <input id="userPhone" class="swal2-input" placeholder="Teléfono" value="${currentPhone}">
-                        <input id="userPassword" type="password" class="swal2-input" placeholder="Nueva Contraseña (opcional)">
-                    `,
-                    confirmButtonText: 'Actualizar',
-                    showCancelButton: true,
-                    preConfirm: () => {
-                        const id       = $('#userId').val();
-                        const name     = $('#userName').val();
-                        const email    = $('#userEmail').val();
-                        const phone    = $('#userPhone').val();
-                        const password = $('#userPassword').val();
+                $.ajax({
+                    url: '/roles/list', // Esta ruta debe devolver todos los roles
+                    method: 'GET',
+                    success: function (roles) {
+                        const rolesOptions = roles.map(role => `<option value="${role.id}" ${currentRole === role.id ? 'selected' : ''}>${role.name}</option>`).join('');
+                        Swal.fire({
+                            title: 'Editar Usuario',
+                            html: `
+                                <input id="userId" class="swal2-input" value="${currentId}" readonly>
+                                <input id="userName" class="swal2-input" value="${currentName}">
+                                <input id="userEmail" class="swal2-input" placeholder="Email" value="${currentEmail}">
+                                <input id="userPhone" class="swal2-input" placeholder="Teléfono" value="${currentPhone}">
+                                <input id="userPassword" type="password" class="swal2-input" placeholder="Nueva Contraseña (opcional)">
+                                <select id="userRole" class="swal2-input">
+                                    ${rolesOptions}
+                                </select>
+                            `,
+                            confirmButtonText: 'Actualizar',
+                            showCancelButton: true,
+                            preConfirm: () => {
+                                const id       = $('#userId').val();
+                                const name     = $('#userName').val();
+                                const email    = $('#userEmail').val();
+                                const phone    = $('#userPhone').val();
+                                const password = $('#userPassword').val();
+                                const role     = $('#userRole').val();
 
-                        if (!id || !name || !email) {
-                            Swal.showValidationMessage('ID, Nombre y Email son obligatorios.');
-                            return false;
-                        }
-                        return { 
-                            id: parseInt(id),
-                            name,
-                            email,
-                            phone: phone || null,
-                            password: password || null
-                        };
-                    }
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        const payload = result.value;
-                        $.ajax({
-                            url: storeOrUpdateUrl,
-                            method: 'POST',
-                            contentType: 'application/json',
-                            data: JSON.stringify(payload),
-                            success: function () {
-                                Swal.fire('Usuario actualizado', '', 'success');
-                                table.ajax.reload();
-                            },
-                            error: function (xhr) {
-                                Swal.fire({
-                                    icon: 'error',
-                                    title: 'Error al actualizar',
-                                    text: `Status: ${xhr.status}. ${xhr.responseJSON?.error || 'Error desconocido'}`
+                                if (!id || !name || !email || !role) {
+                                    Swal.showValidationMessage('ID, Nombre, Email y Rol son obligatorios.');
+                                    return false;
+                                }
+                                return { 
+                                    id: parseInt(id),
+                                    name,
+                                    email,
+                                    phone: phone || null,
+                                    password: password || null,
+                                    role
+                                };
+                            }
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                const payload = result.value;
+                                $.ajax({
+                                    url: storeOrUpdateUrl,
+                                    method: 'POST',
+                                    contentType: 'application/json',
+                                    data: JSON.stringify(payload),
+                                    success: function () {
+                                        Swal.fire('Usuario actualizado', '', 'success');
+                                        table.ajax.reload();
+                                    },
+                                    error: function (xhr) {
+                                        Swal.fire({
+                                            icon: 'error',
+                                            title: 'Error al actualizar',
+                                            text: `Status: ${xhr.status}. ${xhr.responseJSON?.error || 'Error desconocido'}`
+                                        });
+                                    }
                                 });
                             }
                         });
@@ -307,10 +328,7 @@
                     }
                 });
             });
-
-            // Si necesitas importar Excel, reset pass, etc.,
-            // copia la lógica de tu snippet anterior y ajusta los endpoints
-            // (storeOrUpdateUrl, listAllUrl, etc.)
         });
     </script>
 @endpush
+

@@ -170,7 +170,16 @@ class OperatorController extends Controller
      *                 @OA\Property(property="id", type="integer", description="Client ID"),
      *                 @OA\Property(property="name", type="string", description="Operator Name"),
      *                 @OA\Property(property="email", type="string", description="Operator Email"),
-     *                 @OA\Property(property="phone", type="string", description="Operator Phone")
+     *                 @OA\Property(property="phone", type="string", description="Operator Phone"),
+     *                 @OA\Property(property="operator_posts", type="array", description="Operator Assignments", 
+     *                     @OA\Items(
+     *                         @OA\Property(property="rfid_reading_id", type="integer", description="RFID Reading ID"),
+     *                         @OA\Property(property="sensor_id", type="integer", description="Sensor ID"),
+     *                         @OA\Property(property="modbus_id", type="integer", description="Modbus ID"),
+     *                         @OA\Property(property="count", type="integer", description="Count"),
+     *                         @OA\Property(property="product_list_id", type="integer", description="Product List ID")
+     *                     )
+     *                 )
      *             )
      *         )
      *     ),
@@ -183,22 +192,59 @@ class OperatorController extends Controller
      *         )
      *     )
      * )
-     */ 
-    public function listAll(Request $request)
-    {
-        // Obtener todos los operadores como array indexado
-        $operators = Operator::all(['client_id as id', 'name', 'email', 'phone', 'count_shift', 'count_order'])->toArray();
+     */
     
-        // Obtener todos los colores RFID como array
-        $rfidColors = \App\Models\RfidColor::all(['id', 'name'])->toArray();
-    
-        // Retornar los datos con la estructura correcta
-        return response()->json([
-            'operators' => array_values($operators), // Asegura que los operadores sigan siendo un array indexado
-            'rfid_colors' => $rfidColors // Agrega rfid_colors como una clave separada
-        ], 200);
-    }
-    
+     public function listAll(Request $request)
+     {
+         // Obtener todos los operadores con la consulta original y cargar las asignaciones relacionadas usando 'id'
+         $operators = Operator::with(['operatorPosts' => function($query) {
+             // Filtrar las asignaciones que no tienen 'finish_at' (es decir, donde finish_at es NULL)
+             $query->whereNull('finish_at')
+                   ->select('operator_id', 'rfid_reading_id', 'sensor_id', 'modbus_id', 'count', 'product_list_id')
+                   ->with([
+                    'rfidReading', // Cargar la relación de RfidReading
+                    'sensor',      // Cargar la relación de Sensor
+                    'modbus',      // Cargar la relación de Modbus
+                    'productList',  // Cargar la relación de ProductList
+                    'rfidReading.rfidColor' // Cargar el color RFID relacionado
+                ]);
+         }])->get(['id', 'name', 'email', 'phone', 'count_shift', 'count_order', 'client_id']); // Ahora estamos obteniendo 'id' real del operador
+     
+         // Modificar los datos para devolver 'client_id' como 'id'
+         $operators = $operators->map(function ($operator) {
+             return [
+                 'id' => $operator->client_id, // Usamos el 'id' real del operador, no el 'client_id'
+                 'name' => $operator->name,
+                 'email' => $operator->email,
+                 'phone' => $operator->phone,
+                 'count_shift' => $operator->count_shift,
+                 'count_order' => $operator->count_order,
+                 'operator_posts' => $operator->operatorPosts->map(function ($post) {
+                    return [
+                        'rfid_reading_name' => $post->rfidReading->name ?? null, // Nombre de RFID (suponiendo que tiene un campo 'name')
+                        'rfid_color_name' => $post->rfidReading->rfidColor->name ?? null, // Nombre del color RFID
+                        'sensor_name' => $post->sensor->name ?? null, // Nombre del Sensor
+                        'modbus_name' => $post->modbus->name ?? null, // Nombre del Modbus
+                        'count' => $post->count,
+                        'product_list_name' => $post->productList->name ?? null, // Nombre de la lista de productos
+                    ];
+                 }),
+             ];
+         });
+     
+         // Obtener todos los colores RFID como array
+         $rfidColors = \App\Models\RfidColor::all(['id', 'name'])->toArray();
+     
+         // Retornar los datos con la estructura correcta
+         return response()->json([
+             'operators' => $operators, // Los operadores ya incluyen las asignaciones relacionadas
+             'rfid_colors' => $rfidColors // Agrega rfid_colors como una clave separada
+         ], 200);
+     }
+     
+     
+
+
     /**
      * @OA\Get(
      *     path="/api/workers/{id}",

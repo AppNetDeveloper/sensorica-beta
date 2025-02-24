@@ -48,10 +48,11 @@ class DatabaseSeeder extends Seeder
 
         // Crear o encontrar roles
         $adminRole = Role::firstOrCreate(['name' => 'admin']);
-        Role::firstOrCreate(['name' => 'user']);
+        $userRole = Role::firstOrCreate(['name' => 'user']);
+        $encargadoRole = Role::firstOrCreate(['name' => 'encargado']);
+        $oficinaRole = Role::firstOrCreate(['name' => 'oficina']);
 
         // Asignar todos los permisos al rol "admin"
-        // Puedes pasar el array de nombres directamente a givePermissionTo()
         $adminRole->syncPermissions($permissions);
 
         // Crear o encontrar el usuario admin

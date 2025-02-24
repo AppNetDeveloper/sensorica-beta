@@ -131,6 +131,11 @@ Route::delete('/shift-lists/{id}', [ShiftManagementController::class, 'destroy']
 Route::get('/rfid/post', [RfidPostController::class, 'index'])->name('rfid.post.index');
 
 
+// En routes/web.php
+Route::get('/roles/list', function () {
+    return response()->json(Spatie\Permission\Models\Role::all());
+});
+
 Route::prefix('worker-post')->group(function () {
     // GET que carga la VISTA
     Route::get('/', [OperatorPostController::class, 'index'])->name('worker-post.index');

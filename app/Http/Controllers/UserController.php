@@ -47,12 +47,13 @@ class UserController extends Controller
      */
     public function storeOrUpdateAjax(Request $request)
     {
-        // Valida lo mínimo que necesites (aquí, name y email).
+        // Validar lo mínimo que necesites (aquí, name y email).
         $this->validate($request, [
             'name'  => 'required',
             'email' => 'required|email',
+            'role'  => 'required|exists:roles,id',  // Validamos que el rol exista
         ]);
-
+    
         if ($request->id) {
             // Modo Edición
             $user = User::findOrFail($request->id);
@@ -60,25 +61,29 @@ class UserController extends Controller
             // Modo Creación
             $user = new User();
         }
-
+    
         // Asignamos valores
         $user->name  = $request->name;
         $user->email = $request->email;
-
+    
         // Si tu tabla tiene 'phone'
         if (isset($request->phone)) {
             $user->phone = $request->phone;
         }
-
+    
         // Si llega 'password', lo encriptamos
         if (!empty($request->password)) {
             $user->password = Hash::make($request->password);
         }
-
+    
         $user->save();
-
+    
+        // Asignar el rol seleccionado
+        $user->syncRoles([$request->role]); // Asignamos el rol
+    
         return response()->json(['success' => true]);
     }
+    
 
     /**
      * Eliminar un usuario vía AJAX.

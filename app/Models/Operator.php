@@ -25,4 +25,9 @@ class Operator extends Model
     {
         return $this->belongsTo(Client::class);
     }
+
+    public function operatorPosts()
+    {
+        return $this->hasMany(OperatorPost::class, 'operator_id', 'id');
+    }
 }

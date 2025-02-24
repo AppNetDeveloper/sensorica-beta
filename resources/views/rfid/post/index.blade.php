@@ -464,18 +464,22 @@
                         data: null,
                         render: function(data) {
                             return `
-                                <button class="btn btn-sm btn-secondary edit-btn"
-                                    data-id="${data.id}"
-                                    data-product_list_id="${data.product_list_id || ''}"
-                                    data-rfid_reading_id="${data.rfid_reading_id || ''}"
-                                    data-modbus_id="${data.modbus_id || ''}"
-                                    data-sensor_id="${data.sensor_id || ''}">
-                                    Editar
-                                </button>
-                                <button class="btn btn-sm btn-danger delete-btn"
-                                    data-id="${data.id}">
-                                    Eliminar
-                                </button>
+                                @can('rfid-post-edit')
+                                    <button class="btn btn-sm btn-secondary edit-btn"
+                                        data-id="${data.id}"
+                                        data-product_list_id="${data.product_list_id || ''}"
+                                        data-rfid_reading_id="${data.rfid_reading_id || ''}"
+                                        data-modbus_id="${data.modbus_id || ''}"
+                                        data-sensor_id="${data.sensor_id || ''}">
+                                        Editar
+                                    </button>
+                                @endcan
+                                @can('rfid-post-delete')
+                                    <button class="btn btn-sm btn-danger delete-btn"
+                                        data-id="${data.id}">
+                                        Eliminar
+                                    </button>
+                                @endcan
                             `;
                         }
                     }
@@ -642,6 +646,11 @@
                                     }
                                 });
                         }
+                    },
+                    {
+                        extend: 'excelHtml5',
+                        text: 'Exportar a Excel',
+                        className: 'btn btn-success'
                     }
                 ],
                 order: [[3, 'desc'],[1, 'desc']],

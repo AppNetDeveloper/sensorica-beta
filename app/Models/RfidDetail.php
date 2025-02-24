@@ -44,6 +44,9 @@ class RfidDetail extends Model
         'search_out', // buscar siempre si sale de perimetro por defecto 0 o 1 si quieres que se busque siempre
         'last_ant_detect',        // Nuevo campo
         'last_status_detect',     // Nuevo campo
+        'reset' // Agregado el campo reset si en el grupo de tarjetas por filtrado por 	rfid_reading_id hay una que tiene reset = 1 
+        // cuando se guardan en rfid_list desde pasar la de reset solo se permite guardar una sola vez las otras . 
+        // hasta que pasa otra vez la de reset. Pero si no hay ninguna reset se guardan todos los registros.
     ];
 
     /**
