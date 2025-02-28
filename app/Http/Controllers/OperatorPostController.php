@@ -8,6 +8,7 @@ use App\Models\RfidReading;
 use App\Models\Sensor;
 use App\Models\Modbus;
 use Illuminate\Http\Request;
+use App\Models\ProductListSelecteds;
 
 class OperatorPostController extends Controller
 {
@@ -75,7 +76,28 @@ class OperatorPostController extends Controller
                 // Crear un nuevo registro para cada RFID encontrado
                 $createdRecords = [];
                 foreach ($rfidIds as $rfidId) {
-                    $data = $validated;
+                    // Buscamos en ProductListSelecteds usando el rfid_reading_id de la iteración
+                    $product = ProductListSelecteds::where('rfid_reading_id', $rfidId)
+                        ->where(function ($query) {
+                            $query->whereNull('finish_at')
+                                ->orWhere('finish_at', '');
+                        })->first();
+
+                    // Si se encuentra, asignamos los datos del producto; de lo contrario, se dejan en null
+                    if ($product) {
+                        $productData = [
+                            'product_list_id'          => $product->product_list_id,
+                            'product_list_selected_id' => $product->id,
+                        ];
+                    } else {
+                        $productData = [
+                            'product_list_id'          => null,
+                            'product_list_selected_id' => null,
+                        ];
+                    }
+
+                    // Fusionamos los datos validados con los datos del producto
+                    $data = array_merge($validated, $productData);
                     $data['rfid_reading_id'] = $rfidId;
                     $createdRecords[] = OperatorPost::create($data);
                 }

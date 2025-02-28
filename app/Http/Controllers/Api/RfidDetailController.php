@@ -125,60 +125,7 @@ class RfidDetailController extends Controller
                 ], 500);
             }
 
-            // 5. Actualizar contadores del rfid_detail
-            $rfidDetail->increment('count_total');
-            $rfidDetail->increment('count_total_1');
-            $rfidDetail->increment('count_shift_1');
-            $rfidDetail->increment('count_order_1');
 
-            // --- Bloque: Actualizar contadores en Operators ---
-            try {
-                // Buscar en operator_post registros con el mismo rfid_reading_id y finish_at nulo o vacío
-                $operatorPost = OperatorPost::where('rfid_reading_id', $rfidReading->id)
-                    ->where(function($query) {
-                        $query->whereNull('finish_at')
-                              ->orWhere('finish_at', '=', '');
-                    })->first();
-
-                if ($operatorPost) {
-                    $operatorId = $operatorPost->operator_id;
-                    $operator = Operator::find($operatorId);
-                    if ($operator) {
-                        $operator->increment('count_shift');
-                        $operator->increment('count_order');
-                    } else {
-                        Log::warning("No se encontró operator con id: {$operatorId}");
-                    }
-                } else {
-                    Log::info("No se encontró registro en operator_post para rfid_reading_id: " . $rfidReading->id);
-                }
-            } catch (\Exception $e) {
-                Log::error("Error al actualizar contadores en operators: " . $e->getMessage());
-            }
-
-            // --- Nuevo Bloque: Actualizar el campo 'count' en operator_post ---
-            try {
-                // Se verifica que $operatorId esté definido
-                if (isset($operatorId)) {
-                    $operatorPostToUpdate = OperatorPost::where('operator_id', $operatorId)
-                                                        ->where('rfid_reading_id', $rfidReading->id)
-                                                        ->where(function($query) {
-                                                            $query->whereNull('finish_at')
-                                                                ->orWhere('finish_at', '');
-                                                        })->first();
-
-                    if ($operatorPostToUpdate) {
-                        $operatorPostToUpdate->increment('count');
-                    } else {
-                        Log::info("No se encontró registro en operator_post para operator_id: {$operatorId} y rfid_reading_id: {$rfidReading->id}");
-                    }
-                } else {
-                    Log::warning("No se tiene definido operatorId para actualizar el campo count en operator_post");
-                }
-            } catch (\Exception $e) {
-                Log::error("Error al actualizar el contador 'count' en operator_post: " . $e->getMessage());
-            }
-            // --- Fin Bloque ---
 
             // --- Bloque: Filtrado por reset (tarjeta maestra) antes de crear el registro en rfid_list ---
 
@@ -195,7 +142,7 @@ class RfidDetailController extends Controller
                 // Buscar el último registro insertado en rfid_list para la tarjeta maestra
                 $lastMasterRecord = RfidList::where('tid', $masterReset->tid)
                     ->orderBy('created_at', 'desc')
-                    ->first();
+                    ->first(); 
 
                 if ($currentTid !== $masterReset->tid) {
                     // Caso: La tarjeta leída NO es la maestra
@@ -238,6 +185,60 @@ class RfidDetailController extends Controller
                     }
                 }
             }
+                        // 5. Actualizar contadores del rfid_detail
+                        $rfidDetail->increment('count_total');
+                        $rfidDetail->increment('count_total_1');
+                        $rfidDetail->increment('count_shift_1');
+                        $rfidDetail->increment('count_order_1');
+            
+                        // --- Bloque: Actualizar contadores en Operators ---
+                        try {
+                            // Buscar en operator_post registros con el mismo rfid_reading_id y finish_at nulo o vacío
+                            $operatorPost = OperatorPost::where('rfid_reading_id', $rfidReading->id)
+                                ->where(function($query) {
+                                    $query->whereNull('finish_at')
+                                          ->orWhere('finish_at', '=', '');
+                                })->first();
+            
+                            if ($operatorPost) {
+                                $operatorId = $operatorPost->operator_id;
+                                $operator = Operator::find($operatorId);
+                                if ($operator) {
+                                    $operator->increment('count_shift');
+                                    $operator->increment('count_order');
+                                } else {
+                                    Log::warning("No se encontró operator con id: {$operatorId}");
+                                }
+                            } else {
+                                Log::info("No se encontró registro en operator_post para rfid_reading_id: " . $rfidReading->id);
+                            }
+                        } catch (\Exception $e) {
+                            Log::error("Error al actualizar contadores en operators: " . $e->getMessage());
+                        }
+            
+                        // --- Nuevo Bloque: Actualizar el campo 'count' en operator_post ---
+                        try {
+                            // Se verifica que $operatorId esté definido
+                            if (isset($operatorId)) {
+                                $operatorPostToUpdate = OperatorPost::where('operator_id', $operatorId)
+                                                                    ->where('rfid_reading_id', $rfidReading->id)
+                                                                    ->where(function($query) {
+                                                                        $query->whereNull('finish_at')
+                                                                            ->orWhere('finish_at', '');
+                                                                    })->first();
+            
+                                if ($operatorPostToUpdate) {
+                                    $operatorPostToUpdate->increment('count');
+                                } else {
+                                    Log::info("No se encontró registro en operator_post para operator_id: {$operatorId} y rfid_reading_id: {$rfidReading->id}");
+                                }
+                            } else {
+                                Log::warning("No se tiene definido operatorId para actualizar el campo count en operator_post");
+                            }
+                        } catch (\Exception $e) {
+                            Log::error("Error al actualizar el contador 'count' en operator_post: " . $e->getMessage());
+                        }
+                        // --- Fin Bloque ---
 
 
             // 6. Crear el registro en rfid_list
