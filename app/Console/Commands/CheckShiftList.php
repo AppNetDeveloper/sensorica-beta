@@ -46,36 +46,36 @@ class CheckShiftList extends Command
         while (true) {
             // Obtener el día actual de la semana
             $dayOfWeek = Carbon::now()->isoWeekday();
-            $this->info("Día de la semana: {$dayOfWeek}");
+            $this->info("[" . Carbon::now()->toDateTimeString() . "]Día de la semana: {$dayOfWeek}");
 
             // Verificar si es de lunes a viernes
             if ($dayOfWeek >= 1 && $dayOfWeek <= 5) {
                 // Obtener la hora actual
                 $currentTime = Carbon::now()->format('H:i:s');
-                $this->info("Hora actual: {$currentTime}");
+                $this->info("[" . Carbon::now()->toDateTimeString() . "]Hora actual: {$currentTime}");
 
                 // Definir el rango para la consulta de 'start'
                 $startLowerBound = Carbon::now()->subSeconds(0)->format('H:i:s');
                 $startUpperBound = Carbon::now()->addSeconds(0)->format('H:i:s');
-                $this->info("Buscando shifts con start entre {$startLowerBound} y {$startUpperBound}");
+                $this->info("[" . Carbon::now()->toDateTimeString() . "]Buscando shifts con start entre {$startLowerBound} y {$startUpperBound}");
 
                 // Solo se seleccionarán los registros cuyo updated_at sea mayor a 2 segundos atrás.
                 $twoSecondsAgo = Carbon::now()->subSeconds(2);
                 
                     // Procesar turnos que finalizan (campo 'end')
-                    $this->info("Buscando shifts con end igual a {$currentTime}");
+                    $this->info("[" . Carbon::now()->toDateTimeString() . "]Buscando shifts con end igual a {$currentTime}");
                     $shiftFins = ShiftList::where('end', $currentTime)
                         ->where('updated_at', '<', $twoSecondsAgo)
                         ->get();
-                    $this->info("Shifts encontrados para 'end': " . $shiftFins->count());
+                    $this->info("[" . Carbon::now()->toDateTimeString() . "]Shifts encontrados para 'end': " . $shiftFins->count());
 
                     foreach ($shiftFins as $shiftFin) {
-                        $this->info("Procesando shift id: {$shiftFin->id} con end: {$shiftFin->end}");
+                        $this->info("[" . Carbon::now()->toDateTimeString() . "]Procesando shift id: {$shiftFin->id} con end: {$shiftFin->end}");
                         // Buscar el registro en barcodes con el mismo production_line_id
                         $barcodeFin = Barcode::where('production_line_id', $shiftFin->production_line_id)->first();
 
                         if ($barcodeFin) {
-                            $this->info("Barcode encontrado para production_line_id: {$shiftFin->production_line_id}");
+                            $this->info("[" . Carbon::now()->toDateTimeString() . "]Barcode encontrado para production_line_id: {$shiftFin->production_line_id}");
                             // Crear el topic y el mensaje JSON
                             $mqttTopicFin = $barcodeFin->mqtt_topic_barcodes . '/timeline_event';
                             $jsonMessageFin = json_encode([
@@ -83,7 +83,7 @@ class CheckShiftList extends Command
                                 'action'      => 'end',
                                 'description'   => 'Turno' // Duración del turno en minutos
                             ]);
-                            $this->info("Publicando mensaje MQTT en topic: {$mqttTopicFin} | Mensaje: {$jsonMessageFin}");
+                            $this->info("[" . Carbon::now()->toDateTimeString() . "]Publicando mensaje MQTT en topic: {$mqttTopicFin} | Mensaje: {$jsonMessageFin}");
 
                             // Publicar el mensaje MQTT
                             $this->publishMqttMessage($mqttTopicFin, $jsonMessageFin);
@@ -91,11 +91,11 @@ class CheckShiftList extends Command
                             // Actualizar el campo updated_at para marcar que se ha procesado
                             $shiftFin->update(['updated_at' => Carbon::now()]);
                         } else {
-                            $this->info("No se encontró barcode para production_line_id: {$shiftFin->production_line_id}");
+                            $this->info("[" . Carbon::now()->toDateTimeString() . "]No se encontró barcode para production_line_id: {$shiftFin->production_line_id}");
                         }
                     }
                 } else {
-                    $this->info("No es un día laboral. Día: {$dayOfWeek}");
+                    $this->info("[" . Carbon::now()->toDateTimeString() . "]No es un día laboral. Día: {$dayOfWeek}");
                 }
                 //Procesamos turno de start
                 $shifts = ShiftList::whereBetween('start', [$startLowerBound, $startUpperBound])
@@ -107,15 +107,15 @@ class CheckShiftList extends Command
                                     ->get();
             
 
-                $this->info("Shifts encontrados para 'start': " . $shifts->count());
+                $this->info("[" . Carbon::now()->toDateTimeString() . "]Shifts encontrados para 'start': " . $shifts->count());
 
                 foreach ($shifts as $shift) {
-                    $this->info("Procesando shift id: {$shift->id} con start: {$shift->start}");
+                    $this->info("[" . Carbon::now()->toDateTimeString() . "]Procesando shift id: {$shift->id} con start: {$shift->start}");
                     // Buscar el registro en barcodes con el mismo production_line_id
                     $barcode = Barcode::where('production_line_id', $shift->production_line_id)->first();
 
                     if ($barcode) {
-                        $this->info("Barcode encontrado para production_line_id: {$shift->production_line_id}");
+                        $this->info("[" . Carbon::now()->toDateTimeString() . "]Barcode encontrado para production_line_id: {$shift->production_line_id}");
                         // Crear el topic y el mensaje JSON
                         $mqttTopic = $barcode->mqtt_topic_barcodes . '/timeline_event';
                         $jsonMessage = json_encode([
@@ -123,7 +123,7 @@ class CheckShiftList extends Command
                             'action'      => 'start',
                             'description'   => 'Turno' // Duración del turno en minutos
                         ]);
-                        $this->info("Publicando mensaje MQTT en topic: {$mqttTopic} | Mensaje: {$jsonMessage}");
+                        $this->info("[" . Carbon::now()->toDateTimeString() . "]Publicando mensaje MQTT en topic: {$mqttTopic} | Mensaje: {$jsonMessage}");
 
                         // Publicar el mensaje MQTT
                         $this->publishMqttMessage($mqttTopic, $jsonMessage);
@@ -131,7 +131,7 @@ class CheckShiftList extends Command
                         // Actualizar el campo updated_at para marcar que se ha procesado
                         $shift->update(['updated_at' => Carbon::now()]);
                     } else {
-                        $this->info("No se encontró barcode para production_line_id: {$shift->production_line_id}");
+                        $this->info("[" . Carbon::now()->toDateTimeString() . "]No se encontró barcode para production_line_id: {$shift->production_line_id}");
                     }
                 }
 
@@ -139,11 +139,11 @@ class CheckShiftList extends Command
 
             // Esperar 1 segundo antes de la próxima verificación
             sleep(1);
-            $this->info("Volver a procesar en 1 segundo.");
+            $this->info("[" . Carbon::now()->toDateTimeString() . "]Volver a procesar en 1 segundo.");
 
             // Verificación de interrupción limpia
             if ($this->shouldStop()) {
-                $this->info("Detención del proceso solicitada.");
+                $this->info("[" . Carbon::now()->toDateTimeString() . "]Detención del proceso solicitada.");
                 return 0;
             }
         }
@@ -165,7 +165,7 @@ class CheckShiftList extends Command
             // Inserta en la tabla mqtt_send_server2
             MqttSendServer2::createRecord($topic, $message);
 
-            $this->info("Stored message in both mqtt_send_server1 and mqtt_send_server2 tables.");
+            $this->info("[" . Carbon::now()->toDateTimeString() . "]Stored message in both mqtt_send_server1 and mqtt_send_server2 tables.");
         } catch (\Exception $e) {
             Log::error("Error storing message in databases: " . $e->getMessage());
         }

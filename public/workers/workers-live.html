@@ -244,8 +244,8 @@
                         const turnValue = operator.count_shift || 0;
                         const orderValue = operator.count_order || 0;
 
-                        const turnClass = turnValue === 0 ? 'red' : turnValue === maxTurn ? 'green' : 'yellow';
-                        const orderClass = orderValue === 0 ? 'red' : orderValue === maxOrder ? 'green' : 'yellow';
+                        const turnClass = turnValue === 0 ? 'black' : turnValue === maxTurn ? 'black' : 'black';
+                        const orderClass = orderValue === 0 ? 'black' : orderValue === maxOrder ? 'black' : 'black';
 
                         // 📌 Creamos un objeto para almacenar los productos por color RFID
                         let rfidHtml = '';
@@ -300,15 +300,15 @@
 
                         const card = `
                             <div class="card">
-                                ${config.name ? `<h3>${operator.name}</h3>` : ''}
-                                ${config.id ? `<p style="font-size: ${config.idSize};"><span>ID:</span> ${operator.id}</p>` : ''}
+                                ${config.name ? `<h3>${operator.name} Cod. ${operator.id}</h3>` : ''}
+                                ${config.id ? `<p style="font-size: ${config.idSize};"><span>Tiempo Medio</span> 05:03</p>` : ''}
                                 <div class="stats-container">
                                     <div class="stat">
-                                        <span>Turno</span>
+                                        <span>Uds Turno</span>
                                         <div class="value ${turnClass}">${turnValue}</div>
                                     </div>
                                     <div class="stat">
-                                        <span>Orden</span>
+                                        <span>Uds Orden</span>
                                         <div class="value ${orderClass}">${orderValue}</div>
                                     </div>
                                 </div>

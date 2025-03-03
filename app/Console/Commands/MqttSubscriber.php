@@ -8,6 +8,8 @@ use PhpMqtt\Client\MqttClient;
 use PhpMqtt\Client\ConnectionSettings;
 use App\Models\Sensor;
 use App\Models\Modbus;
+//anadir carbon
+use Carbon\Carbon;
 
 class MqttSubscriber extends Command
 {
@@ -42,13 +44,13 @@ class MqttSubscriber extends Command
                 }
     
                 $mqtt->disconnect();
-                $this->info("MQTT Subscriber stopped gracefully.");
+                $this->info("[" . Carbon::now()->toDateTimeString() . "]MQTT Subscriber stopped gracefully.");
     
             } catch (\Exception $e) {
-                $this->error("Error connecting or processing MQTT client: " . $e->getMessage());
+                $this->error("[" . Carbon::now()->toDateTimeString() . "]Error connecting or processing MQTT client: " . $e->getMessage());
                 // Esperar un poco antes de intentar reconectar
                 sleep(5);
-                $this->info("Reconnecting to MQTT...");
+                $this->info("[" . Carbon::now()->toDateTimeString() . "]Reconnecting to MQTT...");
             }
         }
     }
@@ -76,7 +78,7 @@ class MqttSubscriber extends Command
             }, 0);
 
             $this->subscribedTopics[] = $topic;
-            $this->info("Subscribed to topic: {$topic}");
+            $this->info("[" . Carbon::now()->toDateTimeString() . "]Subscribed to topic: {$topic}");
         }
     }
 
@@ -110,7 +112,7 @@ class MqttSubscriber extends Command
         $cleanMessage = json_decode($message, true);  // Convertir el JSON a un array
 
         if (json_last_error() !== JSON_ERROR_NONE) {
-            $this->error("El JSON proporcionado no es válido: " . json_last_error_msg());
+            $this->error("[" . Carbon::now()->toDateTimeString() . "]El JSON proporcionado no es válido: " . json_last_error_msg());
             return;
         }
 
@@ -122,7 +124,7 @@ class MqttSubscriber extends Command
         $barcodes = Barcode::where('mqtt_topic_barcodes', $originalTopic)->get();
     
         if ($barcodes->isEmpty()) {
-            $this->error("No barcodes found for topic: {$topic}");
+            $this->error("[" . Carbon::now()->toDateTimeString() . "]No barcodes found for topic: {$topic}");
             return;
         }
     
@@ -134,7 +136,7 @@ class MqttSubscriber extends Command
                 $barcode->order_notice = $cleanMessageJson;
                 $barcode->sended = 0;  // Después de guardar, poner `sended` a 0
                 $barcode->save();
-                $this->info("Aviso de pedido actualizado para código de barras {$barcode->id} y valor de `sended` cambiado a 0");
+                $this->info("[" . Carbon::now()->toDateTimeString() . "]Aviso de pedido actualizado para código de barras {$barcode->id} y valor de `sended` cambiado a 0");
     
                 // Resetear sensores y modbuses asociados
                 $this->resetSensors($barcode->id);
@@ -145,7 +147,7 @@ class MqttSubscriber extends Command
         }
     
         if (!$processed) {
-            $this->error("Ninguna barcoder encontrado con (`sended` = 1) y topico : {$topic}  que esta en modo de recepción. No se guarda nada");
+            $this->error("[" . Carbon::now()->toDateTimeString() . "]Ninguna barcoder encontrado con (`sended` = 1) y topico : {$topic}  que esta en modo de recepción. No se guarda nada");
         }
     }
 
@@ -159,12 +161,12 @@ class MqttSubscriber extends Command
             ]);
 
             if ($updated > 0) {
-                $this->info("Reset count_order_0 and count_order_1 for {$updated} sensors for barcode ID {$barcodeId}");
+                $this->info("[" . Carbon::now()->toDateTimeString() . "]Reset count_order_0 and count_order_1 for {$updated} sensors for barcode ID {$barcodeId}");
             } else {
-                $this->error("Sensor not found for barcode ID: {$barcodeId}");
+                $this->error("[" . Carbon::now()->toDateTimeString() . "]Sensor not found for barcode ID: {$barcodeId}");
             }
         } catch (\Exception $e) {
-            $this->error("Error updating sensors: " . $e->getMessage());
+            $this->error("[" . Carbon::now()->toDateTimeString() . "]Error updating sensors: " . $e->getMessage());
         }
     }
 
@@ -179,13 +181,13 @@ class MqttSubscriber extends Command
             ]);
     
             if ($updated > 0) {
-                $this->info("Reset rec_box for {$updated} modbuses for barcode ID {$barcodeId}");
+                $this->info("[" . Carbon::now()->toDateTimeString() . "]Reset rec_box for {$updated} modbuses for barcode ID {$barcodeId}");
             } else {
-                $this->error("Modbus not found for barcode ID: {$barcodeId}");
+                $this->error("[" . Carbon::now()->toDateTimeString() . "]Modbus not found for barcode ID: {$barcodeId}");
             }
     
         } catch (\Exception $e) {
-            $this->error("Error updating Modbus: " . $e->getMessage());
+            $this->error("[" . Carbon::now()->toDateTimeString() . "]Error updating Modbus: " . $e->getMessage());
         }
     }
     

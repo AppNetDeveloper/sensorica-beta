@@ -541,7 +541,7 @@
                             return data ? moment(data).format('DD/MM/YYYY HH:mm:ss') : '';
                         }
                     },
-                    { data: 'finish_at', defaultContent: '<b>En curco</b>' },
+                    { data: 'finish_at', defaultContent: '<b>En curso</b>' },
                     {
                         data: null,
                         render: function (data) {

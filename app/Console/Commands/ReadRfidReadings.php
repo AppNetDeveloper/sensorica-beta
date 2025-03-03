@@ -82,7 +82,7 @@ class ReadRfidReadings extends Command
 
             if (!in_array($topic, $this->subscribedTopics)) {
                 $mqtt->subscribe($topic, function ($topic, $message) use ($antenna) {
-                    $this->processMessage($topic, $message, $antenna->name);
+                    $this->processMessage($topic, $message, $antenna->name, $antenna->rssi_min);
                 }, 0);
 
                 $this->subscribedTopics[] = $topic;
@@ -93,7 +93,7 @@ class ReadRfidReadings extends Command
         $this->logInfo('Subscribed to initial topics.');
     }
 
-    private function processMessage($topic, $message, $antennaName)
+    private function processMessage($topic, $message, $antennaName, $rssiMin)
     {
         $dataArray = json_decode($message, true);
     
@@ -113,7 +113,11 @@ class ReadRfidReadings extends Command
                 $this->logError("Error: Faltan datos en el JSON para uno de los objetos.");
                 continue;
             }
-    
+            // Verificar si el RSSI es mayor o igual al mínimo especificado
+            if ($rssi <= $rssiMin) {
+                $this->logError("Error: El RSSI ($rssi) es menor que el mínimo especificado ($rssiMin). EPC: {$epc} y TDI: {$tid}.");
+                continue;
+            }
             // Enviar datos a la API
             $this->sendToApi($epc, $rssi, $serialno, $tid, $ant, $antennaName);
         }

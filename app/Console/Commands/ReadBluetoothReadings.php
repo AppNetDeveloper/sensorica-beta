@@ -7,6 +7,7 @@ use App\Models\BluetoothAnt;
 use PhpMqtt\Client\MqttClient;
 use PhpMqtt\Client\ConnectionSettings;
 use GuzzleHttp\Client;
+use Carbon\Carbon;
 
 class ReadBluetoothReadings extends Command
 {
@@ -44,10 +45,10 @@ class ReadBluetoothReadings extends Command
             }
 
             $mqtt->disconnect();
-            $this->info("MQTT Subscriber stopped gracefully.");
+            $this->info("[" . Carbon::now()->toDateTimeString() . "]MQTT Subscriber stopped gracefully.");
 
         } catch (\Exception $e) {
-            $this->error("Error en el comando bluetooth:read: " . $e->getMessage());
+            $this->error("[" . Carbon::now()->toDateTimeString() . "]Error en el comando bluetooth:read: " . $e->getMessage());
         }
     }
 
@@ -80,7 +81,7 @@ class ReadBluetoothReadings extends Command
                 }, 0);
 
                 $this->subscribedTopics[] = $topic;
-                $this->info("Subscribed to topic: {$topic}");
+                $this->info("[" . Carbon::now()->toDateTimeString() . "]Subscribed to topic: {$topic}");
             }
         }
 
@@ -92,7 +93,7 @@ class ReadBluetoothReadings extends Command
         $dataArray = json_decode($message, true);
     
         if (is_null($dataArray) || !is_array($dataArray)) {
-            $this->error("Error: El mensaje recibido no es un JSON válido.");
+            $this->error("[" . Carbon::now()->toDateTimeString() . "]Error: El mensaje recibido no es un JSON válido.");
             return;
         }
     
@@ -102,7 +103,7 @@ class ReadBluetoothReadings extends Command
         $change = $dataArray['change'] ?? null;
     
         if (is_null($mac) || is_null($rssi) || is_null($change)) {
-            $this->error("Error: Faltan datos en el JSON para uno de los objetos.");
+            $this->error("[" . Carbon::now()->toDateTimeString() . "]Error: Faltan datos en el JSON para uno de los objetos.");
             return;
         }
     
@@ -111,7 +112,7 @@ class ReadBluetoothReadings extends Command
         $antennaName = $antenna ? $antenna->name : null;
     
         if (is_null($antennaName)) {
-            $this->error("Error: No se encontró una antena para el tópico {$topic}.");
+            $this->error("[" . Carbon::now()->toDateTimeString() . "]Error: No se encontró una antena para el tópico {$topic}.");
             return;
         }
     
@@ -143,20 +144,20 @@ class ReadBluetoothReadings extends Command
     
             $promise->then(
                 function ($response) use ($mac) {
-                    $this->info("API call success for MAC {$mac}: " . $response->getStatusCode());
+                    $this->info("[" . Carbon::now()->toDateTimeString() . "]API call success for MAC {$mac}: " . $response->getStatusCode());
                 },
                 function ($exception) use ($mac) {
-                    $this->error("API call error for MAC {$mac}: " . $exception->getMessage());
+                    $this->error("[" . Carbon::now()->toDateTimeString() . "]API call error for MAC {$mac}: " . $exception->getMessage());
                 }
             );
     
             $promise->wait(false);
     
         } catch (\Exception $e) {
-            $this->error("Error al intentar llamar a la API para MAC {$mac}: " . $e->getMessage());
+            $this->error("[" . Carbon::now()->toDateTimeString() . "]Error al intentar llamar a la API para MAC {$mac}: " . $e->getMessage());
         }
     
-        $this->info("Mensaje procesado para MAC {$mac}, RSSI {$rssi}, Change {$change}");
+        $this->info("[" . Carbon::now()->toDateTimeString() . "]Mensaje procesado para MAC {$mac}, RSSI {$rssi}, Change {$change}");
     }
     
 }

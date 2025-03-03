@@ -1289,7 +1289,7 @@ paths:
               schema:
                 type: array
                 items:
-                  properties: { id: { description: 'Client ID', type: integer }, name: { description: 'Operator Name', type: string }, email: { description: 'Operator Email', type: string }, phone: { description: 'Operator Phone', type: string } }
+                  properties: { id: { description: 'Client ID', type: integer }, name: { description: 'Operator Name', type: string }, email: { description: 'Operator Email', type: string }, phone: { description: 'Operator Phone', type: string }, operator_posts: { description: 'Operator Assignments', type: array, items: { properties: { rfid_reading_id: { description: 'RFID Reading ID', type: integer }, sensor_id: { description: 'Sensor ID', type: integer }, modbus_id: { description: 'Modbus ID', type: integer }, count: { description: Count, type: integer }, product_list_id: { description: 'Product List ID', type: integer } }, type: object } } }
                   type: object
         '500':
           description: 'Internal server error'
@@ -1459,12 +1459,12 @@ paths:
                 type: object
         '404':
           description: 'Worker not found'
-  /api/operator-rfid:
+  /api/operator-post:
     get:
       tags:
-        - OperatorRfid
-      summary: 'List all operator-rfid relations'
-      operationId: 054b1679dc356b9d0befba3a0b4536f5
+        - OperatorPost
+      summary: 'List all operator-post relations'
+      operationId: bc13062cb9d465bbf605dd4a726bab20
       responses:
         '200':
           description: 'List of relations'
@@ -1473,12 +1473,12 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/OperatorRfid'
+                  $ref: '#/components/schemas/OperatorPost'
     post:
       tags:
-        - OperatorRfid
-      summary: 'Create a new operator-rfid relation'
-      operationId: 5e2bd7da0d330745550717c816639e41
+        - OperatorPost
+      summary: 'Create a new operator-post relation'
+      operationId: 9c6f8f776f1237f84fb5db3e3af8d672
       requestBody:
         required: true
         content:
@@ -1494,6 +1494,12 @@ paths:
                 rfid_reading_id:
                   type: integer
                   example: 2
+                sensor_id:
+                  type: integer
+                  example: 3
+                modbus_id:
+                  type: integer
+                  example: 4
               type: object
       responses:
         '201':
@@ -1501,13 +1507,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/OperatorRfid'
-  '/api/operator-rfid/{id}':
+                $ref: '#/components/schemas/OperatorPost'
+  '/api/operator-post/{id}':
     get:
       tags:
-        - OperatorRfid
-      summary: 'Get a specific operator-rfid relation'
-      operationId: 66b70bae333705ed0bb4975bd1cb93da
+        - OperatorPost
+      summary: 'Get a specific operator-post relation'
+      operationId: 5cee21033372514ee3501ba8c037c0ed
       parameters:
         -
           name: id
@@ -1522,12 +1528,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/OperatorRfid'
+                $ref: '#/components/schemas/OperatorPost'
     put:
       tags:
-        - OperatorRfid
-      summary: 'Update an operator-rfid relation'
-      operationId: da742e1ea894e98ffbae6086ef5fdf17
+        - OperatorPost
+      summary: 'Update an operator-post relation'
+      operationId: 8a2ce6e059e0ef8b79788f0112d8c196
       parameters:
         -
           name: id
@@ -1548,6 +1554,12 @@ paths:
                 rfid_reading_id:
                   type: integer
                   example: 2
+                sensor_id:
+                  type: integer
+                  example: 3
+                modbus_id:
+                  type: integer
+                  example: 4
               type: object
       responses:
         '200':
@@ -1555,12 +1567,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/OperatorRfid'
+                $ref: '#/components/schemas/OperatorPost'
     delete:
       tags:
-        - OperatorRfid
-      summary: 'Delete an operator-rfid relation'
-      operationId: cfbb3041c3f628ddf644e9a9ceb77a74
+        - OperatorPost
+      summary: 'Delete an operator-post relation'
+      operationId: 2fdee5ba99b36ab07a4d3c8dc2daec39
       parameters:
         -
           name: id
@@ -1577,6 +1589,79 @@ paths:
               schema:
                 properties:
                   message: { type: string }
+                type: object
+  /api/order-notice/store:
+    post:
+      tags:
+        - OrderNotice
+      summary: 'Recibir un order notice'
+      description: 'Recibe un JSON con la información del pedido'
+      operationId: 4411aa8b0ebe23bf35297a5f6cccfdf8
+      parameters:
+        -
+          name: Authorization
+          in: header
+          description: 'Token de la línea de producción'
+          required: true
+          schema:
+            type: string
+            example: 'Bearer your-production-line-token'
+      requestBody:
+        description: 'JSON con la información del order notice'
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - orderId
+                - quantity
+                - unit
+                - refer
+              properties:
+                orderId:
+                  description: 'ID del pedido'
+                  type: integer
+                customerOrderId:
+                  description: 'ID del pedido del cliente'
+                  type: string
+                customerReferenceId:
+                  description: 'ID de referencia del cliente'
+                  type: string
+                barcode:
+                  description: 'Código de barras'
+                  type: string
+                quantity:
+                  description: 'Cantidad de productos'
+                  type: integer
+                unit:
+                  description: 'Unidad de medida'
+                  type: string
+                isAuto:
+                  description: 'Indica si es un pedido automático'
+                  type: integer
+                refer:
+                  description: 'Información adicional del pedido'
+                  properties: { _id: { description: 'ID de referencia', type: string }, company_name: { description: 'Nombre de la empresa', type: string }, id: { description: 'ID del pedido en la base de datos', type: integer }, families: { description: 'Familias relacionadas', type: string }, customerId: { description: 'ID del cliente', type: string }, eanCode: { description: 'Código EAN', type: string }, rfidCode: { description: 'Código RFID', type: string }, descrip: { description: 'Descripción del producto', type: string }, value: { description: 'Valor del producto', type: number, format: float }, magnitude: { description: 'Magnitud (por ejemplo, Masa)', type: string }, envase: { description: 'Envase del producto', type: string }, envase_value: { description: 'Valor del envase', type: string }, measure: { description: 'Unidad de medida del producto', type: string }, groupLevel: { description: 'Detalles de los niveles de grupo', type: array, items: { properties: { id: { description: 'ID del grupo', type: string }, level: { description: 'Nivel del grupo', type: integer }, uds: { description: 'Unidades por nivel', type: integer }, total: { description: 'Total de la medida', type: number, format: float }, measure: { description: 'Unidad de medida del grupo', type: string }, eanCode: { description: 'Código EAN del grupo', type: string }, envase: { description: 'Envase del grupo', type: string } }, type: object } }, standardTime: { description: 'Tiempos estándar de producción', type: array, items: { properties: { value: { description: 'Valor del tiempo estándar', type: string }, magnitude1: { description: 'Magnitud 1 (por ejemplo, Uds/hr)', type: string }, measure1: { description: 'Medida 1 (por ejemplo, uds)', type: string }, magnitude2: { description: 'Magnitud 2', type: string }, measure2: { description: 'Medida 2', type: string }, machineId: { description: 'IDs de máquinas relacionadas', type: array, items: { description: 'ID de la máquina', type: string } } }, type: object } }, createdAt: { description: 'Fecha de creación', type: string, format: date-time }, updatedAt: { description: 'Fecha de última actualización', type: string, format: date-time } }
+                  type: object
+              type: object
+      responses:
+        '200':
+          description: 'Order notice recibido correctamente'
+          content:
+            application/json:
+              schema:
+                properties:
+                  status: { type: string, example: success }
+                  message: { type: string, example: 'Order notice processed successfully' }
+                type: object
+        '400':
+          description: 'Error de validación'
+          content:
+            application/json:
+              schema:
+                properties:
+                  status: { type: string, example: error }
+                  message: { type: object }
                 type: object
   /api/product-lists:
     get:
@@ -1712,113 +1797,6 @@ paths:
                 properties:
                   error: { type: string }
                 type: object
-  /api/product-list-rfids:
-    get:
-      tags:
-        - ProductListRfid
-      summary: 'Listar todas las relaciones'
-      operationId: 07b8966df6d91bc9d8a6c28437fe7a4a
-      responses:
-        '200':
-          description: 'Lista de relaciones'
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/ProductListRfid'
-    post:
-      tags:
-        - ProductListRfid
-      summary: 'Crear una nueva relación'
-      operationId: 8c84b04cd88aa97b0da76c49229a209a
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              required:
-                - client_id
-                - rfid_reading_id
-              properties:
-                client_id:
-                  type: integer
-                  example: 23613092
-                rfid_reading_id:
-                  type: integer
-                  example: 2
-              type: object
-      responses:
-        '201':
-          description: 'Relación creada correctamente'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProductListRfid'
-  '/api/product-list-rfids/{id}':
-    get:
-      tags:
-        - ProductListRfid
-      summary: 'Obtener una relación específica'
-      operationId: 2ea5d5ec4a91f0c789e2babae4cc0355
-      parameters:
-        -
-          name: id
-          in: path
-          description: 'ID de la relación'
-          required: true
-          schema:
-            type: integer
-            example: 1
-      responses:
-        '200':
-          description: 'Detalles de la relación'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProductListRfid'
-    put:
-      tags:
-        - ProductListRfid
-      summary: 'Actualizar una relación existente'
-      operationId: 69acc08b94b09aab0ff210744e2f6aaa
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              properties:
-                product_list_id:
-                  type: integer
-                  example: 1
-                rfid_reading_id:
-                  type: integer
-                  example: 2
-              type: object
-      responses:
-        '200':
-          description: 'Relación actualizada correctamente'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProductListRfid'
-    delete:
-      tags:
-        - ProductListRfid
-      summary: 'Eliminar una relación'
-      operationId: a186e2dd6c3d8a3f8e019705d44183ce
-      parameters:
-        -
-          name: id
-          in: path
-          description: 'ID de la relación'
-          required: true
-          schema:
-            type: integer
-            example: 1
-      responses:
-        '200':
-          description: 'Relación eliminada correctamente'
   '/api/production-line/status/{token}':
     get:
       tags:
@@ -2976,6 +2954,41 @@ paths:
       security:
         -
           bearerAuth: []
+  /api/verne-update:
+    post:
+      tags:
+        - Aplicación
+      summary: 'Actualizar VerneMQ ejecutando el script verne.sh'
+      operationId: ccd47db8be7f0aa5a7a47846759dca2c
+      responses:
+        '200':
+          description: 'Actualización de VerneMQ iniciada correctamente.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  status: { type: string, example: success }
+                  message: { type: string, example: 'Script de actualización de VerneMQ ejecutado correctamente.' }
+                type: object
+        '403':
+          description: 'Token de autorización inválido.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string, example: 'Token de autorización inválido.' }
+                type: object
+        '500':
+          description: 'Error al ejecutar el script de actualización de VerneMQ.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string, example: 'Error al ejecutar el script de actualización de VerneMQ.' }
+                type: object
+      security:
+        -
+          bearerAuth: []
   /api/server-ips:
     get:
       tags:
@@ -3219,14 +3232,14 @@ tags:
     name: Workers
     description: Workers
   -
-    name: OperatorRfid
-    description: OperatorRfid
+    name: OperatorPost
+    description: OperatorPost
+  -
+    name: OrderNotice
+    description: OrderNotice
   -
     name: 'Product Lists'
     description: 'Product Lists'
-  -
-    name: ProductListRfid
-    description: ProductListRfid
   -
     name: Dispositivos
     description: Dispositivos

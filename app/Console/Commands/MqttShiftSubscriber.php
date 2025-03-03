@@ -42,7 +42,7 @@ class MqttShiftSubscriber extends Command
     
         while ($this->shouldContinue) {
             try {
-                $this->info("Intentando conectar con MQTT...");
+                $this->info("[". Carbon::now()->toDateTimeString() . "]Intentando conectar con MQTT...");
     
                 // Inicializar el cliente MQTT
                 $mqtt = $this->initializeMqttClient(env('MQTT_SENSORICA_SERVER'), intval(env('MQTT_SENSORICA_PORT')));
@@ -67,10 +67,10 @@ class MqttShiftSubscriber extends Command
                 }
     
                 $mqtt->disconnect();
-                $this->info("MQTT Subscriber detenido correctamente.");
+                $this->info("[". Carbon::now()->toDateTimeString() . "]MQTT Subscriber detenido correctamente.");
     
             } catch (\Exception $e) {
-                $this->error("Error en la conexión MQTT: " . $e->getMessage());
+                $this->error("[" . Carbon::now()->toDateTimeString() . "]Error en la conexión MQTT: " . $e->getMessage());
     
                 // Espera antes de reintentar (con aumento progresivo hasta un máximo de 30s)
                 sleep($retryDelay);
@@ -112,7 +112,7 @@ class MqttShiftSubscriber extends Command
                 }, 0);
 
                 $this->subscribedTopics[] = $topicWithShift;
-                $this->info("Subscribed to topic: {$topicWithShift}");
+                $this->info("[". Carbon::now()->toDateTimeString() . "]Subscribed to topic: {$topicWithShift}");
             }
         }
 
@@ -135,25 +135,25 @@ class MqttShiftSubscriber extends Command
                 }, 0);
 
                 $this->subscribedTopics[] = $topicWithShift;
-                $this->info("Subscribed to new topic: {$topicWithShift}");
+                $this->info("[". Carbon::now()->toDateTimeString() . "]Subscribed to new topic: {$topicWithShift}");
             }
         }
     }
 
     private function processMessage($topic, $message)
     {
-        $this->info("Processing message for topic: {$topic}");
+        $this->info("[". Carbon::now()->toDateTimeString() . "]Processing message for topic: {$topic}");
 
         // Decodificar el mensaje JSON
         $data = json_decode($message, true);
 
         // Verificar si el JSON es válido
         if (json_last_error() !== JSON_ERROR_NONE) {
-            $this->error("Failed to decode JSON: " . json_last_error_msg());
+            $this->error("[" . Carbon::now()->toDateTimeString() . "]Failed to decode JSON: " . json_last_error_msg());
             return;
         }
 
-        $this->info("Message decoded: " . json_encode($data));
+        $this->info('[' . Carbon::now()->toDateTimeString() . '] Message decoded: ' . json_encode($data));
 
         // Buscar el modbus que coincide con el tópico (sin '/timeline_event')
         $baseTopic = str_replace('/timeline_event', '', $topic);
@@ -161,7 +161,7 @@ class MqttShiftSubscriber extends Command
         $barcode = Barcode::where('mqtt_topic_barcodes', $baseTopic)->first();
 
         if ($barcode) {
-            $this->info("Modbus found for topic: {$baseTopic}");
+            $this->info("[". Carbon::now()->toDateTimeString() . "]Modbus found for topic: {$baseTopic}");
 
             // Obtener el production_line_id desde modbus
             $productionLineId = $barcode->production_line_id;
@@ -171,19 +171,19 @@ class MqttShiftSubscriber extends Command
 
             // Procesar cada sensor encontrado pero ponemos si no hay sensores en la línea de producciónque ponga mesajes linea din sensores
             if ($sensors->isEmpty()) {
-                $this->info("No sensors found for production line ID {$productionLineId}");
+                $this->info("[". Carbon::now()->toDateTimeString() . "]No sensors found for production line ID {$productionLineId}");
                 //pero reseteamos los contadores de usuarios y ponemos log 
                 $this->resetOperators();
             }else {
                 // Procesar cada sensor encontrado
                 foreach ($sensors as $sensor) {
-                    $this->info("Processing sensor ID {$sensor->id}");
+                    $this->info("[". Carbon::now()->toDateTimeString() . "]Processing sensor ID {$sensor->id}");
 
                     try {
                         // Verificar si el JSON contiene 'type'
                         if (isset($data['type'])) {
                             $sensor->shift_type = $data['type'];
-                            $this->info("Shift type set to: {$data['type']}");
+                            $this->info("[". Carbon::now()->toDateTimeString() . "]Shift type set to: {$data['type']}");
                         } else {
                             $this->warn("Shift type missing in the message.");
                         }
@@ -191,7 +191,7 @@ class MqttShiftSubscriber extends Command
                         // Verificar si el JSON contiene 'action'
                         if (isset($data['action'])) {
                             $sensor->event = $data['action'];
-                            $this->info("Action set to: {$data['action']}");
+                            $this->info("[". Carbon::now()->toDateTimeString() . "]Action set to: {$data['action']}");
                         } else {
                             $this->warn("Action missing in the message.");
                         }
@@ -200,7 +200,7 @@ class MqttShiftSubscriber extends Command
                         $sensor->save();
                     } catch (\Exception $e) {
                         // Manejo de la excepción
-                        $this->error("Error al procesar el sensor: " . $e->getMessage());
+                        $this->error("[" . Carbon::now()->toDateTimeString() . "]Error al procesar el sensor: " . $e->getMessage());
                         // Si es necesario, se puede relanzar la excepción:
                         // throw $e;
                     }
@@ -212,9 +212,9 @@ class MqttShiftSubscriber extends Command
                         $this->resetOperators();
                         //$this->changeOrderStatus($sensor->production_line_id);
                         $this->sendMqttTo0($sensor);
-                        $this->info("Sensor ID {$sensor->id} updated with type, action, and counters reset.");
+                        $this->info("[". Carbon::now()->toDateTimeString() . "]Sensor ID {$sensor->id} updated with type, action, and counters reset.");
                     } else {
-                        $this->info("Sensor ID {$sensor->id} updated with type and action. No need to reset counters.");
+                        $this->info("[". Carbon::now()->toDateTimeString() . "]Sensor ID {$sensor->id} updated with type and action. No need to reset counters.");
                     }
                 }
             }
@@ -222,36 +222,36 @@ class MqttShiftSubscriber extends Command
             // Si el type se ha puesto shift y action es start, se cambia datatime de OEE
             if ($data['type'] == 'shift' && $data['action'] == 'start') {
                 //$this->changeOrderStatus($productionLineId);
-                //$this->info("Cambios en ordeStatus para la linea de produccion: {$productionLineId}");
+                //$this->info("[". Carbon::now()->toDateTimeString() . "]Cambios en ordeStatus para la linea de produccion: {$productionLineId}");
                 $this->changeDataTimeOee($productionLineId);
-                $this->info("Cambios en OEE para la linea de produccion: {$productionLineId}");
+                $this->info("[". Carbon::now()->toDateTimeString() . "]Cambios en OEE para la linea de produccion: {$productionLineId}");
             } else {
-                $this->info("Cambios NO realizados en ordeStatus y OEE. Para la linea de produccion: {$productionLineId}");
+                $this->info("[". Carbon::now()->toDateTimeString() . "]Cambios NO realizados en ordeStatus y OEE. Para la linea de produccion: {$productionLineId}");
             }
 
              // Obtener los modbus asociados a esta línea de producción
              $mosbuses = Modbus::where('production_line_id', $productionLineId)->get();
             //ponemos filtro si no hay mosbuses que se ponga un log 
             if ($mosbuses->isEmpty()) {
-                $this->info("No modbus found for production line ID: {$productionLineId}");
+                $this->info("[". Carbon::now()->toDateTimeString() . "]No modbus found for production line ID: {$productionLineId}");
                 //pero reseteamos los contadores de usuarios y ponemos log 
                 $this->resetOperators();
             } else {
                 // Procesar cada modbus asociado a esta línea de producción
                 foreach ($mosbuses as $modbus) {
-                    $this->info("Processing sensor ID {$modbus->id}");
+                    $this->info("[". Carbon::now()->toDateTimeString() . "]Processing sensor ID {$modbus->id}");
 
                     // Verificar si el JSON contiene type y action
                     if (isset($data['type'])) {
                         $modbus->shift_type = $data['type'];
-                        $this->info("Shift type set to: {$data['type']}");
+                        $this->info("[". Carbon::now()->toDateTimeString() . "]Shift type set to: {$data['type']}");
                     } else {
                         $this->warn("Shift type missing in the message.");
                     }
 
                     if (isset($data['action'])) {
                         $modbus->event = $data['action'];
-                        $this->info("action set to: {$data['action']}");
+                        $this->info("[". Carbon::now()->toDateTimeString() . "]action set to: {$data['action']}");
                     } else {
                         $this->warn("action missing in the message.");
                     }
@@ -264,9 +264,9 @@ class MqttShiftSubscriber extends Command
                         $this->resetModbusCounters($modbus);
                         $this->resetOperators();
                         //$this->sendMqttTo0($modbus);
-                        $this->info("Modbus ID {$modbus->id} updated with type, action, and counters reset.");
+                        $this->info("[". Carbon::now()->toDateTimeString() . "]Modbus ID {$modbus->id} updated with type, action, and counters reset.");
                     } else {
-                        $this->info("Modbus ID {$modbus->id} updated with type and action. No need to reset counters.");
+                        $this->info("[". Carbon::now()->toDateTimeString() . "]Modbus ID {$modbus->id} updated with type and action. No need to reset counters.");
                     }
                 }
             }
@@ -275,25 +275,25 @@ class MqttShiftSubscriber extends Command
              $mosbuses = Modbus::where('production_line_id', $productionLineId)->get();
             //ponemos filtro si no hay mosbuses que se ponga un log 
             if ($mosbuses->isEmpty()) {
-                $this->info("No modbus found for production line ID: {$productionLineId}");
+                $this->info("[". Carbon::now()->toDateTimeString() . "]No modbus found for production line ID: {$productionLineId}");
                 //pero reseteamos los contadores de usuarios y ponemos log 
                 $this->resetOperators();
             } else {
                 // Procesar cada modbus asociado a esta línea de producción
                 foreach ($mosbuses as $modbus) {
-                    $this->info("Processing sensor ID {$modbus->id}");
+                    $this->info("[". Carbon::now()->toDateTimeString() . "]Processing sensor ID {$modbus->id}");
 
                     // Verificar si el JSON contiene type y action
                     if (isset($data['type'])) {
                         $modbus->shift_type = $data['type'];
-                        $this->info("Shift type set to: {$data['type']}");
+                        $this->info("[". Carbon::now()->toDateTimeString() . "]Shift type set to: {$data['type']}");
                     } else {
                         $this->warn("Shift type missing in the message.");
                     }
 
                     if (isset($data['action'])) {
                         $modbus->event = $data['action'];
-                        $this->info("action set to: {$data['action']}");
+                        $this->info("[". Carbon::now()->toDateTimeString() . "]action set to: {$data['action']}");
                     } else {
                         $this->warn("action missing in the message.");
                     }
@@ -306,9 +306,9 @@ class MqttShiftSubscriber extends Command
                         $this->resetModbusCounters($modbus);
                         $this->resetOperators();
                         //$this->sendMqttTo0($modbus);
-                        $this->info("Modbus ID {$modbus->id} updated with type, action, and counters reset.");
+                        $this->info("[". Carbon::now()->toDateTimeString() . "]Modbus ID {$modbus->id} updated with type, action, and counters reset.");
                     } else {
-                        $this->info("Modbus ID {$modbus->id} updated with type and action. No need to reset counters.");
+                        $this->info("[". Carbon::now()->toDateTimeString() . "]Modbus ID {$modbus->id} updated with type and action. No need to reset counters.");
                     }
                 }
             }
@@ -317,18 +317,18 @@ class MqttShiftSubscriber extends Command
             $rfidDetails = RfidDetail::where('production_line_id', $productionLineId)->get();
 
             if ($rfidDetails->isEmpty()) {
-                $this->info("No se encontraron registros en rfid_details para production line ID: {$productionLineId}");
+                $this->info("[". Carbon::now()->toDateTimeString() . "]No se encontraron registros en rfid_details para production line ID: {$productionLineId}");
                 // Opcional: reiniciar contadores de operadores o realizar otra acción
                 $this->resetOperators();
             } else {
-                $this->info("Se encontraron registros en rfid_details para production line ID: {$productionLineId}");
+                $this->info("[". Carbon::now()->toDateTimeString() . "]Se encontraron registros en rfid_details para production line ID: {$productionLineId}");
                 foreach ($rfidDetails as $rfidDetail) {
-                    $this->info("Procesando rfid detail ID {$rfidDetail->id}");
+                    $this->info("[". Carbon::now()->toDateTimeString() . "]Procesando rfid detail ID {$rfidDetail->id}");
 
                     // Verificar y asignar shift_type
                     if (isset($data['type'])) {
                         $rfidDetail->shift_type = $data['type'];
-                        $this->info("Shift type establecido en: {$data['type']}");
+                        $this->info("[". Carbon::now()->toDateTimeString() . "]Shift type establecido en: {$data['type']}");
                     } else {
                         $this->warn("Falta el shift type en el mensaje.");
                     }
@@ -336,7 +336,7 @@ class MqttShiftSubscriber extends Command
                     // Verificar y asignar event
                     if (isset($data['action'])) {
                         $rfidDetail->event = $data['action'];
-                        $this->info("Action establecido en: {$data['action']}");
+                        $this->info("[". Carbon::now()->toDateTimeString() . "]Action establecido en: {$data['action']}");
                     } else {
                         $this->warn("Falta la action en el mensaje.");
                     }
@@ -346,9 +346,9 @@ class MqttShiftSubscriber extends Command
                         $this->resetRfidDetail($rfidDetail);
                         $this->resetOperators();
                         //$this->sendMqttTo0($modbus);
-                        $this->info("rfindDetail ID {$rfidDetail->id} updated with type, action, and counters reset.");
+                        $this->info("[". Carbon::now()->toDateTimeString() . "]rfindDetail ID {$rfidDetail->id} updated with type, action, and counters reset.");
                     } else {
-                        $this->info("rfindDetail ID {$rfidDetail->id} updated with type and action. No need to reset counters.");
+                        $this->info("[". Carbon::now()->toDateTimeString() . "]rfindDetail ID {$rfidDetail->id} updated with type and action. No need to reset counters.");
                     }
 
 
@@ -357,13 +357,13 @@ class MqttShiftSubscriber extends Command
                     // Guardar los cambios
                     $rfidDetail->save();
 
-                    $this->info("RFID Detail ID {$rfidDetail->id} actualizado: shift_type, event y contadores reiniciados.");
+                    $this->info("[". Carbon::now()->toDateTimeString() . "]RFID Detail ID {$rfidDetail->id} actualizado: shift_type, event y contadores reiniciados.");
                 }
             }
 
 
         } else {
-            $this->error("Barcoder not found for topic: {$baseTopic}");
+            $this->error("[" . Carbon::now()->toDateTimeString() . "]Barcoder not found for topic: {$baseTopic}");
         }
     }
 
@@ -382,7 +382,7 @@ class MqttShiftSubscriber extends Command
     // Función para resetear los contadores del sensor
     private function resetSensorCounters($sensor)
     {
-        $this->info("Resetting counters for sensor ID {$sensor->id}.");
+        $this->info("[". Carbon::now()->toDateTimeString() . "]Resetting counters for sensor ID {$sensor->id}.");
     
         // Guardar la información actual del sensor en la tabla `sensor_history`
         SensorHistory::create([
@@ -410,7 +410,7 @@ class MqttShiftSubscriber extends Command
     
     private function resetModbusCounters($modbus)
     {
-        $this->info("Resetting modbus counters for modbus ID {$modbus->id}.");
+        $this->info("[". Carbon::now()->toDateTimeString() . "]Resetting modbus counters for modbus ID {$modbus->id}.");
     
         // Guardar la información actual del modbus en la tabla `modbus_history`
         ModbusHistory::create([
@@ -510,7 +510,7 @@ class MqttShiftSubscriber extends Command
     {
         try {
             // Información sobre la actualización de la hora de inicio de OEE
-            $this->info("Actualizando hora de OEE para la línea {$production_line_id}.");
+            $this->info("[". Carbon::now()->toDateTimeString() . "]Actualizando hora de OEE para la línea {$production_line_id}.");
 
             // Obtener todos los registros de MonitorOee relacionados con la línea de producción
             $oees = MonitorOee::where('production_line_id', $production_line_id)->get(); // Cargar los modelos
@@ -521,7 +521,7 @@ class MqttShiftSubscriber extends Command
                     $oee->save();  // Esto disparará el evento 'updating'
                 }
 
-                $this->info("Hora de inicio del turno actualizada para todos los monitores en la línea de producción {$production_line_id}.");
+                $this->info("[". Carbon::now()->toDateTimeString() . "]Hora de inicio del turno actualizada para todos los monitores en la línea de producción {$production_line_id}.");
             } else {
                 $this->warn("No se encontraron monitores para la línea de producción {$production_line_id}.");
             }
@@ -529,7 +529,7 @@ class MqttShiftSubscriber extends Command
 
         } catch (\Exception $e) {
             // Capturar cualquier excepción y mostrar un mensaje de error
-            $this->error("Ocurrió un error al actualizar la hora de OEE para la línea {$production_line_id}: " . $e->getMessage());
+            $this->error("[" . Carbon::now()->toDateTimeString() . "]Ocurrió un error al actualizar la hora de OEE para la línea {$production_line_id}: " . $e->getMessage());
         }
     }
 
@@ -550,11 +550,11 @@ class MqttShiftSubscriber extends Command
         $topicWaitTime = $topicWithoutMac . '/waitTime';
         $topicWaitTime2 = $topic . '/waitTime';
         $this->publishMqttMessage($topic, $processedMessage);
-        $this->info("Resetting mqtt Counter to 0 for sensor ID {$sensor->id}.");
+        $this->info("[". Carbon::now()->toDateTimeString() . "]Resetting mqtt Counter to 0 for sensor ID {$sensor->id}.");
         $this->publishMqttMessage($topicWaitTime, $processedMessage);
-        $this->info("Resetting mqtt counters waiTime to 0 for sensor ID {$sensor->id}.");
+        $this->info("[". Carbon::now()->toDateTimeString() . "]Resetting mqtt counters waiTime to 0 for sensor ID {$sensor->id}.");
         $this->publishMqttMessage($topicWaitTime2, $processedMessage);
-        $this->info("Resetting mqtt counters waiTime to 0 for sensor ID {$sensor->id}.");
+        $this->info("[". Carbon::now()->toDateTimeString() . "]Resetting mqtt counters waiTime to 0 for sensor ID {$sensor->id}.");
     }
 
     private function changeOrderStatus($productionLineId)
@@ -608,9 +608,9 @@ class MqttShiftSubscriber extends Command
                 'oee' => null,  // Dejar vacío o nulo
             ]);
     
-            $this->info("Nueva entrada creada en order_stats para la línea de producción: {$productionLineId}");
+            $this->info("[". Carbon::now()->toDateTimeString() . "]Nueva entrada creada en order_stats para la línea de producción: {$productionLineId}");
         } else {
-            $this->info("No se creó nueva entrada en order_stats ya que el último registro es reciente para la línea de producción: {$productionLineId}");
+            $this->info("[". Carbon::now()->toDateTimeString() . "]No se creó nueva entrada en order_stats ya que el último registro es reciente para la línea de producción: {$productionLineId}");
         }
     }
     private function publishMqttMessage($topic, $message)
@@ -622,7 +622,7 @@ class MqttShiftSubscriber extends Command
         // Inserta en la tabla mqtt_send_server2
         MqttSendServer2::createRecord($topic, $message);
 
-        $this->info("Stored message in both mqtt_send_server1 and mqtt_send_server2 tables.");
+        $this->info("[". Carbon::now()->toDateTimeString() . "]Stored message in both mqtt_send_server1 and mqtt_send_server2 tables.");
 
         } catch (\Exception $e) {
             Log::error("Error storing message in databases: " . $e->getMessage());

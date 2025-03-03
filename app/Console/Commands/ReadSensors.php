@@ -6,6 +6,7 @@ use Illuminate\Console\Command;
 use App\Models\Sensor;
 use PhpMqtt\Client\MqttClient;
 use PhpMqtt\Client\ConnectionSettings;
+use Carbon\Carbon;
 
 class ReadSensors extends Command
 {
@@ -55,15 +56,15 @@ class ReadSensors extends Command
     
                 // 🔹 Desconectar MQTT si el proceso se detiene
                 $mqtt->disconnect();
-                $this->info("MQTT Subscriber stopped gracefully.");
+                $this->info("[" . Carbon::now()->toDateTimeString() . "]MQTT Subscriber stopped gracefully.");
     
             } catch (\Exception $e) {
                 // 🔹 Cambiar `$this->logError()` por `$this->error()`
-                $this->error("Error en MQTT: " . $e->getMessage());
+                $this->error("[" . Carbon::now()->toDateTimeString() . "]Error en MQTT: " . $e->getMessage());
     
                 // 🔹 Esperar 2 segundos antes de intentar reconectar
                 sleep(2);
-                $this->info("Reintentando conexión a MQTT...");
+                $this->info("[" . Carbon::now()->toDateTimeString() . "]Reintentando conexión a MQTT...");
             }
         }
     }
@@ -100,7 +101,7 @@ class ReadSensors extends Command
 
                     // Validamos si el sensor existe
                     if (!$sensor) {
-                        $this->error("[" . now() . "] Error: No se encontró un sensor asociado al tópico {$topic}");
+                        $this->error("[" . Carbon::now()->toDateTimeString() . "][" . now() . "] Error: No se encontró un sensor asociado al tópico {$topic}");
                         return;
                     }
 
@@ -110,13 +111,13 @@ class ReadSensors extends Command
 
                     // Si el sensor es del tipo 0 y el valor es 0, no procesamos el mensaje
                     if ($sensor->sensor_type == 0 && $value == 0) {
-                        $this->info("[" . now() . "] Mensaje descartado para sensor {$sensor->id} (sensor_type=0, value=0)");
+                        $this->info("[" . Carbon::now()->toDateTimeString() . "][" . now() . "] Mensaje descartado para sensor {$sensor->id} (sensor_type=0, value=0)");
                         return;
                     }else{
                         // Continuamos procesando el mensaje si cumple con que no es sensor type 0 y valor 0
-                    $this->info("[" . now() . "] Mensaje procesado para sensor {$sensor->id} con valor {$message}");
+                    $this->info("[" . Carbon::now()->toDateTimeString() . "][" . now() . "] Mensaje procesado para sensor {$sensor->id} con valor {$message}");
                     $this->processMessage($sensor->id, $message);
-                    //$this->info("[" . now() . "] Mensaje finalizado para sensor {$sensor->id} con valor {$message}");
+                    //$this->info("[" . Carbon::now()->toDateTimeString() . "][" . now() . "] Mensaje finalizado para sensor {$sensor->id} con valor {$message}");
                     }
 
                     
@@ -124,7 +125,7 @@ class ReadSensors extends Command
                 }, 0);
 
                 $this->subscribedTopics[] = $topic;
-                $this->info("Subscribed to topic: {$topic}");
+                $this->info("[" . Carbon::now()->toDateTimeString() . "]Subscribed to topic: {$topic}");
             }
         }
 
@@ -136,11 +137,11 @@ class ReadSensors extends Command
         $data = json_decode($message, true);
     
         if (is_null($data)) {
-            $this->error("Error: El mensaje recibido no es un JSON válido.");
+            $this->error("[" . Carbon::now()->toDateTimeString() . "]Error: El mensaje recibido no es un JSON válido.");
             return;
         }
     
-       // $this->info("Contenido del Sensor ID {$id} JSON: " . print_r($data, true));
+       // $this->info("[" . Carbon::now()->toDateTimeString() . "]Contenido del Sensor ID {$id} JSON: " . print_r($data, true));
     
         // Intentar obtener el valor directamente del JSON
         $value = $data['value'] ?? null;
@@ -150,7 +151,7 @@ class ReadSensors extends Command
             $config = Sensor::find($id);
     
             if (!$config) {
-                $this->error("Error: No se encontró un sensor con ID $id.");
+                $this->error("[" . Carbon::now()->toDateTimeString() . "]Error: No se encontró un sensor con ID $id.");
                 return;
             }
     
@@ -159,13 +160,13 @@ class ReadSensors extends Command
                 $value = $this->getValueFromJson($data, $jsonPath);
     
                 if ($value === null) {
-                    $this->info("Advertencia: No se encontró la clave '$jsonPath' en el JSON.");
+                    $this->info("[" . Carbon::now()->toDateTimeString() . "]Advertencia: No se encontró la clave '$jsonPath' en el JSON.");
                 }
             }
     
             // Si aún no encontramos el valor, registramos un error
             if ($value === null) {
-                $this->error("Error: No se encontró 'value' en el JSON.");
+                $this->error("[" . Carbon::now()->toDateTimeString() . "]Error: No se encontró 'value' en el JSON.");
                 return;
             }
         }
@@ -196,10 +197,10 @@ class ReadSensors extends Command
             // Manejar la promesa de forma no bloqueante
             $promise->then(
                 function ($response) use ($id) {
-                    $this->info("API call success for sensor {$id}: " . $response->getStatusCode());
+                    $this->info("[" . Carbon::now()->toDateTimeString() . "]API call success for sensor {$id}: " . $response->getStatusCode());
                 },
                 function ($exception) use ($id) {
-                   $this->error("API call error for sensor {$id}: " . $exception->getMessage());
+                   $this->error("[" . Carbon::now()->toDateTimeString() . "]API call error for sensor {$id}: " . $exception->getMessage());
                 }
             );
     
@@ -207,10 +208,10 @@ class ReadSensors extends Command
             $promise->wait(false);
     
         } catch (\Exception $e) {
-            $this->error("Error al intentar llamar a la API: " . $e->getMessage());
+            $this->error("[" . Carbon::now()->toDateTimeString() . "]Error al intentar llamar a la API: " . $e->getMessage());
         }
     
-       // $this->info("[" . now() . "] Mensaje procesado para sensor {$id} con valor {$value}");
+       // $this->info("[" . Carbon::now()->toDateTimeString() . "][" . now() . "] Mensaje procesado para sensor {$id} con valor {$value}");
 
     }
     

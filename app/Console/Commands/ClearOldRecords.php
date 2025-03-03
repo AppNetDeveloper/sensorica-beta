@@ -50,13 +50,13 @@ class ClearOldRecords extends Command
             ];
 
             foreach ($tables as $table => $dateField) {
-                $this->info("Cleaning up table: {$table}...");
+                $this->info("[" . Carbon::now()->toDateTimeString() . "]Cleaning up table: {$table}...");
 
                 $deletedRows = DB::table($table)
                     ->where($dateField, '<', $cutoffDate)
                     ->delete();
 
-                $this->info("Deleted {$deletedRows} rows from {$table}.");
+                $this->info("[" . Carbon::now()->toDateTimeString() . "]Deleted {$deletedRows} rows from {$table}.");
             }
 
             $this->info('Cleanup cycle completed. Sleeping for 1 hour...');

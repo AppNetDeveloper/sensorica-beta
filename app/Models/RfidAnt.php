@@ -11,6 +11,7 @@ class RfidAnt extends Model
     protected $table = 'rfid_ants';
 
     protected $fillable = [
+        'rssi_min',
         'name',
         'production_line_id',
         'mqtt_topic',

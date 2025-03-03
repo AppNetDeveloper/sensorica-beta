@@ -63,9 +63,9 @@ class FinalizeOperatorPosts extends Command
                         OperatorPost::create($newData);
 
                         // Mostrar mensaje en la consola
-                        $this->info("Se ha finalizado el operador post ID {$operatorPost->id} y duplicado para el siguiente día.");
+                        $this->info("[" . Carbon::now()->toDateTimeString() . "]Se ha finalizado el operador post ID {$operatorPost->id} y duplicado para el siguiente día.");
                     } else {
-                        $this->info("El operador post ID {$operatorPost->id} No necesita ser finalizado porque ya está en la fecha correcta.");
+                        $this->info("[" . Carbon::now()->toDateTimeString() . "]El operador post ID {$operatorPost->id} No necesita ser finalizado porque ya está en la fecha correcta.");
                     }
 
                     // Si el 'created_at' es de hoy y despues de 23:59:00, lo cerramos a las 23:59:59
@@ -86,12 +86,12 @@ class FinalizeOperatorPosts extends Command
                         OperatorPost::create($newData);
 
                         // Mostrar mensaje en la consola
-                        $this->info("Se ha finalizado el operador post ID {$operatorPost->id} y duplicado para el siguiente día.");
+                        $this->info("[" . Carbon::now()->toDateTimeString() . "]Se ha finalizado el operador post ID {$operatorPost->id} y duplicado para el siguiente día.");
                     }
 
                     // Si la fecha de 'created_at' es del día siguiente (mañana), la ignoramos
                     if ($createdAt->isTomorrow()) {
-                        $this->info("Se ha ignorado el operador post ID {$operatorPost->id} porque su fecha es de mañana.");
+                        $this->info("[" . Carbon::now()->toDateTimeString() . "]Se ha ignorado el operador post ID {$operatorPost->id} porque su fecha es de mañana.");
                     }
                 }
 
@@ -99,7 +99,7 @@ class FinalizeOperatorPosts extends Command
                 $this->info('Ciclo de finalización de registros de operadores completado.');
             } catch (\Exception $e) {
                 // Si ocurre un error, se captura y se muestra en consola
-                $this->error("Error al procesar los registros de operadores: " . $e->getMessage());
+                $this->error("[" . Carbon::now()->toDateTimeString() . "]Error al procesar los registros de operadores: " . $e->getMessage());
             }
 
             // Dormir 20 segundos antes de ejecutar el siguiente ciclo

@@ -7,6 +7,8 @@ use App\Models\Barcode;
 use Illuminate\Support\Facades\Log;
 use App\Models\MqttSendServer1;
 use App\Models\MqttSendServer2;
+//anadir carbon
+use Carbon\Carbon;
 
 
 class TcpClient extends Command
@@ -41,12 +43,12 @@ class TcpClient extends Command
     private function terminateAllProcesses()
     {
         foreach ($this->processes as $id => $pid) {
-            $this->info("Stopping TCP client for barcode ID: $id");
+            $this->info("[" . Carbon::now()->toDateTimeString() . "]Stopping TCP client for barcode ID: $id");
             if (posix_kill($pid, SIGTERM)) {
                 unset($this->processes[$id]);
-                $this->info("Successfully stopped process for barcode ID: $id");
+                $this->info("[" . Carbon::now()->toDateTimeString() . "]Successfully stopped process for barcode ID: $id");
             } else {
-                $this->error("Failed to stop process for barcode ID: $id with PID: $pid");
+                $this->error("[" . Carbon::now()->toDateTimeString() . "]Failed to stop process for barcode ID: $id with PID: $pid");
             }
         }
     }
@@ -57,13 +59,13 @@ class TcpClient extends Command
         $port = $barcode->port_barcoder;
 
         if (empty($ip) || empty($port)) {
-            $this->info("Ignoring TCP client for barcode ID: {$barcode->id} due to empty IP or port.");
+            $this->info("[" . Carbon::now()->toDateTimeString() . "]Ignoring TCP client for barcode ID: {$barcode->id} due to empty IP or port.");
             return;
         }
 
         $pid = pcntl_fork();
         if ($pid == -1) {
-            $this->error("Error al crear un proceso hijo para barcode ID: {$barcode->id}");
+            $this->error("[" . Carbon::now()->toDateTimeString() . "]Error al crear un proceso hijo para barcode ID: {$barcode->id}");
         } elseif ($pid) {
             // Proceso padre
             $this->processes[$barcode->id] = $pid; // Guardar el PID del proceso hijo
@@ -79,7 +81,7 @@ class TcpClient extends Command
         $conexionType = $barcode->conexion_type;
 
         if ($conexionType == 0) {
-            $this->info("No TCP connection will be made for barcode ID {$barcode->id}.");
+            $this->info("[" . Carbon::now()->toDateTimeString() . "]No TCP connection will be made for barcode ID {$barcode->id}.");
             return;
         }
 
@@ -89,17 +91,17 @@ class TcpClient extends Command
 
         // Verificar si los valores de IP y puerto son válidos
         if (empty($host) || empty($port)) {
-            $this->info("Ignoring TCP client for barcode ID: {$barcode->id} due to empty IP or port.");
+            $this->info("[" . Carbon::now()->toDateTimeString() . "]Ignoring TCP client for barcode ID: {$barcode->id} due to empty IP or port.");
             return;
         }
 
         // Bucle principal para gestionar la reconexión
         while (true) {
-            $this->info("Connecting to TCP server at $host:$port for barcode ID {$barcode->id}");
+            $this->info("[" . Carbon::now()->toDateTimeString() . "]Connecting to TCP server at $host:$port for barcode ID {$barcode->id}");
             $socket = @socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
 
             if ($socket === false) {
-                $this->error("Error al crear el socket: " . socket_strerror(socket_last_error()));
+                $this->error("[" . Carbon::now()->toDateTimeString() . "]Error al crear el socket: " . socket_strerror(socket_last_error()));
                 sleep(5); // Esperar 5 segundos antes de intentar nuevamente
                 continue;
             }
@@ -109,25 +111,25 @@ class TcpClient extends Command
 
             if ($result === false) {
                 $errorCode = socket_last_error($socket);
-                $this->error("Error al conectar al servidor: " . socket_strerror($errorCode) . " (Código de error: $errorCode)");
+                $this->error("[" . Carbon::now()->toDateTimeString() . "]Error al conectar al servidor: " . socket_strerror($errorCode) . " (Código de error: $errorCode)");
                 socket_close($socket);
                 sleep(5); // Esperar 5 segundos antes de intentar reconectar
                 continue; // Reiniciar el bucle y volver a intentar conectar
             }
 
-            $this->info("Conectado al servidor TCP en $host:$port para barcode ID {$barcode->id}");
+            $this->info("[" . Carbon::now()->toDateTimeString() . "]Conectado al servidor TCP en $host:$port para barcode ID {$barcode->id}");
 
             // Leer mensajes continuamente hasta que haya un error
             while (true) {
                 $response = @socket_read($socket, 2048, PHP_NORMAL_READ);
                 if ($response === false) {
-                    $this->error("Error al leer del servidor: " . socket_strerror(socket_last_error($socket)));
+                    $this->error("[" . Carbon::now()->toDateTimeString() . "]Error al leer del servidor: " . socket_strerror(socket_last_error($socket)));
                     break; // Salir del bucle y cerrar la conexión para reconectar
                 }
 
                 // Verifica si el servidor ha cerrado la conexión
                 if ($response === '') {
-                    $this->info("El servidor ha cerrado la conexión para barcode ID {$barcode->id}");
+                    $this->info("[" . Carbon::now()->toDateTimeString() . "]El servidor ha cerrado la conexión para barcode ID {$barcode->id}");
                     break; // Salir del bucle y reconectar
                 }
 
@@ -135,20 +137,20 @@ class TcpClient extends Command
                 if (trim($response) !== '') {
                     $this->processMessage($barcode->id, $response);
                 } else {
-                    //$this->info("Mensaje vacío recibido para barcode ID {$barcode->id}, ignorando.");
+                    //$this->info("[" . Carbon::now()->toDateTimeString() . "]Mensaje vacío recibido para barcode ID {$barcode->id}, ignorando.");
                 }
             }
 
             // Cerrar el socket antes de intentar reconectar
             socket_close($socket);
-            $this->info("Intentando reconectar en 5 segundos para barcode ID {$barcode->id}...");
+            $this->info("[" . Carbon::now()->toDateTimeString() . "]Intentando reconectar en 5 segundos para barcode ID {$barcode->id}...");
             sleep(5); // Esperar antes de intentar reconectar
         }
     }  
 
     protected function processMessage($id, $barcodeValue)
     {
-        $this->info("Lectura del barcode id : {$id}  value : $barcodeValue");
+        $this->info("[" . Carbon::now()->toDateTimeString() . "]Lectura del barcode id : {$id}  value : $barcodeValue");
         $barcode = $this->barcoderLatest($id);
         // Si el resultado es null, espera y vuelve a intentar una vez más
         if ($barcode === null) {
@@ -157,7 +159,7 @@ class TcpClient extends Command
         }
         $mqttTopicBase = $barcode->mqtt_topic_barcodes;
         $mqttTopicBarcodes = $mqttTopicBase ."/prod_order_mac";
-       // $this->info("mqtt topic : " . $mqttTopicBarcodes);
+       // $this->info("[" . Carbon::now()->toDateTimeString() . "]mqtt topic : " . $mqttTopicBarcodes);
         $mqttTopicOrders = $mqttTopicBase ."/prod_order_notice";
         $mqttTopicFinish = $mqttTopicBase ."/order_finish";
         $mqttTopicPause = $mqttTopicBase ."/order_pause";
@@ -187,13 +189,13 @@ class TcpClient extends Command
     
                 foreach ($relatedBarcodes as $relatedBarcode) {
                     // Aquí puedes realizar cualquier acción que necesites con cada barcode relacionado
-                    $this->info("Encontrada línea relacionada con ID: {$relatedBarcode->id} y valor de iniciar_model: {$relatedBarcode->iniciar_model}");
+                    $this->info("[" . Carbon::now()->toDateTimeString() . "]Encontrada línea relacionada con ID: {$relatedBarcode->id} y valor de iniciar_model: {$relatedBarcode->iniciar_model}");
                     // Si necesitas algo específico de cada barcode relacionado, puedes trabajar con $relatedBarcode aquí
 
                     $relatedBarcode->sended = 1;
                     $relatedBarcode->last_barcode = "INICIAR";
                     $relatedBarcode->save();
-                    $this->info("Puesto en modo escucha ID: {$relatedBarcode->id}" );
+                    $this->info("[" . Carbon::now()->toDateTimeString() . "]Puesto en modo escucha ID: {$relatedBarcode->id}" );
                 }
                 $nowDateTime = date('Y-m-d H:i:s');
 
@@ -208,7 +210,7 @@ class TcpClient extends Command
                         $relatedBarcode->sended = 0;
                         $relatedBarcode->last_barcode = "FINALIZAR";
                         $relatedBarcode->save();
-                        $this->error("Error al actualizar el barcode con ID: {$relatedBarcode->id}, Vuelvo a FINZALIAR");
+                        $this->error("[" . Carbon::now()->toDateTimeString() . "]Error al actualizar el barcode con ID: {$relatedBarcode->id}, Vuelvo a FINZALIAR");
                     }
                     return; // Finaliza la ejecución del método actual
                 }
@@ -218,7 +220,7 @@ class TcpClient extends Command
                     
                     foreach ($relatedBarcodes as $relatedBarcode) {
                         // Aquí puedes realizar cualquier acción que necesites con cada barcode relacionado
-                        $this->info("mando mqtt a: {$relatedBarcode->id} y valor de iniciar_model: {$relatedBarcode->iniciar_model}");
+                        $this->info("[" . Carbon::now()->toDateTimeString() . "]mando mqtt a: {$relatedBarcode->id} y valor de iniciar_model: {$relatedBarcode->iniciar_model}");
                     //ahorra mandamos el mac
                         $this->sendOrderMac("0",$updatedOrderId,$relatedBarcode->machine_id, $mqttTopicBarcodes);
                     }
@@ -230,11 +232,11 @@ class TcpClient extends Command
                                             ->orderByRaw("CAST(SUBSTRING(machine_id, -2) AS UNSIGNED) ASC")
                                             ->get();
                 
-                $this->info("Se encontraron {$relatedBarcodes->count()} líneas para INICIAR-2.");
+                $this->info("[" . Carbon::now()->toDateTimeString() . "]Se encontraron {$relatedBarcodes->count()} líneas para INICIAR-2.");
 
                 foreach ($relatedBarcodes as $relatedBarcode) {
                     // Aquí puedes realizar cualquier acción que necesites con cada barcode relacionado
-                    $this->info("Encontrada línea relacionada con ID: {$relatedBarcode->id} y valor de iniciar_model: {$relatedBarcode->iniciar_model}");
+                    $this->info("[" . Carbon::now()->toDateTimeString() . "]Encontrada línea relacionada con ID: {$relatedBarcode->id} y valor de iniciar_model: {$relatedBarcode->iniciar_model}");
                     
                     $relatedBarcode->sended = 1;
                     $relatedBarcode->last_barcode = "INICIAR";
@@ -251,7 +253,7 @@ class TcpClient extends Command
                         $relatedBarcode->sended = 0;
                         $relatedBarcode->last_barcode = "FINALIZAR";
                         $relatedBarcode->save();
-                        $this->error("Error al actualizar el barcode con ID: {$relatedBarcode->id}, Vuelvo a FINZALIAR");
+                        $this->error("[" . Carbon::now()->toDateTimeString() . "]Error al actualizar el barcode con ID: {$relatedBarcode->id}, Vuelvo a FINZALIAR");
                         return; // Finaliza la ejecución del método actual
                     }
                         //actualizar el OrderId
@@ -273,10 +275,10 @@ class TcpClient extends Command
                                             ->get();
                 foreach ($relatedBarcodes as $relatedBarcode) {
                     // Aquí puedes realizar cualquier acción que necesites con cada barcode relacionado
-                    $this->info("Encontrada línea relacionada con ID: {$relatedBarcode->id} y valor de iniciar_model: {$relatedBarcode->iniciar_model}");
+                    $this->info("[" . Carbon::now()->toDateTimeString() . "]Encontrada línea relacionada con ID: {$relatedBarcode->id} y valor de iniciar_model: {$relatedBarcode->iniciar_model}");
                     // Si necesitas algo específico de cada barcode relacionado, puedes trabajar con $relatedBarcode aquí
                     // Aquí puedes realizar cualquier acción que necesites con cada barcode relacionado
-                    $this->info("mando mqtt a: {$relatedBarcode->id} y valor de iniciar_model: {$relatedBarcode->iniciar_model}");
+                    $this->info("[" . Carbon::now()->toDateTimeString() . "]mando mqtt a: {$relatedBarcode->id} y valor de iniciar_model: {$relatedBarcode->iniciar_model}");
                     //ahorra mandamos el mac
                     // Re actualizar el last_barcode
                     $barcoderLatest = $this->barcoderLatest($relatedBarcode->id,);
@@ -287,7 +289,7 @@ class TcpClient extends Command
                     $relatedBarcode->sended = 1;
                     $relatedBarcode->last_barcode = "INICIAR";
                     $relatedBarcode->save();
-                    $this->info("Puesto en modo escucha" );
+                    $this->info("[" . Carbon::now()->toDateTimeString() . "]Puesto en modo escucha" );
                 }
                 //ahorra preguntamos el next orderid
 
@@ -303,7 +305,7 @@ class TcpClient extends Command
                         $relatedBarcode->sended = 0;
                         $relatedBarcode->last_barcode = "FINALIZAR";
                         $relatedBarcode->save();
-                        $this->error("Error al actualizar el barcode con ID: {$relatedBarcode->id}, Vuelvo a FINZALIAR");
+                        $this->error("[" . Carbon::now()->toDateTimeString() . "]Error al actualizar el barcode con ID: {$relatedBarcode->id}, Vuelvo a FINZALIAR");
                     }
                     return; // Finaliza la ejecución del método actual
                 }
@@ -311,7 +313,7 @@ class TcpClient extends Command
                     
                     foreach ($relatedBarcodes as $relatedBarcode) {
                         // Aquí puedes realizar cualquier acción que necesites con cada barcode relacionado
-                        $this->info("mando mqtt a: {$relatedBarcode->id} y valor de iniciar_model: {$relatedBarcode->iniciar_model}");
+                        $this->info("[" . Carbon::now()->toDateTimeString() . "]mando mqtt a: {$relatedBarcode->id} y valor de iniciar_model: {$relatedBarcode->iniciar_model}");
                     //ahorra mandamos el mac
                         $this->sendOrderMac("0",$updatedOrderId,$relatedBarcode->machine_id, $mqttTopicBarcodes);
                     }
@@ -325,9 +327,9 @@ class TcpClient extends Command
     
                 foreach ($relatedBarcodes as $relatedBarcode) {
                     // Aquí puedes realizar cualquier acción que necesites con cada barcode relacionado
-                    $this->info("Encontrada línea relacionada con ID: {$relatedBarcode->id} y valor de iniciar_model: {$relatedBarcode->iniciar_model}");
+                    $this->info("[" . Carbon::now()->toDateTimeString() . "]Encontrada línea relacionada con ID: {$relatedBarcode->id} y valor de iniciar_model: {$relatedBarcode->iniciar_model}");
                     // Aquí puedes realizar cualquier acción que necesites con cada barcode relacionado
-                    $this->info("mando mqtt a: {$relatedBarcode->id} y valor de iniciar_model: {$relatedBarcode->iniciar_model}");
+                    $this->info("[" . Carbon::now()->toDateTimeString() . "]mando mqtt a: {$relatedBarcode->id} y valor de iniciar_model: {$relatedBarcode->iniciar_model}");
                     //ahorra mandamos el mac
                     // Re actualizar el last_barcode
                     $barcoderLatest = $this->barcoderLatest($relatedBarcode->id,);
@@ -350,7 +352,7 @@ class TcpClient extends Command
                         $relatedBarcode->sended = 0;
                         $relatedBarcode->last_barcode = "FINALIZAR";
                         $relatedBarcode->save();
-                        $this->error("Error al actualizar el barcode con ID: {$relatedBarcode->id}, Vuelvo a FINZALIAR");
+                        $this->error("[" . Carbon::now()->toDateTimeString() . "]Error al actualizar el barcode con ID: {$relatedBarcode->id}, Vuelvo a FINZALIAR");
                         return; // Finaliza la ejecución del método actual
                     }
                         //actualizar el OrderId
@@ -422,19 +424,19 @@ class TcpClient extends Command
             if ($barcodenew && !is_null($barcodenew->updated_at)) {
                 // Si el barcode tiene un `updated_at` más nuevo, retornar la línea actualizada
                 if ($barcodenew->updated_at > $dataTime) {
-                    $this->info("El barcode ya está actualizado: " . date('Y-m-d H:i:s', strtotime($barcodenew->updated_at)));
+                    $this->info("[" . Carbon::now()->toDateTimeString() . "]El barcode ya está actualizado: " . date('Y-m-d H:i:s', strtotime($barcodenew->updated_at)));
                     return $barcodenew;
                 } else {
-                    $this->info("vuelvo a buscar en un segundo: " . date('Y-m-d H:i:s'));
+                    $this->info("[" . Carbon::now()->toDateTimeString() . "]vuelvo a buscar en un segundo: " . date('Y-m-d H:i:s'));
                 }
             } else {
-                $this->info("El campo `updated_at` es null o no se encontró un barcode con ID: {$id}, reintentando...");
+                $this->info("[" . Carbon::now()->toDateTimeString() . "]El campo `updated_at` es null o no se encontró un barcode con ID: {$id}, reintentando...");
             }
 
             $retryCount++;
         }
         // Si alcanzamos el máximo de reintentos sin cumplir la condición, retornamos la línea encontrada (aunque sin cambios).
-        $this->error("No se pudo actualizar el barcode con el nuevo OrderID. Se ha alcanzado el tiempo después de varios intentos.");
+        $this->error("[" . Carbon::now()->toDateTimeString() . "]No se pudo actualizar el barcode con el nuevo OrderID. Se ha alcanzado el tiempo después de varios intentos.");
         return "ERROR";
     }
 
@@ -449,7 +451,7 @@ class TcpClient extends Command
     {
         // Verificar si $barcodenew no es null
         if ($barcodenew === null) {
-            $this->info("El objeto barcodenew es null. No se puede proceder.");
+            $this->info("[" . Carbon::now()->toDateTimeString() . "]El objeto barcodenew es null. No se puede proceder.");
             return null;
         }
     
@@ -462,7 +464,7 @@ class TcpClient extends Command
     
             // Si sigue siendo null, asignar un valor por defecto
             if ($barcodeFromDb === null || $barcodeFromDb->order_notice === null) {
-                $this->info("El valor order_notice sigue siendo null. Asignando valor por defecto.");
+                $this->info("[" . Carbon::now()->toDateTimeString() . "]El valor order_notice sigue siendo null. Asignando valor por defecto.");
                 return null; // Puedes cambiar el valor por defecto aquí si es necesario
             }
     
@@ -473,7 +475,7 @@ class TcpClient extends Command
         // Extraer el orderId, si existe
         $updatedOrderId = $updatedOrderNotice['orderId'] ?? null;
     
-        $this->info("Actualizo JSON de la db: " . ($updatedOrderId ?? "Valor por defecto NULL"));
+        $this->info("[" . Carbon::now()->toDateTimeString() . "]Actualizo JSON de la db: " . ($updatedOrderId ?? "Valor por defecto NULL"));
         return $updatedOrderId;
     }
     private function sendNextOrder($machineId, $mqttTopic)
@@ -484,7 +486,7 @@ class TcpClient extends Command
         ];
 
         $this->publishMqttMessage($mqttTopic, $comando);
-        $this->info("mesaje enviado : ");
+        $this->info("[" . Carbon::now()->toDateTimeString() . "]mesaje enviado : ");
     }
 
     private function sendOrderMac($action,$updatedOrderId,$machineId, $mqttTopicBarcodes)
@@ -511,7 +513,7 @@ class TcpClient extends Command
             MqttSendServer1::createRecord($topic, $message);
             
     
-            $this->info("Stored message in both mqtt_send_server1 and mqtt_send_server2 tables.".$topic);
+            $this->info("[" . Carbon::now()->toDateTimeString() . "]Stored message in both mqtt_send_server1 and mqtt_send_server2 tables.".$topic);
     
             } catch (\Exception $e) {
                 Log::error("Error storing message in databases: " . $e->getMessage());

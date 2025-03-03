@@ -29,6 +29,9 @@ use App\Http\Controllers\Api\RfidReadingController;
 use App\Http\Controllers\Api\OperatorPostController;
 use App\Http\Controllers\Api\TcpPublishController;
 use App\Http\Controllers\Api\TransferExternalDbController;
+use App\Http\Controllers\Api\OrderNoticeController;
+
+
 
 
 
@@ -118,7 +121,8 @@ Route::get('/whatsapp-qr/svg', [WhatsAppController::class, 'getQRSvg']);
 // Retorna el QR como base64
 Route::get('/whatsapp-qr/base64', [WhatsAppController::class, 'getQRBase64']);
 
-
+//ruta de ordernotice por json api
+Route::post('/order-notice/store', [OrderNoticeController::class, 'store']);
 
 // ruta scanner
 Route::prefix('bluetooth')->group(function () {

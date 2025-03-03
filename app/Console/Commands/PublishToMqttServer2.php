@@ -10,6 +10,8 @@ use PhpMqtt\Client\Exceptions\ConnectionException;
 use PhpMqtt\Client\Exceptions\DataTransferException;
 use PhpMqtt\Client\Exceptions\ConnectingToBrokerFailedException;
 use Illuminate\Support\Facades\Log;
+//anadir carbon
+use Carbon\Carbon;
 
 class PublishToMqttServer2 extends Command
 {
@@ -42,9 +44,9 @@ class PublishToMqttServer2 extends Command
     public function handleSignal(int $signal)
     {
         if ($this->output) {
-            $this->info("Señal de terminación recibida ($signal). Cerrando el proceso...");
+            $this->info("[" . Carbon::now()->toDateTimeString() . "]Señal de terminación recibida ($signal). Cerrando el proceso...");
         } else {
-            Log::info("Señal de terminación recibida ($signal). Cerrando el proceso...");
+            $this->info("[" . Carbon::now()->toDateTimeString() . "]Señal de terminación recibida ($signal). Cerrando el proceso...");
         }
         $this->shouldStop = true;
     }
@@ -52,7 +54,7 @@ class PublishToMqttServer2 extends Command
     public function handle()
     {
         if (!$this->initializeMqttClient()) {
-            $this->error("No se pudo establecer la conexión inicial con MQTT Server 2. Abortando...");
+            $this->error("[" . Carbon::now()->toDateTimeString() . "]No se pudo establecer la conexión inicial con MQTT Server 2. Abortando...");
             return 1;
         }
 
@@ -78,7 +80,7 @@ class PublishToMqttServer2 extends Command
                 usleep(100000); // Pausa de 100ms para evitar saturar la base de datos y el broker
 
             } catch (\Exception $e) {
-                Log::error("Error en el loop de publicación a MQTT Server 2: " . $e->getMessage());
+                $this->error("[" . Carbon::now()->toDateTimeString() . "]Error en el loop de publicación a MQTT Server 2: " . $e->getMessage());
                 $this->reconnectClient();
             }
         }
@@ -109,13 +111,13 @@ class PublishToMqttServer2 extends Command
 
         try {
             $this->mqtt->connect($connectionSettings, true);
-            $this->info("Conectado a MQTT Server 2 en {$host}:{$port}");
+            $this->info("[" . Carbon::now()->toDateTimeString() . "]Conectado a MQTT Server 2 en {$host}:{$port}");
             return true;
         } catch (ConnectionException $e) {
-            $this->error("Error de conexión con MQTT Server 2: " . $e->getMessage());
+            $this->error("[" . Carbon::now()->toDateTimeString() . "]Error de conexión con MQTT Server 2: " . $e->getMessage());
             return false;
         } catch (ConnectingToBrokerFailedException $e) {
-            $this->error("Fallo al establecer conexión con MQTT Server 2: " . $e->getMessage());
+            $this->error("[" . Carbon::now()->toDateTimeString() . "]Fallo al establecer conexión con MQTT Server 2: " . $e->getMessage());
             return false;
         }
     }
@@ -131,10 +133,10 @@ class PublishToMqttServer2 extends Command
         try {
             // Publica el mensaje con QoS 0
             $this->mqtt->publish($entry->topic, $entry->json_data, 0);
-            $this->info("Mensaje enviado - Tópico: {$entry->topic} | Datos: {$entry->json_data}");
+            $this->info("[" . Carbon::now()->toDateTimeString() . "]Mensaje enviado - Tópico: {$entry->topic} | Datos: {$entry->json_data}");
             return true;
         } catch (DataTransferException $e) {
-            $this->error("Error de transferencia de datos en MQTT Server 2: " . $e->getMessage());
+            $this->error("[" . Carbon::now()->toDateTimeString() . "]Error de transferencia de datos en MQTT Server 2: " . $e->getMessage());
             return false;
         }
     }
@@ -148,13 +150,13 @@ class PublishToMqttServer2 extends Command
             try {
                 // Comprueba si el método isConnected existe y si el cliente está conectado
                 if (method_exists($this->mqtt, 'isConnected') && !$this->mqtt->isConnected()) {
-                    $this->info("El cliente MQTT ya está desconectado.");
+                    $this->info("[" . Carbon::now()->toDateTimeString() . "]El cliente MQTT ya está desconectado.");
                     return;
                 }
                 $this->mqtt->disconnect();
-                $this->info("Desconectado de MQTT Server 2");
+                $this->info("[" . Carbon::now()->toDateTimeString() . "]Desconectado de MQTT Server 2");
             } catch (\Exception $e) {
-                $this->error("Error al desconectar el cliente MQTT: " . $e->getMessage());
+                $this->error("[" . Carbon::now()->toDateTimeString() . "]Error al desconectar el cliente MQTT: " . $e->getMessage());
             }
         }
     }
@@ -168,9 +170,9 @@ class PublishToMqttServer2 extends Command
         sleep(5); // Espera 5 segundos antes de reconectar
 
         if ($this->initializeMqttClient()) {
-            $this->info("Reconectado exitosamente a MQTT Server 2");
+            $this->info("[" . Carbon::now()->toDateTimeString() . "]Reconectado exitosamente a MQTT Server 2");
         } else {
-            $this->error("No se pudo reconectar a MQTT Server 2. Se intentará nuevamente en el siguiente ciclo.");
+            $this->error("[" . Carbon::now()->toDateTimeString() . "]No se pudo reconectar a MQTT Server 2. Se intentará nuevamente en el siguiente ciclo.");
         }
     }
 

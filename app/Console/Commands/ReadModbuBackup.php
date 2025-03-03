@@ -6,6 +6,8 @@ use Illuminate\Console\Command;
 use App\Models\Modbus;
 use PhpMqtt\Client\MqttClient;
 use PhpMqtt\Client\ConnectionSettings;
+//anadir carbon
+use Carbon\Carbon;
 
 class ReadModbuBackup extends Command
 {
@@ -52,7 +54,7 @@ class ReadModbuBackup extends Command
 
     // Desconectar el cliente MQTT de forma segura
     $mqtt->disconnect();
-    $this->info("MQTT Subscriber stopped gracefully.");
+    $this->info("[" . Carbon::now()->toDateTimeString() . "]MQTT Subscriber stopped gracefully.");
 }
 
 
@@ -85,7 +87,7 @@ class ReadModbuBackup extends Command
                 }, 0);
 
                 $this->subscribedTopics[] = $topic;
-                $this->info("Subscribed to topic: {$topic}");
+                $this->info("[" . Carbon::now()->toDateTimeString() . "]Subscribed to topic: {$topic}");
             }
         }
 
@@ -105,7 +107,7 @@ class ReadModbuBackup extends Command
                 }, 0);
 
                 $this->subscribedTopics[] = $topic;
-                $this->info("Subscribed to new topic: {$topic}");
+                $this->info("[" . Carbon::now()->toDateTimeString() . "]Subscribed to new topic: {$topic}");
             }
         }
     }
@@ -114,7 +116,7 @@ class ReadModbuBackup extends Command
 
     public function processCallApi($topic, $data)
     {
-        //$this->info("Llamada a la API externa para el Modbus ID: {$config->id} y valor: {$value}");
+        //$this->info("[" . Carbon::now()->toDateTimeString() . "]Llamada a la API externa para el Modbus ID: {$config->id} y valor: {$value}");
     
         // Construir la URL de la API
         $appUrl = rtrim(env('LOCAL_SERVER'), '/');
@@ -133,9 +135,9 @@ class ReadModbuBackup extends Command
             'id' => $id,
             'data' => json_decode($data, true), // Decodificar el JSON si es un string
         ];
-        $this->info("Datos enviados a la API: $apiUrl, con id: $id");
-       // $this->info("Datos enviados a la API: {$apiUrl}, con los siguientes datos: " . json_encode($dataToSend, JSON_PRETTY_PRINT));
-       // $this->info("Datos enviados a la API: " . json_encode($dataToSend, JSON_PRETTY_PRINT));
+        $this->info("[" . Carbon::now()->toDateTimeString() . "]Datos enviados a la API: $apiUrl, con id: $id");
+       // $this->info("[" . Carbon::now()->toDateTimeString() . "]Datos enviados a la API: {$apiUrl}, con los siguientes datos: " . json_encode($dataToSend, JSON_PRETTY_PRINT));
+       // $this->info("[" . Carbon::now()->toDateTimeString() . "]Datos enviados a la API: " . json_encode($dataToSend, JSON_PRETTY_PRINT));
     
         try {
             // Enviar solicitud POST y manejar respuesta en la promesa
@@ -147,10 +149,10 @@ class ReadModbuBackup extends Command
             $promise->then(
                 function ($response) use ($topic) {
                     $responseBody = $response->getBody()->getContents(); // Captura la respuesta
-                    $this->info("Respuesta de la API para el Modbus ID {$topic}: {$responseBody}");
+                    $this->info("[" . Carbon::now()->toDateTimeString() . "]Respuesta de la API para el Modbus ID {$topic}: {$responseBody}");
                 },
                 function ($exception) use ($topic) {
-                    $this->error("Error en la llamada a la API para el Modbus ID {$topic}: " . $exception->getMessage());
+                    $this->error("[" . Carbon::now()->toDateTimeString() . "]Error en la llamada a la API para el Modbus ID {$topic}: " . $exception->getMessage());
                 }
             );
     
@@ -158,7 +160,7 @@ class ReadModbuBackup extends Command
             $promise->wait(false);
     
         } catch (\Exception $e) {
-            $this->error("Error al intentar llamar a la API: " . $e->getMessage());
+            $this->error("[" . Carbon::now()->toDateTimeString() . "]Error al intentar llamar a la API: " . $e->getMessage());
         }
     }
 }
