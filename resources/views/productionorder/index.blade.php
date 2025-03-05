@@ -113,6 +113,28 @@
             background-color: #f3f4f6;
         }
 
+        /* NUEVO: contenedor para el grid que irá debajo de la cabecera */
+        .column-grid {
+            background-color: #fff; /* Ajusta si deseas otro color */
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            padding: 0.75rem;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .grid-content {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); /* 3 columnas, ajusta según necesites */
+            gap: 0.5rem;
+        }
+        .grid-item {
+            background-color: #f8fafc;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 0.5rem;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+
         /* Tarjetas */
         .card {
             background-color: var(--card-bg);
@@ -269,17 +291,28 @@
                 // Reiniciar el tablero: vaciar tarjetas y columnas
                 existingCards.clear();
                 kanbanBoard.innerHTML = "";
-                // Crear columnas con el nuevo estilo de cabecera
+                // Crear columnas con la cabecera y el nuevo grid
                 Object.entries(columns).forEach(([status, column]) => {
                     const columnElement = document.createElement('div');
                     columnElement.classList.add('column');
                     columnElement.id = column.id;
+
+                    // Aquí agregamos la cabecera y debajo el grid
                     columnElement.innerHTML = `
                         <div class="column-header">
                             <div class="column-title">${column.name}</div>
                             <div class="column-actions">
                                 <button title="{{ __('Add Card') }}" onclick="addCard('${column.id}')">+</button>
                                 <button title="{{ __('Delete Column') }}" onclick="deleteColumn('${column.id}')">🗑</button>
+                            </div>
+                        </div>
+                        <!-- Grid debajo de la cabecera -->
+                        <div class="column-grid">
+                            <div class="grid-content">
+                                <div class="grid-item">1</div>
+                                <div class="grid-item">2</div>
+                                <div class="grid-item">3</div>
+                                <!-- Agrega más .grid-item si lo deseas -->
                             </div>
                         </div>
                     `;
