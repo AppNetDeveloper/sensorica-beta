@@ -132,7 +132,7 @@ class PublishToMqttServer2 extends Command
     {
         try {
             // Publica el mensaje con QoS 0
-            $this->mqtt->publish($entry->topic, $entry->json_data, 0);
+            $this->mqtt->publish($entry->topic, $entry->json_data, 0, true);
             $this->info("[" . Carbon::now()->toDateTimeString() . "]Mensaje enviado - Tópico: {$entry->topic} | Datos: {$entry->json_data}");
             return true;
         } catch (DataTransferException $e) {

@@ -71,7 +71,7 @@ class PublishToMqttServer1 extends Command
     private function publishToMqtt($entry)
     {
         try {
-            $this->mqtt->publish($entry->topic, $entry->json_data, 0); // Publicar con QoS 0
+            $this->mqtt->publish($entry->topic, $entry->json_data, 0, true); // Publicar con QoS 0
             $this->info("Mensaje enviado a MQTT Server 1 topico: " . $entry->topic . " json_data: " . $entry->json_data);
             return true;
         } catch (DataTransferException $e) {
