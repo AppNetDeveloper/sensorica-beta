@@ -214,7 +214,7 @@
 
         /* Estilo para tarjetas colapsadas */
         .card.collapsed {
-            height: 90px; /* Altura reducida para mostrar solo parte del contenido */
+            height: 80px; /* Altura reducida para mostrar solo parte del contenido */
             overflow: hidden;
             transition: height 0.3s ease;
         }
