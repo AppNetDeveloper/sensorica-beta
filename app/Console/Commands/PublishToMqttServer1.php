@@ -9,6 +9,7 @@ use PhpMqtt\Client\ConnectionSettings;
 use PhpMqtt\Client\Exceptions\ConnectionException;
 use PhpMqtt\Client\Exceptions\DataTransferException;
 use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
 
 class PublishToMqttServer1 extends Command
 {
@@ -39,7 +40,7 @@ class PublishToMqttServer1 extends Command
                     usleep(100000); // Pausa para evitar sobrecarga
 
                 } catch (\Exception $e) {
-                    Log::error("Error in MQTT Server 1 publish loop: " . $e->getMessage());
+                    $this->error("[" . Carbon::now()->toDateTimeString() . "]Error in MQTT Server 1 publish loop: " . $e->getMessage());
                     $this->reconnectClient(); // Intentar reconectar si hay un error
                 }
             }
@@ -98,7 +99,7 @@ class PublishToMqttServer1 extends Command
             $this->initializeMqttClient(); // Intentar reconectar si es necesario
             $this->info("Reconectado exitosamente a MQTT Server 1");
         } catch (\Exception $e) {
-            Log::error("Fallo al reconectar con MQTT Server 1: " . $e->getMessage());
+            $this->error("Fallo al reconectar con MQTT Server 1: " . $e->getMessage());
         }
     }
 

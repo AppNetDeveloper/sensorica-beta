@@ -30,6 +30,8 @@ use App\Http\Controllers\Api\OperatorPostController;
 use App\Http\Controllers\Api\TcpPublishController;
 use App\Http\Controllers\Api\TransferExternalDbController;
 use App\Http\Controllers\Api\OrderNoticeController;
+use App\Http\Controllers\Api\FakeOrderTimeController;
+
 
 
 
@@ -45,6 +47,10 @@ use App\Http\Controllers\Api\OrderNoticeController;
 | is assigned the "api" middleware group. Enjoy building your API!
 |
 */
+
+
+Route::get('/test-order-time', [FakeOrderTimeController::class, 'index']);
+
 Route::match(['get', 'post'], '/barcode', [ApibarcoderController::class, 'barcode']);
 Route::match(['get', 'post'], '/ip-zerotier', [ZerotierIpBarcoderController::class, 'ipZerotier']);
 

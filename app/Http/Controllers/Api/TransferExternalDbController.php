@@ -19,6 +19,7 @@ use Exception;
 use App\Models\ModbusHistory;
 use App\Models\SensorHistory;
 use App\Models\ShiftList;
+use App\Models\ShiftHistory;
 
 
 class TransferExternalDbController extends Controller
@@ -125,11 +126,11 @@ class TransferExternalDbController extends Controller
             // Insertar datos ficticios en linea_por_orden utilizando Eloquent
             $this->insertLineaPorOrden(
                 $externalConnection,
-                $idLinea,                 // IdLinea (ficticio)
+                $idLinea,                 // Nombre de Linea
                 $orderId,                  // IdOrden
-                $idReference,          // IdReference (ficticio)
-                $shiftCount,                         // ShiftCount (ficticio)
-                $orderUnit,                    // OrderCount (ficticio)
+                $idReference,          // IdReference 
+                $shiftCount,                         // ShiftCount 
+                $orderUnit,                    // OrderCount (lo tenemos)
                 $modelUnit,                // OrderUnit (ficticio)
                 $senorUnit,                     // SensorCount (ficticio)
                 $orderUnit,                     // UmaCount (ficticio)
@@ -204,7 +205,7 @@ class TransferExternalDbController extends Controller
         //suma de la tiempo lento
         $slowTime = $orderStats->sum('slow_time');
         //suma de la tiempo lento
-        $downTime = $orderStats->sum('down_time');
+        $downTime = $orderStats->sum('down_time') + $orderStats->sum('production_stop_time');
         //formateamos slowtime a hh:mm:ss
         $slowTimeFormat = gmdate("H:i:s", $slowTime);
         //formateamos downtime a hh:mm:ss
@@ -419,9 +420,37 @@ class TransferExternalDbController extends Controller
      */
     private function calculateShiftCountByEvents($orderStats)
     {
-        return $orderStats->count();
+        // Obtener el primer y el último registro de orderStats
+        $firstOrderStat = $orderStats->first();
+        $lastOrderStat = $orderStats->last();
+    
+        // Si no hay registros, devolvemos 1 turno en curso
+        if (!$firstOrderStat || !$lastOrderStat) {
+            return 1;
+        }
+    
+        // Extraer el production_line_id
+        $productionLineId = $firstOrderStat->production_line_id;
+    
+        // Definir el rango de fechas: desde created_at del primer registro hasta updated_at del último registro
+        $startDate = $firstOrderStat->created_at;
+        $endDate = $lastOrderStat->updated_at;
+    
+        // Consultar la tabla shift_history contando los registros que cumplan con:
+        // - production_line_id coincidente
+        // - type = 'shift'
+        // - action = 'start'
+        // - created_at entre $startDate y $endDate
+        $shiftCount = ShiftHistory::where('production_line_id', $productionLineId)
+            ->where('type', 'shift')
+            ->where('action', 'start')
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->count();
+    
+        // Se suma 1 para incluir el turno que está en curso
+        return $shiftCount + 1;
     }
-
+    
     /**
      * Procesar y transferir sensores a la base de datos externa
      *

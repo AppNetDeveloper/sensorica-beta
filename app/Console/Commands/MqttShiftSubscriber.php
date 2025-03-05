@@ -18,6 +18,7 @@ use App\Models\SensorHistory;
 use App\Models\ModbusHistory;
 use App\Models\Operator;
 use App\Models\RfidDetail;
+use App\Models\ShiftHistory; // Importa el modelo ShiftControl
 
 class MqttShiftSubscriber extends Command
 {
@@ -159,6 +160,23 @@ class MqttShiftSubscriber extends Command
         $baseTopic = str_replace('/timeline_event', '', $topic);
 
         $barcode = Barcode::where('mqtt_topic_barcodes', $baseTopic)->first();
+
+                // Obtener el production_line_id desde barcode
+                $productionLineId = $barcode->production_line_id;
+
+                // Insertar el registro en shift_history con los datos recibidos
+                // Asegúrate de que el JSON incluya 'type', 'action' y 'description'
+                try {
+                    ShiftHistory::create([
+                        'production_line_id' => $productionLineId,
+                        'type'               => $data['type'] ?? null,
+                        'action'             => $data['action'] ?? null,
+                        'description'        => $data['description'] ?? null,
+                    ]);
+                } catch (\Exception $e) {
+                   $this->info("[". Carbon::now()->toDateTimeString() . "]Error al crear registro en shift_history: " . $e->getMessage());
+                }
+                
 
         if ($barcode) {
             $this->info("[". Carbon::now()->toDateTimeString() . "]Modbus found for topic: {$baseTopic}");
