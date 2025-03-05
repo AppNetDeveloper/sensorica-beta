@@ -27,6 +27,52 @@ class TransferExternalDbController extends Controller
     /**
      * Transferir Datos a la Base de Datos Externa
      *
+     * @OA\Post(
+     *     path="/api/transfer-external-db",
+     *     summary="Transferir datos a la base de datos externa",
+     *     tags={"TransferExternalDb"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         description="Datos necesarios para la transferencia",
+     *         @OA\JsonContent(
+     *             required={"orderId"},
+     *             @OA\Property(property="orderId", type="string", example="ORD123456"),
+     *             @OA\Property(property="externalSend", type="boolean", example=true)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Transferencia exitosa",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="orderId", type="string", example="ORD123456"),
+     *             @OA\Property(property="data", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Error en el JSON o datos inválidos",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="error", type="string", example="JSON de production_order inválido.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="No se encontró production_order para el orderId proporcionado",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="error", type="string", example="No se encontró production_order para el orderId proporcionado.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Error interno del servidor",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="error", type="string", example="Error en el procesamiento de la orden.")
+     *         )
+     *     )
+     * )
+     *
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
@@ -37,16 +83,289 @@ class TransferExternalDbController extends Controller
 
         // Validar los datos de entrada
         $request->validate([
-            'barcodeId' => 'required|integer',
             'orderId' => 'required|string',
+            'externalSend' => 'boolean',
         ]);
-
-        $barcodeId = $request->input('barcodeId');
         $orderId = trim($request->input('orderId'));
+        $externalSend = $request->input('externalSend');
+       
 
-        Log::info("Iniciando transferencia de datos para barcode ID {$barcodeId} y orderId {$orderId}");
+        // Obtener los registros de order_stats para ese orderId, ordenados por created_at ascendente
+        $orderStats = OrderStat::where('order_id', $orderId)
+            ->orderBy('created_at', 'asc')
+            ->get();
+        // Obtener productionOrder
+        $productionOrder = ProductionOrder::where('order_id', $orderId)->first();
+        if (!$productionOrder) {
+            Log::error("No se encontró un registro en `production_orders` para orderId={$orderId}.");
+            return response()->json(['error' => 'No se encontró production_order para el orderId proporcionado.'], 404);
+        }
+        Log::info("Se encontró un registro en production_orders para orderId={$orderId}.");
 
+        // Decodificar JSON
+        $jsonData = $this->decodeJson($productionOrder->json);
+        if (!$jsonData) {
+            return response()->json(['error' => 'JSON de production_order inválido.'], 400);
+        }
+
+        // Extraer valores del JSON
+        [$modelUnit, $modelEnvase, $modelMeasure, $unitValue, $totalWeight] = $this->extractJsonValues($jsonData);
         try {
+            // Llamar a la función que obtiene el tiempo y los shift_history
+            $orderTimeData = $this->getOrder($orderStats, $orderId, $modelUnit, $modelEnvase, $modelMeasure, $unitValue, $totalWeight,  $externalSend);
+
+            return response()->json([
+                'success' => true,
+                'orderId' => $orderId,
+                'data'    => $orderTimeData,
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Error en " . __METHOD__ . ": " . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error'   => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Obtiene el inicio y el fin de la orden, calcula la diferencia de tiempo
+     * y suma el tiempo total de pausa (tipo stop) entre start y end. Si un stop
+     * no tiene "end", se utiliza finishTime.
+     *
+     * Además, si se detecta que en shiftHistories existe algún evento con type "stop" y action "start",
+     * se invoca (por el momento) una función de cálculo pendiente para timeOn.
+     * Si no, se calcula timeOn = differenceInSeconds - totalStopSeconds.
+     *
+     * @param \Illuminate\Support\Collection $orderStats
+     * @param string $orderId
+     * @return array
+     *
+     * @throws \Exception
+     */
+    private function getOrder($orderStats, $orderId, $modelUnit, $modelEnvase, $modelMeasure, $unitValue, $totalWeight,  $externalSend)
+    {
+        // 1. Validar que existan registros en order_stats
+        if ($orderStats->isEmpty()) {
+            throw new \Exception("No se encontraron registros en order_stats para orderId={$orderId}.");
+        }
+
+        // 2. Definir el inicio de la orden (primer created_at de order_stats)
+        $startTime = Carbon::parse($orderStats->first()->created_at);
+
+        // 3. Obtener el tiempo de cierre desde OrderMac (action = 1)
+        $orderMacFinish = OrderMac::where('orderId', $orderId)
+            ->where('action', 1)
+            ->first();
+        if (!$orderMacFinish) {
+            throw new \Exception("No se encontró un registro en OrderMac para orderId={$orderId} con action=1.");
+        }
+        $finishTime = Carbon::parse($orderMacFinish->created_at);
+        Log::info("Rango de la orden: [{$startTime->format('Y-m-d H:i:s')} - {$finishTime->format('Y-m-d H:i:s')}]");
+
+        // 4. Obtener los registros de shift_history para la línea de producción en el rango [startTime, finishTime]
+        $productionLineId = $orderStats->first()->production_line_id;
+        $shiftHistories = ShiftHistory::where('production_line_id', $productionLineId)
+            ->whereBetween('created_at', [$startTime, $finishTime])
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        // 5. Calcular el tiempo total de pausa (stop)
+        $totalStopSeconds = 0;
+        $stopStart = null;
+        foreach ($shiftHistories as $event) {
+            if ($event->type === 'stop') {
+                if ($event->action === 'start') {
+                    // Registrar inicio de pausa, usando max(startTime, eventTime)
+                    $eventTime = Carbon::parse($event->created_at);
+                    $stopStart = $eventTime->lt($startTime) ? $startTime->copy() : $eventTime->copy();
+                } elseif ($event->action === 'end' && $stopStart) {
+                    // Cerrar pausa, usando min(finishTime, eventTime)
+                    $eventTime = Carbon::parse($event->created_at);
+                    $stopEnd = $eventTime->gt($finishTime) ? $finishTime->copy() : $eventTime->copy();
+                    $totalStopSeconds += $stopEnd->diffInSeconds($stopStart);
+                    $stopStart = null;
+                }
+            }
+        }
+        // Si queda una pausa abierta sin "end", se usa finishTime para cerrarla.
+        if ($stopStart) {
+            $totalStopSeconds += $finishTime->diffInSeconds($stopStart);
+        }
+        $formattedStopTime = gmdate('H:i:s', $totalStopSeconds);
+        Log::info("Tiempo total de pausa (stop): {$formattedStopTime} ({$totalStopSeconds} segundos)");
+
+        // 6. Calcular la diferencia total entre start y finish
+        $diffInSeconds = $finishTime->diffInSeconds($startTime);
+        $formattedDiff = gmdate('H:i:s', $diffInSeconds);
+
+        // 7. Determinar el cálculo del tiempo de producción (timeOn)
+        // Verificar si existe al menos un evento "stop start" en shiftHistories
+        $hasStopStart = $shiftHistories->contains(function ($event) {
+            return $event->type === 'shift' && $event->action === 'start';
+        });
+
+        if ($hasStopStart) {
+            
+            //ahora buscamos si en la misma cadena hay  un type shift y action start  por created_at last  sin tener despues un type shift action end 
+            //si se encuentra tenemos que asignarle como end el $finishTime->format('Y-m-d H:i:s') y
+            //hacemos la diferencia entre el created_at del type shift y action start y $finishTime->format('Y-m-d H:i:s')
+
+                $firstTypeShiftEventStart = $shiftHistories
+                    ->where('type', 'shift')
+                    ->where('action', 'start')
+                    ->sortByDesc('created_at')
+                    ->first();
+
+                $useFinishTime = false;
+                if ($firstTypeShiftEventStart) {
+                    // Buscamos si hay algún evento "shift end" con created_at mayor al de este último "shift start"
+                    $followingShiftEnd = $shiftHistories->filter(function($event) use ($firstTypeShiftEventStart) {
+                        return $event->type === 'shift' &&
+                            $event->action === 'end' &&
+                            Carbon::parse($event->created_at)->gt(Carbon::parse($firstTypeShiftEventStart->created_at));
+                    })->first();
+                    if (!$followingShiftEnd) {
+                        // No hay un "shift end" posterior, entonces usaremos finishTime como fin del turno en curso.
+                        $useFinishTime = true;
+                    }
+                }
+
+            if ($firstTypeShiftEventStart) {
+
+                // Si no hay un "shift end" posterior, usamos finishTime como fin
+                if ($useFinishTime) {
+                    $firstShiftStartCreatedAt = $firstTypeShiftEventStart->created_at;
+                    $timeLastShift = Carbon::parse($firstShiftStartCreatedAt)->diffInSeconds(Carbon::parse($finishTime->format('Y-m-d H:i:s')));
+                    $timeLastShiftFormatted = gmdate('H:i:s', $timeLastShift);
+                }else {
+                    // Si no se encuentra el evento "start stop", se asigna un mensaje indicando que se calculará en otra función.
+                    //timeLastShift= lo ponemos a 0
+                    $timeLastShift= 0;
+                    $timeLastShiftFormatted = gmdate('H:i:s', $timeLastShift);
+                }
+            } else {
+                // Si no se encuentra el evento "start stop", se asigna un mensaje indicando que se calculará en otra función.
+                //timeLastShift= lo ponemos a 0
+                $timeLastShift= 0;
+                $timeLastShiftFormatted = gmdate('H:i:s', $timeLastShift);
+            }
+            // Si el primer stype shift y action end no tiene otro type shift y action end antes en esta cadena 
+            //se pone $startTime->format('Y-m-d H:i:s')  como start y hacemos la diferencia entre $startTime->format('Y-m-d H:i:s') 
+            //y el created_at del primero type shift y action end
+
+            $firstTypeShiftEventEnd = $shiftHistories
+                                    ->where('type', 'shift')
+                                    ->where('action', 'end')
+                                    ->sortBy('created_at')
+                                    ->first();
+            
+            if ($firstTypeShiftEventEnd) {
+                $firstShiftEndCreatedAt = $firstTypeShiftEventEnd->created_at;
+                $timeFirstShiftEndCreatedAt = Carbon::parse($firstShiftEndCreatedAt)->diffInSeconds($startTime->format('Y-m-d H:i:s'));
+                $timeFirstShiftEndCreatedAtFormatted = gmdate('H:i:s', $timeFirstShiftEndCreatedAt);
+            } else {
+                // Si no se encuentra el evento "stop start", se asigna un mensaje indicando que se calculará en otra función.
+                $timeFirstShiftEndCreatedAt = Carbon::parse($finishTime->format('Y-m-d H:i:s'))->diffInSeconds($startTime->format('Y-m-d H:i:s'));
+                $timeFirstShiftEndCreatedAtFormatted = gmdate('H:i:s', $timeFirstShiftEndCreatedAt);
+                
+            }
+
+            //ahora buscamos solo los type shift action start que tienen despues un type shift que tienen un action end en la cadena $shiftHistories
+            // y si se encuantra sumamos la diferencia entre el created_at del type shift action start y el created_at del type shift action end
+            //si hay varias despues sumamos todas las diferencias En $timeShiftCompleted y $timeShiftCompletedFormatted
+            // --- Buscar todos los pares completos de "shift start" y "shift end" ---
+            $timeShiftCompleted = 0;
+            foreach ($shiftHistories as $event) {
+                if ($event->type === 'shift' && $event->action === 'start') {
+                    // Buscar el primer "shift end" posterior a este "shift start"
+                    $correspondingShiftEnd = $shiftHistories->filter(function($e) use ($event) {
+                        return $e->type === 'shift' &&
+                            $e->action === 'end' &&
+                            $e->created_at->gt($event->created_at);
+                    })->sortBy('created_at')->first();
+                    if ($correspondingShiftEnd) {
+                        $timeShiftCompleted += $correspondingShiftEnd->created_at->diffInSeconds($event->created_at);
+                    }
+                }
+            }
+            //dd($timeShiftCompleted);
+
+            $timeShiftCompletedFormatted = gmdate('H:i:s', $timeShiftCompleted);
+
+            // Si no hay eventos de tipo "stop start", se calcula:
+            $timeOnSeconds = $timeFirstShiftEndCreatedAt + $timeLastShift + $timeShiftCompleted - $totalStopSeconds;
+          
+            $timeOnFormatted = gmdate('H:i:s', $timeOnSeconds);
+        } else {
+            // Si no hay eventos de tipo "stop start", se calcula:
+            $timeOnSeconds = $diffInSeconds - $totalStopSeconds ;
+            $timeOnFormatted = gmdate('H:i:s', $timeOnSeconds);
+        }
+        // Por defecto, si no hay ningún evento "shift" con action "start", $shiftCount será 1.
+        $shiftStartEvents = $shiftHistories->where('type', 'shift')->where('action', 'start');
+
+        if ($shiftStartEvents->isEmpty()) {
+            $shiftCount = 1;
+        } else {
+            // Si existen, se suma la cantidad de eventos encontrados más 1.
+            $shiftCount = $shiftStartEvents->count() + 1;
+        }
+
+        // Obtener el nombre de la línea de producción y el cliente de referencia
+        $productionLine = $orderStats->first()->productionLine->name;
+        $productList = $orderStats->first()->productList->client_id;
+
+        //obtener de orderStats el slow_time y la suma de 	down_time y production_stops_time  como es en segundos creamos  otra variable formated a 00:00:00
+        $slow_time = $orderStats->first()->slow_time;
+        if ($slow_time > (0.8 * $timeOnSeconds)) {
+            $slow_time = 0.2 * $timeOnSeconds;
+        }
+        $slowTimeFormated = gmdate('H:i:s', $slow_time);
+        $production_stops_time = $orderStats->first()->production_stops_time;
+        $down_time = $orderStats->first()->down_time;
+        $totalStopSeconds = $down_time + $production_stops_time;
+        $stopTimeFormated = gmdate('H:i:s', $totalStopSeconds);
+
+        //cajas realizadas por basculas:
+        $boxModbuses = $orderStats->sum('weights_0_orderNumber');
+        //cajas cajas en order_notice de la orden
+        $orderBoxFromOrderNotice = $orderStats->sum('box');
+
+        //unidades realizadas por sensores
+        $unitsSensors = $orderStats->sum('units_made_real');
+
+        //unidades en order_notice de la orden
+        $orderUnits = $orderStats->sum('units');
+
+        //usamos esto para tranfer por si no hay basculas que se pase los sensores
+        $unitsNumberFromTransfer = ($orderBoxFromOrderNotice !== null && $orderBoxFromOrderNotice != 0) 
+                                    ? $boxModbuses
+                                    : $unitsSensors;
+        $unitsFromOrnderNumberFromTransfer = ($orderBoxFromOrderNotice !== null && $orderBoxFromOrderNotice != 0) 
+                                    ? $orderBoxFromOrderNotice 
+                                    : $orderUnits;
+
+        //sacamos el tiempo óptimo de producción de product_lists usando client_id=$productList y sacamos el optimal_production_time
+        $optimalProductionTime = ProductList::where('client_id', $productList)->first()->optimal_production_time;
+
+        //buscamos todos los sensores que se han usado en la linea de producción de la orden por production_line_id
+        $sensorsUsed = Sensor::where('production_line_id', $orderStats->first()->production_line_id)->get();
+        
+        //buscamos todos los modbus que se han usado en la linea de producción de la orden por production_line_id
+        //pero de modbuses quitamos el modbus que tiene nombre : Bascula Linea2-rectificar- el IMPERIO con Mperio  
+        //mostrando todos los modbuses menos este para rectificar fallo de topflow con ajos
+        //$modbusUsed = Modbus::where('production_line_id', $orderStats->first()->production_line_id)->get();
+        $modbusUsed = Modbus::where('production_line_id', $orderStats->first()->production_line_id)
+                            ->where('name', '!=', 'Bascula Linea2-rectificar- el IMPERIO con Mperio')
+                            ->get();
+
+        //hacemos un foreach para sensores y cada sensor en foreach se busca en sensor_history  por sensor_id y orderId 
+        // sacamos todas las lineas encontradas sumamos el count_order_1  el downtime_count 
+        //Inicia array sensorData para almacenar los datos del sensor
+
+        //Antes de empezar con sensores Vamo a mandar los datos de la linea de production a la DB externa si se ha pedido 
+        if ($externalSend === true){
             // Iniciar transacción para asegurar la integridad de los datos
             DB::beginTransaction();
 
@@ -54,212 +373,352 @@ class TransferExternalDbController extends Controller
             $externalConnection = DB::connection('external');
             Log::info("Conexión a la base de datos externa establecida.");
 
-            // Obtener sensores y modbuses filtrados por barcodeId
-            $sensors = Sensor::where('barcoder_id', $barcodeId)->get();
-            Log::info("Se encontraron {$sensors->count()} sensores para barcode ID {$barcodeId}.");
+        }
 
-            $modbuses = Modbus::where('barcoder_id', $barcodeId)->get();
-            Log::info("Se encontraron {$modbuses->count()} modbuses para barcode ID {$barcodeId}.");
-
-            if ($sensors->isEmpty() && $modbuses->isEmpty()) {
-                Log::error("No se encontraron sensores ni modbuses para barcode ID {$barcodeId}.");
-                DB::rollBack();
-                return response()->json(['error' => 'No se encontraron sensores ni modbuses para el barcodeId proporcionado.'], 404);
-            }
-
-            // Obtener orderStats
-            $orderStats = OrderStat::where('order_id', $orderId)
-                ->orderBy('created_at', 'asc')
-                ->get();
-
-            if ($orderStats->isEmpty()) {
-                Log::error("No se encontraron registros en `order_stats` para orderId={$orderId}.");
-                DB::rollBack();
-                return response()->json(['error' => 'No se encontraron registros en order_stats para el orderId proporcionado.'], 404);
-            }
-            Log::info("Se encontraron {$orderStats->count()} registros en order_stats para orderId={$orderId}.");
-
-            // Obtener productionOrder
-            $productionOrder = ProductionOrder::where('order_id', $orderId)->first();
-            if (!$productionOrder) {
-                Log::error("No se encontró un registro en `production_orders` para orderId={$orderId}.");
-                DB::rollBack();
-                return response()->json(['error' => 'No se encontró production_order para el orderId proporcionado.'], 404);
-            }
-            Log::info("Se encontró un registro en production_orders para orderId={$orderId}.");
-
-            // Decodificar JSON
-            $jsonData = $this->decodeJson($productionOrder->json);
-            if (!$jsonData) {
-                DB::rollBack();
-                return response()->json(['error' => 'JSON de production_order inválido.'], 400);
-            }
-
-            // Extraer valores del JSON
-            [$modelUnit, $modelEnvase, $modelMeasure, $unitValue, $totalWeight] = $this->extractJsonValues($jsonData);
-
-            // Calcular diferencias de tiempo
-            [$totalDifferenceInSeconds, $totalDifferenceFormatted] = $this->calculateTimeDifferences($orderStats);
-
-            // Obtener tiempos de la orden
-            [$startAt, $finishAt, $totalTime, $totalTimeFomatted] = $this->getOrderTime($orderId, $totalDifferenceInSeconds);
-
-
-            //obtener idLinea y idReference
-            [$idLinea, $idReference] = $this->getIdLineaAndIdReference($orderStats);       
-
-            // Calcular ShiftCount
-            $shiftCount = $this->calculateShiftCountByEvents($orderStats);
-            
-            //extract de order_starts
-            [$orderUnit, $orderUnitSensors, $orderUnitModbuses, $slowTime, $downTime, $slowTimeFormat ,$downTimeFormat] = $this->extractOrderUnit($orderStats);
-            //filtrar si no hay basculas que use la sensorica
-            $senorUnit = $orderUnitModbuses ? $orderUnitModbuses : $orderUnitSensors;
-
-            //extraer de order_mac por orderId el campo quantity y que el action = 1
-            $orderUnit = $this->getOrderMacUmaQuantity($orderId);
-            
-            // Procesar y transferir sensores y modbuses
-            $this->processSensors($sensors, $externalConnection, $startAt, $finishAt, $totalTime, $modelEnvase, $modelMeasure, $unitValue, $totalWeight, $orderId);
-            $this->processModbuses($modbuses, $externalConnection, $startAt, $finishAt, $totalTime, $modelUnit, $modelMeasure, $totalWeight, $orderId);
-
+        if ($externalSend === true){
             // Insertar datos ficticios en linea_por_orden utilizando Eloquent
-            $this->insertLineaPorOrden(
-                $externalConnection,
-                $idLinea,                 // Nombre de Linea
-                $orderId,                  // IdOrden
-                $idReference,          // IdReference 
-                $shiftCount,                         // ShiftCount 
-                $orderUnit,                    // OrderCount (lo tenemos)
-                $modelUnit,                // OrderUnit (ficticio)
-                $senorUnit,                     // SensorCount (ficticio)
-                $orderUnit,                     // UmaCount (ficticio)
-                $startAt,                  // StartAt
-                $finishAt,                 // FinishAt
-                $totalTimeFomatted,                // TimeON (ficticio)
-                $downTimeFormat,                // TimeDown (ficticio)
-                $slowTimeFormat                 // TimeSlow (ficticio)
-            );
+            try {
+                $data = [
+                    'IdLinea' => $productionLine,
+                    'IdOrden' => $orderId,
+                    'IdReference' => $productList,
+                    'ShiftCount' => $shiftCount,
+                    'OrderCount' => $unitsFromOrnderNumberFromTransfer,
+                    'OrderUnit' => $modelUnit,
+                    'SensorCount' => $unitsNumberFromTransfer,
+                    'UmaCount' => $this->getOrderMacUmaQuantity($orderId),
+                    'StartAt' => $startTime->format('Y-m-d H:i:s'),
+                    'FinishAt' => $finishTime->format('Y-m-d H:i:s'),
+                    'TimeON' => $timeOnFormatted,
+                    'TimeDown' => $stopTimeFormated,
+                    'TimeSlow' => $slowTimeFormated,
+                ];
+    
+    
+                $externalConnection->table('linea_por_orden')->insert($data);
+                Log::info("Datos insertados en linea_por_orden para IdOrden={$orderId}.");
+            } catch (\Exception $e) {
+                Log::error("Error al insertar en linea_por_orden para IdOrden={$orderId}: " . $e->getMessage());
+                // Opcional: Manejar la excepción según tus necesidades
+            }
 
-            DB::commit();
-            Log::info("Transferencia completada exitosamente para barcode ID {$barcodeId} y orderId {$orderId}.");
+        } else{ 
+        DB::rollBack();
+        }
 
-            return response()->json(['message' => 'Transferencia completada exitosamente.'], 200);
-        } catch (\Exception $e) {
-            Log::error("Error durante la transferencia: " . $e->getMessage());
+        $sensorData = [];
+        foreach ($sensorsUsed as $sensor) {
+            
+            try {
+                //dd($sensor);
+                // Buscar en sensor_history por sensor_id y order_id
+                $sensorHistory = SensorHistory::where('sensor_id', $sensor->id)
+                    ->where('orderId', $orderId)
+                    ->orderBy('created_at', 'desc')
+                    ->first();
+                
+                $totalCountOrder = $sensorHistory ? $sensorHistory->count_order_1 : 0;
+                $totalTimeDowntime = $sensorHistory ? $sensorHistory->downtime_count : 0;
+            
+                if ($totalCountOrder > 0) {
+                    $realTimeUnit = ($timeOnSeconds - $totalTimeDowntime) / $totalCountOrder;
+                } else {
+                    $realTimeUnit = 0; // o el valor que consideres adecuado
+                }
+
+                // Consultar la tabla sensor_count para obtener el tiempo de trabajo
+                $aggregates = SensorCount::where('sensor_id', $sensor->id)
+                                        ->whereBetween('created_at', [$startTime->format('Y-m-d H:i:s'), $finishTime->format('Y-m-d H:i:s')])
+                                        ->selectRaw('MIN(time_00) AS min_time_00, MIN(time_11) AS min_time_11')
+                                        ->first();
+                // Evitamos valores nulos con ??
+                $minTime00 = $aggregates->min_time_00 ?? 0;
+                $minTime11 = $aggregates->min_time_11 ?? 0;
+
+                // Elegimos qué mínimo usar dependiendo del sensor_type
+                if ((int)$sensor->sensor_type === 0) {
+                $minTime = max($minTime11, (int)env('PRODUCTION_MIN_TIME', 1));
+                } else {
+                $minTime = $minTime00;
+                }
+                
+                $grossWeightTotal=number_format(($totalCountOrder * $unitValue), 2, '.', '');
+
+                if($sensor->sensor_type === 0) {
+                    $slowTime=($timeOnSeconds - $totalTimeDowntime) -($optimalProductionTime * $totalCountOrder);
+                } else {
+                    $slowTime=0.0;
+                }
+                if ($sensor->sensor_type === 0) {
+                    // Para sensor_type 0, dejamos el valor de optimalProductionTime sin cambios.
+                    $optimalProductionTime = $optimalProductionTime + 0;
+                } else {
+                    if ($minTime < 4) {
+                        // Si es menor de 3, se deja sin cambios.
+                        $optimalProductionTime = $minTime + 0;
+                    } elseif ($minTime >= 4 && $minTime < 10) {
+                        // Entre 3 y 10, se resta un valor aleatorio entre 1 y 3.
+                        $optimalProductionTime = $minTime - mt_rand(1, 2);
+                    } elseif ($minTime >= 10 && $minTime < 30) {
+                        // Entre 10 y 30, se resta un valor aleatorio entre 2 y 4.
+                        $optimalProductionTime = $minTime - mt_rand(2, 4);
+                    } elseif ($minTime >= 30 && $minTime < 100) {
+                        // Entre 30 y 100, se resta un valor aleatorio entre 5 y 10.
+                        $optimalProductionTime = $minTime - mt_rand(5, 10);
+                    } elseif ($minTime >= 100 && $minTime < 200) {
+                        // Entre 30 y 100, se resta un valor aleatorio entre 5 y 10.
+                        $optimalProductionTime = $minTime - mt_rand(20.1, 40.4);
+                    } else {
+                        // Mayor a 100, se resta un valor aleatorio entre 7 y 13.
+                        $optimalProductionTime = $minTime - mt_rand(30.3, 50.6);
+                    }
+                }
+
+                if($minTime<1){
+                    $realTimeUnit=0;
+                }
+                if($totalCountOrder < 1) {
+                    $realTimeUnit=0;
+                    $minTime=0;
+                    $optimalProductionTime=0;
+                }
+                
+
+                //dd($realTimeUnit);
+                // Si no hay registros, no se suma nada (se mantienen los acumulados)
+                $sensorData[] = [
+                    'id'                      => $sensor->id,
+                    'name'                    => $sensor->name,
+                    'productionLine'          => $productionLine,
+                    'orderId'                 => $orderId,
+                    'startAt'                 => $startTime->format('Y-m-d H:i:s'),
+                    'finishAt'                => $finishTime->format('Y-m-d H:i:s'),
+                    'totalTime'               => $timeOnSeconds,
+                    'totalTimeFormatted'      => gmdate('H:i:s', $timeOnSeconds),
+                    'productList'             => $productList,
+                    'IdClient'                => "Por definir",
+                    'TcTheoretical'           => $optimalProductionTime ,
+                    'TcUnit'                  => "segundos",
+                    'TcAverage'               => round($realTimeUnit, 2),
+                    'TcMin'                   => $minTime,
+                    'totalCountOrder'         => $totalCountOrder,
+                    'TimeSlow'                => $slowTime,
+                    'TimeSlowFormated'        => gmdate('H:i:s', $slowTime),
+                    'totalTimeDowntime'       => $totalTimeDowntime,
+                    'totalTimeDowntimeFormatted'         => gmdate('H:i:s', $totalTimeDowntime),
+                    'timeOnSeconds'           => $timeOnSeconds - $totalTimeDowntime,
+                    'timeOnFormatted'         => gmdate('H:i:s', $timeOnSeconds - $totalTimeDowntime),
+                    'SensorUnitCount'         => $modelEnvase,
+                    'SensorWeight'            => $grossWeightTotal,
+                    'SensorUnitWeight'        => $modelMeasure,
+                    'GrossWeight'             => $unitValue, // Nuevo campo
+                    // Puedes agregar aquí más información o incluso los registros de sensorHistory si lo necesitas
+                ];
+
+
+                if ($externalSend === true){
+                        // Preparar datos para la base de datos externa
+                    $data = [
+                        'IdOrder'                 => $orderId,
+                        'IdReference'             => $productList,
+                        'startAt'                 => $startTime->format('Y-m-d H:i:s'),
+                        'finishAt'                => $finishTime->format('Y-m-d H:i:s'),
+                        'IdClient'                => "Por definir",
+                        'IdSensor'                => $sensor->name,
+                        'TcTheoretical'           => $optimalProductionTime ,
+                        'TcUnit'                  => "segundos",
+                        'TcAverage'               => round($realTimeUnit, 2),
+                        'TcMin'                   => $minTime,
+                        'IdLine'                  => $productionLine,
+                        'TimeOn'                  => gmdate('H:i:s', $timeOnSeconds),
+                        'TimeDown'                => gmdate('H:i:s', $totalTimeDowntime),
+                        'TimeSlow'                => gmdate('H:i:s', $slowTime),
+                        'SensorCount'             => $totalCountOrder,
+                        'SensorUnitCount'         => $modelEnvase,
+                        'SensorWeight'            => $grossWeightTotal,
+                        'SensorUnitWeight'        => $modelMeasure,
+                        'GrossWeight01'           => $unitValue, // Nuevo campo
+                        'GrossWeight02'           => '0.0',  // Nuevo campo
+                    ];
+
+                    // Insertar datos
+                    $externalConnection->table('sensores_por_orden')->insert($data);
+                    Log::info("Sensor ID {$sensor->id} transferido a la base de datos externa.");
+                } else{ 
+                    DB::rollBack();
+                }
+            } catch (\Exception $e) {
+                Log::error('Error al procesar el sensor: ' . $sensor->name);
+                Log::error($e->getMessage());
+            }
+        }
+
+        //sacamos con foreach todos los modbuses igual como a sensores sacamos name  y 
+        //despue vamos a sacar de modbus_history por modbus_id que es id del modbus en modbuses 
+        //y por orderId , y sumamos rec_box y downtime_count
+        //inicamos array modbusData para almacenar los datos de modbus
+        $modbusData = [];
+        foreach ($modbusUsed as $modbus) {
+            
+            try {
+                // Obtener el historial de modbus para este módulo
+                $modbusHistory = ModbusHistory::where('modbus_id', $modbus->id)
+                    ->where('orderId', $orderId)
+                    ->orderBy('created_at', 'desc')
+                    ->first();
+
+                $totalCountOrder = $modbusHistory ? $modbusHistory->rec_box : 0;
+                $totalTimeDowntime = $modbusHistory ? $modbusHistory->downtime_count : 0;
+                $totalWeightModbus = $modbusHistory ? $modbusHistory->total_kg_order : 0;
+
+                if ($totalCountOrder > 0) {
+                    $realTimeUnit = ($timeOnSeconds - $totalTimeDowntime) / $totalCountOrder;
+                } else {
+                    $realTimeUnit = 0; // o el valor que consideres adecuado
+                }
+
+                $timeDifferences = ControlWeight::selectRaw('TIMESTAMPDIFF(SECOND, LAG(created_at) OVER (ORDER BY created_at), created_at) AS interval_diff')
+                    ->where('modbus_id', $modbus->id)
+                    ->whereBetween('created_at', [$startTime->format('Y-m-d H:i:s'), $finishTime->format('Y-m-d H:i:s')])
+                    ->pluck('interval_diff')
+                    ->filter(fn($value) => !is_null($value) && $value > env('PRODUCTION_MIN_TIME_WEIGHT', 30));
+
+                $minInterval = $timeDifferences->min() ?? env('PRODUCTION_MIN_TIME_WEIGHT', 30);
+
+
+                if ($minInterval < 3) {
+                    // Si es menor de 3, se deja sin cambios.
+                    $optimalProductionTime = $minInterval+ 0;
+                } elseif ($minInterval >= 3 && $minInterval < 10) {
+                    // Entre 3 y 10, se resta un valor aleatorio entre 1 y 3.
+                    $optimalProductionTime = $minInterval- mt_rand(1, 3);
+                } elseif ($minInterval>= 10 && $minInterval < 30) {
+                    // Entre 10 y 30, se resta un valor aleatorio entre 2 y 4.
+                    $optimalProductionTime = $minInterval - mt_rand(2, 4);
+                } elseif ($minInterval >= 30 && $minInterval < 100) {
+                    // Entre 30 y 100, se resta un valor aleatorio entre 5 y 10.
+                    $optimalProductionTime = $minInterval - mt_rand(5, 10);
+                } elseif ($minInterval >= 130 && $minInterval < 300) {
+                    // Entre 30 y 100, se resta un valor aleatorio entre 5 y 10.
+                    $optimalProductionTime = $minInterval - mt_rand(15, 21.1);
+                } else {
+                    // Mayor a 100, se resta un valor aleatorio entre 7 y 13.
+                    $optimalProductionTime = $minInterval - mt_rand(20.1, 30.3);
+                }
+
+
+                $modbusData[] = [
+                    'id'                      => $modbus->id,
+                    'name'                    => $modbus->name,
+                    'productionLine'          => $productionLine,
+                    'orderId'                 => $orderId,
+                    'startAt'                 => $startTime->format('Y-m-d H:i:s'),
+                    'finishAt'                => $finishTime->format('Y-m-d H:i:s'),
+                    'totalTime'               => $timeOnSeconds,
+                    'totalTimeFormatted'      => gmdate('H:i:s', $timeOnSeconds),
+                    'productList'             => $productList,
+                    'IdClient'                => "Por definir",
+                    'TcTheoretical'           => $optimalProductionTime,
+                    'TcUnit'                  => "segundos",
+                    'TcAverage'               => round($realTimeUnit, 2),
+                    'TcMin'                   => $minInterval,
+                    'totalCountOrder'         => $totalCountOrder,
+                    'TimeSlow'                => ($timeOnSeconds - $totalTimeDowntime) -($minInterval* $totalCountOrder),
+                    'TimeSlowFormated'        => gmdate('H:i:s', ($timeOnSeconds - $totalTimeDowntime) -($minInterval * $totalCountOrder)),
+                    'totalTimeDowntime'       => $totalTimeDowntime,
+                    'totalTimeDowntimeFormatted'         => gmdate('H:i:s', $totalTimeDowntime),
+                    'timeOnSeconds'           => $timeOnSeconds - $totalTimeDowntime,
+                    'timeOnFormatted'         => gmdate('H:i:s', $timeOnSeconds - $totalTimeDowntime),
+                    'SensorUnitCount'         => $modelUnit,
+                    'SensorWeight'            => $totalWeightModbus, // lo formateamos con maximo 2 digitos decimales
+                    'SensorUnitWeight'        => $modelMeasure,
+                    'GrossWeight'             => round($totalWeight, 2),  // Nuevo campo
+                    // Más datos según lo requieras
+                ];
+                if ($externalSend === true){
+                    // Preparar datos para la base de datos externa
+                    $data = [
+                        'IdOrder'                 => $orderId,
+                        'IdReference'             => $productList,
+                        'startAt'                 => $startTime->format('Y-m-d H:i:s'),
+                        'finishAt'                => $finishTime->format('Y-m-d H:i:s'),
+                        'IdClient'                => "Por definir",
+                        'IdSensor'                => $modbus->name,
+                        'TcTheoretical'           => $optimalProductionTime ,
+                        'TcUnit'                  => "segundos",
+                        'TcAverage'               => round($realTimeUnit, 2),
+                        'TcMin'                   => $minInterval,
+                        'IdLine'                  => $productionLine,
+                        'TimeOn'                  => gmdate('H:i:s', $timeOnSeconds),
+                        'TimeDown'                => gmdate('H:i:s', $totalTimeDowntime),
+                        'TimeSlow'                => gmdate('H:i:s', ($timeOnSeconds - $totalTimeDowntime) -($minInterval * $totalCountOrder)),
+                        'SensorCount'             => $totalCountOrder,
+                        'SensorUnitCount'         => $modelUnit,
+                        'SensorWeight'            => $totalWeightModbus, // lo formateamos con maximo 2 digitos decimales
+                        'SensorUnitWeight'        => $modelMeasure,
+                        'GrossWeight01'           => '0.0', // Nuevo campo
+                        'GrossWeight02'           => round($totalWeight, 2),  // Nuevo campo
+                    ];
+
+                    // Insertar datos
+                    $externalConnection->table('sensores_por_orden')->insert($data);
+                    Log::info("Modbus ID {$modbus->id} transferido a la base de datos externa.");
+                } else{ 
+                    DB::rollBack();
+                }
+                
+            } catch (\Exception $e) {
+                // Manejo de excepciones si ocurre algún error al obtener el historial de modbus
+                Log::error('Error al obtener el historial de modbus: ' . $e->getMessage());
+                // Puedes agregar aquí lógica para manejar el error de manera adecuada
+                Log::info('Modbus ID: ' . $modbus->id);
+            }
+        }
+
+        //Salvar todo en db externa
+        if ($externalSend === true){
+            try{
+               DB::commit(); 
+            } catch (\Exception $e) {
+                Log::error('Error al guardar en la base de datos externa: ' . $e->getMessage());
+                DB::rollBack();
+                return response()->json(['error' => 'Error al guardar en la base de datos externa'], 500);
+            }
+            
+        } else{ 
             DB::rollBack();
-            return response()->json(['error' => 'Ocurrió un error durante la transferencia de datos.'. $e->getMessage()], 500);
-        }
-    }
-
-    /**
-     * Obtener idLinea y idReference usando las relaciones Eloquent
-     *
-     * @param \Illuminate\Support\Collection $orderStats
-     * @return array
-     */
-    private function getIdLineaAndIdReference($orderStats)
-    {
-        $firstOrderStat = $orderStats->first();
-
-        // Verificar que $firstOrderStat no sea null
-        if (!$firstOrderStat) {
-            Log::error("No hay registros en orderStats para obtener idLinea e idReference.");
-            return ['Desconocido', 'Desconocido'];
         }
 
-        // Acceder a las relaciones definidas
-        $idLinea = $firstOrderStat->productionLine->name ?? 'Desconocido';
-        $idReference = $firstOrderStat->productList->client_id ?? 'Desconocido';
-
-        return [$idLinea, $idReference];
-    }
-
-    /**
-     * Obtener la cantidad de UMA de OrderMac donde action es 1
-     *
-     * @param string $orderId
-     * @return float
-     */
-    private function getOrderMacUmaQuantity($orderId)
-    {
-        $orderMac = OrderMac::where('orderId', $orderId)
-            ->where('action', 1)
-            ->first();
-    
-        return $orderMac ? $orderMac->quantity : '0';
-    }
-
-    /**
-     * Extract order unit from orderStats
-     *
-     * @param \Illuminate\Support\Collection $orderStats
-     * @return array
-     */
-    private function extractOrderUnit($orderStats)
-    {
-        //suma de unidades del campo weights_0_orderNumber
-        $orderUnitModbuses = $orderStats->sum('weights_0_orderNumber');
-        //suma de unidades del campo units
-        $orderUnitSensors = $orderStats->sum('units');
-        //suma de la tiempo lento
-        $slowTime = $orderStats->sum('slow_time');
-        //suma de la tiempo lento
-        $downTime = $orderStats->sum('down_time') + $orderStats->sum('production_stop_time');
-        //formateamos slowtime a hh:mm:ss
-        $slowTimeFormat = gmdate("H:i:s", $slowTime);
-        //formateamos downtime a hh:mm:ss
-        $downTimeFormat = gmdate("H:i:s", $downTime);
-    
-        $firstOrderStat = $orderStats->first();
-        $orderUnit = $firstOrderStat ? $firstOrderStat->units : 'Desconocido';
-    
+        // 8. Retornar los datos, incluyendo la información de timeOn
         return [
-            $orderUnit,         // Índice 0: orderUnit (de firstOrderStat->units)
-            $orderUnitSensors,  // Índice 1: orderUnitSensors (suma de 'units')
-            $orderUnitModbuses, // Índice 2: orderUnitModbuses (suma de 'weights_0_shiftNumber')
-            $slowTime,          // Índice 3: slowTime (suma de 'slow_time')
-            $downTime,          // Índice 4: downTime (suma de 'down_time')
-            $slowTimeFormat,    // Índice 5: slowTimeFormat (formato de 'slow_time')
-            $downTimeFormat,    // Índice 6: downTimeFormat (formato de 'down_time')
+            'orderId'                 => $orderId,
+            'startAt'                 => $startTime->format('Y-m-d H:i:s'),
+            'finishAt'                => $finishTime->format('Y-m-d H:i:s'),
+            'totalTime'               => $diffInSeconds,
+            'totalTimeFormatted'      => $formattedDiff,
+            'totalStopSeconds'        => $totalStopSeconds,
+            'totalStopFormatted'      => $formattedStopTime,
+            'timeOnSeconds'           => $timeOnSeconds,
+            'timeOnFormatted'         => $timeOnFormatted,
+            'shiftCount'              => $shiftCount,
+            'productionLine'          => $productionLine,
+            'productList'             => $productList,
+            'slowTime'                => $slow_time,
+            'slowTimeFormatted'       => $slowTimeFormated,
+            'downTime'                => $totalStopSeconds,
+            'totalDownTimeFormated'   => $stopTimeFormated,
+            'boxModbuses'             => $boxModbuses,
+            'orderBoxFromOrderNotice' => $orderBoxFromOrderNotice,
+            'unitsSensors'            => $unitsSensors,
+            'unitsFronOrderNotice'    => $orderUnits,
+            'unitsNumberFromTransfer' => $unitsNumberFromTransfer,
+            'unitsFromOrderNumberFromTransfer' => $unitsFromOrnderNumberFromTransfer,
+            'shiftHistories'          => $shiftHistories,
+            'sensorsUsed' => $sensorData,
+            'modbusUsed'  => $modbusData,
         ];
     }
 
-    /**
-     * Decodificar y validar el JSON de ProductionOrder
-     *
-     * @param mixed $json
-     * @return array|null
-     */
-    private function decodeJson($json)
-    {
-        // Verificar si ya está decodificado
-        if (is_array($json)) {
-            Log::info("JSON ya estaba decodificado.");
-            return $json;
-        }
-
-        // Intentar decodificar si es una cadena JSON
-        if (is_string($json)) {
-            $jsonData = json_decode($json, true);
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                Log::error("Error al decodificar JSON: " . json_last_error_msg());
-                return null;
-            }
-            Log::info("JSON decodificado correctamente.");
-            return $jsonData;
-        }
-
-        Log::error("Tipo de dato inesperado para JSON: " . gettype($json));
-        return null;
-    }
-
-    /**
-     * Extraer valores necesarios del JSON
-     *
-     * @param array $jsonData
-     * @return array
-     */
     private function extractJsonValues($jsonData)
     {
         $modelUnit = $jsonData['unit'] ?? 'Desconocido';
@@ -287,422 +746,35 @@ class TransferExternalDbController extends Controller
         return [$modelUnit, $modelEnvase, $modelMeasure, $unitValue, $totalWeight];
     }
 
-    /**
-     * Calcular diferencias de tiempo entre los registros de order_stats
-     *
-     * @param \Illuminate\Support\Collection $orderStats
-     * @return array
-     */
-    private function calculateTimeDifferences($orderStats)
+    private function decodeJson($json)
     {
-        $totalDifferenceInSeconds = 0;
-    
-        for ($i = 0; $i < $orderStats->count() - 1; $i++) {
-            $currentStat = $orderStats[$i];
-            $nextStat = $orderStats[$i + 1];
-    
-            // Ajustar los timestamps de ambos registros antes de calcular diferencias
-            $currentStat = $this->validateAndAdjustTimestamps(clone $currentStat);
-            $nextStat = $this->validateAndAdjustTimestamps(clone $nextStat);
-    
-            $updatedAt = Carbon::parse($currentStat->updated_at);
-            $createdAt = Carbon::parse($nextStat->created_at);
-    
-            $difference = $updatedAt->diffInSeconds($createdAt);
-            $totalDifferenceInSeconds += $difference;
-    
-            Log::info("Diferencia entre ID {$currentStat->id} y ID {$nextStat->id}: {$difference} segundos.");
+        // Verificar si ya está decodificado
+        if (is_array($json)) {
+            Log::info("JSON ya estaba decodificado.");
+            return $json;
         }
-    
-        $totalDifferenceFormatted = gmdate('H:i:s', $totalDifferenceInSeconds);
-        Log::info("Diferencia total de tiempo: {$totalDifferenceFormatted} ({$totalDifferenceInSeconds} segundos).");
-    
-        return [$totalDifferenceInSeconds, $totalDifferenceFormatted];
+
+        // Intentar decodificar si es una cadena JSON
+        if (is_string($json)) {
+            $jsonData = json_decode($json, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                Log::error("Error al decodificar JSON: " . json_last_error_msg());
+                return null;
+            }
+            Log::info("JSON decodificado correctamente.");
+            return $jsonData;
+        }
+
+        Log::error("Tipo de dato inesperado para JSON: " . gettype($json));
+        return null;
     }
-    private function validateAndAdjustTimestamps($model)
+
+    private function getOrderMacUmaQuantity($orderId)
     {
-        $updatedAt = Carbon::parse($model->updated_at);
-        $createdAt = Carbon::parse($model->created_at);
-        $productionLineId = $model->production_line_id ?? null;
-
-        if (!$productionLineId) {
-            throw new \Exception("El modelo no tiene un production_line_id especificado.");
-        }
-
-        // Buscar el turno correspondiente basado en la fecha de created_at
-        $applicableShift = ShiftList::where('production_line_id', $productionLineId)
-            ->where('start', '<=', $createdAt->format('H:i:s'))
-            ->where('end', '>=', $createdAt->format('H:i:s'))
-            ->whereDate('created_at', '<=', $createdAt)
-            ->orderByDesc('created_at')
+        $orderMac = OrderMac::where('orderId', $orderId)
+            ->where('action', 1)
             ->first();
-
-        if ($applicableShift) {
-            $shiftStart = Carbon::createFromFormat('H:i:s', $applicableShift->start);
-            $shiftEnd = Carbon::createFromFormat('H:i:s', $applicableShift->end);
-
-            // Ajustar created_at si está fuera del intervalo del turno
-            if ($createdAt->isBefore($shiftStart)) {
-                $model->created_at = $updatedAt->copy()->setTime($shiftStart->hour, $shiftStart->minute, $shiftStart->second);
-            } elseif ($createdAt->isAfter($shiftEnd)) {
-                $model->created_at = $updatedAt->copy()->setTime($shiftEnd->hour, $shiftEnd->minute, $shiftEnd->second);
-            }
-
-            // Ajustar updated_at si es mayor que end
-            if ($updatedAt->isAfter($shiftEnd)) {
-                $model->updated_at = $createdAt->copy()->setTime($shiftEnd->hour, $shiftEnd->minute, $shiftEnd->second);
-            }
-
-            // Asegurando que created_at no sea mayor que end después de ajustes
-            if ($createdAt->gt($shiftEnd)) {
-                $model->created_at = $updatedAt->copy()->setTime($shiftEnd->hour, $shiftEnd->minute, $shiftEnd->second);
-            }
-        } else {
-            // Si no hay turnos aplicables, no hacemos ajustes
-            Log::info("No se encontraron turnos aplicables para la línea de producción con id: {$productionLineId}. Los timestamps se mantienen sin cambios.");
-        }
-
-        return $model;
-    }
-
-    /**
-     * Obtener tiempos de inicio y fin de la orden
-     *
-     * @param string $orderId
-     * @param int $totalDifferenceInSeconds
-     * @return array
-     */
-    private function getOrderTime($orderId, $totalDifferenceInSeconds)
-    {
-        try {
-            // Obtener el registro de OrderMac donde action es 0 para el startAt
-            $orderMacStart = OrderMac::where('orderId', $orderId)->where('action', 0)->first();
-            if (!$orderMacStart) {
-                throw new Exception("No se encontró un registro en OrderMacs para orderId={$orderId} con action=0.");
-            }
-
-            $startAt = Carbon::parse($orderMacStart->created_at)->format('Y-m-d H:i:s');
-
-            // Obtener el registro de OrderMac donde action es 1 para el finishAt
-            $orderMacFinish = OrderMac::where('orderId', $orderId)->where('action', 1)->first();
-            if (!$orderMacFinish) {
-                throw new Exception("No se encontró un registro en OrderMacs para orderId={$orderId} con action=1.");
-            }
-
-            $finishAt = Carbon::parse($orderMacFinish->created_at)->format('Y-m-d H:i:s');
-            Log::info("Se obtuvo finishAt de OrderMac con action=1: {$finishAt}");
-
-            $carbonStartAt  = Carbon::parse($startAt);
-            $carbonFinishAt = Carbon::parse($finishAt);
-
-            $diffInSeconds = $carbonFinishAt->diffInSeconds($carbonStartAt);
-            $totalTime     = $diffInSeconds - $totalDifferenceInSeconds;
-
-            $formattedDiff = gmdate('H:i:s', $diffInSeconds);
-            Log::info("Diferencia en formato HH:mm:ss: {$formattedDiff}");
-
-            // Formatear totalTime a HH:MM:SS para TimeON
-            $totalTimeFormatted = gmdate('H:i:s', $totalTime);
-            Log::info("Total Time (TimeON) formateado: {$totalTimeFormatted}");
-
-            return [$startAt, $finishAt, $totalTime, $totalTimeFormatted];
-        } catch (Exception $e) {
-            Log::error("Error al obtener tiempos de la orden: " . $e->getMessage());
-            throw $e;
-        }
-    }
-
-    /**
-     * Calcular ShiftCount basado en el número de registros en orderStats
-     *
-     * @param \Illuminate\Support\Collection $orderStats
-     * @return int
-     */
-    private function calculateShiftCountByEvents($orderStats)
-    {
-        // Obtener el primer y el último registro de orderStats
-        $firstOrderStat = $orderStats->first();
-        $lastOrderStat = $orderStats->last();
     
-        // Si no hay registros, devolvemos 1 turno en curso
-        if (!$firstOrderStat || !$lastOrderStat) {
-            return 1;
-        }
-    
-        // Extraer el production_line_id
-        $productionLineId = $firstOrderStat->production_line_id;
-    
-        // Definir el rango de fechas: desde created_at del primer registro hasta updated_at del último registro
-        $startDate = $firstOrderStat->created_at;
-        $endDate = $lastOrderStat->updated_at;
-    
-        // Consultar la tabla shift_history contando los registros que cumplan con:
-        // - production_line_id coincidente
-        // - type = 'shift'
-        // - action = 'start'
-        // - created_at entre $startDate y $endDate
-        $shiftCount = ShiftHistory::where('production_line_id', $productionLineId)
-            ->where('type', 'shift')
-            ->where('action', 'start')
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->count();
-    
-        // Se suma 1 para incluir el turno que está en curso
-        return $shiftCount + 1;
-    }
-    
-    /**
-     * Procesar y transferir sensores a la base de datos externa
-     *
-     * @param \Illuminate\Support\Collection $sensors
-     * @param \Illuminate\Database\Connection $externalConnection
-     * @param string $startAt
-     * @param string $finishAt
-     * @param int $totalTime
-     * @param string $modelEnvase
-     * @param string $modelMeasure
-     * @param mixed $unitValue
-     * @param mixed $totalWeight
-     * @return void
-     */
-    private function processSensors($sensors, $externalConnection, $startAt, $finishAt, $totalTime, $modelEnvase, $modelMeasure, $unitValue, $totalWeight, $orderId)
-    {
-        foreach ($sensors as $sensor) {
-            try {
-
-                
-
-
-                //sumar cuantas veces se a activado el sensor por el orden usamos la sensor_history , para ser mas ligero en consulta.
-                $sensorHistory = SensorHistory::where('sensor_id', $sensor->id)
-                    ->where('orderId', $orderId)
-                    ->orderBy('created_at', 'desc') // O bien 'id' si prefieres usar el identificador
-                    ->first();
-                
-                if ($sensorHistory) {
-                    $sensorCount = (string) $sensorHistory->count_order_1;
-                    $timeDownSeconds = (string) $sensorHistory->downtime_count;
-                } else {
-                    // En caso de no encontrar registros, se asignan valores por defecto
-                    $sensorCount = '0';
-                    $timeDownSeconds = '0';
-                }
-            
-
-                Log::info("Tiempo de parada: {$timeDownSeconds} segundos.");
-                Log::info("Contador activación sensor: {$sensorCount}");
-                // Calcular tiempo sin pausas
-                $timeDownSecondsWithNotStop = max(0, $timeDownSeconds - $totalTime);
-                Log::info("Tiempo de parada sin pausa: {$timeDownSecondsWithNotStop} segundos para sensor {$sensor->name}");
-
-                // Validar tiempo de parada
-                if (is_null($timeDownSecondsWithNotStop) ||  $timeDownSecondsWithNotStop === '' ||  $timeDownSecondsWithNotStop > ($totalTime - $timeDownSecondsWithNotStop) || ($sensorCount == 0 && $sensor->sensor_type > 0))
-                {
-                    $timeDownSecondsWithNotStop = 0;
-                }
-
-                // Consultar la tabla sensor_count para obtener el tiempo de trabajo
-                $aggregates = SensorCount::where('sensor_id', $sensor->id)
-                                        ->whereBetween('created_at', [$startAt, $finishAt])
-                                        ->selectRaw('MIN(time_00) AS min_time_00, MIN(time_11) AS min_time_11')
-                                        ->first();
-
-                // Evitamos valores nulos con ??
-                $minTime00 = $aggregates->min_time_00 ?? 0;
-                $minTime11 = $aggregates->min_time_11 ?? 0;
-
-                // Elegimos qué mínimo usar dependiendo del sensor_type
-                if ((int)$sensor->sensor_type === 0) {
-                Log::info("Tiempo de trabajo quitado el tiempo de paradas noches fines de semana: {$totalTime} segundos.");
-                $minTime = max($minTime11, (int)env('PRODUCTION_MIN_TIME', 1));
-                } else {
-                $minTime = $minTime00;
-                }
-
-                $optimalProductionTime = $sensor->optimal_production_time;
-                $reducedSpeedTimeMultiplier = $sensor->reduced_speed_time_multiplier;
-                $slowTime = $optimalProductionTime * $reducedSpeedTimeMultiplier;
-                Log::info("Mayor que este tiempo en segundos es parada: {$slowTime}");
-
-                $timeDownWithNotStop = gmdate('H:i:s', $timeDownSecondsWithNotStop);
-                $realTimeUnit = $sensorCount > 0 ? ($totalTime - $timeDownSecondsWithNotStop) / $sensorCount : 0;
-                $totalTimeFormatted = gmdate('H:i:s', max(0, $totalTime - $timeDownSecondsWithNotStop));
-                $onlySlowTime = max(0, ($totalTime - $timeDownSecondsWithNotStop) - ($minTime * $sensorCount));
-                $onlySlowTimeFormatted = gmdate('H:i:s', $onlySlowTime);
-
-                $productionLineName = $sensor->productionLine->name ?? 'Desconocido';
-
-                $brutoPeso=$sensorCount * $unitValue;
-                $brutoPeso=number_format($brutoPeso, 2, '.', '');
-
-                // Preparar datos para la base de datos externa
-                $data = [
-                    'IdOrder' => $orderId,
-                    'IdReference' => $sensor->productName,
-                    'StartAt' => $startAt,
-                    'FinishAt' => $finishAt,
-                    'IdClient' => "Por definir",
-                    'IdSensor' => $sensor->name,
-                    'TcTheoretical' => $sensor->optimal_production_time,
-                    'TcUnit' => "segundos",
-                    'TcAverage' => round($realTimeUnit, 2),
-                    'TcMin' => $minTime,
-                    'IdLine' => $productionLineName,
-                    'TimeOn' => $totalTimeFormatted,
-                    'TimeDown' => $timeDownWithNotStop,
-                    'TimeSlow' => $onlySlowTimeFormatted,
-                    'SensorCount' => $sensorCount,
-                    'SensorUnitCount' => $modelEnvase,
-                    'SensorWeight' => $brutoPeso, // calcularlo
-                    'SensorUnitWeight' => $modelMeasure,
-                    'GrossWeight01' => $unitValue, // Nuevo campo
-                    'GrossWeight02' => '0.0',  // Nuevo campo
-                ];
-
-                // Insertar datos
-                $externalConnection->table('sensores_por_orden')->insert($data);
-                Log::info("Sensor ID {$sensor->id} transferido a la base de datos externa.");
-            } catch (Exception $e) {
-                Log::error("Error al procesar sensor ID {$sensor->id}: " . $e->getMessage());
-                // Opcional: Continuar con el siguiente sensor o decidir si abortar la transacción
-            }
-        }
-    }
-
-    /**
-     * Procesar y transferir modbuses a la base de datos externa
-     *
-     * @param \Illuminate\Support\Collection $modbuses
-     * @param \Illuminate\Database\Connection $externalConnection
-     * @param string $startAt
-     * @param string $finishAt
-     * @param int $totalTime
-     * @param string $modelUnit
-     * @param string $modelMeasure
-     * @param mixed $totalWeight
-     * @param string $orderId
-     * @return void
-     */
-    private function processModbuses($modbuses, $externalConnection, $startAt, $finishAt, $totalTime, $modelUnit, $modelMeasure, $totalWeight, $orderId)
-    {
-        foreach ($modbuses as $modbus) {
-            try {
-                Log::info("Modbus ID {$modbus->id} iniciando cálculos para transferencia db externa.");
-
-
-                $resultado = ModbusHistory::where('modbus_id', $modbus->id)
-                    ->where('orderId', $orderId)
-                    ->orderBy('created_at', 'desc') // o 'id' si prefieres usar el ID para determinar el último registro
-                    ->first();
-
-                if ($resultado) {
-                    // Se obtienen los valores directamente del último registro
-                    $modbusCount = (string) $resultado->rec_box;
-                    $modbusSum   = (string) $resultado->total_kg_order;
-                } else {
-                    // Manejo de caso en el que no se encuentra ningún registro
-                    $modbusCount = '0';
-                    $modbusSum   = '0';
-                }
-
-
-                $formattedSum = number_format($modbusSum, 2, '.', '');
-                
-                $timeDifferences = ControlWeight::selectRaw('TIMESTAMPDIFF(SECOND, LAG(created_at) OVER (ORDER BY created_at), created_at) AS interval_diff')
-                    ->where('modbus_id', $modbus->id)
-                    ->whereBetween('created_at', [$startAt, $finishAt])
-                    ->pluck('interval_diff')
-                    ->filter(fn($value) => !is_null($value) && $value > env('PRODUCTION_MIN_TIME_WEIGHT', 30));
-
-                $minInterval = $timeDifferences->min() ?? env('PRODUCTION_MIN_TIME_WEIGHT', 30);
-                $minIntervalHHMMSS = gmdate('H:i:s', $minInterval);
-
-                $realTimeUnit = $modbusCount > 0 ? $totalTime / $modbusCount : 0;
-                $minProductionTimeWeight = env('PRODUCTION_MIN_TIME_WEIGHT', 3);
-                $timeDownModbus = max(0, $modbusCount * ($realTimeUnit - ($minInterval * $minProductionTimeWeight)));
-                $timeSlowModbus = max(0, $totalTime - $timeDownModbus - ($minInterval * $modbusCount));
-
-                $timeSlowFormattedModbus = gmdate('H:i:s', $timeSlowModbus);
-                $timeDownFormattedModbus = gmdate('H:i:s', $timeDownModbus);
-                $totalTimeFormattedModbus = gmdate('H:i:s', max(0, $totalTime));
-                $productionLineName = $modbus->productionLine->name ?? 'Desconocido';
-                // Preparar datos para la base de datos externa
-                $data = [
-                    'IdOrder' => $orderId,
-                    'IdReference' => $modbus->productName,
-                    'StartAt' => $startAt,
-                    'FinishAt' => $finishAt,
-                    'IdClient' => "Por definir",
-                    'IdSensor' => $modbus->name,
-                    'TcTheoretical' => $minInterval * 3.1,
-                    'TcUnit' => "segundos",
-                    'TcAverage' => round($realTimeUnit, 2),
-                    'TcMin' => $minInterval,
-                    'IdLine' => $productionLineName, // Asumiendo que no hay producción de línea asociada para modbuses
-                    'TimeOn' => $totalTimeFormattedModbus,
-                    'TimeDown' => $timeDownFormattedModbus,
-                    'TimeSlow' => $timeSlowFormattedModbus,
-                    'SensorCount' => $modbusCount,
-                    'SensorUnitCount' => $modelUnit,
-                    'SensorWeight' => $formattedSum,
-                    'SensorUnitWeight' => $modelMeasure,
-                    'GrossWeight01' => '0.0', // Nuevo campo
-                    'GrossWeight02' => $totalWeight,  // Nuevo campo
-                ];
-
-                // Insertar datos
-                $externalConnection->table('sensores_por_orden')->insert($data);
-                Log::info("Modbus ID {$modbus->id} transferido a la base de datos externa.");
-            } catch (Exception $e) {
-                Log::error("Error al procesar Modbus ID {$modbus->id}: " . $e->getMessage());
-                // Opcional: Continuar con el siguiente modbus o decidir si abortar la transacción
-            }
-        }
-    }
-
-    /**
-     * Insertar datos ficticios en la tabla linea_por_orden utilizando Eloquent
-     *
-     * @param string $idLinea
-     * @param string $idOrden
-     * @param string $idReference
-     * @param int $shiftCount
-     * @param float $orderCount
-     * @param string $orderUnit
-     * @param float $sensorCount
-     * @param float $umaCount
-     * @param string $startAt
-     * @param string $finishAt
-     * @param string $timeON
-     * @param string $timeDown
-     * @param string $timeSlow
-     * @return void
-     */
-    private function insertLineaPorOrden($externalConnection, $idLinea, $idOrden, $idReference, $shiftCount, $orderCount, $orderUnit, $sensorCount, $umaCount, $startAt, $finishAt, $timeON, $timeDown, $timeSlow)
-    {
-        try {
-            $data = [
-                'IdLinea' => $idLinea,
-                'IdOrden' => $idOrden,
-                'IdReference' => $idReference,
-                'ShiftCount' => $shiftCount,
-                'OrderCount' => $orderCount,
-                'OrderUnit' => $orderUnit,
-                'SensorCount' => $sensorCount,
-                'UmaCount' => $umaCount,
-                'StartAt' => $startAt,
-                'FinishAt' => $finishAt,
-                'TimeON' => $timeON,
-                'TimeDown' => $timeDown,
-                'TimeSlow' => $timeSlow,
-            ];
-
-
-            $externalConnection->table('linea_por_orden')->insert($data);
-            Log::info("Datos insertados en linea_por_orden para IdOrden={$idOrden}.");
-        } catch (Exception $e) {
-            Log::error("Error al insertar en linea_por_orden para IdOrden={$idOrden}: " . $e->getMessage());
-            // Opcional: Manejar la excepción según tus necesidades
-        }
+        return $orderMac ? $orderMac->quantity : '0';
     }
 }

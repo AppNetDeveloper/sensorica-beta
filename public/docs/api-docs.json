@@ -3188,6 +3188,65 @@ paths:
                 type: object
         '500':
           description: 'Hubo un error al enviar el mensaje'
+  /api/transfer-external-db:
+    post:
+      tags:
+        - TransferExternalDb
+      summary: 'Transferir datos a la base de datos externa'
+      description: 'Transferir Datos a la Base de Datos Externa'
+      operationId: fb47ef20a223c0d72581a52f38ce6af2
+      requestBody:
+        description: 'Datos necesarios para la transferencia'
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - orderId
+              properties:
+                orderId:
+                  type: string
+                  example: ORD123456
+                externalSend:
+                  type: boolean
+                  example: true
+              type: object
+      responses:
+        '200':
+          description: 'Transferencia exitosa'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean, example: true }
+                  orderId: { type: string, example: ORD123456 }
+                  data: { type: object }
+                type: object
+        '400':
+          description: 'Error en el JSON o datos inválidos'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string, example: 'JSON de production_order inválido.' }
+                type: object
+        '404':
+          description: 'No se encontró production_order para el orderId proporcionado'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string, example: 'No se encontró production_order para el orderId proporcionado.' }
+                type: object
+        '500':
+          description: 'Error interno del servidor'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean, example: false }
+                  error: { type: string, example: 'Error en el procesamiento de la orden.' }
+                type: object
 tags:
   -
     name: ProductionOrders
@@ -3270,4 +3329,7 @@ tags:
   -
     name: 'TCP Operations'
     description: 'TCP Operations'
+  -
+    name: TransferExternalDb
+    description: TransferExternalDb
 
