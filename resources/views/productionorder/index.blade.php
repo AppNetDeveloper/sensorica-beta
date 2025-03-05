@@ -13,7 +13,7 @@
 
 @section('content')
     {{-- Kanban Board --}}
-    <div class="kanban-board"></div>
+    <div class="kanban-board" role="list" aria-label="{{ __('Kanban Board') }}"></div>
     <div id="load-more-container" style="text-align: center; margin: 1.5rem 0;"></div>
 @endsection
 
@@ -95,6 +95,7 @@
         .column-title {
             font-size: 1rem;
             font-weight: 600;
+            margin: 0; /* Eliminamos margen por defecto */
         }
         .column-actions {
             display: flex;
@@ -111,28 +112,6 @@
         }
         .column-actions button:hover {
             background-color: #f3f4f6;
-        }
-
-        /* NUEVO: contenedor para el grid que irá debajo de la cabecera */
-        .column-grid {
-            background-color: #fff; /* Ajusta si deseas otro color */
-            border-radius: 8px;
-            margin-bottom: 1rem;
-            padding: 0.75rem;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-        }
-        .grid-content {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr); /* 3 columnas, ajusta según necesites */
-            gap: 0.5rem;
-        }
-        .grid-item {
-            background-color: #f8fafc;
-            border: 1px solid #e5e7eb;
-            border-radius: 6px;
-            padding: 0.5rem;
-            text-align: center;
-            font-size: 0.9rem;
         }
 
         /* Tarjetas */
@@ -164,7 +143,8 @@
             align-items: center;
             border-bottom: 1px solid rgba(0,0,0,0.05);
         }
-        .card-header .card-title {
+        .card-header-title {
+            margin: 0;
             font-weight: 600;
             font-size: 1rem;
             line-height: 1.2;
@@ -201,11 +181,13 @@
             border: 1px solid #fff;
             margin-right: -8px;
         }
+
         /* Efecto al arrastrar */
         .card.dragging {
             opacity: 0.7;
             transform: rotate(2deg);
         }
+
         /* Animación */
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(20px); }
@@ -291,23 +273,36 @@
                 // Reiniciar el tablero: vaciar tarjetas y columnas
                 existingCards.clear();
                 kanbanBoard.innerHTML = "";
-                // Crear columnas con la cabecera y el nuevo grid
+                // Crear columnas con la cabecera
                 Object.entries(columns).forEach(([status, column]) => {
                     const columnElement = document.createElement('div');
                     columnElement.classList.add('column');
                     columnElement.id = column.id;
+                    columnElement.setAttribute('role', 'list'); // Para accesibilidad
 
-                    // Aquí agregamos la cabecera y debajo el grid
+                    // Cabecera
                     columnElement.innerHTML = `
-                        <div class="column-header column-grid">
-                            <div class="column-title">${column.name}</div>
+                        <div class="column-header">
+                            <h3 class="column-title">${column.name}</h3>
                             <div class="column-actions">
-                                <button title="{{ __('Add Card') }}" onclick="addCard('${column.id}')">+</button>
-                                <button title="{{ __('Delete Column') }}" onclick="deleteColumn('${column.id}')">🗑</button>
+                                <button
+                                    type="button"
+                                    role="button"
+                                    aria-label="{{ __('Add Card') }}"
+                                    title="{{ __('Add Card') }}"
+                                    onclick="addCard('${column.id}')"
+                                >+</button>
+                                <button
+                                    type="button"
+                                    role="button"
+                                    aria-label="{{ __('Delete Column') }}"
+                                    title="{{ __('Delete Column') }}"
+                                    onclick="deleteColumn('${column.id}')"
+                                >🗑</button>
                             </div>
                         </div>
-                        
                     `;
+
                     kanbanBoard.appendChild(columnElement);
                 });
             }
@@ -325,6 +320,7 @@
                     cardElement.classList.add('card');
                     cardElement.draggable = true;
                     cardElement.setAttribute('data-id', order.id);
+                    cardElement.setAttribute('role', 'listitem'); // Accesibilidad
                     // Eventos de arrastrar
                     cardElement.ondragstart = dragStart;
                     cardElement.ondragend = dragEnd;
@@ -351,15 +347,20 @@
 
                 // Construir el contenido de la tarjeta
                 cardElement.innerHTML = `
-                    <!-- ENCABEZADO: Muestra "OrderId" y debajo el valor -->
+                    <!-- ENCABEZADO DE LA TARJETA -->
                     <div class="card-header">
                         <div>
-                            <p style="margin:0; font-weight:600;">{{ __('OrderId') }}</p>
-                            <p style="margin:0;" class="card-title">${orderIdString}</p>
+                            <p class="card-header-title">{{ __('OrderId') }}</p>
+                            <p class="card-title">${orderIdString}</p>
                         </div>
-                        <span class="card-menu" onclick="showCardMenu(${order.id})">⋮</span>
+                        <span
+                            class="card-menu"
+                            role="button"
+                            aria-label="{{ __('Show Card Menu') }}"
+                            onclick="showCardMenu(${order.id})"
+                        >⋮</span>
                     </div>
-                    <!-- CUERPO: Muestra campos numéricos y fechas -->
+                    <!-- CUERPO DE LA TARJETA -->
                     <div class="card-body">
                         <p><strong>{{ __('Box') }}:</strong> ${order.box}</p>
                         <p><strong>{{ __('Units/Box') }}:</strong> ${order.units_box}</p>
@@ -368,13 +369,30 @@
                         <p><strong>{{ __('Updated') }}:</strong> ${updatedAtFormatted}</p>
                         <p><strong>{{ __('Created afte') }}:</strong> ${daysSince} {{ __('days') }}</p>
                     </div>
-                    <!-- PIE: Placeholder para assigned users -->
+                    <!-- PIE DE LA TARJETA -->
                     <div class="card-footer">
                         <div class="assigned-avatars">
-                            <img class="avatar-img" src="https://i.pravatar.cc/100?img=1" alt="User 1">
-                            <img class="avatar-img" src="https://i.pravatar.cc/100?img=2" alt="User 2">
-                            <img class="avatar-img" src="https://i.pravatar.cc/100?img=3" alt="User 3">
-                            <div style="width:24px;height:24px;border-radius:50%;background:#fff;color:#111;display:flex;align-items:center;justify-content:center;font-size:0.75rem;margin-right:-8px;border:1px solid #fff;">
+                            <img
+                                class="avatar-img"
+                                src="https://i.pravatar.cc/100?img=1"
+                                alt="{{ __('Assigned user') }}"
+                                loading="lazy"
+                            >
+                            <img
+                                class="avatar-img"
+                                src="https://i.pravatar.cc/100?img=2"
+                                alt="{{ __('Assigned user') }}"
+                                loading="lazy"
+                            >
+                            <img
+                                class="avatar-img"
+                                src="https://i.pravatar.cc/100?img=3"
+                                alt="{{ __('Assigned user') }}"
+                                loading="lazy"
+                            >
+                            <div
+                                style="width:24px;height:24px;border-radius:50%;background:#fff;color:#111;display:flex;align-items:center;justify-content:center;font-size:0.75rem;margin-right:-8px;border:1px solid #fff;"
+                            >
                                 +2
                             </div>
                         </div>
@@ -420,7 +438,7 @@
             }
         }
 
-        // Función para actualizar el estado "collapsed" de todas las tarjetas
+        // Función para colapsar todas las tarjetas
         function updateCardCollapse() {
             document.querySelectorAll('.card').forEach(card => {
                 card.classList.add('collapsed');
@@ -433,15 +451,29 @@
             Swal.fire({
                 title: "{{ __('Order Notice') }}",
                 html: `
-                    <button id="verJson" class="swal2-confirm swal2-styled" style="margin:5px;">{{ __('Ver JSON') }}</button>
-                    <button id="cerrar" class="swal2-cancel swal2-styled" style="margin:5px;">{{ __('Cerrar') }}</button>
-                    <button id="borrar" class="swal2-deny swal2-styled" style="margin:5px;">{{ __('Borrar') }}</button>
+                    <button
+                        id="verJson"
+                        class="swal2-confirm swal2-styled"
+                        style="margin:5px;"
+                    >{{ __('Ver JSON') }}</button>
+                    <button
+                        id="cerrar"
+                        class="swal2-cancel swal2-styled"
+                        style="margin:5px;"
+                    >{{ __('Cerrar') }}</button>
+                    <button
+                        id="borrar"
+                        class="swal2-deny swal2-styled"
+                        style="margin:5px;"
+                    >{{ __('Borrar') }}</button>
                 `,
                 showConfirmButton: false,
                 didOpen: () => {
-                    const verJsonBtn = Swal.getPopup().querySelector('#verJson');
-                    const cerrarBtn = Swal.getPopup().querySelector('#cerrar');
-                    const borrarBtn = Swal.getPopup().querySelector('#borrar');
+                    const popup = Swal.getPopup();
+                    const verJsonBtn = popup.querySelector('#verJson');
+                    const cerrarBtn = popup.querySelector('#cerrar');
+                    const borrarBtn = popup.querySelector('#borrar');
+
                     verJsonBtn.addEventListener('click', () => {
                         Swal.fire({
                             title: "{{ __('Order JSON') }}",
@@ -459,22 +491,29 @@
             });
         }
 
+        /* DRAG & DROP LÓGICA */
         let draggedCard = null;
+
         function dragStart(event) {
             draggedCard = event.target;
             event.target.classList.add('dragging');
         }
+
         function dragEnd(event) {
             event.target.classList.remove('dragging');
         }
+
         function dragOver(event) {
             event.preventDefault();
         }
+
         async function drop(event) {
             const targetColumn = event.target.closest('.column');
             if (!draggedCard || !targetColumn) return;
+
             const orderId = draggedCard.getAttribute('data-id');
             const newStatusKey = Object.entries(columns).find(([key, col]) => col.id === targetColumn.id)[0];
+
             try {
                 const response = await fetch(`/api/production-orders/${orderId}`, {
                     method: 'PATCH',

@@ -31,6 +31,9 @@ use App\Http\Controllers\Api\TcpPublishController;
 use App\Http\Controllers\Api\TransferExternalDbController;
 use App\Http\Controllers\Api\OrderNoticeController;
 use App\Http\Controllers\Api\FakeOrderTimeController;
+use App\Http\Controllers\Api\ReferenceController;
+use App\Http\Controllers\Api\ProductionOrderTopflowApiController;
+
 
 
 
@@ -283,3 +286,19 @@ Route::middleware('auth:api')->get('/user', function (Request $request) {
     return $request->user();
 });
 
+
+//TOPFLOW API ENDPOINT
+//para recivir las referencias por api
+
+Route::prefix('reference')->group(function () {
+    Route::get('/', [ReferenceController::class, 'index']);
+    Route::post('/', [ReferenceController::class, 'store']);
+    Route::get('/{id}', [ReferenceController::class, 'show']);
+});
+
+//api para topflow  a recivir para topflow y despues pasarselos
+
+Route::prefix('topflow-production-order')->group(function () {
+    Route::post('/', [ProductionOrderTopflowApiController::class, 'store']);
+    Route::get('/{_id}', [ProductionOrderTopflowApiController::class, 'show']);
+});

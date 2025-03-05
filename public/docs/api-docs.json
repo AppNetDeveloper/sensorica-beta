@@ -2040,6 +2040,83 @@ paths:
                   success: { type: boolean, example: false }
                   message: { type: string, example: 'Orden no encontrada.' }
                 type: object
+  /api/topflow-production-order:
+    post:
+      tags:
+        - ProductionOrder-Topflow
+      summary: 'Crea una nueva production order'
+      description: 'Crea una nueva production order.'
+      operationId: 7519e6bfca018d3816017a32ef7832f2
+      requestBody:
+        description: 'Datos para crear una production order'
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - _id
+                - client_id
+                - code
+                - deliveryDate
+                - referId
+                - quantity
+                - paletsQtty
+              properties:
+                _id:
+                  type: string
+                  example: 646b247f4fd52c364ceaee6b
+                client_id:
+                  type: string
+                  example: LineaPedido.X
+                customerOrderId:
+                  type: string
+                  example: NumPedidoCliente
+                clientId:
+                  type: string
+                  example: ClienteID
+                code:
+                  type: string
+                  example: '1231231231231'
+                deliveryDate:
+                  type: string
+                  format: date
+                  example: '2023-05-30'
+                referId:
+                  type: string
+                  example: ArticuloId
+                quantity:
+                  type: integer
+                  example: 25
+                paletsQtty:
+                  type: integer
+                  example: 3
+              type: object
+      responses:
+        '201':
+          description: 'Production order creada exitosamente'
+          content:
+            application/json:
+              schema:
+                properties:
+                  id: { type: string, example: LineaPedido.X }
+                  customerOrderId: { type: string, example: NumPedidoCliente }
+                  clientId: { type: string, example: ClienteID }
+                  code: { type: string, example: '1231231231231' }
+                  deliveryDate: { type: string, format: date, example: '2023-05-30' }
+                  referId: { type: string, example: ArticuloId }
+                  quantity: { type: integer, example: 25 }
+                  paletsQtty: { type: integer, example: 3 }
+                  createdAt: { type: string, format: date-time, example: '2023-05-22T08:14:55.219Z' }
+                  updatedAt: { type: string, format: date-time, example: '2023-05-22T08:14:55.219Z' }
+                type: object
+        '422':
+          description: 'Error de validación'
+          content:
+            application/json:
+              schema:
+                properties:
+                  message: { type: string, example: 'Los datos proporcionados son inválidos.' }
+                type: object
   /api/rfid-readings:
     get:
       tags:
@@ -3302,6 +3379,9 @@ tags:
   -
     name: Dispositivos
     description: Dispositivos
+  -
+    name: ProductionOrder-Topflow
+    description: ProductionOrder-Topflow
   -
     name: 'RFID Readings'
     description: 'RFID Readings'
