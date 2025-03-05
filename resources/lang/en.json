@@ -402,5 +402,40 @@
     "Count Week 1": "Count Week 1",
     "Save": "Save",
     "Cancel": "Cancel",
-    "Rfid Point Reser":  "RFID Point Reserve"
+    "Rfid Point Reser":  "RFID Point Reserve",
+    "Production Order Kanban Control": "Production Order Kanban Control",
+
+    "Load More": "Load More",
+    "Add Card": "Add Card",
+    "Delete Column": "Delete Column",
+    "To Do": "To Do",
+    "In Progress": "In Progress",
+    "Done": "Done",
+    "Paused": "Paused",
+    "Cancelled": "Cancelled",
+    "Issues": "Issues",
+
+    "Token not provided in URL.": "Token not provided in URL.",
+    "Error fetching API data.": "Error fetching API data.",
+    "An error occurred while loading Kanban data.": "An error occurred while loading Kanban data.",
+    "Error updating order status.": "Error updating order status.",
+    "Failed to update order status.": "Failed to update order status.",
+    "Add Card for column:": "Add Card for column:",
+    "Delete Column:": "Delete Column:",
+    
+    "Order Notice": "Order Notice",
+    "Ver JSON": "View JSON",
+    "Cerrar": "Close",
+    "Borrar": "Delete",
+    "Order JSON": "Order JSON",
+    "Borrar clicked": "Delete clicked",
+
+    "OrderId": "OrderId",
+    "Box": "Box",
+    "Units/Box": "Units/Box",
+    "Units": "Units",
+    "Created": "Created",
+    "Updated": "Updated",
+    "Created afte": "Created after",
+    "days": "days"
   }

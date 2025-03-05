@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Production Order Kanban Control')
+@section('title', __('Production Order Kanban Control'))
 
 @section('breadcrumb')
     <ul class="breadcrumb">
@@ -80,22 +80,37 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             animation: fadeIn 0.3s ease-in-out;
         }
+
+        /* Cabecera de cada columna */
         .column-header {
+            background-color: #f9fafb; /* Fondo claro */
+            border-left: 4px solid var(--primary-color); /* Línea de color a la izquierda */
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            margin-bottom: 1rem;
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            margin-bottom: 1rem;
+            justify-content: space-between;
         }
-        .column h3 {
-            background-color: var(--header-bg);
-            color: var(--header-text);
-            text-align: center;
-            padding: 0.75rem;
-            border-radius: 6px;
-            margin-bottom: 1rem;
-            font-size: 1.1rem;
+        .column-title {
+            font-size: 1rem;
             font-weight: 600;
-            text-transform: uppercase;
+        }
+        .column-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .column-actions button {
+            background-color: transparent;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            padding: 0.25rem 0.5rem;
+            color: #374151;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        .column-actions button:hover {
+            background-color: #f3f4f6;
         }
 
         /* Tarjetas */
@@ -199,13 +214,14 @@
         // Objeto global para almacenar el JSON de cada orden
         const orderData = {};
 
+        // Columnas, usando traducciones de Laravel con Blade
         const columns = {
-            0: { id: 'pending', name: 'To Do' },
-            1: { id: 'started', name: 'In Progress' },
-            2: { id: 'completed', name: 'Done' },
-            3: { id: 'paused', name: 'Paused' },
-            4: { id: 'cancelled', name: 'Cancelled' },
-            5: { id: 'issues', name: 'Issues' }
+            0: { id: 'pending',   name: "{{ __('To Do') }}" },
+            1: { id: 'started',   name: "{{ __('In Progress') }}" },
+            2: { id: 'completed', name: "{{ __('Done') }}" },
+            3: { id: 'paused',    name: "{{ __('Paused') }}" },
+            4: { id: 'cancelled', name: "{{ __('Cancelled') }}" },
+            5: { id: 'issues',    name: "{{ __('Issues') }}" }
         };
 
         const urlParams = new URLSearchParams(window.location.search);
@@ -215,7 +231,7 @@
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
-                text: 'Token not provided in URL.',
+                text: "{{ __('Token not provided in URL.') }}",
             });
             throw new Error('Token required to load data.');
         }
@@ -227,7 +243,7 @@
         async function loadKanbanData(page = 1) {
             try {
                 const response = await fetch(`/api/production-orders?token=${token}&page=${page}`);
-                if (!response.ok) throw new Error('Error fetching API data.');
+                if (!response.ok) throw new Error("{{ __('Error fetching API data.') }}");
                 const responseData = await response.json();
                 currentPage = responseData.current_page;
                 lastPage = responseData.last_page;
@@ -240,7 +256,7 @@
                 Swal.fire({
                     icon: 'error',
                     title: 'Error',
-                    text: 'An error occurred while loading Kanban data.',
+                    text: "{{ __('An error occurred while loading Kanban data.') }}",
                 });
             }
         }
@@ -253,17 +269,17 @@
                 // Reiniciar el tablero: vaciar tarjetas y columnas
                 existingCards.clear();
                 kanbanBoard.innerHTML = "";
-                // Crear columnas
+                // Crear columnas con el nuevo estilo de cabecera
                 Object.entries(columns).forEach(([status, column]) => {
                     const columnElement = document.createElement('div');
                     columnElement.classList.add('column');
                     columnElement.id = column.id;
                     columnElement.innerHTML = `
                         <div class="column-header">
-                            <h3>${column.name}</h3>
-                            <div class="actions">
-                                <button title="Add Card" onclick="addCard('${column.id}')">+</button>
-                                <button title="Delete Column" onclick="deleteColumn('${column.id}')">×</button>
+                            <div class="column-title">${column.name}</div>
+                            <div class="column-actions">
+                                <button title="{{ __('Add Card') }}" onclick="addCard('${column.id}')">+</button>
+                                <button title="{{ __('Delete Column') }}" onclick="deleteColumn('${column.id}')">🗑</button>
                             </div>
                         </div>
                     `;
@@ -313,19 +329,19 @@
                     <!-- ENCABEZADO: Muestra "OrderId" y debajo el valor -->
                     <div class="card-header">
                         <div>
-                            <p style="margin:0; font-weight:600;">OrderId</p>
+                            <p style="margin:0; font-weight:600;">{{ __('OrderId') }}</p>
                             <p style="margin:0;" class="card-title">${orderIdString}</p>
                         </div>
                         <span class="card-menu" onclick="showCardMenu(${order.id})">⋮</span>
                     </div>
                     <!-- CUERPO: Muestra campos numéricos y fechas -->
                     <div class="card-body">
-                        <p><strong>Box:</strong> ${order.box}</p>
-                        <p><strong>Units/Box:</strong> ${order.units_box}</p>
-                        <p><strong>Units:</strong> ${order.units}</p>
-                        <p><strong>Created:</strong> ${createdAtFormatted}</p>
-                        <p><strong>Updated:</strong> ${updatedAtFormatted}</p>
-                        <p><strong>Created afte:</strong> ${daysSince} days</p>
+                        <p><strong>{{ __('Box') }}:</strong> ${order.box}</p>
+                        <p><strong>{{ __('Units/Box') }}:</strong> ${order.units_box}</p>
+                        <p><strong>{{ __('Units') }}:</strong> ${order.units}</p>
+                        <p><strong>{{ __('Created') }}:</strong> ${createdAtFormatted}</p>
+                        <p><strong>{{ __('Updated') }}:</strong> ${updatedAtFormatted}</p>
+                        <p><strong>{{ __('Created afte') }}:</strong> ${daysSince} {{ __('days') }}</p>
                     </div>
                     <!-- PIE: Placeholder para assigned users -->
                     <div class="card-footer">
@@ -366,7 +382,7 @@
             loadMoreContainer.innerHTML = "";
             if (currentPage < lastPage) {
                 const btn = document.createElement('button');
-                btn.textContent = "Load More";
+                btn.textContent = "{{ __('Load More') }}";
                 btn.style.padding = "0.5rem 1rem";
                 btn.style.fontSize = "1rem";
                 btn.style.backgroundColor = "var(--primary-color)";
@@ -390,11 +406,11 @@
         function showCardMenu(orderId) {
             const orderJson = orderData[orderId];
             Swal.fire({
-                title: 'Order Notice',
+                title: "{{ __('Order Notice') }}",
                 html: `
-                    <button id="verJson" class="swal2-confirm swal2-styled" style="margin:5px;">Ver JSON</button>
-                    <button id="cerrar" class="swal2-cancel swal2-styled" style="margin:5px;">Cerrar</button>
-                    <button id="borrar" class="swal2-deny swal2-styled" style="margin:5px;">Borrar</button>
+                    <button id="verJson" class="swal2-confirm swal2-styled" style="margin:5px;">{{ __('Ver JSON') }}</button>
+                    <button id="cerrar" class="swal2-cancel swal2-styled" style="margin:5px;">{{ __('Cerrar') }}</button>
+                    <button id="borrar" class="swal2-deny swal2-styled" style="margin:5px;">{{ __('Borrar') }}</button>
                 `,
                 showConfirmButton: false,
                 didOpen: () => {
@@ -403,7 +419,7 @@
                     const borrarBtn = Swal.getPopup().querySelector('#borrar');
                     verJsonBtn.addEventListener('click', () => {
                         Swal.fire({
-                            title: 'Order JSON',
+                            title: "{{ __('Order JSON') }}",
                             html: `<pre style="text-align:left;">${JSON.stringify(orderJson, null, 2)}</pre>`,
                             width: '600px'
                         });
@@ -412,7 +428,7 @@
                         Swal.close();
                     });
                     borrarBtn.addEventListener('click', () => {
-                        Swal.fire('Borrar clicked');
+                        Swal.fire('{{ __('Borrar clicked') }}');
                     });
                 }
             });
@@ -443,14 +459,14 @@
                 if (response.ok) {
                     await loadKanbanData(1); // Recargamos desde la página 1
                 } else {
-                    throw new Error('Error updating order status.');
+                    throw new Error("{{ __('Error updating order status.') }}");
                 }
             } catch (error) {
                 console.error('Error:', error);
                 Swal.fire({
                     icon: 'error',
                     title: 'Error',
-                    text: 'Failed to update order status.',
+                    text: "{{ __('Failed to update order status.') }}",
                 });
             }
             draggedCard = null;
@@ -458,10 +474,10 @@
 
         // Funciones para botones en el encabezado de columna (ejemplo)
         function addCard(columnId) {
-            Swal.fire('Add Card for column: ' + columnId);
+            Swal.fire('{{ __('Add Card for column:') }} ' + columnId);
         }
         function deleteColumn(columnId) {
-            Swal.fire('Delete Column: ' + columnId);
+            Swal.fire('{{ __('Delete Column:') }} ' + columnId);
         }
 
         // Cargar la primera página al iniciar

@@ -47,7 +47,9 @@ class ClearOldRecords extends Command
                 'control_heights' => 'created_at',
                 'downtime_sensors' => 'created_at',
                 'live_traffic_monitors' => 'created_at',
+                'production_orders' => 'created_at',
             ];
+
 
             foreach ($tables as $table => $dateField) {
                 $this->info("[" . Carbon::now()->toDateTimeString() . "]Cleaning up table: {$table}...");
