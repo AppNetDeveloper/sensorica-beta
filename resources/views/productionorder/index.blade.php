@@ -95,7 +95,7 @@
         .column-title {
             font-size: 1rem;
             font-weight: 600;
-            margin: 0; /* Eliminamos margen por defecto */
+            margin: 0; /* Eliminamos margen por defecto de hX/p */
         }
         .column-actions {
             display: flex;
@@ -112,6 +112,9 @@
         }
         .column-actions button:hover {
             background-color: #f3f4f6;
+        }
+        .column-actions button[role="button"] {
+            outline: none;
         }
 
         /* Tarjetas */
@@ -181,13 +184,11 @@
             border: 1px solid #fff;
             margin-right: -8px;
         }
-
         /* Efecto al arrastrar */
         .card.dragging {
             opacity: 0.7;
             transform: rotate(2deg);
         }
-
         /* Animación */
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(20px); }
@@ -282,7 +283,7 @@
 
                     // Cabecera
                     columnElement.innerHTML = `
-                        <div class="column-header">
+                        <div class="column-header column-grid relative flex justify-between items-center bg-white dark:bg-slate-800 rounded shadow-base px-6 py-5 mb-4">
                             <h3 class="column-title">${column.name}</h3>
                             <div class="column-actions">
                                 <button
