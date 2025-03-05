@@ -214,7 +214,7 @@
 
         /* Estilo para tarjetas colapsadas */
         .card.collapsed {
-            height: 120px; /* Altura reducida para mostrar solo parte del contenido */
+            height: 90px; /* Altura reducida para mostrar solo parte del contenido */
             overflow: hidden;
             transition: height 0.3s ease;
         }
@@ -299,22 +299,14 @@
 
                     // Aquí agregamos la cabecera y debajo el grid
                     columnElement.innerHTML = `
-                        <div class="column-header">
+                        <div class="column-header column-grid">
                             <div class="column-title">${column.name}</div>
                             <div class="column-actions">
                                 <button title="{{ __('Add Card') }}" onclick="addCard('${column.id}')">+</button>
                                 <button title="{{ __('Delete Column') }}" onclick="deleteColumn('${column.id}')">🗑</button>
                             </div>
                         </div>
-                        <!-- Grid debajo de la cabecera -->
-                        <div class="column-grid">
-                            <div class="grid-content">
-                                <div class="grid-item">1</div>
-                                <div class="grid-item">2</div>
-                                <div class="grid-item">3</div>
-                                <!-- Agrega más .grid-item si lo deseas -->
-                            </div>
-                        </div>
+                        
                     `;
                     kanbanBoard.appendChild(columnElement);
                 });
