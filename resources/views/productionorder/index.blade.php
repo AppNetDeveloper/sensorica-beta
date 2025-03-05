@@ -14,37 +14,85 @@
 @section('content')
     {{-- Kanban Board --}}
     <div class="kanban-board"></div>
+    <div id="load-more-container" style="text-align: center; margin: 1.5rem 0;"></div>
 @endsection
 
 @push('style')
     <style>
+        :root {
+            /* Variables para modo claro (Kanban blanco) */
+            --kanban-bg: #ffffff;
+            --column-bg: #f8f9fa;
+            --header-bg: #e9ecef;
+            --header-text: #212529;
+            --card-bg: #ffffff;
+            --card-text: #212529;
+            --card-hover-bg: #f8f9fa;
+            --scrollbar-thumb: #ced4da;
+            --primary-color: #3b82f6;   /* Azul para botones y barra de progreso */
+            --danger-color: #ef4444;    /* Rojo para etiquetas, etc. */
+        }
+
+        /* Variables para modo oscuro */
+        body.dark-mode {
+            --kanban-bg: #1f2937;
+            --column-bg: #374151;
+            --header-bg: #4b5563;
+            --header-text: #ffffff;
+            --card-bg: #ffffff; /* Se mantiene blanco para resaltar el contenido */
+            --card-text: #1f2937;
+            --card-hover-bg: #f3f4f6;
+            --scrollbar-thumb: #6b7280;
+            --primary-color: #3b82f6;
+            --danger-color: #ef4444;
+        }
+
         /* Contenedor principal del tablero Kanban */
         .kanban-board {
             display: flex;
-            gap: 20px;
-            padding: 20px;
+            gap: 1.5rem;
+            padding: 1.5rem;
             overflow-x: auto;
-            background-color: #1c1e21; /* Fondo oscuro similar al layout */
-            border-radius: 8px;
+            background-color: var(--kanban-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .kanban-board::-webkit-scrollbar {
+            height: 8px;
+        }
+        .kanban-board::-webkit-scrollbar-thumb {
+            background: var(--scrollbar-thumb);
+            border-radius: 4px;
+        }
+        .kanban-board::-webkit-scrollbar-thumb:hover {
+            background: var(--header-bg);
         }
 
         /* Columnas del Kanban */
         .column {
             flex: 1;
-            background-color: #2a2d31; /* Fondo oscuro que combina con el tema */
-            padding: 15px;
+            background-color: var(--column-bg);
+            padding: 1rem;
             border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            min-width: 250px;
+            min-width: 280px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            animation: fadeIn 0.3s ease-in-out;
         }
-
+        .column-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
         .column h3 {
-            background-color: #3a3d42; /* Fondo más oscuro para el encabezado */
-            color: #ffffff; /* Texto blanco */
+            background-color: var(--header-bg);
+            color: var(--header-text);
             text-align: center;
-            padding: 10px;
+            padding: 0.75rem;
             border-radius: 6px;
-            margin-bottom: 10px;
+            margin-bottom: 1rem;
             font-size: 1.1rem;
             font-weight: 600;
             text-transform: uppercase;
@@ -52,80 +100,89 @@
 
         /* Tarjetas */
         .card {
-            background-color: #ffffff; /* Fondo blanco para contrastar */
-            color: #333333; /* Texto oscuro */
-            padding: 15px;
-            margin: 10px 0;
+            background-color: var(--card-bg);
+            color: var(--card-text);
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-            font-size: 0.9rem;
-            font-weight: 500;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 1rem;
             position: relative;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        .card:hover {
-            transform: translateY(-3px); /* Efecto de elevación */
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            background-color: #f9f9f9; /* Fondo ligeramente más claro */
-        }
-
-        .card-menu {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            font-size: 1.2rem;
-            color: #6c757d;
-            cursor: pointer;
-        }
-
-        .card-menu:hover {
-            color: #343a40; /* Más oscuro al pasar el ratón */
-        }
-
-        /* Efecto al arrastrar */
-        .card.dragging {
-            opacity: 0.6;
-            transform: rotate(2deg);
-        }
-
-        /* Barra de scroll oculta para el tablero */
-        .kanban-board::-webkit-scrollbar {
-            height: 6px;
-        }
-
-        .kanban-board::-webkit-scrollbar-thumb {
-            background: #444;
-            border-radius: 4px;
-        }
-
-        .kanban-board::-webkit-scrollbar-thumb:hover {
-            background: #555;
-        }
-
-        /* Ajustes de texto */
-        .card div {
-            margin-bottom: 8px;
-        }
-
-        /* Animaciones */
-        .column {
-            animation: fadeIn 0.3s ease-in-out;
-        }
-
-        .card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            cursor: grab;
             animation: fadeIn 0.5s ease-in-out;
         }
-
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+            background-color: var(--card-hover-bg);
+        }
+        .card-header,
+        .card-body,
+        .card-footer {
+            padding: 1rem;
+        }
+        /* Encabezado de la tarjeta */
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+        .card-header .card-title {
+            font-weight: 600;
+            font-size: 1rem;
+            line-height: 1.2;
+        }
+        .card-menu {
+            font-size: 1.25rem;
+            color: var(--scrollbar-thumb);
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+        .card-menu:hover {
+            color: var(--header-bg);
+        }
+        /* Cuerpo de la tarjeta */
+        .card-body p {
+            margin: 0.25rem 0;
+            font-size: 0.9rem;
+        }
+        /* Pie de la tarjeta (placeholder para assigned users) */
+        .card-footer {
+            border-top: 1px solid rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+        }
+        .assigned-avatars {
+            display: flex;
+            align-items: center;
+        }
+        .assigned-avatars .avatar-img {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 1px solid #fff;
+            margin-right: -8px;
+        }
+        /* Efecto al arrastrar */
+        .card.dragging {
+            opacity: 0.7;
+            transform: rotate(2deg);
+        }
+        /* Animación */
         @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Estilo para tarjetas colapsadas */
+        .card.collapsed {
+            height: 120px; /* Altura reducida para mostrar solo parte del contenido */
+            overflow: hidden;
+            transition: height 0.3s ease;
+        }
+        .card.collapsed:hover {
+            height: auto;
         }
     </style>
 @endpush
@@ -135,10 +192,17 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>
+        // Variables globales para paginación
+        let currentPage = 1;
+        let lastPage = 1;
+
+        // Objeto global para almacenar el JSON de cada orden
+        const orderData = {};
+
         const columns = {
-            0: { id: 'pending', name: 'Pending' },
-            1: { id: 'started', name: 'Started' },
-            2: { id: 'completed', name: 'Completed' },
+            0: { id: 'pending', name: 'To Do' },
+            1: { id: 'started', name: 'In Progress' },
+            2: { id: 'completed', name: 'Done' },
             3: { id: 'paused', name: 'Paused' },
             4: { id: 'cancelled', name: 'Cancelled' },
             5: { id: 'issues', name: 'Issues' }
@@ -156,15 +220,21 @@
             throw new Error('Token required to load data.');
         }
 
+        // Usamos un Map para seguir las tarjetas ya creadas
         const existingCards = new Map();
 
-        async function loadKanbanData() {
+        // Función para cargar datos; recibe la página a cargar (por defecto 1)
+        async function loadKanbanData(page = 1) {
             try {
-                const response = await fetch(`/api/production-orders?token=${token}`);
+                const response = await fetch(`/api/production-orders?token=${token}&page=${page}`);
                 if (!response.ok) throw new Error('Error fetching API data.');
-
-                const data = await response.json();
-                await updateKanbanBoard(data.data);
+                const responseData = await response.json();
+                currentPage = responseData.current_page;
+                lastPage = responseData.last_page;
+                // Si estamos en la página 1, reiniciamos el tablero; en caso contrario, se añaden nuevos pedidos
+                await updateKanbanBoard(responseData.data, page > 1);
+                updateLoadMoreButton();
+                updateCardCollapse();
             } catch (error) {
                 console.error('Error:', error);
                 Swal.fire({
@@ -175,129 +245,203 @@
             }
         }
 
-        async function updateKanbanBoard(orders) {
+        // Función para actualizar (o inicializar) el tablero; "append" indica si se añaden pedidos sin limpiar los existentes.
+        async function updateKanbanBoard(orders, append = false) {
             const kanbanBoard = document.querySelector('.kanban-board');
 
-            Object.entries(columns).forEach(([status, column]) => {
-                let columnElement = document.getElementById(column.id);
-                if (!columnElement) {
-                    columnElement = document.createElement('div');
+            if (!append) {
+                // Reiniciar el tablero: vaciar tarjetas y columnas
+                existingCards.clear();
+                kanbanBoard.innerHTML = "";
+                // Crear columnas
+                Object.entries(columns).forEach(([status, column]) => {
+                    const columnElement = document.createElement('div');
                     columnElement.classList.add('column');
                     columnElement.id = column.id;
-                    columnElement.innerHTML = `<h3>${column.name}</h3>`;
+                    columnElement.innerHTML = `
+                        <div class="column-header">
+                            <h3>${column.name}</h3>
+                            <div class="actions">
+                                <button title="Add Card" onclick="addCard('${column.id}')">+</button>
+                                <button title="Delete Column" onclick="deleteColumn('${column.id}')">×</button>
+                            </div>
+                        </div>
+                    `;
                     kanbanBoard.appendChild(columnElement);
-                }
-            });
+                });
+            }
 
             const updatedOrderIds = new Set();
 
+            // Procesar y añadir cada orden
             for (const order of orders.sort((a, b) => a.orden - b.orden)) {
                 const columnId = columns[order.status].id;
                 const columnElement = document.getElementById(columnId);
 
                 let cardElement = existingCards.get(order.id);
-
                 if (!cardElement) {
                     cardElement = document.createElement('div');
                     cardElement.classList.add('card');
                     cardElement.draggable = true;
                     cardElement.setAttribute('data-id', order.id);
-                    cardElement.setAttribute('data-order-id', order.order_id);
-                    columnElement.appendChild(cardElement);
-
+                    // Eventos de arrastrar
                     cardElement.ondragstart = dragStart;
                     cardElement.ondragend = dragEnd;
-
+                    columnElement.appendChild(cardElement);
                     existingCards.set(order.id, cardElement);
-                } else {
-                    if (cardElement.parentElement.id !== columnId) {
-                        columnElement.appendChild(cardElement);
-                    }
+                } else if (cardElement.parentElement !== columnElement) {
+                    columnElement.appendChild(cardElement);
                 }
 
+                // Convertir order_id a string para evitar errores y mostrarlo
+                const orderIdString = String(order.order_id);
+                // Formatear fechas
+                const createdAtFormatted = new Date(order.created_at).toLocaleString();
+                const updatedAtFormatted = new Date(order.updated_at).toLocaleString();
+                // Calcular días transcurridos desde la creación
+                const createdDate = new Date(order.created_at);
+                const now = new Date();
+                const diffTime = now - createdDate;
+                const daysSince = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+                // Almacenar el JSON (parsearlo si es string)
+                const orderJson = typeof order.json === 'string' ? JSON.parse(order.json) : order.json;
+                orderData[order.id] = orderJson;
+
+                // Construir el contenido de la tarjeta
                 cardElement.innerHTML = `
-                    <span class="card-menu" onclick="showCardMenu(${order.id})">⋮</span>
-                    <div>Order ID: ${order.order_id}</div>
-                    <div>Box: ${order.box}</div>
-                    <div>Units/Box: ${order.units_box}</div>
-                    <div>Order: ${order.orden}</div>
+                    <!-- ENCABEZADO: Muestra "OrderId" y debajo el valor -->
+                    <div class="card-header">
+                        <div>
+                            <p style="margin:0; font-weight:600;">OrderId</p>
+                            <p style="margin:0;" class="card-title">${orderIdString}</p>
+                        </div>
+                        <span class="card-menu" onclick="showCardMenu(${order.id})">⋮</span>
+                    </div>
+                    <!-- CUERPO: Muestra campos numéricos y fechas -->
+                    <div class="card-body">
+                        <p><strong>Box:</strong> ${order.box}</p>
+                        <p><strong>Units/Box:</strong> ${order.units_box}</p>
+                        <p><strong>Units:</strong> ${order.units}</p>
+                        <p><strong>Created:</strong> ${createdAtFormatted}</p>
+                        <p><strong>Updated:</strong> ${updatedAtFormatted}</p>
+                        <p><strong>Created afte:</strong> ${daysSince} days</p>
+                    </div>
+                    <!-- PIE: Placeholder para assigned users -->
+                    <div class="card-footer">
+                        <div class="assigned-avatars">
+                            <img class="avatar-img" src="https://i.pravatar.cc/100?img=1" alt="User 1">
+                            <img class="avatar-img" src="https://i.pravatar.cc/100?img=2" alt="User 2">
+                            <img class="avatar-img" src="https://i.pravatar.cc/100?img=3" alt="User 3">
+                            <div style="width:24px;height:24px;border-radius:50%;background:#fff;color:#111;display:flex;align-items:center;justify-content:center;font-size:0.75rem;margin-right:-8px;border:1px solid #fff;">
+                                +2
+                            </div>
+                        </div>
+                    </div>
                 `;
 
                 updatedOrderIds.add(order.id);
             }
 
-            existingCards.forEach((cardElement, orderId) => {
-                if (!updatedOrderIds.has(orderId)) {
-                    cardElement.remove();
-                    existingCards.delete(orderId);
-                }
-            });
+            if (!append) {
+                // En modo no-append, se eliminan las tarjetas que no están en la data (para refrescar)
+                existingCards.forEach((cardElement, orderId) => {
+                    if (!updatedOrderIds.has(orderId)) {
+                        cardElement.remove();
+                        existingCards.delete(orderId);
+                    }
+                });
+            }
 
+            // Asignar eventos de dragover y drop a cada columna
             document.querySelectorAll('.column').forEach(column => {
                 column.ondragover = dragOver;
                 column.ondrop = drop;
             });
         }
 
-        async function showCardMenu(orderId) {
-            try {
-                const response = await fetch(`/api/production-orders/${orderId}`);
-                const order = await response.json();
-
-                Swal.fire({
-                    title: 'Order Details',
-                    html: `
-                        <p><strong>Order ID:</strong> ${order.order_id}</p>
-                        <p><strong>Box:</strong> ${order.box}</p>
-                        <p><strong>Units/Box:</strong> ${order.units_box}</p>
-                        <p><strong>Order:</strong> ${order.orden}</p>
-                        <p><strong>Status:</strong> ${columns[order.status].name}</p>
-                    `,
-                    icon: 'info',
-                    showCancelButton: false,
-                    confirmButtonText: 'Close'
-                });
-            } catch (error) {
-                console.error('Error:', error);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: 'Could not load order details.',
-                });
+        // Función para actualizar (o crear) el botón "Load More"
+        function updateLoadMoreButton() {
+            const loadMoreContainer = document.getElementById('load-more-container');
+            loadMoreContainer.innerHTML = "";
+            if (currentPage < lastPage) {
+                const btn = document.createElement('button');
+                btn.textContent = "Load More";
+                btn.style.padding = "0.5rem 1rem";
+                btn.style.fontSize = "1rem";
+                btn.style.backgroundColor = "var(--primary-color)";
+                btn.style.color = "#fff";
+                btn.style.border = "none";
+                btn.style.borderRadius = "0.25rem";
+                btn.style.cursor = "pointer";
+                btn.onclick = () => loadKanbanData(currentPage + 1);
+                loadMoreContainer.appendChild(btn);
             }
         }
 
-        let draggedCard = null;
+        // Función para actualizar el estado "collapsed" de todas las tarjetas
+        function updateCardCollapse() {
+            document.querySelectorAll('.card').forEach(card => {
+                card.classList.add('collapsed');
+            });
+        }
 
+        // Función para mostrar el menú de opciones de la tarjeta usando SweetAlert2
+        function showCardMenu(orderId) {
+            const orderJson = orderData[orderId];
+            Swal.fire({
+                title: 'Order Notice',
+                html: `
+                    <button id="verJson" class="swal2-confirm swal2-styled" style="margin:5px;">Ver JSON</button>
+                    <button id="cerrar" class="swal2-cancel swal2-styled" style="margin:5px;">Cerrar</button>
+                    <button id="borrar" class="swal2-deny swal2-styled" style="margin:5px;">Borrar</button>
+                `,
+                showConfirmButton: false,
+                didOpen: () => {
+                    const verJsonBtn = Swal.getPopup().querySelector('#verJson');
+                    const cerrarBtn = Swal.getPopup().querySelector('#cerrar');
+                    const borrarBtn = Swal.getPopup().querySelector('#borrar');
+                    verJsonBtn.addEventListener('click', () => {
+                        Swal.fire({
+                            title: 'Order JSON',
+                            html: `<pre style="text-align:left;">${JSON.stringify(orderJson, null, 2)}</pre>`,
+                            width: '600px'
+                        });
+                    });
+                    cerrarBtn.addEventListener('click', () => {
+                        Swal.close();
+                    });
+                    borrarBtn.addEventListener('click', () => {
+                        Swal.fire('Borrar clicked');
+                    });
+                }
+            });
+        }
+
+        let draggedCard = null;
         function dragStart(event) {
             draggedCard = event.target;
             event.target.classList.add('dragging');
         }
-
         function dragEnd(event) {
             event.target.classList.remove('dragging');
         }
-
         function dragOver(event) {
             event.preventDefault();
         }
-
         async function drop(event) {
             const targetColumn = event.target.closest('.column');
             if (!draggedCard || !targetColumn) return;
-
             const orderId = draggedCard.getAttribute('data-id');
             const newStatusKey = Object.entries(columns).find(([key, col]) => col.id === targetColumn.id)[0];
-
             try {
                 const response = await fetch(`/api/production-orders/${orderId}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ status: parseInt(newStatusKey) })
                 });
-
                 if (response.ok) {
-                    await loadKanbanData();
+                    await loadKanbanData(1); // Recargamos desde la página 1
                 } else {
                     throw new Error('Error updating order status.');
                 }
@@ -309,10 +453,18 @@
                     text: 'Failed to update order status.',
                 });
             }
-
             draggedCard = null;
         }
 
+        // Funciones para botones en el encabezado de columna (ejemplo)
+        function addCard(columnId) {
+            Swal.fire('Add Card for column: ' + columnId);
+        }
+        function deleteColumn(columnId) {
+            Swal.fire('Delete Column: ' + columnId);
+        }
+
+        // Cargar la primera página al iniciar
         loadKanbanData();
     </script>
 @endpush
