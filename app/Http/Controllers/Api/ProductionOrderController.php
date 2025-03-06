@@ -7,18 +7,6 @@ use App\Models\ProductionOrder;
 use App\Models\ProductionLine; // Importar el modelo de líneas de producción
 use Illuminate\Http\Request;
 
-/**
- * @OA\Info(
- *     title="Production Orders API",
- *     version="1.0.0",
- *     description="API para gestionar órdenes de producción."
- * )
- *
- * @OA\Tag(
- *     name="ProductionOrders",
- *     description="Operaciones relacionadas con las órdenes de producción"
- * )
- */
 class ProductionOrderController extends Controller
 {
     /**

@@ -290,7 +290,7 @@ Route::middleware('auth:api')->get('/user', function (Request $request) {
 //TOPFLOW API ENDPOINT
 //para recivir las referencias por api
 
-Route::prefix('reference')->group(function () {
+Route::prefix('reference-Topflow')->group(function () {
     Route::get('/', [ReferenceController::class, 'index']);
     Route::post('/', [ReferenceController::class, 'store']);
     Route::get('/{id}', [ReferenceController::class, 'show']);

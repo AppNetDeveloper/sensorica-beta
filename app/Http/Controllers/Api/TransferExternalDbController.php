@@ -20,6 +20,8 @@ use App\Models\ModbusHistory;
 use App\Models\SensorHistory;
 use App\Models\ShiftList;
 use App\Models\ShiftHistory;
+use App\Models\ProductList;
+
 
 
 class TransferExternalDbController extends Controller
@@ -421,6 +423,8 @@ class TransferExternalDbController extends Controller
                 $totalTimeDowntime = $sensorHistory ? $sensorHistory->downtime_count : 0;
             
                 if ($totalCountOrder > 0) {
+                    //TCAverage es realtime unit en segundos por unidad de orden y lo calculamos tiempo de trabajo (sin pausas programadas)
+                    // - tiempo total de paradas ne programadas / total de boilsas mallas
                     $realTimeUnit = ($timeOnSeconds - $totalTimeDowntime) / $totalCountOrder;
                 } else {
                     $realTimeUnit = 0; // o el valor que consideres adecuado

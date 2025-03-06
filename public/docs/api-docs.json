@@ -2043,18 +2043,18 @@ paths:
   /api/topflow-production-order:
     post:
       tags:
-        - ProductionOrder-Topflow
-      summary: 'Crea una nueva production order'
-      description: 'Crea una nueva production order.'
+        - ProductionOrder
+      summary: 'Crea una nueva orden de producción'
+      description: 'Crea una nueva orden de producción.'
       operationId: 7519e6bfca018d3816017a32ef7832f2
       requestBody:
-        description: 'Datos para crear una production order'
+        description: 'Datos para crear una orden de producción'
         required: true
         content:
           application/json:
             schema:
               required:
-                - _id
+                - mongoId
                 - client_id
                 - code
                 - deliveryDate
@@ -2062,43 +2062,52 @@ paths:
                 - quantity
                 - paletsQtty
               properties:
-                _id:
+                mongoId:
+                  description: 'Identificador interno (se asignará al campo _id)'
                   type: string
                   example: 646b247f4fd52c364ceaee6b
                 client_id:
+                  description: 'Número de Pedido Cliente en XGest + numerador de línea de pedido'
                   type: string
                   example: LineaPedido.X
                 customerOrderId:
+                  description: 'Número de Pedido del Cliente'
                   type: string
                   example: NumPedidoCliente
                 clientId:
+                  description: 'Referencia del Pedido del Cliente'
                   type: string
                   example: ClienteID
                 code:
+                  description: 'Código de Barras / RFID'
                   type: string
                   example: '1231231231231'
                 deliveryDate:
+                  description: 'Fecha de Expedición'
                   type: string
                   format: date
                   example: '2023-05-30'
                 referId:
+                  description: 'Referencia o Artículo'
                   type: string
                   example: ArticuloId
                 quantity:
+                  description: Cantidad
                   type: integer
                   example: 25
                 paletsQtty:
+                  description: 'Número de palets'
                   type: integer
                   example: 3
               type: object
       responses:
         '201':
-          description: 'Production order creada exitosamente'
+          description: 'Orden de producción creada exitosamente'
           content:
             application/json:
               schema:
                 properties:
-                  id: { type: string, example: LineaPedido.X }
+                  id: { description: 'Número de Pedido Cliente transformado', type: string, example: LineaPedido.X }
                   customerOrderId: { type: string, example: NumPedidoCliente }
                   clientId: { type: string, example: ClienteID }
                   code: { type: string, example: '1231231231231' }
@@ -2116,6 +2125,179 @@ paths:
               schema:
                 properties:
                   message: { type: string, example: 'Los datos proporcionados son inválidos.' }
+                type: object
+  '/api/topflow-production-order/{mongoId}':
+    get:
+      tags:
+        - ProductionOrder
+      summary: 'Obtiene una orden de producción específica'
+      description: 'Obtiene una orden de producción específica y transforma "client_id" a "id".'
+      operationId: 76981926ba357c93373ef8664c7c97a7
+      parameters:
+        -
+          name: _id
+          in: path
+          description: 'Identificador interno (MongoId) de la orden de producción'
+          required: true
+          schema:
+            type: string
+            example: 646b247f4fd52c364ceaee6b
+      responses:
+        '200':
+          description: 'Detalles de la orden de producción'
+          content:
+            application/json:
+              schema:
+                properties:
+                  _id: { description: 'Número de Pedido Cliente transformado', type: string, example: LineaPedido.X }
+                  customerOrderId: { type: string, example: NumPedidoCliente }
+                  id: { type: string, example: ClienteID }
+                  code: { type: string, example: '1231231231231' }
+                  deliveryDate: { type: string, format: date, example: '2023-05-30' }
+                  referId: { type: string, example: ArticuloId }
+                  quantity: { type: integer, example: 25 }
+                  paletsQtty: { type: integer, example: 3 }
+                  createdAt: { type: string, format: date-time, example: '2023-05-22T08:14:55.219Z' }
+                  updatedAt: { type: string, format: date-time, example: '2023-05-22T08:14:55.219Z' }
+                type: object
+        '404':
+          description: 'Orden de producción no encontrada'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string, example: 'Orden de producción no encontrada.' }
+                type: object
+  /api/reference-Topflow:
+    get:
+      tags:
+        - Reference-Topflow
+      summary: 'Obtiene la lista de referencias'
+      description: 'Obtiene la lista de referencias.'
+      operationId: 5d598a3060053e8c1b80f69f0a1d278b
+      responses:
+        '200':
+          description: 'Lista de referencias'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Reference'
+    post:
+      tags:
+        - Reference-Topflow
+      summary: 'Crea una nueva referencia'
+      description: 'Crea una nueva referencia.'
+      operationId: 68b373e37eb2cc94a326042340d19d49
+      requestBody:
+        description: 'Datos para crear la referencia'
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - id
+                - customerId
+                - families
+                - eanCode
+                - rfidCode
+                - description
+                - value
+                - magnitude
+                - measure
+                - envase
+                - tolerancia_min
+                - tolerancia_max
+                - groupLevel
+              properties:
+                id:
+                  type: string
+                  example: REFER1
+                customerId:
+                  type: string
+                  example: REFER1
+                families:
+                  type: string
+                  example: FamiliaPrueba
+                eanCode:
+                  type: string
+                  example: '1234567890123'
+                rfidCode:
+                  type: string
+                  example: '1234567890123'
+                description:
+                  type: string
+                  example: 'Descripción de la referencia'
+                value:
+                  type: integer
+                  example: 123
+                magnitude:
+                  type: string
+                  example: Aceleración
+                measure:
+                  type: string
+                  example: m/s2
+                envase:
+                  type: string
+                  example: ENVASE1
+                tolerancia_min:
+                  type: number
+                  format: float
+                  example: 2
+                tolerancia_max:
+                  type: number
+                  format: float
+                  example: 2
+                groupLevel:
+                  type: array
+                  items: { required: [id_group, level, uds, total, measure, eanCode, envase], properties: { id_group: { type: string, example: refer1 }, level: { type: integer, example: 1 }, uds: { type: integer, example: 12 }, total: { type: string, example: '2 * 12 = 24' }, measure: { type: string, example: 'g (g-force)' }, eanCode: { type: string, example: '123123123322' }, envase: { type: string, example: SINENVASE } }, type: object }
+              type: object
+      responses:
+        '201':
+          description: 'Referencia creada exitosamente'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reference'
+        '422':
+          description: 'Error de validación'
+          content:
+            application/json:
+              schema:
+                properties:
+                  message: { type: string, example: 'Los datos proporcionados son inválidos.' }
+                type: object
+  '/api/reference-Topflow/{id}':
+    get:
+      tags:
+        - Reference-Topflow
+      summary: 'Obtiene una referencia específica'
+      description: 'Obtiene una referencia específica.'
+      operationId: 30ebfbbda0a97ea961ab138aac0fa0eb
+      parameters:
+        -
+          name: id
+          in: path
+          description: 'ID de la referencia'
+          required: true
+          schema:
+            type: string
+            example: REFER1
+      responses:
+        '200':
+          description: 'Detalles de la referencia'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reference'
+        '404':
+          description: 'Referencia no encontrada'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string, example: 'Referencia no encontrada.' }
                 type: object
   /api/rfid-readings:
     get:
@@ -3324,10 +3506,99 @@ paths:
                   success: { type: boolean, example: false }
                   error: { type: string, example: 'Error en el procesamiento de la orden.' }
                 type: object
+components:
+  schemas:
+    GroupLevel:
+      required:
+        - id_group
+        - level
+        - uds
+        - total
+        - measure
+        - eanCode
+        - envase
+      properties:
+        id_group:
+          type: string
+          example: refer1
+        level:
+          type: integer
+          example: 1
+        uds:
+          type: integer
+          example: 12
+        total:
+          type: string
+          example: '2 * 12 = 24'
+        measure:
+          type: string
+          example: 'g (g-force)'
+        eanCode:
+          type: string
+          example: '123123123322'
+        envase:
+          type: string
+          example: SINENVASE
+      type: object
+    Reference:
+      required:
+        - id
+        - customerId
+        - families
+        - eanCode
+        - rfidCode
+        - description
+        - value
+        - magnitude
+        - measure
+        - envase
+        - tolerancia_min
+        - tolerancia_max
+      properties:
+        id:
+          type: string
+          example: REFER1
+        customerId:
+          type: string
+          example: REFER1
+        families:
+          type: string
+          example: FamiliaPrueba
+        eanCode:
+          type: string
+          example: '1234567890123'
+        rfidCode:
+          type: string
+          example: '1234567890123'
+        description:
+          type: string
+          example: 'Descripción de la referencia'
+        value:
+          type: integer
+          example: 123
+        magnitude:
+          type: string
+          example: Aceleración
+        measure:
+          type: string
+          example: m/s2
+        envase:
+          type: string
+          example: ENVASE1
+        tolerancia_min:
+          type: number
+          format: float
+          example: 2
+        tolerancia_max:
+          type: number
+          format: float
+          example: 2
+        groupLevels:
+          type: array
+          items:
+            $ref: '#/components/schemas/GroupLevel'
+      type: object
 tags:
-  -
-    name: ProductionOrders
-    description: 'Operaciones relacionadas con las órdenes de producción'
   -
     name: Barcode
     description: Barcode
@@ -3380,8 +3651,14 @@ tags:
     name: Dispositivos
     description: Dispositivos
   -
-    name: ProductionOrder-Topflow
-    description: ProductionOrder-Topflow
+    name: ProductionOrders
+    description: ProductionOrders
+  -
+    name: ProductionOrder
+    description: ProductionOrder
+  -
+    name: Reference-Topflow
+    description: Reference-Topflow
   -
     name: 'RFID Readings'
     description: 'RFID Readings'

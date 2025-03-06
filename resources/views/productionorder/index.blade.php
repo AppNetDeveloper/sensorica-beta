@@ -283,7 +283,7 @@
 
                     // Cabecera
                     columnElement.innerHTML = `
-                        <div class="column-header column-grid relative flex justify-between items-center bg-white dark:bg-slate-800 rounded shadow-base px-6 py-5 mb-4">
+                        <div class="column-header column-grid relative flex justify-between items-center bg-white dark:bg-slate-800 rounded shadow-base ">
                             <h3 class="column-title">${column.name}</h3>
                             <div class="column-actions">
                                 <button
