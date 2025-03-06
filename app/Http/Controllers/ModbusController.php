@@ -16,8 +16,12 @@ class ModbusController extends Controller
 
     public function create($production_line_id)
     {
-        return view('modbuses.create', compact('production_line_id'));
+        $modbus = new Modbus(); // Objeto vacío con valores por defecto
+        // Opcionalmente, asigna valores por defecto:
+        $modbus->is_material_receiver = false;
+        return view('modbuses.create', compact('production_line_id', 'modbus'));
     }
+    
 
     public function store(Request $request, $production_line_id)
     {

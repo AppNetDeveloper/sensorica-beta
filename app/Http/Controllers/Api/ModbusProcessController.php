@@ -19,6 +19,7 @@ use App\Models\OrderStat;
 use App\Models\Modbus;
 use App\Models\OperatorPost;
 use App\Models\Operator;
+use App\Models\SupplierOrder;
 
 class ModbusProcessController extends Controller
 {
@@ -342,23 +343,63 @@ class ModbusProcessController extends Controller
                 
 
             // Intentar guardar los datos en la tabla control_weight
-        try {
-            $controlWeight = ControlWeight::create([
-                'modbus_id' => $config->id,
-                'last_control_weight' => $maxKg,
-                'last_dimension' => $dimensionFinal,
-                'last_box_number' => $newBoxNumber,
-                'last_box_shift' => $newBoxNumberShift,
-                'last_barcoder' => $uniqueBarcoder,
-                'last_final_barcoder' => null,
-            ]);
-
-            // Log informativo de los datos guardados
-            Log::info("Datos guardados en control_weight,el Modbus ID: {$config->id}");
-        } catch (\Exception $e) {
-            // Log de errores al intentar guardar los datos
-            Log::info("Error al guardar datos en control_weight, el Modbus ID: {$config->id}");
-        }
+            if ($config->is_material_receiver) {
+                try {
+                    // Buscar en supplier_orders una línea sin control_weight_id asociada
+                    $supplierOrder = SupplierOrder::whereNull('control_weight_id')->first();
+                    
+                    if ($supplierOrder) {
+                        $controlWeight = ControlWeight::create([
+                            'modbus_id'             => $config->id,
+                            'last_control_weight'   => $maxKg,
+                            'last_dimension'        => $dimensionFinal,
+                            'last_box_number'       => $newBoxNumber,
+                            'last_box_shift'        => $newBoxNumberShift,
+                            'last_barcoder'         => $uniqueBarcoder,
+                            'last_final_barcoder'   => null,
+                            'supplier_order_id'     => $supplierOrder->id,
+                        ]);
+                        Log::info("Datos guardados en control_weight, Modbus ID: {$config->id}");
+                        
+                        // Asignar el id del control_weight recién creado en supplier_orders
+                        $supplierOrder->update(['control_weight_id' => $controlWeight->id]);
+                        Log::info("Se asignó control_weight_id {$controlWeight->id} en supplier_orders (ID: {$supplierOrder->id}).");
+                    } else {
+                        $controlWeight = ControlWeight::create([
+                            'modbus_id'             => $config->id,
+                            'last_control_weight'   => $maxKg,
+                            'last_dimension'        => $dimensionFinal,
+                            'last_box_number'       => $newBoxNumber,
+                            'last_box_shift'        => $newBoxNumberShift,
+                            'last_barcoder'         => $uniqueBarcoder,
+                            'last_final_barcoder'   => null,
+                            'supplier_order_id'     => null,
+                        ]);
+                        Log::info("Datos guardados en control_weight, Modbus ID: {$config->id}");
+                        Log::info("No se encontró una línea en supplier_orders sin control_weight_id para el Modbus ID: {$config->id}");
+                    }
+                } catch (\Exception $e) {
+                    Log::error("Error al guardar datos en control_weight, Modbus ID: {$config->id}: " . $e->getMessage());
+                }
+            } else {
+                Log::info("El Modbus ID: {$config->id} no está configurado como báscula de recepción de material.");
+                try {
+                    $controlWeight = ControlWeight::create([
+                        'modbus_id'             => $config->id,
+                        'last_control_weight'   => $maxKg,
+                        'last_dimension'        => $dimensionFinal,
+                        'last_box_number'       => $newBoxNumber,
+                        'last_box_shift'        => $newBoxNumberShift,
+                        'last_barcoder'         => $uniqueBarcoder,
+                        'last_final_barcoder'   => null,
+                        'supplier_order_id'     => null,
+                    ]);
+                    Log::info("Datos guardados en control_weight, Modbus ID: {$config->id}");
+                } catch (\Exception $e) {
+                    Log::error("Error al guardar datos en control_weight, Modbus ID: {$config->id}, Error: " . $e->getMessage());
+                }
+            }            
+            
         // Añadimos la lógica para buscar en operator_post y actualizar en operators
         try {
             $operatorPost = OperatorPost::where('updated_at', null)

@@ -33,6 +33,7 @@ use App\Http\Controllers\Api\OrderNoticeController;
 use App\Http\Controllers\Api\FakeOrderTimeController;
 use App\Http\Controllers\Api\ReferenceController;
 use App\Http\Controllers\Api\ProductionOrderTopflowApiController;
+use App\Http\Controllers\Api\SupplierOrderController;
 
 
 
@@ -69,7 +70,8 @@ Route::get('/control-weights/{token}/all', [ControlWeightController::class, 'get
 Route::middleware(['throttle:1000,1'])->group(function () {
     Route::get('/control-weight/{token}', [ControlWeightController::class, 'getDataByToken']);
 });
-
+// Nueva ruta para el consolidado por supplierOrderId
+Route::get('/control_weight/{supplierOrderId}', [ControlWeightController::class, 'show']);
 
 // Ruta para GET request
 Route::get('/order-notice/{token?}', [ApibarcoderController::class, 'getOrderNotice']);
@@ -302,3 +304,8 @@ Route::prefix('topflow-production-order')->group(function () {
     Route::post('/', [ProductionOrderTopflowApiController::class, 'store']);
     Route::get('/{_id}', [ProductionOrderTopflowApiController::class, 'show']);
 });
+
+
+//pasar el pedido de proveedor
+
+Route::post('/supplier-order/store', [SupplierOrderController::class, 'store']);

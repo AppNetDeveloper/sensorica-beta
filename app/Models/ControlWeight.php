@@ -15,11 +15,18 @@ class ControlWeight extends Model
         'last_barcoder',
         'last_final_barcoder',
         'box_m3',
+        'supplier_order_id', // Se añade para la relación
     ];
 
     public function modbus()
     {
         return $this->belongsTo(Modbus::class);
+    }
+    
+    // Nueva relación con SupplierOrder
+    public function supplierOrder()
+    {
+        return $this->belongsTo(SupplierOrder::class, 'supplier_order_id');
     }
 
     /**

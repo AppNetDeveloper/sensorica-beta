@@ -15,7 +15,7 @@ class ProductionOrderTopflowApiController extends Controller
      * @OA\Post(
      *     path="/api/topflow-production-order",
      *     summary="Crea una nueva orden de producción",
-     *     tags={"ProductionOrder"},
+     *     tags={"ProductionOrder-Topflow"},
      *     @OA\RequestBody(
      *         required=true,
      *         description="Datos para crear una orden de producción",
@@ -138,7 +138,7 @@ class ProductionOrderTopflowApiController extends Controller
      * @OA\Get(
      *     path="/api/topflow-production-order/{mongoId}",
      *     summary="Obtiene una orden de producción específica",
-     *     tags={"ProductionOrder"},
+     *     tags={"ProductionOrder-Topflow"},
      *     @OA\Parameter(
      *         name="_id",
      *         in="path",

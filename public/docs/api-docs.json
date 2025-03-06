@@ -1065,6 +1065,43 @@ paths:
                   status: { type: string }
                   message: { type: string }
                 type: object
+  '/api/control_weight/{supplierOrderId}':
+    get:
+      tags:
+        - 'Control Weight'
+        - 'Supplier Order'
+      summary: 'Obtener datos consolidados de control_weight por pedido de proveedor'
+      description: 'Muestra la información consolidada de control_weight para un pedido de proveedor.'
+      operationId: c3125b95cb2efc454bb659b2c738d092
+      parameters:
+        -
+          name: supplierOrderId
+          in: path
+          description: 'Identificador del pedido de proveedor'
+          required: true
+          schema:
+            type: integer
+            example: 231167
+      responses:
+        '200':
+          description: 'Datos consolidados del control de peso'
+          content:
+            application/json:
+              schema:
+                properties:
+                  supplierOrderId: { type: integer, example: 231167 }
+                  totalPallets: { type: integer, example: 3 }
+                  totalWeight: { type: number, example: 900 }
+                  pallets: { type: array, items: { properties: { palletNumber: { type: string, example: '231167.1' }, weight: { type: number, example: 300 }, unit: { type: string, example: Kg } }, type: object } }
+                type: object
+        '404':
+          description: 'Pedido de proveedor no encontrado'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string, example: 'Supplier order not found.' }
+                type: object
   /api/modbus/cancel:
     post:
       tags:
@@ -2043,7 +2080,7 @@ paths:
   /api/topflow-production-order:
     post:
       tags:
-        - ProductionOrder
+        - ProductionOrder-Topflow
       summary: 'Crea una nueva orden de producción'
       description: 'Crea una nueva orden de producción.'
       operationId: 7519e6bfca018d3816017a32ef7832f2
@@ -2129,7 +2166,7 @@ paths:
   '/api/topflow-production-order/{mongoId}':
     get:
       tags:
-        - ProductionOrder
+        - ProductionOrder-Topflow
       summary: 'Obtiene una orden de producción específica'
       description: 'Obtiene una orden de producción específica y transforma "client_id" a "id".'
       operationId: 76981926ba357c93373ef8664c7c97a7
@@ -2763,6 +2800,35 @@ paths:
                 properties:
                   success: { type: boolean }
                   message: { type: string }
+                type: object
+  /api/supplier-order/store:
+    post:
+      tags:
+        - 'Supplier Order'
+      summary: 'Registrar pedido de proveedor'
+      description: "Endpoint para registrar pedidos de proveedores.\n\nURL: https://domain/api/supplier-order/store\n\nEjemplo de JSON:\n{\n\"supplierOrderId\": 231167,\n\"orderLine\": \"231167.1\",\n\"quantity\": 1,\n\"unit\": \"Palet\",\n\"barcode\": \"ean 128\",\n\"refer\": {\n\"id\": \"Z465\",\n\"company_name\": \"Nombre Proveedor\",\n\"descrip\": \"Descripción de la materia prima\",\n\"value\": 300,\n\"measure\": \"Kg\"\n}\n}\n\nComentario de cada campo:\n- supplierOrderId: Identificador del pedido que se realiza al proveedor.\n- orderLine: Línea del pedido (número de orden concatenado con el número de línea).\n- quantity: Cantidad de unidades solicitadas.\n- unit: Unidad de medida, en este caso \"Palet\".\n- barcode: Código de barras o identificación RFID.\n- refer: Objeto con información adicional sobre la materia prima."
+      operationId: f4e16fe6636fdaf4c6d17908738bbdba
+      requestBody:
+        description: 'Datos para registrar el pedido de proveedor'
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SupplierOrder'
+      responses:
+        '201':
+          description: 'Pedido de proveedor registrado exitosamente'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierOrder'
+        '422':
+          description: 'Error de validación'
+          content:
+            application/json:
+              schema:
+                properties:
+                  message: { type: string, example: 'Los datos proporcionados son inválidos.' }
                 type: object
   /api/reboot:
     post:
@@ -3598,6 +3664,68 @@ components:
           items:
             $ref: '#/components/schemas/GroupLevel'
       type: object
+    Refer:
+      required:
+        - id
+        - company_name
+        - descrip
+        - value
+        - measure
+      properties:
+        id:
+          description: 'Código único de la referencia'
+          type: string
+          example: Z465
+        company_name:
+          description: 'Nombre del proveedor'
+          type: string
+          example: 'Nombre Proveedor'
+        descrip:
+          description: 'Descripción detallada de la materia prima'
+          type: string
+          example: 'Descripción de la materia prima'
+        value:
+          description: 'Valor o peso asignado a la referencia'
+          type: number
+          format: float
+          example: 300
+        measure:
+          description: 'Unidad de medida del valor'
+          type: string
+          example: Kg
+      type: object
+    SupplierOrder:
+      required:
+        - supplierOrderId
+        - orderLine
+        - quantity
+        - unit
+        - barcode
+        - refer
+      properties:
+        supplierOrderId:
+          description: 'Identificador del pedido que se realiza al proveedor'
+          type: integer
+          example: 231167
+        orderLine:
+          description: 'Línea del pedido (número de orden concatenado con el número de línea)'
+          type: string
+          example: '231167.1'
+        quantity:
+          description: 'Cantidad de unidades solicitadas para esa línea'
+          type: integer
+          example: 1
+        unit:
+          description: 'Unidad de medida en la que se expresa la cantidad'
+          type: string
+          example: Palet
+        barcode:
+          description: 'Código de barras o identificación RFID asociado al pedido'
+          type: string
+          example: 'ean 128'
+        refer:
+          $ref: '#/components/schemas/Refer'
+      type: object
 tags:
   -
     name: Barcode
@@ -3636,6 +3764,9 @@ tags:
     name: WhatsApp
     description: WhatsApp
   -
+    name: 'Supplier Order'
+    description: 'Supplier Order'
+  -
     name: Workers
     description: Workers
   -
@@ -3654,8 +3785,8 @@ tags:
     name: ProductionOrders
     description: ProductionOrders
   -
-    name: ProductionOrder
-    description: ProductionOrder
+    name: ProductionOrder-Topflow
+    description: ProductionOrder-Topflow
   -
     name: Reference-Topflow
     description: Reference-Topflow

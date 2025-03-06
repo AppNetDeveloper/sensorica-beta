@@ -258,6 +258,14 @@
                                 <label for="count_week_1">{{ __('Count Week 1') }}</label>
                                 <input type="number" class="form-control" id="count_week_1" name="count_week_1" value="{{ $modbus->count_week_1 }}">
                             </div>
+                            <!-- Campo nuevo: is_material_receiver -->
+                            <div class="form-group">
+                                <label for="is_material_receiver">{{ __('Is Material Receiver') }}</label>
+                                <select class="form-control" id="is_material_receiver" name="is_material_receiver" required>
+                                    <option value="0" {{ $modbus->is_material_receiver == false ? 'selected' : '' }}>No</option>
+                                    <option value="1" {{ $modbus->is_material_receiver == true ? 'selected' : '' }}>Yes</option>
+                                </select>
+                            </div>
 
                             <button type="submit" class="btn btn-primary">{{ __('Save') }}</button>
                             <a href="{{ route('modbuses.index', $modbus->production_line_id) }}" class="btn btn-secondary">{{ __('Cancel') }}</a>

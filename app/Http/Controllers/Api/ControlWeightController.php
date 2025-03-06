@@ -7,6 +7,7 @@ use App\Models\Modbus;
 use App\Models\ControlWeight;
 use Illuminate\Http\Request;
 use App\Models\OrderStat;
+use App\Models\SupplierOrder;
 
 class ControlWeightController extends Controller
 {
@@ -180,5 +181,83 @@ class ControlWeightController extends Controller
         });
 
         return response()->json($response);
+    }
+    /**
+     * Muestra la información consolidada de control_weight para un pedido de proveedor.
+     *
+     * @OA\Get(
+     *     path="/api/control_weight/{supplierOrderId}",
+     *     summary="Obtener datos consolidados de control_weight por pedido de proveedor",
+     *     tags={"Control Weight", "Supplier Order"},
+     *     @OA\Parameter(
+     *         name="supplierOrderId",
+     *         in="path",
+     *         description="Identificador del pedido de proveedor",
+     *         required=true,
+     *         @OA\Schema(type="integer", example=231167)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Datos consolidados del control de peso",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="supplierOrderId", type="integer", example=231167),
+     *             @OA\Property(property="totalPallets", type="integer", example=3),
+     *             @OA\Property(property="totalWeight", type="number", example=900),
+     *             @OA\Property(
+     *                 property="pallets",
+     *                 type="array",
+     *                 @OA\Items(
+     *                     @OA\Property(property="palletNumber", type="string", example="231167.1"),
+     *                     @OA\Property(property="weight", type="number", example=300),
+     *                     @OA\Property(property="unit", type="string", example="Kg")
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Pedido de proveedor no encontrado",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="error", type="string", example="Supplier order not found.")
+     *         )
+     *     )
+     * )
+     *
+     * @param int $supplierOrderId
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function show($supplierOrderId)
+    {
+        // Buscar el pedido usando el identificador externo supplier_order_id
+        $supplierOrder = SupplierOrder::where('supplier_order_id', $supplierOrderId)->first();
+
+        if (!$supplierOrder) {
+            return response()->json([
+                'error' => 'Supplier order not found.'
+            ], 404);
+        }
+
+        // Obtener todos los registros de control_weight asociados al pedido a través de la relación bidireccional
+        $palletRecords = $supplierOrder->controlWeights; // Nota: si la relación en SupplierOrder es hasMany o belongsToMany, ajústala según la lógica
+
+        $totalPallets = $palletRecords->count();
+        // Se asume que cada registro tiene 'last_control_weight' con el peso del palet
+        $totalWeight = $palletRecords->sum('last_control_weight');
+
+        // Formatear cada palet con su número, peso y unidad
+        $pallets = $palletRecords->map(function ($pallet) use ($supplierOrder) {
+            return [
+                'palletNumber' => $supplierOrder->supplier_order_id . '.' . $pallet->last_box_number,
+                'weight'       => $pallet->last_control_weight,
+                'unit'         => 'Kg'
+            ];
+        })->toArray();
+
+        return response()->json([
+            'supplierOrderId' => $supplierOrder->supplier_order_id,
+            'totalPallets'    => $totalPallets,
+            'totalWeight'     => $totalWeight,
+            'pallets'         => $pallets,
+        ]);
     }
 }

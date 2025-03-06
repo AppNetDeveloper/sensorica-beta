@@ -58,6 +58,7 @@ class Modbus extends Model
         'productName',//nombre del producto
         'count_week_0', // contador de la semana 0
         'count_week_1', // contador de la semana 1
+        'is_material_receiver', // nuevo campo para identificar si es báscula de recepción de material true false
          
     ];
 
@@ -78,7 +79,11 @@ class Modbus extends Model
      {
          return $this->hasMany(ControlHeight::class);
      }
-
+    // Relación para obtener el pedido de proveedor asociado
+    public function supplierOrder()
+    {
+        return $this->belongsTo(\App\Models\SupplierOrder::class, 'supplier_order_id');
+    }
      protected static function boot()
      {
          parent::boot();
