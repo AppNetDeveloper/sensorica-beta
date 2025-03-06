@@ -20,6 +20,7 @@ use App\Models\Modbus;
 use App\Models\OperatorPost;
 use App\Models\Operator;
 use App\Models\SupplierOrder;
+use App\Models\ProductList;
 
 class ModbusProcessController extends Controller
 {
@@ -170,12 +171,53 @@ class ModbusProcessController extends Controller
         // Actualiza el valor en la base de datos si ha cambiado
 
             $updateResponse = $config->update(['last_value' => $updatedValue]);
+        if($config->model_type < 1) {  
+            if($updateResponse) {
+                // Buscar el registro en product_lists donde productName coincide con el de $config
+                try {
+                    if (isset($config->productName) && $config->productName !== '') {
+                        $product = ProductList::where('client_id', $config->productName)->first();
+                        $boxKgTheoretic = $product ? $product->box_kg : 0;
+                    } else {
+                        Log::warning('productName no está definido o está vacío en config.');
+                        $boxKgTheoretic = 0;
+                        $product = null;
+                    }
+                } catch (\Exception $e) {
+                    $prodName = isset($config->productName) ? $config->productName : 'N/A';
+                    Log::error("Error al obtener el producto para productName '{$prodName}': " . $e->getMessage());
+                    $boxKgTheoretic = 0;
+                    $product = null;
+                }                
+
+            } else {
+                $boxKgTheoretic = 0;
+                $product = null;
+            }
+
+            if($boxKgTheoretic > 0) {
+                $excessWeight = $updatedValue - $boxKgTheoretic;
+            } else {
+                $excessWeight = 0;
+            }
 
             // Construye el mensaje
             $message = [
                 'value' => $updatedValue,
-                'time' => date('c')
+                'time' => date('c'),
+                'excessWeight' => $excessWeight,
+                'boxKgTheoretic' => $boxKgTheoretic,
+                'productName'     => $product ? $product->name : 'N/A',
+                'productClientId'     => $product ? $product->client_id: 'N/A'
             ];
+        }else{
+            // Construye el mensaje
+            $message = [
+                'value' => $updatedValue,
+                'time' => date('c'),
+            ];
+        }
+            
 
             Log::info("Mensaje MQTT: " . json_encode($message));
 
@@ -317,30 +359,76 @@ class ModbusProcessController extends Controller
                 Log::info("No se encontró el campo 'check' en los datos recibidos.El valor actual es:{$value} kg");
             }
             
-
-
-            $messageControl = [
-                        'type' => "NoEPC",
-                        'unit' => "Kg",
-                        'value' => $maxKg,
-                        'excess' => "0",
-                        'total_excess' => "0",
-                        'rating' => "1",
-                        'time' => date('c'),
-                        'check' => "1",
-                        'dimension' => $dimensionFinal
-                ];
-            $this->publishMqttMessage($topic_control, $messageControl); // Enviar mensaje de control
-            $this->publishMqttMessage($topic_control2, $messageControl); // Enviar mensaje de control    
-
             // Incrementar el recuento de cajas en rec_box
             $newBoxNumber++; // es por orderId
             $newBoxNumberShift++; //por turno
             $newBoxNumberUnlimited++; //indefinido
             // Generar un número de barcoder único
             $uniqueBarcoder = uniqid('', true);
+            // Buscar el registro en product_lists donde productName coincide con el de $config
+            if($config->model_type < 1) {  
+                try {
+                    if (isset($config->productName) && $config->productName !== '') {
+                        $product = ProductList::where('client_id', $config->productName)->first();
+                        $boxKgTheoretic = $product ? $product->box_kg : 0;
+                        $productClientId = $product ? $product->name  : "N/A";
+                    } else {
+                        Log::warning('productName no está definido o está vacío en config.');
+                        $boxKgTheoretic = 0;
+                        $productClientId = "N/A";
+                    }
+                } catch (\Exception $e) {
+                    $prodName = isset($config->productName) ? $config->productName : 'N/A';
+                    Log::error("Error al obtener el producto para productName '{$prodName}': " . $e->getMessage());
+                    $boxKgTheoretic = 0;
+                    $productClientId = "N/A";
+                }
+            }else{
+                $boxKgTheoretic = 0;
+                $productClientId = "N/A";
+            }
 
-                
+            
+
+            try {
+                $box_m3 = (
+                    isset($config->box_width, $config->box_length, $dimensionFinal) &&
+                    $config->box_width > 0 &&
+                    $config->box_length > 0 &&
+                    $dimensionFinal > 0
+                ) ? ($config->box_width * $config->box_length * $dimensionFinal) / 1000000000 : 0;
+            
+                // Si $box_m3 resulta ser 0 (o null, según tu lógica) se puede decidir no procesar el paquete
+                if ($box_m3 == 0) {
+                    // Aquí puedes agregar alguna acción adicional, por ejemplo, un log o retorno temprano
+                    Log::warning("El valor calculado de box_m3 es 0; se cancelará el procesamiento del paquete.");
+                }
+            } catch (\Exception $e) {
+                Log::error("Error al procesar el paquete de datos: " . $e->getMessage());
+                $box_m3 = 0; // Asigna 0 en caso de error
+                return response()->json(['error' => 'Ocurrió un error al procesar los datos'], 500);
+            }            
+            
+
+            $messageControl = [
+                        'type' => "NoEPC",
+                        'unit' => "Kg",
+                        'value' => $maxKg,
+                        'excess' => $maxKg - $boxKgTheoretic,
+                        'total_excess' => "0",
+                        'rating' => "1",
+                        'time' => date('c'),
+                        'check' => "1",
+                        'dimension' => $dimensionFinal,
+                        'barcode_qr_rfid' => $uniqueBarcoder,
+                        'box_m3' => $box_m3 ?? 0,
+                        'box_kg_theoretic' => $boxKgTheoretic,
+                        'productClientId' => $productClientId,
+
+                ];
+            $this->publishMqttMessage($topic_control, $messageControl); // Enviar mensaje de control
+            $this->publishMqttMessage($topic_control2, $messageControl); // Enviar mensaje de control    
+
 
             // Intentar guardar los datos en la tabla control_weight
             if ($config->is_material_receiver) {
