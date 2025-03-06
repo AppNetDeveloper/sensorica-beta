@@ -378,7 +378,6 @@ class TransferExternalDbController extends Controller
         }
 
         if ($externalSend === true){
-            // Insertar datos ficticios en linea_por_orden utilizando Eloquent
             try {
                 $data = [
                     'IdLinea' => $productionLine,
@@ -387,6 +386,9 @@ class TransferExternalDbController extends Controller
                     'ShiftCount' => $shiftCount,
                     'OrderCount' => $unitsFromOrnderNumberFromTransfer,
                     'OrderUnit' => $modelUnit,
+                    'UnitsPerBox' => $orderStats->isNotEmpty() && $orderStats->first()->units_box
+                                    ? number_format($orderStats->first()->units_box, 2) // Formatea a dos decimales
+                                    : null,
                     'SensorCount' => $unitsNumberFromTransfer,
                     'UmaCount' => $this->getOrderMacUmaQuantity($orderId),
                     'StartAt' => $startTime->format('Y-m-d H:i:s'),

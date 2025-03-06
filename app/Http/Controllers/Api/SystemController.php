@@ -1211,6 +1211,7 @@ class SystemController extends Controller
                 'ShiftCount' => 'INT',
                 'OrderCount' => 'DECIMAL(10,2)',
                 'OrderUnit' => 'VARCHAR(255)',
+                'UnitsPerBox' => 'DECIMAL(10,2)', // Nueva columna añadida
                 'SensorCount' => 'DECIMAL(10,2)',
                 'UmaCount' => 'DECIMAL(10,2)',
                 'StartAt' => 'TIMESTAMP',
@@ -1240,7 +1241,7 @@ class SystemController extends Controller
                 'SensorWeight' => 'DECIMAL(10,2)',
                 'SensorUnitWeight' => 'VARCHAR(255)',
                 'GrossWeight01' => 'DECIMAL(10,2)', // Nuevo campo
-                'GrossWeight02' => 'DECIMAL(10,2)'  // Nuevo campo
+                'GrossWeight02' => 'DECIMAL(10,2)', // Nuevo campo
             ]
         ];
     
@@ -1258,6 +1259,7 @@ class SystemController extends Controller
             'message' => 'Base de datos verificada y sincronizada correctamente.'
         ]);
     }
+    
     
     private function createTable($connection, $table, $columns)
     {
