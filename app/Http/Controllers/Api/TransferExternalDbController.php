@@ -452,33 +452,15 @@ class TransferExternalDbController extends Controller
 
                 if($sensor->sensor_type === 0) {
                     $slowTime=($timeOnSeconds - $totalTimeDowntime) -($optimalProductionTime * $totalCountOrder);
+                    $formateado = "optimal_production_time";
                 } else {
                     $slowTime=0.0;
+                    $formateado = "optimalproductionTime_sensorType_" . $sensor->sensor_type;
                 }
-                if ($sensor->sensor_type === 0) {
-                    // Para sensor_type 0, dejamos el valor de optimalProductionTime sin cambios.
-                    $optimalProductionTime = $optimalProductionTime + 0;
-                } else {
-                    if ($minTime < 4) {
-                        // Si es menor de 3, se deja sin cambios.
-                        $optimalProductionTime = $minTime + 0;
-                    } elseif ($minTime >= 4 && $minTime < 10) {
-                        // Entre 3 y 10, se resta un valor aleatorio entre 1 y 3.
-                        $optimalProductionTime = $minTime - mt_rand(1, 2);
-                    } elseif ($minTime >= 10 && $minTime < 30) {
-                        // Entre 10 y 30, se resta un valor aleatorio entre 2 y 4.
-                        $optimalProductionTime = $minTime - mt_rand(2, 4);
-                    } elseif ($minTime >= 30 && $minTime < 100) {
-                        // Entre 30 y 100, se resta un valor aleatorio entre 5 y 10.
-                        $optimalProductionTime = $minTime - mt_rand(5, 10);
-                    } elseif ($minTime >= 100 && $minTime < 200) {
-                        // Entre 30 y 100, se resta un valor aleatorio entre 5 y 10.
-                        $optimalProductionTime = $minTime - mt_rand(20.1, 40.4);
-                    } else {
-                        // Mayor a 100, se resta un valor aleatorio entre 7 y 13.
-                        $optimalProductionTime = $minTime - mt_rand(30.3, 50.6);
-                    }
-                }
+
+                
+                $optimalProductionTime = $orderStats->first()->productList->$formateado;
+                
 
                 if($minTime<1){
                     $realTimeUnit=0;
@@ -486,7 +468,6 @@ class TransferExternalDbController extends Controller
                 if($totalCountOrder < 1) {
                     $realTimeUnit=0;
                     $minTime=0;
-                    $optimalProductionTime=0;
                 }
                 
 
@@ -592,26 +573,19 @@ class TransferExternalDbController extends Controller
                 $minInterval = $timeDifferences->min() ?? env('PRODUCTION_MIN_TIME_WEIGHT', 30);
 
 
-                if ($minInterval < 3) {
-                    // Si es menor de 3, se deja sin cambios.
-                    $optimalProductionTime = $minInterval+ 0;
-                } elseif ($minInterval >= 3 && $minInterval < 10) {
-                    // Entre 3 y 10, se resta un valor aleatorio entre 1 y 3.
-                    $optimalProductionTime = $minInterval- mt_rand(1, 3);
-                } elseif ($minInterval>= 10 && $minInterval < 30) {
-                    // Entre 10 y 30, se resta un valor aleatorio entre 2 y 4.
-                    $optimalProductionTime = $minInterval - mt_rand(2, 4);
-                } elseif ($minInterval >= 30 && $minInterval < 100) {
-                    // Entre 30 y 100, se resta un valor aleatorio entre 5 y 10.
-                    $optimalProductionTime = $minInterval - mt_rand(5, 10);
-                } elseif ($minInterval >= 130 && $minInterval < 300) {
-                    // Entre 30 y 100, se resta un valor aleatorio entre 5 y 10.
-                    $optimalProductionTime = $minInterval - mt_rand(15, 21.1);
+                //sacamos por $orderStats->first()->product_list_id y ahorasacamos la linea product_list where id=product_list_id
+  
+                if ($modbus->model_type < 1) {
+                    $optimalProductionTime = $orderStats->first()->productList->optimalproductionTime_weight;
                 } else {
-                    // Mayor a 100, se resta un valor aleatorio entre 7 y 13.
-                    $optimalProductionTime = $minInterval - mt_rand(20.1, 30.3);
+                    $formateado = "optimalproductionTime_weight_" . $modbus->model_type;
+                    $optimalProductionTime = $orderStats->first()->productList->$formateado;
                 }
-
+                
+                if($totalCountOrder < 1) {
+                    $realTimeUnit=0;
+                    $minTime=0;
+                }
 
                 $modbusData[] = [
                     'id'                      => $modbus->id,

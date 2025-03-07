@@ -11,7 +11,7 @@
         "brian2694/laravel-toastr": "^5.56",
         "darkaonline/l5-swagger": "^8.6",
         "dialect/laravel-gdpr-compliance": "^1.4",
-        "doctrine/dbal": "~2.3",
+        "doctrine/dbal": "^3.6",
         "fideloper/proxy": "^4.4",
         "fruitcake/laravel-cors": "^3.0",
         "guzzlehttp/guzzle": "^7.9",

@@ -13,6 +13,7 @@ use App\Models\Barcode;
 use App\Models\SensorCount;
 use App\Models\OperatorPost;
 use App\Models\Operator;
+use App\Models\OrderStat;
 
 class SensorController extends Controller
 {
@@ -266,6 +267,30 @@ class SensorController extends Controller
             //return;
         }
     
+        //vaerificamos si el sensor es sensor_type 0 o superior
+        if ($config->sensor_type < 1) {
+            // Extraemos el registro de OrderStat correspondiente al orderId
+            $orderStats = OrderStat::where('order_id', $orderId)->first();
+            
+            if ($orderStats) {
+                // Verificamos que 'units' es numérico, o asignamos 0 por defecto
+                $units = is_numeric($orderStats->units) ? $orderStats->units : 0;
+                
+                // Incrementamos los contadores de unidades realizadas
+                $orderStats->units_made_real += 1;
+                $orderStats->units_made      += 1;
+                
+                // Actualizamos las unidades restantes
+                // Aquí usamos $orderStats->units_made_real en lugar de una variable indefinida
+                $orderStats->units_pending = $units - $orderStats->units_made_real - 1;
+                
+                // Guardamos los cambios en la base de datos
+                $orderStats->save();
+            } else {
+                Log::warning("No se encontró un registro de OrderStat para order_id: {$orderId}");
+            }
+        }
+        
         // Incrementar los contadores
         try {
             $config->increment($modelConfig['shift']);

@@ -116,14 +116,30 @@ class CalculateProductionDowntime extends Command
         //FIN MONITOR DOWNTIME LINEA
 
         // Procesar sensores de tipo distinto a 0
-        $sensorsNotType0 = Sensor::where('event', 'start')
-            ->where('sensor_type', '>', 0)
-            ->get();
-
-        foreach ($sensorsNotType0 as $sensor) {
-        $this->handleGenericDowntimeLogic($sensor);
+        
+        try {
+            $sensorsNotType0 = Sensor::where('sensor_type', '>', 0)
+                ->where(function ($query) {
+                    $query->where(function ($q) {
+                        $q->where('event', 'start')
+                          ->where('shift_type', 'shift');
+                    })
+                    ->orWhere(function ($q) {
+                        $q->where('event', 'end')
+                          ->where('shift_type', 'stop');
+                    });
+                })
+                ->get();
+                foreach ($sensorsNotType0 as $sensor) {
+                    $this->info("Procesando sensor nonType 0: {$sensor->name} (ID: {$sensor->id})");
+                $this->handleGenericDowntimeLogic($sensor);
+                }
+        } catch (\Exception $e) {
+            // Manejar la excepción, por ejemplo:
+            Log::error('Error al obtener sensores: ' . $e->getMessage());
+            return response()->json(['error' => 'Error al procesar sensores'], 500);
         }
-
+        
         
     }
     
@@ -223,12 +239,12 @@ class CalculateProductionDowntime extends Command
         $timeDifference = $now->diffInSeconds($lastEventTime);
 
         // Se amplía la inactividad, mandamos mensaje con status=0
-        $this->info("Sensor {$sensor->name} is in downtime.");
+        $this->info("Sensor  de typo non 0 :{$sensor->name} is in downtime.");
         $this->incrementDowntime($sensor, $timeDifference);  // Ajuste para no restar $maxTime aquí
         $this->sendMqttMessage($sensor, 0, $sensor->sensor_type); // status 0 para ampliado, tipo según el sensor
         } else {
         // El valor no es 0, lo que significa que el sensor está estable
-        $this->info("Sensor {$sensor->name} is stable.");
+        $this->info("Sensor  de typo non 0 : {$sensor->name} is stable.");
         $this->closeDowntime($sensor);
         $this->sendMqttMessage($sensor, 2, $sensor->sensor_type); // status 2 para estable
         }

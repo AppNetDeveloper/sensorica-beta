@@ -19,6 +19,7 @@ use App\Models\ModbusHistory;
 use App\Models\Operator;
 use App\Models\RfidDetail;
 use App\Models\ShiftHistory; // Importa el modelo ShiftControl
+use App\Models\OperatorPost;
 
 class MqttShiftSubscriber extends Command
 {
@@ -400,31 +401,36 @@ class MqttShiftSubscriber extends Command
     // Función para resetear los contadores del sensor
     private function resetSensorCounters($sensor)
     {
-        $this->info("[". Carbon::now()->toDateTimeString() . "]Resetting counters for sensor ID {$sensor->id}.");
+        $this->info("[" . Carbon::now()->toDateTimeString() . "] Resetting counters for sensor ID {$sensor->id}.");
     
-        // Guardar la información actual del sensor en la tabla `sensor_history`
-        SensorHistory::create([
-            'sensor_id' => $sensor->id,
-            'count_shift_1' => $sensor->count_shift_1,
-            'count_shift_0' => $sensor->count_shift_0,
-            'count_order_0' => $sensor->count_order_0,
-            'count_order_1' => $sensor->count_order_1,
-            'downtime_count' => $sensor->downtime_count,
-            'unic_code_order' => $sensor->unic_code_order,
-            'orderId' => $sensor->orderId,
-        ]);
+        // Intentar guardar la información actual del sensor en la tabla `sensor_history`
+        try {
+            SensorHistory::create([
+                'sensor_id' => $sensor->id,
+                'count_shift_1' => $sensor->count_shift_1,
+                'count_shift_0' => $sensor->count_shift_0,
+                'count_order_0' => $sensor->count_order_0,
+                'count_order_1' => $sensor->count_order_1,
+                'downtime_count' => $sensor->downtime_count,
+                'unic_code_order' => $sensor->unic_code_order,
+                'orderId' => $sensor->orderId,
+            ]);
+        } catch (\Exception $e) {
+            $this->error("Error al guardar en sensor_history para sensor ID {$sensor->id}: " . $e->getMessage());
+        }
     
-        // Reseteo de los contadores del sensor
-        $sensor->count_shift_1 = 0;
-        $sensor->count_shift_0 = 0;
-       // $sensor->count_order_0 = 0;
-       // $sensor->count_order_1 = 0;
-        $sensor->downtime_count = 0;
-        $sensor->unic_code_order = uniqid(); // Generar un nuevo código único para el pedido
-    
-        // Guardar los cambios en el sensor
-        $sensor->save();
+        // Intentar resetear los contadores del sensor
+        try {
+            $sensor->count_shift_1 = 0;
+            $sensor->count_shift_0 = 0;
+            $sensor->downtime_count = 0;
+            $sensor->unic_code_order = uniqid(); // Generar un nuevo código único para el pedido
+            $sensor->save();
+        } catch (\Exception $e) {
+            $this->error("Error al resetear contadores para sensor ID {$sensor->id}: " . $e->getMessage());
+        }
     }
+    
     
     private function resetModbusCounters($modbus)
     {
@@ -475,11 +481,11 @@ class MqttShiftSubscriber extends Command
     
                 if ($operatorPost) {
                     // Verificar si el registro fue creado en los últimos 10 segundos
-                    $timeDifference = \Carbon\Carbon::now()->diffInSeconds($operatorPost->created_at);
+                    $timeDifference = Carbon::now()->diffInSeconds($operatorPost->created_at);
     
                     if ($timeDifference > 10) {
                         // Actualizar finish_at de la entrada encontrada
-                        $operatorPost->update(['finish_at' => \Carbon\Carbon::now()]);
+                        $operatorPost->update(['finish_at' => Carbon::now()]);
     
                         // Duplicar la entrada: copiamos los datos, eliminamos el id para crear un nuevo registro,
                         // dejamos finish_at en null y reiniciamos count a 0.
@@ -490,8 +496,8 @@ class MqttShiftSubscriber extends Command
     
                         // Añadimos el ID de la nueva asignación para este RFID
                         // Asegúrate de tener los valores correctos para estos campos
-                        $newData['product_list_selected_id'] = $productListSelected->id;
-                        $newData['product_list_id'] = $productList->id;
+                        $newData['product_list_selected_id'] = $operatorPost->id;
+                        $newData['product_list_id'] = $operatorPost->id;
     
                         // Crear el nuevo registro duplicado
                         OperatorPost::create($newData);
@@ -513,12 +519,7 @@ class MqttShiftSubscriber extends Command
         } catch (\Exception $e) {
             // Log del error en caso de fallo
             Log::error("Error al resetear los contadores de operadores: " . $e->getMessage());
-    
-            return response()->json([
-                'message' => 'Error al resetear los contadores de operadores.',
-                'status' => 'error',
-                'error' => $e->getMessage()
-            ], 500);
+
         }
     }
     

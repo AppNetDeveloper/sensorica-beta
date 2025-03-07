@@ -13,6 +13,8 @@ use App\Models\MqttSendServer2;
 use App\Models\OrderStat;
 use Illuminate\Support\Facades\Log;
 use App\Models\ShiftList; // Asegúrate de que la ruta del modelo sea la correcta
+use App\Models\ShiftHistory; // Asegúrate de que la ruta del modelo sea la correcta
+use App\Models\OrderMac; // Asegúrate de que la ruta del modelo sea la correcta
 
 class CalculateProductionMonitorOee extends Command
 {
@@ -44,71 +46,83 @@ class CalculateProductionMonitorOee extends Command
             $monitors = MonitorOee::all();
 
             foreach ($monitors as $monitor) {
-                $totalRealProductionPerMinute = 0;
-                $totalTheoreticalProductionPerMinute = 0;
-
-                // Si sensor_active es 1, obtener todos los sensores de la línea de producción con sensor_type = 0
-                if ($monitor->sensor_active == 1) {
-                    $this->info("Obteniendo sensores con sensor_type = 0 para la línea de producción ID {$monitor->production_line_id}");
-
-                    $result = Sensor::where('production_line_id', $monitor->production_line_id)
-                    ->where('sensor_type', '!=', 0)
-                    ->selectRaw('SUM(downtime_count) as total_downtime, SUM(count_order_0) as total_count_order')
+                //sacamos la linea de produccion
+                $production_line_id = $monitor->production_line_id;
+                //ahora por production_line_id sacamos en shift_history la ultima linea de la tabla shift_history usando production_line_id como filtro
+                $lastShiftHistory = ShiftHistory::where('production_line_id', $monitor->production_line_id)
+                    ->latest('created_at')
                     ->first();
-                   
-                    
-                    $numberSensorStop = $result->total_count_order;
-
-                    // Obtener el último registro de order_stats para la línea de producción
-                    $orderStat = OrderStat::where('production_line_id', $monitor->production_line_id)
-                    ->latest('id') // Obtener el último registro
-                    ->first();
-
-                    if ($orderStat) {
-                    $downTimeSensorStop = $orderStat->down_time; // Obtener el downtime acumulado
-                    $this->info("Downtime: {$downTimeSensorStop}, Number of sensor stops: {$numberSensorStop}.");
+                
+                if ($lastShiftHistory && (
+                    ($lastShiftHistory->type === 'stop' && $lastShiftHistory->action === 'end') ||
+                    ($lastShiftHistory->type === 'shift' && $lastShiftHistory->action === 'start')
+                )) {
+                    $totalRealProductionPerMinute = 0;
+                    $totalTheoreticalProductionPerMinute = 0;
+    
+                    // Si sensor_active es 1, obtener todos los sensores de la línea de producción con sensor_type = 0
+                    if ($monitor->sensor_active == 1) {
+                        $this->info("Obteniendo sensores con sensor_type = 0 para la línea de producción ID {$monitor->production_line_id}");
+    
+                        $result = Sensor::where('production_line_id', $monitor->production_line_id)
+                        ->where('sensor_type', '!=', 0)
+                        ->selectRaw('SUM(downtime_count) as total_downtime, SUM(count_order_0) as total_count_order')
+                        ->first();
+                       
+                        
+                        $numberSensorStop = $result->total_count_order;
+    
+                        // Obtener el último registro de order_stats para la línea de producción
+                        $orderStat = OrderStat::where('production_line_id', $monitor->production_line_id)
+                        ->latest('id') // Obtener el último registro
+                        ->first();
+    
+                        if ($orderStat) {
+                        $downTimeSensorStop = $orderStat->down_time; // Obtener el downtime acumulado
+                        $this->info("Downtime: {$downTimeSensorStop}, Number of sensor stops: {$numberSensorStop}.");
+                        } else {
+                        $this->error("No order_stats record found for production line {$monitor->production_line_id}.");
+                        $downTimeSensorStop = 0;
+                        }
+    
+    
+                        // Filtrar los sensores por production_line_id y sensor_type = 0
+                        $sensors = Sensor::where('production_line_id', $monitor->production_line_id)
+                            ->where('sensor_type', 0)
+                            ->get();
+    
+                        foreach ($sensors as $sensor) {
+                            // Procesar y acumular los datos por minuto para cada sensor
+                            [$realProductionPerMinute, $theoreticalProductionPerMinute] = $this->processSensorData($sensor);
+    
+                            // Acumular la producción real y teórica por minuto
+                            $totalRealProductionPerMinute += $realProductionPerMinute;
+                            $totalTheoreticalProductionPerMinute += $theoreticalProductionPerMinute;
+                        }
+    
+                        // Calcular la producción acumulada y enviar los mensajes MQTT
+                        $this->sendAccumulatedProductionMessages($monitor, $totalRealProductionPerMinute, $totalTheoreticalProductionPerMinute);
                     } else {
-                    $this->error("No order_stats record found for production line {$monitor->production_line_id}.");
-                    $downTimeSensorStop = 0;
+                        $this->info("Cálculos de sensores omitidos para la línea de producción ID {$monitor->production_line_id} (sensor_active es 0).");
                     }
-
-
-                    // Filtrar los sensores por production_line_id y sensor_type = 0
-                    $sensors = Sensor::where('production_line_id', $monitor->production_line_id)
-                        ->where('sensor_type', 0)
-                        ->get();
-
-                    foreach ($sensors as $sensor) {
-                        // Procesar y acumular los datos por minuto para cada sensor
-                        [$realProductionPerMinute, $theoreticalProductionPerMinute] = $this->processSensorData($sensor);
-
-                        // Acumular la producción real y teórica por minuto
-                        $totalRealProductionPerMinute += $realProductionPerMinute;
-                        $totalTheoreticalProductionPerMinute += $theoreticalProductionPerMinute;
+    
+                    // Si modbus_active es 1, obtener todos los modbuses de la línea de producción
+                    if ($monitor->modbus_active == 1) {
+                        $this->info("Obteniendo modbuses para la línea de producción ID {$monitor->production_line_id}");
+                        // Procesar modbuses (si es necesario)
+                    } else {
+                        $this->info("Cálculos de modbus omitidos para la línea de producción ID {$monitor->production_line_id} (modbus_active es 0).");
                     }
-
-                    // Calcular la producción acumulada y enviar los mensajes MQTT
-                    $this->sendAccumulatedProductionMessages($monitor, $totalRealProductionPerMinute, $totalTheoreticalProductionPerMinute);
-                } else {
-                    $this->info("Cálculos de sensores omitidos para la línea de producción ID {$monitor->production_line_id} (sensor_active es 0).");
+    
+                    //calcular inactividad por turno total
+                    $this->calcInactiveTimeShift($monitor, $downTimeSensorStop);
+                    //calcular inactividad por otder total
+                    $this->calcInactiveTimeOrder($monitor, $downTimeSensorStop, $numberSensorStop);
+                    //calcula UDS semana y turno
+                    $this->calcUdsShiftAndWeek($monitor);
                 }
 
-                // Si modbus_active es 1, obtener todos los modbuses de la línea de producción
-                if ($monitor->modbus_active == 1) {
-                    $this->info("Obteniendo modbuses para la línea de producción ID {$monitor->production_line_id}");
-                    // Procesar modbuses (si es necesario)
-                } else {
-                    $this->info("Cálculos de modbus omitidos para la línea de producción ID {$monitor->production_line_id} (modbus_active es 0).");
-                }
-
-                //calcular inactividad por turno total
-                $this->calcInactiveTimeShift($monitor, $downTimeSensorStop);
-                //calcular inactividad por otder total
-                $this->calcInactiveTimeOrder($monitor, $downTimeSensorStop, $numberSensorStop);
-                //calcula UDS semana y turno
-                $this->calcUdsShiftAndWeek($monitor);
             }
-
             // Esperar 1 segundo antes de volver a ejecutar la lógica
             $this->info("Esperando 1 segundo antes de la siguiente ejecución...");
             sleep(1); // Pausar 1 segundo
@@ -137,7 +151,7 @@ class CalculateProductionMonitorOee extends Command
         if ($sensor->barcoder_id) {
             if ($sensor->orderId) {
                 $orderId = $sensor->orderId;
-                $this->info("OrderId extraído: {$orderId} ");
+                //$this->info("OrderId extraído: {$orderId} ");
 
                 // Extraer unic_code_order, optimal_production_time, y count_order_1 del sensor
                 $unicCodeOrder = $sensor->unic_code_order;
@@ -208,30 +222,30 @@ class CalculateProductionMonitorOee extends Command
             ->where('sensor_type', 0)
             ->get();
 
-        foreach ($sensors as $sensor) {
-            // Calcular el número de cajas fabricadas por sensor y el tiempo total usado
-            $firstSensorCount = SensorCount::where('sensor_id', $sensor->id)
-                ->where('count_order_1', '>', 0)
-                ->where('unic_code_order', $sensor->unic_code_order)
-                ->orderBy('created_at', 'asc')
-                ->first();
-
-            if ($firstSensorCount) {
-                // Obtener el datetime de la primera caja fabricada
-                $firstBoxTime = Carbon::parse($firstSensorCount->created_at);
-                $now = Carbon::now();
-                
-                // Calcular el tiempo usado para este sensor
-                $timeUsedForSensor = $now->diffInSeconds($firstBoxTime);
-                $totalTimeUsed += $timeUsedForSensor;
-
-                // Sumar el número de cajas fabricadas
-                $totalRealCajas += $sensor->count_order_1;
-
-                // Sumar el tiempo óptimo de producción
-                $totalOptimalProductionTime += $sensor->optimal_production_time ?? 30; // Tiempo óptimo por defecto
+            foreach ($sensors as $sensor) {
+                // Obtener el registro de order_stats para la línea de producción y la orden del sensor
+                $orderStat = OrderStat::where('production_line_id', $sensor->production_line_id)
+                    ->where('order_id', $sensor->orderId)
+                    ->orderBy('created_at', 'asc')
+                    ->first();
+            
+                if ($orderStat) {
+                    // Obtener la fecha de inicio a partir del created_at de order_stats
+                    $firstBoxTime = Carbon::parse($orderStat->created_at);
+                    $now = Carbon::now();
+            
+                    // Calcular el tiempo usado para este sensor
+                    $timeUsedForSensor = $now->diffInSeconds($firstBoxTime);
+                    $totalTimeUsed += $timeUsedForSensor;
+            
+                    // Sumar el número de cajas fabricadas (valor que ya tiene el sensor)
+                    $totalRealCajas += $sensor->count_order_1;
+            
+                    // Sumar el tiempo óptimo de producción (si no está definido se usa 30 como valor por defecto)
+                    $totalOptimalProductionTime += $sensor->optimal_production_time ?? 30;
+                }
             }
-        }
+            
 
         
         // Obtener la suma de downtime_count para los sensores de la línea de producción
@@ -308,14 +322,14 @@ class CalculateProductionMonitorOee extends Command
         
             // Guardamos cambios
             $orderStats->oee = $valueMonitorOEE;
-            $orderStats->units_made_real = $realCajas;
+           // $orderStats->units_made_real = $realCajas;
             $orderStats->units_made_theoretical = $totalCajasTeoricas;
             $orderStats->units_per_minute_real = $totalRealProductionPerMinute;
             $orderStats->units_per_minute_theoretical = $totalTheoreticalProductionPerMinute;
             $orderStats->seconds_per_unit_real = $realSecondsPerBox;
             $orderStats->seconds_per_unit_theoretical = $theoreticalSecondsPerBox;
-            $orderStats->units_made = $realCajas;
-            $orderStats->units_pending = $units - $realCajas;
+           // $orderStats->units_made = $realCajas;
+           // $orderStats->units_pending = $units - $realCajas;
             $orderStats->units_delayed = $totalCajasTeoricas - $realCajas;
            // $orderStats->production_stops_time = floor($totalDowntimeCountSensorType0 / 60);
             $orderStats->fast_time = $totalLessThanOrEqualToOptimalTime;
@@ -537,6 +551,7 @@ class CalculateProductionMonitorOee extends Command
              }
          }
     }
+    //estoy aqui para sequir
     public function calcInactiveTimeOrder($monitor, $downTimeSensorStop, $numberSensorStop) {
         //sacar todo el tiempo de inactividad de la linea de produccion si no es null
         if ($monitor->production_line_id != null) {
@@ -718,79 +733,172 @@ class CalculateProductionMonitorOee extends Command
         ]);
         return $realMessage;
     }
-
-    private function getTotalBoxForProdLineFromOrder($time_start_shift, $createdAt, $totalTheoreticalProductionPerMinute, $productionLineId)
+    private function getTotalBoxForProdLineFromOrder($time_start_shift, $createdAt, $totalTheoreticalProductionPerMinute, $productionLineId )
     {
-        if ($time_start_shift) {
-            // Convertir la fecha de inicio de la orden a objeto Carbon
-            $orderStart = Carbon::parse($createdAt);
-            // Se realiza el cálculo hasta el momento actual
-            $orderEnd   = Carbon::now();
+        $orderStats = OrderStat::where('production_line_id', $productionLineId)
+                                ->orderBy('created_at', 'desc')
+                                ->first();
+
+        // 2. Definir el inicio de la orden (primer created_at de order_stats)
+        $startTime = Carbon::parse($orderStats->created_at);
+        $this->info("Inicio de la orden: {$startTime}");
+        //ponemos $finishTime como la fecha actual
+        // 3. Obtener el tiempo de cierre desde OrderMac (action = 1)
+        $orderId = $orderStats->first()->order_id;
+        $orderMacFinish = OrderMac::where('orderId', $orderId)
+            ->where('action', 1)
+            ->first();
+        if (!$orderMacFinish) {
+            $finishTime = Carbon::now();
+        }else{
+            $finishTime = Carbon::parse($orderMacFinish->created_at);
+        }
         
-            // Obtener los turnos activos para la línea de producción indicada (active=1 o NULL)
-            $shifts = ShiftList::where('production_line_id', $productionLineId)->get();
-        
-            $totalEffectiveMinutes = 0;
-        
-            // Iterar día a día desde el inicio de la orden hasta el momento actual
-            for ($currentDay = $orderStart->copy()->startOfDay(); $currentDay->lte($orderEnd); $currentDay->addDay()) {
-                
-                // Si el día actual es fin de semana, se salta (se supone que la producción no se cuenta en fin de semana)
-                if ($currentDay->isWeekend()) {
-                    continue;
+
+                // 4. Obtener los registros de shift_history para la línea de producción en el rango [startTime, finishTime]
+        $productionLineId = $orderStats->first()->production_line_id;
+                $shiftHistories = ShiftHistory::where('production_line_id', $productionLineId)
+                    ->whereBetween('created_at', [$startTime, $finishTime])
+                    ->orderBy('created_at', 'asc')
+                    ->get();
+        // 5. Calcular el tiempo total de pausa (stop)
+        $totalStopSeconds = 0;
+        $stopStart = null;
+        foreach ($shiftHistories as $event) {
+            if ($event->type === 'stop') {
+                if ($event->action === 'start') {
+                    // Registrar inicio de pausa, usando max(startTime, eventTime)
+                    $eventTime = Carbon::parse($event->created_at);
+                    $stopStart = $eventTime->lt($startTime) ? $startTime->copy() : $eventTime->copy();
+                } elseif ($event->action === 'end' && $stopStart) {
+                    // Cerrar pausa, usando min(finishTime, eventTime)
+                    $eventTime = Carbon::parse($event->created_at);
+                    $stopEnd = $eventTime->gt($finishTime) ? $finishTime->copy() : $eventTime->copy();
+                    $totalStopSeconds += $stopEnd->diffInSeconds($stopStart);
+                    $stopStart = null;
                 }
-        
-                // Procesar cada turno definido para la línea de producción
-                foreach ($shifts as $shift) {
-                    // Si el turno NO cruza la medianoche (por ejemplo, de 06:00 a 14:00 o de 14:00 a 22:00)
-                    if ($shift->start < $shift->end) {
-                        $shiftStart = $currentDay->copy()->setTimeFromTimeString($shift->start);
-                        $shiftEnd   = $currentDay->copy()->setTimeFromTimeString($shift->end);
-        
-                        // Calcular el solapamiento entre el turno y el período de la orden
-                        $effectiveStart = $orderStart->greaterThan($shiftStart) ? $orderStart->copy() : $shiftStart;
-                        $effectiveEnd   = $orderEnd->lessThan($shiftEnd) ? $orderEnd->copy() : $shiftEnd;
-        
-                        if ($effectiveStart < $effectiveEnd) {
-                            $totalEffectiveMinutes += $effectiveEnd->diffInMinutes($effectiveStart);
-                        }
-                    } else {
-                        // El turno cruza la medianoche (por ejemplo, de 22:00 a 06:00)
-        
-                        // --- Segmento 1: desde el turno hasta el fin del día actual ---
-                        $segment1Start = $currentDay->copy()->setTimeFromTimeString($shift->start);
-                        $segment1End   = $currentDay->copy()->endOfDay(); // Hasta 23:59:59
-        
-                        // Se procesa este segmento si el día actual es laborable (ya se comprobó con isWeekend)
-                        $effectiveStart1 = $orderStart->greaterThan($segment1Start) ? $orderStart->copy() : $segment1Start;
-                        $effectiveEnd1   = $orderEnd->lessThan($segment1End) ? $orderEnd->copy() : $segment1End;
-                        if ($effectiveStart1 < $effectiveEnd1) {
-                            $totalEffectiveMinutes += $effectiveEnd1->diffInMinutes($effectiveStart1);
-                        }
-        
-                        // --- Segmento 2: desde el inicio del día siguiente hasta la hora final del turno ---
-                        $nextDay = $currentDay->copy()->addDay();
-                        // Sólo se procesa si el siguiente día es laborable
-                        if (!$nextDay->isWeekend()) {
-                            $segment2Start = $nextDay->copy()->startOfDay(); // 00:00:00
-                            $segment2End   = $nextDay->copy()->setTimeFromTimeString($shift->end);
-        
-                            $effectiveStart2 = $orderStart->greaterThan($segment2Start) ? $orderStart->copy() : $segment2Start;
-                            $effectiveEnd2   = $orderEnd->lessThan($segment2End) ? $orderEnd->copy() : $segment2End;
-                            if ($effectiveStart2 < $effectiveEnd2) {
-                                $totalEffectiveMinutes += $effectiveEnd2->diffInMinutes($effectiveStart2);
-                            }
-                        }
+            }
+        }
+        // Si queda una pausa abierta sin "end", se usa finishTime para cerrarla.
+        if ($stopStart) {
+            $totalStopSeconds += $finishTime->diffInSeconds($stopStart);
+        }
+        $formattedStopTime = gmdate('H:i:s', $totalStopSeconds);
+        Log::info("Tiempo total de pausa (stop): {$formattedStopTime} ({$totalStopSeconds} segundos)");
+
+        // 6. Calcular la diferencia total entre start y finish
+        $diffInSeconds = $finishTime->diffInSeconds($startTime);
+        $formattedDiff = gmdate('H:i:s', $diffInSeconds);
+
+        // 7. Determinar el cálculo del tiempo de producción (timeOn)
+        // Verificar si existe al menos un evento "stop start" en shiftHistories
+        $hasStopStart = $shiftHistories->contains(function ($event) {
+            return $event->type === 'shift' && $event->action === 'start';
+        });
+
+        if ($hasStopStart) {
+            
+            //ahora buscamos si en la misma cadena hay  un type shift y action start  por created_at last  sin tener despues un type shift action end 
+            //si se encuentra tenemos que asignarle como end el $finishTime->format('Y-m-d H:i:s') y
+            //hacemos la diferencia entre el created_at del type shift y action start y $finishTime->format('Y-m-d H:i:s')
+
+                $firstTypeShiftEventStart = $shiftHistories
+                    ->where('type', 'shift')
+                    ->where('action', 'start')
+                    ->sortByDesc('created_at')
+                    ->first();
+
+                $useFinishTime = false;
+                if ($firstTypeShiftEventStart) {
+                    // Buscamos si hay algún evento "shift end" con created_at mayor al de este último "shift start"
+                    $followingShiftEnd = $shiftHistories->filter(function($event) use ($firstTypeShiftEventStart) {
+                        return $event->type === 'shift' &&
+                            $event->action === 'end' &&
+                            Carbon::parse($event->created_at)->gt(Carbon::parse($firstTypeShiftEventStart->created_at));
+                    })->first();
+                    if (!$followingShiftEnd) {
+                        // No hay un "shift end" posterior, entonces usaremos finishTime como fin del turno en curso.
+                        $useFinishTime = true;
+                    }
+                }
+
+            if ($firstTypeShiftEventStart) {
+
+                // Si no hay un "shift end" posterior, usamos finishTime como fin
+                if ($useFinishTime) {
+                    $firstShiftStartCreatedAt = $firstTypeShiftEventStart->created_at;
+                    $timeLastShift = Carbon::parse($firstShiftStartCreatedAt)->diffInSeconds(Carbon::parse($finishTime->format('Y-m-d H:i:s')));
+                    $timeLastShiftFormatted = gmdate('H:i:s', $timeLastShift);
+                }else {
+                    // Si no se encuentra el evento "start stop", se asigna un mensaje indicando que se calculará en otra función.
+                    //timeLastShift= lo ponemos a 0
+                    $timeLastShift= 0;
+                    $timeLastShiftFormatted = gmdate('H:i:s', $timeLastShift);
+                }
+            } else {
+                // Si no se encuentra el evento "start stop", se asigna un mensaje indicando que se calculará en otra función.
+                //timeLastShift= lo ponemos a 0
+                $timeLastShift= 0;
+                $timeLastShiftFormatted = gmdate('H:i:s', $timeLastShift);
+            }
+            // Si el primer stype shift y action end no tiene otro type shift y action end antes en esta cadena 
+            //se pone $startTime->format('Y-m-d H:i:s')  como start y hacemos la diferencia entre $startTime->format('Y-m-d H:i:s') 
+            //y el created_at del primero type shift y action end
+
+            $firstTypeShiftEventEnd = $shiftHistories
+                                    ->where('type', 'shift')
+                                    ->where('action', 'end')
+                                    ->sortBy('created_at')
+                                    ->first();
+            
+            if ($firstTypeShiftEventEnd) {
+                $firstShiftEndCreatedAt = $firstTypeShiftEventEnd->created_at;
+                $timeFirstShiftEndCreatedAt = Carbon::parse($firstShiftEndCreatedAt)->diffInSeconds($startTime->format('Y-m-d H:i:s'));
+                $timeFirstShiftEndCreatedAtFormatted = gmdate('H:i:s', $timeFirstShiftEndCreatedAt);
+            } else {
+                // Si no se encuentra el evento "stop start", se asigna un mensaje indicando que se calculará en otra función.
+                $timeFirstShiftEndCreatedAt = Carbon::parse($finishTime->format('Y-m-d H:i:s'))->diffInSeconds($startTime->format('Y-m-d H:i:s'));
+                $timeFirstShiftEndCreatedAtFormatted = gmdate('H:i:s', $timeFirstShiftEndCreatedAt);
+                
+            }
+
+            //ahora buscamos solo los type shift action start que tienen despues un type shift que tienen un action end en la cadena $shiftHistories
+            // y si se encuantra sumamos la diferencia entre el created_at del type shift action start y el created_at del type shift action end
+            //si hay varias despues sumamos todas las diferencias En $timeShiftCompleted y $timeShiftCompletedFormatted
+            // --- Buscar todos los pares completos de "shift start" y "shift end" ---
+            $timeShiftCompleted = 0;
+            foreach ($shiftHistories as $event) {
+                if ($event->type === 'shift' && $event->action === 'start') {
+                    // Buscar el primer "shift end" posterior a este "shift start"
+                    $correspondingShiftEnd = $shiftHistories->filter(function($e) use ($event) {
+                        return $e->type === 'shift' &&
+                            $e->action === 'end' &&
+                            $e->created_at->gt($event->created_at);
+                    })->sortBy('created_at')->first();
+                    if ($correspondingShiftEnd) {
+                        $timeShiftCompleted += $correspondingShiftEnd->created_at->diffInSeconds($event->created_at);
                     }
                 }
             }
+            //dd($timeShiftCompleted);
+
+            $timeShiftCompletedFormatted = gmdate('H:i:s', $timeShiftCompleted);
+
+            // Si no hay eventos de tipo "stop start", se calcula:
+            $timeOnSeconds = $timeFirstShiftEndCreatedAt + $timeLastShift + $timeShiftCompleted - $totalStopSeconds;
+          
+            $timeOnFormatted = gmdate('H:i:s', $timeOnSeconds);
+        } else {
+            // Si no hay eventos de tipo "stop start", se calcula:
+            $timeOnSeconds = $diffInSeconds - $totalStopSeconds ;
+            $timeOnFormatted = gmdate('H:i:s', $timeOnSeconds);
+        }
+            $this->info("Tiempo total de producción (timeOn): {$timeOnFormatted} ({$timeOnSeconds} segundos)");
+            $totalEffectiveMinutes =$timeOnSeconds / 60;
         
             // Calcular el total de cajas teóricas: producción teórica por minuto * minutos efectivos
             $totalCajasTeoricas = $totalTheoreticalProductionPerMinute * $totalEffectiveMinutes;
-        } else {
-            $totalCajasTeoricas = 0;
-        }
-        
+
         return $totalCajasTeoricas;
     }
     private function shiftTimeToSeconds() {
@@ -816,7 +924,7 @@ class CalculateProductionMonitorOee extends Command
             // Inserta en la tabla mqtt_send_server2
             MqttSendServer2::createRecord($topic, $message);
 
-            $this->info("Mensaje almacenado en mqtt_send_server1 y mqtt_send_server2 para el topic: {$topic}");
+            //$this->info("Mensaje almacenado en mqtt_send_server1 y mqtt_send_server2 para el topic: {$topic}");
         } catch (\Exception $e) {
             Log::error("Error almacenando el mensaje en las bases de datos: " . $e->getMessage());
         }

@@ -66,6 +66,10 @@ class CheckShiftList extends Command
                     $this->info("[" . Carbon::now()->toDateTimeString() . "]Buscando shifts con end igual a {$currentTime}");
                     $shiftFins = ShiftList::where('end', $currentTime)
                         ->where('updated_at', '<', $twoSecondsAgo)
+                        ->where(function ($query) {
+                            $query->where('active', '!=', 0)
+                                ->orWhereNull('active');
+                        })
                         ->get();
                     $this->info("[" . Carbon::now()->toDateTimeString() . "]Shifts encontrados para 'end': " . $shiftFins->count());
 

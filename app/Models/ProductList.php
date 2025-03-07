@@ -14,6 +14,17 @@ class ProductList extends Model
         'name', //nombre de la confeccion
         'optimal_production_time', //tiempo optimo para la fabricacion
         'box_kg', //kg por cada caja fabricados.
+        'optimalproductionTime_sensorType_0',
+        'optimalproductionTime_sensorType_1',
+        'optimalproductionTime_sensorType_2',
+        'optimalproductionTime_sensorType_3',
+        'optimalproductionTime_sensorType_4',
+        'optimalproductionTime_rfid',
+        'optimalproductionTime_weight',
+        'optimalproductionTime_weight_1',
+        'optimalproductionTime_weight_2',
+        'optimalproductionTime_weight_3',
+        'optimalproductionTime_weight_4',
     ];
 
     // Relationship with Client
