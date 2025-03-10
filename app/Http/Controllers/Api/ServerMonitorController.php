@@ -127,7 +127,20 @@ class ServerMonitorController extends Controller
                 }
             }
 
-            if ($sendAlert) {
+            if ($sendAlert && $host->emails) {
+                // Obtener los correos y separarlos por comas
+                $emailList = array_map('trim', explode(',', $host->emails));
+
+                // Preparar datos para el correo de alerta
+                $alertData = [
+                    'host' => $host->name,
+                    'cpu' => $request->cpu,
+                    'memory_used_percent' => $request->memory_used_percent,
+                    'disk' => $request->disk,
+                ];
+
+                // Enviar correo usando el Mailable ServerAlertMail
+                Mail::to($emailList)->send(new ServerAlertMail($alertData));
             }
         }
 
@@ -136,6 +149,7 @@ class ServerMonitorController extends Controller
             'data'    => $hostMonitor,
         ], 201);
     }
+
 
     /**
      * Display the specified resource.

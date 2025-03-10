@@ -36,6 +36,7 @@ class Kernel extends ConsoleKernel
         Commands\ResetWeeklyCounts::class,
         Commands\TcpClientlocal::class,
         Commands\ClearOldRecords::class,
+        Commands\CheckHostMonitor::class,
         
     ];
 
