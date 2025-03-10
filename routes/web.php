@@ -37,6 +37,7 @@ use App\Http\Controllers\OperatorPostController;
 use App\Http\Controllers\RfidPostController;
 use App\Http\Controllers\RfidColorController;
 use App\Http\Controllers\ScanPostController;
+use App\Http\Controllers\ServerMonitorController;
 
 
 
@@ -331,6 +332,16 @@ Route::delete('users/delete/ajax/{id}', [UserController::class, 'deleteAjax'])->
 
 Route::get('confections', [ConfectionController::class, 'index'])->name('confections.index');
 
+//Server monitor externo
+Route::get('/servermonitor', [ServerMonitorController::class, 'index'])->name('servermonitor.index');
+Route::get('/servermonitor/create', [ServerMonitorController::class, 'create'])->name('hosts.create');
+Route::post('/servermonitor', [ServerMonitorController::class, 'store'])->name('hosts.store');
+Route::get('/servermonitor/{host}/edit', [ServerMonitorController::class, 'edit'])->name('hosts.edit');
+Route::patch('/servermonitor/{host}', [ServerMonitorController::class, 'update'])->name('hosts.update');
+Route::delete('/servermonitor/{host}', [ServerMonitorController::class, 'destroy'])->name('hosts.destroy');
+
+Route::get('/servermonitor/latest/{host}', [ServerMonitorController::class, 'getLatest'])->name('servermonitor.latest');
+Route::get('/servermonitor/history/{host}', [ServerMonitorController::class, 'getHistory'])->name('servermonitor.history');
 
 
 

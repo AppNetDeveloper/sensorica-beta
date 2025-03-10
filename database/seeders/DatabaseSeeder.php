@@ -19,13 +19,13 @@ class DatabaseSeeder extends Seeder
     public function run()
     {
         $permissions = [
-            'manage-permission','create-permission','edit-permission','delete-permission',
-            'manage-role','create-role','edit-role','delete-role','show-role',
-            'manage-user','create-user','edit-user','delete-user','show-user',
-            'manage-module','create-module','delete-module','show-module','edit-module',
+            'manage-permission', 'create-permission', 'edit-permission', 'delete-permission',
+            'manage-role', 'create-role', 'edit-role', 'delete-role', 'show-role',
+            'manage-user', 'create-user', 'edit-user', 'delete-user', 'show-user',
+            'manage-module', 'create-module', 'delete-module', 'show-module', 'edit-module',
             'manage-setting',
             'manage-crud',
-            'manage-langauge','create-langauge','delete-langauge','show-langauge','edit-langauge', 
+            'manage-langauge', 'create-langauge', 'delete-langauge', 'show-langauge', 'edit-langauge', 
             'customer-show', 'customer-create', 'customer-edit', 'customer-delete',
             'workers-show', 'workers-create', 'workers-edit', 'workers-delete',
             'product-show', 'product-create', 'product-edit', 'product-delete',
@@ -35,7 +35,14 @@ class DatabaseSeeder extends Seeder
             'worker-post-show', 'worker-post-create', 'worker-post-edit', 'worker-post-delete',
             'rfid-post-show', 'rfid-post-create', 'rfid-post-edit', 'rfid-post-delete',
             'rfid-show', 'rfid-create', 'rfid-edit', 'rfid-delete',
+            'servermonitor show', 'servermonitor create', 'servermonitor edit', 'servermonitor delete',
+            'servermonitorbusynes show', 'servermonitorbusynes create', 'servermonitorbusynes edit', 'servermonitorbusynes delete',
+            'servermonitorbusyness-show', 'servermonitorbusyness-create', 'servermonitorbusyness-edit', 'servermonitorbusyness-delete',
+            'servermonitorbusynes create', 'servermonitorbusynes update', 'servermonitorbusynes delete',
+            'servermonitorbusynes show', 'servermonitorbusynes index', 'servermonitor create', 'servermonitor update',
+            'servermonitor delete', 'servermonitor show', 'servermonitor index',
         ];
+        
 
         $modules = [
             'user','role','module','setting','crud','langauge','permission',
