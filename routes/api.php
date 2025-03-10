@@ -52,6 +52,7 @@ use App\Http\Controllers\Api\ServerMonitorController;
 |
 */
 Route::post('/server-monitor-store', [ServerMonitorController::class, 'store']);
+Route::post('/register-server', [ServerMonitorController::class, 'index']);
 
 Route::get('/test-order-time', [FakeOrderTimeController::class, 'index']);
 

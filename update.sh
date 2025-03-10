@@ -155,6 +155,57 @@ for KEY in "${!ENV_VARS[@]}"; do
     fi
 done
 
+
+
+# Ruta del archivo donde se almacenará el token
+TOKEN_FILE="/root/api_token.txt"
+
+# Endpoint para registrar el servidor (usando el dominio con www)
+REGISTER_URL="https://www.boisolo.dev/api/register-server"
+
+# Función para generar un token aleatorio (60 caracteres hexadecimales)
+generate_token() {
+    openssl rand -hex 30
+}
+
+# Verifica si el archivo existe y contiene un token
+if [ -f "$TOKEN_FILE" ] && [ -s "$TOKEN_FILE" ]; then
+    API_TOKEN=$(cat "$TOKEN_FILE")
+    echo "Token existente: $API_TOKEN"
+else
+    # No existe token: generar uno nuevo
+    API_TOKEN=$(generate_token)
+    echo "Nuevo token generado: $API_TOKEN"
+    
+    # Preparar payload para registrar el servidor.
+    # Se obtienen el IP y el hostname del servidor.
+    HOST_IP=$(hostname -I | awk '{print $1}')
+    HOST_NAME=$(hostname)
+    
+    JSON_PAYLOAD=$(cat <<EOF
+{
+  "host": "$HOST_IP",
+  "name": "Servidor $HOST_NAME",
+  "emails": "admin@boisolo.dev",
+  "phones": "619929205",
+  "telegrams": "303129205",
+  "token": "$API_TOKEN"
+}
+EOF
+)
+    echo "Payload generado:"
+    echo "$JSON_PAYLOAD"
+    
+    echo "Registrando servidor en la API..."
+    # Se usa --insecure para ignorar la verificación SSL (ideal para pruebas; en producción usa certificados válidos)
+    curl -v -X POST -H "Content-Type: application/json" -d "$JSON_PAYLOAD" "$REGISTER_URL" --insecure
+
+    # Guardar el token en el archivo
+    echo "$API_TOKEN" > "$TOKEN_FILE"
+    echo "Token guardado en $TOKEN_FILE"
+fi
+
+
 # Reiniciar Supervisor con nueva configuración
 echo "Reconfigurando Supervisor..."
 sudo rm -rf /etc/supervisor/conf.d/*

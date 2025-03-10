@@ -14,11 +14,67 @@ use Spatie\Permission\Models\Role;
 class ServerMonitorController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Registra un nuevo servidor en host_lists.
+     *
+     * @OA\Post(
+     *     path="/api/register-server",
+     *     summary="Registra un nuevo servidor",
+     *     tags={"Server Registration"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"host","name"},
+     *             @OA\Property(property="host", type="string", example="192.168.1.100"),
+     *             @OA\Property(property="name", type="string", example="Servidor Xmart"),
+     *             @OA\Property(property="emails", type="string", example="admin@example.com"),
+     *             @OA\Property(property="phones", type="string", example="1234567890"),
+     *             @OA\Property(property="telegrams", type="string", example="@xmart_server"),
+     *             @OA\Property(property="token", type="string", example="opcional-token-personalizado")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Servidor registrado exitosamente",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Server registered successfully."),
+     *             @OA\Property(property="data", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(response=422, description="Error de validación")
+     * )
      */
-    public function index()
+    public function index(Request $request)
     {
-        //
+        // Validar los datos recibidos
+        $validated = $request->validate([
+            'host' => 'required|string|unique:host_lists,host',
+            'name' => 'required|string',
+            'emails' => 'nullable|string',
+            'phones' => 'nullable|string',
+            'telegrams' => 'nullable|string',
+            // Opcionalmente, se puede permitir que se envíe un token personalizado.
+            'token' => 'nullable|string|unique:host_lists,token',
+        ]);
+
+        // Si no se envía token, generarlo de forma aleatoria
+        $token = $validated['token'] ?? Str::random(60);
+
+        // Crear el registro en host_lists
+        $host = HostList::create([
+            'host'     => $validated['host'],
+            'name'     => $validated['name'],
+            'token'    => $token,
+            'emails'   => $validated['emails'] ?? null,
+            'phones'   => $validated['phones'] ?? null,
+            'telegrams'=> $validated['telegrams'] ?? null,
+            // Si deseas asignar un usuario, podrías agregar 'user_id' aquí
+            'user_id'  => $request->input('user_id'),
+        ]);
+
+        return response()->json([
+            'message' => 'Server registered successfully.',
+            'data'    => $host,
+        ], 201);
     }
 
     /**
