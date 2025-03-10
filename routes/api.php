@@ -34,7 +34,7 @@ use App\Http\Controllers\Api\FakeOrderTimeController;
 use App\Http\Controllers\Api\ReferenceController;
 use App\Http\Controllers\Api\ProductionOrderTopflowApiController;
 use App\Http\Controllers\Api\SupplierOrderController;
-
+use App\Http\Controllers\Api\ServerMonitorController;
 
 
 
@@ -51,7 +51,7 @@ use App\Http\Controllers\Api\SupplierOrderController;
 | is assigned the "api" middleware group. Enjoy building your API!
 |
 */
-
+Route::post('/server-monitor-store', [ServerMonitorController::class, 'store']);
 
 Route::get('/test-order-time', [FakeOrderTimeController::class, 'index']);
 
