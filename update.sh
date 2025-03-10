@@ -158,7 +158,7 @@ done
 
 
 # Ruta del archivo donde se almacenará el token
-TOKEN_FILE="/root/api_token.txt"
+TOKEN_FILE="/var/www/html/storage/api_token.txt"
 
 # Endpoint para registrar el servidor (usando el dominio con www)
 REGISTER_URL="https://www.boisolo.dev/api/register-server"

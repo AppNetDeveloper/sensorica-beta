@@ -9,7 +9,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # Configuración de la API (datos que funcionan con el comando curl)
 API_URL = "https://www.boisolo.dev/api/server-monitor-store"  # URL correcta
-TOKEN_FILE = "/root/api_token.txt"  # Ruta del archivo donde se guarda el token
+TOKEN_FILE = "/var/www/html/storage/api_token.txt"  # Ruta del archivo donde se guarda el token
 
 def get_api_token():
     """Lee y devuelve el token almacenado en TOKEN_FILE."""
