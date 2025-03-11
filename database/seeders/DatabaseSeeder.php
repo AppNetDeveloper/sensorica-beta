@@ -41,6 +41,7 @@ class DatabaseSeeder extends Seeder
             'servermonitorbusynes create', 'servermonitorbusynes update', 'servermonitorbusynes delete',
             'servermonitorbusynes show', 'servermonitorbusynes index', 'servermonitor create', 'servermonitor update',
             'servermonitor delete', 'servermonitor show', 'servermonitor index',
+            'whatsapp show', 'whatsapp create', 'whatsapp update', 'whatsapp delete',
         ];
         
 

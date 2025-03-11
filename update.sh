@@ -205,7 +205,7 @@ EOF
     echo "Token guardado en $TOKEN_FILE"
 fi
 
-  php artisan db:seed
+php artisan db:seed --force || { echo "Error: Falló la ejecución de las seeds."; exit 1; }
 
 # Reiniciar Supervisor con nueva configuración
 echo "Reconfigurando Supervisor..."
