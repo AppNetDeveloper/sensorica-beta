@@ -215,4 +215,6 @@ sudo supervisorctl reread
 sudo supervisorctl update
 sudo supervisorctl restart all
 
+chmod +x /var/www/html/update.sh
+
 echo "Proceso completado con éxito."
