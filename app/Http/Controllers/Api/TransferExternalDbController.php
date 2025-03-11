@@ -469,6 +469,11 @@ class TransferExternalDbController extends Controller
                     $realTimeUnit=0;
                     $minTime=0;
                 }
+                if($sensor->sensor_type > 0) {
+                    //si es sensor de tipo 1 o 2 $unitValue es igual a 0
+                    $unitValue=0;
+                }
+
                 
 
                 //dd($realTimeUnit);
@@ -585,6 +590,11 @@ class TransferExternalDbController extends Controller
                 if($totalCountOrder < 1) {
                     $realTimeUnit=0;
                     $minTime=0;
+                }
+
+                //si el model_type es 1 2 3 4  el $totalWeight es 0
+                if ($modbus->model_type > 0) {
+                    $totalWeight = 0;
                 }
 
                 $modbusData[] = [
