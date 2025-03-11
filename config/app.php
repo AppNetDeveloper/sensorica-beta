@@ -243,6 +243,8 @@ return [
         'Flash'     => Laracasts\Flash\Flash::class,
 
         'Toastr'  => Brian2694\Toastr\Facades\Toastr::class,
+        'UtilityFacades' => App\Facades\UtilityFacades::class,
+
     ],
 
 ];

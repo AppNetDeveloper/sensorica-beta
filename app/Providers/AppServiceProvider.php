@@ -18,6 +18,7 @@ class AppServiceProvider extends ServiceProvider
         // Registrar MqttService como un singleton
         $this->app->singleton(MqttService::class, function ($app) {
             return new MqttService();
+            return new \App\Services\UtilityService;
         });
     }
 

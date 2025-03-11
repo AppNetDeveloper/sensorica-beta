@@ -4,7 +4,7 @@ namespace App\Facades;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 
-class Utility{
+class Utility {
 
     public function settings()
     {
@@ -41,10 +41,13 @@ class Utility{
         {
             foreach($values as $envKey => $envValue)
             {
-                $keyPosition       = strpos($str, "{$envKey}=");
+                $envValue = trim($envValue);
+                // Buscamos la línea que comience con la clave y capturamos lo que haya hasta el final de la línea
+                $pattern = '/^' . preg_quote($envKey, '/') . '=(.*)$/m';
+                $keyPosition = strpos($str, "{$envKey}=");
                 $endOfLinePosition = strpos($str, "\n", $keyPosition);
-                $oldLine           = substr($str, $keyPosition, $endOfLinePosition - $keyPosition);
-                if(!$keyPosition || !$endOfLinePosition || !$oldLine)
+                $oldLine = ($keyPosition !== false && $endOfLinePosition !== false) ? substr($str, $keyPosition, $endOfLinePosition - $keyPosition) : false;
+                if($keyPosition === false || $endOfLinePosition === false || !$oldLine)
                 {
                     $str .= "{$envKey}='{$envValue}'\n";
                 }
@@ -54,8 +57,8 @@ class Utility{
                 }
             }
         }
-        $str = substr($str, 0, -1);
-        $str .= "\n";
+        // Aseguramos que el archivo termine con una nueva línea
+        $str = rtrim($str) . "\n";
         if(!file_put_contents($envFile, $str))
         {
             return false;
@@ -75,18 +78,14 @@ class Utility{
 
     public function languages()
     {
-        $dir     = base_path() . '/resources/lang/';
-        $glob    = glob($dir . "*", GLOB_ONLYDIR);
-        $arrLang = array_map(
-            function ($value) use ($dir){
-                return str_replace($dir, '', $value);
-            }, $glob
-        );
-        $arrLang = array_map(
-            function ($value) use ($dir){
-                return preg_replace('/[0-9]+/', '', $value);
-            }, $arrLang
-        );
+        $dir  = base_path() . '/resources/lang/';
+        $glob = glob($dir . "*", GLOB_ONLYDIR);
+        $arrLang = array_map(function ($value) use ($dir) {
+            return str_replace($dir, '', $value);
+        }, $glob);
+        $arrLang = array_map(function ($value) {
+            return preg_replace('/[0-9]+/', '', $value);
+        }, $arrLang);
         $arrLang = array_filter($arrLang);
         return $arrLang;
     }
@@ -114,10 +113,10 @@ class Utility{
         }
         return rmdir($dir);
     }
+
     public function dateFormat($date)
     {
         $settings = $this->settings();
         return date($settings['site_date_format'], strtotime($date));
     }
 }
-
