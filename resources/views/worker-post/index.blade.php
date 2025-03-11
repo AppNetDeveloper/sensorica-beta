@@ -376,13 +376,22 @@
                                     </select>
                                     <select id="rfidId" class="swal2-input custom-select-style">
                                         <option value="">Seleccione Tarjeta RFID</option>
-                                        ${rfids.map(rfid => `<option value="${rfid.id}" data-color="${rfid.color ? rfid.color.toLowerCase() : ''}">${rfid.name}</option>`).join('')}
+                                        ${[...new Map(
+                                            rfids.map(rfid => [String(rfid.name), rfid])
+                                        ).values()]
+                                            .map(rfid => `
+                                                <option value="${rfid.id}" data-color="${rfid.color ? rfid.color.toLowerCase() : ''}">
+                                                    ${rfid.name}
+                                                </option>
+                                            `)
+                                            .join('')}
                                     </select>
-                                    <select id="sensorId" class="swal2-input custom-select-style" >
+
+                                    <select id="sensorId" class="swal2-input custom-select-style">
                                         <option value="">Seleccione Sensor Conteo</option>
                                         ${sensors.map(sensor => `<option value="${sensor.id}" data-color="${sensor.color ? sensor.color.toLowerCase() : ''}">${sensor.name}</option>`).join('')}
                                     </select>
-                                    <select id="modbusId" class="swal2-input custom-select-style" >
+                                    <select id="modbusId" class="swal2-input custom-select-style">
                                         <option value="">Seleccione una Báscula</option>
                                         ${modbuses.map(modbus => `<option value="${modbus.id}" data-color="${modbus.color ? modbus.color.toLowerCase() : ''}">${modbus.name}</option>`).join('')}
                                     </select>
@@ -404,7 +413,6 @@
                                     startQrScanner();
                                     return false; // Evita el cierre del modal
                                 },
-                                // Dentro del didOpen del Swal.fire en "Añadir Relación"
                                 didOpen: () => {
                                     // Inicializar Select2 para cada select
                                     $('#operatorId').select2({
@@ -476,34 +484,78 @@
                                         }
                                     });
                                 },
-
-
                                 preConfirm: () => {
-                                    const data = {
-                                        operator_id: $('#operatorId').val(),
-                                        rfid_reading_id: $('#rfidId').val(),
-                                        sensor_id: $('#sensorId').val(),
-                                        modbus_id: $('#modbusId').val()
-                                    };
-                                    if (!data.operator_id ) {
+                                    // Extraer valores y textos seleccionados
+                                    const operatorId = $('#operatorId').val();
+                                    const operatorName = $('#operatorId option:selected').text();
+                                    const rfidVal = $('#rfidId').val();
+                                    const sensorVal = $('#sensorId').val();
+                                    const modbusVal = $('#modbusId').val();
+                                    let selectedLocation = '';
+
+                                    if (rfidVal) {
+                                        selectedLocation = $('#rfidId option:selected').text();
+                                    } else if (sensorVal) {
+                                        selectedLocation = $('#sensorId option:selected').text();
+                                    } else if (modbusVal) {
+                                        selectedLocation = $('#modbusId option:selected').text();
+                                    }
+
+                                    if (!operatorId) {
                                         Swal.showValidationMessage('Debe seleccionar un operador y al menos una de las ubicaciones.');
                                         return false;
                                     }
-                                    return $.post(storeUrl, data)
-                                        .done(response => {
-                                            if (response.success) {
-                                                Swal.fire('Guardado', response.message, 'success');
-                                                table.ajax.reload();
-                                            } else {
-                                                Swal.fire('Error', response.message, 'error');
-                                            }
-                                        })
-                                        .fail(xhr => {
-                                            Swal.showValidationMessage(xhr.responseJSON?.message || 'Error');
-                                        });
+
+                                    // Definir mensaje de confirmación según si se ha seleccionado una ubicación
+                                    const confirmMessage = selectedLocation 
+                                        ? `Has seleccionado el Operario: <strong>${operatorName}</strong> y el puesto: <strong>${selectedLocation}</strong>. </br>¿Estás de acuerdo?`
+                                        : `Desasignas el puesto del  Operario: <strong>${operatorName}</strong>  </br>¿Estás de acuerdo?`;
+
+                                    // Mostrar la confirmación previa
+                                    return Swal.fire({
+                                        title: 'Confirmar',
+                                        html: confirmMessage,
+                                        icon: 'question',
+                                        showCancelButton: true,
+                                        confirmButtonText: 'Continuar',
+                                        cancelButtonText: 'Cancelar',
+                                        customClass: {
+                                            confirmButton: 'btn btn-success',
+                                            cancelButton: 'btn btn-danger'
+                                        },
+                                        buttonsStyling: false
+                                    }).then(confirmation => {
+                                        if (!confirmation.isConfirmed) {
+                                            // Cancelar la operación y mantener el modal abierto
+                                            throw new Error('Operación cancelada');
+                                        }
+                                        // Preparar los datos para enviar a la API
+                                        const data = {
+                                            operator_id: operatorId,
+                                            rfid_reading_id: rfidVal,
+                                            sensor_id: sensorVal,
+                                            modbus_id: modbusVal
+                                        };
+
+                                        // Retornar la promesa de $.post para continuar el flujo
+                                        return $.post(storeUrl, data)
+                                            .done(response => {
+                                                if (response.success) {
+                                                    Swal.fire('Guardado', response.message, 'success');
+                                                    table.ajax.reload();
+                                                } else {
+                                                    Swal.fire('Error', response.message, 'error');
+                                                }
+                                            })
+                                            .fail(xhr => {
+                                                Swal.showValidationMessage(xhr.responseJSON?.message || 'Error');
+                                            });
+                                    });
                                 }
                             });
                         }
+
+
                     },
                     {
                         extend: 'excelHtml5',

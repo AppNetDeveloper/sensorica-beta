@@ -191,6 +191,11 @@
                 <input type="text" name="last_status_detect" id="last_status_detect" class="form-control" value="{{ old('last_status_detect', $rfidDevice->last_status_detect) }}">
             </div>
 
+            <div class="form-group mt-3">
+                <label for="reset">{{ __('RFID RESSET') }}</label>
+                <input type="text" name="reset" id="reset" class="form-control" value="{{ old('reset', $rfidDevice->reset) }}">
+            </div>
+
             <input type="hidden" name="production_line_id" value="{{ $production_line_id }}">
 
             <button type="submit" class="btn btn-success mt-4">

@@ -205,6 +205,7 @@ EOF
     echo "Token guardado en $TOKEN_FILE"
 fi
 
+  php artisan db:seed
 
 # Reiniciar Supervisor con nueva configuración
 echo "Reconfigurando Supervisor..."
