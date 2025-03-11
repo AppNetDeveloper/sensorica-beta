@@ -468,7 +468,7 @@ class OperatorController extends Controller
 
         try {
             // Realizar la llamada a la API de WhatsApp
-            $response = Http::post($apiUrl, $requestData);
+            $response = Http::withoutVerifying()->post($apiUrl, $requestData);
 
             Log::info('WhatsApp API Response Status: ' . $response->status());
             Log::info('WhatsApp API Response Body: ' . $response->body());

@@ -13,14 +13,20 @@ class WhatsAppController extends Controller
     public function sendNotification()
     {
         $apiUrl = rtrim(env('LOCAL_SERVER'), '/') . '/api/whatsapp-qr/base64';
-
+    
         try {
-            $response = Http::get($apiUrl);
+            $response = Http::withoutVerifying()->get($apiUrl);
             $data = $response->json();
-
+    
+            // Para depurar, descomenta la siguiente línea y revisa la respuesta:
+            // dd($data);
+    
+            $isLinked = (isset($data['success']) && $data['success'] === true) ? false : true;
+            $qrCode = (isset($data['qr_image']) && $data['success'] === true) ? $data['qr_image'] : null;
+    
             return view('whatsapp.notification', [
-                'isLinked' => $data['success'] ? false : true, // QR disponible si no está vinculado
-                'qrCode' => $data['success'] ? $data['qr_image'] : null, // Base64 QR si disponible
+                'isLinked' => $isLinked,
+                'qrCode' => $qrCode,
                 'phoneNumber' => env('WHATSAPP_PHONE_NOT'),
             ]);
         } catch (\Exception $e) {
@@ -31,6 +37,7 @@ class WhatsAppController extends Controller
             ]);
         }
     }
+    
 
     /**
      * Desconectar WhatsApp.
@@ -38,12 +45,13 @@ class WhatsAppController extends Controller
     public function disconnect()
     {
         try {
-            Http::post(rtrim(env('LOCAL_SERVER'), '/') . '/api/whatsapp-disconnect');
+            Http::withoutVerifying()->post(rtrim(env('LOCAL_SERVER'), '/') . '/api/whatsapp-disconnect');
             return redirect()->route('whatsapp.notifications')->with('status', 'WhatsApp desconectado exitosamente.');
         } catch (\Exception $e) {
             return redirect()->route('whatsapp.notifications')->with('error', 'Error al desconectar WhatsApp.');
         }
     }
+    
 
     /**
      * Actualizar el número de notificación en .env.
@@ -84,7 +92,7 @@ class WhatsAppController extends Controller
         $apiUrl = rtrim(env('LOCAL_SERVER'), '/') . "/api/send-message";
 
         try {
-            $response = Http::get($apiUrl, [
+            $response = Http::withoutVerifying()->get($apiUrl, [
                 'jid' => $phoneNumber . '@s.whatsapp.net',
                 'message' => $message,
             ]);
@@ -98,4 +106,32 @@ class WhatsAppController extends Controller
             return redirect()->route('whatsapp.notifications')->with('error', 'Error al conectar con la API. Intenta nuevamente.');
         }
     }
+    /**
+     * Devuelve el estado de conexión de WhatsApp en formato JSON.
+     */
+    public function getStatus()
+    {
+        $apiUrl = rtrim(env('LOCAL_SERVER'), '/') . '/api/whatsapp-qr/base64';
+
+        try {
+            $response = Http::withoutVerifying()->get($apiUrl);
+            $data = $response->json();
+
+            $isLinked = (isset($data['success']) && $data['success'] === true) ? false : true;
+            $qrCode = (isset($data['qr_image']) && $data['success'] === true) ? $data['qr_image'] : null;
+
+            return response()->json([
+                'isLinked' => $isLinked,
+                'qrCode' => $qrCode,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'isLinked' => false,
+                'qrCode' => null,
+            ], 500);
+        }
+    }
+
+
 }
+ 

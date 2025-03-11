@@ -709,6 +709,10 @@ class ModbusProcessController extends Controller
             curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $useMethod);
             curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
             curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($dataForTcp));
+
+            // Ignorar la verificación SSL
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
     
             Log::info("Enviando datos con cURL a {$apiQueue->url_back}. Datos: " . json_encode($dataForTcp));
             

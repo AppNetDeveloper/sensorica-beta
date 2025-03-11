@@ -302,6 +302,7 @@ Route::get('whatsapp/notifications', [App\Http\Controllers\WhatsAppController::c
 Route::post('whatsapp/disconnect', [App\Http\Controllers\WhatsAppController::class, 'disconnect'])->name('whatsapp.disconnect');
 Route::post('whatsapp/update-phone', [App\Http\Controllers\WhatsAppController::class, 'updatePhoneNumber'])->name('whatsapp.updatePhone');
 Route::post('whatsapp/send-test-message', [App\Http\Controllers\WhatsAppController::class, 'sendTestMessage'])->name('whatsapp.sendTestMessage');
+Route::get('/whatsapp-status', [WhatsAppController::class, 'getStatus'])->name('whatsapp.status');
 
 
 

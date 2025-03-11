@@ -167,20 +167,6 @@
                     </div>
                     {{-- Fin card Monitor OEE --}}
 
-                    {{-- Card WhatsApp --}}
-                    <div class="col">
-                        <div class="card h-100">
-                            <img src="/necesarios/whatsapp.webp" class="card-img-top img-card" alt="WhatsApp">
-                            <div class="card-body">
-                                <h5 class="card-title">WhatsApp</h5>
-                                <p class="card-text">Enviar notificaciones a través de WhatsApp.</p>
-                                <a href="{{ route('whatsapp.notifications') }}" class="btn btn-success">
-                                    Enviar Notificación
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                    {{-- Fin card WhatsApp --}}
                 </div>{{-- row --}}
             </div>{{-- card-body --}}
         </div>{{-- card --}}

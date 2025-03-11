@@ -1,3 +1,5 @@
+// Definir crypto globalmente para que esté disponible en todo el script
+global.crypto = require('crypto');
 const { Boom } = require('@hapi/boom');
 const NodeCache = require('node-cache');
 const makeWASocket = require('@whiskeysockets/baileys').default;

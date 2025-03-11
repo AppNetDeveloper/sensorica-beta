@@ -82,6 +82,15 @@ $settings = Utility::settings();
                     </li>
                 @endif
 
+                @if (auth()->user()->hasRole('admin') || auth()->user()->can('whatsapp show'))
+                    <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
+                        <a class="dash-link" href="{{ route('whatsapp.notifications') }}">
+                            <span class="dash-micon"><i class="bi bi-whatsapp"></i></span>
+                            <span class="dash-mtext custom-weight">{{ __('Whatsapp Server') }}</span>
+                        </a>
+                    </li>
+                @endif
+
                 @if (auth()->user()->hasRole('admin') || auth()->user()->can('db-upload-show'))
                     <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
                         <a class="dash-link" href="{{ route('server.uploadstats') }}">
