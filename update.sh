@@ -38,8 +38,8 @@ echo "Cambiando al directorio /var/www/html..."
 cd /var/www/html || { echo "Error: No se pudo cambiar al directorio /var/www/html"; exit 1; }
 
 # Detener todos los procesos de Supervisor
-echo "Deteniendo todos los procesos de Supervisor..."
-sudo supervisorctl stop all
+#echo "Deteniendo todos los procesos de Supervisor..."
+#sudo supervisorctl stop all
 
 # Guardar cambios locales en Git antes de hacer un rebase
 echo "Guardando cambios locales en Git..."

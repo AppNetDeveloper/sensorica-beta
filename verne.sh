@@ -45,6 +45,21 @@ listener.ws.default = 0.0.0.0:8083
 allow_anonymous = on
 EOL
 
+sudo bash -c 'cat > /etc/vernemq/vm.args <<EOF
+-name vernemq@$(hostname)
+-setcookie mysecretcookie
+EOF'
+
+# Asignar permisos adecuados al archivo
+sudo chmod 644 /etc/vernemq/vm.args
+
+# Recargar la configuración de systemd y reiniciar el servicio de VerneMQ
+sudo systemctl daemon-reload
+sudo systemctl restart vernemq.service
+
+# Mostrar el estado del servicio para confirmar que se inició correctamente
+sudo systemctl status vernemq.service
+
 echo "Reiniciando el servicio VerneMQ."
 systemctl restart vernemq
 systemctl enable vernemq
