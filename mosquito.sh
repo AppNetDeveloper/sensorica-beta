@@ -90,8 +90,6 @@ sudo systemctl daemon-reload
 sudo systemctl restart mosquitto
 sudo systemctl enable mosquitto
 
-echo "Estado del servicio Mosquitto:"
-sudo systemctl status mosquitto
 
 echo "============================================="
 echo "Mosquitto instalado y configurado correctamente."
