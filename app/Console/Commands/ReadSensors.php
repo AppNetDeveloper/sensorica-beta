@@ -51,7 +51,7 @@ class ReadSensors extends Command
                     // 🔹 Verificar señales del sistema
                     pcntl_signal_dispatch();
     
-                    usleep(100000); // Espera 0.1s para reducir carga en CPU
+                    //usleep(100000); // Espera 0.1s para reducir carga en CPU
                 }
     
                 // 🔹 Desconectar MQTT si el proceso se detiene

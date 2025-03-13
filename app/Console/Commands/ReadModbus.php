@@ -49,7 +49,7 @@ class ReadModbus extends Command
         pcntl_signal_dispatch();
 
         // Reducir la carga del sistema esperando un corto período
-        usleep(100000); // Esperar 0.1 segundos
+        //usleep(100000); // Esperar 0.1 segundos
     }
 
     // Desconectar el cliente MQTT de forma segura

@@ -45,7 +45,7 @@ class ReadRfidReadings extends Command
             while ($this->shouldContinue) {
                 $mqtt->loop(true);
                 pcntl_signal_dispatch();
-                usleep(100000); // Esperar 0.1 segundos para reducir la carga del sistema
+                //usleep(100000); // Esperar 0.1 segundos para reducir la carga del sistema
             }
 
             $mqtt->disconnect();
