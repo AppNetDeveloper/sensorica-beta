@@ -24,7 +24,7 @@ class CalculateProductionMonitorOee extends Command
      *
      * @var string
      */
-    protected $signature = 'production:calculate-monitor-oee';
+    protected $signature = 'production:calculate-monitor-oee-vieja';
     protected $orderTimeService;
 
     public function __construct(OrderTimeService $orderTimeService)

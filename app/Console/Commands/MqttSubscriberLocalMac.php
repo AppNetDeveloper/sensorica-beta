@@ -18,6 +18,7 @@ use Exception;
 use App\Models\ModbusHistory;
 use App\Models\SensorHistory;
 use App\Models\Operator;
+use Illuminate\Support\Facades\DB;
 
 class MqttSubscriberLocalMac extends Command
 {
@@ -554,116 +555,144 @@ class MqttSubscriberLocalMac extends Command
         $this->info("Iniciar reset de sensores con optimal_production_time={$optimalProductionTime}, orderId={$orderId}, quantity={$quantity}, uds={$uds} para barcode ID {$barcodeId}");
     
         try {
+            // Iniciar transacción
+            DB::beginTransaction();
+    
             // Obtener sensores relacionados con el barcodeId
             $sensors = Sensor::where('barcoder_id', $barcodeId)->get();
     
             if ($sensors->isEmpty()) {
                 $this->error("No se encontraron sensores para barcode ID: {$barcodeId}");
+                DB::rollBack();
                 return;
+            } else {
+                $this->info("Sensores encontrados para barcode ID: {$barcodeId}");
             }
     
             // Guardar datos en la tabla `sensor_history`
             foreach ($sensors as $sensor) {
                 SensorHistory::create([
-                    'sensor_id' => $sensor->id,
-                    'count_shift_1' => $sensor->count_shift_1,
-                    'count_shift_0' => $sensor->count_shift_0,
-                    'count_order_0' => $sensor->count_order_0,
-                    'count_order_1' => $sensor->count_order_1,
-                    'downtime_count' => $sensor->downtime_count,
-                    'unic_code_order' => $sensor->unic_code_order,
-                    'orderId' => $sensor->orderId,
+                    'sensor_id'        => $sensor->id,
+                    'count_shift_1'    => $sensor->count_shift_1,
+                    'count_shift_0'    => $sensor->count_shift_0,
+                    'count_order_0'    => $sensor->count_order_0,
+                    'count_order_1'    => $sensor->count_order_1,
+                    'downtime_count'   => $sensor->downtime_count,
+                    'unic_code_order'  => $sensor->unic_code_order,
+                    'orderId'          => $sensor->orderId,
                 ]);
             }
     
             // Actualizar sensores
             $updated = Sensor::where('barcoder_id', $barcodeId)->update([
-                'count_order_0' => 0,
-                'count_order_1' => 0,
-                'downtime_count' => 0,
+                'count_order_0'         => 0,
+                'count_order_1'         => 0,
+                'downtime_count'        => 0,
                 'optimal_production_time' => $optimalProductionTime,
-                'orderId' => $orderId,
-                'quantity' => $quantity,
-                'uds' => $uds,
-                'productName' => $referId,
+                'orderId'               => $orderId,
+                'quantity'              => $quantity,
+                'uds'                   => $uds,
+                'productName'           => $referId,
             ]);
     
+            // Confirmar transacción
+            DB::commit();
             $this->info("Reset realizado para {$updated} sensores con optimal_production_time={$optimalProductionTime}, orderId={$orderId}, quantity={$quantity}, uds={$uds} para barcode ID {$barcodeId}");
         } catch (Exception $e) {
+            // Revertir transacción en caso de error
+            DB::rollBack();
             $this->error("Error actualizando sensores: " . $e->getMessage());
         }
     }
+    
     
     private function resetModbuses($barcodeId, $optimalProductionTime, $orderId, $quantity, $uds, $referId)
     {
         $this->info("Iniciar reset de modbuses con optimal_production_time={$optimalProductionTime}, orderId={$orderId}, quantity={$quantity}, uds={$uds} para barcode ID {$barcodeId}");
     
         try {
+            // Iniciar transacción
+            DB::beginTransaction();
+    
             // Obtener modbuses relacionados con el barcodeId
             $modbuses = Modbus::where('barcoder_id', $barcodeId)->get();
     
             if ($modbuses->isEmpty()) {
                 $this->error("No se encontraron modbuses para barcode ID: {$barcodeId}");
+                DB::rollBack();
                 return;
             }
     
             // Guardar datos en la tabla `modbus_history`
             foreach ($modbuses as $modbus) {
                 ModbusHistory::create([
-                    'modbus_id' => $modbus->id,
-                    'orderId' => $modbus->orderId,
-                    'rec_box_shift' => $modbus->rec_box_shift,
-                    'rec_box' => $modbus->rec_box,
-                    'downtime_count' => $modbus->downtime_count,
-                    'unic_code_order' => $modbus->unic_code_order,
-                    'total_kg_order' => $modbus->total_kg_order,
-                    'total_kg_shift' => $modbus->total_kg_shift,
+                    'modbus_id'        => $modbus->id,
+                    'orderId'          => $modbus->orderId,
+                    'rec_box_shift'    => $modbus->rec_box_shift,
+                    'rec_box'          => $modbus->rec_box,
+                    'downtime_count'   => $modbus->downtime_count,
+                    'unic_code_order'  => $modbus->unic_code_order,
+                    'total_kg_order'   => $modbus->total_kg_order,
+                    'total_kg_shift'   => $modbus->total_kg_shift,
                 ]);
             }
     
             // Actualizar modbuses
             $updatedCount = Modbus::where('barcoder_id', $barcodeId)->update([
-                'rec_box' => 0,
-                'total_kg_order' => 0,
-                'downtime_count' => 0,
+                'rec_box'               => 0,
+                'total_kg_order'        => 0,
+                'downtime_count'        => 0,
                 'optimal_production_time' => $optimalProductionTime,
-                'orderId' => $orderId,
-                'quantity' => $quantity,
-                'uds' => $uds,
-                'productName' => $referId,
+                'orderId'               => $orderId,
+                'quantity'              => $quantity,
+                'uds'                   => $uds,
+                'productName'           => $referId,
             ]);
     
+            // Confirmar transacción
+            DB::commit();
             $this->info("Reset realizado para {$updatedCount} modbuses con optimal_production_time={$optimalProductionTime}, orderId={$orderId}, quantity={$quantity}, uds={$uds} para barcode ID {$barcodeId}");
         } catch (Exception $e) {
+            // Revertir transacción en caso de error
+            DB::rollBack();
             $this->error("Error actualizando modbuses: " . $e->getMessage());
         }
     }
     public function resetOperators()
     {
         try {
+            // Iniciar transacción
+            DB::beginTransaction();
+
             // Reseteamos todos los operadores a 0
             Operator::query()->update([
                 'count_order' => 0,
             ]);
+
+            // Confirmar transacción
+            DB::commit();
 
             // Log para confirmar la operación
             $this->info("Todos los contadores de operadores han sido reseteados a 0.");
 
             return response()->json([
                 'message' => 'Todos los contadores de operadores han sido reseteados a 0.',
-                'status' => 'success'
+                'status'  => 'success'
             ], 200);
         } catch (\Exception $e) {
-            // Log del error en caso de fallo
+            // Revertir transacción en caso de error
+            DB::rollBack();
+
             $this->error("Error al resetear los contadores de operadores: " . $e->getMessage());
 
             return response()->json([
                 'message' => 'Error al resetear los contadores de operadores.',
-                'status' => 'error',
-                'error' => $e->getMessage()
+                'status'  => 'error',
+                'error'   => $e->getMessage()
             ], 500);
         }
     }
+
 
     private function sensorHistorics($barcodeId)
     {

@@ -487,7 +487,7 @@
         document.getElementById("units").textContent = data.units;
 
         const slowTimeInSeconds = data.units_delayed * data.seconds_per_unit_theoretical;
-        document.getElementById("slow-time").textContent = formatTime(slowTimeInSeconds);
+        document.getElementById("slow-time").textContent = formatTime(slowTimeInSeconds); 
 
         const totalStopsTimeInSeconds = data.production_stops_time + data.down_time + slowTimeInSeconds;
         document.getElementById("total-downtime").textContent = formatTime(totalStopsTimeInSeconds);
@@ -503,10 +503,10 @@
         const timeOneBox = timeDifferenceInSeconds / data.weights_0_orderNumber;
         document.getElementById("time-box").textContent = formatTime(timeOneBox);
 
-        const theoreticalEndTimeInSeconds = data.theoretical_end_time * 60;
+        const theoreticalEndTimeInSeconds = data.theoretical_end_time;
         document.getElementById("theoretical-end-time").textContent = formatTime(theoreticalEndTimeInSeconds);
 
-        const realEndTimeInSeconds = data.real_end_time * 60;
+        const realEndTimeInSeconds = data.real_end_time;
         document.getElementById("real-end-time").textContent = formatTime(realEndTimeInSeconds);
 
         document.getElementById("oee-percentage").textContent = Math.round(data.oee);

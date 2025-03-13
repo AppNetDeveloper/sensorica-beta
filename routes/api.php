@@ -35,7 +35,7 @@ use App\Http\Controllers\Api\ReferenceController;
 use App\Http\Controllers\Api\ProductionOrderTopflowApiController;
 use App\Http\Controllers\Api\SupplierOrderController;
 use App\Http\Controllers\Api\ServerMonitorController;
-
+use App\Http\Controllers\Api\CalculateProductionDowntimeController;
 
 
 
@@ -310,3 +310,7 @@ Route::prefix('topflow-production-order')->group(function () {
 //pasar el pedido de proveedor
 
 Route::post('/supplier-order/store', [SupplierOrderController::class, 'store']);
+
+//api para downtime calculate
+Route::match(['get', 'post'], '/calculate-production-downtime', [CalculateProductionDowntimeController::class, 'calculateDowntime']);
+
