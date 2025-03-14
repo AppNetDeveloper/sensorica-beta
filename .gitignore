@@ -27,3 +27,4 @@ wa-logs*
 baileys_store_multi.json
 wa-logs.txt
 storage/api_token.txt
+telegram/sessions
