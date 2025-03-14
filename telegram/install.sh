@@ -29,6 +29,7 @@ npm install express cors body-parser telegram dotenv sqlite3
 npm install axios telegraf
 npm install express telegram qrcode axios dotenv
 npm install swagger-ui-express swagger-jsdoc --save
+npm install cors
 
 # Otros requisitos adicionales
 echo "Verificando si hay otros requisitos..."

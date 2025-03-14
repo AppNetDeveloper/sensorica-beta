@@ -1,8 +1,9 @@
 require("dotenv").config();
 const express = require("express");
+const cors = require("cors");
 const { TelegramClient } = require("telegram");
 const { StringSession } = require("telegram/sessions");
-const { Api } = require("telegram/tl"); // Para métodos de autenticación, SendCode, etc.
+const { Api } = require("telegram/tl"); // Para métodos de autenticación
 const qrcode = require("qrcode");
 const axios = require("axios");
 const fs = require("fs");
@@ -12,6 +13,13 @@ const swaggerUi = require("swagger-ui-express");
 
 const app = express();
 app.use(express.json());
+
+// Habilitar CORS
+app.use(cors({
+  origin: "*",
+  methods: "GET,POST,PUT,DELETE,OPTIONS",
+  allowedHeaders: "Content-Type,Authorization"
+}));
 
 // Variables de entorno y configuración
 const apiId = parseInt(process.env.API_ID);
