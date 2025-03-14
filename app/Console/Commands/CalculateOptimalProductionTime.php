@@ -142,9 +142,9 @@ class CalculateOptimalProductionTime extends Command
 
                 // Si el tiempo calculado es mayor que el valor almacenado en product_lists, se asigna este último.
                 if ($optimalProductionTime > $productList->optimal_production_time) {
-                    $sensor->optimal_production_time = $productList->optimal_production_time;
+                    $sensor->optimal_production_time = round($productList->optimal_production_time, 2);
                 } else {
-                    $sensor->optimal_production_time = $optimalProductionTime;
+                    $sensor->optimal_production_time = round($optimalProductionTime, 2);
                 }
                 $sensor->save();
 
@@ -193,7 +193,7 @@ private function processSensorOtherTypes(Sensor $sensor)
                     if (is_null($defaultValue) || $defaultValue < 1) {
                         $this->error("El sensor {$sensor->name} tiene count_order_1 menor que 3 y no existe un valor default válido en product_lists para {$field}.");
                     } else {
-                        $sensor->optimal_production_time = $defaultValue;
+                        $sensor->optimal_production_time = round($defaultValue, 2);
                         $sensor->save();
                         $this->info("Sensor '{$sensor->name}' actualizado: count_order_1 menor que 3, se asigna valor default {$defaultValue} desde product_lists campo {$field}.");
                     }
@@ -228,37 +228,37 @@ private function processSensorOtherTypes(Sensor $sensor)
 
                 // Si no existe un valor válido en product_lists (null o 0), se actualiza con el valor calculado
                 if (is_null($existingValue) || $existingValue == 0 || $calculatedOptimalTime < $existingValue) {
-                    $productList->$field = $calculatedOptimalTime;
+                    $productList->$field = round($calculatedOptimalTime, 2);
                     $productList->save();
                     $this->info("Sensor '{$sensor->name}' actualizado: Se estableció {$field} = {$calculatedOptimalTime} en product_lists.");
-                    $sensor->optimal_production_time = $calculatedOptimalTime;
+                    $sensor->optimal_production_time = round($calculatedOptimalTime, 2);
                     $sensor->save();
                     $this->info("Sensor '{$sensor->name}' actualizado: Se estableció optimal_production_time = {$calculatedOptimalTime} y se actualizó {$field} en product_lists (antes era nulo o 0).");
                 } else {
                     // Si ya existe un valor válido en product_lists, se compara:
                     if ($calculatedOptimalTime < $existingValue && $calculatedOptimalTime > 0) {
                         // El valor calculado es menor: se actualizan ambos registros
-                        $productList->$field = $calculatedOptimalTime;
+                        $productList->$field = round($calculatedOptimalTime, 2);
                         $productList->save();
-                        $sensor->optimal_production_time = $calculatedOptimalTime;
+                        $sensor->optimal_production_time = round($calculatedOptimalTime, 2);
                         $sensor->save();
                         $this->info("Sensor '{$sensor->name}' actualizado: Se actualizó {$field} a {$calculatedOptimalTime} (valor calculado menor que el existente {$existingValue}).");
                     } else {
                         // Si el valor calculado no es menor, se asigna al sensor el valor existente de product_lists
-                        $sensor->optimal_production_time = $existingValue;
+                        $sensor->optimal_production_time = round($existingValue, 2);
                         $sensor->save();
                         $this->info("Sensor '{$sensor->name}' actualizado: optimal_production_time se mantiene en {$existingValue} (valor existente en product_lists para {$field}).");
                     }
                 }
             } else {
                 // Si no se encuentra el registro en product_lists, simplemente se actualiza el sensor
-                $sensor->optimal_production_time = $calculatedOptimalTime;
+                $sensor->optimal_production_time = round($calculatedOptimalTime, 2);
                 $sensor->save();
                 $this->info("Sensor '{$sensor->name}' actualizado: optimal_production_time = {$calculatedOptimalTime}. No se encontró registro en product_lists para: {$modelProduct}");
             }
         } else {
             // Si no hay producto asociado, se actualiza solo el sensor
-            $sensor->optimal_production_time = $calculatedOptimalTime;
+            $sensor->optimal_production_time = round($calculatedOptimalTime, 2);
             $sensor->save();
             $this->info("Sensor '{$sensor->name}' actualizado: optimal_production_time = {$calculatedOptimalTime}. No tiene producto asociado.");
         }
@@ -314,7 +314,8 @@ private function processSensorOtherTypes(Sensor $sensor)
         //ahora si el $average_time es menor que lo que esta en product->optimalproductionTime_weight lo actualizamos si no lo dejamos como es
         //pero si el tiempo de inicio de turno que sea mayor a 300 segundos
         if ($average_time < $product->optimalproductionTime_weight && $time > 3600) {
-            $product->optimalproductionTime_weight = $average_time;
+            $product->optimalproductionTime_weight =round($average_time, 2);
+
             $product->save();
             $this->info("Actualizado en product_lists: optimalproductionTime_weight = {$average_time} para el producto: {$productListClient}");
         }else {
@@ -368,7 +369,7 @@ private function processSensorOtherTypes(Sensor $sensor)
         }
         $modelType="optimalproductionTime_weight_".$modbusData->model_type;
         if ($average_time < $product->optimalproductionTime_weight && $time > 3600) {
-            $product->$modelType  = $average_time;
+            $product->$modelType  = round($average_time, 2);
             $product->save();
             $this->info("Actualizado en product_lists: optimalproductionTime_weight = {$average_time} para el producto: {$productListClient}");
         }else {
@@ -428,7 +429,7 @@ private function processSensorOtherTypes(Sensor $sensor)
         if ($productList) {
             // Actualizar el 'optimal_production_time' solo si el nuevo tiempo es menor que el tiempo actual.
             if ($optimalProductionTime < $productList->optimal_production_time) {
-                $productList->optimal_production_time = $optimalProductionTime;
+                $productList->optimal_production_time = round($optimalProductionTime, 2);
                 $productList->save();
                 $this->info("Actualizado en product_lists: optimal_production_time = {$optimalProductionTime} para el producto: {$modelProduct}");
             }
