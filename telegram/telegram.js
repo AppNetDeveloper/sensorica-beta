@@ -31,6 +31,15 @@ const API_EXTERNAL_TOKEN = process.env.API_EXTERNAL_TOKEN;
 const DATA_FOLDER = process.env.DATA_FOLDER || "sessions";
 const CALLBACK_BASE = process.env.CALLBACK_BASE;
 
+console.log("API_ID:", apiId);
+console.log("API_HASH:", apiHash);
+console.log("PORT:", PORT);
+console.log("API_EXTERNAL:", API_EXTERNAL);
+console.log("API_EXTERNAL_URL:", API_EXTERNAL_URL);
+console.log("API_EXTERNAL_TOKEN:", API_EXTERNAL_TOKEN);
+console.log("DATA_FOLDER:", DATA_FOLDER);
+console.log("CALLBACK_BASE:", CALLBACK_BASE);
+
 // Crear la carpeta para sesiones si no existe
 if (!fs.existsSync(DATA_FOLDER)) {
   fs.mkdirSync(DATA_FOLDER);

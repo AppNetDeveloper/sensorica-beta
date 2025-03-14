@@ -176,8 +176,6 @@ class ServerMonitorController extends Controller
             if ($response->successful()) {
                \Log::info('Mensaje enviado exitosamente');
             }
-
-            \Log::error('No se pudo enviar el mensaje. Verifica el número y el mensaje.');
         } catch (\Exception $e) {
             \Log::error('No se pudo enviar el mensaje. Verifica el número y el mensaje.');
         }
@@ -188,12 +186,10 @@ class ServerMonitorController extends Controller
         \Log::info("message: {$message} telefono: {$phone}");
         try {
             $response = Http::post("{$this->baseUrl}/send-message/1/+{$phone}/{$message}");
-
+ 
             if ($response->successful()) {
                 \Log::info('Mensaje enviado exitosamente');
             }
-    
-            \Log::error("message: {$message} telefono: {$phone} ");
         } catch (\Exception $e) {
             \Log::error("Error enviando mensaje de Telegram a {$phone}: " . $e->getMessage());
         }
