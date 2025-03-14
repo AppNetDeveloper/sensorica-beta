@@ -10,6 +10,8 @@ use App\Models\Notification;
 use App\Models\User;
 use Carbon\Carbon;
 use Spatie\Permission\Models\Role;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\ServerAlertMail;
 
 class ServerMonitorController extends Controller
 {

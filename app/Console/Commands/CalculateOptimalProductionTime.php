@@ -11,6 +11,7 @@ use Illuminate\Database\QueryException;
 //anadimos modbuses
 use App\Models\Modbus;
 use App\Models\ShiftHistory;
+use App\Models\RfidDetail;
 
 /**
  * Clase CalculateOptimalProductionTime
@@ -71,18 +72,20 @@ class CalculateOptimalProductionTime extends Command
 
             // Iterar sobre cada sensor para procesar su información.
             foreach ($sensors as $sensor) {
-                if ((int)$sensor->sensor_type === 0) {
-                    //if sensor es shift_type no es shift y event start ponemos $this info
-                    if($sensor->shift_type != 'shift' && $sensor->event != "start"){
-                        $this->info("Sensor name: {$sensor->name} sensor_type: {$sensor->sensor_type} shift_type: {$sensor->shift_type} event_start: {$sensor->event_start}");
-                    }else{
+                if (
+                    ($sensor->shift_type === 'shift' && $sensor->event === 'start') ||
+                    ($sensor->shift_type === 'stop' && $sensor->event === 'end')
+                ) {
+                    // Ejecutar lógica según sensor_type
+                    if ((int)$sensor->sensor_type === 0) {
                         $this->processSensorType0($sensor, $minTime, $maxTime);
+                    } else {
+                        $this->processSensorOtherTypes($sensor);
                     }
-                    
                 } else {
-                    // Aquí se implementará la lógica específica para sensor_type 1, 2 y 3
-                    $this->processSensorOtherTypes($sensor);
-                }
+                    // Registrar información en log si no se cumplen condiciones específicas
+                    $this->info("Sensor name: {$sensor->name}, sensor_type: {$sensor->sensor_type}, shift_type: {$sensor->shift_type}, event_start: {$sensor->event_start}");
+                }                
             }
 
             //obtenemos todos los modbuses de la base de datos
@@ -90,19 +93,26 @@ class CalculateOptimalProductionTime extends Command
 
             //creamos un foreach para recorrer todos los modbuses y entro los separamos por model_type 0 1 2 3 
             foreach ($modbuses as $modbus) {
-                if ((int)$modbus->model_type === 0) {
-                    if($sensor->shift_type != 'shift' && $sensor->event != "start"){
-                        $this->info("Modbus name: {$modbus->name} model_type: {$modbus->model_type} shift_type: {$modbus->shift_type} event_start: {$modbus->event_start}");
-                    }else{
+                if (($modbus->shift_type === 'shift' && $modbus->event === 'start') || ($modbus->shift_type === 'stop' && $modbus->event === 'end')) {
+                    if ((int)$modbus->model_type === 0) {
+                        // Lógica específica para model_type 0
                         $this->processModbusType0($modbus);
+                    } else {
+                        // Lógica para otros model_type
+                        $this->processModbusOtherTypes($modbus);
                     }
-                    // Aquí se implementará la lógica específica para model_type 0
-                   
                 } else {
-                    // Aquí se implementará la lógica específica para model_type 1, 2 y 3
-                    $this->processModbusOtherTypes($modbus);
-                }
+                    // Registro informativo común si no se cumplen las condiciones
+                    $this->info("Modbus name: {$modbus->name}, model_type: {$modbus->model_type}, shift_type: {$modbus->shift_type}, event_start: {$modbus->event_start}");
+                }                
             }
+
+            //obtenemos todas los rfid de rfid_details
+            $rfid_details = RfidDetail::all();
+            foreach ($rfid_details as $rfid_detail) {
+               $this->processRfid($rfid_detail);
+            }
+
 
 
             $this->info("Waiting for 10 minutes before the next run...");
@@ -409,6 +419,11 @@ private function processSensorOtherTypes(Sensor $sensor)
         $this->info("Sensor name: {$sensor->name} count time_11 calculado: {$optimalTime}");
 
         return $optimalTime;
+    }
+
+    private function processRfid($rfid_detail)
+    {
+
     }
 
     /**
