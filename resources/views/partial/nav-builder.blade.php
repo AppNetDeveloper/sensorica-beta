@@ -91,6 +91,15 @@ $settings = Utility::settings();
                     </li>
                 @endif
 
+                @if (auth()->user()->hasRole('admin') || auth()->user()->can('telegram show'))
+                    <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
+                        <a class="dash-link" href="{{ route('telegram.index') }}">
+                            <span class="dash-micon"><i class="bi bi-telegram"></i></span>
+                            <span class="dash-mtext custom-weight">{{ __('Telegram Server') }}</span>
+                        </a>
+                    </li>
+                @endif
+
                 @if (auth()->user()->hasRole('admin') || auth()->user()->can('db-upload-show'))
                     <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
                         <a class="dash-link" href="{{ route('server.uploadstats') }}">

@@ -5,38 +5,38 @@
 <div class="row">
     <div class="col-lg-12">
 
-        {{-- Alertas de sesión (éxito/error) --}}
+        {{-- Alertas de sesión --}}
         @if (session('status'))
             <div class="alert alert-success alert-dismissible fade show" role="alert">
-                {{ session('status') }}
+                <i class="bi bi-check-circle"></i> {{ session('status') }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         @endif
 
         @if (session('error'))
             <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                {{ session('error') }}
+                <i class="bi bi-exclamation-triangle"></i> {{ session('error') }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
-        @endif 
+        @endif
 
-        {{-- Tarjeta: Estado de Conexión --}}
-        <div class="card mb-4 shadow-sm">
-            <div class="card-body" id="connectionStatus">
-                <h2 class="h5 mb-3">{{ __('Estado de Conexión') }}</h2>
+        {{-- Estado de Conexión --}}
+        <div class="card shadow-lg mb-4">
+            <div class="card-body text-center" id="connectionStatus">
+                <h3 class="h5 mb-3"><i class="bi bi-whatsapp"></i> {{ __('Estado de Conexión') }}</h3>
                 @if ($isLinked)
-                    <p class="fw-bold text-success">{{ __('WhatsApp ya vinculado') }}</p>
-                    <p class="text-secondary">{{ __('Tu aplicación ya está conectada con WhatsApp.') }}</p>
+                    <p class="fw-bold text-success"><i class="bi bi-check-circle-fill"></i> {{ __('WhatsApp ya vinculado') }}</p>
+                    <p class="text-secondary">{{ __('Tu aplicación está conectada con WhatsApp.') }}</p>
                 @elseif ($qrCode)
-                    <p class="fw-bold text-danger">{{ __('Escanea el Código QR') }}</p>
+                    <p class="fw-bold text-danger"><i class="bi bi-qr-code"></i> {{ __('Escanea el Código QR') }}</p>
                     <p class="text-secondary">
-                        {{ __('Por favor, escanea el siguiente código QR con tu aplicación de WhatsApp para conectarte.') }}
+                        {{ __('Escanea el código QR con tu aplicación de WhatsApp para conectarte.') }}
                     </p>
                     <div class="text-center">
-                        <img src="{{ $qrCode }}" alt="{{ __('Código QR de WhatsApp') }}" class="img-fluid mt-3" style="max-width: 300px;">
+                        <img src="{{ $qrCode }}" alt="{{ __('Código QR de WhatsApp') }}" class="img-fluid mt-3 border rounded shadow-sm" style="max-width: 300px;">
                     </div>
                 @else
-                    <p class="fw-bold text-danger">{{ __('Error') }}</p>
+                    <p class="fw-bold text-danger"><i class="bi bi-x-circle-fill"></i> {{ __('Error de Conexión') }}</p>
                     <p class="text-secondary">
                         {{ __('No se pudo obtener el estado de conexión. Intenta nuevamente más tarde.') }}
                     </p>
@@ -44,71 +44,52 @@
             </div>
         </div>
 
-        {{-- Tarjeta: Desconectar WhatsApp --}}
-        <div class="card mb-4 shadow-sm">
-            <div class="card-body">
-                <h2 class="h5 mb-3">{{ __('Desconectar WhatsApp') }}</h2>
+        {{-- Desconectar WhatsApp --}}
+        <div class="card shadow-lg mb-4">
+            <div class="card-body text-center">
+                <h3 class="h5 mb-3"><i class="bi bi-box-arrow-right"></i> {{ __('Desconectar WhatsApp') }}</h3>
                 <form action="{{ route('whatsapp.disconnect') }}" method="POST">
                     @csrf
                     <button type="submit" class="btn btn-danger">
-                        {{ __('Desconectar') }}
+                        <i class="bi bi-x-circle"></i> {{ __('Desconectar') }}
                     </button>
                 </form>
             </div>
         </div>
 
-        {{-- Tarjeta: Actualizar Número de Notificación --}}
-        <div class="card mb-4 shadow-sm">
+        {{-- Actualizar Número de Notificación --}}
+        <div class="card shadow-lg mb-4">
             <div class="card-body">
-                <h2 class="h5 mb-3">{{ __('Actualizar Número de Notificación') }}</h2>
+                <h3 class="h5 mb-3 text-center"><i class="bi bi-telephone"></i> {{ __('Actualizar Número de Notificación') }}</h3>
                 <form action="{{ route('whatsapp.updatePhone') }}" method="POST">
                     @csrf
                     <div class="mb-3">
                         <label for="phone_number" class="form-label">{{ __('Número de Notificación') }}</label>
-                        <input
-                            type="text"
-                            name="phone_number"
-                            id="phone_number"
-                            class="form-control"
-                            value="{{ $phoneNumber }}"
-                            placeholder="{{ __('Ingrese el número de notificación') }}"
-                        >
+                        <input type="text" name="phone_number" id="phone_number" class="form-control" value="{{ $phoneNumber }}" placeholder="{{ __('Ingrese el número de notificación') }}">
                     </div>
-                    <button type="submit" class="btn btn-primary">
-                        {{ __('Actualizar Número') }}
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-arrow-repeat"></i> {{ __('Actualizar Número') }}
                     </button>
                 </form>
             </div>
         </div>
 
-        {{-- Tarjeta: Enviar Mensaje de Prueba --}}
-        <div class="card mb-4 shadow-sm">
+        {{-- Enviar Mensaje de Prueba --}}
+        <div class="card shadow-lg mb-4">
             <div class="card-body">
-                <h2 class="h5 mb-3">{{ __('Enviar Mensaje de Prueba') }}</h2>
+                <h3 class="h5 mb-3 text-center"><i class="bi bi-chat-dots"></i> {{ __('Enviar Mensaje de Prueba') }}</h3>
                 <form action="{{ route('whatsapp.sendTestMessage') }}" method="POST">
                     @csrf
                     <div class="mb-3">
                         <label for="test_phone_number" class="form-label">{{ __('Número de Teléfono') }}</label>
-                        <input
-                            type="text"
-                            name="test_phone_number"
-                            id="test_phone_number"
-                            class="form-control"
-                            placeholder="{{ __('Ingrese el número de teléfono') }}"
-                        >
+                        <input type="text" name="test_phone_number" id="test_phone_number" class="form-control" placeholder="{{ __('Ingrese el número de teléfono') }}">
                     </div>
                     <div class="mb-3">
                         <label for="test_message" class="form-label">{{ __('Mensaje') }}</label>
-                        <input
-                            type="text"
-                            name="test_message"
-                            id="test_message"
-                            class="form-control"
-                            placeholder="{{ __('Ingrese el mensaje de prueba') }}"
-                        >
+                        <input type="text" name="test_message" id="test_message" class="form-control" placeholder="{{ __('Ingrese el mensaje de prueba') }}">
                     </div>
-                    <button type="submit" class="btn btn-success">
-                        {{ __('Enviar Mensaje') }}
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="bi bi-send"></i> {{ __('Enviar Mensaje') }}
                     </button>
                 </form>
             </div>
@@ -125,18 +106,18 @@
         })
         .then(response => response.json())
         .then(data => {
-            let html = '<h2 class="h5 mb-3">{{ __("Estado de Conexión") }}</h2>';
+            let html = `<h3 class="h5 mb-3"><i class="bi bi-whatsapp"></i> {{ __("Estado de Conexión") }}</h3>`;
             if (data.isLinked) {
-                html += `<p class="fw-bold text-success">{{ __("WhatsApp ya vinculado") }}</p>
-                         <p class="text-secondary">{{ __("Tu aplicación ya está conectada con WhatsApp.") }}</p>`;
+                html += `<p class="fw-bold text-success"><i class="bi bi-check-circle-fill"></i> {{ __("WhatsApp ya vinculado") }}</p>
+                         <p class="text-secondary">{{ __("Tu aplicación está conectada con WhatsApp.") }}</p>`;
             } else if (data.qrCode) {
-                html += `<p class="fw-bold text-danger">{{ __("Escanea el Código QR") }}</p>
-                         <p class="text-secondary">{{ __("Por favor, escanea el siguiente código QR con tu aplicación de WhatsApp para conectarte.") }}</p>
+                html += `<p class="fw-bold text-danger"><i class="bi bi-qr-code"></i> {{ __("Escanea el Código QR") }}</p>
+                         <p class="text-secondary">{{ __("Escanea el código QR con tu aplicación de WhatsApp para conectarte.") }}</p>
                          <div class="text-center">
-                             <img src="${data.qrCode}" alt="{{ __("Código QR de WhatsApp") }}" class="img-fluid mt-3" style="max-width: 300px;">
+                             <img src="${data.qrCode}" alt="{{ __("Código QR de WhatsApp") }}" class="img-fluid mt-3 border rounded shadow-sm" style="max-width: 300px;">
                          </div>`;
             } else {
-                html += `<p class="fw-bold text-danger">{{ __("Error") }}</p>
+                html += `<p class="fw-bold text-danger"><i class="bi bi-x-circle-fill"></i> {{ __("Error de Conexión") }}</p>
                          <p class="text-secondary">{{ __("No se pudo obtener el estado de conexión. Intenta nuevamente más tarde.") }}</p>`;
             }
             document.getElementById('connectionStatus').innerHTML = html;
@@ -144,9 +125,7 @@
         .catch(error => console.error('Error al refrescar el estado de conexión:', error));
     }
 
-    // Refrescar cada 15 segundos
     setInterval(refreshConnectionState, 15000);
-    // Ejecutar una vez al cargar la página
     refreshConnectionState();
 </script>
 @endsection

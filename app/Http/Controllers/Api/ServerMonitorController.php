@@ -12,9 +12,11 @@ use Carbon\Carbon;
 use Spatie\Permission\Models\Role;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\ServerAlertMail;
+use Illuminate\Support\Facades\Http;
 
 class ServerMonitorController extends Controller
 {
+    private $baseUrl = 'http://localhost:3006';
     /**
      * Registra un nuevo servidor en host_lists.
      *
@@ -94,13 +96,13 @@ class ServerMonitorController extends Controller
             'disk' => 'required|numeric',
             'cpu' => 'required|numeric',
         ]);
-
+    
         // Obtener el host mediante el token
         $host = HostList::where('token', $request->token)->first();
-
+    
         // Llamar al método de limpieza de registros antiguos
         $this->deleteOldRecords($host);
-
+    
         // Crear el registro en host_monitors
         $hostMonitor = HostMonitor::create([
             'id_host'             => $host->id,
@@ -111,16 +113,15 @@ class ServerMonitorController extends Controller
             'disk'                => $request->disk,
             'cpu'                 => $request->cpu,
         ]);
-
+    
         // Verificar si alguna métrica excede el umbral (80%)
         if ($request->cpu > 80 || $request->memory_used_percent > 80 || $request->disk > 80) {
-
             // Consultar el registro anterior para este host (excluyendo el actual)
             $previousRecord = HostMonitor::where('id_host', $host->id)
                 ->where('id', '<', $hostMonitor->id)
                 ->orderBy('id', 'desc')
                 ->first();
-
+    
             // Si existe un registro anterior y también excede el umbral, no se envía la alerta
             $sendAlert = true;
             if ($previousRecord) {
@@ -128,28 +129,74 @@ class ServerMonitorController extends Controller
                     $sendAlert = false;
                 }
             }
-
-            if ($sendAlert && $host->emails) {
-                // Obtener los correos y separarlos por comas
-                $emailList = array_map('trim', explode(',', $host->emails));
-
-                // Preparar datos para el correo de alerta
+    
+            if ($sendAlert) {
                 $alertData = [
                     'host' => $host->name,
                     'cpu' => $request->cpu,
                     'memory_used_percent' => $request->memory_used_percent,
                     'disk' => $request->disk,
                 ];
-
-                // Enviar correo usando el Mailable ServerAlertMail
-                Mail::to($emailList)->send(new ServerAlertMail($alertData));
+    
+                // Enviar correo si existen emails
+                if ($host->emails) {
+                    $emailList = array_map('trim', explode(',', $host->emails));
+                    Mail::to($emailList)->send(new ServerAlertMail($alertData));
+                }
+                \Log::info("pasamos a mandas whatsapp telegram");
+                // Enviar alertas a WhatsApp y Telegram si existen teléfonos
+                if ($host->phones) {
+                    $phoneList = array_map('trim', explode(',', $host->phones));
+                    foreach ($phoneList as $phone) {
+                        $message = "⚠️ Alerta en {$host->name}: CPU: {$request->cpu}%, Memoria: {$request->memory_used_percent}%, Disco: {$request->disk}%";
+                        $this->sendWhatsApp($phone, $message);
+                        $this->sendTelegram($phone, $message);
+                    }
+                }
             }
         }
-
+    
         return response()->json([
             'message' => 'Data stored successfully',
             'data'    => $hostMonitor,
         ], 201);
+    }
+    
+    private function sendWhatsApp($phone, $message)
+    {
+        \Log::info("message: {$message} telefono: {$phone}");
+        $apiUrl = rtrim(env('LOCAL_SERVER'), '/') . "/api/send-message";
+
+        try {
+            $response = Http::withoutVerifying()->get($apiUrl, [
+                'jid' => $phone . '@s.whatsapp.net',
+                'message' => $message,
+            ]);
+
+            if ($response->successful()) {
+               \Log::info('Mensaje enviado exitosamente');
+            }
+
+            \Log::error('No se pudo enviar el mensaje. Verifica el número y el mensaje.');
+        } catch (\Exception $e) {
+            \Log::error('No se pudo enviar el mensaje. Verifica el número y el mensaje.');
+        }
+    }
+    
+    private function sendTelegram($phone, $message)
+    {
+        \Log::info("message: {$message} telefono: {$phone}");
+        try {
+            $response = Http::post("{$this->baseUrl}/send-message/1/+{$phone}/{$message}");
+
+            if ($response->successful()) {
+                \Log::info('Mensaje enviado exitosamente');
+            }
+    
+            \Log::error("message: {$message} telefono: {$phone} ");
+        } catch (\Exception $e) {
+            \Log::error("Error enviando mensaje de Telegram a {$phone}: " . $e->getMessage());
+        }
     }
 
 

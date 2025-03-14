@@ -440,5 +440,6 @@
     "days": "days",
     "Is Material Receiver": "Is Material Receiver",
     "RFID RESSET": "Master Card Reset Counter 1 Yes 0 No",
-    "Whatsapp Server": "Whatsapp Server"
+    "Whatsapp Server": "Whatsapp Server",
+    "Telegram Server": "Telegram Server"
   }

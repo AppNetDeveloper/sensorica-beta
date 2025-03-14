@@ -129,13 +129,19 @@ function loadSessions() {
  */
 function saveSession(userId) {
   if (sessions[userId]) {
-    const sessionString = sessions[userId].session.save();
-    fs.writeFileSync(
-      path.join(DATA_FOLDER, `${userId}.json`),
-      JSON.stringify({ session: sessionString }, null, 2)
-    );
+    try {
+      const sessionString = sessions[userId].session.save();
+      fs.writeFileSync(
+        path.join(DATA_FOLDER, `${userId}.json`),
+        JSON.stringify({ session: sessionString }, null, 2)
+      );
+      console.log(`✅ Sesión guardada para usuario ${userId}`);
+    } catch (error) {
+      console.error(`❌ Error guardando sesión para ${userId}:`, error);
+    }
   }
 }
+
 
 /**
  * Borrar la sesión en disco.
@@ -267,12 +273,16 @@ app.post("/request-code/:userId", async (req, res) => {
 app.post("/verify-code/:userId", async (req, res) => {
   const { userId } = req.params;
   const { code, password } = req.body;
+
   if (!authData[userId] || !authData[userId].phone || !authData[userId].phoneCodeHash) {
     return res.status(400).json({ error: "No hay datos de autenticación para este usuario" });
   }
+
   const { phone, phoneCodeHash } = authData[userId];
   const client = sessions[userId];
+
   try {
+    // Intentamos iniciar sesión con el código de verificación
     const signInResult = await client.invoke(
       new Api.auth.SignIn({
         phoneNumber: phone,
@@ -281,14 +291,32 @@ app.post("/verify-code/:userId", async (req, res) => {
         password: password || null,
       })
     );
-    console.log(`Sesión iniciada para ${phone}`);
+
+    console.log(`✅ Sesión iniciada para ${phone}`);
+
+    // Guardamos la sesión en disco
     saveSession(userId);
+
+    // Eliminamos los datos temporales de autenticación
     delete authData[userId];
+
+    // Confirmamos que está autenticado correctamente
     res.json({ success: true, message: "Sesión iniciada correctamente", result: signInResult });
+
   } catch (error) {
+    console.error(`❌ Error verificando sesión para usuario ${userId}:`, error);
+    
+    // Si el error es AUTH_KEY_UNREGISTERED, intentamos forzar una nueva sesión
+    if (error.code === 401 && error.errorMessage === "AUTH_KEY_UNREGISTERED") {
+      console.log("⚠️ Clave de autenticación no registrada. Borrando sesión y reiniciando...");
+      deleteSession(userId);
+      delete sessions[userId];
+    }
+
     res.status(500).json({ error: error.message });
   }
 });
+
 
 /**
  * @openapi
@@ -322,16 +350,28 @@ app.post("/verify-code/:userId", async (req, res) => {
  */
 app.post("/logout/:userId", async (req, res) => {
   const { userId } = req.params;
-  if (!sessions[userId]) return res.status(404).json({ error: "Sesión no encontrada" });
+
+  if (!sessions[userId]) {
+    return res.status(404).json({ error: "Sesión no encontrada" });
+  }
+
   try {
-    await sessions[userId].logOut();
+    const client = sessions[userId];
+
+    // Cierra sesión en Telegram usando API oficial
+    await client.invoke(new Api.auth.LogOut());
+
+    // Borra la sesión localmente
     delete sessions[userId];
     deleteSession(userId);
+    console.log(`Session for user ${userId} closed successfully`);
     res.json({ success: true, message: "Sesión cerrada correctamente" });
   } catch (error) {
+    console.error("Error cerrando sesión:", error);
     res.status(500).json({ error: error.message });
   }
 });
+
 
 /**
  * @openapi
@@ -762,6 +802,58 @@ app.post("/send-group-message/:userId/:groupId/:message", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+/**
+ * @openapi
+ * /active-sessions:
+ *   get:
+ *     summary: Obtiene las sesiones activas en el sistema
+ *     tags: [Sessions]
+ *     responses:
+ *       200:
+ *         description: Lista de sesiones activas
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 sessions:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       userId:
+ *                         type: string
+ *                       isConnected:
+ *                         type: boolean
+ *       500:
+ *         description: Error en el servidor
+ */
+app.get("/active-sessions", async (req, res) => {
+  try {
+    const activeSessions = await Promise.all(
+      Object.keys(sessions).map(async (userId) => {
+        try {
+          const user = await sessions[userId].getMe(); // Comprobamos si está autenticado
+          return {
+            userId,
+            isConnected: user ? true : false, // Solo es `true` si getMe() no falla
+          };
+        } catch (err) {
+          console.error(`Error verificando sesión para usuario ${userId}:`, err);
+          return { userId, isConnected: false };
+        }
+      })
+    );
+
+    res.json({ success: true, sessions: activeSessions });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
 
 /**
  * Manejador de mensajes entrantes.

@@ -38,7 +38,7 @@ use App\Http\Controllers\RfidPostController;
 use App\Http\Controllers\RfidColorController;
 use App\Http\Controllers\ScanPostController;
 use App\Http\Controllers\ServerMonitorController;
-
+use App\Http\Controllers\TelegramController;
 
 
 /*
@@ -384,6 +384,14 @@ Route::prefix('rfid-devices')->group(function () {
     Route::delete('/{id}', [RfidDeviceController::class, 'destroy'])->name('rfid.devices.destroy');
 });
 
+Route::prefix('telegram')->group(function () {
+    Route::get('/', [TelegramController::class, 'index'])->name('telegram.index'); // La vista ahora es telegram/index.blade.php
+    Route::post('/request-code', [TelegramController::class, 'requestCode'])->name('telegram.requestCode');
+    Route::post('/verify-code', [TelegramController::class, 'verifyCode'])->name('telegram.verifyCode');
+    Route::post('/logout', [TelegramController::class, 'logout'])->name('telegram.logout');
+    Route::post('/send-message', [TelegramController::class, 'sendMessage'])->name('telegram.sendMessage');
+    Route::get('/status', [TelegramController::class, 'status'])->name('telegram.status');
+});
 
 Route::group(['prefix' => '2fa', 'middleware' => ['auth', 'XSS']], function () {
     Route::get('/', [UserController::class, 'profile'])->name('2fa');
