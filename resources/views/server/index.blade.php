@@ -18,37 +18,37 @@
                     <h4 class="card-title">{{ __('Server Action') }}</h4>
                 </div>
                 <div class="card-body">
-                    <button id="reboot" class="btn btn-danger mb-2">Reiniciar Servidor</button>
-                    <button id="poweroff" class="btn btn-warning mb-2">Apagar Servidor</button>
-                    <button id="restart-supervisor" class="btn btn-info mb-2">Reiniciar Supervisor</button>
-                    <button id="start-supervisor" class="btn btn-success mb-2">Iniciar Supervisor</button>
-                    <button id="stop-supervisor" class="btn btn-secondary mb-2">Detener Supervisor</button>
-                    <button id="restart-485" class="btn btn-primary mb-2">Reiniciar 485</button>
-                    <button id="update-app" class="btn btn-dark mb-2">Actualizar Software</button>
-                    <button id="verne-app" class="btn btn-danger mb-2">Instalar Verne</button>
-                    <button id="logs" class="btn btn-info mb-2">Ver Log</button>
+                    <button id="reboot" class="btn btn-danger mb-2">{{ __('Restart Server') }}</button>
+                    <button id="poweroff" class="btn btn-warning mb-2">{{ __('Power Off') }}</button>
+                    <button id="restart-supervisor" class="btn btn-info mb-2">{{ __('Restart Supervisor') }}</button>
+                    <button id="start-supervisor" class="btn btn-success mb-2">{{ __('Start Supervisor') }}</button>
+                    <button id="stop-supervisor" class="btn btn-secondary mb-2">{{ __('Stop Supervisor') }}</button>
+                    <button id="restart-485" class="btn btn-primary mb-2">{{ __('Reiniciar 485') }}</button>
+                    <button id="update-app" class="btn btn-dark mb-2">{{ __('Actualizar Software') }}</button>
+                    <button id="verne-app" class="btn btn-danger mb-2">{{ __('Instalar Verne') }}</button>
+                    <button id="logs" class="btn btn-info mb-2">{{ __('Ver Log') }}</button>
                 </div>
             </div>
 
             {{-- Card con estadísticas del servidor --}}
             <div class="card border-0 shadow mt-4">
                 <div class="card-header border-0">
-                    <h4 class="card-title">Estadísticas del Servidor</h4>
+                    <h4 class="card-title">{{__('Estadísticas del Servidor')}}</h4>
                 </div>
                 <div class="card-body">
-                    <p id="cpu-usage">CPU: Cargando...</p>
-                    <p id="ram-usage">RAM: Cargando...</p>
+                    <p id="cpu-usage">{{ __('CPU') }}: {{__('Cargando...')}}</p>
+                    <p id="ram-usage">{{ __('RAM') }}: {{__('Cargando...')}}</p>
                 </div>
             </div>
 
             {{-- Card con estado del Supervisor --}}
             <div class="card border-0 shadow mt-4">
                 <div class="card-header border-0">
-                    <h4 class="card-title">Estado de Supervisor</h4>
+                    <h4 class="card-title">{{__('Estado del Supervisor')}}</h4>
                 </div>
                 <div class="card-body">
                     <ul id="supervisor-status">
-                        <li>Cargando...</li>
+                        <li>{{ __('Estado de servidor') }}</li>
                     </ul>
                 </div>
             </div>
@@ -56,24 +56,24 @@
             {{-- Card con estado del servicio Swift 485 --}}
             <div class="card border-0 shadow mt-4">
                 <div class="card-header border-0">
-                    <h4 class="card-title">Estado del Servicio Swift 485</h4>
+                    <h4 class="card-title">{{__('Estado del servicio Swift 485')}}</h4>
                 </div>
                 <div class="card-body">
-                    <p id="service-485-status">Cargando...</p>
-                    <button id="install-485-service" class="btn btn-primary" style="display: none;">Instalar y arrancar servicio</button>
+                    <p id="service-485-status">{{__('Cargando...')}}</p>
+                    <button id="install-485-service" class="btn btn-primary" style="display: none;">{{__('Instalar y arrancar servicio')}}</button>
                 </div>
             </div>
 
             {{-- Card con direcciones IP del servidor --}}
             <div class="card border-0 shadow mt-4">
                 <div class="card-header border-0">
-                    <h4 class="card-title">Direcciones IP del Servidor</h4>
+                    <h4 class="card-title">{{__('Direcciones IP del Servidor')}}</h4>
                 </div>
                 <div class="card-body">
                     <ul id="server-ips">
-                        <li>Cargando...</li>
+                        <li>{{__('Cargando...')}}<</li>
                     </ul>
-                    <button id="get-ips" class="btn btn-info mt-2">Actualizar IPs</button>
+                    <button id="get-ips" class="btn btn-info mt-2">{{__('Actualizar IPs')}}</button>
                 </div>
             </div>
         </div>
