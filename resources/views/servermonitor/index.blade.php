@@ -20,7 +20,7 @@
                 @endphp
 
                 <div class="col-xl-4 col-md-6 mb-4">
-                    <div class="card h-100 shadow-sm">
+                    <div class="card h-100 shadow-lg">
                         <div class="card-body d-flex flex-column">
                             <!-- Encabezado: Nombre y estado -->
                             <div class="d-flex justify-content-between align-items-center mb-3">
@@ -59,21 +59,21 @@
                             <!-- Métricas: CPU, RAM, Disco -->
                             <div class="row text-center">
                                 <div class="col-4 mb-3">
-                                    <div class="bg-light p-3 rounded">
+                                    <div class="bg-light p-3 rounded shadow-sm">
                                         <i class="ti ti-power d-block mb-1 text-primary" style="font-size: 24px;"></i>
                                         <span class="text-muted d-block">{{ __('CPU') }}</span>
                                         <strong id="cpu-{{ $host->id }}">{{ $cpu }}%</strong>
                                     </div>
                                 </div>
                                 <div class="col-4 mb-3">
-                                    <div class="bg-light p-3 rounded">
+                                    <div class="bg-light p-3 rounded shadow-sm">
                                         <i class="ti ti-server d-block mb-1 text-warning" style="font-size: 24px;"></i>
                                         <span class="text-muted d-block">{{ __('RAM') }}</span>
                                         <strong id="ram-{{ $host->id }}">{{ $ram }}%</strong>
                                     </div>
                                 </div>
                                 <div class="col-4 mb-3">
-                                    <div class="bg-light p-3 rounded">
+                                    <div class="bg-light p-3 rounded shadow-sm">
                                         <i class="ti ti-folder d-block mb-1 text-info" style="font-size: 24px;"></i>
                                         <span class="text-muted d-block">{{ __('Disco') }}</span>
                                         <strong id="disk-{{ $host->id }}">{{ $disk }}%</strong>
