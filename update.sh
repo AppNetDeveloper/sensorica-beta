@@ -207,6 +207,14 @@ fi
 
 php artisan db:seed --force || { echo "Error: Falló la ejecución de las seeds."; exit 1; }
 
+# Verifica si el archivo .env no existe en la carpeta telegram
+if [ ! -f "telegram/.env" ]; then
+    cp "telegram/.env.example" "telegram/.env"
+    echo "Se ha copiado .env.example a .env"
+else
+    echo "El archivo .env ya existe."
+fi
+
 # Reiniciar Supervisor con nueva configuración
 echo "Reconfigurando Supervisor..."
 sudo rm -rf /etc/supervisor/conf.d/*
