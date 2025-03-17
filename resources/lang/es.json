@@ -518,5 +518,14 @@
     "Eliminación exitosa": "Eliminación exitosa",
     "Error al eliminar la Antena RFID: ": "Error al eliminar la Antena RFID: ",
     "Antena RFID eliminada correctamente.": "Antena RFID eliminada correctamente.",
-    "No se pudo eliminar la Antena RFID.": "No se pudo eliminar la Antena RFID."
+    "No se pudo eliminar la Antena RFID.": "No se pudo eliminar la Antena RFID.",
+    "Monitor de Servidores": "Monitor de Servidores",
+    "OFFLINE": "SIN CONEXIÓN",
+    "CPU": "CPU",
+    "RAM": "RAM",
+    "Disco": "Disco",
+    "Monitoreo En Vivo": "Monitoreo En Vivo",
+    "¿Estás seguro?": "¿Estás seguro?",
+    "Esta acción no se puede deshacer.": "Esta acción no se puede deshacer.",
+    "Sí, borrar!": "Sí, borrar!"
   }

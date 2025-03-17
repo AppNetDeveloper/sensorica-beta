@@ -3,7 +3,13 @@
 @section('title')
     {{ __('Monitor de Servidores') }}
 @endsection
-
+@section('breadcrumb')
+    <ul class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ route('home') }}">{{ __('Dashboard') }}</a></li>
+        <li class="breadcrumb-item">{{ __('Monitor de Servidores') }}
+        </li>
+    </ul>
+@endsection
 @section('content')
 <div class="row">
     <div class="col-lg-12">

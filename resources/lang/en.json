@@ -1,10 +1,7 @@
 {
-    " Create New Permission": "Create New Permission",
-    " Create Permission": "Create Permission",
-    " Dashboard": "Dashboard",
-    " Languages": "Languages",
-    " Permissions": "Permissions",
-    " Role": "Role",
+    "Create New Permission": "Create New Permission",
+    "Create Permission": "Create Permission",
+    "Role": "Role",
     "\" . $translatable_string . \"": "\" . $translatable_string . \"",
     "# Introduction": "# Introduction",
     "+n+(r?": "+ n + (r?",
@@ -467,5 +464,15 @@
     "Eliminación exitosa": "Successful Deletion",
     "Error al eliminar la Antena RFID: ": "Error Deleting the RFID Antenna: ",
     "Antena RFID eliminada correctamente.": "RFID Antenna Deleted Successfully.",
-    "No se pudo eliminar la Antena RFID.": "RFID Antenna Could Not Be Deleted."
+    "No se pudo eliminar la Antena RFID.": "RFID Antenna Could Not Be Deleted.",
+    "Asignar Confeccion": "Product Post",
+    "Monitor de Servidores": "Server Monitor",
+    "OFFLINE": "Offline",
+    "CPU": "CPU",
+    "RAM": "RAM",
+    "Disco": "Disk",
+    "Monitoreo En Vivo": "Live Monitoring",
+    "¿Estás seguro?": "Are you sure?",
+    "Esta acción no se puede deshacer.": "This action cannot be undone.",
+    "Sí, borrar!": "Yes, delete!"
   }
