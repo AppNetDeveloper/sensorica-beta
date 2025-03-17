@@ -8,7 +8,7 @@
         <li class="breadcrumb-item">
             <a href="{{ route('home') }}">{{ __('Dashboard') }}</a>
         </li>
-        <li class="breadcrumb-item">{{ __('RFID Reader') }}</li>
+        <li class="breadcrumb-item">{{ __('Antenas RFID para la Línea de Producción') }} {{ $production_line_id }}</li>
     </ul>
 @endsection
 
@@ -21,12 +21,18 @@
                 {{-- Cabecera con título y botón --}}
                 <div class="card-header border-0 d-flex justify-content-between align-items-center">
                     <h4 class="card-title mb-0">
-                        {{ __('Antenas RFID para la Línea de Producción') }} {{ $production_line_id }}
+                        <a href="{{ route('rfid.create', ['production_line_id' => $production_line_id]) }}" 
+                        class="btn btn-primary">
+                            {{ __('Añadir Nueva Antena RFID') }}
+                        </a>
                     </h4>
-                    <a href="{{ route('rfid.create', ['production_line_id' => $production_line_id]) }}" 
-                       class="btn btn-primary">
-                        {{ __('Añadir Nueva Antena RFID') }}
-                    </a>
+                    <form action="{{ route('rfid-blocked.destroyAll') }}" method="POST" onsubmit="return confirm('¿Está seguro de eliminar todos los registros?');">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="btn btn-primary">
+                             {{ __('Eliminar EPC Bloqueados') }}
+                        </button>
+                    </form>
                 </div>
 
                 @if ($rfidAnts->isEmpty())

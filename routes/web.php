@@ -39,6 +39,9 @@ use App\Http\Controllers\RfidColorController;
 use App\Http\Controllers\ScanPostController;
 use App\Http\Controllers\ServerMonitorController;
 use App\Http\Controllers\TelegramController;
+use App\Http\Controllers\RfidBlockedController;
+
+
 
 
 /*
@@ -94,7 +97,8 @@ Route::delete('production-lines/{production_line_id}/rfid/colors/{rfidColor}', [
     ->name('rfid.colors.destroy');
 
 
-
+//limpiar el listado de epc bloqueados
+Route::delete('/rfid-blocked/destroy-all', [RfidBlockedController::class, 'destroyAll'])->name('rfid-blocked.destroyAll');
 
 // Ruta para la página principal de sensores
 Route::get('sensors/{id}', [SensorController::class, 'listSensors'])->name('sensors.index');
