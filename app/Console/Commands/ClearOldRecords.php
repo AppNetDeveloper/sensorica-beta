@@ -48,6 +48,8 @@ class ClearOldRecords extends Command
                 'downtime_sensors' => 'created_at',
                 'live_traffic_monitors' => 'created_at',
                 'production_orders' => 'created_at',
+                'operator_post' => 'created_at',
+                'product_list_selecteds' => 'created_at',
             ];
 
 

@@ -14,6 +14,7 @@ use Carbon\Carbon;
 use GuzzleHttp\Client;
 use App\Models\OperatorPost;  // Asegúrate de tener este modelo
 use App\Models\Operator;      // Asegúrate de tener este modelo
+use App\Models\RfidBlocked;   // Importamos el modelo para la tabla rfid_blocked
 
 class RfidDetailController extends Controller
 {
@@ -62,9 +63,12 @@ class RfidDetailController extends Controller
 
             if (!$rfidReading) {
                 Log::info("RFID reading no encontrado para el EPC: " . $epcInput);
+                // Agregar el EPC a la tabla rfid_blocked
+                RfidBlocked::create(['epc' => $epcInput]);
+                
                 return response()->json([
                     'success' => false,
-                    'message' => 'RFID reading no encontrado para el EPC proporcionado'
+                    'message' => 'RFID reading no encontrado para el EPC proporcionado , EPC bloqueado!!!'
                 ], 404);
             }
 

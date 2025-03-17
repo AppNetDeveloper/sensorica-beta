@@ -7,6 +7,8 @@ use App\Models\RfidAnt;
 use PhpMqtt\Client\MqttClient;
 use PhpMqtt\Client\ConnectionSettings;
 use GuzzleHttp\Client;
+use Illuminate\Support\Facades\Cache;
+use App\Models\RfidBlocked;   // Importamos el modelo para la tabla rfid_blocked
 
 class ReadRfidReadings extends Command
 {
@@ -92,6 +94,13 @@ class ReadRfidReadings extends Command
 
         $this->logInfo('Subscribed to initial topics.');
     }
+    private function getBlockedEpcs()
+    {
+        // Se almacena la lista por 120 segundos
+        return Cache::remember('blocked_epcs', 120, function () {
+            return RfidBlocked::pluck('epc')->toArray();
+        });
+    }
 
     private function processMessage($topic, $message, $antennaName, $rssiMin)
     {
@@ -101,6 +110,8 @@ class ReadRfidReadings extends Command
             $this->logError("Error: El mensaje recibido no es un JSON válido.");
             return;
         }
+        // Obtener la lista de EPC bloqueados desde la caché
+        $blockedEpcs = $this->getBlockedEpcs();
 
         foreach ($dataArray as $data) {
             $epc = $data['epc'] ?? null;
@@ -113,12 +124,18 @@ class ReadRfidReadings extends Command
                 $this->logError("Error: Faltan datos en el JSON para uno de los objetos.");
                 continue;
             }
+            // Verificar si el EPC está en la lista de bloqueados
+            if (in_array($epc, $blockedEpcs)) {
+               // $this->logInfo("El EPC {$epc} se encuentra en la lista de bloqueados. No se procesará.");
+                continue;
+            }
             // Verificar si el RSSI es mayor o igual al mínimo especificado
             if ($rssi <= $rssiMin) {
                 $this->logError("Error: El RSSI ($rssi) es menor que el mínimo especificado ($rssiMin). EPC: {$epc} y TDI: {$tid}.");
                 continue;
             }
             // Enviar datos a la API
+            $this->logInfo("Procesamos Rfid para EPC {$epc}, RSSI {$rssi}, SerialNo {$serialno}, TID {$tid}, Antena: {$antennaName}");
             $this->sendToApi($epc, $rssi, $serialno, $tid, $ant, $antennaName);
         }
     }
@@ -148,7 +165,14 @@ class ReadRfidReadings extends Command
     
             $promise->then(
                 function ($response) use ($epc) {
-                    $this->logInfo("API call success for EPC {$epc}: " . $response->getStatusCode());
+                    $statusCode = $response->getStatusCode();
+                    // Obtener el contenido del cuerpo
+                    $body = $response->getBody()->getContents();
+                    // Intentar decodificar el JSON
+                    $data = json_decode($body, true);
+                    // Si se decodifica correctamente, usar un campo específico, por ejemplo "message"
+                    $jsonMessage = isset($data['message']) ? $data['message'] : $body;
+                    $this->logInfo("API call success for EPC {$epc}: {$statusCode} - Message: {$jsonMessage}");
                 },
                 function ($exception) use ($epc) {
                     $this->logError("API call error for EPC {$epc}: " . $exception->getMessage());
@@ -162,7 +186,7 @@ class ReadRfidReadings extends Command
             $this->logError("Error al intentar llamar a la API para EPC {$epc}: " . $e->getMessage());
         }
     
-        $this->logInfo("Mensaje procesado para EPC {$epc}, RSSI {$rssi}, SerialNo {$serialno}, TID {$tid}, Antena: {$antennaName}");
+        //$this->logInfo("Mensaje procesado para EPC {$epc}, RSSI {$rssi}, SerialNo {$serialno}, TID {$tid}, Antena: {$antennaName}");
     }
 
     /**
