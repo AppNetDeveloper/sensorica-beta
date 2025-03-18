@@ -29,8 +29,7 @@ class RfidDetailController extends Controller
                 'tid'           => 'required|string',
                 'antenna_name'  => 'required|string'
             ]);
-
-            Log::info("Estamos en el método store de RfidDetailController");
+            Log::info("--======= Estamos en el método store de RfidDetailController ========--");
 
             if ($validator->fails()) {
                 Log::warning('Fallo de validación en store RfidDetailController', [
@@ -138,6 +137,8 @@ class RfidDetailController extends Controller
             ->where('reset', 1)
             ->orderBy('created_at', 'desc')
             ->first();
+            //vamos a poner un log para mostrar la tarjeta maestra
+            Log::info("Tarjeta Maestra encontrada: " . json_encode($masterReset));
 
             if ($masterReset) {
                 // Si se encontró la tarjeta maestra, diferenciamos según el TID recibido
@@ -199,10 +200,9 @@ class RfidDetailController extends Controller
                         try {
                             // Buscar en operator_post registros con el mismo rfid_reading_id y finish_at nulo o vacío
                             $operatorPost = OperatorPost::where('rfid_reading_id', $rfidReading->id)
-                                ->where(function($query) {
-                                    $query->whereNull('finish_at')
-                                          ->orWhere('finish_at', '=', '');
-                                })->first();
+                                            ->whereNull('finish_at')
+                                            ->first();
+
             
                             if ($operatorPost) {
                                 $operatorId = $operatorPost->operator_id;
@@ -225,11 +225,10 @@ class RfidDetailController extends Controller
                             // Se verifica que $operatorId esté definido
                             if (isset($operatorId)) {
                                 $operatorPostToUpdate = OperatorPost::where('operator_id', $operatorId)
-                                                                    ->where('rfid_reading_id', $rfidReading->id)
-                                                                    ->where(function($query) {
-                                                                        $query->whereNull('finish_at')
-                                                                            ->orWhere('finish_at', '');
-                                                                    })->first();
+                                                        ->where('rfid_reading_id', $rfidReading->id)
+                                                        ->whereNull('finish_at')
+                                                        ->first();
+
             
                                 if ($operatorPostToUpdate) {
                                     $operatorPostToUpdate->increment('count');

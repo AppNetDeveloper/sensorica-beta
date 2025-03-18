@@ -78,10 +78,10 @@ class OperatorPostController extends Controller
                 foreach ($rfidIds as $rfidId) {
                     // Buscamos en ProductListSelecteds usando el rfid_reading_id de la iteración
                     $product = ProductListSelecteds::where('rfid_reading_id', $rfidId)
-                        ->where(function ($query) {
-                            $query->whereNull('finish_at')
-                                ->orWhere('finish_at', '');
-                        })->first();
+                            ->whereNull('finish_at')
+                            ->first();
+
+
 
                     // Si se encuentra, asignamos los datos del producto; de lo contrario, se dejan en null
                     if ($product) {

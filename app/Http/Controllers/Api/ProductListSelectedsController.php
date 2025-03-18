@@ -91,11 +91,9 @@ class ProductListSelectedsController extends Controller
     
                 // NUEVA LÓGICA: Buscar en operator_post por rfid_reading_id con finish_at null.
                 $operatorPost = OperatorPost::where('rfid_reading_id', $rfidId)
-                                            ->where(function ($query) {
-                                                $query->whereNull('finish_at')
-                                                    ->orWhere('finish_at', '');
-                                            })
-                                            ->first();
+                                ->whereNull('finish_at')
+                                ->first();
+
 
     
                 if ($operatorPost) {

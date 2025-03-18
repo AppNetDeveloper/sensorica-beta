@@ -37,9 +37,9 @@ class FinalizeOperatorPosts extends Command
 
                 // Buscar solo los registros que no están finalizados (finish_at es null o vacío) y cuya fecha de creación no sea mayor que ahora
                 $operatorPosts = OperatorPost::whereNull('finish_at')
-                    ->orWhere('finish_at', '')
-                    ->where('created_at', '<', Carbon::now()) // Filtramos para que 'created_at' no sea mayor a la fecha actual
-                    ->get();
+                ->where('created_at', '<', Carbon::now()) // Filtramos para que 'created_at' no sea mayor a la fecha actual
+                ->get();
+            
 
                 foreach ($operatorPosts as $operatorPost) {
                     // Obtener el 'created_at' del registro y convertirlo a objeto Carbon
