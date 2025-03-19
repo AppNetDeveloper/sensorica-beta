@@ -121,7 +121,6 @@ async function processCallApi(topic, data) {
     }
 }
 
-
 // Función principal
 async function start() {
     await connectToDatabase();
