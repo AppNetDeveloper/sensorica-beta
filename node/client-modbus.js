@@ -19,6 +19,7 @@ const dbConfig = {
 let mqttClient;
 let isMqttConnected = false;
 let dbConnection;
+let subscribedTopics = [];
 
 function connectMQTT() {
     const clientId = `mqtt_client_${Math.random().toString(16).substr(2, 8)}`;
@@ -32,12 +33,6 @@ function connectMQTT() {
         console.log(`✅ Conectado a MQTT Server: ${mqttServer}:${mqttPort}`);
         isMqttConnected = true;
         subscribeToTopics(); // Nos suscribimos a los tópicos después de conectarnos
-
-        // Solo agregar el 'on' para el manejo de mensajes después de la conexión
-        mqttClient.on('message', async (topic, message) => {
-            console.log(`✅ Mensaje recibido: Tópico: ${topic} | Datos: ${message.toString()}`);
-            await processCallApi(topic, message.toString());
-        });
     });
 
     mqttClient.on('disconnect', () => {
@@ -77,14 +72,32 @@ async function subscribeToTopics() {
 
     const topics = await getAllTopics();
 
+    // Suscribirse a los nuevos tópicos que no estén ya suscritos
     topics.forEach(topic => {
-        mqttClient.subscribe(topic, (err) => {
-            if (err) {
-                console.log(`❌ Error al suscribirse al tópico: ${topic}`);
-            } else {
-                console.log(`✅ Suscrito al tópico: ${topic}`);
-            }
-        });
+        if (!subscribedTopics.includes(topic)) {
+            mqttClient.subscribe(topic, (err) => {
+                if (err) {
+                    console.log(`❌ Error al suscribirse al tópico: ${topic}`);
+                } else {
+                    console.log(`✅ Suscrito al tópico: ${topic}`);
+                    subscribedTopics.push(topic); // Guardamos el tópico como suscrito
+                }
+            });
+        }
+    });
+
+    // Desuscribirse de los tópicos que ya no existen en la base de datos
+    subscribedTopics.forEach((topic, index) => {
+        if (!topics.includes(topic)) {
+            mqttClient.unsubscribe(topic, (err) => {
+                if (err) {
+                    console.log(`❌ Error al desuscribirse del tópico: ${topic}`);
+                } else {
+                    console.log(`✅ Desuscrito del tópico: ${topic}`);
+                    subscribedTopics.splice(index, 1); // Eliminamos el tópico de la lista de suscritos
+                }
+            });
+        }
     });
 }
 
@@ -126,12 +139,14 @@ async function start() {
     await connectToDatabase();
     connectMQTT();
     
-    // Si el broker está desconectado, no hacer nada
+    // Verificar y actualizar las suscripciones cada 1 minuto
     await setIntervalAsync(async () => {
         if (!isMqttConnected) {
             console.log('⚠️ Esperando reconexión a MQTT...');
+        } else {
+            await subscribeToTopics();  // Revisa y actualiza las suscripciones
         }
-    }, 5000); // Verifica la conexión cada 5 segundos
+    }, 60000); // Ejecutar cada 60 segundos
 }
 
 // Iniciar la aplicación
