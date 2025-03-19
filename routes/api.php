@@ -201,10 +201,11 @@ Route::delete('/product-lists/{id}', [ProductListController::class, 'destroy']);
 
 Route::get('production-line/status/{token}', [ProductionLineStatusController::class, 'getStatusByToken']);
 
-//mosbus api
+// Modbus API
 Route::middleware(['throttle:30000,1'])->group(function () {
     Route::post('/modbus-process-data-mqtt', [ModbusProcessController::class, 'processMqttData']);
 });
+
 
 
 //scada orders api show

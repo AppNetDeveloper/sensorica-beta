@@ -20,6 +20,7 @@ let mqttClient;
 let isMqttConnected = false;
 let dbConnection;
 let subscribedTopics = [];
+let valueCounters = {}; // Para almacenar los contadores de repetición por tópico
 
 function connectMQTT() {
     const clientId = `mqtt_client_${Math.random().toString(16).substr(2, 8)}`;
@@ -33,6 +34,12 @@ function connectMQTT() {
         console.log(`✅ Conectado a MQTT Server: ${mqttServer}:${mqttPort}`);
         isMqttConnected = true;
         subscribeToTopics(); // Nos suscribimos a los tópicos después de conectarnos
+    
+        // Solo agregar el 'on' para el manejo de mensajes después de la conexión
+        mqttClient.on('message', async (topic, message) => {
+            console.log(`✅ Mensaje recibido: Tópico: ${topic} | Datos: ${message.toString()}`);
+            await processCallApi(topic, message.toString());
+        });
     });
 
     mqttClient.on('disconnect', () => {
@@ -60,12 +67,12 @@ async function connectToDatabase() {
 }
 
 async function getAllTopics() {
-    const [rows] = await dbConnection.execute('SELECT mqtt_topic_modbus FROM modbuses WHERE mqtt_topic_modbus IS NOT NULL AND mqtt_topic_modbus != ""');
-    return rows.map(row => row.mqtt_topic_modbus);
+    const [rows] = await dbConnection.execute('SELECT mqtt_topic_modbus, rep_number FROM modbuses WHERE mqtt_topic_modbus IS NOT NULL AND mqtt_topic_modbus != ""');
+    return rows;
 }
 
 async function subscribeToTopics() {
-    if (!mqttClient || !isMqttConnected) {
+    if (!isMqttConnected) {
         console.log('❌ mqttClient no está conectado. No se pueden suscribir a los tópicos.');
         return;
     }
@@ -74,13 +81,14 @@ async function subscribeToTopics() {
 
     // Suscribirse a los nuevos tópicos que no estén ya suscritos
     topics.forEach(topic => {
-        if (!subscribedTopics.includes(topic)) {
-            mqttClient.subscribe(topic, (err) => {
+        if (!subscribedTopics.includes(topic.mqtt_topic_modbus)) {
+            mqttClient.subscribe(topic.mqtt_topic_modbus, (err) => {
                 if (err) {
-                    console.log(`❌ Error al suscribirse al tópico: ${topic}`);
+                    console.log(`❌ Error al suscribirse al tópico: ${topic.mqtt_topic_modbus}`);
                 } else {
-                    console.log(`✅ Suscrito al tópico: ${topic}`);
-                    subscribedTopics.push(topic); // Guardamos el tópico como suscrito
+                    console.log(`✅ Suscrito al tópico: ${topic.mqtt_topic_modbus}`);
+                    subscribedTopics.push(topic.mqtt_topic_modbus); // Guardamos el tópico como suscrito
+                    valueCounters[topic.mqtt_topic_modbus] = { count: 0, lastValue: null, repNumber: topic.rep_number }; // Inicializamos el contador
                 }
             });
         }
@@ -88,13 +96,14 @@ async function subscribeToTopics() {
 
     // Desuscribirse de los tópicos que ya no existen en la base de datos
     subscribedTopics.forEach((topic, index) => {
-        if (!topics.includes(topic)) {
+        if (!topics.some(t => t.mqtt_topic_modbus === topic)) {
             mqttClient.unsubscribe(topic, (err) => {
                 if (err) {
                     console.log(`❌ Error al desuscribirse del tópico: ${topic}`);
                 } else {
                     console.log(`✅ Desuscrito del tópico: ${topic}`);
                     subscribedTopics.splice(index, 1); // Eliminamos el tópico de la lista de suscritos
+                    delete valueCounters[topic]; // Eliminamos el contador
                 }
             });
         }
@@ -110,6 +119,28 @@ async function processCallApi(topic, data) {
             data: JSON.parse(data) // Asumiendo que los datos están en formato JSON
         };
 
+        // Verificamos si el valor ha cambiado
+        const parsedData = JSON.parse(data);
+        const value = parsedData.value;
+        const topicCounter = valueCounters[topic];
+
+        if (topicCounter) {
+            // Si el valor ha cambiado, reiniciar el contador
+            if (value !== topicCounter.lastValue) {
+                topicCounter.count = 0;
+                topicCounter.lastValue = value;
+            }
+
+            // Si el contador alcanza el rep_number, no enviamos la API
+            if (topicCounter.count >= topicCounter.repNumber) {
+                console.log(`⚠️ El valor se ha repetido más de ${topicCounter.repNumber} veces para el tópico ${topic}. No se llamará a la API.`);
+                return; // No procesamos más
+            }
+
+            // Incrementamos el contador si el valor sigue siendo el mismo
+            topicCounter.count++;
+        }
+
         // Verificar si LOCAL_SERVER tiene barra al final y quitarla si existe
         let apiUrl = process.env.LOCAL_SERVER;
         if (apiUrl.endsWith('/')) {
@@ -119,7 +150,7 @@ async function processCallApi(topic, data) {
         // Agregar el endpoint
         apiUrl += '/api/modbus-process-data-mqtt';
 
-        // Aquí no usamos `await`, la llamada HTTP será asíncrona
+        // Realizar la solicitud HTTP sin bloquear el flujo
         axios.post(apiUrl, dataToSend)
             .then(response => {
                 // Convertir la respuesta de la API a una cadena JSON para visualizarla mejor
@@ -141,10 +172,11 @@ async function start() {
     
     // Verificar y actualizar las suscripciones cada 1 minuto
     await setIntervalAsync(async () => {
-        if (!isMqttConnected) {
-            console.log('⚠️ Esperando reconexión a MQTT...');
+        if (isMqttConnected) {
+            console.log('✅ MQTT conectado, actualizando suscripciones...');
+            await subscribeToTopics();  // Revisa y actualiza las suscripciones si MQTT está conectado
         } else {
-            await subscribeToTopics();  // Revisa y actualiza las suscripciones
+            console.log('⚠️ Esperando reconexión a MQTT...');
         }
     }, 60000); // Ejecutar cada 60 segundos
 }
