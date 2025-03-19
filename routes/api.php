@@ -202,7 +202,7 @@ Route::delete('/product-lists/{id}', [ProductListController::class, 'destroy']);
 Route::get('production-line/status/{token}', [ProductionLineStatusController::class, 'getStatusByToken']);
 
 //mosbus api
-Route::middleware(['throttle:3000,1'])->group(function () {
+Route::middleware(['throttle:30000,1'])->group(function () {
     Route::post('/modbus-process-data-mqtt', [ModbusProcessController::class, 'processMqttData']);
 });
 
