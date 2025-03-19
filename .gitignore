@@ -30,3 +30,4 @@ storage/api_token.txt
 telegram/sessions
 .baileys_store_multi.json
 baileys_store_multi*
+node/node
