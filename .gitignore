@@ -22,12 +22,12 @@ yarn-error.log
 /storage/dotenv-editor
 /packages
 ngrok.exe
-baileys_auth_info
-wa-logs*
-baileys_store_multi.json
-wa-logs.txt
+node/baileys_auth_info
+node/wa-logs*
+node/baileys_store_multi.json
+node/wa-logs.txt
 storage/api_token.txt
 telegram/sessions
-.baileys_store_multi.json
+node/baileys_store_multi.json
 baileys_store_multi*
 node/node

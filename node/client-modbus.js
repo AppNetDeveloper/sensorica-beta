@@ -22,6 +22,11 @@ let dbConnection;
 let subscribedTopics = [];
 let valueCounters = {}; // Para almacenar los contadores de repetición por tópico
 
+// Función para obtener la fecha y hora actual en formato YYYY-MM-DD HH:mm:ss
+function getCurrentTimestamp() {
+    return new Date().toLocaleString('en-GB', { timeZone: 'UTC' }).replace(',', '');
+}
+
 function connectMQTT() {
     const clientId = `mqtt_client_${Math.random().toString(16).substr(2, 8)}`;
     mqttClient = mqtt.connect(`mqtt://${mqttServer}:${mqttPort}`, {
@@ -31,38 +36,38 @@ function connectMQTT() {
     });
 
     mqttClient.on('connect', () => {
-        console.log(`✅ Conectado a MQTT Server: ${mqttServer}:${mqttPort}`);
+        console.log(`[${getCurrentTimestamp()}] ✅ Conectado a MQTT Server: ${mqttServer}:${mqttPort}`);
         isMqttConnected = true;
         subscribeToTopics(); // Nos suscribimos a los tópicos después de conectarnos
     
         // Solo agregar el 'on' para el manejo de mensajes después de la conexión
         mqttClient.on('message', async (topic, message) => {
-            console.log(`✅ Mensaje recibido: Tópico: ${topic} | Datos: ${message.toString()}`);
+            console.log(`[${getCurrentTimestamp()}] ✅ Mensaje recibido: Tópico: ${topic} | Datos: ${message.toString()}`);
             await processCallApi(topic, message.toString());
         });
     });
 
     mqttClient.on('disconnect', () => {
-        console.log('🔴 Desconectado de MQTT');
+        console.log(`[${getCurrentTimestamp()}] 🔴 Desconectado de MQTT`);
         isMqttConnected = false;
     });
 
     mqttClient.on('error', (error) => {
-        console.error('❌ Error en la conexión MQTT:', error);
+        console.error(`[${getCurrentTimestamp()}] ❌ Error en la conexión MQTT: ${error}`);
         isMqttConnected = false;
     });
 
     mqttClient.on('reconnect', () => {
-        console.log('⚠️ Intentando reconectar a MQTT...');
+        console.log(`[${getCurrentTimestamp()}] ⚠️ Intentando reconectar a MQTT...`);
     });
 }
 
 async function connectToDatabase() {
     try {
         dbConnection = await mysql.createConnection(dbConfig);
-        console.log('✅ Conectado a la base de datos');
+        console.log(`[${getCurrentTimestamp()}] ✅ Conectado a la base de datos`);
     } catch (error) {
-        console.error('❌ Error al conectar con la base de datos:', error);
+        console.error(`[${getCurrentTimestamp()}] ❌ Error al conectar con la base de datos:`, error);
     }
 }
 
@@ -73,7 +78,7 @@ async function getAllTopics() {
 
 async function subscribeToTopics() {
     if (!isMqttConnected) {
-        console.log('❌ mqttClient no está conectado. No se pueden suscribir a los tópicos.');
+        console.log(`[${getCurrentTimestamp()}] ❌ mqttClient no está conectado. No se pueden suscribir a los tópicos.`);
         return;
     }
 
@@ -84,9 +89,9 @@ async function subscribeToTopics() {
         if (!subscribedTopics.includes(topic.mqtt_topic_modbus)) {
             mqttClient.subscribe(topic.mqtt_topic_modbus, (err) => {
                 if (err) {
-                    console.log(`❌ Error al suscribirse al tópico: ${topic.mqtt_topic_modbus}`);
+                    console.log(`[${getCurrentTimestamp()}] ❌ Error al suscribirse al tópico: ${topic.mqtt_topic_modbus}`);
                 } else {
-                    console.log(`✅ Suscrito al tópico: ${topic.mqtt_topic_modbus}`);
+                    console.log(`[${getCurrentTimestamp()}] ✅ Suscrito al tópico: ${topic.mqtt_topic_modbus}`);
                     subscribedTopics.push(topic.mqtt_topic_modbus); // Guardamos el tópico como suscrito
                     valueCounters[topic.mqtt_topic_modbus] = { count: 0, lastValue: null, repNumber: topic.rep_number }; // Inicializamos el contador
                 }
@@ -99,13 +104,24 @@ async function subscribeToTopics() {
         if (!topics.some(t => t.mqtt_topic_modbus === topic)) {
             mqttClient.unsubscribe(topic, (err) => {
                 if (err) {
-                    console.log(`❌ Error al desuscribirse del tópico: ${topic}`);
+                    console.log(`[${getCurrentTimestamp()}] ❌ Error al desuscribirse del tópico: ${topic}`);
                 } else {
-                    console.log(`✅ Desuscrito del tópico: ${topic}`);
+                    console.log(`[${getCurrentTimestamp()}] ✅ Desuscrito del tópico: ${topic}`);
                     subscribedTopics.splice(index, 1); // Eliminamos el tópico de la lista de suscritos
                     delete valueCounters[topic]; // Eliminamos el contador
                 }
             });
+        }
+    });
+}
+
+async function updateRepNumber() {
+    const topics = await getAllTopics();
+    topics.forEach(topic => {
+        // Si el rep_number ha cambiado para un tópico suscrito, lo actualizamos
+        if (valueCounters[topic.mqtt_topic_modbus] && valueCounters[topic.mqtt_topic_modbus].repNumber !== topic.rep_number) {
+            valueCounters[topic.mqtt_topic_modbus].repNumber = topic.rep_number;
+            console.log(`[${getCurrentTimestamp()}] ✅ rep_number actualizado para el tópico ${topic.mqtt_topic_modbus} a ${topic.rep_number}`);
         }
     });
 }
@@ -133,7 +149,7 @@ async function processCallApi(topic, data) {
 
             // Si el contador alcanza el rep_number, no enviamos la API
             if (topicCounter.count >= topicCounter.repNumber) {
-                console.log(`⚠️ El valor se ha repetido más de ${topicCounter.repNumber} veces para el tópico ${topic}. No se llamará a la API.`);
+                console.log(`[${getCurrentTimestamp()}] ⚠️ El valor se ha repetido más de ${topicCounter.repNumber} veces para el tópico ${topic}. No se llamará a la API.`);
                 return; // No procesamos más
             }
 
@@ -154,14 +170,14 @@ async function processCallApi(topic, data) {
         axios.post(apiUrl, dataToSend)
             .then(response => {
                 // Convertir la respuesta de la API a una cadena JSON para visualizarla mejor
-                console.log(`✅ Respuesta de la API para el Modbus ID ${topic}: ${JSON.stringify(response.data, null, 2)}`);
+                console.log(`[${getCurrentTimestamp()}] ✅ Respuesta de la API para el Modbus ID ${topic}: ${JSON.stringify(response.data, null, 2)}`);
             })
             .catch(error => {
-                console.error(`❌ Error al procesar los datos del Modbus ID ${topic}: ${error.message}`);
+                console.error(`[${getCurrentTimestamp()}] ❌ Error al procesar los datos del Modbus ID ${topic}: ${error.message}`);
             });
 
     } catch (error) {
-        console.error(`❌ Error al procesar los datos del Modbus ID ${topic}: ${error.message}`);
+        console.error(`[${getCurrentTimestamp()}] ❌ Error al procesar los datos del Modbus ID ${topic}: ${error.message}`);
     }
 }
 
@@ -173,10 +189,11 @@ async function start() {
     // Verificar y actualizar las suscripciones cada 1 minuto
     await setIntervalAsync(async () => {
         if (isMqttConnected) {
-            console.log('✅ MQTT conectado, actualizando suscripciones...');
+            console.log(`[${getCurrentTimestamp()}] ✅ MQTT conectado, actualizando suscripciones...`);
             await subscribeToTopics();  // Revisa y actualiza las suscripciones si MQTT está conectado
+            await updateRepNumber();  // Actualiza el rep_number de los tópicos
         } else {
-            console.log('⚠️ Esperando reconexión a MQTT...');
+            console.log(`[${getCurrentTimestamp()}] ⚠️ Esperando reconexión a MQTT...`);
         }
     }, 60000); // Ejecutar cada 60 segundos
 }
@@ -186,11 +203,11 @@ start();
 
 // Manejo de señales
 process.on('SIGINT', () => {
-    console.log('🔴 Deteniendo el proceso...');
+    console.log(`[${getCurrentTimestamp()}] 🔴 Deteniendo el proceso...`);
     mqttClient.end(() => {
-        console.log('✅ Desconectado de MQTT');
+        console.log(`[${getCurrentTimestamp()}] ✅ Desconectado de MQTT`);
         dbConnection.end(() => {
-            console.log('✅ Desconectado de la base de datos');
+            console.log(`[${getCurrentTimestamp()}] ✅ Desconectado de la base de datos`);
             process.exit(0); // Salir de manera controlada
         });
     });

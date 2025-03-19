@@ -24,26 +24,36 @@ then
 else
     echo "Node.js ya está instalado."
 fi
+
 npm init -y
 npm install express cors body-parser telegram dotenv sqlite3
 npm install express qrcode axios dotenv
 npm install swagger-ui-express swagger-jsdoc --save
 npm install cors
+npm install mqtt mysql2
+npm install @whiskeysockets/baileys express node-cache pino axios @hapi/boom dotenv qrcode
+npm install swagger-ui-express swagger-jsdoc
+npm install swagger-ui-express swagger-jsdoc --save
+npm install multer
+npm install https-agent
+npm install express-fileupload
+npm install @hapi/boom
+npm install dotenv
+npm install qrcode
+npm install axios
+npm install node-cache
+npm install pino
+npm install express
+npm install node-cron
+npm install express cors body-parser telegram dotenv sqlite3
+npm install axios telegraf
+npm install express telegram qrcode axios dotenv
+npm install swagger-ui-express swagger-jsdoc --save
+npm install cors
 npm install mqtt mysql2 axios
 
 
-# Otros requisitos adicionales
-echo "Verificando si hay otros requisitos..."
+npm update
+npm install
 
-# Por ejemplo, si necesitas instalar Python o alguna otra herramienta
-# Descomenta las siguientes líneas si necesitas instalar algo más
-
-# echo "Instalando Python..."
-# sudo apt install -y python3
-
-# echo "Instalando otras dependencias..."
-# sudo apt install -y <paquete>
-
-echo "Instalación completada con éxito."
-
-# Fin del script
+echo "Instalación completada."
