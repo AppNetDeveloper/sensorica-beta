@@ -97,7 +97,7 @@ async function processCallApi(topic, data) {
             data: JSON.parse(data) // Asumiendo que los datos están en formato JSON
         };
 
-        const apiUrl = `${process.env.LOCAL_SERVER}/api/modbus-process-data-mqtt`;
+        const apiUrl = `${process.env.LOCAL_SERVER}api/modbus-process-data-mqtt`;
 
         // Aquí no usamos `await`, la llamada HTTP será asíncrona
         axios.post(apiUrl, dataToSend)
