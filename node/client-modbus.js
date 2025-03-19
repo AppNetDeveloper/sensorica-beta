@@ -97,12 +97,20 @@ async function processCallApi(topic, data) {
             data: JSON.parse(data) // Asumiendo que los datos están en formato JSON
         };
 
-        const apiUrl = `${process.env.LOCAL_SERVER}api/modbus-process-data-mqtt`;
+        // Verificar si LOCAL_SERVER tiene barra al final y quitarla si existe
+        let apiUrl = process.env.LOCAL_SERVER;
+        if (apiUrl.endsWith('/')) {
+            apiUrl = apiUrl.slice(0, -1);  // Eliminar la barra final
+        }
+
+        // Agregar el endpoint
+        apiUrl += '/api/modbus-process-data-mqtt';
 
         // Aquí no usamos `await`, la llamada HTTP será asíncrona
         axios.post(apiUrl, dataToSend)
             .then(response => {
-                console.log(`✅ Respuesta de la API para el Modbus ID ${topic}: ${response.data}`);
+                // Convertir la respuesta de la API a una cadena JSON para visualizarla mejor
+                console.log(`✅ Respuesta de la API para el Modbus ID ${topic}: ${JSON.stringify(response.data, null, 2)}`);
             })
             .catch(error => {
                 console.error(`❌ Error al procesar los datos del Modbus ID ${topic}: ${error.message}`);
@@ -112,6 +120,7 @@ async function processCallApi(topic, data) {
         console.error(`❌ Error al procesar los datos del Modbus ID ${topic}: ${error.message}`);
     }
 }
+
 
 // Función principal
 async function start() {
