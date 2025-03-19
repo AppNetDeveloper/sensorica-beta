@@ -48,7 +48,6 @@ npm install node-cron
 npm install express cors body-parser telegram dotenv sqlite3
 npm install axios telegraf
 npm install express telegram qrcode axios dotenv
-npm install swagger-ui-express swagger-jsdoc --save
 npm install cors
 npm install mqtt mysql2 axios
 

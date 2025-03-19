@@ -208,6 +208,9 @@ fi
 
 php artisan db:seed --force || { echo "Error: Falló la ejecución de las seeds."; exit 1; }
 
+sudo sh telegram/install.sh || { echo "Error: Falló la instalación de Telegram."; exit 1; }
+sudo sh node/install.sh || { echo "Error: Falló la instalación de Node.js."; exit 1; }
+
 # Verifica si el archivo .env no existe en la carpeta telegram
 if [ ! -f "telegram/.env" ]; then
     cp "telegram/.env.example" "telegram/.env"
