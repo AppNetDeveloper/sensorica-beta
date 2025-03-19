@@ -93,7 +93,7 @@ async function publishToMqtt(entry) {
         
         if (isMqttConnected) {
             // Publicamos en MQTT solo si estamos conectados
-            mqttClient.publish(entry.topic, payload, { qos: 0, retain: false });
+            mqttClient.publish(entry.topic, payload, { qos: 0, retain: true });
             console.log(`✅ Publicado en MQTT: Tópico: ${entry.topic} | Datos: ${payload}`);
             // Solo eliminar el registro si la publicación fue exitosa
             deleteProcessedEntries([entry.id]);
