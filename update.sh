@@ -93,6 +93,7 @@ COMMANDS=(
     "/bin/systemctl start 485.service"
     "/var/www/html/verne.sh"
     "/var/www/html/reset-sensor.sh"
+    "/var/www/html/node/*.js"
 )
 
 
