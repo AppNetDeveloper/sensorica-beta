@@ -334,8 +334,9 @@ class ModbusProcessController extends Controller
             if (abs($value - $lastKg) <= $variacionNumber) { // Si la variación está dentro del rango permitido
                 Log::info("Valor estable dentro del rango de variación.");
                 $lastRep++; // Incrementar el contador de repeticiones
-
-                if ($lastRep >= $repNumber && $value >= $minKg && $value > $maxKg) { // Si se alcanza el número de repeticiones requerido, pero el valor es mas grande que minimo permitido y que el valor es mas grande que maxKG
+                //original era asi , solo validaba mas grande 
+                //if ($lastRep >= $repNumber && $value >= $minKg && $value > $maxKg) { 
+                if ($lastRep >= $repNumber && $value >= $minKg) { // Si se alcanza el número de repeticiones requerido, pero el valor es mas grande que minimo permitido y que el valor es mas grande que maxKG
                     Log::info("Número de repeticiones alcanzado. Nuevo máximo: {$value} kg");
                     $maxKg = $value; // Actualizar el valor máximo
                     $lastRep = 0; // Reiniciar el contador de repeticiones
