@@ -21,6 +21,7 @@ let dbConnection;
 let subscribedTopics = [];
 let valueCounters = {};
 let blockedEPCs = new Set();  // Guardamos EPC bloqueados en memoria
+let ignoredTIDs = new Map();  // TIDs ignorados temporalmente (clave = TID, valor = timestamp de expiración)
 let antennaData = {};  // Almacena mqtt_topic -> { rssi_min, antenna_name }
 
 // Obtener la fecha y hora en formato YYYY-MM-DD HH:mm:ss
@@ -153,6 +154,12 @@ async function processCallApi(topic, data) {
                 continue;
             }
 
+            // Si el TID está en la lista de ignorados, no llamamos a la API
+            if (ignoredTIDs.has(tid)) {
+                //console.log(`[${getCurrentTimestamp()}] ⚠️ TID ${tid} ignorado, ya fue registrado recientemente.`);
+                continue;
+            }
+
             // Construir el JSON para la API
             const dataToSend = {
                 epc,
@@ -172,6 +179,13 @@ async function processCallApi(topic, data) {
             axios.post(apiUrl, dataToSend)
                 .then(response => {
                     console.log(`[${getCurrentTimestamp()}] ✅ Respuesta de la API para EPC ${epc} y TID ${tid}: ${JSON.stringify(response.data, null, 2)}`);
+           
+                    // Si la API indica que la tarjeta ya fue registrada, ignoramos este TID por 1 minuto
+                    if (!response.data.success && response.data.suvves.includes("false")) {
+                        ignoredTIDs.set(tid, Date.now());
+                        setTimeout(() => ignoredTIDs.delete(tid), 60000);
+                        console.log(`[${getCurrentTimestamp()}] ⏳ TID ${tid} será ignorado durante 1 minuto.`);
+                    }     
                 })
                 .catch(error => {
                     console.error(`[${getCurrentTimestamp()}] ❌ Error al procesar EPC ${epc}: ${error.response ? error.response.data.message : error.message}`);
