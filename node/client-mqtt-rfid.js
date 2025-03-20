@@ -149,7 +149,7 @@ async function processCallApi(topic, data) {
             // Verificamos el rssi_min para este tópico
             const antennaInfo = antennaData[topic];
             if (antennaInfo && rssi < antennaInfo.rssi_min) {
-               console.log(`[${getCurrentTimestamp()}] ⚠️ RSSI ${rssi} es menor que el mínimo ${antennaInfo.rssi_min} para el EPC ${epc}, no se llamará a la API.`);
+               //console.log(`[${getCurrentTimestamp()}] ⚠️ RSSI ${rssi} es menor que el mínimo ${antennaInfo.rssi_min} para el EPC ${epc}, no se llamará a la API.`);
                 continue;
             }
 
@@ -171,7 +171,7 @@ async function processCallApi(topic, data) {
 
             axios.post(apiUrl, dataToSend)
                 .then(response => {
-                    console.log(`[${getCurrentTimestamp()}] ✅ Respuesta de la API para EPC ${epc}: ${JSON.stringify(response.data, null, 2)}`);
+                    console.log(`[${getCurrentTimestamp()}] ✅ Respuesta de la API para EPC ${epc} y TID ${tid}: ${JSON.stringify(response.data, null, 2)}`);
                 })
                 .catch(error => {
                     console.error(`[${getCurrentTimestamp()}] ❌ Error al procesar EPC ${epc}: ${error.response ? error.response.data.message : error.message}`);
@@ -192,7 +192,7 @@ async function start() {
     setIntervalAsync(async () => {
         if (isMqttConnected) {
             await subscribeToTopics();
-            await updateBlockedEPCs();
+           // await updateBlockedEPCs();
         } else {
             console.log(`[${getCurrentTimestamp()}] ⚠️ Esperando reconexión a MQTT...`);
         }
