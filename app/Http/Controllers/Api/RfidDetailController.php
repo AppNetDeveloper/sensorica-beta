@@ -178,7 +178,7 @@ class RfidDetailController extends Controller
                         // Calcular la diferencia en minutos desde la última inserción de la tarjeta maestra
                         $minutosTranscurridos = Carbon::now()->diffInMinutes(Carbon::parse($lastMasterRecord->created_at));
 
-                        if (!$otroRegistroExiste || $minutosTranscurridos < 1) {
+                        if (!$otroRegistroExiste || $minutosTranscurridos < 5) {
                             Log::info("Condiciones para reinsertar la tarjeta maestra no cumplidas: " .
                                 "otro registro insertado = " . ($otroRegistroExiste ? 'sí' : 'no') .
                                 ", minutos transcurridos = {$minutosTranscurridos}.");

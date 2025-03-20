@@ -42,7 +42,7 @@ function connectMQTT() {
         subscribeToTopics();
 
         mqttClient.on('message', async (topic, message) => {
-            console.log(`[${getCurrentTimestamp()}] ✅ Mensaje recibido: Tópico: ${topic} | Datos: ${message.toString()}`);
+            //console.log(`[${getCurrentTimestamp()}] ✅ Mensaje recibido: Tópico: ${topic} | Datos: ${message.toString()}`);
             await processCallApi(topic, message.toString());
         });
     });
@@ -142,14 +142,14 @@ async function processCallApi(topic, data) {
 
             // Si el EPC está en la lista de bloqueados, no llamamos a la API
             if (blockedEPCs.has(epc)) {
-                console.log(`[${getCurrentTimestamp()}] ⚠️ EPC bloqueado detectado (${epc}), no se llamará a la API.`);
+                //console.log(`[${getCurrentTimestamp()}] ⚠️ EPC bloqueado detectado (${epc}), no se llamará a la API.`);
                 continue;
             }
 
             // Verificamos el rssi_min para este tópico
             const antennaInfo = antennaData[topic];
             if (antennaInfo && rssi < antennaInfo.rssi_min) {
-                console.log(`[${getCurrentTimestamp()}] ⚠️ RSSI ${rssi} es menor que el mínimo ${antennaInfo.rssi_min} para el EPC ${epc}, no se llamará a la API.`);
+               console.log(`[${getCurrentTimestamp()}] ⚠️ RSSI ${rssi} es menor que el mínimo ${antennaInfo.rssi_min} para el EPC ${epc}, no se llamará a la API.`);
                 continue;
             }
 
