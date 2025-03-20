@@ -188,6 +188,12 @@ async function processCallApi(topic, data) {
                         setTimeout(() => ignoredTIDs.delete(tid), 60000);
                         console.log(`[${getCurrentTimestamp()}] ⏳ TID ${tid} será ignorado durante 1 minuto.`);
                     }     
+                    //bloqueamos los TID ya pasados con exito .Para que no llame 1 minuto a la api y reducimos carga de api
+                    if (response.data.success) {
+                        ignoredTIDs.set(tid, Date.now());
+                        setTimeout(() => ignoredTIDs.delete(tid), 60000);
+                        console.log(`[${getCurrentTimestamp()}] ⏳ TID ${tid} será ignorado durante 1 minuto.`);
+                    }   
                 })
                 .catch(error => {
                     console.error(`[${getCurrentTimestamp()}] ❌ Error al procesar EPC ${epc}: ${error.response ? error.response.data.message : error.message}`);
