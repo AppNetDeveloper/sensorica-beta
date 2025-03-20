@@ -181,6 +181,8 @@ async function processCallApi(topic, data) {
                     console.log(`[${getCurrentTimestamp()}] ✅ Respuesta de la API para EPC ${epc} y TID ${tid}: ${JSON.stringify(response.data, null, 2)}`);
            
                     // Si la API indica que la tarjeta ya fue registrada, ignoramos este TID por 1 minuto
+
+                    //if (!response.data.success && response.data.message.includes("ya fue registrada en este ciclo")) {
                     if (!response.data.success) {
                         ignoredTIDs.set(tid, Date.now());
                         setTimeout(() => ignoredTIDs.delete(tid), 60000);
