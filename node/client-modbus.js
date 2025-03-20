@@ -91,9 +91,10 @@ async function subscribeToTopics() {
                 if (err) {
                     console.log(`[${getCurrentTimestamp()}] ❌ Error al suscribirse al tópico: ${topic.mqtt_topic_modbus}`);
                 } else {
-                    console.log(`[${getCurrentTimestamp()}] ✅ Suscrito al tópico: ${topic.mqtt_topic_modbus}`);
-                    subscribedTopics.push(topic.mqtt_topic_modbus); // Guardamos el tópico como suscrito
-                    valueCounters[topic.mqtt_topic_modbus] = { count: 0, lastValue: null, repNumber: topic.rep_number }; // Inicializamos el contador
+                    const repNumber = parseInt(topic.rep_number, 10) + 1; // Asegurar conversión numérica
+                    console.log(`[${getCurrentTimestamp()}] ✅ Suscrito al tópico: ${topic.mqtt_topic_modbus} (rep_number ajustado a: ${repNumber})`);
+                    subscribedTopics.push(topic.mqtt_topic_modbus);
+                    valueCounters[topic.mqtt_topic_modbus] = { count: 0, lastValue: null, repNumber, zeroCount: 0 };
                 }
             });
         }
@@ -118,10 +119,12 @@ async function subscribeToTopics() {
 async function updateRepNumber() {
     const topics = await getAllTopics();
     topics.forEach(topic => {
+        const newRepNumber = parseInt(topic.rep_number, 10) + 1; // Asegurar conversión numérica
+
         // Si el rep_number ha cambiado para un tópico suscrito, lo actualizamos
-        if (valueCounters[topic.mqtt_topic_modbus] && valueCounters[topic.mqtt_topic_modbus].repNumber !== topic.rep_number) {
+        if (valueCounters[topic.mqtt_topic_modbus] && valueCounters[topic.mqtt_topic_modbus].repNumber !== newRepNumber) {
             valueCounters[topic.mqtt_topic_modbus].repNumber = topic.rep_number;
-            console.log(`[${getCurrentTimestamp()}] ✅ rep_number actualizado para el tópico ${topic.mqtt_topic_modbus} a ${topic.rep_number}`);
+            console.log(`[${getCurrentTimestamp()}] ✅ rep_number actualizado para el tópico ${topic.mqtt_topic_modbus} a ${newRepNumber}`);
         }
     });
 }

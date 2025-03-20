@@ -153,7 +153,7 @@ async function initialize() {
         } else {
             console.log('⚠️ No hay conexión a MQTT, esperando reconexión...');
         }
-    }, 1000);  // 1000 ms = 1 segundo
+    }, 500);  // 1000 ms = 1 segundo
 }
 
 // Ejecutar inicialización
