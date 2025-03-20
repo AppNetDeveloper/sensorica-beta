@@ -180,13 +180,13 @@ async function processCallApi(topic, data) {
                 .then(response => {
                     console.log(`[${getCurrentTimestamp()}] ✅ Respuesta de la API para EPC ${epc} , TID ${tid} y RSSI ${rssi}: ${JSON.stringify(response.data, null, 2)}`);
            
-                    // Si la API indica que la tarjeta ya fue registrada, ignoramos este TID por 1 minuto
+                    // Si la API indica que la tarjeta ya fue registrada, ignoramos este TID por 3 minuto
 
                     //if (!response.data.success && response.data.message.includes("ya fue registrada en este ciclo")) {
                     if (!response.data.success) {
                         ignoredTIDs.set(tid, Date.now());
-                        setTimeout(() => ignoredTIDs.delete(tid), 60000);
-                        console.log(`[${getCurrentTimestamp()}] ⏳ TID ${tid} será ignorado durante 1 minuto.`);
+                        setTimeout(() => ignoredTIDs.delete(tid), 180000);
+                        console.log(`[${getCurrentTimestamp()}] ⏳ TID ${tid} será ignorado durante 3 minuto.`);
                     }     
                     //bloqueamos los TID ya pasados con exito .Para que no llame 5 minuto a la api y reducimos carga de api
                     if (response.data.success) {
