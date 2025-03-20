@@ -175,6 +175,7 @@ async function processCallApi(topic, data) {
                 })
                 .catch(error => {
                     console.error(`[${getCurrentTimestamp()}] ❌ Error al procesar EPC ${epc}: ${error.response ? error.response.data.message : error.message}`);
+                    updateBlockedEPCs();
                 });
         }
     } catch (error) {
