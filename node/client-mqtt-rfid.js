@@ -167,7 +167,7 @@ async function processCallApi(topic, data) {
             if (apiUrl.endsWith('/')) {
                 apiUrl = apiUrl.slice(0, -1);
             }
-            apiUrl += '/api/rfid-process-data';
+            apiUrl += '/api/rfid-insert';
 
             axios.post(apiUrl, dataToSend)
                 .then(response => {
