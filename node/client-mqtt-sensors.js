@@ -209,7 +209,7 @@ async function processCallApi(topic, data) {
 
      //llamada api con cola de 5 intentos si falla 1
      const response = await callApiWithRetries(dataToSend);
-     console.log(`[${getCurrentTimestamp()}] ✅ Respuesta de la API para el Sensor ID ${sensorConfig.id}: ${JSON.stringify(response.data, null, 2)}`);
+     console.log(`[${getCurrentTimestamp()}] ✅ Respuesta de la API para el Sensor ID ${sensorConfig.id} y tópico ${topic}: ${JSON.stringify(response.data, null, 2)}`);
   } catch (error) {
     console.error(`[${getCurrentTimestamp()}] ❌ Error al procesar los datos del Sensor para el tópico ${topic}: ${error.message}`);
   }
