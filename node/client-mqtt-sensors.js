@@ -26,7 +26,7 @@ let sensorsCache = {};      // Objeto: { mqtt_topic_sensor: { id, sensor_type } 
 
 // Función para obtener la fecha y hora actual
 function getCurrentTimestamp() {
-  return new Date().toLocaleString('en-GB', { timeZone: 'UTC' }).replace(',', '');
+    return new Date().toLocaleString('en-GB').replace(',', '');
 }
 
 function connectMQTT() {
@@ -143,23 +143,26 @@ async function subscribeToTopics() {
 async function callApiWithRetries(dataToSend, maxRetries = 20, initialDelay = 1000) {
     let attempt = 0;
     let delay = initialDelay;
-
+  
     while (attempt < maxRetries) {
-        try {
-            // Intenta realizar la llamada a la API
-            const response = await axios.post(`${apiBaseUrl}/api/sensor-insert`, dataToSend);
-            return response;
-        } catch (error) {
-            attempt++;
-            if (attempt >= maxRetries) {
-                throw error;
-            }
-            console.warn(`[${getCurrentTimestamp()}] ⚠️ Error en llamada a API, reintentando en ${delay}ms (Intento ${attempt} de ${maxRetries})`);
-            await new Promise(resolve => setTimeout(resolve, delay));
-            delay *= 2; // Backoff exponencial
+      try {
+        const response = await axios.post(`${apiBaseUrl}/api/sensor-insert`, dataToSend);
+        return response;
+      } catch (error) {
+        attempt++;
+        // Extraemos el status, si existe
+        const status = error.response ? error.response.status : 'No status';
+        if (attempt >= maxRetries) {
+          console.error(`[${getCurrentTimestamp()}] ❌ Error final en llamada a API después de ${maxRetries} intentos: ${error.message} (Status: ${status})`);
+          throw error;
         }
+        console.warn(`[${getCurrentTimestamp()}] ⚠️ Error en llamada a API (Status: ${status}), reintentando en ${delay}ms (Intento ${attempt} de ${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        delay *= 2;
+      }
     }
-}
+  }
+  
 
 async function processCallApi(topic, data) {
   try {

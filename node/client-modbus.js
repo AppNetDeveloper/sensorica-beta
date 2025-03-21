@@ -24,7 +24,7 @@ let valueCounters = {}; // Para almacenar los contadores de repetición por tóp
 
 // Función para obtener la fecha y hora actual en formato YYYY-MM-DD HH:mm:ss
 function getCurrentTimestamp() {
-    return new Date().toLocaleString('en-GB', { timeZone: 'UTC' }).replace(',', '');
+    return new Date().toLocaleString('en-GB').replace(',', '');
 }
 
 function connectMQTT() {
