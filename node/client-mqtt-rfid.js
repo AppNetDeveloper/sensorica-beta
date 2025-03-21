@@ -31,7 +31,7 @@ let antennaData = {};             // Objeto que almacena datos de antenas asocia
 
 // ⏰ Función para obtener la fecha y hora actual en formato 'en-GB' y en la zona horaria UTC, sin la coma
 function getCurrentTimestamp() {
-    return new Date().toLocaleString('en-GB', { timeZone: 'UTC' }).replace(',', '');
+    return new Date().toLocaleString('en-GB').replace(',', '');
 }
 
 // 🔄 Función para conectar a la base de datos con reconexión automática en caso de error
@@ -204,7 +204,10 @@ async function processCallApi(topic, data) {
 
             try {
                 // Realiza la llamada a la API con reintentos en caso de error
-                const response = await callApiWithRetries(dataToSend);
+                //const response = await callApiWithRetries(dataToSend);
+
+                //llamada por directo
+                const response = await axios.post(`${apiBaseUrl}/api/rfid-insert`, dataToSend);
                 console.log(`[${getCurrentTimestamp()}] ✅ API Respuesta EPC ${epc} TID ${tid} y RSSI ${rssi}: ${JSON.stringify(response.data, null, 2)}`);
 
                 // Define el tiempo durante el cual se ignorará el TID según el éxito de la operación (300000 ms o 180000 ms)
