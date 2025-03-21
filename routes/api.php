@@ -68,7 +68,7 @@ Route::get('/modbuses', [ModbusController::class, 'getModbuses']);
 
 Route::get('/control-weights/{token}/all', [ControlWeightController::class, 'getAllDataByToken']);
 
-Route::middleware(['throttle:1000,1'])->group(function () {
+Route::middleware(['throttle:90000,1'])->group(function () {
     Route::get('/control-weight/{token}', [ControlWeightController::class, 'getDataByToken']);
 });
 // Nueva ruta para el consolidado por supplierOrderId
@@ -93,7 +93,10 @@ Route::match(['get', 'post'], '/barcode-info-by-customer/{customerToken}', [GetT
 Route::match(['get', 'post'], '/sensors/{token}', [SensorController::class, 'getByToken']);
 Route::match(['get', 'post'], '/sensors', [SensorController::class, 'getAllSensors']);
 
-Route::post('/sensor-insert', [SensorController::class, 'sensorInsert']);
+Route::middleware(['throttle:90000,1'])->group(function () {
+    Route::post('/sensor-insert', [SensorController::class, 'sensorInsert']);
+});
+
 
 Route::match(['get', 'post'], '/order-stats', [OrderStatsController::class, 'getLastOrderStat']);
 
@@ -202,7 +205,7 @@ Route::delete('/product-lists/{id}', [ProductListController::class, 'destroy']);
 Route::get('production-line/status/{token}', [ProductionLineStatusController::class, 'getStatusByToken']);
 
 // Modbus API
-Route::middleware(['throttle:30000,1'])->group(function () {
+Route::middleware(['throttle:90000,1'])->group(function () {
     Route::post('/modbus-process-data-mqtt', [ModbusProcessController::class, 'processMqttData']);
 });
 

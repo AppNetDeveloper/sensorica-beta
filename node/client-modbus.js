@@ -63,18 +63,33 @@ function connectMQTT() {
 }
 
 async function connectToDatabase() {
-    try {
-        dbConnection = await mysql.createConnection(dbConfig);
-        console.log(`[${getCurrentTimestamp()}] ✅ Conectado a la base de datos`);
-    } catch (error) {
-        console.error(`[${getCurrentTimestamp()}] ❌ Error al conectar con la base de datos:`, error);
+    while (true) {
+        try {
+            dbConnection = await mysql.createConnection(dbConfig);
+            console.log(`[${getCurrentTimestamp()}] ✅ Conectado a la base de datos`);
+            break; // Sale del bucle si la conexión es exitosa
+        } catch (error) {
+            console.error(`[${getCurrentTimestamp()}] ❌ Error conectando a la base de datos: ${error.message}`);
+            console.log(`[${getCurrentTimestamp()}] 🔄 Reintentando en 5 segundos...`);
+            await new Promise(resolve => setTimeout(resolve, 5000));
+        }
     }
 }
 
+
 async function getAllTopics() {
-    const [rows] = await dbConnection.execute('SELECT mqtt_topic_modbus, rep_number FROM modbuses WHERE mqtt_topic_modbus IS NOT NULL AND mqtt_topic_modbus != ""');
-    return rows;
-}
+    try {
+      const [rows] = await dbConnection.execute(
+        'SELECT mqtt_topic_modbus, rep_number FROM modbuses WHERE mqtt_topic_modbus IS NOT NULL AND mqtt_topic_modbus != ""'
+      );
+      return rows;
+    } catch (error) {
+      console.error(`[${getCurrentTimestamp()}] ❌ Error en getAllTopics: ${error.message}. Intentando reconectar a la DB...`);
+      await connectToDatabase();
+      return getAllTopics(); // Vuelve a intentar la consulta tras reconectar
+    }
+  }
+  
 
 async function subscribeToTopics() {
     if (!isMqttConnected) {
