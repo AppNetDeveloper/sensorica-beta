@@ -42,7 +42,7 @@ function connectMQTT() {
     
         // Solo agregar el 'on' para el manejo de mensajes después de la conexión
         mqttClient.on('message', async (topic, message) => {
-            console.log(`[${getCurrentTimestamp()}] ✅ Mensaje recibido: Tópico: ${topic} | Datos: ${message.toString()}`);
+            //console.log(`[${getCurrentTimestamp()}] ✅ Mensaje recibido: Tópico: ${topic} | Datos: ${message.toString()}`);
             await processCallApi(topic, message.toString());
         });
     });
@@ -167,7 +167,7 @@ async function processCallApi(topic, data) {
 
             // Si el contador alcanza el rep_number, no enviamos la API
             if (topicCounter.count >= topicCounter.repNumber) {
-                console.log(`[${getCurrentTimestamp()}] ⚠️ El valor se ha repetido más de ${topicCounter.repNumber} veces para el tópico ${topic}. No se llamará a la API.`);
+               // console.log(`[${getCurrentTimestamp()}] ⚠️ El valor se ha repetido más de ${topicCounter.repNumber} veces para el tópico ${topic}. No se llamará a la API.`);
                 return; // No procesamos más
             }
 
