@@ -219,6 +219,37 @@ else
     echo "El archivo .env ya existe."
 fi
 
+
+
+# Define las entradas de cron que deseas agregar:
+# En este ejemplo, se ejecuta el script clean_and_backup.sh a las 00:00 y a las 14:30.
+CRON_ENTRY1="0 0 * * * /bin/bash /var/www/html/clean_and_backup.sh >> /var/www/html/storage/logs/clean_and_backup.log 2>&1"
+CRON_ENTRY2="30 14 * * * /bin/bash /var/www/html/clean_and_backup.sh >> /var/www/html/storage/logs/clean_and_backup.log 2>&1"
+
+# Obtiene la lista de cron actual
+CURRENT_CRON=$(crontab -l 2>/dev/null)
+
+# Función para agregar entrada si no existe
+function add_cron_entry {
+    local entry="$1"
+    echo "$CURRENT_CRON" | grep -Fq "$entry"
+    if [ $? -ne 0 ]; then
+        echo "Agregando entrada cron: $entry"
+        # Agrega la entrada a la lista existente
+        CURRENT_CRON="${CURRENT_CRON}"$'\n'"$entry"
+    else
+        echo "La entrada ya existe: $entry"
+    fi
+}
+
+add_cron_entry "$CRON_ENTRY1"
+add_cron_entry "$CRON_ENTRY2"
+
+# Instala la nueva lista de cron
+echo "$CURRENT_CRON" | crontab -
+echo "Cron actualizado."
+
+
 # Reiniciar Supervisor con nueva configuración
 echo "Reconfigurando Supervisor..."
 sudo rm -rf /etc/supervisor/conf.d/*
