@@ -214,7 +214,6 @@ async function processCallApi(topic, data) {
         id: modbusConfig.id,
         data: parsedData
     };
-  
       
     // Verificar si LOCAL_SERVER tiene barra al final y quitarla si existe
     let apiUrl = process.env.LOCAL_SERVER;
