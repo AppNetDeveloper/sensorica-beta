@@ -154,60 +154,77 @@ async function processCallApi(topic, data) {
       console.error(`[${getCurrentTimestamp()}] ❌ No se encontró configuración para el tópico ${topic}`);
       return;
     }
-    
+
     // Parseamos el mensaje recibido (se asume que está en formato JSON con al menos la propiedad "value")
     const parsedData = JSON.parse(data);
     const currentValue = parsedData.value;
-    
-
     // Obtener el contador asociado al tópico
     const topicCounter = valueCounters[topic];
-    if (topicCounter) {
-        // Si ya existe un valor previo
-        if (topicCounter.lastValue !== null) {
-          if (currentValue !== topicCounter.lastValue) {
-            
-            // El valor ha cambiado; se calcula la diferencia
-            const diff = Math.abs(currentValue - topicCounter.lastValue);
-            const variacionNumber = parseFloat(modbusConfig.variacion_number) || 0;
-            const conversionFactor = parseFloat(modbusConfig.conversion_factor) || 0;
-            // Se obtiene el umbral en unidades de medida
-            const variacionInUnits = variacionNumber * conversionFactor;
-            console.log(`[${getCurrentTimestamp()}] Diferencia calculada: ${diff} unidades; Umbral: ${variacionInUnits} unidades`);
-            
-            // Si la diferencia es mayor que 0 pero menor al umbral, se omite la llamada a la API
-            if (diff > 0 && diff < variacionInUnits) {
-                console.log(`[${getCurrentTimestamp()}] ℹ️ La diferencia (${diff}) es menor al umbral (${variacionInUnits}) para el tópico ${topic}. Se omite la llamada a la API.`);
-                //return; // Aquí se puede decidir si se quiere hacer algo más o no hacer nada
 
-                // Actualizamos el JSON que se enviará, modificando solo la propiedad "value"
-                parsedData.value = topicCounter.lastValue;
-
+    // Extraemos model_name y evaluamos si es "weight" o "height"
+    const modelName = modbusConfig.model_name;
+    if (modelName === 'weight') {
+        if (topicCounter) {
+            // Si ya existe un valor previo
+            if (topicCounter.lastValue !== null) {
+              if (currentValue !== topicCounter.lastValue) {
+                
+                // El valor ha cambiado; se calcula la diferencia
+                const diff = Math.abs(currentValue - topicCounter.lastValue);
+                const variacionNumber = parseFloat(modbusConfig.variacion_number) || 0;
+                const conversionFactor = parseFloat(modbusConfig.conversion_factor) || 0;
+                // Se obtiene el umbral en unidades de medida
+                const variacionInUnits = variacionNumber * conversionFactor;
+                console.log(`[${getCurrentTimestamp()}] Diferencia calculada: ${diff} unidades; Umbral: ${variacionInUnits} unidades`);
+                
+                // Si la diferencia es mayor que 0 pero menor al umbral, se omite la llamada a la API
+                if (diff > 0 && diff < variacionInUnits) {
+                    console.log(`[${getCurrentTimestamp()}] ℹ️ La diferencia (${diff}) es menor al umbral (${variacionInUnits}) para el tópico ${topic}. Se omite la llamada a la API.`);
+                    //return; // Aquí se puede decidir si se quiere hacer algo más o no hacer nada
+    
+                    // Actualizamos el JSON que se enviará, modificando solo la propiedad "value"
+                    parsedData.value = topicCounter.lastValue;
+    
+                    topicCounter.count++;
+                    if (topicCounter.count > topicCounter.repNumber) {
+                    console.log(`[${getCurrentTimestamp()}] ⚠️ El valor se ha repetido más de ${topicCounter.repNumber} veces para el tópico ${topic}. No se llamará a la API.`);
+                    return;
+                    }
+                    // Si es igual, se continúa y se llama a la API (no se evalúa la diferencia)
+                } else {
+                  // La diferencia es significativa; se resetea el contador y se actualiza el último valor
+                  topicCounter.count = 0;
+                  topicCounter.lastValue = currentValue;
+                }
+              } else {
+                // El valor es igual al anterior, se incrementa el contador
                 topicCounter.count++;
                 if (topicCounter.count > topicCounter.repNumber) {
-                console.log(`[${getCurrentTimestamp()}] ⚠️ El valor se ha repetido más de ${topicCounter.repNumber} veces para el tópico ${topic}. No se llamará a la API.`);
-                return;
+                  console.log(`[${getCurrentTimestamp()}] ⚠️ El valor se ha repetido más de ${topicCounter.repNumber} veces para el tópico ${topic}. No se llamará a la API.`);
+                  return;
                 }
                 // Si es igual, se continúa y se llama a la API (no se evalúa la diferencia)
+              }
             } else {
-              // La diferencia es significativa; se resetea el contador y se actualiza el último valor
-              topicCounter.count = 0;
+              // Si no hay valor previo, se asigna el actual
               topicCounter.lastValue = currentValue;
             }
-          } else {
-            // El valor es igual al anterior, se incrementa el contador
-            topicCounter.count++;
-            if (topicCounter.count > topicCounter.repNumber) {
-              console.log(`[${getCurrentTimestamp()}] ⚠️ El valor se ha repetido más de ${topicCounter.repNumber} veces para el tópico ${topic}. No se llamará a la API.`);
-              return;
-            }
-            // Si es igual, se continúa y se llama a la API (no se evalúa la diferencia)
-          }
-        } else {
-          // Si no hay valor previo, se asigna el actual
-          topicCounter.lastValue = currentValue;
         }
+
+    } else if (modelName === 'height') {
+        if (topicCounter) {
+            // Si ya existe un valor previo
+            if (topicCounter.lastValue !== null) {
+              if (currentValue !== topicCounter.lastValue) {
+
+              }
+            } else {
+                // Si no hay valor previo, se asigna el actual
+                topicCounter.lastValue = currentValue;
+              }
+          }
     }
+    
       
     // Preparar el objeto que se enviará a la API
     const dataToSend = {
