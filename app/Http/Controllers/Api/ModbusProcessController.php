@@ -330,7 +330,10 @@ class ModbusProcessController extends Controller
         // Lógica de control de peso y repeticiones
         if ($value >= $minKg) { // Si el valor actual es mayor o igual al mínimo
             Log::info("Valor actual ({$value} kg) es mayor o igual al mínimo ({$minKg} kg)"); // Logging detallado
-
+            //hacermos este if para que contorize bien desde inicio si no el lastkg es 0 y lo ve como un valor mall hasta la segunda validacion
+            if($lastKg <= 0){
+                $lastKg = $value; // Actualizar el último valor a la nueva medida
+            }
             if (abs($value - $lastKg) <= $variacionNumber) { // Si la variación está dentro del rango permitido
                 Log::info("Valor estable dentro del rango de variación.");
                 $lastRep++; // Incrementar el contador de repeticiones
