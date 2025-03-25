@@ -374,6 +374,15 @@ class TransferExternalDbController extends Controller
             // Conexión a la base de datos externa
             $externalConnection = DB::connection('external');
             Log::info("Conexión a la base de datos externa establecida.");
+                // Eliminar registros previos para el mismo OrderId
+                
+            $externalConnection->table('linea_por_orden')
+                ->where('IdOrden', $orderId)
+                ->delete();
+            $externalConnection->table('sensores_por_orden')
+                ->where('IdOrder', $orderId)
+                ->delete();
+            Log::info("Se eliminaron los registros previos para orderId={$orderId} en la DB externa.");
 
         }
 
@@ -451,16 +460,26 @@ class TransferExternalDbController extends Controller
                 $grossWeightTotal=number_format(($totalCountOrder * $unitValue), 2, '.', '');
 
                 if($sensor->sensor_type === 0) {
-                    $slowTime=($timeOnSeconds - $totalTimeDowntime) -($optimalProductionTime * $totalCountOrder);
                     $formateado = "optimal_production_time";
                 } else {
-                    $slowTime=0.0;
                     $formateado = "optimalproductionTime_sensorType_" . $sensor->sensor_type;
                 }
 
                 
                 $optimalProductionTime = $orderStats->first()->productList->$formateado;
                 
+                if($sensor->sensor_type === 0) {
+                    if($optimalProductionTime > $realTimeUnit){
+                        $optimalProductionTime = round($realTimeUnit, 2);
+                        $slowTime=0.0;
+                        $minTime=round($realTimeUnit, 1);
+                    }else{
+                        $slowTime=($timeOnSeconds - $totalTimeDowntime) -($optimalProductionTime * $totalCountOrder);
+                    }
+                    
+                } else {
+                    $slowTime=0.0;
+                }
 
                 if($minTime<1){
                     $realTimeUnit=0;

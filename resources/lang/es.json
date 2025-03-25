@@ -562,5 +562,17 @@
     "El servicio 485 se ha reiniciado con éxito.": "El servicio 485 se ha reiniciado con éxito.",
     "Aplicación actualizada con éxito.": "Aplicación actualizada con éxito.",
     "Error al cargar estado": "Error al cargar estado",
-    "Error al cargar direcciones IP": "Error al cargar direcciones IP"
+    "Error al cargar direcciones IP": "Error al cargar direcciones IP",
+    "Transferencia completada con éxito": "Transferencia completada con éxito",
+    "Error en la transferencia": "Error en la transferencia",
+    "Procesando...": "Procesando...",
+    "Por favor, espere.": "Por favor, espere.",
+    "Exportar DB Externa": "Exportar DB Externa",
+    "Error al cargar datos de la base de datos": "Error al cargar datos de la base de datos",
+    "Error al conectar a la base de datos": "Error al conectar a la base de datos",
+    "Error al ejecutar consulta SQL": "Error al ejecutar consulta SQL",
+    "Error al procesar respuesta del servidor": "Error al procesar respuesta del servidor",
+    "Error al enviar solicitud HTTP": "Error al enviar solicitud HTTP",
+    "Error al recibir respuesta HTTP": "Error al recibir respuesta HTTP",
+    "Error al realizar la transferencia de datos": "Error al realizar la transferencia de datos"
   }

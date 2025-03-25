@@ -248,6 +248,7 @@
         async function loadKanbanData(page = 1) {
             try {
                 const response = await fetch(`/api/production-orders?token=${token}&page=${page}`);
+                console.log('Response:', response);
                 if (!response.ok) throw new Error("{{ __('Error fetching API data.') }}");
                 const responseData = await response.json();
                 currentPage = responseData.current_page;
@@ -358,7 +359,7 @@
                             class="card-menu"
                             role="button"
                             aria-label="{{ __('Show Card Menu') }}"
-                            onclick="showCardMenu(${order.id})"
+                            onclick='showCardMenu(${JSON.stringify(order)})'
                         >⋮</span>
                     </div>
                     <!-- CUERPO DE LA TARJETA -->
@@ -447,50 +448,85 @@
         }
 
         // Función para mostrar el menú de opciones de la tarjeta usando SweetAlert2
-        function showCardMenu(orderId) {
-            const orderJson = orderData[orderId];
-            Swal.fire({
-                title: "{{ __('Order Notice') }}",
-                html: `
-                    <button
-                        id="verJson"
-                        class="swal2-confirm swal2-styled"
-                        style="margin:5px;"
-                    >{{ __('Ver JSON') }}</button>
-                    <button
-                        id="cerrar"
-                        class="swal2-cancel swal2-styled"
-                        style="margin:5px;"
-                    >{{ __('Cerrar') }}</button>
-                    <button
-                        id="borrar"
-                        class="swal2-deny swal2-styled"
-                        style="margin:5px;"
-                    >{{ __('Borrar') }}</button>
-                `,
-                showConfirmButton: false,
-                didOpen: () => {
-                    const popup = Swal.getPopup();
-                    const verJsonBtn = popup.querySelector('#verJson');
-                    const cerrarBtn = popup.querySelector('#cerrar');
-                    const borrarBtn = popup.querySelector('#borrar');
+        function showCardMenu(order) {
+    // Suponiendo que order.order_id es el identificador correcto
+    const orderJson = orderData[order.order_id]; 
+    Swal.fire({
+        title: "{{ __('Order Notice') }}",
+        html: `
+            <button id="verJson" class="swal2-confirm swal2-styled" style="margin:5px;">{{ __('Ver JSON') }}</button>
+            <button id="cerrar" class="swal2-cancel swal2-styled" style="margin:5px;">{{ __('Cerrar') }}</button>
+            <button id="borrar" class="swal2-deny swal2-styled" style="margin:5px;">{{ __('Borrar') }}</button>
+            <button id="exportExternal" class="swal2-confirm swal2-styled" style="margin:5px;">{{ __('Exportar DB Externa') }}</button>
+        `,
+        showConfirmButton: false,
+        didOpen: () => {
+            const popup = Swal.getPopup();
+            const verJsonBtn = popup.querySelector('#verJson');
+            const cerrarBtn = popup.querySelector('#cerrar');
+            const borrarBtn = popup.querySelector('#borrar');
+            const exportBtn = popup.querySelector('#exportExternal');
 
-                    verJsonBtn.addEventListener('click', () => {
-                        Swal.fire({
-                            title: "{{ __('Order JSON') }}",
-                            html: `<pre style="text-align:left;">${JSON.stringify(orderJson, null, 2)}</pre>`,
-                            width: '600px'
-                        });
-                    });
-                    cerrarBtn.addEventListener('click', () => {
-                        Swal.close();
-                    });
-                    borrarBtn.addEventListener('click', () => {
-                        Swal.fire('{{ __('Borrar clicked') }}');
-                    });
-                }
+            verJsonBtn.addEventListener('click', () => {
+                Swal.fire({
+                    title: "{{ __('Order JSON') }}",
+                    html: `<pre style="text-align:left;">${JSON.stringify(orderJson, null, 2)}</pre>`,
+                    width: '600px'
+                });
+            });
+            cerrarBtn.addEventListener('click', () => {
+                Swal.close();
+            });
+            borrarBtn.addEventListener('click', () => {
+                Swal.fire('{{ __("Borrar clicked") }}');
+            });
+            exportBtn.addEventListener('click', () => {
+                const payload = {
+                    // Usar el identificador correcto desde order, por ejemplo order.order_id
+                    orderId: order.order_id,
+                    externalSend: true
+                };
+                console.log("Enviando payload:", payload);
+
+                // Mostrar un modal de carga
+                Swal.fire({
+                    title: "{{ __('Procesando...') }}",
+                    html: "{{ __('Por favor, espere.') }}",
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                fetch('https://imperio.boisolo.dev/api/transfer-external-db', {
+                    method: 'POST',
+                    headers: {
+                        'accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error("Error " + response.status + ": " + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log("Respuesta de la API:", data);
+                    Swal.fire('{{ __("Transferencia completada con éxito") }}');
+                })
+                .catch(error => {
+                    console.error("Error en la transferencia:", error);
+                    Swal.fire('{{ __("Error en la transferencia") }}');
+                });
             });
         }
+    });
+}
+
+
+
 
         /* DRAG & DROP LÓGICA */
         let draggedCard = null;
