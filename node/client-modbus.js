@@ -184,24 +184,28 @@ async function processCallApi(topic, data) {
     
                     // Actualizamos el JSON que se enviará, modificando solo la propiedad "value"
                     parsedData.value = topicCounter.lastValue;
-    
-                    topicCounter.count++;
+                    console.log(`[${getCurrentTimestamp()}] ℹ️ Valor modificado: ${topicCounter.lastValue}`);
+                    
                     if (topicCounter.count > topicCounter.repNumber) {
-                    console.log(`[${getCurrentTimestamp()}] ⚠️ El valor se ha repetido más de ${topicCounter.repNumber} veces para el tópico ${topic}. No se llamará a la API.`);
-                    return;
+                      console.log(`[${getCurrentTimestamp()}] ⚠️ El valor se ha repetido más de ${topicCounter.repNumber} veces para el tópico ${topic}. No se llamará a la API.`);
+                      return;
+                    }else{
+                      topicCounter.count++;
                     }
                     // Si es igual, se continúa y se llama a la API (no se evalúa la diferencia)
                 } else {
                   // La diferencia es significativa; se resetea el contador y se actualiza el último valor
                   topicCounter.count = 0;
                   topicCounter.lastValue = currentValue;
+                  console.log(`[${getCurrentTimestamp()}] ✅ Diferencia significativa detectada para el tópico ${topic}. Se llamará a la API.`);
                 }
               } else {
                 // El valor es igual al anterior, se incrementa el contador
-                topicCounter.count++;
                 if (topicCounter.count > topicCounter.repNumber) {
                   console.log(`[${getCurrentTimestamp()}] ⚠️ El valor se ha repetido más de ${topicCounter.repNumber} veces para el tópico ${topic}. No se llamará a la API.`);
                   return;
+                }else{
+                  topicCounter.count++;
                 }
                 // Si es igual, se continúa y se llama a la API (no se evalúa la diferencia)
               }

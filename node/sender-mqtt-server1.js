@@ -1,179 +1,203 @@
-require('dotenv').config({ path: '../.env' });  // Cargar archivo .env desde la ruta personalizada
+require('dotenv').config({ path: '../.env' });  // Cargar variables de entorno desde la ruta personalizada
 const mqtt = require('mqtt');
-const mysql = require('mysql2/promise');
-const fs = require('fs'); // Usamos fs para monitorear el archivo .env
+const fs = require('fs');
+const path = require('path');
 
 let mqttClient;
-let dbConnection;
-let isMqttConnected = false;  // Estado de la conexión MQTT
+let isMqttConnected = false;
+let intervalId;  // Variable para almacenar el ID del intervalo
 
-// Función para cargar de nuevo el archivo .env cuando cambie
-function reloadEnv() {
-    console.log('🔄 Recargando archivo .env...');
-    require('dotenv').config({ path: '../.env' });  // Recargar el archivo .env
-    console.log('✅ .env recargado');
+// Función para obtener la fecha y hora actual en formato [YYYY-MM-DD HH:mm:ss]
+function getFormattedDate() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
+  return `[${year}-${month}-${day} ${hours}:${minutes}:${seconds}]`;
 }
 
-// Monitorear el archivo .env cada 5 segundos para detectar cambios
-fs.watchFile('../.env', { interval: 5000 }, (curr, prev) => {
-    if (curr.mtime !== prev.mtime) {
-        reloadEnv();  // Recargar el archivo .env si ha cambiado
-    }
+// Función para recargar el .env si cambia
+function reloadEnv() {
+  console.log(`${getFormattedDate()} 🔄 Recargando archivo .env...`);
+  require('dotenv').config({ path: '../.env' });
+  console.log(`${getFormattedDate()} ✅ .env recargado`);
+}
+
+// Monitorear el archivo .env cada 30 segundos
+fs.watchFile('../.env', { interval: 30000 }, (curr, prev) => {
+  if (curr.mtime !== prev.mtime) {
+    reloadEnv();
+  }
 });
 
-// Función para conectar a MQTT con los valores actuales de .env
+// Función para conectar a MQTT
 function connectMQTT() {
-    const MQTT_BROKER = `mqtt://${process.env.MQTT_SENSORICA_SERVER}:${process.env.MQTT_SENSORICA_PORT}`;
-    const clientId = `mqtt_client_${Math.random().toString(16).substr(2, 8)}`;
-    
-    mqttClient = mqtt.connect(MQTT_BROKER, {
-        clientId: clientId,
-        reconnectPeriod: 1000,  // Reconexión cada 1 segundo si la conexión se pierde
-        clean: false  // Mantener el estado de suscripción incluso si el cliente se desconecta
-    });
+  const MQTT_BROKER = `mqtt://${process.env.MQTT_SENSORICA_SERVER}:${process.env.MQTT_SENSORICA_PORT}`;
+  const clientId = `mqtt_client_${Math.random().toString(16).substr(2, 8)}`;
 
-    mqttClient.on('connect', () => {
-        console.log(`✅ Conectado a MQTT Server: ${process.env.MQTT_SENSORICA_SERVER}:${process.env.MQTT_SENSORICA_PORT}`);
-        isMqttConnected = true;  // Marcar que estamos conectados al broker MQTT
-        publishData(); // Publicar datos al conectarse
-    });
+  mqttClient = mqtt.connect(MQTT_BROKER, {
+    clientId: clientId,
+    reconnectPeriod: 1000,  // Reconexión cada 1 segundo si se pierde la conexión
+    clean: false
+  });
 
-    mqttClient.on('error', (error) => {
-        console.error('❌ Error en la conexión MQTT:', error);
-    });
+  mqttClient.on('connect', () => {
+    console.log(`${getFormattedDate()} ✅ Conectado a MQTT Server: ${process.env.MQTT_SENSORICA_SERVER}:${process.env.MQTT_SENSORICA_PORT}`);
+    isMqttConnected = true;
+    publishData(); // Llamada inmediata al conectar
+  });
 
-    mqttClient.on('disconnect', () => {
-        console.log('🔴 Desconectado de MQTT');
-        isMqttConnected = false;  // Marcar que estamos desconectados del broker MQTT
-    });
+  mqttClient.on('error', (error) => {
+    console.error(`${getFormattedDate()} ❌ Error en la conexión MQTT:`, error);
+  });
+
+  mqttClient.on('disconnect', () => {
+    console.log(`${getFormattedDate()} 🔴 Desconectado de MQTT`);
+    isMqttConnected = false;
+  });
 }
 
-// Obtener las variables de entorno para la base de datos y MQTT
-const DB_HOST = process.env.DB_HOST;
-const DB_PORT = process.env.DB_PORT;
-const DB_DATABASE = process.env.DB_DATABASE;
-const DB_USERNAME = process.env.DB_USERNAME;
-const DB_PASSWORD = process.env.DB_PASSWORD;
+// Definir la carpeta donde se almacenan los archivos para server1
+const server1Dir = path.join(__dirname, '../storage/app/mqtt/server1');
 
-// Configuración de la base de datos
-const dbConfig = {
-    host: DB_HOST,
-    port: DB_PORT,
-    user: DB_USERNAME,
-    password: DB_PASSWORD,
-    database: DB_DATABASE
-};
+// Asegurarse de que la carpeta existe
+if (!fs.existsSync(server1Dir)) {
+  fs.mkdirSync(server1Dir, { recursive: true });
+}
 
-// Mantener la conexión persistente a la base de datos
-async function connectToDatabase() {
-    try {
-        // Conectar a la base de datos y mantener la conexión abierta
-        dbConnection = await mysql.createConnection(dbConfig);
-        console.log('✅ Conectado a la base de datos');
-    } catch (error) {
-        console.error('❌ Error al conectar con la base de datos:', error);
+/**
+ * Función recursiva para obtener todos los archivos .json en un directorio y sus subdirectorios.
+ * Retorna un array con las rutas completas de cada archivo .json encontrado.
+ */
+function getAllJsonFiles(dir) {
+  let results = [];
+  const list = fs.readdirSync(dir, { withFileTypes: true });
+  list.forEach((dirent) => {
+    const fullPath = path.join(dir, dirent.name);
+    if (dirent.isDirectory()) {
+      // Si es un directorio, lo exploramos recursivamente
+      results = results.concat(getAllJsonFiles(fullPath));
+    } else if (dirent.isFile() && dirent.name.endsWith('.json')) {
+      // Si es un archivo .json, lo agregamos al array de resultados
+      results.push(fullPath);
     }
+  });
+  return results;
 }
 
-// Obtener los datos de la base de datos sin cerrar la conexión
-async function getDataFromDatabase() {
+/**
+ * Función para obtener los mensajes (archivos) desde la carpeta server1 y sus subdirectorios.
+ * Retorna un array de objetos { file, filePath, data } para cada archivo JSON encontrado.
+ */
+function getDataFromFiles() {
+  return new Promise((resolve, reject) => {
     try {
-        const [rows] = await dbConnection.execute('SELECT * FROM mqtt_send_server1 ORDER BY id ASC LIMIT 100');
-        return rows;
+      // Obtener recursivamente la lista de archivos .json
+      const files = getAllJsonFiles(server1Dir);
+
+      // Crear promesas para leer el contenido de cada archivo
+      const dataPromises = files.map(filePath => {
+        return new Promise((res, rej) => {
+          fs.readFile(filePath, 'utf8', (err, content) => {
+            if (err) return rej(err);
+            try {
+              const data = JSON.parse(content);
+              // 'file' será el nombre relativo, útil para logs
+              const fileName = path.relative(server1Dir, filePath);
+              res({ file: fileName, filePath, data });
+            } catch (e) {
+              rej(e);
+            }
+          });
+        });
+      });
+
+      Promise.all(dataPromises)
+        .then(resolve)
+        .catch(reject);
+
     } catch (error) {
-        console.error('❌ Error al obtener datos de la base de datos:', error);
-        return [];
+      reject(error);
     }
+  });
 }
 
-// Función para publicar en MQTT
-async function publishToMqtt(entry) {
-    try {
-        const payload = typeof entry.json_data === 'object' ? JSON.stringify(entry.json_data) : entry.json_data;
-        
-        if (isMqttConnected) {
-            // Publicamos en MQTT solo si estamos conectados
-            mqttClient.publish(entry.topic, payload, { qos: 0, retain: true });
-            console.log(`✅ Publicado en MQTT: Tópico: ${entry.topic} | Datos: ${payload}`);
-            // Solo eliminar el registro si la publicación fue exitosa
-            deleteProcessedEntries([entry.id]);
+/**
+ * Función para publicar un mensaje en MQTT y, si se publica con éxito, borrar el archivo.
+ * Si hay error o no hay conexión, el archivo no se borra y se reintenta en el siguiente ciclo.
+ */
+async function publishToMqtt(fileEntry) {
+  const { file, filePath, data } = fileEntry;
+  // Se espera que 'data' tenga al menos 'topic' y 'message'
+  const payload = typeof data.message === 'object' ? JSON.stringify(data.message) : data.message;
+
+  if (!isMqttConnected) {
+    console.log(`${getFormattedDate()} ⚠️ MQTT no conectado, reintentando archivo: ${file}`);
+    return; // Deja el archivo para reintentar en el siguiente ciclo
+  }
+
+  mqttClient.publish(data.topic, payload, { qos: 0, retain: true }, (err) => {
+    if (err) {
+      console.error(`${getFormattedDate()} ❌ Error publicando ${file}:`, err);
+      // No se elimina el archivo; se reintentará en el próximo ciclo
+    } else {
+      // Si la publicación es exitosa, se borra el archivo
+      fs.unlink(filePath, (unlinkErr) => {
+        if (unlinkErr) {
+          console.error(`${getFormattedDate()} ❌ Error borrando el archivo ${file}:`, unlinkErr);
         } else {
-            console.log('⚠️ No hay conexión MQTT, esperando reconexión...');
+          console.log(`${getFormattedDate()} ✅ Publicado y borrado archivo: ${file}`);
         }
-    } catch (error) {
-        console.error(`❌ Error al publicar en MQTT: ${error.message}`);
+      });
     }
+  });
 }
 
-// Eliminar los registros procesados después de la publicación
-async function deleteProcessedEntries(ids) {
-    try {
-        // Convertir los IDs a enteros y desestructurarlos en la consulta
-        const integerIds = ids.map(id => parseInt(id, 10)); // Convertir a enteros
-        const placeholders = integerIds.map(() => '?').join(', '); // Crear los placeholders para cada ID
-
-        // Ejecutar la consulta de eliminación con los IDs como parámetros individuales
-        await dbConnection.execute(`DELETE FROM mqtt_send_server1 WHERE id IN (${placeholders})`, integerIds);
-        console.log(`✅ Eliminaron los registros con IDs: ${integerIds.join(', ')}`);
-    } catch (error) {
-        console.error('❌ Error al eliminar registros de la base de datos:', error);
-    }
-}
-
-// Publicar los datos obtenidos de la base de datos
+/**
+ * Función para publicar todos los mensajes encontrados en la carpeta (y subcarpetas).
+ * Si no hay archivos, muestra un log de que no hay datos nuevos.
+ */
 async function publishData() {
-    const entries = await getDataFromDatabase();
-
-    if (entries.length === 0) {
-        console.log('⚠️ No hay datos nuevos para publicar.');
-        return;
+  try {
+    const filesData = await getDataFromFiles();
+    if (filesData.length === 0) {
+      console.log(`${getFormattedDate()} ⚠️ No hay archivos nuevos para publicar.`);
+      return;
     }
-
-    const ids = entries.map(entry => entry.id);  // Obtener los IDs de los registros
-
-    // Publicar los datos de todos los registros
-    const publishPromises = entries.map(entry => publishToMqtt(entry));
-    await Promise.all(publishPromises);
-
-    // Eliminar los registros procesados de la base de datos
-    await deleteProcessedEntries(ids);
-
-    console.log('✅ Todos los datos han sido publicados y eliminados.');
+    // Publicar todos los mensajes de manera concurrente
+    await Promise.all(filesData.map(publishToMqtt));
+    console.log(`${getFormattedDate()} ✅ Proceso de publicación completado.`);
+  } catch (error) {
+    console.error(`${getFormattedDate()} ❌ Error procesando archivos:`, error);
+  }
 }
 
-// Inicializar la conexión MQTT y la base de datos
-async function initialize() {
-    await connectToDatabase();  // Conectar a la base de datos
-    connectMQTT();  // Conectar a MQTT
-
-    // Realizamos una consulta periódica cada 1 segundo para obtener nuevos datos
-    setInterval(async () => {
-        if (isMqttConnected) {  // Solo consultamos si estamos conectados a MQTT
-            await publishData();  // Consultamos y publicamos los datos
-        } else {
-            console.log('⚠️ No hay conexión a MQTT, esperando reconexión...');
-        }
-    }, 500);  // 1000 ms = 1 segundo
+/**
+ * Inicializar la conexión MQTT y el intervalo que revisa los archivos cada 500 ms.
+ */
+function initialize() {
+  connectMQTT();
+  // Establecer consulta periódica cada 500 ms (ajustar según la necesidad)
+  intervalId = setInterval(async () => {
+    if (isMqttConnected) {
+      await publishData();
+    } else {
+      console.log(`${getFormattedDate()} ⚠️ MQTT no conectado, esperando reconexión...`);
+    }
+  }, 100);
 }
 
-// Ejecutar inicialización
 initialize();
 
-// Manejo de señales y desconexión limpia
+// Manejo de señal SIGINT para desconexión limpia
 process.on('SIGINT', () => {
-    console.log('🔴 Recibido SIGINT, deteniendo el proceso...');
-    
-    // Detener el intervalo de ejecución para evitar más consultas
-    clearInterval(intervalId);  // Detener las consultas periódicas
-
-    // Desconectar de MQTT y la base de datos de manera ordenada
-    mqttClient.end(() => {
-        console.log('✅ Desconectado de MQTT');
-        
-        // Cerrar la conexión de base de datos de forma ordenada
-        dbConnection.end(() => {
-            console.log('✅ Desconectado de la base de datos');
-            process.exit(0); // Salir del proceso de forma limpia
-        });
-    });
+  console.log(`${getFormattedDate()} 🔴 Recibido SIGINT, deteniendo el proceso...`);
+  clearInterval(intervalId);
+  mqttClient.end(() => {
+    console.log(`${getFormattedDate()} ✅ Desconectado de MQTT`);
+    process.exit(0);
+  });
 });

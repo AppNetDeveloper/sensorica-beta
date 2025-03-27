@@ -14,3 +14,7 @@ sudo supervisorctl restart laravel-mqtt-subscriber:*
 
 
 ./vendor/bin/openapi ./app/Http/Controllers > ./public/docs/api-docs.json
+
+
+iostat -dx 1
+

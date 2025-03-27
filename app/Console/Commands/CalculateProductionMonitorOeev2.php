@@ -8,8 +8,6 @@ use App\Models\Modbus;
 use App\Models\MonitorOee;
 use Carbon\Carbon;
 use App\Models\SensorCount;
-use App\Models\MqttSendServer1;
-use App\Models\MqttSendServer2;
 use App\Models\OrderStat;
 use Illuminate\Support\Facades\Log;
 use App\Models\ShiftList; // Asegúrate de que la ruta del modelo sea la correcta
@@ -497,16 +495,41 @@ class CalculateProductionMonitorOeev2 extends Command
     }
     private function publishMqttMessage($topic, $message)
     {
+
+
         try {
-            // Inserta en la tabla mqtt_send_server1
-            MqttSendServer1::createRecord($topic, $message);
-
-            // Inserta en la tabla mqtt_send_server2
-            MqttSendServer2::createRecord($topic, $message);
-
-            $this->info("[" . Carbon::now()->toDateTimeString() . "] Mensaje almacenado en mqtt_send_server1 y mqtt_send_server2 para el topic: {$topic}");
+            // Preparar los datos a almacenar, agregando la fecha y hora
+            $data = [
+                'topic'     => $topic,
+                'message'   => $message,
+                'timestamp' => now()->toDateTimeString(),
+            ];
+        
+            // Convertir a JSON
+            $jsonData = json_encode($data);
+        
+            // Sanitizar el topic para evitar creación de subcarpetas
+            $sanitizedTopic = str_replace('/', '_', $topic);
+            // Generar un identificador único (por ejemplo, usando microtime)
+            $uniqueId = round(microtime(true) * 1000); // milisegundos
+        
+            // Guardar en servidor 1
+            $fileName1 = storage_path("app/mqtt/server1/{$sanitizedTopic}_{$uniqueId}.json");
+            if (!file_exists(dirname($fileName1))) {
+                mkdir(dirname($fileName1), 0755, true);
+            }
+            file_put_contents($fileName1, $jsonData . PHP_EOL);
+            Log::info("Mensaje almacenado en archivo (server1): {$fileName1}");
+        
+            // Guardar en servidor 2
+            $fileName2 = storage_path("app/mqtt/server2/{$sanitizedTopic}_{$uniqueId}.json");
+            if (!file_exists(dirname($fileName2))) {
+                mkdir(dirname($fileName2), 0755, true);
+            }
+            file_put_contents($fileName2, $jsonData . PHP_EOL);
+            Log::info("Mensaje almacenado en archivo (server2): {$fileName2}");
         } catch (\Exception $e) {
-            Log::error("Error almacenando el mensaje en las bases de datos: " . $e->getMessage());
+            Log::error("Error storing message in file: " . $e->getMessage());
         }
     }
 }

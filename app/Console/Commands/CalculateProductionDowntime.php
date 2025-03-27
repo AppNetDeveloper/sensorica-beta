@@ -4,14 +4,7 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use Carbon\Carbon;
-use App\Models\Sensor;
-use App\Models\DowntimeSensor;
-use App\Models\MqttSendServer1;
-use App\Models\MqttSendServer2;
-use App\Models\SensorCount;
-use Illuminate\Support\Facades\Log;
 use Exception;
-use App\Models\OrderStat;
 
 class CalculateProductionDowntime extends Command
 {
@@ -101,7 +94,7 @@ class CalculateProductionDowntime extends Command
     
             // Se resuelve la promesa sin bloquear la ejecución
             $promise->wait(false);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->error("[" . Carbon::now()->toDateTimeString() . "] Error al intentar llamar a la API: " . $e->getMessage());
         }
     }
