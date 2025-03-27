@@ -17,8 +17,6 @@ class Kernel extends ConsoleKernel
         // ... otros comandos ...
         Commands\MqttSubscriber::class,
         Commands\MqttSubscriberLocal::class,
-        Commands\PublishToMqttServer1::class,
-        Commands\PublishToMqttServer2::class,
         Commands\ReadSensors::class,
         Commands\TcpClient::class,
         Commands\MqttShiftSubscriber::class,
