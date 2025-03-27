@@ -117,7 +117,7 @@ class PublishOrderStatsCommand extends Command
             }
             file_put_contents($fileName2, $jsonData . PHP_EOL);
             Log::info("Mensaje almacenado en archivo (server2): {$fileName2}");
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error("Error storing message in file: " . $e->getMessage());
         }
     }
