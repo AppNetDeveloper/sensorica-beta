@@ -548,12 +548,10 @@ class ModbusProcessController extends Controller
             $this->publishMqttMessage($topic_box_control2, $messageTotalKgOrder); // Enviar mensaje de control
 
                 //llamar a la api externa si se ha pedido desde el cliente, esto comprueba si el cliente nos ha mandado valor en api para devolverle las info
-
-                ApiQueuePrint::where('modbus_id', $config->id)
-                            ->where('used', false)
-                            ->orderBy('id', 'asc')
-                            ->first();
-            
+            $apiQueue = ApiQueuePrint::where('modbus_id', $config->id)
+                                    ->where('used', false)
+                                    ->orderBy('id', 'asc')
+                                    ->first();
 
             if ($apiQueue) {
                 if ($apiQueue->value == 0) {
