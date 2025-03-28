@@ -551,7 +551,6 @@ class ModbusProcessController extends Controller
 
                 ApiQueuePrint::where('modbus_id', $config->id)
                             ->where('used', false)
-                            ->orderBy('created_at', 'asc')
                             ->orderBy('id', 'asc')
                             ->first();
             
