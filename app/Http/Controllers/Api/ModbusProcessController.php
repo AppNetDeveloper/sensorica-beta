@@ -669,6 +669,10 @@ class ModbusProcessController extends Controller
         Log::info("Llamada a la API externa para el Modbus ID: {$config->id}");
     
         $apiQueue->used = true;
+        $apiQueue->control_weight = $maxKg;
+        $apiQueue->control_height = $dimensionFinal;
+        $apiQueue->barcoder = $uniqueBarcoder;
+        $apiQueue->box_number = $newBoxNumber;
         $apiQueue->save(); 
         
         if ($apiQueue->url_back === 'tcp') {

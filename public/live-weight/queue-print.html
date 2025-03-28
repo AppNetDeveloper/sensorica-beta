@@ -10,8 +10,8 @@
   <style>
     body {
       font-family: 'Roboto', sans-serif;
-      background-color: #ffffff; /* Cambiado a blanco */
-      color: #000000; /* Cambiado a negro */
+      background-color: #ffffff;
+      color: #000000;
       margin: 0;
       display: flex;
       justify-content: center;
@@ -19,10 +19,9 @@
       min-height: 100vh;
     }
     .container {
-      width: 90%;
-      max-width: 1200px;
+      width: 100%;
       padding: 20px;
-      background-color: #f8f9fa; /* Cambiado a gris claro */
+      background-color: #f8f9fa;
       border-radius: 10px;
       box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
       overflow-x: auto;
@@ -107,17 +106,21 @@
     </div>
 
     <div class="table-container">
-      <table id="queuePrintTable" class="display nowrap">
+      <table id="queuePrintTable" class="table table-striped table-bordered nowrap" style="width:100%">
         <thead>
           <tr>
             <th>ID</th>
             <th>Modbus ID</th>
-            <th>Valor</th>
+            <th>ID ERP</th>
             <th>Usado</th>
+            <th>Weight</th>
+            <th>Height</th>
+            <th>Barcoder</th>
+            <th>Box Number</th>
             <th>URL de Retorno</th>
             <th>Token de Retorno</th>
             <th>Fecha de Creación</th>
-            <th>Fecha de Actualización</th>
+            <th>Fecha llamada API</th>
           </tr>
         </thead>
         <tbody>
@@ -127,6 +130,7 @@
     </div>
   </div>
 
+  <!-- Scripts -->
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.min.js"></script>
   <script src="https://cdn.datatables.net/buttons/1.7.1/js/dataTables.buttons.min.js"></script>
@@ -134,16 +138,16 @@
   <script src="https://cdn.datatables.net/buttons/1.7.1/js/buttons.html5.min.js"></script>
   <script src="https://cdn.datatables.net/buttons/1.7.1/js/buttons.print.min.js"></script>
   <script>
-    // Obtener el parámetro `token` de la URL
+    // Función para obtener el parámetro 'token' de la URL
     function getQueryParam(param) {
       const urlParams = new URLSearchParams(window.location.search);
       return urlParams.get(param);
     }
 
     const token = getQueryParam('token');
-    let used = 'all'; // Valor inicial de `used`
-    let info = 'all'; // Valor inicial de `info`
-    let table; // Declaración de la variable de DataTable
+    let used = 'all'; // Valor inicial del filtro 'used'
+    let info = 'all'; // Valor inicial del filtro 'info'
+    let table; // Variable para el DataTable
 
     // Función para obtener los datos y mostrarlos en la tabla
     async function fetchQueuePrintData() {
@@ -157,19 +161,34 @@
         const data = await response.json();
         console.log("Datos recibidos:", data);
 
-        // Inicializar DataTable si no ha sido inicializado
+        // Inicializar DataTable si aún no se ha inicializado
         if (!table) {
           table = $('#queuePrintTable').DataTable({
             data: data,
             columns: [
               { data: 'id' },
               { data: 'modbus_id' },
-              { data: 'value' },
-              { data: 'used', render: function(data) { return data ? 'Sí' : 'No'; } },
+              { data: 'value' }, // Asumiendo que 'value' corresponde a "ID ERP"
+              { 
+                data: 'used', 
+                render: function(data) { 
+                  return data == 1 ? 'Sí' : 'No'; 
+                } 
+              },
+              { data: 'control_weight' },
+              { data: 'control_height' },
+              { data: 'barcoder' },
+              { data: 'box_number' },
               { data: 'url_back' },
               { data: 'token_back' },
               { data: 'created_at' },
-              { data: 'updated_at' }
+              { 
+                data: 'updated_at',
+                render: function(data, type, row) {
+                  // Si created_at y updated_at son iguales, mostramos "en espera"
+                  return row.created_at === data ? 'en espera' : data;
+                }
+              }
             ],
             dom: 'Bfrtip',
             buttons: [
@@ -185,48 +204,48 @@
                 className: 'btn btn-primary'
               }
             ],
-            scrollX: true, // Habilitar desplazamiento horizontal
-            order: [[0, 'desc']], // Ordenar por ID
+            scrollX: true, // Desplazamiento horizontal
+            order: [[0, 'desc']], // Ordenar por ID de forma descendente
             paging: true,
             pageLength: 10,
             lengthChange: true,
             searching: true,
-            autoWidth: false // Desactiva el ancho automático para evitar deformación
+            autoWidth: false
           });
         } else {
-          table.clear().rows.add(data).draw(); // Actualizar los datos sin reiniciar
+          table.clear().rows.add(data).draw(); // Actualizar los datos sin reinicializar
         }
 
-        // Ajustar visibilidad de columnas y ancho automático según `info`
+        // Ajustar visibilidad de columnas según el filtro 'info'
         if (info === 'lite') {
-          table.column(1).visible(false); // Ocultar Modbus ID
-          table.column(4).visible(false); // Ocultar URL de Retorno
-          table.column(5).visible(false); // Ocultar Token de Retorno
-          table.column(6).visible(false); // Ocultar Fecha de Creación
-          table.column(7).visible(false); // Ocultar Fecha de Actualización
-          table.columns.adjust(); // Ajustar el ancho de las columnas visibles
+          table.column(1).visible(false); // Ocultar "Modbus ID"
+          table.column(8).visible(false); // Ocultar "URL de Retorno"
+          table.column(9).visible(false); // Ocultar "Token de Retorno"
+          table.column(10).visible(false); // Ocultar "Fecha de Creación"
+          table.column(11).visible(false); // Ocultar "Fecha llamada API"
+          table.columns.adjust();
         } else {
-          table.columns().visible(true); // Mostrar todas las columnas
-          table.columns.adjust(); // Ajustar el ancho de todas las columnas
+          table.columns().visible(true);
+          table.columns.adjust();
         }
       } catch (error) {
         console.error("Error al obtener o procesar datos de la API:", error);
       }
     }
 
-    // Configurar la actualización automática cada 5 segundos
-    setInterval(fetchQueuePrintData, 5000);
+    // Actualizar los datos cada 1 segundos
+    setInterval(fetchQueuePrintData, 1000);
 
-    // Evento para cambiar el filtro `used` y actualizar la tabla
+    // Evento para cambiar el filtro 'used' y actualizar la tabla
     document.getElementById('usedSelect').addEventListener('change', (event) => {
-      used = event.target.value; // Actualizar el valor de `used`
-      fetchQueuePrintData(); // Volver a cargar los datos de la tabla
+      used = event.target.value;
+      fetchQueuePrintData();
     });
 
-    // Evento para cambiar el modo `info` y actualizar la visibilidad de columnas
+    // Evento para cambiar el modo 'info' y ajustar la visibilidad de columnas
     document.getElementById('infoSelect').addEventListener('change', (event) => {
-      info = event.target.value; // Actualizar el valor de `info`
-      fetchQueuePrintData(); // Ajustar la visibilidad de columnas
+      info = event.target.value;
+      fetchQueuePrintData();
     });
 
     // Cargar los datos cuando el documento esté listo
