@@ -549,10 +549,12 @@ class ModbusProcessController extends Controller
 
                 //llamar a la api externa si se ha pedido desde el cliente, esto comprueba si el cliente nos ha mandado valor en api para devolverle las info
 
-            $apiQueue = ApiQueuePrint::where('modbus_id', $config->id)
-                ->where('used', false)
-                ->oldest()
-                ->first();
+                ApiQueuePrint::where('modbus_id', $config->id)
+                            ->where('used', false)
+                            ->orderBy('created_at', 'asc')
+                            ->orderBy('id', 'asc')
+                            ->first();
+            
 
             if ($apiQueue) {
                 if ($apiQueue->value == 0) {
