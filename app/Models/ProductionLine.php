@@ -48,4 +48,10 @@ class ProductionLine extends Model
     {
         return $this->hasMany(OrderStat::class, 'production_line_id');
     }
+    // En ProductionLine.php
+    public function lastShiftHistory()
+    {
+        return $this->hasOne(ShiftHistory::class)->latest();
+    }
+
 }

@@ -130,6 +130,8 @@ Route::get('/shift-lists/api', [ShiftManagementController::class, 'getShiftsData
 Route::post('/shift-lists', [ShiftManagementController::class, 'store'])->name('shift.store');
 Route::put('/shift-lists/{id}', [ShiftManagementController::class, 'update'])->name('shift.update');
 Route::delete('/shift-lists/{id}', [ShiftManagementController::class, 'destroy'])->name('shift.destroy');
+Route::get('/shift-history/{productionLineId}', [ShiftManagementController::class, 'showShiftHistory'])->name('shift.history');
+
 
 
 //rfid select confection

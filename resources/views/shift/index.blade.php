@@ -16,15 +16,134 @@
 @section('content')
     <div class="row mt-3">
         <div class="col-lg-12">
-
             {{-- Mensajes de éxito de redirect --}}
             @if (session('success'))
                 <div class="alert alert-success mb-2">{{ session('success') }}</div>
             @endif
 
+            {{-- Listado de Production Lines con botones de acción --}}
+            <div class="mb-4">
+                <h4>{{ __('Production Lines Overview') }}</h4>
+                <div class="row">
+                    @foreach($productionLines as $line)
+                        <div class="col-md-4 col-lg-3 mb-4">
+                            <div class="card shadow-sm">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0">{{ $line->name }}</h5>
+                                    <span class="badge bg-primary">ID #{{ $line->id }}</span>
+                                </div>
+                                <div class="card-body text-center">
+                                    <p class="card-text">{{ __('Manage shifts for this line:') }}</p>
+                                    @php
+                                        // Se asume que $line->lastShiftHistory fue eager loaded en el controlador.
+                                        $last = $line->lastShiftHistory;
+                                    @endphp
+
+                                    <div class="btn-group" role="group" aria-label="Shift Actions">
+                                        @if($last)
+                                            @if($last->type === 'shift' && $last->action === 'start')
+                                                {{-- Turno iniciado: mostrar Pausar y Finalizar Turno --}}
+                                                <button type="button" class="btn btn-outline-warning"
+                                                        data-action="pause"
+                                                        data-line-id="{{ $line->id }}"
+                                                        title="{{ __('Pause') }}">
+                                                    <i class="fa fa-pause" aria-hidden="true"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-outline-danger"
+                                                        data-action="final_trabajo"
+                                                        data-line-id="{{ $line->id }}"
+                                                        title="{{ __('End Shift') }}">
+                                                    <i class="fa fa-stop" aria-hidden="true"></i>
+                                                </button>
+                                            @elseif($last->type === 'stop' && $last->action === 'start')
+                                                {{-- Pausa iniciada: mostrar sólo Finalizar Comida --}}
+                                                <button type="button" class="btn btn-outline-danger"
+                                                        data-action="final_comida"
+                                                        data-line-id="{{ $line->id }}"
+                                                        title="{{ __('End Lunch') }}">
+                                                    <i class="fa fa-cutlery" aria-hidden="true"></i>
+                                                </button>
+                                            @elseif($last->type === 'stop' && $last->action === 'end')
+                                                {{-- Pausa finalizada: mostrar Inicio Comida y Finalizar Turno --}}
+                                                <button type="button" class="btn btn-outline-success"
+                                                        data-action="inicio_comida"
+                                                        data-line-id="{{ $line->id }}"
+                                                        title="{{ __('Start Lunch') }}">
+                                                    <i class="fa fa-cutlery" aria-hidden="true"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-outline-danger"
+                                                        data-action="final_trabajo"
+                                                        data-line-id="{{ $line->id }}"
+                                                        title="{{ __('End Shift') }}">
+                                                    <i class="fa fa-stop" aria-hidden="true"></i>
+                                                </button>
+                                            @elseif($last->type === 'shift' && $last->action === 'end')
+                                                {{-- Turno finalizado: mostrar sólo Iniciar Turno --}}
+                                                <button type="button" class="btn btn-outline-success"
+                                                        data-action="inicio_trabajo"
+                                                        data-line-id="{{ $line->id }}"
+                                                        title="{{ __('Start Shift') }}">
+                                                    <i class="fa fa-play" aria-hidden="true"></i>
+                                                </button>
+                                            @else
+                                                {{-- Caso por defecto: se muestran los 4 botones --}}
+                                                <button type="button" class="btn btn-outline-success"
+                                                        data-action="inicio_trabajo"
+                                                        data-line-id="{{ $line->id }}"
+                                                        title="{{ __('Start Shift') }}">
+                                                    <i class="fa fa-play" aria-hidden="true"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-outline-success"
+                                                        data-action="inicio_comida"
+                                                        data-line-id="{{ $line->id }}"
+                                                        title="{{ __('Start Lunch') }}">
+                                                    <i class="fa fa-cutlery" aria-hidden="true"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-outline-danger"
+                                                        data-action="final_comida"
+                                                        data-line-id="{{ $line->id }}"
+                                                        title="{{ __('End Lunch') }}">
+                                                    <i class="fa fa-cutlery" aria-hidden="true"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-outline-danger"
+                                                        data-action="final_trabajo"
+                                                        data-line-id="{{ $line->id }}"
+                                                        title="{{ __('End Shift') }}">
+                                                    <i class="fa fa-stop" aria-hidden="true"></i>
+                                                </button>
+                                            @endif
+                                        @else
+                                            {{-- Sin historial: opción para iniciar el turno --}}
+                                            <button type="button" class="btn btn-outline-success"
+                                                    data-action="inicio_trabajo"
+                                                    data-line-id="{{ $line->id }}"
+                                                    title="{{ __('Start Shift') }}">
+                                                <i class="fa fa-play" aria-hidden="true"></i>
+                                            </button>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+
+            {{-- Filtro para DataTable --}}
+            <div class="mb-3">
+                <label for="productionLineFilter">{{ __('Filter by Production Line') }}</label>
+                <select id="productionLineFilter" class="form-select">
+                    <option value="">{{ __('All') }}</option>
+                    @foreach ($productionLines as $line)
+                        <option value="{{ $line->id }}">{{ $line->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            {{-- Tabla de Turnos (DataTable) --}}
             <div class="card border-0 shadow">
                 <div class="card-header d-flex justify-content-between align-items-center">
-
+                    {{-- Aquí podrías agregar otros controles o títulos --}}
                 </div>
                 <div class="card-body">
                     <table id="shiftTable" class="table table-striped table-bordered w-100">
@@ -125,7 +244,6 @@
 @push('style')
     {{-- Token CSRF para peticiones AJAX --}}
     <meta name="csrf-token" content="{{ csrf_token() }}">
-
     {{-- DataTables CSS --}}
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
     {{-- Botones de DataTables (para exportar Excel, etc.) --}}
@@ -135,35 +253,31 @@
 @push('scripts')
     {{-- jQuery debe cargarse antes que DataTables --}}
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
     {{-- DataTables core JS --}}
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-
     {{-- Extensión de botones para DataTables (ej. export to Excel) --}}
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-
     {{-- SweetAlert2 (alertas) --}}
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>
-        // Para incluir el token CSRF en todas las peticiones AJAX
+        // Configuración global AJAX con CSRF
         $.ajaxSetup({
             headers: {
                 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
             }
         });
 
-        // Ajusta baseUrl en caso de que tengas subcarpetas o dominio
         const baseUrl = "{{ rtrim(config('app.url'), '/') }}";
-        const apiIndexUrl = `${baseUrl}/shift-lists/api`; // GET para DataTables
-        const storeUrl    = `${baseUrl}/shift-lists`;     // POST crear
-        const updateUrlTemplate = `${baseUrl}/shift-lists/:id`; // PUT update
-        const deleteUrlTemplate = `${baseUrl}/shift-lists/:id`; // DELETE
+        const apiIndexUrl = `${baseUrl}/shift-lists/api`;
+        const storeUrl    = `${baseUrl}/shift-lists`;
+        const updateUrlTemplate = `${baseUrl}/shift-lists/:id`;
+        const deleteUrlTemplate = `${baseUrl}/shift-lists/:id`;
 
         $(document).ready(function() {
-            // Inicializar DataTable
+            // Inicializar DataTable con filtro de Production Line
             const table = $('#shiftTable').DataTable({
                 dom: 'Bfrtip',
                 buttons: [
@@ -184,6 +298,9 @@
                 ajax: {
                     url: apiIndexUrl,
                     dataSrc: 'data',
+                    data: function(d) {
+                        d.production_line = $('#productionLineFilter').val();
+                    },
                     error: function() {
                         Swal.fire('Error', '{{ __("Error loading data") }}', 'error');
                     }
@@ -196,7 +313,6 @@
                     {
                         data: null,
                         render: function(data) {
-                            // Botón "Editar"
                             const editBtn = `
                                 <button 
                                     class="btn btn-sm btn-primary edit-shift"
@@ -208,7 +324,6 @@
                                     {{ __("Edit") }}
                                 </button>
                             `;
-                            // Form para "Borrar"
                             const deleteForm = `
                                 <form 
                                     action="${deleteUrlTemplate.replace(':id', data.id)}" 
@@ -233,7 +348,10 @@
                 scrollX: true,
             });
 
-            // Crear turno (submit del formulario "Crear")
+            $('#productionLineFilter').on('change', function() {
+                table.ajax.reload(null, false);
+            });
+
             $('#createShiftForm').on('submit', function(e) {
                 e.preventDefault();
                 const formData = $(this).serialize();
@@ -241,7 +359,7 @@
                     .done(response => {
                         if (response.success) {
                             Swal.fire('{{ __("Saved") }}', response.message, 'success');
-                            table.ajax.reload(null, false); // Recarga sin resetear paginación
+                            table.ajax.reload(null, false);
                             $('#createShiftModal').modal('hide');
                         } else {
                             Swal.fire('{{ __("Error") }}', response.message, 'error');
@@ -252,24 +370,20 @@
                     });
             });
 
-            // Abrir modal "Editar" con datos
             $('#shiftTable').on('click', '.edit-shift', function() {
                 const id = $(this).data('id');
                 const productionLineId = $(this).data('production-line-id');
                 const start = $(this).data('start');
                 const end = $(this).data('end');
 
-                // Rellenar campos en modal
                 $('#editShiftId').val(id);
                 $('#editProductionLineId').val(productionLineId);
-                // Si llega "HH:MM:SS", recortamos a "HH:MM"
                 $('#editStartTime').val(start.slice(0,5));
                 $('#editEndTime').val(end.slice(0,5));
 
                 $('#editShiftModal').modal('show');
             });
 
-            // Guardar cambios (submit del formulario "Editar")
             $('#editShiftForm').on('submit', function(e) {
                 e.preventDefault();
                 const id = $('#editShiftId').val();
@@ -293,6 +407,16 @@
                 .fail(xhr => {
                     Swal.fire('{{ __("Error") }}', xhr.responseJSON?.message || 'Error', 'error');
                 });
+            });
+            
+            // Delegación de eventos para los botones de las tarjetas de Production Lines
+            document.body.addEventListener('click', function(e) {
+                const button = e.target.closest('button[data-action]');
+                if (!button) return;
+                const action = button.getAttribute('data-action');
+                const lineId = button.getAttribute('data-line-id');
+                alert(`Acción: ${action} en línea: ${lineId}`);
+                // Aquí puedes agregar la lógica que necesites (por ejemplo, una llamada AJAX).
             });
         });
     </script>

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ShiftList;
 use App\Models\ProductionLine;
 use Illuminate\Http\Request;
+use App\Models\ShiftHistory;
 
 class ShiftManagementController extends Controller
 {
@@ -13,22 +14,42 @@ class ShiftManagementController extends Controller
      */
     public function index()
     {
-        $productionLines = ProductionLine::all();
+        // Trae las líneas con su último historial
+        $productionLines = ProductionLine::with('lastShiftHistory')->get();
         return view('shift.index', compact('productionLines'));
     }
+    
 
     /**
      * Retorna datos en formato JSON para DataTables.
      */
-    public function getShiftsData()
+    public function getShiftsData(Request $request)
     {
-        // Carga con la relación
-        $shiftLists = ShiftList::with('productionLine')->get();
-
-        // DataTables usa por defecto la clave 'data'
+        $query = ShiftList::with('productionLine');
+    
+        // Si se envía un id de línea de producción, aplicar el filtro
+        if ($request->filled('production_line')) {
+            $query->where('production_line_id', $request->production_line);
+        }
+    
+        $shiftLists = $query->get();
+    
         return response()->json([
             'data' => $shiftLists,
         ]);
+    }
+
+    /**
+     * Muestra el historial (último registro) de turnos para una línea de producción.
+     */
+    public function showShiftHistory($productionLineId)
+    {
+        // Obtén el último registro para la línea de producción
+        $lastRecord = ShiftHistory::where('production_line_id', $productionLineId)
+            ->orderBy('id', 'desc')
+            ->first();
+
+        return view('shift.history', compact('lastRecord', 'productionLineId'));
     }
 
     /**
@@ -36,7 +57,6 @@ class ShiftManagementController extends Controller
      */
     public function store(Request $request)
     {
-        // Ajustar 'H:i' vs 'H:i:s' según tu input <time>
         $request->validate([
             'production_line_id' => 'required|integer',
             'start' => 'required|date_format:H:i',
@@ -45,7 +65,6 @@ class ShiftManagementController extends Controller
 
         ShiftList::create($request->all());
 
-        // Si la petición es AJAX, responder con JSON
         if ($request->ajax()) {
             return response()->json([
                 'success' => true,
@@ -53,7 +72,6 @@ class ShiftManagementController extends Controller
             ]);
         }
 
-        // Si no, redirigir
         return redirect()->route('shift.index')->with('success', 'Shift created successfully.');
     }
 
