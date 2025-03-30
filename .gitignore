@@ -31,3 +31,4 @@ telegram/sessions
 node/baileys_store_multi.json
 baileys_store_multi*
 node/node
+python/models
