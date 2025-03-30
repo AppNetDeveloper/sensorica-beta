@@ -415,8 +415,26 @@
                 if (!button) return;
                 const action = button.getAttribute('data-action');
                 const lineId = button.getAttribute('data-line-id');
-                alert(`Acción: ${action} en línea: ${lineId}`);
-                // Aquí puedes agregar la lógica que necesites (por ejemplo, una llamada AJAX).
+                // Llamada AJAX para publicar el evento MQTT
+                $.ajax({
+                    url: "/shift-event",
+                    method: "POST",
+                    data: {
+                        production_line_id: lineId,
+                        event: action
+                    },
+                    success: function(response) {
+                        Swal.fire('Success', response.message, 'success')
+                            .then(() => {
+                                // Recargar la página para actualizar los botones (y por ende el estado)
+                                location.reload();
+                            });
+                    },
+                    error: function(xhr) {
+                        const err = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Error';
+                        Swal.fire('Error', err, 'error');
+                    }
+                });
             });
         });
     </script>

@@ -131,6 +131,7 @@ Route::post('/shift-lists', [ShiftManagementController::class, 'store'])->name('
 Route::put('/shift-lists/{id}', [ShiftManagementController::class, 'update'])->name('shift.update');
 Route::delete('/shift-lists/{id}', [ShiftManagementController::class, 'destroy'])->name('shift.destroy');
 Route::get('/shift-history/{productionLineId}', [ShiftManagementController::class, 'showShiftHistory'])->name('shift.history');
+Route::post('/shift-event', [ShiftManagementController::class, 'publishShiftEvent'])->name('shift.publishEvent');
 
 
 
