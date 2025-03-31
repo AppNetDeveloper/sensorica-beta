@@ -219,8 +219,9 @@ async function processCallApi(topic, data) {
         if (topicCounter) {
             // Si ya existe un valor previo
             if (topicCounter.lastValue !== null) {
-              if (currentValue !== topicCounter.lastValue) {
-
+              const dimensionDefault = modbusConfig.dimension_default
+              if (currentValue >= dimensionDefault) {
+                return; // No se llamará a la API si el valor es mayor o igual al default
               }
             } else {
                 // Si no hay valor previo, se asigna el actual

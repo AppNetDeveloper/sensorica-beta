@@ -19,6 +19,7 @@ use App\Models\OperatorPost;
 use App\Models\Operator;
 use App\Models\SupplierOrder;
 use App\Models\ProductList;
+use Carbon\Carbon;
 
 class ModbusProcessController extends Controller
 {
@@ -367,6 +368,19 @@ class ModbusProcessController extends Controller
             $newBoxNumberUnlimited++; //indefinido
             // Generar un número de barcoder único
             $uniqueBarcoder = uniqid('', true);
+
+            
+            //buscamos en ControlWeight si ya existe un registro para el last_box_number = $newBoxNumber con modbus_id = $config->id en los ultimos 5 minutos
+            $fiveMinutesAgo = Carbon::now()->subMinutes(5);
+            $controlWeightExists = ControlWeight::where('modbus_id', '=', $config->id)
+                ->where('last_box_number', '=', $newBoxNumber)
+                ->where('created_at', '>=', $fiveMinutesAgo)
+                ->exists();
+            if ($controlWeightExists) {
+                Log::alert("message: control weight already exists for last_box_number=$newBoxNumber and modbus_id=$config->id in the last 5 minutes");
+                return;
+            }
+
             // Buscar el registro en product_lists donde productName coincide con el de $config
             if($config->model_type < 1) {  
                 try {
