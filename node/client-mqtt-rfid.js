@@ -55,7 +55,6 @@ async function connectToDatabase() {
 // 🔄 Función para actualizar el cache de production_line_id
 async function updateProductionLineCache() {
     try {
-        // Consulta la base de datos para obtener los production_line_id asociados a los mqtt_topic
         const [rows] = await dbConnection.execute(`
             SELECT mqtt_topic, production_line_id 
             FROM rfid_ants WHERE mqtt_topic IS NOT NULL AND mqtt_topic != ""
@@ -67,11 +66,12 @@ async function updateProductionLineCache() {
             return cache;
         }, {});
 
-        //console.log(`[${getCurrentTimestamp()}] ✅ Cache de production_line_id actualizado`);
+        //console.log(`[${getCurrentTimestamp()}] ✅ Cache de production_line_id actualizado:`, productionLineCache);
     } catch (error) {
         console.error(`[${getCurrentTimestamp()}] ❌ Error al actualizar el cache de production_line_id: ${error.message}`);
     }
 }
+
 
 // 🔄 Función para obtener el production_line_id del cache
 function getProductionLineIdFromCache(mqttTopic) {
@@ -104,6 +104,7 @@ function connectMQTT() {
 
             if (!productionLineId) {
                 console.log(`[${getCurrentTimestamp()}] ❌ No se encontró production_line_id en el cache para el topic: ${topic}`);
+                await updateProductionLineCache();
                 return; // Si no se encuentra el production_line_id, ignorar el mensaje
             }
 
@@ -112,7 +113,7 @@ function connectMQTT() {
 
             if (shift && (shift.type === 'shift' && shift.action === 'start' || shift.type === 'stop' && shift.action === 'end')) {
                 // Aquí procesamos el mensaje solo si el turno está activo o finalizado
-                console.log(`[${getCurrentTimestamp()}] ✅ Procesando mensaje para production_line_id ${productionLineId}, tipo: ${shift.type}, acción: ${shift.action}`);
+                //console.log(`[${getCurrentTimestamp()}] ✅ Procesando mensaje para production_line_id ${productionLineId}, tipo: ${shift.type}, acción: ${shift.action}`);
                 await processCallApi(topic, message.toString());
             } else {
                 console.log(`[${getCurrentTimestamp()}] ❌ Ignorando mensaje para production_line_id ${productionLineId}, tipo: ${shift.type}, acción: ${shift.action}`);
