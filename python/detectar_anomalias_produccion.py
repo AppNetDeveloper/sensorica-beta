@@ -114,10 +114,10 @@ def detectar_anomalias():
             threshold = 0.02
             if error > threshold:
                 campo, valor, causa = causa_principal(X_scaled, pred, columnas)
-                print(f"🚨 Anomalía | Línea {line_id} | Tipo {tipo} | Sensor {sensor_id} | Error: {error:.5f}")
+                print(f"🚨 Anomalía | Línea Id: {line_id} | Tipo {tipo} | Sensor {sensor_id} | Error: {error:.5f}")
                 print(f"   ↪️  Causa probable: {causa} ({campo}, desviación: {valor:.4f})")
             else:
-                print(f"✅ OK       | Línea {line_id} | Tipo {tipo} | Sensor {sensor_id} | Error: {error:.5f}")
+                print(f"✅ OK       | Línea Id: {line_id} | Tipo {tipo} | Sensor {sensor_id} | Error: {error:.5f}")
 
     # 🚫 Verificar sensores de tipo 0 sin actividad
     sensores_tipo_0 = sensores_df[sensores_df['sensor_type'] == 0]

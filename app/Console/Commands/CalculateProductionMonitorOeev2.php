@@ -519,7 +519,7 @@ class CalculateProductionMonitorOeev2 extends Command
                 mkdir(dirname($fileName1), 0755, true);
             }
             file_put_contents($fileName1, $jsonData . PHP_EOL);
-            Log::info("Mensaje almacenado en archivo (server1): {$fileName1}");
+            //Log::info("Mensaje almacenado en archivo (server1): {$fileName1}");
         
             // Guardar en servidor 2
             $fileName2 = storage_path("app/mqtt/server2/{$sanitizedTopic}_{$uniqueId}.json");
@@ -527,7 +527,7 @@ class CalculateProductionMonitorOeev2 extends Command
                 mkdir(dirname($fileName2), 0755, true);
             }
             file_put_contents($fileName2, $jsonData . PHP_EOL);
-            Log::info("Mensaje almacenado en archivo (server2): {$fileName2}");
+            //Log::info("Mensaje almacenado en archivo (server2): {$fileName2}");
         } catch (\Exception $e) {
             Log::error("Error storing message in file: " . $e->getMessage());
         }
