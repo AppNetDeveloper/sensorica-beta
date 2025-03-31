@@ -115,7 +115,7 @@ def read_modbus_and_publish():
                     else:
                         print(f"Error al leer la Unidad {unit_id} en la Direccion {address}")
 
-            time.sleep(0.3)  # Pausa de 0.3 segundos entre lecturas
+            time.sleep(0.5)  # Pausa de 0.5 segundos entre lecturas
         except Exception as e:
             print(f"Error in Modbus loop: {e}. Reconnecting...")
             client_modbus = connect_modbus()
