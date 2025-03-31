@@ -21,7 +21,8 @@ db_config = {
     'port': int(os.getenv('DB_PORT', 3306))
 }
 
-# Obtener eventos shift (sin filtrar por descripción)
+# Abrir la conexión a la base de datos
+conn = pymysql.connect(**db_config)
 query = """
 SELECT production_line_id, created_at, action
 FROM shift_history
