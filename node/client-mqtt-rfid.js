@@ -28,6 +28,8 @@ let subscribedTopics = [];        // Lista de tópicos a los que se está suscri
 let blockedEPCs = new Set();      // Conjunto de EPCs bloqueados (evitar procesamiento)
 let ignoredTIDs = new Map();      // Mapa para ignorar TIDs que ya han sido procesados recientemente
 let antennaData = {};             // Objeto que almacena datos de antenas asociadas a cada tópico
+// 🔄 Cache en memoria para almacenar production_line_id por mqtt_topic
+let productionLineCache = {};
 
 // ⏰ Función para obtener la fecha y hora actual en formato 'en-GB' y en la zona horaria UTC, sin la coma
 function getCurrentTimestamp() {
@@ -50,6 +52,31 @@ async function connectToDatabase() {
         }
     }
 }
+// 🔄 Función para actualizar el cache de production_line_id
+async function updateProductionLineCache() {
+    try {
+        // Consulta la base de datos para obtener los production_line_id asociados a los mqtt_topic
+        const [rows] = await dbConnection.execute(`
+            SELECT mqtt_topic, production_line_id 
+            FROM rfid_ants WHERE mqtt_topic IS NOT NULL AND mqtt_topic != ""
+        `);
+
+        // Actualiza el cache con los valores obtenidos
+        productionLineCache = rows.reduce((cache, row) => {
+            cache[row.mqtt_topic] = row.production_line_id;
+            return cache;
+        }, {});
+
+        //console.log(`[${getCurrentTimestamp()}] ✅ Cache de production_line_id actualizado`);
+    } catch (error) {
+        console.error(`[${getCurrentTimestamp()}] ❌ Error al actualizar el cache de production_line_id: ${error.message}`);
+    }
+}
+
+// 🔄 Función para obtener el production_line_id del cache
+function getProductionLineIdFromCache(mqttTopic) {
+    return productionLineCache[mqttTopic] || null;
+}
 
 // 🔄 Función para conectar a MQTT con reconexión automática
 function connectMQTT() {
@@ -71,8 +98,28 @@ function connectMQTT() {
 
     // Evento 'message': Se ejecuta al recibir un mensaje en cualquier tópico suscrito
     mqttClient.on('message', async (topic, message) => {
-        // Se procesa la información recibida en el mensaje
-        await processCallApi(topic, message.toString());
+        try {
+            // Obtener el production_line_id desde el cache
+            const productionLineId = getProductionLineIdFromCache(topic);
+
+            if (!productionLineId) {
+                console.log(`[${getCurrentTimestamp()}] ❌ No se encontró production_line_id en el cache para el topic: ${topic}`);
+                return; // Si no se encuentra el production_line_id, ignorar el mensaje
+            }
+
+            // Ahora consulta shift_history para obtener el estado de ese turno
+            const shift = await checkShiftHistory(productionLineId);
+
+            if (shift && (shift.type === 'shift' && shift.action === 'start' || shift.type === 'stop' && shift.action === 'end')) {
+                // Aquí procesamos el mensaje solo si el turno está activo o finalizado
+                console.log(`[${getCurrentTimestamp()}] ✅ Procesando mensaje para production_line_id ${productionLineId}, tipo: ${shift.type}, acción: ${shift.action}`);
+                await processCallApi(topic, message.toString());
+            } else {
+                console.log(`[${getCurrentTimestamp()}] ❌ Ignorando mensaje para production_line_id ${productionLineId}, tipo: ${shift.type}, acción: ${shift.action}`);
+            }
+        } catch (error) {
+            console.error(`[${getCurrentTimestamp()}] ❌ Error procesando mensaje en MQTT: ${error.message}`);
+        }
     });
 
     // Evento 'disconnect': Se ejecuta al perder la conexión con el servidor MQTT
@@ -86,6 +133,22 @@ function connectMQTT() {
     
     // Evento 'reconnect': Se ejecuta cuando el cliente intenta reconectarse
     mqttClient.on('reconnect', () => console.log(`[${getCurrentTimestamp()}] ⚠️ Intentando reconectar a MQTT...`));
+}
+
+// 🔄 Función para consultar la tabla shift_history y obtener la última línea con condiciones específicas
+async function checkShiftHistory(productionLineId) {
+    try {
+        const [rows] = await dbConnection.execute(`
+            SELECT * FROM shift_history 
+            WHERE production_line_id = ? 
+            ORDER BY id  DESC LIMIT 1
+        `, [productionLineId]);
+
+        return rows.length > 0 ? rows[0] : null; // Devuelve la última línea si cumple los criterios, sino null
+    } catch (error) {
+        console.error(`[${getCurrentTimestamp()}] ❌ Error al consultar shift_history: ${error.message}`);
+        return null;
+    }
 }
 
 // 🔄 Función para actualizar la lista de EPCs bloqueados desde la base de datos
@@ -107,8 +170,9 @@ async function subscribeToTopics() {
     if (!isMqttConnected) return;
 
     try {
-        // Consulta la base de datos para obtener los tópicos configurados en la tabla 'rfid_ants'
-        const [rows] = await dbConnection.execute('SELECT mqtt_topic, rssi_min, name FROM rfid_ants WHERE mqtt_topic IS NOT NULL AND mqtt_topic != ""');
+        // Consulta la base de datos para obtener los tópicos configurados en la tabla 'rfid_ants', ahora incluyendo el production_line_id
+        const [rows] = await dbConnection.execute('SELECT mqtt_topic, rssi_min, name, production_line_id FROM rfid_ants WHERE mqtt_topic IS NOT NULL AND mqtt_topic != ""');
+
         // Crea un array con los nuevos tópicos obtenidos
         const newTopics = rows.map(row => row.mqtt_topic);
 
@@ -241,6 +305,10 @@ async function start() {
     setIntervalAsync(async () => {
         if (isMqttConnected) await subscribeToTopics();
     }, 60000);
+
+    setInterval(async () => {
+        await updateProductionLineCache();
+    }, 60000); // Actualización cada 60 segundos
 
     // Programa la limpieza de TIDs ignorados cada 60 segundos
     setInterval(cleanupIgnoredTIDs, 60000);

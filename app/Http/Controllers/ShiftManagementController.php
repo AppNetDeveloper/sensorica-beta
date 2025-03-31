@@ -130,8 +130,8 @@ class ShiftManagementController extends Controller
      * Los posibles eventos son:
      * - "inicio_trabajo"  → {type: "shift", action: "start"}
      * - "final_trabajo"   → {type: "shift", action: "end"}
-     * - "inicio_comida"   → {type: "stop", action: "start"}
-     * - "final_comida"    → {type: "stop", action: "end"}
+     * - "inicio_pausa"   → {type: "stop", action: "start"}
+     * - "final_pausa"    → {type: "stop", action: "end"}
      *
      * En todos los casos se incluye "description": "Manual".
      */
@@ -139,7 +139,7 @@ class ShiftManagementController extends Controller
     {
         $request->validate([
             'production_line_id' => 'required|integer',
-            'event' => 'required|string|in:inicio_trabajo,final_trabajo,inicio_comida,final_comida'
+            'event' => 'required|string|in:inicio_trabajo,final_trabajo,inicio_pausa,final_pausa'
         ]);
 
         $productionLineId = $request->production_line_id;
@@ -155,11 +155,11 @@ class ShiftManagementController extends Controller
                 $data['type'] = 'shift';
                 $data['action'] = 'end';
                 break;
-            case 'inicio_comida':
+            case 'inicio_pausa':
                 $data['type'] = 'stop';
                 $data['action'] = 'start';
                 break;
-            case 'final_comida':
+            case 'final_pausa':
                 $data['type'] = 'stop';
                 $data['action'] = 'end';
                 break;

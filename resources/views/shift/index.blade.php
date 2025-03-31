@@ -44,7 +44,7 @@
                                             @if($last->type === 'shift' && $last->action === 'start')
                                                 {{-- Turno iniciado: mostrar Pausar y Finalizar Turno --}}
                                                 <button type="button" class="btn btn-outline-warning"
-                                                        data-action="pause"
+                                                        data-action="inicio_pausa"
                                                         data-line-id="{{ $line->id }}"
                                                         title="{{ __('Pause') }}">
                                                     <i class="fa fa-pause" aria-hidden="true"></i>
@@ -56,20 +56,20 @@
                                                     <i class="fa fa-stop" aria-hidden="true"></i>
                                                 </button>
                                             @elseif($last->type === 'stop' && $last->action === 'start')
-                                                {{-- Pausa iniciada: mostrar sólo Finalizar Comida --}}
+                                                {{-- Pausa iniciada: mostrar sólo Finalizar pausa --}}
                                                 <button type="button" class="btn btn-outline-danger"
-                                                        data-action="final_comida"
+                                                        data-action="final_pausa"
                                                         data-line-id="{{ $line->id }}"
                                                         title="{{ __('End Lunch') }}">
-                                                    <i class="fa fa-cutlery" aria-hidden="true"></i>
+                                                    <i class="fa fa-play" aria-hidden="true"></i>
                                                 </button>
                                             @elseif($last->type === 'stop' && $last->action === 'end')
-                                                {{-- Pausa finalizada: mostrar Inicio Comida y Finalizar Turno --}}
+                                                {{-- Pausa finalizada: mostrar Inicio pausa y Finalizar Turno --}}
                                                 <button type="button" class="btn btn-outline-success"
-                                                        data-action="inicio_comida"
+                                                        data-action="inicio_pausa"
                                                         data-line-id="{{ $line->id }}"
                                                         title="{{ __('Start Lunch') }}">
-                                                    <i class="fa fa-cutlery" aria-hidden="true"></i>
+                                                    <i class="fa fa-pause" aria-hidden="true"></i>
                                                 </button>
                                                 <button type="button" class="btn btn-outline-danger"
                                                         data-action="final_trabajo"
@@ -94,16 +94,16 @@
                                                     <i class="fa fa-play" aria-hidden="true"></i>
                                                 </button>
                                                 <button type="button" class="btn btn-outline-success"
-                                                        data-action="inicio_comida"
+                                                        data-action="inicio_pausa"
                                                         data-line-id="{{ $line->id }}"
                                                         title="{{ __('Start Lunch') }}">
-                                                    <i class="fa fa-cutlery" aria-hidden="true"></i>
+                                                    <i class="fa fa-pause" aria-hidden="true"></i>
                                                 </button>
                                                 <button type="button" class="btn btn-outline-danger"
-                                                        data-action="final_comida"
+                                                        data-action="final_pausa"
                                                         data-line-id="{{ $line->id }}"
                                                         title="{{ __('End Lunch') }}">
-                                                    <i class="fa fa-cutlery" aria-hidden="true"></i>
+                                                    <i class="fa fa-play" aria-hidden="true"></i>
                                                 </button>
                                                 <button type="button" class="btn btn-outline-danger"
                                                         data-action="final_trabajo"
@@ -415,6 +415,11 @@
                 if (!button) return;
                 const action = button.getAttribute('data-action');
                 const lineId = button.getAttribute('data-line-id');
+                    // Mostrar en consola la data antes de enviarla
+                console.log("Data to be sent:", {
+                    production_line_id: lineId,
+                    event: action
+                });
                 // Llamada AJAX para publicar el evento MQTT
                 $.ajax({
                     url: "/shift-event",
@@ -423,19 +428,32 @@
                         production_line_id: lineId,
                         event: action
                     },
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+
                     success: function(response) {
-                        Swal.fire('Success', response.message, 'success')
-                            .then(() => {
-                                // Recargar la página para actualizar los botones (y por ende el estado)
-                                location.reload();
-                            });
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Success',
+                            text: response.message,
+                            timer: 2000,  // Tiempo de 2 segundos antes de cerrar
+                            showConfirmButton: false  // No se muestra el botón de confirmación
+                        }).then(() => {
+                            // Recargar la página para actualizar los botones (y por ende el estado)
+                            location.reload();
+                        });
                     },
                     error: function(xhr) {
+                        // Mostrar el error en la consola
+                        console.error("Error details:", xhr); // Imprime todos los detalles de la respuesta de error
+
                         const err = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Error';
-                        Swal.fire('Error', err, 'error');
+                        Swal.fire('Error', err, 'error'); 
                     }
                 });
             });
+
         });
     </script>
 @endpush
