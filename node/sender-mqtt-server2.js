@@ -149,7 +149,7 @@ async function publishToMqtt(fileEntry) {
         if (unlinkErr) {
           console.error(`${getFormattedDate()} ❌ Error borrando el archivo ${file}:`, unlinkErr);
         } else {
-          console.log(`${getFormattedDate()} ✅ Publicado y borrado archivo: ${file}`);
+         // console.log(`${getFormattedDate()} ✅ Publicado y borrado archivo: ${file}`);
         }
       });
     }

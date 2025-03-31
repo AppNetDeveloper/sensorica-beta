@@ -225,7 +225,8 @@ fi
 # En este ejemplo, se ejecuta el script clean_and_backup.sh a las 00:00 y a las 14:30.
 CRON_ENTRY1="0 0 * * * /bin/bash /var/www/html/clean_and_backup.sh >> /var/www/html/storage/logs/clean_and_backup.log 2>&1"
 CRON_ENTRY2="30 14 * * * /bin/bash /var/www/html/clean_and_backup.sh >> /var/www/html/storage/logs/clean_and_backup.log 2>&1"
-CRON_ENTRY2="30 0 * * * python3 /var/www/html/python/entrena_shift.py >> /var/www/html/storage/logs/entrena_shift.log 2>&1"
+CRON_ENTRY3="30 0 * * * python3 /var/www/html/python/entrena_shift.py >> /var/www/html/storage/logs/entrena_shift.log 2>&1"
+CRON_ENTRY4="*/10 * * * * find /var/www/html/storage/app/mqtt/server2 -type f -mmin +60 -delete"
 
 
 # Obtiene la lista de cron actual
