@@ -187,7 +187,7 @@ function initialize() {
     } else {
       console.log(`${getFormattedDate()} ⚠️ MQTT no conectado, esperando reconexión...`);
     }
-  }, 100);
+  }, 500);
 }
 
 initialize();

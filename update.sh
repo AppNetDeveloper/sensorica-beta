@@ -252,6 +252,11 @@ echo "$CURRENT_CRON" | crontab -
 echo "Cron actualizado."
 
 
+pip install pymysql pandas numpy scikit-learn tensorflow joblib --break-system-packages
+pip install python-dotenv --break-system-package
+pip3 install scikit-learn tensorflow pandas pymysql joblib --break-system-packages
+pip install pymysql --break-system-packages
+
 # Reiniciar Supervisor con nueva configuración
 echo "Reconfigurando Supervisor..."
 sudo rm -rf /etc/supervisor/conf.d/*
