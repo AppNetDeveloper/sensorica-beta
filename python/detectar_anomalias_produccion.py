@@ -7,12 +7,15 @@ from datetime import datetime, timedelta
 from sklearn.preprocessing import MinMaxScaler
 from tensorflow.keras.models import load_model
 import joblib
-
 import time
+
 from dotenv import dotenv_values
 
-# Cargar variables del archivo .env de Laravel
-env_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../.env'))
+# -------------------------------------------------------------------------
+# 1. Carga de variables del .env
+# -------------------------------------------------------------------------
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+env_path = os.path.join(CURRENT_DIR, '../.env')
 config = dotenv_values(env_path)
 
 DB_HOST = config.get("DB_HOST", "127.0.0.1")
@@ -22,6 +25,9 @@ DB_USER = config.get("DB_USERNAME", "root")
 DB_PASS = config.get("DB_PASSWORD", "")
 
 def conectar_db():
+    """
+    Crea la conexión a MySQL usando la configuración del .env
+    """
     return pymysql.connect(
         host=DB_HOST,
         user=DB_USER,
@@ -30,107 +36,137 @@ def conectar_db():
         port=DB_PORT
     )
 
-# Identifica la causa de la anomalía
-def causa_principal(X_scaled, pred, columnas):
-    errores = np.abs(X_scaled - pred)
-    error_por_campo = dict(zip(columnas, errores[0]))
-
-    campo_max = max(error_por_campo, key=error_por_campo.get)
-    valor = error_por_campo[campo_max]
-
-    causas = {
-        "avg_time_11": "tiempo promedio de actividad muy alto",
-        "std_time_11": "variabilidad anormal en actividad",
-        "avg_time_01": "transición de 0 a 1 anormalmente larga",
-        "avg_time_10": "transición de 1 a 0 anormalmente larga",
-        "conteos_porcentaje": "porcentaje de conteos fuera de lo normal",
-    }
-
-    descripcion = causas.get(campo_max, "desviación en comportamiento")
-    return campo_max, valor, descripcion
-
-# Función principal
 def detectar_anomalias():
+    """
+    Monitorea los últimos 15 minutos:
+      - tipo=0 => usa time_11 y forzar time_00=0
+      - tipo>0 => usa time_00 y forzar time_11=0
+      - Si no hay registros (o <2) => inactivo (solo avisa para tipo=0)
+      - Si el MSE excede el threshold => anomalía
+      - Si no, OK
+    """
     conn = conectar_db()
     fecha_inicio = datetime.now() - timedelta(minutes=15)
 
+    # 1) Carga de sensores
     sensores_df = pd.read_sql("""
         SELECT id, production_line_id, sensor_type
         FROM sensors
         WHERE sensor_type IN (0,1,2,3,4)
     """, conn)
 
+    # 2) Carga de registros de sensor_counts (últimos 15 min)
     counts_df = pd.read_sql(f"""
-        SELECT sensor_id, value, time_11, time_01, time_10, created_at
+        SELECT 
+            sensor_id, 
+            time_11, 
+            time_00, 
+            created_at
         FROM sensor_counts
         WHERE created_at >= '{fecha_inicio.strftime('%Y-%m-%d %H:%M:%S')}'
     """, conn)
     conn.close()
 
+    # Unir con info de línea y tipo
     counts_df = counts_df.merge(sensores_df, left_on='sensor_id', right_on='id', how='inner')
     counts_df.drop(columns=['id'], inplace=True)
-    counts_df['created_at'] = pd.to_datetime(counts_df['created_at'])
 
+    # Convertir a numérico
+    counts_df['time_11'] = pd.to_numeric(counts_df['time_11'], errors='coerce')
+    counts_df['time_00'] = pd.to_numeric(counts_df['time_00'], errors='coerce')
+
+    # Para llevar control de sensores que sí tuvieron registros
     sensores_analizados = []
 
-    for (line_id, tipo), group in counts_df.groupby(['production_line_id', 'sensor_type']):
-        model_path = f"models/line_{line_id}_type_{tipo}_autoencoder.h5"
-        scaler_path = f"models/line_{line_id}_type_{tipo}_scaler.save"
+    # -----------------------------
+    # PROCESAR POR (LÍNEA, TIPO)
+    # -----------------------------
+    for (line_id, s_type), group_line_type in counts_df.groupby(['production_line_id', 'sensor_type']):
+        # Rutas de modelo y scaler
+        model_path = f"models/line_{line_id}_type_{s_type}_autoencoder.h5"
+        scaler_path = f"models/line_{line_id}_type_{s_type}_scaler.pkl"
 
+        # Verificar existencia
         if not os.path.exists(model_path) or not os.path.exists(scaler_path):
-            print(f"⚠️  Modelo no encontrado para Línea {line_id} / Tipo {tipo}")
+            print(f"⚠️  No hay modelo para Línea={line_id}, Tipo={s_type}")
             continue
 
+        # Cargar modelo y scaler
         model = load_model(model_path, compile=False)
         scaler = joblib.load(scaler_path)
 
-        sensores = group['sensor_id'].unique()
-        for sensor_id in sensores:
+        # -------------
+        # Por cada sensor en este (line_id, tipo)
+        # -------------
+        for sensor_id, sensor_data in group_line_type.groupby('sensor_id'):
+            # Marcamos que este sensor sí apareció
             sensores_analizados.append(sensor_id)
 
-            sensor_data = group[group['sensor_id'] == sensor_id]
-            if len(sensor_data) < 5:
+            # Si NO hay suficientes registros => inactivo (solo avisar si es tipo=0)
+            if len(sensor_data) < 2:
+                if s_type == 0:
+                    print(f"🚫 Inactivo | Línea {line_id} | Sensor {sensor_id} (pocos registros)")
+                # Si NO es tipo 0, simplemente no avisamos
                 continue
 
-            values = sensor_data['value'].astype(int)
-            time_11 = sensor_data['time_11'].dropna()
-            time_01 = sensor_data['time_01'].dropna()
-            time_10 = sensor_data['time_10'].dropna()
+            # Calcular estadísticos
+            mean_11 = sensor_data['time_11'].mean()
+            std_11  = sensor_data['time_11'].std(ddof=1) or 0.0
+            mean_00 = sensor_data['time_00'].mean()
+            std_00  = sensor_data['time_00'].std(ddof=1) or 0.0
 
-            row = {
-                'avg_time_11': time_11.mean(),
-                'std_time_11': time_11.std(),
-                'avg_time_01': time_01.mean() if not time_01.empty else 0,
-                'avg_time_10': time_10.mean() if not time_10.empty else 0,
-                'conteos_porcentaje': values.sum() / len(values)
-            }
-
-            X = pd.DataFrame([row]).fillna(0)
-            columnas = X.columns
-            X_scaled = scaler.transform(X)
-            pred = model.predict(X_scaled, verbose=0)
-            error = np.mean(np.power(X_scaled - pred, 2))
-
-            threshold = 0.02
-            if error > threshold:
-                campo, valor, causa = causa_principal(X_scaled, pred, columnas)
-                print(f"🚨 Anomalía | Línea Id: {line_id} | Tipo {tipo} | Sensor {sensor_id} | Error: {error:.5f}")
-                print(f"   ↪️  Causa probable: {causa} ({campo}, desviación: {valor:.4f})")
+            # Ajustar según tipo:
+            if s_type == 0:
+                # Mantener time_11, forzar 00
+                mean_00 = 0.0
+                std_00  = 0.0
             else:
-                print(f"✅ OK       | Línea Id: {line_id} | Tipo {tipo} | Sensor {sensor_id} | Error: {error:.5f}")
+                # Mantener time_00, forzar 11
+                mean_11 = 0.0
+                std_11  = 0.0
 
-    # 🚫 Verificar sensores de tipo 0 sin actividad
-    sensores_tipo_0 = sensores_df[sensores_df['sensor_type'] == 0]
-    sensores_0_analizados = set(sensores_analizados)
+            # Empaquetar features
+            row = {
+                'mean_time_11': mean_11,
+                'std_time_11': std_11,
+                'mean_time_00': mean_00,
+                'std_time_00': std_00
+            }
+            X = pd.DataFrame([row])
 
-    for _, row in sensores_tipo_0.iterrows():
-        sensor_id = row['id']
-        line_id = row['production_line_id']
-        if sensor_id not in sensores_0_analizados:
-            print(f"🚫 Inactivo | Línea {line_id} | Sensor {sensor_id} | sin actividad en los últimos 15 minutos")
+            # Escalar
+            X_scaled = scaler.transform(X)
 
-# ⏱️ Bucle infinito cada 60 segundos
-print("🧠 Monitor de sensores en tiempo real iniciado (cada 60 segundos)...")
-while True:
-    detectar_anomalias()
-    time.sleep(60)
+            # Predicción con autoencoder
+            pred = model.predict(X_scaled, verbose=0)
+            mse = np.mean((X_scaled - pred)**2)
+
+            # Umbral (puedes ajustar según tu entrenamiento)
+            threshold = 0.01
+
+            if mse > threshold:
+                print(f"🚨 Anomalía | Línea {line_id} | Sensor {sensor_id}, MSE={mse:.5f}")
+            else:
+                print(f"✅ OK       | Línea {line_id} | Sensor {sensor_id}, MSE={mse:.5f}")
+
+    # -----------------------------
+    # Revisar si hay sensores TIPO 0 que NO aparecieron en los últimos 15 min
+    # -----------------------------
+    # Tomamos solo los de tipo 0
+    sensores_tipo0 = sensores_df[sensores_df['sensor_type'] == 0]
+    # filtramos los que NO están en sensores_analizados
+    inactivos = sensores_tipo0[~sensores_tipo0['id'].isin(sensores_analizados)]
+
+    for _, row_sens in inactivos.iterrows():
+        sensor_id = row_sens['id']
+        line_id = row_sens['production_line_id']
+        print(f"🚫 Inactivo | Línea {line_id} | Sensor {sensor_id} (sin actividad en 15 min)")
+
+# -------------------------------------------------------------------------
+# 2. Bucle infinito
+# -------------------------------------------------------------------------
+if __name__ == "__main__":
+    print("🚀 Iniciando DETECCIÓN: solo avisa inactividad si type=0 ...")
+    while True:
+        detectar_anomalias()
+        time.sleep(60)

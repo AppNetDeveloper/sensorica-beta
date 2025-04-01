@@ -36,7 +36,7 @@ class SensorCount extends Model
         'count_order_1',
         'time_00',
         'time_01',
-        'time_11',
+        'time_11', //tiempo entre la ultima bolsa y actual , este es para usarlo para calcular el tiempo de producción
         'time_10',
         'unic_code_order',      // codigo de orden unico, uso interno nada mas
     ];

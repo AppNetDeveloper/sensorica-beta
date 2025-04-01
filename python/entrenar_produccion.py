@@ -1,121 +1,223 @@
+import os
+import logging
+from dotenv import load_dotenv
 import pymysql
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
+from datetime import datetime
+from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.callbacks import EarlyStopping
 import joblib
-import os
 
-# Configuración de conexión a base de datos
-conn = pymysql.connect(
-    host='localhost',
-    user='root',
-    password='Cvlss2101281613',
-    database='boisolo',
-    port=3306
+# -------------------------------------------------------------------------
+# 1. Configuración de logging
+# -------------------------------------------------------------------------
+logging.basicConfig(
+    level=logging.INFO,
+    format='[%(asctime)s] [%(levelname)s] %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
 )
 
-# Usar los últimos 15 días
-fecha_limite = datetime.now() - timedelta(days=15)
+# -------------------------------------------------------------------------
+# 2. Carga de variables de entorno
+# -------------------------------------------------------------------------
+load_dotenv(dotenv_path='../.env')  # Ajusta ruta si tu .env está en otro lugar
 
-# Cargar sensores de tipo 0 a 4
-sensores_query = """
-SELECT id, production_line_id, sensor_type
-FROM sensors
-WHERE sensor_type IN (0, 1, 2, 3, 4)
-"""
-sensores_df = pd.read_sql(sensores_query, conn)
+db_config = {
+    'host': os.getenv('DB_HOST', 'localhost'),
+    'user': os.getenv('DB_USERNAME', 'root'),
+    'password': os.getenv('DB_PASSWORD', ''),
+    'database': os.getenv('DB_DATABASE', 'boisolo'),
+    'port': int(os.getenv('DB_PORT', 3306))
+}
 
-# Cargar eventos de sensor_counts
-counts_query = f"""
-SELECT sensor_id, value, time_11, time_01, time_10, created_at
-FROM sensor_counts
-WHERE created_at >= '{fecha_limite.strftime('%Y-%m-%d %H:%M:%S')}'
-"""
-counts_df = pd.read_sql(counts_query, conn)
-conn.close()
+# -------------------------------------------------------------------------
+# 3. Función de conexión y carga de datos
+# -------------------------------------------------------------------------
+def cargar_datos():
+    """
+    Conecta a la DB y carga:
+      - Los sensores (id, production_line_id, sensor_type).
+      - La tabla sensor_counts con time_11, time_00, created_at (sin filtrar).
+    Converte time_11 y time_00 a numéricos, eliminando filas donde ambos
+    son NaN.
+    """
+    connection = pymysql.connect(**db_config)
+    try:
+        # A) Cargar sensores
+        sensores_query = """
+        SELECT id, production_line_id, sensor_type
+        FROM sensors
+        WHERE sensor_type IN (0, 1, 2, 3, 4)
+        """
+        sensores_df = pd.read_sql(sensores_query, connection)
 
-# Unir sensores con sus líneas y tipo
-counts_df = counts_df.merge(sensores_df, left_on='sensor_id', right_on='id', how='inner')
-counts_df.drop(columns=['id'], inplace=True)
+        # B) Cargar sensor_counts (todo el histórico)
+        counts_query = """
+        SELECT sensor_id, time_11, time_00, created_at
+        FROM sensor_counts
+        """
+        counts_df = pd.read_sql(counts_query, connection)
+    finally:
+        connection.close()
 
-# Asegurar formato datetime
-counts_df['created_at'] = pd.to_datetime(counts_df['created_at'])
+    # Convertir a numérico
+    for col in ['time_11', 'time_00']:
+        counts_df[col] = pd.to_numeric(counts_df[col], errors='coerce')
 
-# Crear carpeta para guardar modelos
-os.makedirs("models", exist_ok=True)
+    # Eliminar filas donde ambos sean NaN
+    counts_df.dropna(subset=['time_11', 'time_00'], how='all', inplace=True)
 
-# Configuración de ventana temporal (15 minutos)
-ventana_min = 15
-ventana = timedelta(minutes=ventana_min)
+    return sensores_df, counts_df
 
-# Entrenar modelo por línea de producción + tipo de sensor
-for (line_id, tipo), group in counts_df.groupby(['production_line_id', 'sensor_type']):
-    sensores = group['sensor_id'].unique()
-    features = []
+# -------------------------------------------------------------------------
+# 4. Preprocesamiento y generación de features
+# -------------------------------------------------------------------------
+def generar_features(sensores_df, counts_df):
+    """
+    Une sensors con sensor_counts y crea agregaciones diarias.
+    Luego, si sensor_type = 0 => solo dejamos time_11 (time_00 a 0).
+                 sensor_type != 0 => solo dejamos time_00 (time_11 a 0).
+    Final: Las columnas resultantes (mean_time_11, std_time_11,
+    mean_time_00, std_time_00) están definidas para todos.
+    """
+    # Merge
+    df = counts_df.merge(sensores_df, left_on='sensor_id', right_on='id', how='inner')
+    df.drop(columns=['id'], inplace=True)
 
-    for sensor_id in sensores:
-        sensor_data = group[group['sensor_id'] == sensor_id].sort_values(by='created_at')
-        start = sensor_data['created_at'].min()
-        end = sensor_data['created_at'].max()
-        actual = start
+    # Asegurar datetime
+    df['created_at'] = pd.to_datetime(df['created_at'], errors='coerce')
+    # Dia para la agregación
+    df['fecha'] = df['created_at'].dt.date
 
-        while actual < end:
-            ventana_data = sensor_data[(sensor_data['created_at'] >= actual) &
-                                       (sensor_data['created_at'] < actual + ventana)]
-            if len(ventana_data) < 5:
-                actual += ventana
-                continue
+    feature_rows = []
+    for (line_id, s_type), group_line_type in df.groupby(['production_line_id', 'sensor_type']):
+        for sensor_id, sensor_data in group_line_type.groupby('sensor_id'):
+            # Agregar por día
+            daily_agg = sensor_data.groupby('fecha').agg({
+                'time_11': ['mean', 'std'],
+                'time_00': ['mean', 'std']
+            }).reset_index()
 
-            values = ventana_data['value'].astype(int)
-            time_11 = ventana_data['time_11'].dropna()
-            time_01 = ventana_data['time_01'].dropna()
-            time_10 = ventana_data['time_10'].dropna()
+            daily_agg.columns = [
+                'fecha',
+                'mean_time_11', 'std_time_11',
+                'mean_time_00', 'std_time_00'
+            ]
 
-            features.append({
-                'sensor_id': sensor_id,
-                'avg_time_11': time_11.mean(),
-                'std_time_11': time_11.std(),
-                'avg_time_01': time_01.mean() if not time_01.empty else 0,
-                'avg_time_10': time_10.mean() if not time_10.empty else 0,
-                'conteos': values.sum(),
-                'total_registros': len(values),
-                'conteos_porcentaje': values.sum() / len(values)
-            })
+            # Asignar IDs
+            daily_agg['sensor_id'] = sensor_id
+            daily_agg['production_line_id'] = line_id
+            daily_agg['sensor_type'] = s_type
 
-            actual += ventana
+            # ================ CLAVE: Ajustar según el tipo ================
+            # Si el sensor es tipo 0, dejamos time_11 y forzamos a 0 time_00
+            if s_type == 0:
+                daily_agg['mean_time_00'] = 0.0
+                daily_agg['std_time_00']  = 0.0
+            else:
+                # Si NO es tipo 0, forzamos a 0 time_11
+                daily_agg['mean_time_11'] = 0.0
+                daily_agg['std_time_11']  = 0.0
+            # =============================================================
 
-    df_feat = pd.DataFrame(features)
-    if df_feat.empty:
-        print(f"❌ Línea {line_id} / Tipo {tipo}: sin datos suficientes.")
-        continue
+            feature_rows.append(daily_agg)
 
-    # Normalizar datos
-    X = df_feat[['avg_time_11', 'std_time_11', 'avg_time_01', 'avg_time_10', 'conteos_porcentaje']].fillna(0)
-    scaler = MinMaxScaler()
-    X_scaled = scaler.fit_transform(X)
+    if not feature_rows:
+        logging.warning("No se generaron datos de features.")
+        return pd.DataFrame()
 
-    # Crear modelo autoencoder
-    input_dim = X_scaled.shape[1]
-    model = Sequential([
-        Dense(8, activation='relu', input_shape=(input_dim,)),
-        Dense(4, activation='relu'),
-        Dense(8, activation='relu'),
-        Dense(input_dim, activation='linear')
-    ])
-    model.compile(optimizer='adam', loss='mse')
-    early_stop = EarlyStopping(monitor='loss', patience=10, restore_best_weights=True)
-    model.fit(X_scaled, X_scaled, epochs=100, batch_size=32, verbose=1, callbacks=[early_stop])
+    df_feat = pd.concat(feature_rows, ignore_index=True)
 
-    # Guardar modelo y scaler
-    model_path = f"models/line_{line_id}_type_{tipo}_autoencoder.h5"
-    scaler_path = f"models/line_{line_id}_type_{tipo}_scaler.save"
-    model.save(model_path)
-    joblib.dump(scaler, scaler_path)
+    # Rellenar NaN (e.g. std_time_11 si 1 solo registro)
+    df_feat.fillna(0, inplace=True)
 
-    print(f"✅ Modelo entrenado para Línea {line_id} / Tipo {tipo} con {len(df_feat)} muestras.")
+    return df_feat
 
-print("🎯 Entrenamiento completo para todos los sensores por ventana.")
+# -------------------------------------------------------------------------
+# 5. Entrenar modelos
+# -------------------------------------------------------------------------
+def entrenar_modelos(df_feat, output_dir="models"):
+    """
+    Entrena un autoencoder para cada (line_id, sensor_type), usando
+    mean_time_11, std_time_11, mean_time_00, std_time_00 como columnas
+    (4 features).
+    """
+    os.makedirs(output_dir, exist_ok=True)
+
+    grouped = df_feat.groupby(['production_line_id', 'sensor_type'])
+
+    for (line_id, s_type), group in grouped:
+        # Extraer features que ahora SIEMPRE son 4
+        X = group[['mean_time_11', 'std_time_11',
+                   'mean_time_00', 'std_time_00']]
+
+        if len(X) < 10:
+            logging.warning(f"Línea {line_id}, Tipo {s_type}: muy pocos datos ({len(X)}) para entrenar.")
+            continue
+
+        # Escalado
+        scaler = MinMaxScaler()
+        X_scaled = scaler.fit_transform(X)
+
+        # Partición train/val
+        X_train, X_val = train_test_split(X_scaled, test_size=0.2, random_state=42)
+
+        # Arquitectura simple autoencoder
+        input_dim = X_train.shape[1]
+        model = Sequential([
+            Dense(8, activation='relu', input_shape=(input_dim,)),
+            Dense(4, activation='relu'),
+            Dense(8, activation='relu'),
+            Dense(input_dim, activation='linear')
+        ])
+        model.compile(optimizer='adam', loss='mse')
+
+        # EarlyStopping
+        early_stop = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
+
+        # Entrenar
+        history = model.fit(
+            X_train, X_train,
+            epochs=100,
+            batch_size=32,
+            validation_data=(X_val, X_val),
+            callbacks=[early_stop],
+            verbose=1
+        )
+
+        # Guardar con nombres fijos (sin timestamp)
+        model_path = os.path.join(output_dir, f"line_{line_id}_type_{s_type}_autoencoder.h5")
+        scaler_path = os.path.join(output_dir, f"line_{line_id}_type_{s_type}_scaler.pkl")
+
+        model.save(model_path)
+        joblib.dump(scaler, scaler_path)
+
+        logging.info(
+            f"Entrenado para línea={line_id}, tipo={s_type}, muestras={len(X)}. "
+            f"Guardado en {model_path}"
+        )
+
+# -------------------------------------------------------------------------
+# 6. Script principal
+# -------------------------------------------------------------------------
+if __name__ == "__main__":
+    logging.info("Iniciando ENTRENAMIENTO: tipo 0 usa time_11, otros usan time_00.")
+
+    # 1) Cargar datos
+    sensores_df, counts_df = cargar_datos()
+    logging.info(f"Sensores: {len(sensores_df)}. Registros limpios: {len(counts_df)}.")
+
+    # 2) Generar features
+    df_features = generar_features(sensores_df, counts_df)
+    if df_features.empty:
+        logging.error("No se generaron features. Abortando.")
+        exit()
+
+    # 3) Entrenar
+    entrenar_modelos(df_features, output_dir="models")
+
+    logging.info("Entrenamiento COMPLETADO.")
