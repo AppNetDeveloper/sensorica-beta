@@ -72,12 +72,18 @@ class Barcode extends Model
 
         if ($orderNotice && isset($orderNotice['orderId'], $orderNotice['quantity'])) {
             
-            // Extraer 'orderId' como cadena de texto completa
-            $orderId = (string)$orderNotice['orderId'];  // Convertir a string explícitamente
-            // Extraer 'quantity' del JSON esto no es necesario en string, por no tener caracteros raros
-            $box = $orderNotice['quantity'];
+            // Extraer 'orderId' y convertirlo a string explícitamente
+            $orderId = isset($orderNotice['orderId']) ? (string)$orderNotice['orderId'] : null;
+
+            // Extraer 'quantity' sin necesidad de conversión adicional
+            $box = isset($orderNotice['quantity']) ? $orderNotice['quantity'] : null;
+
             // Extraer 'uds' del primer nivel dentro de 'groupLevel'
-            $units = $orderNotice['refer']['groupLevel'][0]['uds']; // Accede al valor de 'uds'
+            $units = isset($orderNotice['refer']['groupLevel'][0]['uds']) ? $orderNotice['refer']['groupLevel'][0]['uds'] : null;
+
+            // Extraer 'customerId'; si no existe, se asigna null
+            $customerId = isset($orderNotice['refer']['customerId']) ? $orderNotice['refer']['customerId'] : null;
+
             
             // Extraer 'production_line_id' de la tabla 'barcodes'
             $productionLineId = $barcode->production_line_id;
@@ -98,6 +104,7 @@ class Barcode extends Model
                         'units_box' => $units,
                         'box' => $box,
                         'units' => $box * $units,
+                        'customerId' => $customerId,
                     ]);
                     // Borrar el campo 'order_notice' del barcode
                    // $barcode->order_notice = null;
@@ -132,6 +139,7 @@ class Barcode extends Model
                         'json' => $orderNotice, // Almacenar el JSON original
                         'status' => 5, // Estado 5 para indicar orden duplicada
                         'orden' => $newOrder, // Asignar el nuevo orden
+                        'customerId' => $customerId,
                     ]);
 
                     Log::warning("Orden duplicada detectada. ScadaOrder creado con status 5 y order_id: {$orderId}-Order-Duplicado");
@@ -154,6 +162,7 @@ class Barcode extends Model
                         'json' => $orderNotice, // Almacenar el JSON original
                         'status' => 0, // Estado inicial
                         'orden' => $newOrder, // Asignar el nuevo orden
+                        'customerId' => $customerId,
                     ]);
 
                     // Obtener la capacidad de la mezcladora en metros cúbicos desde el JSON o desde 'scada'

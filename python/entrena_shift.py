@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 import os
 
 # Cargar las variables desde el .env de Laravel
-load_dotenv(dotenv_path='../.env')
+load_dotenv(dotenv_path='/var/www/html/.env')
 
 # Obtener credenciales desde las variables de entorno
 db_config = {

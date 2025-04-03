@@ -7,14 +7,13 @@ use App\Models\Sensor;
 use App\Models\Modbus;
 use App\Models\MonitorOee;
 use Carbon\Carbon;
-use App\Models\SensorCount;
 use App\Models\OrderStat;
 use Illuminate\Support\Facades\Log;
-use App\Models\ShiftList; // Asegúrate de que la ruta del modelo sea la correcta
 use App\Models\ShiftHistory; // Asegúrate de que la ruta del modelo sea la correcta
-use App\Models\OrderMac; // Asegúrate de que la ruta del modelo sea la correcta
 use App\Services\OrderTimeService;
 use App\Models\ProductList;
+use App\Models\OptimalProductionTime;
+use App\Models\OptimalSensorTime;
 
 class CalculateProductionMonitorOeev2 extends Command
 {
@@ -71,7 +70,7 @@ class CalculateProductionMonitorOeev2 extends Command
 
                     //obtenemos el tiempo de cuando ha iniciado la orden quitando todo los de las pausas 
                     $timeData = $this->orderTimeService->getTimeOrder($productionLineId);
-                    // $this->info("[" . Carbon::now()->toDateTimeString() . "] Tiempo en segundos: {$timeData['timeOnSeconds']}");
+                   $this->info("[" . Carbon::now()->toDateTimeString() . "] Tiempo en segundos: {$timeData['timeOnSeconds']}");
                     //$this->info("[" . Carbon::now()->toDateTimeString() . "] Tiempo en formato: {$timeData['timeOnFormatted']}");
                     $orderTimeActivitySeconds  = $timeData['timeOnSeconds'];
                     $orderTimeActivityFormatted = $timeData['timeOnFormatted'];
@@ -233,7 +232,8 @@ class CalculateProductionMonitorOeev2 extends Command
                 $this->error("[" . Carbon::now()->toDateTimeString() . "] units_made_real es 0 o negativo, no se puede calcular secondsPerUnitReal.");
                 $secondsPerUnitReal = 0;
             } else {
-                $secondsPerUnitReal = $orderTimeActivitySeconds / $unitsMadeReal;
+                $secondsPerUnitReal = ($orderTimeActivitySeconds - ($downTime + $productionStopTime)) / $unitsMadeReal;
+                $this->info("[" . Carbon::now()->toDateTimeString() . "] secondsPerUnitReal calculado: {$secondsPerUnitReal} segundos");
             }
             
             if ($countSensors <= 0) {
@@ -243,17 +243,45 @@ class CalculateProductionMonitorOeev2 extends Command
             } else {
                 // Buscar datos del producto y obtener el tiempo óptimo de producción
                 $productList = ProductList::find($currentOrder->product_list_id);
+                //sacamos de optimal_production_times con un where production_line_id = $productList->production_line_id y 
+                // sensor_type= 0 y product_list_id = $currentOrder->product_list_id y sumamos de las lineas que se quedan
+                //el optimal_time y partimos por numero de lineas encontradas 
+
                 $optimalProductionTime = $productList ? $productList->optimal_production_time : 1000;
-                $secondsPerUnitTheoretical = $optimalProductionTime / $countSensors;
+                try {
+                    $optimalTimes = OptimalSensorTime::where('production_line_id', $currentOrder->production_line_id)
+                        ->where('sensor_type', 0)
+                        ->where('product_list_id', $currentOrder->product_list_id)
+                        ->whereNotNull('sensor_id')
+                        ->get();
+                
+                    $totalOptimalTime = $optimalTimes->sum('optimal_time');
+                    $linesCount = $optimalTimes->count();
+                    //$this->info('Total optimal time: ' . $totalOptimalTime);
+                    //$this->info('Lines count: ' . $linesCount);
+                    if ($linesCount === 0) {
+                        throw new \Exception('No optimal times found.');
+                    }
+                
+                    $secondsPerUnitTheoretical = ($totalOptimalTime / $linesCount) / $linesCount;
+                
+                } catch (\Exception $e) {
+                    // Usamos el fallback si algo falla en la lógica anterior
+                    $secondsPerUnitTheoretical = $optimalProductionTime / $countSensors;
+                
+                    // Opcionalmente puedes registrar el error
+                    $this->error("[" . Carbon::now()->toDateTimeString() . "]Error calculating secondsPerUnitTheoretical: " . $e->getMessage());
+                }
+
             }
             
-            $this->info("[" . Carbon::now()->toDateTimeString() . "] Unidades reales: {$unitsMadeReal}");
-            $this->info("[" . Carbon::now()->toDateTimeString() . "] Optimal production time: {$optimalProductionTime} segundos");
-            $this->info("[" . Carbon::now()->toDateTimeString() . "] Seconds per unit real: {$secondsPerUnitReal} segundos");
+            //$this->info("[" . Carbon::now()->toDateTimeString() . "] Unidades reales: {$unitsMadeReal}");
+            //$this->info("[" . Carbon::now()->toDateTimeString() . "] Optimal production time: {$optimalProductionTime} segundos");
+            //$this->info("[" . Carbon::now()->toDateTimeString() . "] Seconds per unit real: {$secondsPerUnitReal} segundos");
             
             // Para evitar problemas de precedencia, se usan paréntesis (verifica la fórmula deseada)
             if ($secondsPerUnitTheoretical > 0) {
-                $unitsMadeTheoretical = ($orderTimeActivitySeconds - $downTime - $productionStopTime) / $secondsPerUnitTheoretical;
+                $unitsMadeTheoretical = ($orderTimeActivitySeconds - ($downTime + $productionStopTime)) / $secondsPerUnitTheoretical;
                 $unitsMadeTheoreticalPerMinute = 60 / $secondsPerUnitTheoretical;
             } else {
                 $this->error("[" . Carbon::now()->toDateTimeString() . "] secondsPerUnitTheoretical es 0, no se pueden calcular las unidades teóricas.");
@@ -261,7 +289,7 @@ class CalculateProductionMonitorOeev2 extends Command
                 $unitsMadeTheoreticalPerMinute = 0;
             }
 
-            $this->info("[" . Carbon::now()->toDateTimeString() . "] Unidades teóricas: {$unitsMadeTheoretical}");
+            //$this->info("[" . Carbon::now()->toDateTimeString() . "] Unidades teóricas: {$unitsMadeTheoretical}");
             
 
             
@@ -269,9 +297,9 @@ class CalculateProductionMonitorOeev2 extends Command
             
             // Calcular la diferencia entre unidades teóricas y reales
             $unitsDelayed = $unitsMadeTheoretical - $unitsMadeReal;
-            $this->info("[" . Carbon::now()->toDateTimeString() . "] Unidades teóricas: $unitsMadeTheoretical");
-            $this->info("[" . Carbon::now()->toDateTimeString() . "] Unidades reales: $unitsMadeReal");
-            $this->info("[" . Carbon::now()->toDateTimeString() . "] Unidades retrasadas: $unitsDelayed");
+            //$this->info("[" . Carbon::now()->toDateTimeString() . "] Unidades teóricas: $unitsMadeTheoretical");
+            //$this->info("[" . Carbon::now()->toDateTimeString() . "] Unidades reales: $unitsMadeReal");
+            //$this->info("[" . Carbon::now()->toDateTimeString() . "] Unidades retrasadas: $unitsDelayed");
             // Calcular la diferencia entre unidades teóricas y reales para slow time , esto se quita tambien el tiempo de parada de sensores y no identificadas
 
 
@@ -287,22 +315,20 @@ class CalculateProductionMonitorOeev2 extends Command
             // Calcular tiempos de finalización en función de las unidades pendientes
             $unitsPending = $currentOrder ? $currentOrder->units_pending : 0;
             $unitsMadeTheoreticalEnd = $unitsPending * $secondsPerUnitTheoretical;
-            $this->info("[" . Carbon::now()->toDateTimeString() . "] Tiempo finalización teórica para pendientes: $unitsMadeTheoreticalEnd segundos");
+           // $this->info("[" . Carbon::now()->toDateTimeString() . "] Tiempo finalización teórica para pendientes: $unitsMadeTheoreticalEnd segundos");
             $unitsMadeRealEnd = $unitsPending * $secondsPerUnitReal;
             
             // Calcular el slow time
             $unitsDelayedSForSlowTime = ($orderTimeActivitySeconds - $downTime - $productionStopTime) / $secondsPerUnitTheoretical;
-            $this->info("[" . Carbon::now()->toDateTimeString() . "] Unidades retrasadas para slow time: $unitsDelayedSForSlowTime");
+            //$this->info("[" . Carbon::now()->toDateTimeString() . "] Unidades retrasadas para slow time: $unitsDelayedSForSlowTime");
             $unitsDelayedSlowTime = $unitsDelayedSForSlowTime - ($unitsMadeReal * $secondsPerUnitTheoretical);
-            $this->info("[" . Carbon::now()->toDateTimeString() . "] Tiempo retrasado para slow time: $unitsDelayedSlowTime");
-            $slowTime = $unitsDelayedSlowTime * $secondsPerUnitReal;
+            //$this->info("[" . Carbon::now()->toDateTimeString() . "] Tiempo retrasado para slow time: $unitsDelayedSlowTime");
+            $slowTime = $unitsDelayed * $secondsPerUnitTheoretical;
+
 
             //log slowtime
-            $this->info("[" . Carbon::now()->toDateTimeString() . "] Slow Time: {$slowTime} segundos");
-            
-            $this->info("[" . Carbon::now()->toDateTimeString() . "] OEE: {$oee}%");
-            $this->info("[" . Carbon::now()->toDateTimeString() . "] Bolsas teóricas: " . $unitsMadeTheoretical);
-            $this->info("[" . Carbon::now()->toDateTimeString() . "] Bolsas reales: " . $unitsMadeReal);
+           $this->info("[" . Carbon::now()->toDateTimeString() . "] Slow Time: {$slowTime} segundos, Calculo por {$secondsPerUnitTheoretical} * {$unitsDelayed} unidades");
+
             
             // Actualizar la orden si existe
             if ($currentOrder) {
@@ -316,6 +342,7 @@ class CalculateProductionMonitorOeev2 extends Command
                 $currentOrder->theoretical_end_time = $unitsMadeTheoreticalEnd;
                 $currentOrder->real_end_time = $unitsMadeRealEnd;
                 $currentOrder->oee = $oee;
+                $currentOrder->on_time = $orderTimeActivitySeconds;
                 $currentOrder->save();
             }
 

@@ -12,6 +12,8 @@ use App\Models\SensorCount;
 use App\Models\OperatorPost;
 use App\Models\Operator;
 use App\Models\OrderStat;
+use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class SensorController extends Controller
 {
@@ -266,27 +268,35 @@ class SensorController extends Controller
         }
     
         //vaerificamos si el sensor es sensor_type 0 o superior
+            // Proteger con una transacción si el sensor_type < 1 (o según tu regla)
         if ($config->sensor_type < 1) {
-            // Extraemos el registro de OrderStat correspondiente al orderId
-            $orderStats = OrderStat::where('order_id', $orderId)->first();
-            
-            if ($orderStats) {
-                // Verificamos que 'units' es numérico, o asignamos 0 por defecto
-                $units = is_numeric($orderStats->units) ? $orderStats->units : 0;
-                
-                // Incrementamos los contadores de unidades realizadas
-                $orderStats->units_made_real += 1;
-                $orderStats->units_made      += 1;
-                
-                // Actualizamos las unidades restantes
-                // Aquí usamos $orderStats->units_made_real en lugar de una variable indefinida
-                $orderStats->units_pending = $units - $orderStats->units_made_real - 1;
-                
-                // Guardamos los cambios en la base de datos
-                $orderStats->save();
-            } else {
-                Log::warning("No se encontró un registro de OrderStat para order_id: {$orderId}");
-            }
+            DB::transaction(function () use ($orderId) {
+                // Leemos el registro con lockForUpdate, para que otra transacción
+                // no pueda leer valores obsoletos de la misma fila
+                $orderStats = OrderStat::where('order_id', $orderId)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($orderStats) {
+                    // Verificamos que 'units' sea numérico
+                    $units = is_numeric($orderStats->units) ? $orderStats->units : 0;
+
+                    // Incrementamos contadores de forma atómica
+                    $orderStats->increment('units_made_real', 1);
+                    $orderStats->increment('units_made', 1);
+                    if ($orderStats->units_made_real === 1) {
+                        $orderStats->prepair_time = Carbon::now()->diffInSeconds($orderStats->created_at);
+                    }
+
+                    // Recalculamos las unidades pendientes con el valor recién incrementado
+                    $orderStats->units_pending = $units - $orderStats->units_made_real - 1;
+
+                    // Guardamos los cambios
+                    $orderStats->save();
+                } else {
+                    Log::warning("No se encontró un registro de OrderStat para order_id: {$orderId}");
+                }
+            });
         }
         
         // Incrementar los contadores
@@ -306,8 +316,9 @@ class SensorController extends Controller
             $previousEntry0 = $this->getLastEntryByValue($config->id, 0);
             $previousEntry1 = $this->getLastEntryByValue($config->id, 1);
 
-            $time_0 = $previousEntry0 ? now()->diffInSeconds($previousEntry0->created_at) : 300;
-            $time_1 = $previousEntry1 ? now()->diffInSeconds($previousEntry1->created_at) : 300;
+            $time_0 = $previousEntry0 ? now()->diffInRealSeconds($previousEntry0->created_at) : 300;
+            $time_1 = $previousEntry1 ? now()->diffInRealSeconds($previousEntry1->created_at) : 300;
+            
 
             Log::debug("Tiempos calculados: {$modelConfig['time_0']}: $time_0, {$modelConfig['time_1']}: $time_1");
         } catch (\Exception $e) {

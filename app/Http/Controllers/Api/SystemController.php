@@ -1219,6 +1219,9 @@ class SystemController extends Controller
                 'TimeON' => 'TIME',
                 'TimeDown' => 'TIME',
                 'TimeSlow' => 'TIME',
+                'TimePreparing' => 'TIME',
+                'customerId' => 'VARCHAR(255)',        // Nueva columna que acepta números y letras
+                'TimeDownSensors' => 'TIME',           // Nueva columna de tipo TIME
             ],
             $tableSensoresPorOrden => [
                 'id' => 'INT AUTO_INCREMENT PRIMARY KEY',
@@ -1242,6 +1245,7 @@ class SystemController extends Controller
                 'SensorUnitWeight' => 'VARCHAR(255)',
                 'GrossWeight01' => 'DECIMAL(10,2)', // Nuevo campo
                 'GrossWeight02' => 'DECIMAL(10,2)', // Nuevo campo
+                'customerId' => 'VARCHAR(255)',     // Nueva columna que acepta números y letras
             ]
         ];
     

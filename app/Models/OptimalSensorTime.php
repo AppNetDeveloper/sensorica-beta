@@ -18,9 +18,7 @@ class OptimalSensorTime extends Model
         'product_list_id',
         'production_line_id',
         'optimal_time',
-        'tipo_analisis',
-        'muestras_validas',
-        'repeticiones',
+        'modbus_id'
     ];
 
     // 🔗 Relaciones

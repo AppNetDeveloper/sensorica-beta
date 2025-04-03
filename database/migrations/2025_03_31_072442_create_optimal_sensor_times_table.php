@@ -18,10 +18,6 @@ class CreateOptimalSensorTimesTable extends Migration
             $table->unsignedBigInteger('production_line_id')->nullable();
 
             $table->integer('optimal_time');
-            $table->string('tipo_analisis', 10); // 'time_11' o 'time_00'
-
-            $table->integer('muestras_validas');
-            $table->integer('repeticiones');
 
             $table->timestamps();
 

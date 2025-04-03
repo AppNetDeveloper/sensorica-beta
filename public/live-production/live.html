@@ -192,8 +192,8 @@
               </div>
               <div class="col-md-4">
                 <div class="small-card">
-                  <div class="metric" id="slow-time">--:--</div>
-                  <div class="metric-label">Tiempo Lento</div>
+                  <div class="metric" id="preparing-time">--:--</div>
+                  <div class="metric-label">Tiempo de Preparación</div>
                 </div>
               </div>
               <div class="col-md-4">
@@ -204,23 +204,11 @@
               </div>
             </div>
             <div class="row">
-              <!-- Fila 3 -->
+              <!-- Fila 2 -->
               <div class="col-md-4">
-                <div class="small-card-white">
-                  <div class="metric" id="real-cycle-time">--</div>
-                  <div class="metric-label">TC Real/Ud</div>
-                </div>
-              </div>
-              <div class="col-md-4">
-                <div class="small-card-white">
-                  <div class="metric" id="theoretical-end-time">--:--:--</div>
-                  <div class="metric-label">Tiempo Hasta Fin Orden</div>
-                </div>
-              </div>
-              <div class="col-md-4">
-                <div class="small-card-white">
-                  <div class="metric" id="total-downtime">--</div>
-                  <div class="metric-label">Tiempo Total Perdido</div>
+                <div class="small-card">
+                  <div class="metric" id="slow-time">--:--</div>
+                  <div class="metric-label">Tiempo Lento</div>
                 </div>
               </div>
             </div>
@@ -262,15 +250,34 @@
               <div class="col-md-4">
                 <div class="small-card-white">
                   <div class="metric" id="theoretical-cycle-time">--</div>
-                  <div class="metric-label">TC Teórico/Ud</div>
+                  <div class="metric-label">TC Teórico(seg)/Ud</div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="small-card-white">
+                  <div class="metric" id="theoretical-end-time">--:--:--</div>
+                  <div class="metric-label">T Hasta Fin Orden (Teórico)</div>
+                </div>
+              </div>
+              <!-- Fila 3 -->
+              <div class="col-md-4">
+                <div class="small-card-white">
+                  <div class="metric" id="total-downtime">--</div>
+                  <div class="metric-label">Tiempo Total Perdido</div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="small-card-white">
+                  <div class="metric" id="real-cycle-time">--</div>
+                  <div class="metric-label">TC Real(seg)/Ud</div>
                 </div>
               </div>
               <div class="col-md-4">
                 <div class="small-card-white">
                   <div class="metric" id="real-end-time">--:--:--</div>
-                  <div class="metric-label">Tiempo Estimado Production</div>
+                  <div class="metric-label">T Hasta Fin Orden (Real)</div>
                 </div>
-              </div>
+              </div>   
             </div>
           </div>
         </div>
@@ -489,7 +496,9 @@
         const slowTimeInSeconds = data.units_delayed * data.seconds_per_unit_theoretical;
         document.getElementById("slow-time").textContent = formatTime(slowTimeInSeconds); 
 
-        const totalStopsTimeInSeconds = data.production_stops_time + data.down_time + slowTimeInSeconds;
+        document.getElementById("preparing-time").textContent = formatTime(data.prepair_time); 
+
+        const totalStopsTimeInSeconds = data.production_stops_time + data.down_time + slowTimeInSeconds + data.prepair_time;
         document.getElementById("total-downtime").textContent = formatTime(totalStopsTimeInSeconds);
         document.getElementById("theoretical-cycle-time").textContent = data.seconds_per_unit_theoretical;
         document.getElementById("real-cycle-time").textContent = data.seconds_per_unit_real;
@@ -515,7 +524,7 @@
         document.getElementById("box-pending").textContent = data.box - data.weights_0_orderNumber;
         document.getElementById("total-weight").textContent = data.weights_0_orderKg;
 
-        const totalStopTimeInSeconds = sensorStopsTimeInSeconds + data.down_time;
+        const totalStopTimeInSeconds = sensorStopsTimeInSeconds + data.down_time + data.prepair_time;
         let availabilityPercentage = 0;
         let stopPercentage = 0;
         if (timeDifferenceInSeconds > 0) {
@@ -551,18 +560,7 @@
         document.getElementById('quality-progress-container').style.width = calidadBarWidth + '%';
         document.getElementById('quality-progress-container').style.margin = '0';
 
-        let qualityPercentage = 0;
-        let sensorStopsPercentage = 0;
-        if (timeAtTheoreticalSpeedInSeconds > 0) {
-          qualityPercentage = ((timeAtTheoreticalSpeedInSeconds - sensorStopsTimeInSeconds) / timeAtTheoreticalSpeedInSeconds) * 100;
-          sensorStopsPercentage = (sensorStopsTimeInSeconds / timeAtTheoreticalSpeedInSeconds) * 100;
-        }
-        qualityPercentage = qualityPercentage.toFixed(2);
-        sensorStopsPercentage = sensorStopsPercentage.toFixed(2);
 
-        document.getElementById('quality-progress-bar').style.width = qualityPercentage + '%';
-        document.getElementById('quality-progress-bar-defects').style.width = sensorStopsPercentage + '%';
-        document.getElementById('quality-progress-bar-label').textContent = formatTime(sensorStopsTimeInSeconds);
 
         // Cálculos para el Sankey Diagram
         const boxFinalized = parseFloat(data.weights_0_orderNumber || 0);
@@ -578,7 +576,24 @@
         const udsNotEnvasadas = Math.round(unitsMadeReal - (unitsPerBox * boxFinalized));
         const totalWeightFromAllUnitsCreated = Math.round(unitsMadeReal * weightPerUnit) || 0;
         const totalWeightFromAll = Math.round(totalWeightFromAllUnitsCreated  + totalWeightBoxFinalized1 + totalWeightBoxFinalized2 ) || 0;
+        //Fin calculo Sankey
 
+        //volvemos a Calidad
+        let qualityPercentage = 0;
+        let sensorStopsPercentage = 0;
+        if (timeAtTheoreticalSpeedInSeconds > 0) {
+          qualityPercentage = ((timeAtTheoreticalSpeedInSeconds - sensorStopsTimeInSeconds) / timeAtTheoreticalSpeedInSeconds) * 100;
+          sensorStopsPercentage = ((totalWeightBoxFinalized1 / weightPerUnit) / timeAtTheoreticalSpeedInSeconds) * 100;
+        }
+        qualityPercentage = qualityPercentage.toFixed(2);
+        sensorStopsPercentage = sensorStopsPercentage.toFixed(2);
+
+        document.getElementById('quality-progress-bar').style.width = qualityPercentage + '%';
+        document.getElementById('quality-progress-bar-defects').style.width = sensorStopsPercentage + '%';
+        document.getElementById('quality-progress-bar-label').textContent = formatTime(Math.round(totalWeightBoxFinalized1 / weightPerUnit) * data.seconds_per_unit_real);
+
+
+        //volvemos a Sankey
         function drawChart() {
           const dataTable = new google.visualization.DataTable();
           dataTable.addColumn('string', 'From');

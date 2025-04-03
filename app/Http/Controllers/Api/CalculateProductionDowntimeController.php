@@ -210,15 +210,15 @@ class CalculateProductionDowntimeController extends Controller
         $now = Carbon::now();
         $timeDifference = $now->diffInSeconds($lastEventTime);
 
-        // Se amplía la inactividad, mandamos mensaje con status=0
-        \Log::info("Sensor  de typo non 0 :{$sensor->name} is in downtime.");
-        $this->incrementDowntime($sensor, $timeDifference);  // Ajuste para no restar $maxTime aquí
-        $this->sendMqttMessage($sensor, 0, $sensor->sensor_type); // status 0 para ampliado, tipo según el sensor
+            // Se amplía la inactividad, mandamos mensaje con status=0
+            // Log::info("Sensor  de typo non 0 :{$sensor->name} is in downtime.");
+            $this->incrementDowntime($sensor, $timeDifference);  // Ajuste para no restar $maxTime aquí
+            $this->sendMqttMessage($sensor, 0, $sensor->sensor_type); // status 0 para ampliado, tipo según el sensor
         } else {
-        // El valor no es 0, lo que significa que el sensor está estable
-        \Log::info("Sensor  de typo non 0 : {$sensor->name} is stable.");
-        $this->closeDowntime($sensor);
-        $this->sendMqttMessage($sensor, 2, $sensor->sensor_type); // status 2 para estable
+            // El valor no es 0, lo que significa que el sensor está estable
+            //Log::info("Sensor  de typo non 0 : {$sensor->name} is stable.");
+            $this->closeDowntime($sensor);
+            $this->sendMqttMessage($sensor, 2, $sensor->sensor_type); // status 2 para estable
         }
 
     }

@@ -30,23 +30,22 @@ class OrderTimeService
         Log::info("Inicio de la orden: {$startTime}");
         //ponemos $finishTime como la fecha actual
         // 3. Obtener el tiempo de cierre desde OrderMac (action = 1)
-        $orderId = $orderStats->first()->order_id;
+        $orderId = $orderStats->order_id;
         $orderMacFinish = OrderMac::where('orderId', $orderId)
-        ->where('action', 1)
-        ->first();
+            ->where('action', 1)
+            ->first();
         if (!$orderMacFinish) {
-        $finishTime = Carbon::now();
+            $finishTime = Carbon::now();
         }else{
-        $finishTime = Carbon::parse($orderMacFinish->created_at);
+            $finishTime = Carbon::parse($orderMacFinish->created_at);
         }
 
 
-        // 4. Obtener los registros de shift_history para la línea de producción en el rango [startTime, finishTime]
-        $productionLineId = $orderStats->first()->production_line_id;
+
         $shiftHistories = ShiftHistory::where('production_line_id', $productionLineId)
-        ->whereBetween('created_at', [$startTime, $finishTime])
-        ->orderBy('created_at', 'asc')
-        ->get();
+            ->whereBetween('created_at', [$startTime, $finishTime])
+            ->orderBy('created_at', 'asc')
+            ->get();
         // 5. Calcular el tiempo total de pausa (stop)
         $totalStopSeconds = 0;
         $stopStart = null;
@@ -172,12 +171,14 @@ class OrderTimeService
 
             // Si no hay eventos de tipo "stop start", se calcula:
             $timeOnSeconds = $timeFirstShiftEndCreatedAt + $timeLastShift + $timeShiftCompleted - $totalStopSeconds;
-
+            Log::info("Tiempo total de producción (timeOn)!!: {$timeFirstShiftEndCreatedAt} - {$timeLastShift} - {$timeShiftCompleted} - {$totalStopSeconds} segundos)");
+            
             $timeOnFormatted = gmdate('H:i:s', $timeOnSeconds);
         } else {
             // Si no hay eventos de tipo "stop start", se calcula:
             $timeOnSeconds = $diffInSeconds - $totalStopSeconds ;
             $timeOnFormatted = gmdate('H:i:s', $timeOnSeconds);
+            Log::info("Tiempo total de producción! (timeOn): {$timeOnFormatted} ({$timeOnSeconds} segundos)");
         }
         Log::info("Tiempo total de producción (timeOn): {$timeOnFormatted} ({$timeOnSeconds} segundos)");
         return [

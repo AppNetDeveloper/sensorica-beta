@@ -22,6 +22,7 @@ class OrderStat extends Model
         'units',
         'units_per_minute_real',
         'units_per_minute_theoretical',
+        'units_made_real',
         'seconds_per_unit_real',
         'seconds_per_unit_theoretical',
         'units_made_real',
@@ -55,6 +56,7 @@ class OrderStat extends Model
         'weights_3_orderNumber',
         'weights_3_orderKg',
         'down_time',
+        'prepair_time'
     ];
 
     // Asegúrate de que se gestionen las marcas de tiempo automáticamente.

@@ -412,6 +412,7 @@ class MqttShiftSubscriber extends Command
                 'downtime_count' => $sensor->downtime_count,
                 'unic_code_order' => $sensor->unic_code_order,
                 'orderId' => $sensor->orderId,
+                'optimal_production_time' => $sensor->optimal_production_time,
             ]);
         } catch (\Exception $e) {
             $this->error("Error al guardar en sensor_history para sensor ID {$sensor->id}: " . $e->getMessage());
@@ -444,6 +445,7 @@ class MqttShiftSubscriber extends Command
             'unic_code_order' => $modbus->unic_code_order,
             'total_kg_order' => $modbus->total_kg_order,
             'total_kg_shift' => $modbus->total_kg_shift,
+            'optimal_production_time' => $modbus->optimal_production_time,
         ]);
     
         // Reseteo de los contadores del modbus

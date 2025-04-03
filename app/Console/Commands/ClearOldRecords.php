@@ -50,6 +50,7 @@ class ClearOldRecords extends Command
                 'production_orders' => 'created_at',
                 'operator_post' => 'created_at',
                 'product_list_selecteds' => 'created_at',
+                'sensor_history'=> 'created_at',
             ];
 
 

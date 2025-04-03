@@ -1,6 +1,6 @@
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-import pymysql
+
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
@@ -8,11 +8,13 @@ from sklearn.preprocessing import MinMaxScaler
 from tensorflow.keras.models import load_model
 import joblib
 import time
+import tensorflow as tf
 
 from dotenv import dotenv_values
+from sqlalchemy import create_engine
 
 # -------------------------------------------------------------------------
-# 1. Carga de variables del .env
+# 1. Carga de variables del .env y creación del engine de SQLAlchemy
 # -------------------------------------------------------------------------
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 env_path = os.path.join(CURRENT_DIR, '../.env')
@@ -24,18 +26,20 @@ DB_NAME = config.get("DB_DATABASE", "boisolo")
 DB_USER = config.get("DB_USERNAME", "root")
 DB_PASS = config.get("DB_PASSWORD", "")
 
-def conectar_db():
-    """
-    Crea la conexión a MySQL usando la configuración del .env
-    """
-    return pymysql.connect(
-        host=DB_HOST,
-        user=DB_USER,
-        password=DB_PASS,
-        database=DB_NAME,
-        port=DB_PORT
-    )
+# Construir la URL de conexión para SQLAlchemy
+db_url = f"mysql+pymysql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+engine = create_engine(db_url)
 
+# -------------------------------------------------------------------------
+# Función predictiva precompilada para TensorFlow (evita retrazados excesivos)
+# -------------------------------------------------------------------------
+@tf.function(reduce_retracing=True)
+def predict_fn(model, X):
+    return model(X, training=False)
+
+# -------------------------------------------------------------------------
+# 2. Función de detección de anomalías
+# -------------------------------------------------------------------------
 def detectar_anomalias():
     """
     Monitorea los últimos 15 minutos:
@@ -45,18 +49,22 @@ def detectar_anomalias():
       - Si el MSE excede el threshold => anomalía
       - Si no, OK
     """
-    conn = conectar_db()
+    # Definir el rango de tiempo
     fecha_inicio = datetime.now() - timedelta(minutes=15)
 
-    # 1) Carga de sensores
-    sensores_df = pd.read_sql("""
+    # 1) Carga de sensores (usando engine de SQLAlchemy)
+    sensores_df = pd.read_sql(
+        """
         SELECT id, production_line_id, sensor_type
         FROM sensors
         WHERE sensor_type IN (0,1,2,3,4)
-    """, conn)
+        """,
+        engine
+    )
 
     # 2) Carga de registros de sensor_counts (últimos 15 min)
-    counts_df = pd.read_sql(f"""
+    counts_df = pd.read_sql(
+        f"""
         SELECT 
             sensor_id, 
             time_11, 
@@ -64,8 +72,9 @@ def detectar_anomalias():
             created_at
         FROM sensor_counts
         WHERE created_at >= '{fecha_inicio.strftime('%Y-%m-%d %H:%M:%S')}'
-    """, conn)
-    conn.close()
+        """,
+        engine
+    )
 
     # Unir con info de línea y tipo
     counts_df = counts_df.merge(sensores_df, left_on='sensor_id', right_on='id', how='inner')
@@ -86,7 +95,7 @@ def detectar_anomalias():
         model_path = f"models/line_{line_id}_type_{s_type}_autoencoder.h5"
         scaler_path = f"models/line_{line_id}_type_{s_type}_scaler.pkl"
 
-        # Verificar existencia
+        # Verificar existencia de archivos
         if not os.path.exists(model_path) or not os.path.exists(scaler_path):
             print(f"⚠️  No hay modelo para Línea={line_id}, Tipo={s_type}")
             continue
@@ -106,7 +115,6 @@ def detectar_anomalias():
             if len(sensor_data) < 2:
                 if s_type == 0:
                     print(f"🚫 Inactivo | Línea {line_id} | Sensor {sensor_id} (pocos registros)")
-                # Si NO es tipo 0, simplemente no avisamos
                 continue
 
             # Calcular estadísticos
@@ -117,11 +125,11 @@ def detectar_anomalias():
 
             # Ajustar según tipo:
             if s_type == 0:
-                # Mantener time_11, forzar 00
+                # Mantener time_11, forzar time_00 a 0
                 mean_00 = 0.0
                 std_00  = 0.0
             else:
-                # Mantener time_00, forzar 11
+                # Mantener time_00, forzar time_11 a 0
                 mean_11 = 0.0
                 std_11  = 0.0
 
@@ -134,14 +142,18 @@ def detectar_anomalias():
             }
             X = pd.DataFrame([row])
 
-            # Escalar
+            # Escalar los datos
             X_scaled = scaler.transform(X)
 
-            # Predicción con autoencoder
-            pred = model.predict(X_scaled, verbose=0)
-            mse = np.mean((X_scaled - pred)**2)
+            # Convertir a tensor y fijar la forma (aseguramos forma constante: 1 x num_features)
+            X_tensor = tf.convert_to_tensor(X_scaled, dtype=tf.float32)
+            X_tensor = tf.reshape(X_tensor, (1, -1))
 
-            # Umbral (puedes ajustar según tu entrenamiento)
+            # Predicción usando la función precompilada
+            pred = predict_fn(model, X_tensor)
+            mse = np.mean((X_scaled - pred.numpy())**2)
+
+            # Umbral de detección (ajustable según entrenamiento)
             threshold = 0.01
 
             if mse > threshold:
@@ -150,11 +162,9 @@ def detectar_anomalias():
                 print(f"✅ OK       | Línea {line_id} | Sensor {sensor_id}, MSE={mse:.5f}")
 
     # -----------------------------
-    # Revisar si hay sensores TIPO 0 que NO aparecieron en los últimos 15 min
+    # Revisar sensores TIPO 0 inactivos en los últimos 15 min
     # -----------------------------
-    # Tomamos solo los de tipo 0
     sensores_tipo0 = sensores_df[sensores_df['sensor_type'] == 0]
-    # filtramos los que NO están en sensores_analizados
     inactivos = sensores_tipo0[~sensores_tipo0['id'].isin(sensores_analizados)]
 
     for _, row_sens in inactivos.iterrows():
@@ -163,7 +173,7 @@ def detectar_anomalias():
         print(f"🚫 Inactivo | Línea {line_id} | Sensor {sensor_id} (sin actividad en 15 min)")
 
 # -------------------------------------------------------------------------
-# 2. Bucle infinito
+# 3. Bucle infinito para la detección
 # -------------------------------------------------------------------------
 if __name__ == "__main__":
     print("🚀 Iniciando DETECCIÓN: solo avisa inactividad si type=0 ...")

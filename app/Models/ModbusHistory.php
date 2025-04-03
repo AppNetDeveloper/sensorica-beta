@@ -20,6 +20,7 @@ class ModbusHistory extends Model
         'total_kg_order',
         'total_kg_shift',
         'orderId',
+        'optimal_production_time'
     ];
 
     /**

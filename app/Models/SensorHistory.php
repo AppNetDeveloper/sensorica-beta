@@ -20,6 +20,7 @@ class SensorHistory extends Model
         'downtime_count',
         'unic_code_order',
         'orderId',
+        'optimal_production_time'
     ];
 
     /**

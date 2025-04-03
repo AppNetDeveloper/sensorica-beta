@@ -140,7 +140,7 @@ async function subscribeToTopics() {
 }
 
 // 🔄 Función auxiliar para realizar la llamada a la API con reintentos y backoff exponencial
-async function callApiWithRetries(dataToSend, maxRetries = 20, initialDelay = 1000) {
+async function callApiWithRetries(dataToSend, maxRetries = 5, initialDelay = 5000) {
     let attempt = 0;
     let delay = initialDelay;
   

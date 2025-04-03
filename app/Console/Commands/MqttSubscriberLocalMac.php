@@ -402,7 +402,7 @@ class MqttSubscriberLocalMac extends Command
                 $productList = ProductList::create([
                     'client_id' => $referId,
                     'name' => $envase,
-                    'optimal_production_time' => 2, // Valor predeterminado
+                    'optimal_production_time' => 1000, // Valor predeterminado
                     'box_kg' => $boxKg,
                 ]);
 
@@ -580,6 +580,7 @@ class MqttSubscriberLocalMac extends Command
                     'downtime_count'   => $sensor->downtime_count,
                     'unic_code_order'  => $sensor->unic_code_order,
                     'orderId'          => $sensor->orderId,
+                    'optimal_production_time' => $sensor->optimal_production_time,
                 ]);
             }
     
@@ -634,6 +635,7 @@ class MqttSubscriberLocalMac extends Command
                     'unic_code_order'  => $modbus->unic_code_order,
                     'total_kg_order'   => $modbus->total_kg_order,
                     'total_kg_shift'   => $modbus->total_kg_shift,
+                    'optimal_production_time' => $modbus->optimal_production_time,
                 ]);
             }
     
@@ -716,6 +718,7 @@ class MqttSubscriberLocalMac extends Command
                     'downtime_count' => $sensor->downtime_count,
                     'unic_code_order' => $sensor->unic_code_order,
                     'orderId' => $sensor->orderId,
+                    'optimal_production_time' => $sensor->optimal_production_time,
                 ]);
             }
             $this->info("Se ha guardado el historial para el sensor id: {$sensor->id}");
@@ -747,6 +750,7 @@ class MqttSubscriberLocalMac extends Command
                     'unic_code_order' => $modbus->unic_code_order,
                     'total_kg_order' => $modbus->total_kg_order,
                     'total_kg_shift' => $modbus->total_kg_shift,
+                    'optimal_production_time' => $modbus->optimal_production_time,
                 ]);
             }
     

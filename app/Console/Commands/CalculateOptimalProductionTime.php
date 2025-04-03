@@ -12,6 +12,9 @@ use Illuminate\Database\QueryException;
 use App\Models\Modbus;
 use App\Models\ShiftHistory;
 use App\Models\RfidDetail;
+use App\Services\OrderTimeService;
+use App\Models\OptimalSensorTime;
+
 
 /**
  * Clase CalculateOptimalProductionTime
@@ -115,9 +118,9 @@ class CalculateOptimalProductionTime extends Command
 
 
 
-            $this->info("Waiting for 10 minutes before the next run...");
-            // Pausar la ejecución durante 10 minutos (600 segundos).
-            sleep(600);
+            $this->info("Waiting for 1 minut before the next run...");
+            // Pausar la ejecución durante 1 minutos (60 segundos).
+            sleep(60);
         }
         return 0;
     }
@@ -129,32 +132,135 @@ class CalculateOptimalProductionTime extends Command
      * actualizar la tabla 'product_lists' (si es necesario) y el registro del sensor.
      *
      * @param Sensor $sensor El sensor a procesar.
-     * @param float $minTime El tiempo mínimo de producción.
-     * @param float $maxTime El tiempo máximo de producción.
      */
     private function processSensorType0(Sensor $sensor, float $minTime, float $maxTime)
     {
+        if ((int)$sensor->sensor_type > 0 || (int)$sensor->count_order_1 < 1) {
+            return;
+        }
+        // Crear instancia del servicio OrderTimeService
+        $orderTimeService = new OrderTimeService();
+        // Define el productionLineId que necesitas (ejemplo: 1)
+        $productionLineId = $sensor->production_line_id;
+        
         try {
+            // Llamar al método getTimeOrder y capturar el resultado
+            $orderTime = $orderTimeService->getTimeOrder($productionLineId);
+            //ahora mismo dentro hay 2 campos de $orderTime {"timeOnSeconds":7882,"timeOnFormatted":"02:11:22"}
+            //extraemos en 2 variables
+            $orderTimeSeconds = $orderTime['timeOnSeconds'];
+            $orderTimeFormatted = $orderTime['timeOnFormatted'];
+            $orderTimeSecondsSinDownTime = $orderTimeSeconds - $sensor->downtime_count; // Supongamos que se resta 10 segundos
+            
+            // Registrar el resultado en el log
+            $this->info("Tiempo de orden para production_line_id {$productionLineId}: " . json_encode($orderTime));
+        } catch (\Exception $e) {
+            $this->error("Error al obtener tiempo de orden: " . $e->getMessage());
+        }
             // Obtener el nombre del producto (client_id) asociado al sensor a través de la relación productList.
             // Se usa 'optional()' para evitar errores si la relación 'productList' no existe.
             $modelProduct = optional($sensor->productList)->client_id;
+            $modelProductId = optional($sensor->productList)->id;
+            $modelProductOptimalProductionTime = optional($sensor->productList)->optimal_production_time ?? 1000.0;
+
+        try {
+            // Buscar registro existente
+            $optimalSensorTime = OptimalSensorTime::where('sensor_id', $sensor->id)
+                    ->where('production_line_id', $sensor->production_line_id)
+                    ->where('model_product', $modelProduct)
+                    ->first();
+        } catch (\Exception $e) {
+            $this->error("Error al buscar registro existente: " . $e->getMessage());
+        }
+
+        try {
+
 
             // Si se encuentra un producto asociado al sensor...
             if ($modelProduct) {
-                // Calcular el tiempo óptimo de producción para el sensor actual.
-                $optimalProductionTime = $this->calculateOptimalTimeForSensor($sensor, $minTime, $maxTime);
+                if ((int)$sensor->count_order_1 < 200) {
+                    if($optimalSensorTime) {
+                        $optimalProductionTime = $optimalSensorTime->optimal_time;
+                        $this->info("El tiempo óptimo de producción para el sensor actual es!: " . $optimalProductionTime . " segundos.");
+                    }else{
+                        $optimalProductionTime = $modelProductOptimalProductionTime;
+                        $this->info("El tiempo óptimo de producción para el sensor actual es: " . $optimalProductionTime . " segundos.");
+                    }
+                }else{
+                    // Calcular el tiempo óptimo de producción para el sensor actual.
+                    $optimalProductionTimeAll = $this->calculateOptimalTimeForSensor($sensor, $orderTimeSecondsSinDownTime);
+                    //redondeamos a dos decimales
+                    $optimalProductionTime = round($optimalProductionTimeAll, 2);
+                }
+                $this->info("Tiempo optimo para el sensor actual: " .$sensor->name . ": " . $optimalProductionTime . " segundos");
+            
+                //ahora en tabla optimasl_sensor_times si no existe linea con sensor_id = $sensor->id y production_line_id = $sensor->production_line_id
+                // y model_product = $modelProduct lo creamos si existe lo actualizamos si el campo optimal_time es menor al existente
+                // y si es menor al existente actualizamos el campo optimal_time en la tabla 'optimal_sensor_times'
+                if ($optimalProductionTime < 1) {
+                    return;
+                }
+                
+                try {
+                    
+                    if (!$optimalSensorTime ) {
+                        // No existe registro, se crea uno nuevo
+                        $optimalSensorTime = new OptimalSensorTime();
+                        $optimalSensorTime->sensor_id = $sensor->id;
+                        $optimalSensorTime->production_line_id = $sensor->production_line_id;
+                        $optimalSensorTime->model_product = $modelProduct;
+                        $optimalSensorTime->product_list_id = $modelProductId;
+                        $optimalSensorTime->optimal_time = $optimalProductionTime;
+                        $optimalSensorTime->sensor_type = $sensor->sensor_type;
+                        $optimalSensorTime->save();
+                        $this->info("Se creó registro en optimal_sensor_times para el sensor {$sensor->name} (Producto: {$modelProduct}) con optimal_time: {$optimalProductionTime}");
+                    } else if ($optimalProductionTime < $optimalSensorTime->optimal_time) {
+                        // Si ya existe y el nuevo tiempo óptimo es menor que el actual, se actualiza el registro
+                        $optimalSensorTime->optimal_time = $optimalProductionTime;
+                        $optimalSensorTime->save();
+                        $this->info("Se actualizó el registro en optimal_sensor_times para el sensor {$sensor->name} (Producto: {$modelProduct}) con nuevo optimal_time: {$optimalProductionTime}");
+                    } else if ($optimalSensorTime->updated_at->diffInDays(\Carbon\Carbon::now()) > 6) {
+                        // Si ya existe y la última actualización fue hace más de 6 días, se actualiza el registro
+                        $optimalSensorTime->optimal_time = $optimalProductionTime;
+                        $optimalSensorTime->save();
 
-                // Actualizar la tabla 'product_lists' con el tiempo óptimo calculado, si es menor al existente.
-                $this->updateProductListIfNeeded($modelProduct, $optimalProductionTime);
+                        // Actualizar la tabla 'product_lists' con el tiempo óptimo calculado, si es menor al existente.
+                        $this->updateProductListIfNeeded($modelProduct, $optimalProductionTime);
+
+                        $this->info("Se actualizó el registro en optimal_sensor_times para el sensor {$sensor->name} (Producto: {$modelProduct}) debido a que han pasado más de 6 días desde la última actualización");
+                    } else {
+                        // Si ya existe, el nuevo tiempo es mayor que el actual y no han pasado 6 días, no se hace nada
+                    }
+                } catch (\Exception $e) {
+                    $this->error("Error al procesar optimal_sensor_times para el sensor {$sensor->name}: " . $e->getMessage());
+                }
+
 
                 // Releer el registro actualizado de product_lists
                 $productList = ProductList::where('client_id', $modelProduct)->first();
 
                 // Si el tiempo calculado es mayor que el valor almacenado en product_lists, se asigna este último.
-                if ($optimalProductionTime > $productList->optimal_production_time) {
-                    $sensor->optimal_production_time = round($productList->optimal_production_time, 2);
-                } else {
-                    $sensor->optimal_production_time = round($optimalProductionTime, 2);
+                // Buscar el registro en optimal_sensor_times utilizando sensor_id y product_list_id
+                try {
+                    $optimalSensorRecord = OptimalSensorTime::where('sensor_id', $sensor->id)
+                        ->where('product_list_id', $modelProductId)
+                        ->first();
+
+                    if ($optimalSensorRecord) {
+                        // Si se encontró el registro, comparamos el tiempo óptimo calculado con el almacenado
+                        if ($optimalProductionTime > $optimalSensorRecord->optimal_time) {
+                            $sensor->optimal_production_time = $optimalSensorRecord->optimal_time;
+                        } else {
+                            $sensor->optimal_production_time = $optimalProductionTime;
+                        }
+                        $this->info("Sensor {$sensor->name} actualizado con optimal_production_time: {$sensor->optimal_production_time} basado en optimal_sensor_times.");
+                    } else {
+                        // Si no se encuentra el registro en optimal_sensor_times, se asigna el tiempo calculado
+                        $sensor->optimal_production_time = $optimalProductionTime;
+                        $this->info("Sensor {$sensor->name} actualizado con optimal_production_time calculado: {$sensor->optimal_production_time} (sin registro en optimal_sensor_times).");
+                    }
+                } catch (\Exception $e) {
+                    $this->error("Error al actualizar el tiempo óptimo del sensor {$sensor->name} basado en optimal_sensor_times: " . $e->getMessage());
                 }
                 $sensor->save();
 
@@ -188,12 +294,11 @@ private function processSensorOtherTypes(Sensor $sensor)
     try {
         // Validar que el sensor no sea de tipo 0 (este método es para otros tipos)
         if ((int)$sensor->sensor_type === 0) {
-            $this->info("El sensor {$sensor->name} es de tipo 0 y debe procesarse con processSensorType0.");
             return;
         }
 
-        // Validar que count_order_1 no sea cero para evitar división por cero
-        if ($sensor->count_order_1 < 3) {
+        // Validar que count_order_1 no sea cero para evitar división por cero ANTES ERA 3 y funcionaba bien por si falla con 1
+        if ($sensor->count_order_1 < 1) {
             $modelProduct = optional($sensor->productList)->client_id;
             if ($modelProduct) {
                 $productList = ProductList::where('client_id', $modelProduct)->first();
@@ -224,48 +329,101 @@ private function processSensorOtherTypes(Sensor $sensor)
         if ($calculatedOptimalTime < 1) {
             $this->error("El sensor {$sensor->name} no tiene un resultado valido");
             return;
-            
         }
 
-        // Obtener el producto asociado mediante la relación productList
+        // Obtener el producto asociado mediante la relación productList Se usa para hacer el listado de optimal_sensor_times
         $modelProduct = optional($sensor->productList)->client_id;
-        if ($modelProduct) {
-            $productList = ProductList::where('client_id', $modelProduct)->first();
-            if ($productList) {
-                // Construir dinámicamente el nombre del campo según el sensor_type
-                $field = "optimalproductionTime_sensorType_" . $sensor->sensor_type;
-                $existingValue = $productList->$field;
+        $modelProductId = optional($sensor->productList)->id;
 
-                // Si no existe un valor válido en product_lists (null o 0), se actualiza con el valor calculado
-                if (is_null($existingValue) || $existingValue == 0 || $calculatedOptimalTime < $existingValue) {
-                    $productList->$field = round($calculatedOptimalTime, 2);
-                    $productList->save();
-                    $this->info("Sensor '{$sensor->name}' actualizado: Se estableció {$field} = {$calculatedOptimalTime} en product_lists.");
-                    $sensor->optimal_production_time = round($calculatedOptimalTime, 2);
-                    $sensor->save();
-                    $this->info("Sensor '{$sensor->name}' actualizado: Se estableció optimal_production_time = {$calculatedOptimalTime} y se actualizó {$field} en product_lists (antes era nulo o 0).");
+
+        if ($modelProduct) {
+            try {
+                // Buscar registro existente
+                $optimalSensorTime = OptimalSensorTime::where('sensor_id', $sensor->id)
+                    ->where('production_line_id', $sensor->production_line_id)
+                    ->where('model_product', $modelProduct)
+                    ->first();
+            
+                if (!$optimalSensorTime) {
+                    // No existe registro, se crea uno nuevo
+                    $optimalSensorTime = new OptimalSensorTime();
+                    $optimalSensorTime->sensor_id = $sensor->id;
+                    $optimalSensorTime->production_line_id = $sensor->production_line_id;
+                    $optimalSensorTime->model_product = $modelProduct;
+                    $optimalSensorTime->product_list_id = $modelProductId;
+                    $optimalSensorTime->optimal_time = $calculatedOptimalTime;
+                    $optimalSensorTime->sensor_type = $sensor->sensor_type;
+                    $optimalSensorTime->save();
+                    $this->info("Se creó registro en optimal_sensor_times para el sensor {$sensor->name} (Producto: {$modelProduct}) con optimal_time: {$calculatedOptimalTime}");
+                } else if ($calculatedOptimalTime < $optimalSensorTime->optimal_time) {
+                    // Si ya existe y el nuevo tiempo óptimo es menor que el actual, se actualiza el registro
+                    $optimalSensorTime->optimal_time = $calculatedOptimalTime;
+                    $optimalSensorTime->save();
+                    $this->info("Se actualizó el registro en optimal_sensor_times para el sensor {$sensor->name} (Producto: {$modelProduct}) con nuevo optimal_time: {$calculatedOptimalTime}");
+                } else if ($optimalSensorTime->updated_at->diffInDays(\Carbon\Carbon::now()) > 6) {
+                    // Si ya existe y la última actualización fue hace más de 6 días, se actualiza el registro
+                    $optimalSensorTime->optimal_time = $calculatedOptimalTime;
+                    $optimalSensorTime->save();
+                    $this->info("Se actualizó el registro en optimal_sensor_times para el sensor {$sensor->name} (Producto: {$modelProduct}) debido a que han pasado más de 6 días desde la última actualización");
                 } else {
-                    // Si ya existe un valor válido en product_lists, se compara:
-                    if ($calculatedOptimalTime < $existingValue && $calculatedOptimalTime > 0) {
-                        // El valor calculado es menor: se actualizan ambos registros
-                        $productList->$field = round($calculatedOptimalTime, 2);
-                        $productList->save();
-                        $sensor->optimal_production_time = round($calculatedOptimalTime, 2);
-                        $sensor->save();
-                        $this->info("Sensor '{$sensor->name}' actualizado: Se actualizó {$field} a {$calculatedOptimalTime} (valor calculado menor que el existente {$existingValue}).");
+                    // Si ya existe, el nuevo tiempo es mayor que el actual y no han pasado 6 días, no se hace nada
+                }
+            } catch (\Exception $e) {
+                $this->error("Error al procesar optimal_sensor_times para el sensor {$sensor->name}: " . $e->getMessage());
+            }
+
+            //actualizamos el sensor
+            // Si el tiempo calculado es mayor que el valor almacenado en product_lists, se asigna este último.
+                // Buscar el registro en optimal_sensor_times utilizando sensor_id y product_list_id
+                try {
+                    $optimalSensorRecord = OptimalSensorTime::where('sensor_id', $sensor->id)
+                        ->where('product_list_id', $modelProductId)
+                        ->first();
+
+                    if ($optimalSensorRecord) {
+                        // Si se encontró el registro, comparamos el tiempo óptimo calculado con el almacenado
+                        if ($calculatedOptimalTime > $optimalSensorRecord->optimal_time) {
+                            $sensor->optimal_production_time = $optimalSensorRecord->optimal_time;
+                        } else {
+                            $sensor->optimal_production_time = $calculatedOptimalTime;
+                        }
+                        $this->info("Sensor {$sensor->name} actualizado con optimal_production_time: {$sensor->optimal_production_time} basado en optimal_sensor_times.");
                     } else {
-                        // Si el valor calculado no es menor, se asigna al sensor el valor existente de product_lists
-                        $sensor->optimal_production_time = round($existingValue, 2);
-                        $sensor->save();
-                        $this->info("Sensor '{$sensor->name}' actualizado: optimal_production_time se mantiene en {$existingValue} (valor existente en product_lists para {$field}).");
+                        // Si no se encuentra el registro en optimal_sensor_times, se asigna el tiempo calculado
+                        $sensor->optimal_production_time = $calculatedOptimalTime;
+                        $this->info("Sensor {$sensor->name} actualizado con optimal_production_time calculado: {$sensor->optimal_production_time} (sin registro en optimal_sensor_times).");
+                    }
+                } catch (\Exception $e) {
+                    $this->error("Error al actualizar el tiempo óptimo del sensor {$sensor->name} basado en optimal_sensor_times: " . $e->getMessage());
+                }
+                $sensor->save();
+    
+            // Actualizar product_lists si es necesario
+            $productList = ProductList::where('client_id', $modelProduct)->first();
+            if($updateOn = true) {
+                if ($productList) {
+                    // Construir dinámicamente el nombre del campo según el sensor_type
+                    $field = "optimalproductionTime_sensorType_" . $sensor->sensor_type;
+                    $existingValue = $productList->$field;
+    
+                    // Si no existe un valor válido en product_lists (null o 0), se actualiza con el valor calculado
+                    if (is_null($existingValue) || $existingValue == 0 ) {
+                        $productList->$field = $calculatedOptimalTime;
+                        $productList->save();
+                        $this->info("Sensor '{$sensor->name}' actualizado: Se estableció {$field} = {$calculatedOptimalTime} en product_lists.");
+                    } else {
+                        // Si ya existe un valor válido en product_lists, se compara:
+                        if ($calculatedOptimalTime > 0) {
+                            // El valor calculado es menor: se actualizan ambos registros
+                            $productList->$field = $calculatedOptimalTime;
+                            $productList->save();
+                            $this->info("Sensor '{$sensor->name}' actualizado: Se actualizó {$field} a {$calculatedOptimalTime} (valor calculado menor que el existente {$existingValue}).");
+                        }
                     }
                 }
-            } else {
-                // Si no se encuentra el registro en product_lists, simplemente se actualiza el sensor
-                $sensor->optimal_production_time = round($calculatedOptimalTime, 2);
-                $sensor->save();
-                $this->info("Sensor '{$sensor->name}' actualizado: optimal_production_time = {$calculatedOptimalTime}. No se encontró registro en product_lists para: {$modelProduct}");
             }
+            
+            
         } else {
             // Si no hay producto asociado, se actualiza solo el sensor
             $sensor->optimal_production_time = round($calculatedOptimalTime, 2);
@@ -279,20 +437,33 @@ private function processSensorOtherTypes(Sensor $sensor)
 
     private function processModbusType0($modbusData)
     {
-        // Implementación del procesamiento específico para datos de tipo 0
 
-        //ahor extraemos  el production_line_id
-        $production_line_id = $modbusData->production_line_id;
-        //ahora por production_line_id sacamos  de shift_history  por production_line_id y sacamos la ultima lunea con where type= shift y action = start 
-        // y sacamos la created_at
-        $shift_history = ShiftHistory::where('production_line_id', $production_line_id)
-            ->where('type', 'shift')
-            ->where('action', 'start')
-            ->orderBy('created_at', 'desc')
-            ->first();
+        if($modbusData->model_type > 0) {
+            return;
+        }
+
+        // Crear instancia del servicio OrderTimeService
+        $orderTimeService = new OrderTimeService();
+        // Define el productionLineId que necesitas (ejemplo: 1)
+        $productionLineId = $modbusData->production_line_id;
+        
+        try {
+            // Llamar al método getTimeOrder y capturar el resultado
+            $orderTime = $orderTimeService->getTimeOrder($productionLineId);
+            //ahora mismo dentro hay 2 campos de $orderTime {"timeOnSeconds":7882,"timeOnFormatted":"02:11:22"}
+            //extraemos en 2 variables
+            $orderTimeSeconds = $orderTime['timeOnSeconds'];
+            $orderTimeFormatted = $orderTime['timeOnFormatted'];
+            $orderTimeSecondsSinDownTime = $orderTimeSeconds - $modbusData->downtime_count; // Supongamos que se resta 10 segundos
+            
+            // Registrar el resultado en el log
+            $this->info("Tiempo de orden para production_line_id {$productionLineId}: " . json_encode($orderTime));
+        } catch (\Exception $e) {
+            $this->error("Error al obtener tiempo de orden: " . $e->getMessage());
+        }
 
         //si el shift no existe salimos
-        if (!$shift_history) {
+        if (!$orderTimeSecondsSinDownTime) {
             return;
         }
         //sacamos se modbus tambien el productName  que productList_client_id
@@ -301,19 +472,17 @@ private function processSensorOtherTypes(Sensor $sensor)
         if (!$productListClient) {
             return;
         }
-        //hacemos calculamos en segundos el tiempo desde shift_history hasta ahora
-        $time = Carbon::parse($shift_history->created_at)->diffInSeconds(Carbon::now());
-        //ahora hacemos una media de tiempo por cada caja pesada
-        // Extraer el valor de rec_box_shift (que es un string) y convertirlo a entero.
-        $boxes = $modbusData->rec_box_shift;
+         //ahora hacemos una media de tiempo por cada caja pesada
+        // Extraer el valor de rec_box (que es un string) y convertirlo a entero.
+        $boxes = $modbusData->rec_box;
         $boxCount = (int)$boxes; // Convertimos la cadena a entero
 
-        if ($boxCount <= 0) {
+        if ($boxCount < 20) {
             $this->info("No se encontraron cajas registradas en rec_box_shift para el modbus.");
             return;
         }
 
-        $average_time = round($time / $boxCount, 2);
+        $average_time = round($orderTimeSecondsSinDownTime / $boxCount, 2);
 
         //ahora buscamos en product_list el producnto con $productListClient que es client_id 
         $product = ProductList::where('client_id', $productListClient)->first();
@@ -321,33 +490,124 @@ private function processSensorOtherTypes(Sensor $sensor)
         if (!$product) {
             return;
         }
-        //ahora si el $average_time es menor que lo que esta en product->optimalproductionTime_weight lo actualizamos si no lo dejamos como es
-        //pero si el tiempo de inicio de turno que sea mayor a 300 segundos
-        if ($average_time < $product->optimalproductionTime_weight && $time > 3600) {
-            $product->optimalproductionTime_weight =round($average_time, 2);
 
-            $product->save();
-            $this->info("Actualizado en product_lists: optimalproductionTime_weight = {$average_time} para el producto: {$productListClient}");
-        }else {
-            $this->info("No se actualizó en product_lists: optimalproductionTime_weight = {$average_time} para el producto: {$productListClient}");
+        try {
+            // Obtener el nombre del producto (client_id) asociado al sensor a través de la relación productList.
+            // Se usa 'optional()' para evitar errores si la relación 'productList' no existe.
+            $modelProduct = $product->client_id;
+            $modelProductId = $product->id;
+
+            // Si se encuentra un producto asociado al sensor...
+            if ($modelProduct) {
+
+                //redondeamos a dos decimales
+                $optimalProductionTime = $average_time;
+                $this->info("Tiempo optimo para el sensor actual: " .$modbusData->name . ": " . $optimalProductionTime . " segundos");
+            
+                //ahora en tabla optimasl_sensor_times si no existe linea con sensor_id = $sensor->id y production_line_id = $sensor->production_line_id
+                // y model_product = $modelProduct lo creamos si existe lo actualizamos si el campo optimal_time es menor al existente
+                // y si es menor al existente actualizamos el campo optimal_time en la tabla 'optimal_sensor_times'
+                try {
+                    // Buscar registro existente
+                    $optimalSensorTime = OptimalSensorTime::where('modbus_id', $modbusData->id)
+                        ->where('production_line_id', $modbusData->production_line_id)
+                        ->where('model_product', $modelProduct)
+                        ->first();
+                
+                    if (!$optimalSensorTime) {
+                        // No existe registro, se crea uno nuevo
+                        $optimalSensorTime = new OptimalSensorTime();
+                        $optimalSensorTime->modbus_id = $modbusData->id;
+                        $optimalSensorTime->production_line_id = $modbusData->production_line_id;
+                        $optimalSensorTime->model_product = $modelProduct;
+                        $optimalSensorTime->product_list_id = $modelProductId;
+                        $optimalSensorTime->optimal_time = $optimalProductionTime;
+                        $optimalSensorTime->sensor_type = $modbusData->model_type;
+                        $optimalSensorTime->save();
+                        $this->info("Se creó registro en optimal_sensor_times para el sensor {$modbusData->name} (Producto: {$modelProduct}) con optimal_time: {$optimalProductionTime}");
+                    } else if ($optimalProductionTime < $optimalSensorTime->optimal_time) {
+                        // Si ya existe y el nuevo tiempo óptimo es menor que el actual, se actualiza el registro
+                        $optimalSensorTime->optimal_time = $optimalProductionTime;
+                        $optimalSensorTime->save();
+                        $this->info("Se actualizó el registro en optimal_sensor_times para el sensor {$modbusData->name} (Producto: {$modelProduct}) con nuevo optimal_time: {$optimalProductionTime}");
+                    }
+                } catch (\Exception $e) {
+                    $this->error("Error al procesar optimal_sensor_times para el sensor {$modbusData->name}: " . $e->getMessage());
+                }
+
+                // Actualizar la tabla 'product_lists' con el tiempo óptimo calculado, si es menor al existente.
+                $product->optimalproductionTime_weight =round($average_time, 2);
+                $product->save();
+
+
+
+                // Si el tiempo calculado es mayor que el valor almacenado en product_lists, se asigna este último.
+                // Buscar el registro en optimal_sensor_times utilizando sensor_id y product_list_id
+                try {
+                    $optimalSensorRecord = OptimalSensorTime::where('modbus_id', $modbusData->id)
+                        ->where('product_list_id', $modelProductId)
+                        ->first();
+
+                    if ($optimalSensorRecord) {
+                        // Si se encontró el registro, comparamos el tiempo óptimo calculado con el almacenado
+                        if ($optimalProductionTime > $optimalSensorRecord->optimal_time) {
+                            $modbusData->optimal_production_time = $optimalSensorRecord->optimal_time;
+                        } else {
+                            $modbusData->optimal_production_time = $optimalProductionTime;
+                        }
+                        $this->info("Sensor {$modbusData->name} actualizado con optimal_production_time: {$modbusData->optimal_production_time} basado en optimal_sensor_times.");
+                    } else {
+                        // Si no se encuentra el registro en optimal_sensor_times, se asigna el tiempo calculado
+                        $modbusData->optimal_production_time = $optimalProductionTime;
+                        $this->info("Sensor {$modbusData->name} actualizado con optimal_production_time calculado: {$modbusData->optimal_production_time} (sin registro en optimal_sensor_times).");
+                    }
+                } catch (\Exception $e) {
+                    $this->error("Error al actualizar el tiempo óptimo del sensor {$modbusData->name} basado en optimal_sensor_times: " . $e->getMessage());
+                }
+                $modbusData->save();
+
+                $this->info("Actualizado en sensors: optimal_production_time = {$optimalProductionTime} para el sensor: {$modbusData->name} (Producto: {$modelProduct})");
+            } else {
+                // Si no se encuentra un producto asociado, manejar el caso especial.
+
+            }
+        } catch (QueryException $e) {
+            // Capturar excepciones específicas de la base de datos.
+            $this->error("Database error processing sensor {$modbusData->name}: {$e->getMessage()}");
+        } catch (\Exception $e) {
+            // Capturar cualquier otra excepción.
+            $this->error("Error processing sensor {$modbusData->name}: {$e->getMessage()}");
         }
     }
 
     private function processModbusOtherTypes($modbusData)
     {
-        // Implementación del procesamiento específico para datos de otros tipos
-        //ahor extraemos  el production_line_id
-        $production_line_id = $modbusData->production_line_id;
-        //ahora por production_line_id sacamos  de shift_history  por production_line_id y sacamos la ultima lunea con where type= shift y action = start 
-        // y sacamos la created_at
-        $shift_history = ShiftHistory::where('production_line_id', $production_line_id)
-            ->where('type', 'shift')
-            ->where('action', 'start')
-            ->orderBy('created_at', 'desc')
-            ->first();
+        if($modbusData->model_type < 1) {
+            return;
+        }
+
+        // Crear instancia del servicio OrderTimeService
+        $orderTimeService = new OrderTimeService();
+        // Define el productionLineId que necesitas (ejemplo: 1)
+        $productionLineId = $modbusData->production_line_id;
+        
+        try {
+            // Llamar al método getTimeOrder y capturar el resultado
+            $orderTime = $orderTimeService->getTimeOrder($productionLineId);
+            //ahora mismo dentro hay 2 campos de $orderTime {"timeOnSeconds":7882,"timeOnFormatted":"02:11:22"}
+            //extraemos en 2 variables
+            $orderTimeSeconds = $orderTime['timeOnSeconds'];
+            $orderTimeFormatted = $orderTime['timeOnFormatted'];
+            $orderTimeSecondsSinDownTime = $orderTimeSeconds - $modbusData->downtime_count; // Supongamos que se resta 10 segundos
+            
+            // Registrar el resultado en el log
+            $this->info("Tiempo de orden para production_line_id {$productionLineId}: " . json_encode($orderTime));
+        } catch (\Exception $e) {
+            $this->error("Error al obtener tiempo de orden: " . $e->getMessage());
+        }
 
         //si el shift no existe salimos
-        if (!$shift_history) {
+        if (!$orderTimeSecondsSinDownTime) {
             return;
         }
         //sacamos se modbus tambien el productName  que productList_client_id
@@ -356,36 +616,112 @@ private function processSensorOtherTypes(Sensor $sensor)
         if (!$productListClient) {
             return;
         }
-        //hacemos calculamos en segundos el tiempo desde shift_history hasta ahora
-        $time = Carbon::parse($shift_history->created_at)->diffInSeconds(Carbon::now());
-        // Extraer el valor de rec_box_shift (que es un string) y convertirlo a entero.
-        $boxes = $modbusData->rec_box_shift;
+         //ahora hacemos una media de tiempo por cada caja pesada
+        // Extraer el valor de rec_box (que es un string) y convertirlo a entero.
+        $boxes = $modbusData->rec_box;
         $boxCount = (int)$boxes; // Convertimos la cadena a entero
 
-        if ($boxCount <= 0) {
+        if ($boxCount < 1) {
             $this->info("No se encontraron cajas registradas en rec_box_shift para el modbus.");
             return;
         }
 
-        $average_time = round($time / $boxCount, 2);
+        $average_time = round($orderTimeSecondsSinDownTime / $boxCount, 2);
 
         //ahora buscamos en product_list el producnto con $productListClient que es client_id 
         $product = ProductList::where('client_id', $productListClient)->first();
-        //ahora si el $average_time es menor que lo que esta en product->optimalproductionTime_weight lo actualizamos si no lo dejamos como es
-        //pero si el tiempo de inicio de turno que sea mayor a 300 segundos
         //si el product no existe salimos
         if (!$product) {
             return;
         }
-        $modelType="optimalproductionTime_weight_".$modbusData->model_type;
-        if ($average_time < $product->optimalproductionTime_weight && $time > 3600) {
-            $product->$modelType  = round($average_time, 2);
-            $product->save();
-            $this->info("Actualizado en product_lists: optimalproductionTime_weight = {$average_time} para el producto: {$productListClient}");
-        }else {
-            $this->info("No se actualizó en product_lists: optimalproductionTime_weight = {$average_time} para el producto: {$productListClient}");
-        }
 
+        try {
+            // Obtener el nombre del producto (client_id) asociado al sensor a través de la relación productList.
+            // Se usa 'optional()' para evitar errores si la relación 'productList' no existe.
+            $modelProduct = $product->client_id;
+            $modelProductId = $product->id;
+
+            // Si se encuentra un producto asociado al sensor...
+            if ($modelProduct) {
+
+                //redondeamos a dos decimales
+                $optimalProductionTime = $average_time;
+                $this->info("Tiempo optimo para el sensor actual: " .$modbusData->name . ": " . $optimalProductionTime . " segundos");
+            
+                //ahora en tabla optimasl_sensor_times si no existe linea con sensor_id = $sensor->id y production_line_id = $sensor->production_line_id
+                // y model_product = $modelProduct lo creamos si existe lo actualizamos si el campo optimal_time es menor al existente
+                // y si es menor al existente actualizamos el campo optimal_time en la tabla 'optimal_sensor_times'
+                try {
+                    // Buscar registro existente
+                    $optimalSensorTime = OptimalSensorTime::where('modbus_id', $modbusData->id)
+                        ->where('production_line_id', $modbusData->production_line_id)
+                        ->where('model_product', $modelProduct)
+                        ->first();
+                
+                    if (!$optimalSensorTime) {
+                        // No existe registro, se crea uno nuevo
+                        $optimalSensorTime = new OptimalSensorTime();
+                        $optimalSensorTime->modbus_id = $modbusData->id;
+                        $optimalSensorTime->production_line_id = $modbusData->production_line_id;
+                        $optimalSensorTime->model_product = $modelProduct;
+                        $optimalSensorTime->product_list_id = $modelProductId;
+                        $optimalSensorTime->optimal_time = $optimalProductionTime;
+                        $optimalSensorTime->sensor_type = $modbusData->model_type;
+                        $optimalSensorTime->save();
+                        $this->info("Se creó registro en optimal_sensor_times para el sensor {$modbusData->name} (Producto: {$modelProduct}) con optimal_time: {$optimalProductionTime}");
+                    } else if ($optimalProductionTime < $optimalSensorTime->optimal_time) {
+                        // Si ya existe y el nuevo tiempo óptimo es menor que el actual, se actualiza el registro
+                        $optimalSensorTime->optimal_time = $optimalProductionTime;
+                        $optimalSensorTime->save();
+                        $this->info("Se actualizó el registro en optimal_sensor_times para el sensor {$modbusData->name} (Producto: {$modelProduct}) con nuevo optimal_time: {$optimalProductionTime}");
+                    }
+                } catch (\Exception $e) {
+                    $this->error("Error al procesar optimal_sensor_times para el sensor {$modbusData->name}: " . $e->getMessage());
+                }
+
+                // Actualizar la tabla 'product_lists' con el tiempo óptimo calculado, si es menor al existente.
+                $product->optimalproductionTime_weight =round($average_time, 2);
+                $product->save();
+
+
+
+                // Si el tiempo calculado es mayor que el valor almacenado en product_lists, se asigna este último.
+                // Buscar el registro en optimal_sensor_times utilizando sensor_id y product_list_id
+                try {
+                    $optimalSensorRecord = OptimalSensorTime::where('modbus_id', $modbusData->id)
+                        ->where('product_list_id', $modelProductId)
+                        ->first();
+
+                    if ($optimalSensorRecord) {
+                        // Si se encontró el registro, comparamos el tiempo óptimo calculado con el almacenado
+                        if ($optimalProductionTime > $optimalSensorRecord->optimal_time) {
+                            $modbusData->optimal_production_time = $optimalSensorRecord->optimal_time;
+                        } else {
+                            $modbusData->optimal_production_time = $optimalProductionTime;
+                        }
+                        $this->info("Sensor {$modbusData->name} actualizado con optimal_production_time: {$modbusData->optimal_production_time} basado en optimal_sensor_times.");
+                    } else {
+                        // Si no se encuentra el registro en optimal_sensor_times, se asigna el tiempo calculado
+                        $modbusData->optimal_production_time = $optimalProductionTime;
+                        $this->info("Sensor {$modbusData->name} actualizado con optimal_production_time calculado: {$modbusData->optimal_production_time} (sin registro en optimal_sensor_times).");
+                    }
+                } catch (\Exception $e) {
+                    $this->error("Error al actualizar el tiempo óptimo del sensor {$modbusData->name} basado en optimal_sensor_times: " . $e->getMessage());
+                }
+                $modbusData->save();
+
+                $this->info("Actualizado en sensors: optimal_production_time = {$optimalProductionTime} para el sensor: {$modbusData->name} (Producto: {$modelProduct})");
+            } else {
+                // Si no se encuentra un producto asociado, manejar el caso especial.
+
+            }
+        } catch (QueryException $e) {
+            // Capturar excepciones específicas de la base de datos.
+            $this->error("Database error processing sensor {$modbusData->name}: {$e->getMessage()}");
+        } catch (\Exception $e) {
+            // Capturar cualquier otra excepción.
+            $this->error("Error processing sensor {$modbusData->name}: {$e->getMessage()}");
+        }
     }
 
     /**
@@ -400,23 +736,12 @@ private function processSensorOtherTypes(Sensor $sensor)
      * @param float $maxTime El tiempo máximo de producción.
      * @return float El tiempo óptimo de producción calculado.
      */
-    private function calculateOptimalTimeForSensor(Sensor $sensor, float $minTime, float $maxTime): float
+    private function calculateOptimalTimeForSensor(Sensor $sensor, $orderTimeSeconds): float
     {
-        // Buscar el registro en 'sensor_counts' que cumple con los criterios especificados.
-        // Aquí se asume que 'productName' en Sensor coincide con 'client_id' en ProductList.
-        $sensorCount = SensorCount::where('model_product', $sensor->productName)
-            ->where('sensor_id', $sensor->id)
-            ->where('value', '1') // Considerar usar una constante o configuración para este valor.
-            ->where('created_at', '>=', Carbon::now()->subDays(30))
-            ->whereNotNull('time_11')
-            ->whereBetween('time_11', [$minTime, $maxTime]) // Podría ser redundante si 'time_11' siempre está entre 'minTime' y 'maxTime'.
-            ->orderBy('time_11', 'asc') // Ordenar por 'time_11' ascendente para obtener el menor primero.
-            ->first();
-
-        // Si se encuentra un registro en 'sensor_counts', usar su 'time_11' como tiempo óptimo.
-        // De lo contrario, usar el tiempo óptimo predeterminado.
-        $optimalTime = $sensorCount ? $sensorCount->time_11 : $this->getDefaultOptimalTime($minTime, $maxTime);
-        $this->info("Sensor name: {$sensor->name} count time_11 calculado: {$optimalTime}");
+        //en sensors buscamos  y extraemos count_order_1
+        $sensorCountOrder1 = $sensor->count_order_1;
+        //ahora usamos el tiempo en segundos recibido y partimos a countorder1
+        $optimalTime = $orderTimeSeconds / $sensorCountOrder1;
 
         return $optimalTime;
     }
@@ -442,12 +767,9 @@ private function processSensorOtherTypes(Sensor $sensor)
 
         // Si se encuentra un registro en 'product_lists'...
         if ($productList) {
-            // Actualizar el 'optimal_production_time' solo si el nuevo tiempo es menor que el tiempo actual.
-            if ($optimalProductionTime < $productList->optimal_production_time) {
                 $productList->optimal_production_time = round($optimalProductionTime, 2);
                 $productList->save();
-                $this->info("Actualizado en product_lists: optimal_production_time = {$optimalProductionTime} para el producto: {$modelProduct}");
-            }
+                //$this->info("Actualizado en product_lists: optimal_production_time = {$optimalProductionTime} para el producto: {$modelProduct}");
         } else {
             $this->info("No se encontró registro en product_lists para: {$modelProduct}");
         }

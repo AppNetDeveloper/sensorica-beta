@@ -111,10 +111,10 @@ class TransferExternalDbController extends Controller
         }
 
         // Extraer valores del JSON
-        [$modelUnit, $modelEnvase, $modelMeasure, $unitValue, $totalWeight] = $this->extractJsonValues($jsonData);
+        [$modelUnit, $modelEnvase, $modelMeasure, $unitValue, $totalWeight, $customerId] = $this->extractJsonValues($jsonData);
         try {
             // Llamar a la función que obtiene el tiempo y los shift_history
-            $orderTimeData = $this->getOrder($orderStats, $orderId, $modelUnit, $modelEnvase, $modelMeasure, $unitValue, $totalWeight,  $externalSend);
+            $orderTimeData = $this->getOrder($orderStats, $orderId, $modelUnit, $modelEnvase, $modelMeasure, $unitValue, $totalWeight,  $externalSend, $customerId);
 
             return response()->json([
                 'success' => true,
@@ -145,7 +145,7 @@ class TransferExternalDbController extends Controller
      *
      * @throws \Exception
      */
-    private function getOrder($orderStats, $orderId, $modelUnit, $modelEnvase, $modelMeasure, $unitValue, $totalWeight,  $externalSend)
+    private function getOrder($orderStats, $orderId, $modelUnit, $modelEnvase, $modelMeasure, $unitValue, $totalWeight,  $externalSend, $customerId)
     {
         // 1. Validar que existan registros en order_stats
         if ($orderStats->isEmpty()) {
@@ -320,9 +320,7 @@ class TransferExternalDbController extends Controller
 
         //obtener de orderStats el slow_time y la suma de 	down_time y production_stops_time  como es en segundos creamos  otra variable formated a 00:00:00
         $slow_time = $orderStats->first()->slow_time;
-        if ($slow_time > (0.8 * $timeOnSeconds)) {
-            $slow_time = 0.2 * $timeOnSeconds;
-        }
+
         $slowTimeFormated = gmdate('H:i:s', $slow_time);
         $production_stops_time = $orderStats->first()->production_stops_time;
         $down_time = $orderStats->first()->down_time;
@@ -403,8 +401,12 @@ class TransferExternalDbController extends Controller
                     'StartAt' => $startTime->format('Y-m-d H:i:s'),
                     'FinishAt' => $finishTime->format('Y-m-d H:i:s'),
                     'TimeON' => $timeOnFormatted,
-                    'TimeDown' => $stopTimeFormated,
+                    'TimeDown' => gmdate('H:i:s', $down_time),
                     'TimeSlow' => $slowTimeFormated,
+                    'TimeDownSensors' => gmdate('H:i:s', $production_stops_time),
+                    'customerId' => $customerId,
+                    'TimePreparing' => $orderStats->first()->prepair_time,
+                    
                 ];
     
     
@@ -436,26 +438,28 @@ class TransferExternalDbController extends Controller
                 if ($totalCountOrder > 0) {
                     //TCAverage es realtime unit en segundos por unidad de orden y lo calculamos tiempo de trabajo (sin pausas programadas)
                     // - tiempo total de paradas ne programadas / total de boilsas mallas
-                    $realTimeUnit = ($timeOnSeconds - $totalTimeDowntime) / $totalCountOrder;
+                    //separamos sersores de tipo0 y superior
+                    if ($sensor->sensor_type < 1) {
+                        // Calculo para sensores de tipo 0
+                        $realTimeUnit = ($timeOnSeconds - $totalTimeDowntime) / $totalCountOrder;
+                    } else {
+                        // Calculo para sensores de tipo superior
+                        $realTimeUnit = $totalTimeDowntime / $totalCountOrder;
+                    }
                 } else {
                     $realTimeUnit = 0; // o el valor que consideres adecuado
                 }
 
                 // Consultar la tabla sensor_count para obtener el tiempo de trabajo
                 $aggregates = SensorCount::where('sensor_id', $sensor->id)
-                                        ->whereBetween('created_at', [$startTime->format('Y-m-d H:i:s'), $finishTime->format('Y-m-d H:i:s')])
-                                        ->selectRaw('MIN(time_00) AS min_time_00, MIN(time_11) AS min_time_11')
-                                        ->first();
-                // Evitamos valores nulos con ??
-                $minTime00 = $aggregates->min_time_00 ?? 0;
-                $minTime11 = $aggregates->min_time_11 ?? 0;
-
-                // Elegimos qué mínimo usar dependiendo del sensor_type
-                if ((int)$sensor->sensor_type === 0) {
-                $minTime = max($minTime11, (int)env('PRODUCTION_MIN_TIME', 1));
-                } else {
-                $minTime = $minTime00;
-                }
+                    ->whereBetween('created_at', [
+                        $startTime->format('Y-m-d H:i:s'),
+                        $finishTime->format('Y-m-d H:i:s')
+                    ])
+                    ->selectRaw('MIN(time_11) AS min_time_11')
+                    ->first();
+                
+                $minTime = $aggregates->min_time_11 ?? 0;
                 
                 $grossWeightTotal=number_format(($totalCountOrder * $unitValue), 2, '.', '');
 
@@ -466,7 +470,7 @@ class TransferExternalDbController extends Controller
                 }
 
                 
-                $optimalProductionTime = $orderStats->first()->productList->$formateado;
+                $optimalProductionTime =$sensorHistory ? $sensorHistory->optimal_production_time ?? 0 : 0;
                 
                 if($sensor->sensor_type === 0) {
                     if($optimalProductionTime > $realTimeUnit){
@@ -478,6 +482,7 @@ class TransferExternalDbController extends Controller
                     }
                     
                 } else {
+
                     $slowTime=0.0;
                 }
 
@@ -487,6 +492,14 @@ class TransferExternalDbController extends Controller
                 if($totalCountOrder < 1) {
                     $realTimeUnit=0;
                     $minTime=0;
+
+                    if($sensor->sensor_type > 0) {
+                        //si es sensor de tipo 1 o 2 $unitValue es igual a 0
+                        $slowTime= 0;
+                        $totalTimeDowntime=0;
+                    }
+                    
+
                 }
                 if($sensor->sensor_type > 0) {
                     //si es sensor de tipo 1 o 2 $unitValue es igual a 0
@@ -523,6 +536,7 @@ class TransferExternalDbController extends Controller
                     'SensorWeight'            => $grossWeightTotal,
                     'SensorUnitWeight'        => $modelMeasure,
                     'GrossWeight'             => $unitValue, // Nuevo campo
+                    'customerId'              => $customerId,
                     // Puedes agregar aquí más información o incluso los registros de sensorHistory si lo necesitas
                 ];
 
@@ -550,6 +564,7 @@ class TransferExternalDbController extends Controller
                         'SensorUnitWeight'        => $modelMeasure,
                         'GrossWeight01'           => $unitValue, // Nuevo campo
                         'GrossWeight02'           => '0.0',  // Nuevo campo
+                        'customerId'              => $customerId,
                     ];
 
                     // Insertar datos
@@ -583,7 +598,12 @@ class TransferExternalDbController extends Controller
                 $totalWeightModbus = $modbusHistory ? $modbusHistory->total_kg_order : 0;
 
                 if ($totalCountOrder > 0) {
-                    $realTimeUnit = ($timeOnSeconds - $totalTimeDowntime) / $totalCountOrder;
+                    if ($modbus->model_type < 1){
+                        $realTimeUnit = ($timeOnSeconds - $totalTimeDowntime) / $totalCountOrder;
+                    }else{
+                        $realTimeUnit = $totalTimeDowntime / $totalCountOrder;
+                    }
+                    
                 } else {
                     $realTimeUnit = 0; // o el valor que consideres adecuado
                 }
@@ -596,24 +616,27 @@ class TransferExternalDbController extends Controller
 
                 $minInterval = $timeDifferences->min() ?? env('PRODUCTION_MIN_TIME_WEIGHT', 30);
 
+                $optimalProductionTime = $modbusHistory ? $modbusHistory->optimal_production_time : 0;
 
-                //sacamos por $orderStats->first()->product_list_id y ahorasacamos la linea product_list where id=product_list_id
-  
-                if ($modbus->model_type < 1) {
-                    $optimalProductionTime = $orderStats->first()->productList->optimalproductionTime_weight;
-                } else {
-                    $formateado = "optimalproductionTime_weight_" . $modbus->model_type;
-                    $optimalProductionTime = $orderStats->first()->productList->$formateado;
-                }
-                
+                $timeSlowModbus = $timeOnSeconds  -($optimalProductionTime * $totalCountOrder);
+                $timeSlowModbusFormated = gmdate('H:i:s', $timeSlowModbus);
+
                 if($totalCountOrder < 1) {
                     $realTimeUnit=0;
                     $minTime=0;
+                    $timeSlowModbus = 0;
+                    $timeSlowModbusFormated = 0;
+                    $minInterval = 0;
+
                 }
 
                 //si el model_type es 1 2 3 4  el $totalWeight es 0
                 if ($modbus->model_type > 0) {
                     $totalWeight = 0;
+                    $minInterval = $optimalProductionTime;
+                    if($totalCountOrder < 1) {
+                        $minInterval = 0;
+                    }
                 }
 
                 $modbusData[] = [
@@ -632,8 +655,8 @@ class TransferExternalDbController extends Controller
                     'TcAverage'               => round($realTimeUnit, 2),
                     'TcMin'                   => $minInterval,
                     'totalCountOrder'         => $totalCountOrder,
-                    'TimeSlow'                => ($timeOnSeconds - $totalTimeDowntime) -($minInterval* $totalCountOrder),
-                    'TimeSlowFormated'        => gmdate('H:i:s', ($timeOnSeconds - $totalTimeDowntime) -($minInterval * $totalCountOrder)),
+                    'TimeSlow'                => $timeSlowModbus,
+                    'TimeSlowFormated'        => $timeSlowModbusFormated,
                     'totalTimeDowntime'       => $totalTimeDowntime,
                     'totalTimeDowntimeFormatted'         => gmdate('H:i:s', $totalTimeDowntime),
                     'timeOnSeconds'           => $timeOnSeconds - $totalTimeDowntime,
@@ -642,6 +665,7 @@ class TransferExternalDbController extends Controller
                     'SensorWeight'            => $totalWeightModbus, // lo formateamos con maximo 2 digitos decimales
                     'SensorUnitWeight'        => $modelMeasure,
                     'GrossWeight'             => round($totalWeight, 2),  // Nuevo campo
+                    'customerId'              => $customerId,
                     // Más datos según lo requieras
                 ];
                 if ($externalSend === true){
@@ -660,13 +684,14 @@ class TransferExternalDbController extends Controller
                         'IdLine'                  => $productionLine,
                         'TimeOn'                  => gmdate('H:i:s', $timeOnSeconds),
                         'TimeDown'                => gmdate('H:i:s', $totalTimeDowntime),
-                        'TimeSlow'                => gmdate('H:i:s', ($timeOnSeconds - $totalTimeDowntime) -($minInterval * $totalCountOrder)),
+                        'TimeSlow'                => $timeSlowModbusFormated,
                         'SensorCount'             => $totalCountOrder,
                         'SensorUnitCount'         => $modelUnit,
                         'SensorWeight'            => $totalWeightModbus, // lo formateamos con maximo 2 digitos decimales
                         'SensorUnitWeight'        => $modelMeasure,
                         'GrossWeight01'           => '0.0', // Nuevo campo
                         'GrossWeight02'           => round($totalWeight, 2),  // Nuevo campo
+                        'customerId'              => $customerId,
                     ];
 
                     // Insertar datos
@@ -722,9 +747,11 @@ class TransferExternalDbController extends Controller
             'unitsFronOrderNotice'    => $orderUnits,
             'unitsNumberFromTransfer' => $unitsNumberFromTransfer,
             'unitsFromOrderNumberFromTransfer' => $unitsFromOrnderNumberFromTransfer,
+            'customerId'              => $customerId,
+            'TimePreparing'           => $orderStats->first()->prepair_time,
             'shiftHistories'          => $shiftHistories,
-            'sensorsUsed' => $sensorData,
-            'modbusUsed'  => $modbusData,
+            'sensorsUsed'             => $sensorData,
+            'modbusUsed'              => $modbusData,
         ];
     }
 
@@ -735,6 +762,7 @@ class TransferExternalDbController extends Controller
         $modelMeasure = $jsonData['refer']['measure'] ?? 'Desconocido';
         $unitValue = $jsonData['refer']['value'] ?? 'Desconocido';
         $totalWeight = $jsonData['refer']['groupLevel'][0]['total'] ?? 'Desconocido';
+        $customerId = $jsonData['refer']['customerId']  ?? 'Desconocido';
 
         $fields = [
             'unit' => $modelUnit,
@@ -742,6 +770,7 @@ class TransferExternalDbController extends Controller
             'measure' => $modelMeasure,
             'value' => $unitValue,
             'total' => $totalWeight,
+            'customerId' => $customerId,
         ];
 
         foreach ($fields as $key => $value) {
@@ -752,7 +781,7 @@ class TransferExternalDbController extends Controller
             }
         }
 
-        return [$modelUnit, $modelEnvase, $modelMeasure, $unitValue, $totalWeight];
+        return [$modelUnit, $modelEnvase, $modelMeasure, $unitValue, $totalWeight, $customerId];
     }
 
     private function decodeJson($json)

@@ -258,6 +258,7 @@ pip install pymysql pandas numpy scikit-learn tensorflow joblib --break-system-p
 pip install python-dotenv --break-system-package
 pip3 install scikit-learn tensorflow pandas pymysql joblib --break-system-packages
 pip install pymysql --break-system-packages
+pip install SQLAlchemy --break-system-packages
 
 # Reiniciar Supervisor con nueva configuración
 echo "Reconfigurando Supervisor..."
@@ -266,6 +267,11 @@ sudo cp laravel*.conf /etc/supervisor/conf.d/
 sudo supervisorctl reread
 sudo supervisorctl update
 sudo supervisorctl restart all
+
+php artisan cache:clear
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
 
 chmod +x /var/www/html/update.sh
 
