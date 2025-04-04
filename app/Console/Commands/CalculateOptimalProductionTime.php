@@ -192,7 +192,7 @@ class CalculateOptimalProductionTime extends Command
                     //redondeamos a dos decimales
                     $optimalProductionTime = round($optimalProductionTimeAll, 2);
                 }
-                $this->info("Tiempo optimo para el sensor actual: " .$sensor->name . ": " . $optimalProductionTime . " segundos");
+                $this->info("Tiempo optimo para el sensor actual de conteo: sensor {$sensor->name} ID: {$sensor->id} tiempo optimo : " . $optimalProductionTime . " segundos y tiempo actual :". $optimalSensorTime->optimal_time);
             
                 //ahora en tabla optimasl_sensor_times si no existe linea con sensor_id = $sensor->id y production_line_id = $sensor->production_line_id
                 // y model_product = $modelProduct lo creamos si existe lo actualizamos si el campo optimal_time es menor al existente
@@ -213,12 +213,12 @@ class CalculateOptimalProductionTime extends Command
                         $optimalSensorTime->optimal_time = $optimalProductionTime;
                         $optimalSensorTime->sensor_type = $sensor->sensor_type;
                         $optimalSensorTime->save();
-                        $this->info("Se creó registro en optimal_sensor_times para el sensor {$sensor->name} (Producto: {$modelProduct}) con optimal_time: {$optimalProductionTime}");
+                        $this->info("Se creó registro en optimal_sensor_times para el sensor {$sensor->name} ID: {$sensor->id} (Producto: {$modelProduct}) con optimal_time: {$optimalProductionTime}");
                     } else if ($optimalProductionTime < $optimalSensorTime->optimal_time) {
                         // Si ya existe y el nuevo tiempo óptimo es menor que el actual, se actualiza el registro
                         $optimalSensorTime->optimal_time = $optimalProductionTime;
                         $optimalSensorTime->save();
-                        $this->info("Se actualizó el registro en optimal_sensor_times para el sensor {$sensor->name} (Producto: {$modelProduct}) con nuevo optimal_time: {$optimalProductionTime}");
+                        $this->info("Se actualizó el registro en optimal_sensor_times para el sensor {$sensor->name} ID: {$sensor->id} (Producto: {$modelProduct}) con nuevo optimal_time: {$optimalProductionTime}");
                     } else if ($optimalSensorTime->updated_at->diffInDays(\Carbon\Carbon::now()) > 6) {
                         // Si ya existe y la última actualización fue hace más de 6 días, se actualiza el registro
                         $optimalSensorTime->optimal_time = $optimalProductionTime;
@@ -227,7 +227,7 @@ class CalculateOptimalProductionTime extends Command
                         // Actualizar la tabla 'product_lists' con el tiempo óptimo calculado, si es menor al existente.
                         $this->updateProductListIfNeeded($modelProduct, $optimalProductionTime);
 
-                        $this->info("Se actualizó el registro en optimal_sensor_times para el sensor {$sensor->name} (Producto: {$modelProduct}) debido a que han pasado más de 6 días desde la última actualización");
+                        $this->info("Se actualizó el registro en optimal_sensor_times para el sensor {$sensor->name}ID: {$sensor->id}  (Producto: {$modelProduct}) debido a que han pasado más de 6 días desde la última actualización");
                     } else {
                         // Si ya existe, el nuevo tiempo es mayor que el actual y no han pasado 6 días, no se hace nada
                     }

@@ -37,6 +37,21 @@ engine = create_engine(db_url)
 def predict_fn(model, X):
     return model(X, training=False)
 
+def turno_activo(line_id):
+    query = f"""
+    SELECT type, action FROM shift_history
+    WHERE production_line_id = {line_id}
+    ORDER BY created_at DESC
+    LIMIT 1
+    """
+    result = pd.read_sql(query, engine)
+    if result.empty:
+        return True
+    last_type, last_action = result.iloc[0]['type'], result.iloc[0]['action']
+    if (last_type == 'shift' and last_action == 'stop') or (last_type == 'stop' and last_action == 'start'):
+        return False
+    return True
+
 # -------------------------------------------------------------------------
 # 2. Función de detección de anomalías
 # -------------------------------------------------------------------------
@@ -91,6 +106,12 @@ def detectar_anomalias():
     # PROCESAR POR (LÍNEA, TIPO)
     # -----------------------------
     for (line_id, s_type), group_line_type in counts_df.groupby(['production_line_id', 'sensor_type']):
+        if not turno_activo(line_id):
+            print(f"🟡 Línea {line_id} está detenida, omitiendo análisis.")
+            continue
+        else:
+            print(f"✅ OK       | Línea {line_id} | Esta en operación.")
+
         # Rutas de modelo y scaler
         model_path = f"models/line_{line_id}_type_{s_type}_autoencoder.h5"
         scaler_path = f"models/line_{line_id}_type_{s_type}_scaler.pkl"

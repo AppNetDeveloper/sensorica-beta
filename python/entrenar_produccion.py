@@ -24,7 +24,7 @@ logging.basicConfig(
 # -------------------------------------------------------------------------
 # 2. Carga de variables de entorno
 # -------------------------------------------------------------------------
-load_dotenv(dotenv_path='../.env')  # Ajusta ruta si tu .env está en otro lugar
+load_dotenv(dotenv_path='/var/www/html/.env')  # Ajusta ruta si tu .env está en otro lugar
 
 db_config = {
     'host': os.getenv('DB_HOST', 'localhost'),
