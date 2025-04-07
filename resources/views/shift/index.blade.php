@@ -33,7 +33,6 @@
                                     <span class="badge bg-primary">ID #{{ $line->id }}</span>
                                 </div>
                                 <div class="card-body text-center">
-                                    <p class="card-text">{{ __('Manage shifts for this line:') }}</p>
                                     @php
                                         // Se asume que $line->lastShiftHistory fue eager loaded en el controlador.
                                         $last = $line->lastShiftHistory;
@@ -43,82 +42,82 @@
                                         @if($last)
                                             @if($last->type === 'shift' && $last->action === 'start')
                                                 {{-- Turno iniciado: mostrar Pausar y Finalizar Turno --}}
-                                                <button type="button" class="btn btn-outline-warning"
+                                                <button type="button" class="btn btn-outline-warning" style="padding: 1rem 2rem; font-size: 1.25rem;"
                                                         data-action="inicio_pausa"
                                                         data-line-id="{{ $line->id }}"
                                                         title="{{ __('Pause') }}">
-                                                    <i class="fa fa-pause" aria-hidden="true"></i>
+                                                    <i class="fa fa-pause" style="font-size: 2rem;"  aria-hidden="true"></i>
                                                 </button>
-                                                <button type="button" class="btn btn-outline-danger"
+                                                <button type="button" class="btn btn-outline-danger" style="padding: 1rem 2rem; font-size: 1.25rem;"
                                                         data-action="final_trabajo"
                                                         data-line-id="{{ $line->id }}"
                                                         title="{{ __('End Shift') }}">
-                                                    <i class="fa fa-stop" aria-hidden="true"></i>
+                                                    <i class="fa fa-stop" style="font-size: 2rem;" aria-hidden="true"></i>
                                                 </button>
                                             @elseif($last->type === 'stop' && $last->action === 'start')
                                                 {{-- Pausa iniciada: mostrar sólo Finalizar pausa --}}
-                                                <button type="button" class="btn btn-outline-danger"
+                                                <button type="button" class="btn btn-outline-danger" style="padding: 1rem 2rem; font-size: 1.25rem;"
                                                         data-action="final_pausa"
                                                         data-line-id="{{ $line->id }}"
-                                                        title="{{ __('End Lunch') }}">
-                                                    <i class="fa fa-play" aria-hidden="true"></i>
+                                                        title="{{ __('Reanudar') }}">
+                                                    <i class="fa fa-play" style="font-size: 2rem;" aria-hidden="true"></i>
                                                 </button>
                                             @elseif($last->type === 'stop' && $last->action === 'end')
                                                 {{-- Pausa finalizada: mostrar Inicio pausa y Finalizar Turno --}}
-                                                <button type="button" class="btn btn-outline-success"
+                                                <button type="button" class="btn btn-outline-success" style="padding: 1rem 2rem; font-size: 1.25rem;"
                                                         data-action="inicio_pausa"
                                                         data-line-id="{{ $line->id }}"
-                                                        title="{{ __('Start Lunch') }}">
-                                                    <i class="fa fa-pause" aria-hidden="true"></i>
+                                                        title="{{ __('Pause') }}">
+                                                    <i class="fa fa-pause" style="font-size: 2rem;" aria-hidden="true"></i>
                                                 </button>
-                                                <button type="button" class="btn btn-outline-danger"
+                                                <button type="button" class="btn btn-outline-danger" style="padding: 1rem 2rem; font-size: 1.25rem;"
                                                         data-action="final_trabajo"
                                                         data-line-id="{{ $line->id }}"
                                                         title="{{ __('End Shift') }}">
-                                                    <i class="fa fa-stop" aria-hidden="true"></i>
+                                                    <i class="fa fa-stop" style="font-size: 2rem;" aria-hidden="true"></i>
                                                 </button>
                                             @elseif($last->type === 'shift' && $last->action === 'end')
                                                 {{-- Turno finalizado: mostrar sólo Iniciar Turno --}}
-                                                <button type="button" class="btn btn-outline-success"
+                                                <button type="button" class="btn btn-outline-success" style="padding: 1rem 2rem; font-size: 1.25rem;"
                                                         data-action="inicio_trabajo"
                                                         data-line-id="{{ $line->id }}"
                                                         title="{{ __('Start Shift') }}">
-                                                    <i class="fa fa-play" aria-hidden="true"></i>
+                                                    <i class="fa fa-play" style="font-size: 2rem;" aria-hidden="true"></i>
                                                 </button>
                                             @else
                                                 {{-- Caso por defecto: se muestran los 4 botones --}}
-                                                <button type="button" class="btn btn-outline-success"
+                                                <button type="button" class="btn btn-outline-success" style="padding: 1rem 2rem; font-size: 1.25rem;"
                                                         data-action="inicio_trabajo"
                                                         data-line-id="{{ $line->id }}"
                                                         title="{{ __('Start Shift') }}">
-                                                    <i class="fa fa-play" aria-hidden="true"></i>
+                                                    <i class="fa fa-play" style="font-size: 2rem;"  aria-hidden="true"></i>
                                                 </button>
-                                                <button type="button" class="btn btn-outline-success"
+                                                <button type="button" class="btn btn-outline-success" style="padding: 1rem 2rem; font-size: 1.25rem;"
                                                         data-action="inicio_pausa"
                                                         data-line-id="{{ $line->id }}"
-                                                        title="{{ __('Start Lunch') }}">
-                                                    <i class="fa fa-pause" aria-hidden="true"></i>
+                                                        title="{{ __('Pause') }}">
+                                                    <i class="fa fa-pause" style="font-size: 2rem;"  aria-hidden="true"></i>
                                                 </button>
-                                                <button type="button" class="btn btn-outline-danger"
+                                                <button type="button" class="btn btn-outline-danger" style="padding: 1rem 2rem; font-size: 1.25rem;"
                                                         data-action="final_pausa"
                                                         data-line-id="{{ $line->id }}"
-                                                        title="{{ __('End Lunch') }}">
-                                                    <i class="fa fa-play" aria-hidden="true"></i>
+                                                        title="{{ __('Reanudar') }}">
+                                                    <i class="fa fa-play" style="font-size: 2rem;"  aria-hidden="true"></i>
                                                 </button>
-                                                <button type="button" class="btn btn-outline-danger"
+                                                <button type="button" class="btn btn-outline-danger" style="padding: 1rem 2rem; font-size: 1.25rem;"
                                                         data-action="final_trabajo"
                                                         data-line-id="{{ $line->id }}"
                                                         title="{{ __('End Shift') }}">
-                                                    <i class="fa fa-stop" aria-hidden="true"></i>
+                                                    <i class="fa fa-stop" style="font-size: 2rem;"  aria-hidden="true"></i>
                                                 </button>
                                             @endif
                                         @else
                                             {{-- Sin historial: opción para iniciar el turno --}}
-                                            <button type="button" class="btn btn-outline-success"
+                                            <button type="button" class="btn btn-outline-success" style="padding: 1rem 2rem; font-size: 1.25rem;"
                                                     data-action="inicio_trabajo"
                                                     data-line-id="{{ $line->id }}"
                                                     title="{{ __('Start Shift') }}">
-                                                <i class="fa fa-play" aria-hidden="true"></i>
+                                                <i class="fa fa-play" style="font-size: 2rem;" aria-hidden="true"></i>
                                             </button>
                                         @endif
                                     </div>

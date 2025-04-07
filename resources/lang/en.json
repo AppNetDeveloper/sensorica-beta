@@ -567,5 +567,10 @@
     "Shift History": "Shift History",
     "Shift History for Production Line": "Shift History for Production Line",
     "Last Record": "Last Record",
-    "No history records found.": "No history records found."
+    "No history records found.": "No history records found.",
+    "Min Correction Percentage": "Percentage of Correction Minimum (20%)",
+    "Max Correction Percentage": "Percentage of Correction Maximum (98%)",
+    "Materia Prima": "Product Material",
+    "Conteo": "Counting",
+    "Reanudar": "Resume
   }

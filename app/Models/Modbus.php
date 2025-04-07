@@ -59,6 +59,8 @@ class Modbus extends Model
         'count_week_0', // contador de la semana 0
         'count_week_1', // contador de la semana 1
         'is_material_receiver', // nuevo campo para identificar si es báscula de recepción de material true false
+        'min_correction_percentage', //vamos que  empieza a corregir por ejemplo 80% de la velocidad real si es por debajo  de 20 % de la velocidad optima la actual corrige
+        'max_correction_percentage', // despues de correcion se correccion por ejemplo 98% de la velocidad real si es por encima de 90 % de la velocidad optima la actual corrige
          
     ];
 

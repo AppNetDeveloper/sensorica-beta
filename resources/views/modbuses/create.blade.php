@@ -31,7 +31,7 @@
 
                             <div class="form-group">
                                 <label for="token">{{ __('Token') }}</label>
-                                <input type="text" class="form-control" id="token" name="token">
+                                <input type="text" class="form-control" id="token" name="token" value="{{ uniqid() }}-{{ uniqid() }}-{{ uniqid() }}-{{ uniqid() }}">
                             </div>
 
                             <div class="form-group">
@@ -46,27 +46,47 @@
 
                             <div class="form-group">
                                 <label for="conversion_factor">{{ __('Conversion Factor') }}</label>
-                                <input type="text" class="form-control" id="conversion_factor" name="conversion_factor">
+                                <input type="text" class="form-control" id="conversion_factor" name="conversion_factor" value="1">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="min_correction_percentage">{{ __('Min Correction Percentage') }}</label>
+                                <input type="text" class="form-control" id="min_correction_percentage" name="conversion_factor" value="20">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="max_correction_percentage">{{ __('Max Correction Percentage') }}</label>
+                                <input type="text" class="form-control" id="max_correction_percentage" name="conversion_factor" value="98">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="optimal_production_time">{{ __('Optimal Production Time') }}</label>
+                                <input type="number" class="form-control" id="optimal_production_time" name="optimal_production_time" value="100">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="reduced_speed_time_multiplier">{{ __('Reduced Speed Time Multiplier') }}</label>
+                                <input type="number" class="form-control" id="reduced_speed_time_multiplier" name="reduced_speed_time_multiplier" value="3">
                             </div>
 
                             <div class="form-group">
                                 <label for="total_kg_order">{{ __('Total KG Order') }}</label>
-                                <input type="text" class="form-control" id="total_kg_order" name="total_kg_order">
+                                <input type="text" class="form-control" id="total_kg_order" name="total_kg_order" value="0">
                             </div>
 
                             <div class="form-group">
                                 <label for="total_kg_shift">{{ __('Total KG Shift') }}</label>
-                                <input type="text" class="form-control" id="total_kg_shift" name="total_kg_shift">
+                                <input type="text" class="form-control" id="total_kg_shift" name="total_kg_shift" value="0">
                             </div>
 
                             <div class="form-group">
                                 <label for="max_kg">{{ __('Max KG') }}</label>
-                                <input type="text" class="form-control" id="max_kg" name="max_kg">
+                                <input type="text" class="form-control" id="max_kg" name="max_kg" value="0">
                             </div>
 
                             <div class="form-group">
                                 <label for="rep_number">{{ __('Repetition Number') }}</label>
-                                <input type="text" class="form-control" id="rep_number" name="rep_number">
+                                <input type="text" class="form-control" id="rep_number" name="rep_number" value="5">
                             </div>
 
                             <div class="form-group">
@@ -90,42 +110,42 @@
 
                             <div class="form-group">
                                 <label for="min_kg">{{ __('Min KG') }}</label>
-                                <input type="text" class="form-control" id="min_kg" name="min_kg">
+                                <input type="text" class="form-control" id="min_kg" name="min_kg" value="0.10">
                             </div>
 
                             <div class="form-group">
                                 <label for="last_kg">{{ __('Last KG') }}</label>
-                                <input type="text" class="form-control" id="last_kg" name="last_kg">
+                                <input type="text" class="form-control" id="last_kg" name="last_kg" value="0">
                             </div>
 
                             <div class="form-group">
                                 <label for="last_rep">{{ __('Last Repetition') }}</label>
-                                <input type="text" class="form-control" id="last_rep" name="last_rep">
+                                <input type="text" class="form-control" id="last_rep" name="last_rep" value="0">
                             </div>
 
                             <div class="form-group">
                                 <label for="rec_box">{{ __('Rec Box') }}</label>
-                                <input type="text" class="form-control" id="rec_box" name="rec_box">
+                                <input type="text" class="form-control" id="rec_box" name="rec_box" value="0">
                             </div>
 
                             <div class="form-group">
                                 <label for="rec_box_shift">{{ __('Rec Box Shift') }}</label>
-                                <input type="text" class="form-control" id="rec_box_shift" name="rec_box_shift">
+                                <input type="text" class="form-control" id="rec_box_shift" name="rec_box_shift" value="0">
                             </div>
 
                             <div class="form-group">
                                 <label for="rec_box_unlimited">{{ __('Rec Box Unlimited') }}</label>
-                                <input type="text" class="form-control" id="rec_box_unlimited" name="rec_box_unlimited">
+                                <input type="text" class="form-control" id="rec_box_unlimited" name="rec_box_unlimited" value="0">
                             </div>
 
                             <div class="form-group">
                                 <label for="last_value">{{ __('Last Value') }}</label>
-                                <input type="text" class="form-control" id="last_value" name="last_value">
+                                <input type="text" class="form-control" id="last_value" name="last_value" value="0">
                             </div>
 
                             <div class="form-group">
                                 <label for="variacion_number">{{ __('Variation Number') }}</label>
-                                <input type="text" class="form-control" id="variacion_number" name="variacion_number">
+                                <input type="text" class="form-control" id="variacion_number" name="variacion_number" value="0.01">
                             </div>
 
                             <div class="form-group">
@@ -139,7 +159,7 @@
 
                             <div class="form-group">
                                 <label for="dimension_default">{{ __('Dimension Default') }}</label>
-                                <input type="text" class="form-control" id="dimension_default" name="dimension_default">
+                                <input type="text" class="form-control" id="dimension_default" name="dimension_default" value="30000">
                             </div>
 
                             <div class="form-group">
@@ -149,7 +169,7 @@
 
                             <div class="form-group">
                                 <label for="dimension_variacion">{{ __('Dimension Variation') }}</label>
-                                <input type="text" class="form-control" id="dimension_variacion" name="dimension_variacion">
+                                <input type="text" class="form-control" id="dimension_variacion" name="dimension_variacion" value="20">
                             </div>
 
                             <div class="form-group">
@@ -164,17 +184,17 @@
 
                             <div class="form-group">
                                 <label for="unic_code_order">{{ __('Unic Code Order') }}</label>
-                                <input type="text" class="form-control" id="unic_code_order" name="unic_code_order">
+                                <input type="text" class="form-control" id="unic_code_order" name="unic_code_order" value="{{ uniqid() }}">
                             </div>
 
                             <div class="form-group">
                                 <label for="shift_type">{{ __('Shift Type') }}</label>
-                                <input type="text" class="form-control" id="shift_type" name="shift_type">
+                                <input type="text" class="form-control" id="shift_type" name="shift_type"  value="shift">
                             </div>
 
                             <div class="form-group">
                                 <label for="event">{{ __('Event') }}</label>
-                                <input type="text" class="form-control" id="event" name="event">
+                                <input type="text" class="form-control" id="event" name="event" value="start">
                             </div>
 
                             <div class="form-group">
@@ -183,54 +203,29 @@
                             </div>
 
                             <div class="form-group">
-                                <label for="optimal_production_time">{{ __('Optimal Production Time') }}</label>
-                                <input type="number" class="form-control" id="optimal_production_time" name="optimal_production_time">
-                            </div>
-
-                            <div class="form-group">
-                                <label for="reduced_speed_time_multiplier">{{ __('Reduced Speed Time Multiplier') }}</label>
-                                <input type="number" class="form-control" id="reduced_speed_time_multiplier" name="reduced_speed_time_multiplier">
-                            </div>
-
-                            <div class="form-group">
                                 <label for="barcoder_id">{{ __('Barcoder ID') }}</label>
                                 <input type="text" class="form-control" id="barcoder_id" name="barcoder_id">
                             </div>
 
                             <div class="form-group">
-                                <label for="orderId">{{ __('Order ID') }}</label>
-                                <input type="text" class="form-control" id="orderId" name="orderId">
-                            </div>
-
-                            <div class="form-group">
-                                <label for="quantity">{{ __('Quantity') }}</label>
-                                <input type="number" class="form-control" id="quantity" name="quantity">
-                            </div>
-
-                            <div class="form-group">
-                                <label for="uds">{{ __('Units Per Box') }}</label>
-                                <input type="number" class="form-control" id="uds" name="uds">
-                            </div>
-
-                            <div class="form-group">
                                 <label for="box_type">{{ __('Box Type') }}</label>
-                                <input type="text" class="form-control" id="box_type" name="box_type">
+                                <input type="text" class="form-control" id="box_type" name="box_type" value="Caja/s">
                             </div>
 
                             <div class="form-group">
                                 <label for="group">{{ __('Group') }}</label>
-                                <input type="number" class="form-control" id="group" name="group">
+                                <input type="number" class="form-control" id="group" name="group" value="0">
                             </div>
-
                             <div class="form-group">
                                 <label for="model_type">{{ __('Model Type') }}</label>
-                                <input type="number" class="form-control" id="model_type" name="model_type">
-                            </div>
-
-                            <div class="form-group">
-                                <label for="dosage_order">{{ __('Dosage Order') }}</label>
-                                <input type="text" class="form-control" id="dosage_order" name="dosage_order">
-                            </div>
+                                <select class="form-control" id="model_type" name="model_type">
+                                    <option value="0">{{ __('Conteo') }}</option>
+                                    <option value="1">{{ __('Materia Prima') }} 1</option>
+                                    <option value="2">{{ __('Materia Prima') }} 2</option>
+                                    <option value="3">{{ __('Materia Prima') }} 3</option>
+                                    <option value="4">{{ __('Materia Prima') }} 4</option>
+                                </select>
+                            </div>                            
 
                             <div class="form-group">
                                 <label for="box_width">{{ __('Box Width') }}</label>
@@ -242,20 +237,6 @@
                                 <input type="number" class="form-control" id="box_length" name="box_length">
                             </div>
 
-                            <div class="form-group">
-                                <label for="productName">{{ __('Product Name') }}</label>
-                                <input type="text" class="form-control" id="productName" name="productName">
-                            </div>
-
-                            <div class="form-group">
-                                <label for="count_week_0">{{ __('Count Week 0') }}</label>
-                                <input type="number" class="form-control" id="count_week_0" name="count_week_0">
-                            </div>
-
-                            <div class="form-group">
-                                <label for="count_week_1">{{ __('Count Week 1') }}</label>
-                                <input type="number" class="form-control" id="count_week_1" name="count_week_1">
-                            </div>
                             <!-- Campo nuevo: is_material_receiver -->
                             <div class="form-group">
                                 <label for="is_material_receiver">{{ __('Is Material Receiver') }}</label>

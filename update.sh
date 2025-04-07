@@ -277,6 +277,9 @@ php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 
+sudo chown -R www-data:www-data /var/www/html/storage
+
+
 chmod +x /var/www/html/update.sh
 
 echo "Proceso completado con éxito."

@@ -611,5 +611,10 @@
     "Shift History": "Historial de Turnos",
     "Shift History for Production Line": "Historial de Turnos para la Línea de Producción",
     "Last Record": "Último Registro",
-    "No history records found.": "No se encontraron registros de historial."
+    "No history records found.": "No se encontraron registros de historial.",
+    "Min Correction Percentage": "Porcentaje de Corrección Mínimo (20%)",
+    "Max Correction Percentage": "Porcentaje de Corrección Máximo (98%)",
+    "Materia Prima": "Materia Prima",
+    "Conteo": "Contador",
+    "Reanudar": "Reanudar"
   }

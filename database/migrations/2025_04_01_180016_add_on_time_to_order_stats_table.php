@@ -11,7 +11,7 @@ class AddOnTimeToOrderStatsTable extends Migration
         Schema::table('order_stats', function (Blueprint $table) {
             // Agregar la columna on_time como integer (int(11)) con valor por defecto 0.
             // En Laravel, al usar integer() se crea por defecto un int(11) en MySQL.
-            $table->integer('on_time')->default(0)->after('ultima_columna_existente');
+            $table->integer('on_time')->default(0)->after('id');
         });
     }
 
