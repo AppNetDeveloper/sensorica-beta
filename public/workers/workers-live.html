@@ -160,10 +160,22 @@
         align-items: center;
     }
     .footer-bar img {
-        height: 50px; /* Ajusta el tamaño según tus necesidades */
+        height: 30px; /* Ajusta el tamaño según tus necesidades */
         margin-right: 30px;
         margin-left: 30px;
     }
+    .floating-logo {
+      position: fixed;
+      bottom: 40px;  /* Distancia desde la parte inferior */
+      right: 20px;   /* Distancia desde la parte derecha */
+      z-index: 9999; /* Asegura que esté por encima del contenido */
+    }
+    .floating-logo img {
+      height: 50px;  /* Ajusta el tamaño a tu gusto */
+      /* Añade margen, sombra, borde, etc., si deseas un estilo especial */
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2); /* sombra */
+    }
+
   </style>
 </head>
 <body>
@@ -177,10 +189,16 @@
             </div>
         </div>
 
+        <!-- Logo flotante -->
+        <div class="floating-logo">
+          <img src="logo-float.png" alt="autoconto logo">
+        </div>
+        <!-- Barra de herramientas -->
+
         <!-- Footer / franja inferior -->
         <footer class="footer-bar">
             <i class="fa fa-file-excel icon" id="exportExcel" title="Exportar a Excel"></i>
-            <img src="logo.png" alt="autoconto logo">
+           <!--  <img src="logo.png" alt="autoconto logo"> -->
         </footer>
     </div>
 

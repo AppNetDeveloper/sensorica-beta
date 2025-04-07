@@ -635,10 +635,14 @@
                                             contentType: 'application/json',
                                             data: JSON.stringify(result.value),
                                             success: function() {
+                                                // Reiniciamos el color al cerrar el modal
+                                                selectedRfidColor = null;
                                                 Swal.fire('Éxito', 'Relación añadida.', 'success');
                                                 table.ajax.reload();
                                             },
                                             error: function(xhr) {
+                                                // Reiniciamos el color al cerrar el modal
+                                                selectedRfidColor = null;
                                                 let errorMsg = xhr.responseJSON ? JSON.stringify(xhr.responseJSON) : xhr.responseText;
                                                 Swal.fire('Error', errorMsg, 'error');
                                             }
