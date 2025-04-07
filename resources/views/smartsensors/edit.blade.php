@@ -43,6 +43,16 @@
         </div>
 
         <div class="form-group">
+            <label for="min_correction_percentage">{{ __('Min Correction Percentage') }}</label>
+            <input type="text" class="form-control" id="min_correction_percentage" name="min_correction_percentage" value="{{ $sensor->min_correction_percentage }}">
+        </div>
+
+        <div class="form-group">
+            <label for="max_correction_percentage">{{ __('Max Correction Percentage') }}</label>
+            <input type="text" class="form-control" id="max_correction_percentage" name="max_correction_percentage" value="{{ $sensor->max_correction_percentage }}">
+        </div>
+
+        <div class="form-group">
             <label for="json_api">{{ __('JSON API') }}</label>
             <textarea name="json_api" class="form-control" rows="3">{{ $sensor->json_api }}</textarea>
         </div>

@@ -51,12 +51,12 @@
 
                             <div class="form-group">
                                 <label for="min_correction_percentage">{{ __('Min Correction Percentage') }}</label>
-                                <input type="text" class="form-control" id="min_correction_percentage" name="conversion_factor" value="20">
+                                <input type="text" class="form-control" id="min_correction_percentage" name="min_correction_percentage" value="20">
                             </div>
 
                             <div class="form-group">
                                 <label for="max_correction_percentage">{{ __('Max Correction Percentage') }}</label>
-                                <input type="text" class="form-control" id="max_correction_percentage" name="conversion_factor" value="98">
+                                <input type="text" class="form-control" id="max_correction_percentage" name="max_correction_percentage" value="98">
                             </div>
 
                             <div class="form-group">

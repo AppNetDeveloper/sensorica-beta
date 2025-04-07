@@ -51,6 +51,17 @@
                                 <input type="text" class="form-control" id="conversion_factor" name="conversion_factor" value="{{ $modbus->conversion_factor }}">
                             </div>
 
+
+                            <div class="form-group">
+                                <label for="min_correction_percentage">{{ __('Min Correction Percentage') }}</label>
+                                <input type="text" class="form-control" id="min_correction_percentage" name="min_correction_percentage" value="{{ $modbus->min_correction_percentage }}">
+                            </div>
+                    
+                            <div class="form-group">
+                                <label for="max_correction_percentage">{{ __('Max Correction Percentage') }}</label>
+                                <input type="text" class="form-control" id="max_correction_percentage" name="max_correction_percentage" value="{{ $modbus->max_correction_percentage }}">
+                            </div>
+
                             <div class="form-group">
                                 <label for="total_kg_order">{{ __('Total KG Order') }}</label>
                                 <input type="text" class="form-control" id="total_kg_order" name="total_kg_order" value="{{ $modbus->total_kg_order }}">
