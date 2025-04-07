@@ -228,6 +228,17 @@ class CalculateOptimalProductionTime extends Command
                         $this->updateProductListIfNeeded($modelProduct, $optimalProductionTime);
 
                         $this->info("Se actualizó el registro en optimal_sensor_times para el sensor {$sensor->name}ID: {$sensor->id}  (Producto: {$modelProduct}) debido a que han pasado más de 6 días desde la última actualización");
+                    } else if ($optimalProductionTime > $optimalSensorTime->optimal_time * (1 + $sensor->min_correction_percentage / 100)) {
+                        // Se actualiza el registro ya que la diferencia supera el porcentaje mínimo seleccionado
+                        $calcValue= $optimalProductionTime * ($sensor->max_correction_percentage / 100);
+                        $this->info("Calculo : {$calcValue},  Datos de calculo : {$sensor->max_correction_percentage}, {$sensor->min_correction_percentage}");
+                        $optimalSensorTime->optimal_time = $calcValue;
+                        $optimalSensorTime->save();
+
+                        // Actualizar la tabla 'product_lists' con el tiempo óptimo calculado, si es menor al existente.
+                       $this->updateProductListIfNeeded($modelProduct, $optimalProductionTime);
+
+                        $this->info("Se actualizó el registro en optimal_sensor_times para el sensor {$sensor->name}ID: {$sensor->id}  (Producto: {$modelProduct}) debido a que hay una diferencia mayor del procentaje selecionado");
                     } else {
                         // Si ya existe, el nuevo tiempo es mayor que el actual y no han pasado 6 días, no se hace nada
                     }
@@ -248,9 +259,9 @@ class CalculateOptimalProductionTime extends Command
 
                     if ($optimalSensorRecord) {
                         // Si se encontró el registro, comparamos el tiempo óptimo calculado con el almacenado
-                        if ($optimalProductionTime > $optimalSensorRecord->optimal_time) {
+                        if ($optimalProductionTime > $optimalSensorRecord->optimal_time && $optimalSensorRecord->optimal_time < 1) {
                             $sensor->optimal_production_time = $optimalSensorRecord->optimal_time;
-                        } else {
+                        }else {
                             $sensor->optimal_production_time = $optimalProductionTime;
                         }
                         $this->info("Sensor {$sensor->name} actualizado con optimal_production_time: {$sensor->optimal_production_time} basado en optimal_sensor_times.");
@@ -365,6 +376,17 @@ private function processSensorOtherTypes(Sensor $sensor)
                     $optimalSensorTime->optimal_time = $calculatedOptimalTime;
                     $optimalSensorTime->save();
                     $this->info("Se actualizó el registro en optimal_sensor_times para el sensor {$sensor->name} (Producto: {$modelProduct}) debido a que han pasado más de 6 días desde la última actualización");
+                }  else if ($optimalProductionTime > $optimalSensorTime->optimal_time * (1 + $sensor->min_correction_percentage / 100)) {
+                    // Se actualiza el registro ya que la diferencia supera el porcentaje mínimo seleccionado
+                    $calcValue= $optimalProductionTime * ($sensor->max_correction_percentage / 100);
+                    $this->info("Calculo : {$calcValue},  Datos de calculo : {$sensor->max_correction_percentage}, {$sensor->min_correction_percentage}");
+                    $optimalSensorTime->optimal_time = $calcValue;
+                    $optimalSensorTime->save();
+
+                    // Actualizar la tabla 'product_lists' con el tiempo óptimo calculado, si es menor al existente.
+                   $this->updateProductListIfNeeded($modelProduct, $optimalProductionTime);
+
+                    $this->info("Se actualizó el registro en optimal_sensor_times para el sensor {$sensor->name}ID: {$sensor->id}  (Producto: {$modelProduct}) debido a que hay una diferencia mayor del procentaje selecionado");
                 } else {
                     // Si ya existe, el nuevo tiempo es mayor que el actual y no han pasado 6 días, no se hace nada
                 }

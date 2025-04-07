@@ -327,8 +327,23 @@ class CalculateProductionMonitorOeev2 extends Command
 
 
             //log slowtime
-           $this->info("[" . Carbon::now()->toDateTimeString() . "] Slow Time: {$slowTime} segundos, Calculo por {$secondsPerUnitTheoretical} * {$unitsDelayed} unidades");
+            $this->info("[" . Carbon::now()->toDateTimeString() . "] Slow Time: {$slowTime} segundos, Calculo por {$secondsPerUnitTheoretical} * {$unitsDelayed} unidades");
 
+            $oeeModbus = $currentOrder->oee_modbus ?? 0;
+            $oeeRfid = $currentOrder->oee_rfid ?? 0;
+
+            // Inicializamos el contador con 1 para el oee principal.
+            $monitorOee = 1;
+
+            if ($oeeModbus > 0) {
+                $monitorOee++;
+            }
+
+            if ($oeeRfid > 0) {
+                $monitorOee++;
+            }
+
+            $totalOee = ($oee + $oeeModbus + $oeeRfid) / $monitorOee;
             
             // Actualizar la orden si existe
             if ($currentOrder) {
@@ -341,7 +356,8 @@ class CalculateProductionMonitorOeev2 extends Command
                 $currentOrder->slow_time = $slowTime;
                 $currentOrder->theoretical_end_time = $unitsMadeTheoreticalEnd;
                 $currentOrder->real_end_time = $unitsMadeRealEnd;
-                $currentOrder->oee = $oee;
+                $currentOrder->oee_sensors = $oee;
+                $currentOrder->oee = $totalOee;
                 $currentOrder->on_time = $orderTimeActivitySeconds;
                 $currentOrder->save();
             }
@@ -376,7 +392,7 @@ class CalculateProductionMonitorOeev2 extends Command
         $mqttTopicRealMet03 = $monitor->mqtt_topic . '-met03/real';
         $mqttTopicTeoricaMet03 = $monitor->mqtt_topic . '-met03/teorica';
 
-        $jsonMonitorOEE=$this->preparedJsonValue($oee, 0);
+        $jsonMonitorOEE=$this->preparedJsonValue($totalOee, 0);
 
         // Publicar mensajes MQTT
         $this->publishMqttMessage($monitor->topic_oee . '/monitor_oee', $jsonMonitorOEE);
