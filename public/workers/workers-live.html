@@ -1,21 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Gestión de Producción - Tarjetas</title>
-  <!-- Hoja de estilos SweetAlert2 -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
-  <!-- Font Awesome para íconos -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <!-- SweetAlert2 CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" />
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
   <!-- jQuery -->
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  <!-- Script SweetAlert2 -->
+  <!-- SweetAlert2 JS -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <!-- Script SheetJS -->
+  <!-- SheetJS -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
-    /* Eliminamos el fondo negro */
+    /* Estilos generales */
     body {
       font-family: Arial, sans-serif;
       margin: 0;
@@ -60,12 +60,11 @@
       color: #ffc107;
     }
     .content {
-      padding: 8px; /* Reducir el padding */
-      max-width: 100%; /* Para que ocupe todo el ancho */
-      margin: 0;       /* Quitar auto-centramiento */
-      padding-bottom: 80px; /* Ajusta este valor al alto de tu footer */
+      padding: 8px;
+      max-width: 100%;
+      margin: 0;
+      padding-bottom: 80px;
     }
-
     .card-container {
       display: flex;
       flex-wrap: wrap;
@@ -77,39 +76,27 @@
       border: 1px solid #ddd;
       border-radius: 8px;
       padding: 15px;
-      width: calc(100% / 6 - 10px);
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      width: calc(100% / 5 - 10px);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
       text-align: center;
       transition: transform 0.3s;
     }
     @media (max-width: 1800px) {
-      .card {
-        width: calc(100% / 5 - 10px);
-      }
+      .card { width: calc(100% / 4 - 10px); }
     }
     @media (max-width: 1500px) {
-      .card {
-        width: calc(100% / 4 - 10px);
-      }
+      .card { width: calc(100% / 3 - 10px); }
     }
     @media (max-width: 1200px) {
-      .card {
-        width: calc(100% / 3 - 10px);
-      }
+      .card { width: calc(100% / 2 - 10px); }
     }
     @media (max-width: 768px) {
-      .card {
-        width: calc(100% / 2 - 10px);
-      }
+      .card { width: calc(100% / 1 - 10px); }
     }
     @media (max-width: 480px) {
-      .card {
-        width: calc(100% / 1 - 10px);
-      }
+      .card { width: calc(100% / 1 - 10px); }
     }
-    .card:hover {
-      transform: scale(1.05);
-    }
+    .card:hover { transform: scale(1.05); }
     .card h3 {
       margin: 0;
       font-size: var(--nameSize, 1rem);
@@ -142,345 +129,308 @@
     .rfid-item {
       font-size: 1rem;
       font-weight: bold;
-      background: rgba(0, 0, 0, 0.1);
+      background: rgba(0,0,0,0.1);
       padding: 5px 10px;
       border-radius: 5px;
     }
-    /* Si deseas el footer (franja inferior), lo mantienes o eliminas según prefieras */
+    /* Barra apilada */
+    .stacked-bar {
+      display: flex;
+      margin: 10px 0;
+      border-radius: 5px;
+      overflow: hidden;
+      height: 30px;
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.2);
+      opacity: 0.75;
+    }
+    .stacked-section {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      font-weight: bold;
+    }
+    /* Footer */
     .footer-bar {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        background-color: #e2c100;
-        color: #000;
-        padding: 10px 20px;
-        display: flex;
-        justify-content: space-between; /* icono a la izquierda y logo a la derecha */
-        align-items: center;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background-color: #e2c100;
+      color: #000;
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
     .footer-bar img {
-        height: 30px; /* Ajusta el tamaño según tus necesidades */
-        margin-right: 30px;
-        margin-left: 30px;
+      height: 30px;
+      margin: 0 30px;
     }
     .floating-logo {
       position: fixed;
-      bottom: 40px;  /* Distancia desde la parte inferior */
-      right: 20px;   /* Distancia desde la parte derecha */
-      z-index: 9999; /* Asegura que esté por encima del contenido */
+      bottom: 40px;
+      right: 20px;
+      z-index: 9999;
     }
     .floating-logo img {
-      height: 50px;  /* Ajusta el tamaño a tu gusto */
-      /* Añade margen, sombra, borde, etc., si deseas un estilo especial */
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2); /* sombra */
+      height: 50px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
     }
-    .yellow {
-      color: #e6ce38 !important;
+    /* Colores RFID */
+    .blue, .BLUE {
+      background-color: #003049 !important;
+      color: white !important;
     }
-
-
+    .yellow, .YELLOW {
+      background-color: #FFC300 !important;
+      color: white !important;
+    }
+    .red, .RED {
+      background-color: #d62828 !important;
+      color: white !important;
+    }
   </style>
 </head>
 <body>
-    <div class="screen-container">
-
-
-        <!-- Content -->
-        <div class="content">
-            <div class="card-container" id="cardContainer">
-                <!-- Las tarjetas se llenarán dinámicamente aquí -->
-            </div>
-        </div>
-
-        <!-- Logo flotante -->
-        <div class="floating-logo">
-          <img src="logo-float.png" alt="autoconto logo">
-        </div>
-        <!-- Barra de herramientas -->
-
-        <!-- Footer / franja inferior -->
-        <footer class="footer-bar">
-            <i class="fa fa-file-excel icon" id="exportExcel" title="Exportar a Excel"></i>
-           <!--  <img src="logo.png" alt="autoconto logo"> -->
-        </footer>
+  <div class="screen-container">
+    <!-- Content -->
+    <div class="content">
+      <div class="card-container" id="cardContainer">
+        <!-- Las tarjetas se llenarán dinámicamente aquí -->
+      </div>
     </div>
-
-    <script>
-        const workersApiUrl = '/api/workers';
+    <!-- Logo flotante -->
+    <div class="floating-logo">
+      <img src="logo-float.png" alt="autoconto logo" />
+    </div>
+    <!-- Footer -->
+    <footer class="footer-bar">
+      <i class="fa fa-file-excel icon" id="exportExcel" title="Exportar a Excel"></i>
+    </footer>
+  </div>
+  <script>
+    const workersApiUrl = '/api/workers';
     
-        // 📌 Variable global para almacenar los colores RFID
-        let rfidColorsGlobal = [];
+    // Variable global para almacenar los colores RFID
+    let rfidColorsGlobal = [];
     
-        // 📌 Obtener parámetros de la URL con valores predeterminados
-        function getUrlParams() {
-            const params = new URLSearchParams(window.location.search);
-            return {
-                shift: params.get('shift') === 'true',
-                order: params.get('order') === 'true',
-                name: params.get('name') === 'true',
-                id: params.get('id') === 'true',
-                nameSize: params.get('nameSize') || '1rem',
-                numberSize: params.get('numberSize') || '1.8rem',
-                idSize: params.get('idSize') || '1rem',
-                labelSize: params.get('labelSize') || '0.9rem',
-            };
-        }
+    // Función para obtener parámetros de la URL (si es necesario)
+    function getUrlParams() {
+      const params = new URLSearchParams(window.location.search);
+      return {
+        shift: params.get('shift') === 'true',
+        order: params.get('order') === 'true',
+        name: params.get('name') === 'true',
+        id: params.get('id') === 'true',
+        nameSize: params.get('nameSize') || '1rem',
+        numberSize: params.get('numberSize') || '1.8rem',
+        idSize: params.get('idSize') || '1rem',
+        labelSize: params.get('labelSize') || '0.9rem',
+      };
+    }
     
-        const config = getUrlParams();
+    const config = getUrlParams();
+    document.documentElement.style.setProperty('--nameSize', config.nameSize);
+    document.documentElement.style.setProperty('--numberSize', config.numberSize);
+    document.documentElement.style.setProperty('--labelSize', config.labelSize);
     
-        // Aplicar estilos dinámicos a la página
-        document.documentElement.style.setProperty('--nameSize', config.nameSize);
-        document.documentElement.style.setProperty('--numberSize', config.numberSize);
-        document.documentElement.style.setProperty('--labelSize', config.labelSize);
+    // Variable global para almacenar operadores
+    let operatorsData = [];
     
-
-    
-        // 📌 Variable global para almacenar los operadores
-        let operatorsData = [];
-
-        // 📌 Función para cargar operadores y colores RFID desde la API
-        function loadOperators() {
-            $.ajax({
-                url: `${workersApiUrl}/list-all`,
-                method: 'GET',
-                success: function (response) {
-                    const operators = response.operators; 
-                    rfidColorsGlobal = response.rfid_colors || []; // 📌 Guardamos los colores RFID globalmente
-
-                    operatorsData = operators; 
-
-                    const container = $('#cardContainer');
-                    container.empty();
-
-                    if (!operators || operators.length === 0) {
-                        container.append('<p>No hay operadores disponibles.</p>');
-                        return;
-                    }
-
-                    const maxTurn = Math.max(...operators.map(o => o.count_shift || 0));
-                    const maxOrder = Math.max(...operators.map(o => o.count_order || 0));
-
-                    operators.forEach(operator => {
-                        const turnValue = operator.count_shift || 0;
-                        const orderValue = operator.count_order || 0;
-
-                        const turnClass = turnValue === 0 ? 'black' : turnValue === maxTurn ? 'black' : 'black';
-                        const orderClass = orderValue === 0 ? 'black' : orderValue === maxOrder ? 'black' : 'black';
-
-                        // 📌 Creamos un objeto para almacenar los productos por color RFID
-                        let rfidHtml = '';
-                        let rfidProducts = {};
-
-                        operator.operator_posts.forEach(post => {
-                            const colorName = post.rfid_color_name; // El color RFID
-                            const productName = post.product_list_name; // El nombre del producto
-                            const count = post.count; // El valor de count
-
-                            if (!rfidProducts[colorName]) {
-                                rfidProducts[colorName] = [];
-                            }
-                            rfidProducts[colorName].push({
-                                productName: productName,
-                                count: count,
-                            });
-                        });
-
-                        // Generar el HTML para los productos de cada color RFID
-                        if (rfidColorsGlobal.length > 0) {
-                            // Dentro de tu bucle donde construyes la tarjeta, 
-                            // genera rfidHtml de esta forma:
-                            rfidHtml = `
-                              <div class="rfid-container" style="display: flex; justify-content: center; gap: 10px; margin-top: 10px;">
-                                ${rfidColorsGlobal.map(color => {
-                                  const products = rfidProducts[color.name] || [];
-                                  
-                                  // Para cada producto, generamos un "cuadro" con la franja de color y el número
-                                  const colorHtml = products.map(product => {
-                                    // Verifica si el nombre del producto no es nulo/vacío
-                                    if (product.productName && product.productName.trim() !== "") {
-                                      // Trunca el nombre si excede 10 caracteres
-                                      const truncatedName = product.productName.length > 10 
-                                        ? product.productName.substring(0, 10) + '...' 
-                                        : product.productName;
-
-                                      return `
-                                        <div style="
-                                          background: #fff;
-                                          border: 1px solid #ddd;
-                                          border-radius: 5px;
-                                          width: 80px;
-                                          text-align: center;
-                                          padding: 10px;
-                                        ">
-                                          <!-- Contenedor para la franja de color y el número -->
-                                          <div style="display: flex; align-items: center;">
-                                            <!-- Franja vertical de color -->
-                                            <div style="
-                                              width: 5px;
-                                              height: 40px;
-                                              background-color: ${color.name};
-                                              margin-right: 8px;
-                                            "></div>
-                                            <!-- Número grande -->
-                                            <div style="font-size: 1.8rem; font-weight: bold; color: #333;">
-                                              ${product.count}
-                                            </div>
-                                          </div>
-                                          <!-- Nombre debajo -->
-                                          <div style="margin-top: 5px; font-size: 0.9rem; color: #555;">
-                                            ${truncatedName}
-                                          </div>
-                                        </div>
-                                      `;
-                                    } 
-                                    // Si no hay nombre, no retorna nada
-                                    return '';
-                                  }).join('');
-
-                                  return colorHtml;
-                                }).join('')}
-                              </div>
-                            `;
-                        }
-
-                        // Construir la tarjeta
-                        // Primero, calcula los porcentajes para la barra apilada:
-                        let total = turnValue + orderValue;
-                        let turnPerc, orderPerc;
-                        if (total === 0) {
-                          // Si ambos son 0, forzamos un 50/50 en el relleno
-                          turnPerc = 50;
-                          orderPerc = 50;
-                        } else {
-                          turnPerc = ((turnValue / total) * 100).toFixed(0);
-                          orderPerc = ((orderValue / total) * 100).toFixed(0);
-                        }
-
-                        // Construir la barra apilada:
-                        const stackedBar = `
+    // Función para cargar operadores y colores RFID
+    function loadOperators() {
+      $.ajax({
+        url: `${workersApiUrl}/list-all`,
+        method: 'GET',
+        success: function(response) {
+          const operators = response.operators;
+          rfidColorsGlobal = response.rfid_colors || [];
+          operatorsData = operators;
+          const container = $('#cardContainer');
+          container.empty();
+          
+          if (!operators || operators.length === 0) {
+            container.append('<p>No hay operadores disponibles.</p>');
+            return;
+          }
+          
+          // Por cada operador:
+          operators.forEach(operator => {
+            // Extraemos operator_posts
+            let rfidHtml = '';
+            let rfidProducts = {};
+            operator.operator_posts.forEach(post => {
+              const colorName = post.rfid_color_name;
+              const productName = post.product_list_name;
+              const count = post.count;
+              // Agrupamos por color
+              if (!rfidProducts[colorName]) {
+                rfidProducts[colorName] = [];
+              }
+              rfidProducts[colorName].push({
+                productName: productName,
+                count: count
+              });
+            });
+            
+            // Generamos el HTML para la sección RFID (muestra cada producto en un recuadro)
+            if (rfidColorsGlobal.length > 0) {
+              rfidHtml = `
+                <div class="rfid-container" style="display: flex; justify-content: center; gap: 10px; margin-top: 10px;">
+                  ${rfidColorsGlobal.map(color => {
+                    const products = rfidProducts[color.name] || [];
+                    const colorHtml = products.map(product => {
+                      if (product.productName && product.productName.trim() !== "") {
+                        const truncatedName = product.productName.length > 20
+                          ? product.productName.substring(0, 20) + '...'
+                          : product.productName;
+                        return `
                           <div style="
-                            display: flex;
-                            margin: 10px 0;
+                            background: #fff;
+                            border: 1px solid #ddd;
                             border-radius: 5px;
-                            overflow: hidden;
-                            height: 40px;
-                            box-shadow: inset 0 1px 2px rgba(0,0,0,0.2);
+                            width: 80px;
+                            text-align: center;
+                            padding: 10px;
                           ">
-                            <!-- Sección para turnValue -->
-                            <div style="
-                              flex: 0 0 ${turnPerc}%;
-                              background-color: #f0b41f;
-                              display: flex;
-                              justify-content: center;
-                              align-items: center;
-                              color: #343a40;
-                              font-weight: bold;
-                            ">
-                              ${turnValue}
+                            <div style="display: flex; align-items: center;">
+                              <div class="${color.name.toLowerCase()}" style="
+                                width: 5px;
+                                height: 40px;
+                                margin-right: 8px;
+                                opacity: 0.75;
+                              "></div>
+                              <div style="font-size: 1.8rem; font-weight: bold; color: #333;">
+                                ${product.count}
+                              </div>
                             </div>
-                            <!-- Sección para orderValue -->
-                            <div style="
-                              flex: 0 0 ${orderPerc}%;
-                              background-color: #ffe680;
-                              display: flex;
-                              justify-content: center;
-                              align-items: center;
-                              color: #343a40;
-                              font-weight: bold;
-                            ">
-                              ${orderValue}
+                            <div style="margin-top: 5px; font-size: 0.9rem; color: #555;">
+                              ${truncatedName}
                             </div>
                           </div>
                         `;
-
-                        // Construir la tarjeta completa:
-                        const card = `
-                          <div class="card" style="padding: 0; border-radius: 8px; overflow: hidden;">
-                            <!-- Encabezado (Header) que ocupa todo el ancho -->
-                            <div style="
-                              background-color: #faf7f7;
-                              color: #ffffff;
-                              padding: 10px;
-                              width: 100%;
-                              box-sizing: border-box;
-                              border-top-left-radius: 8px;
-                              border-top-right-radius: 8px;
-                            ">
-                              ${config.name ? `
-                                <h3 style="
-                                  margin: 0;
-                                  display: flex;
-                                  justify-content: space-between;
-                                  align-items: center;
-                                  color: black;
-                                ">
-                                  <span>${operator.name.length > 10 ? operator.name.substring(0, 10) + '...' : operator.name}</span>
-                                  <span>${operator.id}</span>
-                                </h3>
-                              ` : ''}
-                            </div>
-
-                            <!-- Cuerpo (Body) de la tarjeta -->
-                            <div style="padding: 15px;">
-                              ${config.id ? `
-                                <p style="font-size: ${config.idSize}; margin: 0 0 10px;">
-                                  <span>Tiempo Medio / UDS:</span> 5:03
-                                </p>
-                              ` : ''}
-
-                              <!-- Barra apilada con turnValue y orderValue -->
-                              ${stackedBar}                              
-                              <!-- Sección RFID (si existe) -->
-                              ${rfidHtml}
-                            </div>
-                          </div>
-                        `;
-
-                        container.append(card);
-                    });
-                },
-                error: function (xhr) {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error al cargar operadores',
-                        text: `Status: ${xhr.status}. Mensaje: ${xhr.responseJSON?.error || 'Error desconocido'}`,
-                    });
-                },
-            });
-        }
-
-        // 📌 Función para exportar datos a Excel
-        function exportToExcel() {
-            if (operatorsData.length === 0) {
-                Swal.fire('Error', 'No hay datos para exportar.', 'error');
-                return;
+                      }
+                      return '';
+                    }).join('');
+                    return colorHtml;
+                  }).join('')}
+                </div>
+              `;
             }
-            const rfidColorNames = rfidColorsGlobal.map(color => color.name);
-            const rows = operatorsData.map(operator => {
-                let row = {
-                    ...(config.name && { Nombre: operator.name }),
-                    ...(config.id && { ID: operator.id }),
-                    ...(config.shift && { Turno: operator.count_shift || 0 }),
-                    ...(config.order && { Orden: operator.count_order || 0 }),
-                };
-                rfidColorNames.forEach(color => {
-                    row[color] = 0;
-                });
-                return row;
+            
+            // Construir la barra apilada usando SOLO los valores de operator_posts
+            // Calculamos la suma de count para cada color definido en rfidColorsGlobal
+            let totalRFID = 0;
+            let colorCounts = {};
+            rfidColorsGlobal.forEach(color => {
+              const products = rfidProducts[color.name] || [];
+              const sumForColor = products.reduce((acc, p) => acc + Number(p.count), 0);
+              colorCounts[color.name] = sumForColor;
+              totalRFID += sumForColor;
             });
-            const worksheet = XLSX.utils.json_to_sheet(rows);
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, 'Operadores');
-            XLSX.writeFile(workbook, 'operadores.xlsx');
+            
+            // Filtramos solo los colores con count > 0
+            const usedColors = rfidColorsGlobal.filter(color => colorCounts[color.name] > 0);
+            
+            let stackedBar = '';
+            if (usedColors.length > 0) {
+              const totalUsed = usedColors.reduce((acc, color) => acc + colorCounts[color.name], 0);
+              stackedBar = `<div class="stacked-bar">`;
+              usedColors.forEach(color => {
+                const count = colorCounts[color.name];
+                let percentage = totalUsed === 0 ? (100 / usedColors.length) : ((count / totalUsed) * 100);
+                percentage = percentage.toFixed(0);
+                stackedBar += `
+                  <div class="stacked-section ${color.name.toLowerCase()}" style="flex: 0 0 ${percentage}%; background: inherit;">
+                    ${count}
+                  </div>
+                `;
+              });
+              stackedBar += `</div>`;
+            } else {
+              // Si no hay asignación (todos count son 0), mostramos un mensaje o una barra indicativa
+              stackedBar = `
+                <div class="stacked-bar" style="display: flex; justify-content: center; align-items: center; background: #ccc;">
+                  <span style="color: white; font-weight: bold;">Sin asignación</span>
+                </div>
+              `;
+            }
+            
+            // Construir la tarjeta completa
+            const card = `
+              <div class="card" style="padding: 0; border-radius: 8px; overflow: hidden;">
+                <div style="
+                  background-color: #faf7f7;
+                  color: #ffffff;
+                  padding: 10px;
+                  width: 100%;
+                  box-sizing: border-box;
+                  border-top-left-radius: 8px;
+                  border-top-right-radius: 8px;
+                ">
+                  ${config.name ? `
+                    <h3 style="
+                      margin: 0;
+                      display: flex;
+                      justify-content: space-between;
+                      align-items: center;
+                      color: black;
+                    ">
+                      <span>${operator.name.length > 20 ? operator.name.substring(0,20) + '...' : operator.name}</span>
+                      <span>${operator.id}</span>
+                    </h3>
+                  ` : ''}
+                </div>
+                <div style="padding: 15px;">
+                  ${stackedBar}
+                  ${rfidHtml}
+                </div>
+              </div>
+            `;
+            
+            container.append(card);
+          });
+        },
+        error: function(xhr) {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error al cargar operadores',
+            text: `Status: ${xhr.status}. Mensaje: ${xhr.responseJSON?.error || 'Error desconocido'}`,
+          });
         }
+      });
+    }
     
-        // 📌 Inicializar la carga de operadores y la exportación a Excel
-        $(document).ready(function () {
-            loadOperators();
-            setInterval(loadOperators, 5000);
-            $('#exportExcel').click(exportToExcel);
+    // Función para exportar a Excel (se mantiene sin cambios)
+    function exportToExcel() {
+      if (operatorsData.length === 0) {
+        Swal.fire('Error', 'No hay datos para exportar.', 'error');
+        return;
+      }
+      const rfidColorNames = rfidColorsGlobal.map(color => color.name);
+      const rows = operatorsData.map(operator => {
+        let row = {
+          ...(config.name && { Nombre: operator.name }),
+          ...(config.id && { ID: operator.id }),
+          // Solo se usarán operator_posts, por lo que count_shift y count_order se omiten
+        };
+        rfidColorNames.forEach(color => {
+          row[color] = 0;
         });
-    </script>
+        return row;
+      });
+      const worksheet = XLSX.utils.json_to_sheet(rows);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Operadores');
+      XLSX.writeFile(workbook, 'operadores.xlsx');
+    }
+    
+    $(document).ready(function() {
+      loadOperators();
+      setInterval(loadOperators, 5000);
+      $('#exportExcel').click(exportToExcel);
+    });
+  </script>
 </body>
 </html>
