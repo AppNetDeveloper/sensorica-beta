@@ -167,6 +167,12 @@
       height: 30px;
       margin: 0 30px;
     }
+    .floating-excel {
+      position: fixed;
+      bottom: 40px;
+      right: 98%;
+      z-index: 9999;
+    }
     .floating-logo {
       position: fixed;
       bottom: 40px;
@@ -204,10 +210,10 @@
     <div class="floating-logo">
       <img src="logo-float.png" alt="autoconto logo" />
     </div>
-    <!-- Footer -->
-    <footer class="footer-bar">
+    <div class="floating-excel">
       <i class="fa fa-file-excel icon" id="exportExcel" title="Exportar a Excel"></i>
-    </footer>
+    </div>
+
   </div>
   <script>
     const workersApiUrl = '/api/workers';
