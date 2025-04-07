@@ -6027,16 +6027,16 @@
         },
         {
             "name": "rawilk/laravel-printing",
-            "version": "v3.0.5",
+            "version": "v3.0.6",
             "source": {
                 "type": "git",
                 "url": "https://github.com/rawilk/laravel-printing.git",
-                "reference": "07f4b4d9a3a1f29e727eecff2b7fe44acc067bd8"
+                "reference": "d5312bebdd540d0b2e2e314fcd74b5ce8545c4b5"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/rawilk/laravel-printing/zipball/07f4b4d9a3a1f29e727eecff2b7fe44acc067bd8",
-                "reference": "07f4b4d9a3a1f29e727eecff2b7fe44acc067bd8",
+                "url": "https://api.github.com/repos/rawilk/laravel-printing/zipball/d5312bebdd540d0b2e2e314fcd74b5ce8545c4b5",
+                "reference": "d5312bebdd540d0b2e2e314fcd74b5ce8545c4b5",
                 "shasum": ""
             },
             "require": {
@@ -6056,11 +6056,7 @@
                 "php-http/socket-client": "^2.1",
                 "psr/http-client": "^1.0",
                 "psr/http-message": "1.*|^2.0",
-                "smalot/cups-ipp": "^0.5.0",
                 "spatie/laravel-ray": "^1.0|^1.29"
-            },
-            "suggest": {
-                "smalot/cups-ipp": "Required when using the CUPS driver"
             },
             "type": "library",
             "extra": {
@@ -6104,7 +6100,7 @@
             ],
             "support": {
                 "issues": "https://github.com/rawilk/laravel-printing/issues",
-                "source": "https://github.com/rawilk/laravel-printing/tree/v3.0.5"
+                "source": "https://github.com/rawilk/laravel-printing/tree/v3.0.6"
             },
             "funding": [
                 {
@@ -6112,7 +6108,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2025-02-26T14:13:49+00:00"
+            "time": "2025-03-31T18:28:37+00:00"
         },
         {
             "name": "silviolleite/laravelpwa",
@@ -6788,16 +6784,16 @@
         },
         {
             "name": "swagger-api/swagger-ui",
-            "version": "v5.20.2",
+            "version": "v5.20.7",
             "source": {
                 "type": "git",
                 "url": "https://github.com/swagger-api/swagger-ui.git",
-                "reference": "25daec9ce963151f6c6a44ac7485fe8d96cbad3f"
+                "reference": "1c0f094653c70d6a69dc652d3713905d924ae916"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/swagger-api/swagger-ui/zipball/25daec9ce963151f6c6a44ac7485fe8d96cbad3f",
-                "reference": "25daec9ce963151f6c6a44ac7485fe8d96cbad3f",
+                "url": "https://api.github.com/repos/swagger-api/swagger-ui/zipball/1c0f094653c70d6a69dc652d3713905d924ae916",
+                "reference": "1c0f094653c70d6a69dc652d3713905d924ae916",
                 "shasum": ""
             },
             "type": "library",
@@ -6843,9 +6839,9 @@
             ],
             "support": {
                 "issues": "https://github.com/swagger-api/swagger-ui/issues",
-                "source": "https://github.com/swagger-api/swagger-ui/tree/v5.20.2"
+                "source": "https://github.com/swagger-api/swagger-ui/tree/v5.20.7"
             },
-            "time": "2025-03-27T14:13:32+00:00"
+            "time": "2025-04-07T07:35:32+00:00"
         },
         {
             "name": "swiftmailer/swiftmailer",
