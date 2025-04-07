@@ -263,6 +263,10 @@
           
           // Por cada operador:
           operators.forEach(operator => {
+              // Si el operador no tiene registros en operator_posts, lo omitimos
+            if (!operator.operator_posts || operator.operator_posts.length === 0) {
+              return;
+            }
             // Extraemos operator_posts
             let rfidHtml = '';
             let rfidProducts = {};
@@ -358,7 +362,7 @@
               // Si no hay asignación (todos count son 0), mostramos un mensaje o una barra indicativa
               stackedBar = `
                 <div class="stacked-bar" style="display: flex; justify-content: center; align-items: center; background: #ccc;">
-                  <span style="color: white; font-weight: bold;">Sin asignación</span>
+                  <span style="color: white; font-weight: bold;">Sin datos</span>
                 </div>
               `;
             }
