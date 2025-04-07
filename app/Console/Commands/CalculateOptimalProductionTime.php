@@ -178,7 +178,8 @@ class CalculateOptimalProductionTime extends Command
 
             // Si se encuentra un producto asociado al sensor...
             if ($modelProduct) {
-                if ((int)$sensor->count_order_1 < 200) {
+                if ((int)$sensor->count_order_1 < 20) {
+                    $this->info("Vamos por debajo de 20 bolsas");
                     if($optimalSensorTime) {
                         $optimalProductionTime = $optimalSensorTime->optimal_time;
                         $this->info("El tiempo óptimo de producción para el sensor actual es!: " . $optimalProductionTime . " segundos.");
@@ -190,6 +191,7 @@ class CalculateOptimalProductionTime extends Command
                     // Calcular el tiempo óptimo de producción para el sensor actual.
                     $optimalProductionTimeAll = $this->calculateOptimalTimeForSensor($sensor, $orderTimeSecondsSinDownTime);
                     //redondeamos a dos decimales
+                    $this->info("Valor calculado sensor ". $sensor->name.": ". $optimalProductionTimeAll );
                     $optimalProductionTime = round($optimalProductionTimeAll, 2);
                 }
                 $this->info("Tiempo optimo para el sensor actual de conteo: sensor {$sensor->name} ID: {$sensor->id} tiempo optimo : " . $optimalProductionTime . " segundos y tiempo actual :". $optimalSensorTime->optimal_time);
@@ -282,10 +284,10 @@ class CalculateOptimalProductionTime extends Command
             }
         } catch (QueryException $e) {
             // Capturar excepciones específicas de la base de datos.
-            $this->error("Database error processing sensor {$sensor->name}: {$e->getMessage()}");
+            $this->error("Database error processing sensor::: {$sensor->name}: {$e->getMessage()}");
         } catch (\Exception $e) {
             // Capturar cualquier otra excepción.
-            $this->error("Error processing sensor {$sensor->name}: {$e->getMessage()}");
+            $this->error("Error processing sensor: {$sensor->name}: {$e->getMessage()}");
         }
     }
 /**
