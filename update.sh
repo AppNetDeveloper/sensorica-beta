@@ -138,7 +138,7 @@ declare -A ENV_VARS=(
     ["LOCAL_SERVER"]="http://127.0.0.1/"
     ["PRODUCTION_MIN_TIME_WEIGHT"]="30"
     ["CLEAR_DB_DAY"]="30"
-    ["RFID_AUTO_ADD=true"]="false"
+    ["RFID_AUTO_ADD"]="true"
 )
 
 ENV_FILE=".env"
@@ -275,8 +275,10 @@ sudo supervisorctl restart all
 
 php artisan cache:clear
 php artisan config:cache
-php artisan route:cache
-php artisan view:cache
+#php artisan route:cache
+#php artisan view:cache
+php artisan config:cache
+
 
 sudo chown -R www-data:www-data /var/www/html/storage
 
