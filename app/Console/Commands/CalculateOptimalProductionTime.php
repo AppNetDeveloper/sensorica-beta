@@ -207,7 +207,8 @@ class CalculateOptimalProductionTime extends Command
                 
                 try {
                     
-                    
+                    //ponemos un log 
+                    $this->info("Sensor name: ".$sensor->name." tiene nuevo calculo:". $optimalProductionTime. "tiempo anterior: ".$sensor->optimal_production_time); 
                     if (!$optimalSensorTime ) {
                         // No existe registro, se crea uno nuevo
                         $optimalSensorTime = new OptimalSensorTime();
