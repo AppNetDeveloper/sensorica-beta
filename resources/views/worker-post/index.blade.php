@@ -541,7 +541,13 @@
                                         return $.post(storeUrl, data)
                                             .done(response => {
                                                 if (response.success) {
-                                                    Swal.fire('Guardado', response.message, 'success');
+                                                    Swal.fire({
+                                                        title: 'Guardado',
+                                                        text: response.message,
+                                                        icon: 'success',
+                                                        timer: 2000,             // 2000 milisegundos = 2 segundos
+                                                        showConfirmButton: false // Oculta el botón, para que se cierre automáticamente
+                                                    });
                                                     table.ajax.reload();
                                                 } else {
                                                     Swal.fire('Error', response.message, 'error');

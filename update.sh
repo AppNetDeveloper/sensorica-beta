@@ -264,6 +264,7 @@ pip3 install scikit-learn tensorflow pandas pymysql joblib --break-system-packag
 pip install pymysql --break-system-packages
 pip install SQLAlchemy --break-system-packages
 
+
 # Reiniciar Supervisor con nueva configuración
 echo "Reconfigurando Supervisor..."
 sudo rm -rf /etc/supervisor/conf.d/*

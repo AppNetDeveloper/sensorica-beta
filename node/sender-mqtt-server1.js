@@ -139,7 +139,7 @@ async function publishToMqtt(fileEntry) {
     return; // Deja el archivo para reintentar en el siguiente ciclo
   }
 
-  mqttClient.publish(data.topic, payload, { qos: 0, retain: true }, (err) => {
+  mqttClient.publish(data.topic, payload, { qos: 0, retain: false }, (err) => {
     if (err) {
       console.error(`${getFormattedDate()} ❌ Error publicando ${file}:`, err);
       // No se elimina el archivo; se reintentará en el próximo ciclo

@@ -637,7 +637,13 @@
                                             success: function() {
                                                 // Reiniciamos el color al cerrar el modal
                                                 selectedRfidColor = null;
-                                                Swal.fire('Éxito', 'Relación añadida.', 'success');
+                                                Swal.fire({
+                                                    title: 'Éxito',
+                                                    text: 'Relación añadida.',
+                                                    icon: 'success',
+                                                    timer: 2000,             // Tiempo en milisegundos (2000 ms = 2 segundos)
+                                                    showConfirmButton: false // Oculta el botón de confirmación para que se cierre automáticamente
+                                                });
                                                 table.ajax.reload();
                                             },
                                             error: function(xhr) {
