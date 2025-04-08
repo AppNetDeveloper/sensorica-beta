@@ -264,6 +264,60 @@ pip3 install scikit-learn tensorflow pandas pymysql joblib --break-system-packag
 pip install pymysql --break-system-packages
 pip install SQLAlchemy --break-system-packages
 
+#para que ignore los cambios de prmisos en git
+git config core.fileMode false
+
+
+cd /var/www/html/
+echo 'limpiar cache'
+    php artisan config:clear
+    php artisan route:clear
+    php artisan view:clear
+    echo 'npm install update'
+    /usr/bin/npm install
+    /usr/bin/npm update
+    echo 'dar permiso composer root y instalar y actualizar'
+    export COMPOSER_ALLOW_SUPERUSER=1
+    /usr/local/bin/composer update
+   # /usr/bin/npm run dev
+    /usr/bin/npm run prod
+    /usr/bin/npm run build
+    
+    echo 'dar los permisos necesario'
+    cd storage || exit
+    unzip logos.zip -d app
+    cd /var/www/html/ || exit
+    sudo rm -rf /var/www/html/public/storage
+    sudo php artisan storage:link
+    sudo chmod -R 777 /var/www
+    sudo chmod -R 777 *
+    sudo chmod -R 777 storage
+    sudo chmod -R 777 app/Models
+    sudo chmod 777 /var/www/html/storage/logs/
+    sudo chmod 777 /var/www/html/storage/framework/sessions
+    sudo chmod 777 /var/www/html/storage/framework/views
+    sudo chown www-data:www-data /var/www/html/baileys_auth_info
+    sudo chown www-data:www-data /var/www/html/wa-logs.txt
+sudo chmod 664 /var/www/html/wa-logs.txt
+sudo chown -R www-data:www-data /var/www/html/baileys_auth_info
+sudo chmod -R 700 /var/www/html/baileys_auth_info
+sudo chown www-data:www-data /var/www/html/baileys_store_multi.json
+sudo chmod 600 /var/www/html/baileys_store_multi.json
+sudo chown -R www-data:www-data /var/www/html/whatsapp
+sudo chmod -R 755 /var/www/html/whatsapp
+
+sudo chown -R :nginx /var/www/html
+sudo chown -R :www-data /var/www/html
+sudo chmod -R g+rwx /var/www/html
+sudo chown -R :nginx /var/www/html
+sudo chmod -R g+rwx /var/www/html
+sudo chown -R www-data:www-data /var/www/html/whatsapp/media
+sudo chmod -R 755 /var/www/html/whatsapp/media
+
+sudo apt -y purge apache
+sudo apt -y purge apache2
+sudo apt -y autoremove
+
 
 # Reiniciar Supervisor con nueva configuración
 echo "Reconfigurando Supervisor..."
@@ -273,11 +327,7 @@ sudo supervisorctl reread
 sudo supervisorctl update
 sudo supervisorctl restart all
 
-php artisan cache:clear
-php artisan config:cache
-#php artisan route:cache
-#php artisan view:cache
-php artisan config:cache
+
 
 
 sudo chown -R www-data:www-data /var/www/html/storage

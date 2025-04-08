@@ -208,7 +208,7 @@ class OperatorController extends Controller
                     'productList',  // Cargar la relación de ProductList
                     'rfidReading.rfidColor' // Cargar el color RFID relacionado
                 ]);
-         }])->get(['id', 'name', 'email', 'phone', 'count_shift', 'count_order', 'client_id']); // Ahora estamos obteniendo 'id' real del operador
+         }])->get(['id', 'name', 'email', 'phone', 'produced_units_turn', 'produced_units_order', 'client_id']); // Ahora estamos obteniendo 'id' real del operador
      
          // Modificar los datos para devolver 'client_id' como 'id'
          $operators = $operators->map(function ($operator) {
@@ -217,8 +217,8 @@ class OperatorController extends Controller
                  'name' => $operator->name,
                  'email' => $operator->email,
                  'phone' => $operator->phone,
-                 'count_shift' => $operator->count_shift,
-                 'count_order' => $operator->count_order,
+                 'count_shift' => $operator->produced_units_turn,
+                 'count_order' => $operator->produced_units_order,
                  'operator_posts' => $operator->operatorPosts->map(function ($post) {
                     return [
                         'rfid_reading_name' => $post->rfidReading->name ?? null, // Nombre de RFID (suponiendo que tiene un campo 'name')
