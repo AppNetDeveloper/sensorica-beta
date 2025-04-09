@@ -506,7 +506,7 @@ class ModbusProcessController extends Controller
             
         // Añadimos la lógica para buscar en operator_post y actualizar en operators
         try {
-            $operatorPost = OperatorPost::where('updated_at', null)
+            $operatorPost = OperatorPost::where('finish_at', null)
                 ->where('modbus_id', $config->id)
                 ->first();
 
