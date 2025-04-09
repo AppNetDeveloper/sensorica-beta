@@ -83,34 +83,50 @@ class OrderStatsController extends Controller
             return response()->json($orderStat, 201);
         }
 
-        // Obtiene el token de la línea de producción desde la solicitud.
-        $token = $request->input('token');
+    // Obtención del token y búsqueda de la línea de producción
+    $token = $request->input('token');
 
-        if (!$token) {
-            return response()->json(['error' => 'Token is required'], 400);
-        }
-
-        // Encuentra la línea de producción por el token.
-        $productionLine = ProductionLine::where('token', $token)->first();
-
-        if (!$productionLine) {
-            return response()->json(['error' => 'Production line not found'], 404);
-        }
-
-        // Encuentra la última línea de 'order_stats' para la línea de producción encontrada.
-        $lastOrderStat = OrderStat::where('production_line_id', $productionLine->id)->orderBy('id', 'desc')->first();
-
-        if (!$lastOrderStat) {
-            return response()->json(['error' => 'No order stats found for the production line'], 404);
-        }
-        
-        // Combina los datos de OrderStat con el nombre de la línea de producción en un solo JSON
-        $response = $lastOrderStat->toArray();  // Convierte los datos de OrderStat a un array
-        $response['production_line_name'] = $productionLine->name;  // Añade el nombre de la línea de producción al mismo array
-    
-        // Devuelve el array combinado en formato JSON
-        return response()->json($response, 200);
+    if (!$token) {
+        return response()->json(['error' => 'Token is required'], 400);
     }
+
+    $productionLine = ProductionLine::where('token', $token)->first();
+
+    if (!$productionLine) {
+        return response()->json(['error' => 'Production line not found'], 404);
+    }
+
+    // Obtiene el último OrderStat
+    $lastOrderStat = OrderStat::with('productList')
+        ->where('production_line_id', $productionLine->id)
+        ->orderBy('id', 'desc')
+        ->first();
+
+    if (!$lastOrderStat) {
+        return response()->json(['error' => 'No order stats found for the production line'], 404);
+    }
+    
+    // Convierte los datos de OrderStat a array
+    $response = $lastOrderStat->toArray();
+    
+    // Añade el nombre de la línea de producción
+    $response['production_line_name'] = $productionLine->name;
+    
+    // Verifica si existe la relación y añade los campos requeridos
+    if (isset($response['product_list']) && !empty($response['product_list'])) {
+        $response['optimal_production_time'] = $response['product_list']['optimal_production_time'];
+        $response['optimalproductionTime_weight'] = $response['product_list']['optimalproductionTime_weight'];
+        
+        // Si no necesitas mostrar toda la información de product_list, la puedes eliminar:
+        unset($response['product_list']);
+    } else {
+        // Opcionalmente, manejar el caso en que no se encuentre la información de product_list
+        $response['optimal_production_time'] = null;
+        $response['optimalproductionTime_weight'] = null;
+    }
+    
+    return response()->json($response, 200);
+}
     /**
      * @OA\Post(
      *     path="/api/order-stats/between-dates",

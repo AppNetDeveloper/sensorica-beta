@@ -8,6 +8,7 @@ use App\Models\ControlWeight;
 use Illuminate\Http\Request;
 use App\Models\OrderStat;
 use App\Models\SupplierOrder;
+use App\Models\ProductList;  // Asegurarse de que el modelo ProductList exista
 
 class ControlWeightController extends Controller
 {
@@ -62,24 +63,38 @@ class ControlWeightController extends Controller
         $latestControlWeight = ControlWeight::where('modbus_id', $modbus->id)
             ->latest('created_at')
             ->first();
-            // Obtener datos adicionales de order_stats usando production_line_id
-        $orderStats = OrderStat::where('production_line_id', $modbus->production_line_id)->latest('created_at')->first();
 
-        // Prepara los datos para la respuesta AQUI introducimos order y fecha de inicio de order
+        // Obtener datos adicionales de order_stats usando production_line_id
+        $orderStats = OrderStat::where('production_line_id', $modbus->production_line_id)
+            ->latest('created_at')
+            ->first();
+
+        // Obtener productName desde Modbus para buscar en product_lists
+        $productName = $modbus->productName; // Asumiendo que productName existe en Modbus
+
+        // Buscar en product_lists el registro que coincida con client_id = productName
+        $productList = ProductList::where('client_id', $productName)->first();
+
+        // Si no se encuentra un registro, asignar 0 o el valor por defecto deseado
+        $teoreticoWeight = $productList ? (float) $productList->box_kg : 0;
+
+        // Preparar los datos para la respuesta
         $response = [
-            'name' => (string) ($modbus->name ?? 'NoName'), // Asegúrate de que 'NoName' esté entre comillas
+            'name' => (string) ($modbus->name ?? 'NoName'),
             'gross_weight' => (float) ($modbus->last_value ?? 0),
             'dimension' => (float) ($modbus->dimension ?? 0),
             'box_number' => (int) ($modbus->rec_box + 1 ?? 0),
+            // Asigna teoretico_weight basado en box_kg obtenido de product_lists
+            'teoretico_weight' => $teoreticoWeight,
             'last_control_weight' => (float) ($latestControlWeight->last_control_weight ?? 0),
             'last_dimension' => (float) ($latestControlWeight->last_dimension ?? 0),
             'box_m3' => (float) ($latestControlWeight->box_m3 ?? 0),
             'last_box_number' => (int) ($modbus->rec_box ?? 0),
             'last_barcoder' => (string) ($latestControlWeight->last_barcoder ?? ''),
-            'box_type' => (string) ($modbus->box_type ?? 'Cultos'), // Asegúrate de que 'NoName' esté entre comillas,
-            'order_id' => (string) ($orderStats->order_id ?? ''), // Se incluye directamente el order_id sin divisiones
-            'created_at' => (string) ($orderStats->created_at ?? ''), // created_at desde order_stats
-            'updated_at' => (string) ($orderStats->updated_at ?? ''), // updated_at desde order_stats
+            'box_type' => (string) ($modbus->box_type ?? 'Cultos'),
+            'order_id' => (string) ($orderStats->order_id ?? ''),
+            'created_at' => (string) ($orderStats->created_at ?? ''),
+            'updated_at' => (string) ($orderStats->updated_at ?? ''),
         ];
 
         return response()->json($response);
