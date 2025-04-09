@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Kanban - Validar Botones</title>
+    <title>Dashboard Kanban - URL Base Dinámica</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dragula/3.7.3/dragula.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
@@ -103,6 +103,12 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // --- Configuración ---
+            // Define la URL base de tu API aquí.
+            // En una app multi-cliente real, esto se determinaría dinámicamente.
+            const API_BASE_URL = window.location.origin;
+            console.log(`API Base URL set to: ${API_BASE_URL}`);
+
             // Verificar librerías principales
             if (typeof $ === 'undefined' || typeof $.fn.select2 === 'undefined') { console.error("Error Crítico: jQuery o Select2 no cargados."); return; }
             if (typeof dragula !== 'function') { console.error("Error Crítico: Dragula no cargado."); return; }
@@ -115,24 +121,17 @@
             const displayContainer = $('#display-container');
             const selectedWorkerInfo = $('#selected-worker-info');
             const logoutButton = $('#logout-button');
-            const playButton = document.getElementById('play-button'); // Seleccionar botón Play
-            const pauseButton = document.getElementById('pause-button'); // Seleccionar botón Pause
+            const playButton = document.getElementById('play-button');
+            const pauseButton = document.getElementById('pause-button');
             const progressIndicator = document.getElementById('progress-indicator');
             const progressValue = document.getElementById('progress-value');
-            let currentWorker = null; // Variable para guardar el operario logueado
+            let currentWorker = null;
 
             // --- Función para mostrar alerta de operario requerido ---
             function showWorkerRequiredAlert() {
                  if (typeof Swal === 'function') {
-                     Swal.fire({
-                         icon: 'warning',
-                         title: 'Acción no permitida',
-                         text: 'Por favor, selecciona un operario primero.',
-                         confirmButtonColor: '#3085d6'
-                     });
-                 } else {
-                     alert('Por favor, selecciona un operario primero.');
-                 }
+                     Swal.fire({ icon: 'warning', title: 'Acción no permitida', text: 'Por favor, selecciona un operario primero.', confirmButtonColor: '#3085d6' });
+                 } else { alert('Por favor, selecciona un operario primero.'); }
             }
 
             // --- Función para actualizar el círculo de progreso ---
@@ -146,7 +145,10 @@
 
             // --- Función para obtener datos de progreso desde API ---
             function fetchProgressData() {
-                const progressApiUrl = '/api/datos-progreso'; // URL de ejemplo
+                 // !!! REEMPLAZA ESTA URL CON TU API REAL !!!
+                const progressEndpoint = '/api/datos-progreso'; // Endpoint relativo
+                const progressApiUrl = `${API_BASE_URL}${progressEndpoint}`; // URL completa
+                console.log("Fetching progress data from:", progressApiUrl);
                 fetch(progressApiUrl)
                     .then(response => response.ok ? response.json() : Promise.reject(`HTTP error! status: ${response.status}`))
                     .then(data => { if (data && typeof data.percentage !== 'undefined') { updateProgress(data.percentage); } else { updateProgress(0); } })
@@ -157,7 +159,9 @@
             workerSelect.select2({ placeholder: "Selecciona un operario...", allowClear: true, language: "es" });
 
             function loadWorkers() {
-                const apiUrl = 'https://soldelevante.boisolo.dev/api/workers/list-all';
+                const workersEndpoint = '/api/workers/list-all'; // Endpoint relativo
+                const apiUrl = `${API_BASE_URL}${workersEndpoint}`; // URL completa
+                console.log("Fetching workers from:", apiUrl);
                 fetch(apiUrl)
                     .then(response => response.ok ? response.json() : Promise.reject(`HTTP error! status: ${response.status}`))
                     .then(data => {
@@ -231,11 +235,7 @@
             // --- Manejar clic en botones Play/Pause ---
             if (playButton) {
                 playButton.addEventListener('click', function() {
-                    if (!currentWorker) {
-                        showWorkerRequiredAlert(); // Mostrar alerta si no hay operario
-                        return; // Detener
-                    }
-                    // Acción del botón Play (si hay operario)
+                    if (!currentWorker) { showWorkerRequiredAlert(); return; }
                     console.log('Botón PLAY pulsado por:', currentWorker.name);
                     // Aquí iría la lógica real del botón Play
                 });
@@ -243,11 +243,7 @@
 
             if (pauseButton) {
                  pauseButton.addEventListener('click', function() {
-                    if (!currentWorker) {
-                        showWorkerRequiredAlert(); // Mostrar alerta si no hay operario
-                        return; // Detener
-                    }
-                    // Acción del botón Pause (si hay operario)
+                    if (!currentWorker) { showWorkerRequiredAlert(); return; }
                     console.log('Botón PAUSE pulsado por:', currentWorker.name);
                     // Aquí iría la lógica real del botón Pause
                 });
