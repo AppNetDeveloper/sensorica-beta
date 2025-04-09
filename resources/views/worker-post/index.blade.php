@@ -16,6 +16,9 @@
 {{-- Contenido --}}
 @section('content')
     <div class="card">
+        <div class="card-header">
+            <!-- Puedes agregar botones o título adicional si lo deseas -->
+        </div>
         <div class="card-body">
             <!-- Contenedor responsive con padding para separar la tabla del borde -->
             <div class="table-responsive p-3">
