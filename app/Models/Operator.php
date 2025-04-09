@@ -30,4 +30,8 @@ class Operator extends Model
     {
         return $this->hasMany(OperatorPost::class, 'operator_id', 'id');
     }
+    public function shiftHistories()
+    {
+        return $this->hasMany(ShiftHistory::class, 'operator_id');
+    }
 }

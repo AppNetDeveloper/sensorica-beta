@@ -36,6 +36,9 @@ use App\Http\Controllers\Api\ProductionOrderTopflowApiController;
 use App\Http\Controllers\Api\SupplierOrderController;
 use App\Http\Controllers\Api\ServerMonitorController;
 use App\Http\Controllers\Api\CalculateProductionDowntimeController;
+use App\Http\Controllers\Api\ShiftHistoryController;
+use App\Http\Controllers\Api\ShiftEventController;
+
 
 
 
@@ -117,7 +120,12 @@ Route::post('/modbus/tara', [ModbusController::class, 'setTara']);
 Route::post('/modbus/tara/reset', [ModbusController::class, 'resetTara']);
 Route::post('/modbus/cancel', [ModbusController::class, 'sendCancel']);
 
+// historial de shift
+Route::get('/shift-history/production-line/{token}/last', [ShiftHistoryController::class, 'getLastByProductionLineToken']);
 
+//shift publicar mesajes en mqtt
+
+Route::post('shift-event', [ShiftEventController::class, 'publishShiftEvent']);
 
 //api rfid
 Route::post('/rfid-insert', [RfidDetailController::class, 'store']);

@@ -179,8 +179,8 @@ class CalculateOptimalProductionTime extends Command
 
             // Si se encuentra un producto asociado al sensor...
             if ($modelProduct) {
-                if ((int)$sensor->count_order_1 < 20) {
-                    $this->info("Vamos por debajo de 20 bolsas");
+                if ((int)$sensor->count_order_1 < 400) {
+                    $this->info("Vamos por debajo de400 bolsas");
                     if($optimalSensorTime) {
                         $optimalProductionTime = $optimalSensorTime->optimal_time;
                         $this->info("El tiempo óptimo de producción para el sensor actual es!: " . $optimalProductionTime . " segundos.");

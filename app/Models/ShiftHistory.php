@@ -16,6 +16,7 @@ class ShiftHistory extends Model
         'type',
         'action',
         'description',
+        'operator_id' // Agregamos esta columna
     ];
 
     /**
@@ -24,5 +25,9 @@ class ShiftHistory extends Model
     public function productionLine()
     {
         return $this->belongsTo(ProductionLine::class, 'production_line_id');
+    }
+    public function operator()
+    {
+        return $this->belongsTo(Operator::class, 'operator_id');
     }
 }
