@@ -23,7 +23,6 @@
 
             {{-- Listado de Production Lines con botones de acción --}}
             <div class="mb-4">
-                <h4>{{ __('Production Lines Overview') }}</h4>
                 <div class="row">
                     @foreach($productionLines as $line)
                         <div class="col-md-4 col-lg-3 mb-4">
