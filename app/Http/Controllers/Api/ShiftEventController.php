@@ -6,14 +6,13 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\ProductionLine;
 use App\Models\Barcode;
-use App\Models\Operator; // Asegurarse de tener el modelo Operator para buscar el operario
 
 class ShiftEventController extends Controller
 {
     /**
      * Método público para recibir vía AJAX el evento de cambio de estado (por botón)
      * utilizando el token de la producción en lugar de production_line_id y recibiendo
-     * también el campo operator_id (client_id). Se procesa para obtener el id real del operario.
+     * también el campo operator_id. Se publica el mensaje MQTT con la siguiente estructura:
      *
      * Los posibles eventos son:
      * - "inicio_trabajo"  → {type: "shift", action: "start"}
@@ -23,7 +22,7 @@ class ShiftEventController extends Controller
      *
      * Además se incluyen:
      * - "description": "Manual"
-     * - "operator_id": id real del operario obtenido desde la tabla `operators`
+     * - "operator_id": valor recibido en la petición
      *
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\JsonResponse
@@ -34,12 +33,12 @@ class ShiftEventController extends Controller
         $request->validate([
             'production_line_token' => 'required|string',
             'event' => 'required|string|in:inicio_trabajo,final_trabajo,inicio_pausa,final_pausa',
-            'operator_id' => 'required|integer' // Este valor corresponde al client_id del operario
+            'operator_id' => 'required|integer'
         ]);
 
         $productionLineToken = $request->production_line_token;
         $event = $request->event;
-        $clientOperatorId = $request->operator_id;
+        $operatorId = $request->operator_id;
 
         // Buscar la línea de producción utilizando el token recibido.
         $productionLine = ProductionLine::where('token', $productionLineToken)->first();
@@ -49,17 +48,6 @@ class ShiftEventController extends Controller
                 'message' => 'Production Line not found'
             ], 404);
         }
-
-        // Procesar el operador: se asume que en la tabla operators tenemos un campo "client_id"
-        $operator = Operator::where('client_id', $clientOperatorId)->first();
-        if (!$operator) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Operator not found'
-            ], 404);
-        }
-        // Obtener el id real del operario
-        $realOperatorId = $operator->id;
         
         // Armar la estructura del mensaje en función del evento recibido.
         $data = [];
@@ -89,8 +77,7 @@ class ShiftEventController extends Controller
         
         // Agregar los campos adicionales al mensaje
         $data['description'] = 'Manual';
-        // Se utiliza el id real del operario en el mensaje MQTT
-        $data['operator_id'] = $realOperatorId;
+        $data['operator_id'] = $operatorId;
 
         // Obtener el registro de Barcode asociado a la línea de producción
         $barcode = Barcode::where('production_line_id', $productionLine->id)->first();
@@ -106,6 +93,7 @@ class ShiftEventController extends Controller
         $jsonMessage = json_encode($data);
 
         // Publicar el mensaje MQTT
+        // Se asume la implementación del método publishMqttMessage() para la publicación
         $this->publishMqttMessage($mqttTopic, $jsonMessage);
 
         return response()->json([
