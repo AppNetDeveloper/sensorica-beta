@@ -267,10 +267,15 @@ class CalculateOptimalProductionTime extends Command
                         // Si se encontró el registro, comparamos el tiempo óptimo calculado con el almacenado
                         if ($optimalProductionTime > $optimalSensorRecord->optimal_time && $optimalSensorRecord->optimal_time < 1) {
                             $sensor->optimal_production_time = $optimalSensorRecord->optimal_time;
-                        }else {
+                            $this->info("Sensor {$sensor->name} actualizado con optimal_production_time v1: {$optimalSensorRecord->optimal_time} basado en optimal_sensor_times.");
+                        }else if($optimalProductionTime < $optimalSensorRecord->optimal_time){
                             $sensor->optimal_production_time = $optimalProductionTime;
+                            $this->info("Sensor {$sensor->name} actualizado con optimal_production_time v2: {$optimalProductionTime} basado en optimal_sensor_times.");
+                        }else{
+                            $sensor->optimal_production_time = $optimalSensorRecord->optimal_time;
+                            $this->info("Sensor {$sensor->name} actualizado con optimal_production_time v3: {$optimalSensorRecord->optimal_time} basado en optimal_sensor_times.");
                         }
-                        $this->info("Sensor {$sensor->name} actualizado con optimal_production_time: {$sensor->optimal_production_time} basado en optimal_sensor_times.");
+                        
                     } else {
                         // Si no se encuentra el registro en optimal_sensor_times, se asigna el tiempo calculado
                         $sensor->optimal_production_time = $optimalProductionTime;

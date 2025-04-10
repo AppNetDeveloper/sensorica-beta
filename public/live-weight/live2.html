@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BOISOLO Autoconto - Indicador Negro</title>
+  <title>BOISOLO Autoconto - Barra e Indicador Más Gruesos</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -34,7 +34,7 @@
       --info-color: #3498db;
       --info-box-bg: #f8f9fa;
       --info-box-border: #e9ecef;
-      --black-color: #000000; /* <<< NUEVO: Definir color negro */
+      --black-color: #000000;
     }
 
     html, body {
@@ -111,9 +111,10 @@
     }
     .tolerance-bar-track {
         position: relative;
-        height: 10px;
+        /* <<< CAMBIO: Aumentar altura de la barra de colores >>> */
+        height: 15px;
         background-color: var(--info-box-border);
-        border-radius: 5px;
+        border-radius: 7px; /* Ajustar redondeo */
         display: flex;
         overflow: hidden;
     }
@@ -122,28 +123,29 @@
     }
     .zone-low {
         background-color: var(--danger-color);
-        flex-basis: 48%; /* Ajustar según el rango visual deseado para 'bajo' */
+        flex-basis: 48%;
     }
     .zone-target {
         background-color: var(--success-color);
-        flex-basis: 4%; /* Ajustar según el rango visual deseado para 'objetivo' (e.g., +/- 2%) */
+        flex-basis: 4%;
     }
     .zone-high {
         background-color: var(--danger-color);
-        flex-basis: 48%; /* Ajustar según el rango visual deseado para 'alto' */
+        flex-basis: 48%;
     }
     .tolerance-indicator {
         position: absolute;
-        top: -5px;
-        bottom: -5px;
-        width: 5px;
-        /* <<< CAMBIO: Color de fondo a negro usando la variable CSS >>> */
+        /* Mantener el solapamiento vertical (ajustar si se ve mal con la nueva altura) */
+        top: -6px;
+        bottom: -6px;
+        /* <<< CAMBIO: Hacer la línea indicadora más ancha (gruesa) >>> */
+        width: 12px;
         background-color: var(--black-color);
-        border-radius: 1.5px;
+        border-radius: 3px; /* Ajustar redondeo */
         left: 50%;
         transform: translateX(-50%);
         transition: left 0.4s ease-in-out;
-        box-shadow: 0 0 3px rgba(0,0,0,0.5);
+        box-shadow: 0 0 5px rgba(0,0,0,0.6);
         z-index: 1;
         border: 1px solid white;
         box-sizing: border-box;
@@ -235,358 +237,316 @@
   <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 
   <script>
-    // --- Variables Globales ---
-    let lastWeight = null, lastDimension = null, lastBoxNumber = null;
-    let liveWeight = null, liveDimension = null, liveBoxNumber = null;
-    let qrCodeInstance = null; // Instancia del código QR
-    const qrCodeElement = document.getElementById("qrCode"); // Elemento contenedor del QR
-    let updateInterval = null; // ID del intervalo para actualizar datos
+        // --- Variables Globales ---
+        let lastWeight = null, lastDimension = null, lastBoxNumber = null;
+        let liveWeight = null, liveDimension = null, liveBoxNumber = null;
+        let qrCodeInstance = null; // Instancia del código QR
+        const qrCodeElement = document.getElementById("qrCode"); // Elemento contenedor del QR
+        let updateInterval = null; // ID del intervalo para actualizar datos
 
-    // --- Funciones Auxiliares ---
+        // --- Funciones Auxiliares ---
 
-    /**
-     * Obtiene el valor de un parámetro de la URL.
-     * @param {string} name - Nombre del parámetro.
-     * @returns {string|null} - Valor del parámetro o null si no existe.
-     */
-    function getUrlParameter(name) {
-      const urlParams = new URLSearchParams(window.location.search);
-      return urlParams.get(name);
-    }
-
-    const token = getUrlParameter('token'); // Obtener token de la URL
-    const apiUrl = token ? `/api/control-weight/${token}` : null; // Construir URL de la API
-    const isM3Active = getUrlParameter('m3') === 'true'; // Verificar si el modo m³ está activo
-
-    // Cambiar icono de dimensión si m3=true
-    if (isM3Active) {
-      const iconLive = document.getElementById('iconDimensionLive');
-      const iconLast = document.getElementById('iconDimensionLast');
-      if (iconLive) { iconLive.classList.replace('bi-rulers', 'bi-box'); }
-      if (iconLast) { iconLast.classList.replace('bi-rulers', 'bi-box'); }
-    }
-
-    /**
-     * Actualiza el contenido de texto de un elemento HTML.
-     * @param {string} id - ID del elemento.
-     * @param {string} text - Texto a establecer.
-     */
-    function setTextContent(id, text) {
-      const element = document.getElementById(id);
-      if (element) {
-        element.textContent = text;
-      } else {
-        console.warn(`Elemento ID '${id}' no encontrado.`);
-      }
-    }
-
-    /**
-     * Actualiza el contenido HTML de un elemento.
-     * @param {string} id - ID del elemento.
-     * @param {string} html - Contenido HTML a establecer.
-     */
-    function setHTMLContent(id, html) {
-      const element = document.getElementById(id);
-      if (element) {
-        element.innerHTML = html;
-      } else {
-        console.warn(`Elemento ID '${id}' no encontrado.`);
-      }
-    }
-
-    /**
-     * Aplica una clase de animación CSS a un elemento temporalmente.
-     * @param {string} elementId - ID del elemento.
-     * @param {string} animationClass - Clase CSS de la animación.
-     * @param {number} [duration=1000] - Duración de la animación en ms.
-     */
-    function applyAnimation(elementId, animationClass, duration = 1000) {
-      const element = document.getElementById(elementId);
-      if (element) {
-        element.classList.add(animationClass);
-        setTimeout(() => {
-          element.classList.remove(animationClass);
-        }, duration);
-      }
-    }
-
-    /**
-     * Genera un código de barras en un elemento SVG.
-     * @param {string} elementId - ID del elemento SVG.
-     * @param {string} value - Valor para el código de barras.
-     */
-    function generateBarcode(elementId, value) {
-        const element = document.getElementById(elementId);
-        if (!element) {
-            console.error(`Elemento SVG con ID '${elementId}' no encontrado para barcode.`);
-            return;
+        /**
+         * Obtiene el valor de un parámetro de la URL.
+         * @param {string} name - Nombre del parámetro.
+         * @returns {string|null} - Valor del parámetro o null si no existe.
+         */
+        function getUrlParameter(name) {
+          const urlParams = new URLSearchParams(window.location.search);
+          return urlParams.get(name);
         }
-        if (value) {
-            try {
-                JsBarcode(element, value, {
-                    format: "CODE128",
-                    displayValue: true, // Mostrar valor debajo
-                    textMargin: 5,
-                    fontSize: 18,
-                    height: 100, // Altura del código de barras
-                    margin: 10 // Margen alrededor
-                });
-                element.style.display = 'block'; // Mostrar el SVG
-            } catch (e) {
-                console.error("Error al generar código de barras:", e);
-                element.style.display = 'none'; // Ocultar si hay error
+
+        const token = getUrlParameter('token'); // Obtener token de la URL
+        const apiUrl = token ? `/api/control-weight/${token}` : null; // Construir URL de la API
+        const isM3Active = getUrlParameter('m3') === 'true'; // Verificar si el modo m³ está activo
+
+        // Cambiar icono de dimensión si m3=true
+        if (isM3Active) {
+          const iconLive = document.getElementById('iconDimensionLive');
+          const iconLast = document.getElementById('iconDimensionLast');
+          if (iconLive) { iconLive.classList.replace('bi-rulers', 'bi-box'); }
+          if (iconLast) { iconLast.classList.replace('bi-rulers', 'bi-box'); }
+        }
+
+        /**
+         * Actualiza el contenido de texto de un elemento HTML.
+         * @param {string} id - ID del elemento.
+         * @param {string} text - Texto a establecer.
+         */
+        function setTextContent(id, text) {
+          const element = document.getElementById(id);
+          if (element) {
+            element.textContent = text;
+          } else {
+            console.warn(`Elemento ID '${id}' no encontrado.`);
+          }
+        }
+
+        /**
+         * Actualiza el contenido HTML de un elemento.
+         * @param {string} id - ID del elemento.
+         * @param {string} html - Contenido HTML a establecer.
+         */
+        function setHTMLContent(id, html) {
+          const element = document.getElementById(id);
+          if (element) {
+            element.innerHTML = html;
+          } else {
+            console.warn(`Elemento ID '${id}' no encontrado.`);
+          }
+        }
+
+        /**
+         * Aplica una clase de animación CSS a un elemento temporalmente.
+         * @param {string} elementId - ID del elemento.
+         * @param {string} animationClass - Clase CSS de la animación.
+         * @param {number} [duration=1000] - Duración de la animación en ms.
+         */
+        function applyAnimation(elementId, animationClass, duration = 1000) {
+          const element = document.getElementById(elementId);
+          if (element) {
+            element.classList.add(animationClass);
+            setTimeout(() => {
+              element.classList.remove(animationClass);
+            }, duration);
+          }
+        }
+
+        /**
+         * Genera un código de barras en un elemento SVG.
+         * @param {string} elementId - ID del elemento SVG.
+         * @param {string} value - Valor para el código de barras.
+         */
+        function generateBarcode(elementId, value) {
+            const element = document.getElementById(elementId);
+            if (!element) {
+                console.error(`Elemento SVG con ID '${elementId}' no encontrado para barcode.`);
+                return;
             }
-        } else {
-            element.style.display = 'none'; // Ocultar si no hay valor
-        }
-    }
-
-    /**
-     * Genera un código QR en un elemento DIV.
-     * @param {HTMLElement} element - Elemento HTML donde generar el QR.
-     * @param {string} value - Valor para el código QR.
-     */
-    function generateQRCode(element, value) {
-        if (!element) {
-            console.error("Elemento para QR no proporcionado.");
-            return;
-        }
-        // Limpiar QR anterior
-        element.innerHTML = '';
-        qrCodeInstance = null;
-
-        if (value) {
-            try {
-                qrCodeInstance = new QRCode(element, {
-                    text: value,
-                    width: 100,
-                    height: 100,
-                    colorDark : "#000000", // Color de los módulos oscuros
-                    colorLight : "#ffffff", // Color de los módulos claros
-                    correctLevel : QRCode.CorrectLevel.H // Nivel de corrección de errores (Alto)
-                });
-                element.style.display = 'flex'; // Mostrar el contenedor del QR
-            } catch (e) {
-                console.error("Error al generar código QR:", e);
-                element.style.display = 'none'; // Ocultar si hay error
+            if (value) {
+                try {
+                    JsBarcode(element, value, {
+                        format: "CODE128",
+                        displayValue: true, // Mostrar valor debajo
+                        textMargin: 5,
+                        fontSize: 18,
+                        height: 100, // Altura del código de barras
+                        margin: 10 // Margen alrededor
+                    });
+                    element.style.display = 'block'; // Mostrar el SVG
+                } catch (e) {
+                    console.error("Error al generar código de barras:", e);
+                    element.style.display = 'none'; // Ocultar si hay error
+                }
+            } else {
+                element.style.display = 'none'; // Ocultar si no hay valor
             }
-        } else {
-            element.style.display = 'none'; // Ocultar si no hay valor
-        }
-    }
-
-    /**
-     * Actualiza la posición del indicador en la barra de tolerancia de peso.
-     * @param {number} currentWeight - Peso actual.
-     * @param {number} theoreticalWeight - Peso teórico de referencia.
-     */
-    function updateToleranceBar(currentWeight, theoreticalWeight) {
-        const indicator = document.getElementById('weight-tolerance-indicator');
-        if (!indicator) return; // Salir si el indicador no existe
-
-        // Ocultar indicador si no hay peso teórico válido
-        if (isNaN(theoreticalWeight) || theoreticalWeight <= 0) {
-            indicator.style.display = 'none';
-            return;
         }
 
-        // --- Cálculo de la posición del indicador ---
-        // Definir el margen del rango visual (ej., +/- 20% del teórico)
-        const rangeMargin = 0.20; // 20%
-        const minRange = theoreticalWeight * (1 - rangeMargin);
-        const maxRange = theoreticalWeight * (1 + rangeMargin);
-        const rangeSpan = maxRange - minRange;
-
-        let indicatorPositionPercent = 50; // Posición por defecto (centro)
-
-        if (rangeSpan > 0) { // Evitar división por cero
-            // Calcular la posición relativa del peso actual dentro del rango visual
-            const relativePosition = (currentWeight - minRange) / rangeSpan;
-            // Limitar la posición entre 0% y 100% para que no se salga de la barra
-            indicatorPositionPercent = Math.max(0, Math.min(100, relativePosition * 100));
-        } else {
-            // Casos borde si el rango es cero (minRange == maxRange == theoreticalWeight)
-            if (currentWeight < theoreticalWeight) {
-                indicatorPositionPercent = 0; // A la izquierda si es menor
-            } else if (currentWeight > theoreticalWeight) {
-                indicatorPositionPercent = 100; // A la derecha si es mayor
+        /**
+         * Genera un código QR en un elemento DIV.
+         * @param {HTMLElement} element - Elemento HTML donde generar el QR.
+         * @param {string} value - Valor para el código QR.
+         */
+        function generateQRCode(element, value) {
+            if (!element) {
+                console.error("Elemento para QR no proporcionado.");
+                return;
             }
-            // Si es igual, se queda en 50% (centro)
+            // Limpiar QR anterior
+            element.innerHTML = '';
+            qrCodeInstance = null;
+
+            if (value) {
+                try {
+                    qrCodeInstance = new QRCode(element, {
+                        text: value,
+                        width: 100,
+                        height: 100,
+                        colorDark : "#000000", // Color de los módulos oscuros
+                        colorLight : "#ffffff", // Color de los módulos claros
+                        correctLevel : QRCode.CorrectLevel.H // Nivel de corrección de errores (Alto)
+                    });
+                    element.style.display = 'flex'; // Mostrar el contenedor del QR
+                } catch (e) {
+                    console.error("Error al generar código QR:", e);
+                    element.style.display = 'none'; // Ocultar si hay error
+                }
+            } else {
+                element.style.display = 'none'; // Ocultar si no hay valor
+            }
         }
 
-        // Mover el indicador aplicando el porcentaje calculado
-        indicator.style.left = indicatorPositionPercent + '%';
-        indicator.style.display = 'block'; // Asegurar que sea visible
+        /**
+         * Actualiza la posición del indicador en la barra de tolerancia de peso.
+         * @param {number} currentWeight - Peso actual.
+         * @param {number} theoreticalWeight - Peso teórico de referencia.
+         */
+        function updateToleranceBar(currentWeight, theoreticalWeight) {
+            const indicator = document.getElementById('weight-tolerance-indicator');
+            if (!indicator) return; // Salir si el indicador no existe
 
-        // <<< ELIMINADO: Cambio de color del indicador (ahora siempre es negro por CSS) >>>
-        // Ya no se necesita el cálculo de lowerLimit y upperLimit aquí
-        // ni el if/else para cambiar indicator.style.backgroundColor
-    }
+            // Ocultar indicador si no hay peso teórico válido
+            if (isNaN(theoreticalWeight) || theoreticalWeight <= 0) {
+                indicator.style.display = 'none';
+                return;
+            }
 
+            // --- Cálculo de la posición del indicador ---
+            const rangeMargin = 0.20; // 20% de margen visual
+            const minRange = theoreticalWeight * (1 - rangeMargin);
+            const maxRange = theoreticalWeight * (1 + rangeMargin);
+            const rangeSpan = maxRange - minRange;
 
-    /**
-     * Obtiene los datos de la API y actualiza la interfaz de usuario.
-     */
-    async function updateData() {
-      // Verificar si la URL de la API está disponible
-      if (!apiUrl) {
-        console.warn("No se puede actualizar: falta token en la URL.");
-        setTextContent('orderId', 'Error: Falta Token');
-        // Detener futuras actualizaciones si no hay token
-        if (updateInterval) clearInterval(updateInterval);
-        return;
-      }
+            let indicatorPositionPercent = 50; // Posición por defecto (centro)
 
-      try {
-        // Realizar la petición a la API
-        const response = await fetch(apiUrl);
-        // Verificar si la respuesta fue exitosa
-        if (!response.ok) {
-          throw new Error(`Error HTTP: ${response.status} ${response.statusText}`);
-        }
-        // Convertir la respuesta a JSON
-        const data = await response.json();
+            if (rangeSpan > 0) { // Evitar división por cero
+                const relativePosition = (currentWeight - minRange) / rangeSpan;
+                indicatorPositionPercent = Math.max(0, Math.min(100, relativePosition * 100));
+            } else {
+                if (currentWeight < theoreticalWeight) indicatorPositionPercent = 0;
+                else if (currentWeight > theoreticalWeight) indicatorPositionPercent = 100;
+            }
 
-        // --- 1. Extraer y procesar datos recibidos ---
-        const grossWeight = parseFloat(data.gross_weight) || 0;
-        const theoreticalWeight = parseFloat(data.teoretico_weight); // Puede ser NaN si no viene o no es número
-        const dimensionValue = data.dimension ?? '--';
-        const boxNumberValue = data.box_number ?? '--';
-        const boxType = data.box_type || 'Caja'; // Tipo de caja (o 'Caja' por defecto)
-        const lastControlWeight = parseFloat(data.last_control_weight) || 0;
-        const lastDimensionValue = data.last_dimension ?? '--';
-        const lastBoxM3 = data.box_m3; // Valor m³ de la última caja
-        const lastBoxNumberValue = data.last_box_number ?? '--';
-        const lastBarcodeValue = data.last_barcoder ? data.last_barcoder.toString() : ''; // Código de barras
-
-        // --- 2. Actualizar elementos generales de la UI ---
-        setTextContent('scaleName', data.name || "Báscula Desconocida");
-        setTextContent('orderId', data.order_id || "N/A");
-        // Formatear fecha de creación
-        if (data.created_at) {
-          const createdAt = new Date(data.created_at);
-          const formattedDate = createdAt.toLocaleDateString('es-ES', { year: 'numeric', month: '2-digit', day: '2-digit' });
-          const formattedTime = createdAt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-          setTextContent('created-at', `Iniciada ${formattedDate} ${formattedTime}`);
-        } else {
-          setTextContent('created-at', "Iniciada ...");
-        }
-
-        // --- 3. Actualizar datos en tiempo real ---
-        if (grossWeight !== liveWeight) {
-          applyAnimation('weightDisplay', 'zoom');
-          setHTMLContent('weightDisplay', `${grossWeight.toFixed(2)} <b class="unit">Kg</b>`);
-          liveWeight = grossWeight;
-          // Actualizar barra de tolerancia CADA VEZ que cambie el peso en vivo
-          updateToleranceBar(grossWeight, theoreticalWeight);
-        }
-
-        let liveDimensionUnit = 'mm';
-        let liveDimensionDisplayValue = dimensionValue;
-        // (No hay modo m³ para datos en vivo según el código original)
-        if (dimensionValue !== liveDimension) {
-          applyAnimation('dimensionDisplay', 'zoom');
-          setHTMLContent('dimensionDisplay', `${liveDimensionDisplayValue} <b class="unit">${liveDimensionUnit}</b>`);
-          liveDimension = dimensionValue;
-        }
-
-        if (boxNumberValue !== liveBoxNumber) {
-          applyAnimation('boxNumberDisplay', 'zoom');
-          setHTMLContent('boxNumberDisplay', `${boxNumberValue} <b class="unit">${boxType}</b>`);
-          liveBoxNumber = boxNumberValue;
-        }
-
-        // --- 4. Actualizar datos de la última caja registrada ---
-        if (lastControlWeight !== lastWeight) {
-          applyAnimation('lastWeightDisplay', 'zoom-red');
-          setHTMLContent('lastWeightDisplay', `${lastControlWeight.toFixed(2)} <b class="unit">Kg</b>`);
-          lastWeight = lastControlWeight;
-        }
-
-        // Determinar cómo mostrar la última dimensión (mm o m³)
-        let lastDimensionDisplayValue = '--';
-        let lastDimensionUnit = 'mm';
-        if (isM3Active && lastBoxM3 !== null && lastBoxM3 !== undefined && !isNaN(parseFloat(lastBoxM3))) {
-          // Si m3 está activo y hay un valor numérico para lastBoxM3
-          lastDimensionDisplayValue = (parseFloat(lastBoxM3) / 1000000).toFixed(3); // Convertir mm³ a m³
-          lastDimensionUnit = 'm³';
-        } else {
-          // Si no, mostrar el valor de dimensión normal en mm
-          lastDimensionDisplayValue = lastDimensionValue;
-          lastDimensionUnit = 'mm';
-        }
-        // Actualizar solo si el valor o la unidad ha cambiado
-        const currentLastDimensionHTML = `${lastDimensionDisplayValue} <b class="unit">${lastDimensionUnit}</b>`;
-        if (document.getElementById('lastDimensionDisplay').innerHTML !== currentLastDimensionHTML) {
-            applyAnimation('lastDimensionDisplay', 'zoom-red');
-            setHTMLContent('lastDimensionDisplay', currentLastDimensionHTML);
-            // Actualizamos lastDimension con el valor original para detectar cambios la próxima vez
-            lastDimension = lastDimensionValue;
+            // Mover el indicador aplicando el porcentaje calculado a 'left'
+            indicator.style.left = indicatorPositionPercent + '%';
+            indicator.style.display = 'block'; // Asegurar que sea visible
         }
 
 
-        if (lastBoxNumberValue !== lastBoxNumber) {
-          applyAnimation('lastBoxNumberDisplay', 'zoom-red');
-          setHTMLContent('lastBoxNumberDisplay', `${lastBoxNumberValue} <b class="unit">${boxType}</b>`);
-          lastBoxNumber = lastBoxNumberValue;
-        }
-        // Actualizar el tipo de caja en la sección de barcode
-        setTextContent('boxTypeModel', boxType);
-
-        // --- 5. Generar Barcode y QR ---
-        generateBarcode('lastBarcode', lastBarcodeValue);
-        generateQRCode(qrCodeElement, lastBarcodeValue);
-
-      } catch (error) {
-        console.error("Error al obtener o procesar datos de la API:", error);
-        // Podrías mostrar un mensaje de error en la UI aquí si lo deseas
-        // setTextContent('orderId', 'Error de conexión');
-      }
-    }
-
-    /**
-     * Actualiza la hora mostrada en el header.
-     */
-    function updateTime() {
-      const timeElement = document.getElementById('timeDisplay');
-      if (!timeElement) return; // Salir si el elemento no existe
-      const now = new Date();
-      const options = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
-      timeElement.textContent = now.toLocaleTimeString('es-ES', options);
-    }
-
-    // --- Inicialización al cargar la página ---
-    function initializeApp() {
-        updateTime(); // Mostrar hora inicial
-        setInterval(updateTime, 1000); // Actualizar hora cada segundo
-
-        if (apiUrl) {
-            updateData(); // Cargar datos iniciales inmediatamente
-            // Iniciar intervalo para actualizaciones periódicas
-            updateInterval = setInterval(updateData, 300); // Actualizar cada 300ms
-        } else {
-            // Mostrar error si no hay token y detener
+        /**
+         * Obtiene los datos de la API y actualiza la interfaz de usuario.
+         */
+        async function updateData() {
+          // Verificar si la URL de la API está disponible
+          if (!apiUrl) {
+            console.warn("No se puede actualizar: falta token en la URL.");
             setTextContent('orderId', 'Error: Falta Token');
-            console.error("No se iniciará la actualización automática: falta token en la URL.");
-            // Ocultar indicador de carga/vivo si no hay datos
-             const liveIndicator = document.querySelector('.live-indicator');
-             if(liveIndicator) liveIndicator.style.display = 'none';
-             // Ocultar barra de tolerancia si no hay datos
-             const toleranceBar = document.getElementById('weight-tolerance-indicator');
-             if(toleranceBar) toleranceBar.style.display = 'none';
+            if (updateInterval) clearInterval(updateInterval);
+            return;
+          }
+
+          try {
+            // Realizar la petición a la API
+            const response = await fetch(apiUrl);
+            if (!response.ok) throw new Error(`Error HTTP: ${response.status} ${response.statusText}`);
+            const data = await response.json();
+
+            // --- 1. Extraer y procesar datos ---
+            const grossWeight = parseFloat(data.gross_weight) || 0;
+            const theoreticalWeight = parseFloat(data.teoretico_weight);
+            const dimensionValue = data.dimension ?? '--';
+            const boxNumberValue = data.box_number ?? '--';
+            const boxType = data.box_type || 'Caja';
+            const lastControlWeight = parseFloat(data.last_control_weight) || 0;
+            const lastDimensionValue = data.last_dimension ?? '--';
+            const lastBoxM3 = data.box_m3;
+            const lastBoxNumberValue = data.last_box_number ?? '--';
+            const lastBarcodeValue = data.last_barcoder ? data.last_barcoder.toString() : '';
+
+            // --- 2. Actualizar UI General ---
+            setTextContent('scaleName', data.name || "Báscula Desconocida");
+            setTextContent('orderId', data.order_id || "N/A");
+            if (data.created_at) {
+              const createdAt = new Date(data.created_at);
+              const formattedDate = createdAt.toLocaleDateString('es-ES', { year: 'numeric', month: '2-digit', day: '2-digit' });
+              const formattedTime = createdAt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+              setTextContent('created-at', `Iniciada ${formattedDate} ${formattedTime}`);
+            } else {
+              setTextContent('created-at', "Iniciada ...");
+            }
+
+            // --- 3. Actualizar Datos en Vivo ---
+            if (grossWeight !== liveWeight) {
+              applyAnimation('weightDisplay', 'zoom');
+              setHTMLContent('weightDisplay', `${grossWeight.toFixed(2)} <b class="unit">Kg</b>`);
+              liveWeight = grossWeight;
+              updateToleranceBar(grossWeight, theoreticalWeight); // Actualizar barra/indicador
+            }
+            if (dimensionValue !== liveDimension) {
+              applyAnimation('dimensionDisplay', 'zoom');
+              setHTMLContent('dimensionDisplay', `${dimensionValue} <b class="unit">mm</b>`);
+              liveDimension = dimensionValue;
+            }
+            if (boxNumberValue !== liveBoxNumber) {
+              applyAnimation('boxNumberDisplay', 'zoom');
+              setHTMLContent('boxNumberDisplay', `${boxNumberValue} <b class="unit">${boxType}</b>`);
+              liveBoxNumber = boxNumberValue;
+            }
+
+            // --- 4. Actualizar Última Caja ---
+            if (lastControlWeight !== lastWeight) {
+              applyAnimation('lastWeightDisplay', 'zoom-red');
+              setHTMLContent('lastWeightDisplay', `${lastControlWeight.toFixed(2)} <b class="unit">Kg</b>`);
+              lastWeight = lastControlWeight;
+            }
+            // Lógica para mostrar última dimensión (mm o m³)
+            let lastDimensionDisplayValue = '--';
+            let lastDimensionUnit = 'mm';
+            if (isM3Active && lastBoxM3 !== null && lastBoxM3 !== undefined && !isNaN(parseFloat(lastBoxM3))) {
+              lastDimensionDisplayValue = (parseFloat(lastBoxM3) / 1000000).toFixed(3);
+              lastDimensionUnit = 'm³';
+            } else {
+              lastDimensionDisplayValue = lastDimensionValue;
+              lastDimensionUnit = 'mm';
+            }
+            const currentLastDimensionHTML = `${lastDimensionDisplayValue} <b class="unit">${lastDimensionUnit}</b>`;
+            if (document.getElementById('lastDimensionDisplay').innerHTML !== currentLastDimensionHTML) {
+                applyAnimation('lastDimensionDisplay', 'zoom-red');
+                setHTMLContent('lastDimensionDisplay', currentLastDimensionHTML);
+                lastDimension = lastDimensionValue;
+            }
+            if (lastBoxNumberValue !== lastBoxNumber) {
+              applyAnimation('lastBoxNumberDisplay', 'zoom-red');
+              setHTMLContent('lastBoxNumberDisplay', `${lastBoxNumberValue} <b class="unit">${boxType}</b>`);
+              lastBoxNumber = lastBoxNumberValue;
+            }
+            setTextContent('boxTypeModel', boxType);
+
+            // --- 5. Generar Barcode y QR ---
+            generateBarcode('lastBarcode', lastBarcodeValue);
+            generateQRCode(qrCodeElement, lastBarcodeValue);
+
+          } catch (error) {
+            console.error("Error al obtener o procesar datos de la API:", error);
+          }
         }
 
-        // Limpiar intervalo al cerrar o recargar la página
-        window.addEventListener('beforeunload', () => {
-            if (updateInterval) {
-                clearInterval(updateInterval);
+        /**
+         * Actualiza la hora mostrada en el header.
+         */
+        function updateTime() {
+          const timeElement = document.getElementById('timeDisplay');
+          if (!timeElement) return;
+          const now = new Date();
+          const options = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+          timeElement.textContent = now.toLocaleTimeString('es-ES', options);
+        }
+
+        // --- Inicialización ---
+        function initializeApp() {
+            updateTime();
+            setInterval(updateTime, 1000);
+
+            if (apiUrl) {
+                updateData();
+                updateInterval = setInterval(updateData, 300);
+            } else {
+                setTextContent('orderId', 'Error: Falta Token');
+                console.error("No se iniciará la actualización automática: falta token en la URL.");
+                 const liveIndicator = document.querySelector('.live-indicator');
+                 if(liveIndicator) liveIndicator.style.display = 'none';
+                 const toleranceIndicator = document.getElementById('weight-tolerance-indicator');
+                 if(toleranceIndicator) toleranceIndicator.style.display = 'none';
             }
-        });
-    }
 
-    // Ejecutar inicialización cuando el DOM esté listo
-    document.addEventListener('DOMContentLoaded', initializeApp);
+            window.addEventListener('beforeunload', () => {
+                if (updateInterval) clearInterval(updateInterval);
+            });
+        }
 
-  </script>
+        document.addEventListener('DOMContentLoaded', initializeApp);
+
+      </script>
 </body>
 </html>

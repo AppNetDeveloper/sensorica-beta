@@ -257,13 +257,14 @@ class CalculateProductionMonitorOeev2 extends Command
                 
                     $totalOptimalTime = $optimalTimes->sum('optimal_time');
                     $linesCount = $optimalTimes->count();
-                    //$this->info('Total optimal time: ' . $totalOptimalTime);
-                    //$this->info('Lines count: ' . $linesCount);
+                    $this->info('Total optimal time: ' . $totalOptimalTime);
+                    $this->info('Lines count: ' . $linesCount);
                     if ($linesCount === 0) {
                         throw new \Exception('No optimal times found.');
                     }
                 
                     $secondsPerUnitTheoretical = ($totalOptimalTime / $linesCount) / $linesCount;
+                    $this->info('Seconds per unit theoretical: ' . $secondsPerUnitTheoretical);
                 
                 } catch (\Exception $e) {
                     // Usamos el fallback si algo falla en la lógica anterior
