@@ -208,7 +208,9 @@ class OperatorController extends Controller
                     'productList',  // Cargar la relación de ProductList
                     'rfidReading.rfidColor' // Cargar el color RFID relacionado
                 ]);
-         }])->get(['id', 'name', 'email', 'phone', 'count_shift', 'count_order', 'client_id']); // Ahora estamos obteniendo 'id' real del operador
+         }])
+         ->orderBy('count_shift', 'desc')  // Ordenar por count_shift en orden descendente
+         ->get(['id', 'name', 'email', 'phone', 'count_shift', 'count_order', 'client_id']); // Ahora estamos obteniendo 'id' real del operador
      
          // Modificar los datos para devolver 'client_id' como 'id'
          $operators = $operators->map(function ($operator) {
@@ -241,6 +243,100 @@ class OperatorController extends Controller
              'rfid_colors' => $rfidColors // Agrega rfid_colors como una clave separada
          ], 200);
      }
+
+         /**
+     * @OA\Get(
+     *     path="/api/workers/list-all2",
+     *     summary="Get all workers",
+     *     tags={"Workers"},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Returns all operators",
+     *         @OA\JsonContent(
+     *             type="array",
+     *             @OA\Items(
+     *                 @OA\Property(property="id", type="integer", description="Client ID"),
+     *                 @OA\Property(property="name", type="string", description="Operator Name"),
+     *                 @OA\Property(property="email", type="string", description="Operator Email"),
+     *                 @OA\Property(property="phone", type="string", description="Operator Phone"),
+     *                 @OA\Property(property="operator_posts", type="array", description="Operator Assignments", 
+     *                     @OA\Items(
+     *                         @OA\Property(property="rfid_reading_id", type="integer", description="RFID Reading ID"),
+     *                         @OA\Property(property="sensor_id", type="integer", description="Sensor ID"),
+     *                         @OA\Property(property="modbus_id", type="integer", description="Modbus ID"),
+     *                         @OA\Property(property="count", type="integer", description="Count"),
+     *                         @OA\Property(property="product_list_id", type="integer", description="Product List ID")
+     *                     )
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Internal server error",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="error", type="string")
+     *         )
+     *     )
+     * )
+     */
+    
+     public function listAll2(Request $request)
+     {
+         // Obtener todos los operadores, cargando sus operatorPosts y las relaciones necesarias
+         $operators = Operator::with([
+             'operatorPosts' => function($query) {
+                 // Filtrar las asignaciones sin finish_at
+                 $query->whereNull('finish_at')
+                       ->select('operator_id', 'rfid_reading_id', 'sensor_id', 'modbus_id', 'count', 'product_list_id')
+                       ->with([
+                           'rfidReading',      // Relación RfidReading
+                           'sensor',           // Relación Sensor
+                           'modbus',           // Relación Modbus
+                           'productList',      // Relación ProductList
+                           'rfidReading.rfidColor' // Relación del color RFID
+                       ]);
+             }
+         ])
+         // Elegir campos que necesitamos (incluyendo id real y client_id)
+         ->get(['id', 'name', 'email', 'phone', 'count_shift', 'count_order', 'client_id']);
+     
+         // Ajustar los datos para mostrar tanto id como client_id por separado
+         $operators = $operators->map(function ($operator) {
+             return [
+                 'id'          => $operator->id,         // El ID real de la tabla
+                 'client_id'   => $operator->client_id,  // Campo client_id (opcional si lo quieres exponer)
+                 'name'        => $operator->name,
+                 'email'       => $operator->email,
+                 'phone'       => $operator->phone,
+                 'count_shift' => $operator->count_shift,
+                 'count_order' => $operator->count_order,
+     
+                 // Mapeo de operatorPosts
+                 'operator_posts' => $operator->operatorPosts->map(function ($post) {
+                     return [
+                         'rfid_reading_name' => $post->rfidReading->name ?? null,
+                         'rfid_color_name'   => $post->rfidReading->rfidColor->name ?? null,
+                         'sensor_name'       => $post->sensor->name ?? null,
+                         'modbus_name'       => $post->modbus->name ?? null,
+                         'count'             => $post->count,
+                         'product_list_name' => $post->productList->name ?? null,
+                     ];
+                 }),
+             ];
+         });
+     
+         // Obtener todos los colores RFID como array
+         $rfidColors = \App\Models\RfidColor::all(['id', 'name'])->toArray();
+     
+         // Retornar los datos en la respuesta JSON
+         return response()->json([
+             'operators'   => $operators,
+             'rfid_colors' => $rfidColors,
+         ], 200);
+     }
+     
      
      
 

@@ -184,6 +184,7 @@ Route::post('/run-update', [SystemController::class, 'runUpdateScript']);
 Route::post('/workers/update-or-insert', [OperatorController::class, 'updateOrInsertSingle']);
 Route::post('/workers/replace-all', [OperatorController::class, 'replaceAll']);
 Route::get('/workers/list-all', [OperatorController::class, 'listAll']);
+Route::get('/workers/list-all2', [OperatorController::class, 'listAll2']);
 // Ruta para mostrar un solo operador por ID
 Route::get('/workers/{id}', [OperatorController::class, 'show']);
 // Nuevas rutas para reset de contraseña
