@@ -59,7 +59,17 @@
             <div id="col-finalizadas" data-column-name="FINALIZADAS" class="kanban-column"> <h2 class="kanban-title">FINALIZADAS</h2> <div class="kanban-card" data-card-id="card-5">Tarea 5</div> <div class="kanban-card" data-card-id="card-6">Tarea 6</div> </div>
             <div id="col-incidencias" data-column-name="INCIDENCIAS" class="kanban-column"> <h2 class="kanban-title">INCIDENCIAS</h2> <div class="kanban-card" data-card-id="card-7">Incidencia A</div> </div>
         </div>
-
+        <!-- NOTIFICACIÓN EN AMARILLO (Ejemplo) -->
+        <div id="pause-notification" class="container mx-auto mt-4 hidden">
+            <div class="bg-yellow-100 border border-yellow-300 text-yellow-800 px-4 py-3 rounded relative">
+                <center>
+                    <span class="block sm:inline font-semibold">
+                        Estás en pausa. Vuelve a reanudar cuando estés listo.
+                    </span>
+                </center>
+            </div>
+        </div>
+        <!-- FIN NOTIFICACIÓN -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 border-t border-gray-200 pt-6">
              <div id="action-buttons-container" class="flex items-center justify-start space-x-4">
                  <button id="start-shift-button" class="hidden bg-green-500 hover:bg-green-600 text-white p-3 rounded-full shadow-md transition duration-150 ease-in-out" data-action-type="start-shift" title="Iniciar Turno/Tarea"> <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347c.75.411.75 1.559 0 1.97l-11.54 6.347c-.75.411-1.667-.13-1.667-.986V5.653Z" /></svg> </button>
@@ -256,10 +266,10 @@
              function updateActionButtons(type, action) {
                  const buttons = actionButtonsContainer.querySelectorAll('button');
                  buttons.forEach(btn => btn.classList.add('hidden'));
-                 if ((type === 'shift' && action === 'start') || (type === 'stop' && action === 'end')) { $('#start-pause-button').removeClass('hidden'); $('#end-shift-button').removeClass('hidden'); }
-                 else if (type === 'stop' && action === 'start') { $('#resume-button').removeClass('hidden'); $('#end-pause-button').removeClass('hidden'); }
-                 else if (type === 'shift' && action === 'end') { $('#start-shift-button').removeClass('hidden'); }
-                 else { $('#start-shift-button').removeClass('hidden'); } // Estado por defecto/desconocido
+                 if ((type === 'shift' && action === 'start') || (type === 'stop' && action === 'end')) { $('#start-pause-button').removeClass('hidden'); $('#end-shift-button').removeClass('hidden'); document.getElementById('pause-notification').classList.add('hidden');}
+                 else if (type === 'stop' && action === 'start') { $('#resume-button').removeClass('hidden'); $('#end-pause-button').removeClass('hidden'); document.getElementById('pause-notification').classList.remove('hidden');}
+                 else if (type === 'shift' && action === 'end') { $('#start-shift-button').removeClass('hidden');  document.getElementById('pause-notification').classList.add('hidden');}
+                 else { $('#start-shift-button').removeClass('hidden');  document.getElementById('pause-notification').classList.add('hidden');} // Estado por defecto/desconocido
              }
 
               // --- Añadir listeners genéricos a los botones de acción ---
