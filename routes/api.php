@@ -30,7 +30,6 @@ use App\Http\Controllers\Api\OperatorPostController;
 use App\Http\Controllers\Api\TcpPublishController;
 use App\Http\Controllers\Api\TransferExternalDbController;
 use App\Http\Controllers\Api\OrderNoticeController;
-use App\Http\Controllers\Api\FakeOrderTimeController;
 use App\Http\Controllers\Api\ReferenceController;
 use App\Http\Controllers\Api\ProductionOrderTopflowApiController;
 use App\Http\Controllers\Api\SupplierOrderController;
@@ -38,7 +37,6 @@ use App\Http\Controllers\Api\ServerMonitorController;
 use App\Http\Controllers\Api\CalculateProductionDowntimeController;
 use App\Http\Controllers\Api\ShiftHistoryController;
 use App\Http\Controllers\Api\ShiftEventController;
-
 
 
 
@@ -57,7 +55,6 @@ use App\Http\Controllers\Api\ShiftEventController;
 Route::post('/server-monitor-store', [ServerMonitorController::class, 'store']);
 Route::post('/register-server', [ServerMonitorController::class, 'index']);
 
-Route::get('/test-order-time', [FakeOrderTimeController::class, 'index']);
 
 Route::match(['get', 'post'], '/barcode', [ApibarcoderController::class, 'barcode']);
 Route::match(['get', 'post'], '/ip-zerotier', [ZerotierIpBarcoderController::class, 'ipZerotier']);
@@ -196,6 +193,10 @@ Route::delete('/workers/{id}', [OperatorController::class, 'destroy']);
 Route::post('/scada/log-access', [OperatorController::class, 'logScadaAccess']);
 //mostrar los login de scada
 Route::post('/scada/get-logins', [OperatorController::class, 'getLoginsByScadaToken']);
+
+//obtener todos los empleados con todo fabricado al dia.
+Route::get('/workers/all-list/completed', [OperatorController::class, 'completeList']);
+
 
 
 

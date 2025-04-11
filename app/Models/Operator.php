@@ -19,6 +19,10 @@ class Operator extends Model
         'count_shift',
         'count_order',
     ];
+    // Hidden fields for security purposes
+    protected $hidden = [
+        'password'
+    ];
 
     // Relationship with Client
     public function client()

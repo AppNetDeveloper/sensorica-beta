@@ -739,4 +739,30 @@ public function verifyPassword(Request $request)
             }),
         ], 200);
     }
+    public function completeList(Request $request)
+    {
+        // Obtener parámetros de fecha de la solicitud (ej.: ?from_date=2025-03-01&to_date=2025-03-10)
+        $fromDate = $request->get('from_date');
+        $toDate   = $request->get('to_date');
+    
+        $operators = Operator::with(['operatorPosts' => function($query) use ($fromDate, $toDate) {
+            // Agregar la relación anidada para ProductList
+            $query->with('productList');
+    
+            if ($fromDate && $toDate) {
+                // Filtrar utilizando whereBetween para el campo 'created_at'
+                $query->whereBetween('created_at', [$fromDate, $toDate]);
+            } elseif ($fromDate) {
+                $query->whereDate('created_at', '>=', $fromDate);
+            } elseif ($toDate) {
+                $query->whereDate('created_at', '<=', $toDate);
+            }
+        }])->get();
+    
+        return response()->json([
+            'success' => true,
+            'data'    => $operators
+        ]);
+    }
+    
 }
