@@ -172,6 +172,7 @@ class MqttShiftSubscriber extends Command
                         'action'             => $data['action'] ?? null,
                         'description'        => $data['description'] ?? null,
                         'operator_id'        => $data['operator_id'] ?? null,
+                        'shift_list_id'        => $data['shift_list_id'] ?? null,
                     ]);
                 } catch (\Exception $e) {
                    $this->info("[". Carbon::now()->toDateTimeString() . "]Error al crear registro en shift_history: " . $e->getMessage());

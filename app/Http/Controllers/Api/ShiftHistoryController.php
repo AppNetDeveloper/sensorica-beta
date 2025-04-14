@@ -50,8 +50,8 @@ class ShiftHistoryController extends Controller
         }
 
         // Buscar la última entrada en shift_history para la línea de producción
-        // Usamos with('operator') para cargar la relación del operario
-        $shiftHistory = ShiftHistory::with('operator')
+        // Cargando las relaciones operator y shiftList
+        $shiftHistory = ShiftHistory::with(['operator', 'shiftList'])
             ->where('production_line_id', $productionLine->id)
             ->orderBy('created_at', 'desc')
             ->first();

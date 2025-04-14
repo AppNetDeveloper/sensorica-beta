@@ -13,6 +13,7 @@ class ShiftHistory extends Model
 
     protected $fillable = [
         'production_line_id',
+        'shift_list_id',
         'type',
         'action',
         'description',
@@ -29,5 +30,9 @@ class ShiftHistory extends Model
     public function operator()
     {
         return $this->belongsTo(Operator::class, 'operator_id');
+    }
+    public function shiftList()
+    {
+        return $this->belongsTo(ShiftList::class, 'shift_list_id');
     }
 }
