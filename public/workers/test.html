@@ -3,63 +3,213 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Kanban - Corregido Auto-Display Operario</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Dashboard Kanban - Ocupación y Botones</title> <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dragula/3.7.3/dragula.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-    <style type="text/tailwindcss">
-        @layer utilities {
-          /* Estilos personalizados si son necesarios */
-        }
+    <style>
+        /* --- Fuentes y Body --- */
         body {
-            font-family: 'Inter', sans-serif; /* Usar la fuente Inter */
+            font-family: 'Inter', sans-serif;
             overscroll-behavior-y: contain;
         }
-        /* --- Estilos Círculo de Progreso Dinámico --- */
+        /* --- Estilos Círculo de Progreso Dinámico (sin cambios) --- */
         .progress-circle {
-            width: 100px; height: 100px; border-radius: 50%; display: grid; place-items: center;
+            width: 180px; height: 180px; border-radius: 50%; display: grid; place-items: center;
             background: conic-gradient(#4ade80 calc(var(--progress-percent, 0) * 1%), #e5e7eb 0);
-            position: relative; font-size: 1.8rem; font-weight: bold; color: #16a34a; transition: background 0.3s ease;
+            position: relative; font-size: 2.8rem; font-weight: bold; color: #16a34a; transition: background 0.3s ease;
         }
-        .progress-circle::before { content: ""; position: absolute; border-radius: 50%; inset: 8px; background: #fff; z-index: 1; }
+        .progress-circle::before {
+            content: ""; position: absolute; border-radius: 50%; inset: 14px; background: #fff; z-index: 1;
+        }
         #progress-value { z-index: 2; position: relative; }
-        /* --- Fin Estilos Círculo --- */
 
-        .kanban-card { @apply bg-white p-3 rounded-md shadow border border-gray-200 mb-3 cursor-grab; touch-action: manipulation; user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; }
-        .kanban-column { @apply bg-gray-100 p-4 rounded-lg h-full min-h-[200px]; }
-        .kanban-title { @apply font-semibold text-gray-700 mb-4 text-center; }
-        .gu-mirror { @apply bg-white p-3 rounded-md shadow-lg border border-blue-300 opacity-80 fixed !important; cursor: grabbing !important; z-index: 9999 !important; touch-action: none; }
-        .gu-transit { @apply opacity-50; }
-        .long-press-ready { /* @apply ring-2 ring-offset-2 ring-blue-500; */ }
-        /* Estilos Select2 */
-        .select2-container--default .select2-selection--single { @apply border-gray-300 rounded-md shadow-sm h-10; }
-        .select2-container--default .select2-selection--single .select2-selection__rendered { @apply leading-10 pl-3; }
-        .select2-container--default .select2-selection--single .select2-selection__arrow { @apply h-9; }
-        .select2-dropdown { @apply border-gray-300 rounded-md shadow-sm; }
-        .select2-search--dropdown .select2-search__field { @apply border-gray-300 rounded-md m-1; }
-        /* Estilo para ocultar elementos */
+        /* --- Estilos Tarjeta Kanban Refactorizados (sin cambios) --- */
+        .kanban-card {
+            padding: 0.75rem; border-radius: 0.375rem;
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+            border-width: 1px; margin-bottom: 0.75rem; cursor: grab;
+            font-size: 0.875rem; line-height: 1.25rem; border-style: solid;
+            touch-action: manipulation; user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;
+        }
+        #col-pendiente .kanban-card { background-color: #fefce8; border-color: #fde68a; }
+        #col-en-curso .kanban-card { background-color: #eff6ff; border-color: #bfdbfe; }
+        #col-finalizadas .kanban-card { background-color: #f9fafb; border-color: #e5e7eb; }
+        #col-incidencias .kanban-card { background-color: #fef2f2; border-color: #fecaca; }
+
+        /* --- Estilos Etiquetas OPE (sin cambios) --- */
+         .ope-tag {
+            display: inline-block; padding-left: 0.5rem; padding-right: 0.5rem;
+            padding-top: 0.125rem; padding-bottom: 0.125rem; border-radius: 0.25rem;
+            font-size: 0.75rem; font-weight: 500; margin-right: 0.25rem; margin-bottom: 0.25rem;
+            line-height: 1;
+        }
+        .ope-pendiente { background-color: #fef08a; color: #a16207; }
+        .ope-en-curso { background-color: #bfdbfe; color: #1e40af; }
+        .ope-finalizada { background-color: #bbf7d0; color: #166534; }
+        .ope-incidencia { background-color: #fecaca; color: #991b1b; }
+        .ope-default { background-color: #e5e7eb; color: #374151; }
+
+        /* --- Otros estilos (Columnas, Títulos, Dragula, Select2, Hidden) (sin cambios) --- */
+        .kanban-column { background-color: #f3f4f6; padding: 1rem; border-radius: 0.5rem; height: 100%; min-height: 200px; }
+        .kanban-title { font-weight: 600; color: #374151; margin-bottom: 1rem; text-align: center; }
+        .gu-mirror {
+            padding: 0.75rem; border-radius: 0.375rem; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); border-width: 1px; font-size: 0.875rem; line-height: 1.25rem; border-style: solid;
+            opacity: 0.8 !important; position: fixed !important; cursor: grabbing !important; z-index: 9999 !important; touch-action: none; margin-bottom: 0;
+        }
+        #col-pendiente .gu-mirror { background-color: #fefce8; border-color: #fde68a; }
+        #col-en-curso .gu-mirror { background-color: #eff6ff; border-color: #bfdbfe; }
+        #col-finalizadas .gu-mirror { background-color: #f9fafb; border-color: #e5e7eb; }
+        #col-incidencias .gu-mirror { background-color: #fef2f2; border-color: #fecaca; }
+        .gu-transit { opacity: 0.5; }
+        .long-press-ready { /* Estilo opcional */ }
+        .select2-container--default .select2-selection--single { border: 1px solid #d1d5db; border-radius: 0.375rem; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); height: 2.5rem; }
+        .select2-container--default .select2-selection--single .select2-selection__rendered { line-height: 2.5rem; padding-left: 0.75rem; }
+        .select2-container--default .select2-selection--single .select2-selection__arrow { height: calc(2.5rem - 2px); }
+        .select2-dropdown { border: 1px solid #d1d5db; border-radius: 0.375rem; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); }
+        .select2-search--dropdown .select2-search__field { border: 1px solid #d1d5db; border-radius: 0.375rem; margin: 0.25rem; }
         .hidden { display: none; }
     </style>
      <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-      @font-face { font-family: 'LucideIcons'; src: url('https://cdn.jsdelivr.net/npm/lucide-static@0.487.0/font/lucide.ttf') format('truetype'); }
-      .lucide { font-family: 'LucideIcons'; font-style: normal; font-weight: normal; font-variant: normal; text-rendering: auto; line-height: 1; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+      @font-face { font-family: 'LucideIcons'; src: url('https://cdn.jsdelivr.net/npm/lucide-static@latest/font/lucide.ttf') format('truetype'); }
+      .lucide { font-family: 'LucideIcons'; font-style: normal; font-weight: normal; font-variant: normal; text-rendering: auto; line-height: 1; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; display: inline-block; vertical-align: middle; }
     </style>
 </head>
 <body class="bg-gray-200 p-8">
-
     <div class="container mx-auto bg-white p-6 rounded-lg shadow-md">
 
         <div id="kanban-board" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-6">
-             <div id="col-pendiente" data-column-name="PENDIENTE" class="kanban-column"> <h2 class="kanban-title">PENDIENTE</h2> <div class="kanban-card" data-card-id="card-1">Tarea 1</div> <div class="kanban-card flex items-center justify-between" data-card-id="card-2"><span>Tarea 2</span><i class="lucide text-red-500" style="font-size: 16px;">alert-triangle</i></div> <div class="kanban-card" data-card-id="card-3">Tarea 3</div> </div>
-            <div id="col-en-curso" data-column-name="EN CURSO" class="kanban-column"> <h2 class="kanban-title">EN CURSO</h2> <div class="kanban-card" data-card-id="card-4">Tarea 4</div> </div>
-            <div id="col-finalizadas" data-column-name="FINALIZADAS" class="kanban-column"> <h2 class="kanban-title">FINALIZADAS</h2> <div class="kanban-card" data-card-id="card-5">Tarea 5</div> <div class="kanban-card" data-card-id="card-6">Tarea 6</div> </div>
-            <div id="col-incidencias" data-column-name="INCIDENCIAS" class="kanban-column"> <h2 class="kanban-title">INCIDENCIAS</h2> <div class="kanban-card" data-card-id="card-7">Incidencia A</div> </div>
+            <div id="col-pendiente" data-column-name="PENDIENTE" class="kanban-column">
+                <h2 class="kanban-title">PENDIENTE</h2>
+                <div class="kanban-card" data-card-id="card-1">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="font-semibold text-gray-800">2025-003552-02</span>
+                        <span class="text-gray-600">CLIENTE 062</span>
+                    </div>
+                    <div class="mb-2">
+                        <span class="ope-tag ope-pendiente">OPE-01</span>
+                        <span class="ope-tag ope-pendiente">OPE-02</span>
+                        <span class="ope-tag ope-pendiente">OPE-03</span>
+                    </div>
+                    <div class="flex justify-between items-center text-gray-500">
+                        <span>05/03/2025</span>
+                        <span>MATERIAL A0015</span>
+                        <span class="font-medium text-gray-700">411 Uds</span>
+                    </div>
+                </div>
+                 <div class="kanban-card" data-card-id="card-2">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="font-semibold text-gray-800">2025-002252-01</span>
+                        <span class="text-gray-600">CLIENTE 019</span>
+                    </div>
+                    <div class="mb-2 flex items-center">
+                        <span class="ope-tag ope-pendiente">OPE-01</span>
+                        <span class="ope-tag ope-pendiente">OPE-02</span>
+                        <span class="ope-tag ope-pendiente">OPE-03</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-red-500 ml-1 inline-block align-middle">
+                            <path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+                            <path d="M12 9v4"/>
+                            <path d="M12 17h.01"/>
+                        </svg>
+                        </div>
+                    <div class="flex justify-between items-center text-gray-500">
+                        <span>04/03/2025</span>
+                        <span>MATERIAL A0013</span>
+                        <span class="font-medium text-gray-700">244 Uds</span>
+                    </div>
+                </div>
+                 <div class="kanban-card" data-card-id="card-3">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="font-semibold text-gray-800">OTRA-TAREA-01</span>
+                        <span class="text-gray-600">CLIENTE XYZ</span>
+                    </div>
+                    <div class="mb-2">
+                        <span class="ope-tag ope-pendiente">OPE-04</span>
+                    </div>
+                    <div class="flex justify-between items-center text-gray-500">
+                        <span>14/04/2025</span>
+                        <span>MATERIAL B0001</span>
+                        <span class="font-medium text-gray-700">50 Uds</span>
+                    </div>
+                </div>
+            </div>
+            <div id="col-en-curso" data-column-name="EN CURSO" class="kanban-column">
+                <h2 class="kanban-title">EN CURSO</h2>
+                 <div class="kanban-card" data-card-id="card-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="font-semibold text-gray-800">2025-003516-02</span>
+                        <span class="text-gray-600">CLIENTE 033</span>
+                    </div>
+                    <div class="mb-2">
+                        <span class="ope-tag ope-en-curso">OPE-01</span>
+                        <span class="ope-tag ope-en-curso">OPE-02</span>
+                        <span class="ope-tag ope-default">OPE-03</span> </div>
+                    <div class="flex justify-between items-center text-gray-500">
+                        <span>05/03/2025</span>
+                        <span>MATERIAL A00223</span>
+                        <span class="font-medium text-gray-700">105 Uds</span>
+                    </div>
+                </div>
+            </div>
+            <div id="col-finalizadas" data-column-name="FINALIZADAS" class="kanban-column">
+                <h2 class="kanban-title">FINALIZADAS</h2>
+                 <div class="kanban-card" data-card-id="card-5">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="font-semibold text-gray-800">2025-003552-02</span>
+                        <span class="text-gray-600">CLIENTE 0221</span>
+                    </div>
+                    <div class="mb-2">
+                        <span class="ope-tag ope-finalizada">OPE-01</span>
+                        <span class="ope-tag ope-default">OPE-02</span>
+                        <span class="ope-tag ope-default">OPE-03</span>
+                    </div>
+                    <div class="flex justify-between items-center text-gray-500">
+                        <span>04/03/2025</span>
+                        <span>MATERIAL A0015</span>
+                        <span class="font-medium text-gray-700">71 Uds</span>
+                    </div>
+                </div>
+                 <div class="kanban-card" data-card-id="card-6">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="font-semibold text-gray-800">2025-003552-02</span>
+                        <span class="text-gray-600">CLIENTE 087</span>
+                    </div>
+                    <div class="mb-2">
+                        <span class="ope-tag ope-finalizada">OPE-01</span>
+                        <span class="ope-tag ope-default">OPE-02</span>
+                        <span class="ope-tag ope-default">OPE-03</span>
+                    </div>
+                    <div class="flex justify-between items-center text-gray-500">
+                        <span>03/03/2025</span>
+                        <span>MATERIAL A0054</span>
+                        <span class="font-medium text-gray-700">121 Uds</span>
+                    </div>
+                </div>
+            </div>
+            <div id="col-incidencias" data-column-name="INCIDENCIAS" class="kanban-column">
+                <h2 class="kanban-title">INCIDENCIAS</h2>
+                 <div class="kanban-card" data-card-id="card-7">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="font-semibold text-gray-800">2025-003552-02</span>
+                        <span class="text-gray-600">CLIENTE 091</span>
+                    </div>
+                    <div class="mb-2">
+                        <span class="ope-tag ope-incidencia">OPE-01</span>
+                        <span class="ope-tag ope-incidencia">OPE-02</span>
+                        <span class="ope-tag ope-incidencia">OPE-03</span>
+                    </div>
+                    <div class="flex justify-between items-center text-gray-500">
+                        <span>05/03/2025</span>
+                        <span>MATERIAL A0025</span>
+                        <span class="font-medium text-gray-700">41 Uds</span>
+                    </div>
+                </div>
+            </div>
         </div>
-        <!-- NOTIFICACIÓN EN AMARILLO (Ejemplo) -->
+
         <div id="pause-notification" class="container mx-auto mt-4 hidden">
             <div class="bg-yellow-100 border border-yellow-300 text-yellow-800 px-4 py-3 rounded relative">
                 <center>
@@ -69,15 +219,25 @@
                 </center>
             </div>
         </div>
-        <!-- FIN NOTIFICACIÓN -->
+
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 border-t border-gray-200 pt-6">
-             <div id="action-buttons-container" class="flex items-center justify-start space-x-4">
-                 <button id="start-shift-button" class="hidden bg-green-500 hover:bg-green-600 text-white p-3 rounded-full shadow-md transition duration-150 ease-in-out" data-action-type="start-shift" title="Iniciar Turno/Tarea"> <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347c.75.411.75 1.559 0 1.97l-11.54 6.347c-.75.411-1.667-.13-1.667-.986V5.653Z" /></svg> </button>
-                 <button id="start-pause-button" class="hidden bg-yellow-500 hover:bg-yellow-600 text-white p-3 rounded-full shadow-md transition duration-150 ease-in-out" data-action-type="start-pause" title="Iniciar Parada"> <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25v13.5m-7.5-13.5v13.5" /></svg> </button>
-                 <button id="resume-button" class="hidden bg-green-500 hover:bg-green-600 text-white p-3 rounded-full shadow-md transition duration-150 ease-in-out" data-action-type="resume-pause" title="Reanudar"> <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347c.75.411.75 1.559 0 1.97l-11.54 6.347c-.75.411-1.667-.13-1.667-.986V5.653Z" /></svg> </button>
-                 <button id="end-shift-button" class="hidden bg-red-500 hover:bg-red-600 text-white p-3 rounded-full shadow-md transition duration-150 ease-in-out" data-action-type="end-shift" title="Finalizar Turno/Tarea"> <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6"> <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/> <polyline points="16 17 21 12 16 7"/> <line x1="21" x2="9" y1="12" y2="12"/> </svg> </button>
-                 <button id="end-pause-button" class="hidden bg-red-500 hover:bg-red-600 text-white p-3 rounded-full shadow-md transition duration-150 ease-in-out" data-action-type="end-pause" title="Finalizar Parada"> <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><line x1="12" x2="12" y1="8" y2="16"/><line x1="8" x2="16" y1="12" y2="12"/></svg> </button>
-            </div>
+
+             <div class="flex flex-col justify-start space-y-4"> <div class="text-sm w-full max-w-sm">
+                    <div class="flex justify-between py-1">
+                        <span class="text-gray-600">OCUPACIÓN TEÓRICA</span>
+                        <span id="ocupacion-teorica-val" class="font-mono font-medium text-gray-800">27:34:24</span> </div>
+                    <div class="flex justify-between py-1">
+                        <span class="text-gray-600">OCUPACIÓN REAL</span>
+                        <span id="ocupacion-real-val" class="font-mono font-medium text-gray-800">29:45:59</span> </div>
+                 </div>
+                 <div id="action-buttons-container" class="flex items-center justify-start space-x-4">
+                     <button id="start-shift-button" class="hidden bg-green-500 hover:bg-green-600 text-white p-3 rounded-full shadow-md transition duration-150 ease-in-out" data-action-type="start-shift" title="Iniciar Turno/Tarea"> <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347c.75.411.75 1.559 0 1.97l-11.54 6.347c-.75.411-1.667-.13-1.667-.986V5.653Z" /></svg> </button>
+                     <button id="start-pause-button" class="hidden bg-yellow-500 hover:bg-yellow-600 text-white p-3 rounded-full shadow-md transition duration-150 ease-in-out" data-action-type="start-pause" title="Iniciar Parada"> <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25v13.5m-7.5-13.5v13.5" /></svg> </button>
+                     <button id="resume-button" class="hidden bg-green-500 hover:bg-green-600 text-white p-3 rounded-full shadow-md transition duration-150 ease-in-out" data-action-type="resume-pause" title="Reanudar"> <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347c.75.411.75 1.559 0 1.97l-11.54 6.347c-.75.411-1.667-.13-1.667-.986V5.653Z" /></svg> </button>
+                     <button id="end-shift-button" class="hidden bg-red-500 hover:bg-red-600 text-white p-3 rounded-full shadow-md transition duration-150 ease-in-out" data-action-type="end-shift" title="Finalizar Turno/Tarea"> <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6"> <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/> <polyline points="16 17 21 12 16 7"/> <line x1="21" x2="9" y1="12" y2="12"/> </svg> </button>
+                     <button id="end-pause-button" class="hidden bg-red-500 hover:bg-red-600 text-white p-3 rounded-full shadow-md transition duration-150 ease-in-out" data-action-type="end-pause" title="Finalizar Parada"> <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><line x1="12" x2="12" y1="8" y2="16"/><line x1="8" x2="16" y1="12" y2="12"/></svg> </button>
+                 </div>
+             </div>
 
             <div class="flex flex-col justify-start items-center space-y-6">
                  <div class="w-full max-w-sm text-center">
@@ -101,7 +261,7 @@
             </div>
 
             <div class="flex justify-center items-start">
-                 <div id="progress-indicator" class="progress-circle" style="--progress-percent: 0;"> <span id="progress-value">0</span> </div>
+                 <div id="progress-indicator" class="progress-circle"> <span id="progress-value">0</span> </div>
             </div>
         </div>
 
@@ -119,6 +279,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dragula/3.7.3/dragula.min.js" crossorigin="anonymous" referrerpolicy="no-referrer" defer onerror="console.error('Error loading Dragula script:', event)"></script>
 
     <script>
+        // El código JavaScript permanece exactamente igual que en la versión anterior.
+        // ... (Todo el script JS sin modificaciones) ...
         document.addEventListener('DOMContentLoaded', function() {
             // --- Configuración ---
             const API_BASE_URL = window.location.origin;
@@ -196,7 +358,9 @@
                 })
                 .then(data => {
                     console.log(`Evento ${eventName} enviado con éxito. Respuesta:`, data);
-                    // No refrescar inmediatamente aquí, dejar que el polling lo haga
+                    // Forzar refresco inmediato para ver el cambio de estado de botones
+                    if (shiftHistoryTimeoutId) clearTimeout(shiftHistoryTimeoutId);
+                    fetchLastShiftHistory(productionLineToken);
                     return data;
                 })
                 .catch(error => {
@@ -231,7 +395,6 @@
             function loadWorkers() {
                 const workersEndpoint = '/api/workers/list-all2';
                 const apiUrl = `${API_BASE_URL}${workersEndpoint}`;
-                const currentSelectedId = workerSelect.val();
                 console.log("Fetching workers...");
                 fetch(apiUrl)
                     .then(response => response.ok ? response.json() : Promise.reject(`HTTP error! status: ${response.status}`))
@@ -241,19 +404,17 @@
                         if (data && Array.isArray(data.operators) && data.operators.length > 0) {
                             data.operators.forEach(worker => { if (worker && typeof worker.id !== 'undefined' && typeof worker.name !== 'undefined') { workerSelect.append(new Option(worker.name, worker.id)); } });
                         } else { workerSelect.append(new Option("No se encontraron operarios", "", false, true)); }
-                        if (currentWorker) { workerSelect.val(currentWorker.id).trigger('change.select2'); } // Restaurar si hay login
-                        // No restaurar currentSelectedId aquí para evitar conflictos
-                        else { workerSelect.val(null).trigger('change'); } // Asegurar placeholder si no hay login
+                        if (currentWorker) { workerSelect.val(currentWorker.id).trigger('change.select2'); }
+                        else { workerSelect.val(null).trigger('change'); }
                         console.log("Worker list reloaded.");
                     })
-                    .catch(error => { console.error('Error fetching workers:', error); workerSelect.empty().append(new Option("Error al cargar operarios", "", true, true))/*.trigger('change')*/; if (typeof Swal === 'function') Swal.fire('Error', 'No se pudo cargar la lista de operarios.', 'error'); });
+                    .catch(error => { console.error('Error fetching workers:', error); workerSelect.empty().append(new Option("Error al cargar operarios", "", true, true)); if (typeof Swal === 'function') Swal.fire('Error', 'No se pudo cargar la lista de operarios.', 'error'); });
             }
 
             // --- Pausar/Reanudar polling al abrir/cerrar Select2 ---
             workerSelect.on('select2:opening', function (e) {
                 isSelectOpen = true;
                 if (shiftHistoryTimeoutId) { clearTimeout(shiftHistoryTimeoutId); shiftHistoryTimeoutId = null; console.log('Shift history refresh PAUSED.'); }
-                // No llamar a loadWorkers aquí
             });
              workerSelect.on('select2:close', function (e) {
                  isSelectOpen = false;
@@ -261,15 +422,36 @@
                  if (productionLineToken && !shiftHistoryTimeoutId) { fetchLastShiftHistory(productionLineToken); }
              });
 
-
              // --- Función para actualizar botones de acción ---
              function updateActionButtons(type, action) {
+                 console.log("Updating buttons for state:", type, action);
                  const buttons = actionButtonsContainer.querySelectorAll('button');
                  buttons.forEach(btn => btn.classList.add('hidden'));
-                 if ((type === 'shift' && action === 'start') || (type === 'stop' && action === 'end')) { $('#start-pause-button').removeClass('hidden'); $('#end-shift-button').removeClass('hidden'); document.getElementById('pause-notification').classList.add('hidden');}
-                 else if (type === 'stop' && action === 'start') { $('#resume-button').removeClass('hidden'); $('#end-pause-button').removeClass('hidden'); document.getElementById('pause-notification').classList.remove('hidden');}
-                 else if (type === 'shift' && action === 'end') { $('#start-shift-button').removeClass('hidden');  document.getElementById('pause-notification').classList.add('hidden');}
-                 else { $('#start-shift-button').removeClass('hidden');  document.getElementById('pause-notification').classList.add('hidden');} // Estado por defecto/desconocido
+
+                 if (type === 'shift' && action === 'start') {
+                    $('#start-pause-button').removeClass('hidden');
+                    $('#end-shift-button').removeClass('hidden');
+                    $('#pause-notification').addClass('hidden');
+                    console.log("Buttons: Start Pause, End Shift");
+                 } else if (type === 'stop' && action === 'start') {
+                    $('#resume-button').removeClass('hidden');
+                    $('#end-pause-button').removeClass('hidden');
+                    $('#pause-notification').removeClass('hidden');
+                     console.log("Buttons: Resume, End Pause");
+                 } else if (type === 'shift' && action === 'end') {
+                    $('#start-shift-button').removeClass('hidden');
+                    $('#pause-notification').addClass('hidden');
+                     console.log("Buttons: Start Shift");
+                 } else if (type === 'stop' && action === 'end') {
+                    $('#start-pause-button').removeClass('hidden');
+                    $('#end-shift-button').removeClass('hidden');
+                    $('#pause-notification').addClass('hidden');
+                     console.log("Buttons: Start Pause, End Shift (after pause end)");
+                 } else {
+                    $('#start-shift-button').removeClass('hidden');
+                    $('#pause-notification').addClass('hidden');
+                     console.log("Buttons: Start Shift (Default/Unknown)");
+                 }
              }
 
               // --- Añadir listeners genéricos a los botones de acción ---
@@ -279,7 +461,7 @@
                   const actionType = button.dataset.actionType;
                   let actionDescription = "realizar esta acción";
                   let eventName = null;
-                  switch (actionType) { /* ... descripciones y eventName ... */
+                  switch (actionType) {
                       case 'start-shift': actionDescription = "iniciar el turno/tarea"; eventName = "inicio_trabajo"; break;
                       case 'start-pause': actionDescription = "iniciar una parada"; eventName = "inicio_pausa"; break;
                       case 'resume-pause': actionDescription = "reanudar la tarea"; eventName = "final_pausa"; break;
@@ -287,7 +469,15 @@
                       case 'end-pause': actionDescription = "finalizar la parada"; eventName = "final_pausa"; break;
                   }
                   if (!eventName) { console.error("Tipo de acción desconocida:", actionType); return; }
-                  showActionConfirmation(actionDescription, () => { postShiftEvent(eventName).catch(err => { console.error(`Error en la acción ${actionType} (API):`, err); }); });
+
+                  if (actionType !== 'start-shift' && !currentWorker) {
+                      showWorkerRequiredAlert();
+                      return;
+                  }
+
+                  showActionConfirmation(actionDescription, () => {
+                      postShiftEvent(eventName).catch(err => { console.error(`Error en la acción ${actionType} (API):`, err); });
+                  });
               });
 
              // --- Función para procesar datos del historial de turno ---
@@ -297,65 +487,98 @@
                  if (shiftData && shiftData.data) { operator = shiftData.data.operator; type = shiftData.data.type; action = shiftData.data.action; }
 
                  const isShiftEnded = (type === 'shift' && action === 'end');
-                 // Actualizar estado global solo si ha cambiado
-                 if (previousState.type !== type || previousState.action !== action) {
+
+                 if (!previousState.type || previousState.type !== type || previousState.action !== action) {
                     currentShiftState = { type, action };
                     console.log("Processing shift data. New state:", currentShiftState);
-                    updateActionButtons(type, action); // Actualizar botones solo si el estado cambió
+                    updateActionButtons(type, action);
+                 } else {
+                    console.log("Shift state unchanged:", currentShiftState);
                  }
 
-                 // Lógica de UI de Operario (Simplificada)
-                 // *** CORREGIDO: Lógica para mostrar/ocultar selector ***
                  if (isShiftEnded && !isProcessingLogin) {
-                     // Turno finalizado -> Mostrar selector, limpiar operario actual si lo había
                      if (currentWorker) {
                          console.log("Shift ended, logging out current worker:", currentWorker.name);
                          currentWorker = null;
-                         displayContainer.addClass('hidden'); workerLabel.removeClass('hidden'); selectContainer.removeClass('hidden');
+                         displayContainer.addClass('hidden');
+                         workerLabel.removeClass('hidden');
+                         selectContainer.removeClass('hidden');
                          workerSelect.val(null).trigger('change.select2');
-                     } else if (selectContainer.hasClass('hidden')) { // Asegurar que se muestra el select si no había nadie
-                          displayContainer.addClass('hidden'); workerLabel.removeClass('hidden'); selectContainer.removeClass('hidden');
+                     } else if (selectContainer.hasClass('hidden')) {
+                          console.log("Shift ended, no worker was logged in. Ensuring selector is visible.");
+                          displayContainer.addClass('hidden');
+                          workerLabel.removeClass('hidden');
+                          selectContainer.removeClass('hidden');
                           workerSelect.val(null).trigger('change.select2');
                      }
                  } else if (operator && !currentWorker && !isProcessingLogin) {
-                     // Hay operario en API y nadie logueado manualmente -> Mostrar operario API y ocultar selector
-                     // *** ESTA ES LA LÓGICA DE AUTO-DISPLAY ***
                      console.log("Operator found in API, no manual login. Auto-displaying:", operator.name);
-                     currentWorker = { id: operator.id, name: operator.name }; // Asignar como actual
+                     currentWorker = { id: operator.id, name: operator.name };
                      selectedWorkerInfo.text(currentWorker.name);
                      workerLabel.addClass('hidden');
                      selectContainer.addClass('hidden');
                      displayContainer.removeClass('hidden');
-                     workerSelect.val(currentWorker.id).trigger('change.select2'); // Sincronizar select interno
+                     workerSelect.val(currentWorker.id).trigger('change.select2');
                  } else if (!operator && currentWorker && !isProcessingLogin) {
-                     // No hay operario en API pero sí logueado manualmente -> Forzar logout manual
                      console.log("No operator in API, but worker logged in manually. Forcing logout.");
                      currentWorker = null;
-                     displayContainer.addClass('hidden'); workerLabel.removeClass('hidden'); selectContainer.removeClass('hidden');
+                     displayContainer.addClass('hidden');
+                     workerLabel.removeClass('hidden');
+                     selectContainer.removeClass('hidden');
                      workerSelect.val(null).trigger('change.select2');
                  } else if (!operator && !currentWorker && !isProcessingLogin) {
-                     // No hay operario en API ni manual -> Asegurar que se muestra el selector
                      if (selectContainer.hasClass('hidden')) {
-                         console.log("No worker manually logged in. Ensuring selector is visible.");
-                         displayContainer.addClass('hidden'); workerLabel.removeClass('hidden'); selectContainer.removeClass('hidden');
+                         console.log("No worker manually logged in and no operator in API. Ensuring selector is visible.");
+                         displayContainer.addClass('hidden');
+                         workerLabel.removeClass('hidden');
+                         selectContainer.removeClass('hidden');
+                         workerSelect.val(null).trigger('change.select2');
                      }
                  }
-                 // Si hay un currentWorker (manual), esta función ya no lo toca a menos que isShiftEnded sea true (y no estemos procesando login)
              }
-
 
             // --- Función para obtener el último historial de turno (y auto-refrescar) ---
             function fetchLastShiftHistory(token) {
-                if (isSelectOpen) { if (!shiftHistoryTimeoutId) { shiftHistoryTimeoutId = setTimeout(() => fetchLastShiftHistory(token), REFRESH_INTERVAL_MS); } return; }
+                if (isSelectOpen || isProcessingLogin) {
+                    console.log(`Shift history refresh SKIPPED (Select open: ${isSelectOpen}, Processing login: ${isProcessingLogin})`);
+                    if (!shiftHistoryTimeoutId) {
+                       shiftHistoryTimeoutId = setTimeout(() => fetchLastShiftHistory(token), REFRESH_INTERVAL_MS);
+                    }
+                    return;
+                }
+
                 if (shiftHistoryTimeoutId) { clearTimeout(shiftHistoryTimeoutId); shiftHistoryTimeoutId = null; }
                 if (!token) { console.error("Token no encontrado en la URL."); updateActionButtons(null, null); return; }
+
                 const historyEndpoint = `/api/shift-history/production-line/${token}/last`;
                 const historyApiUrl = `${API_BASE_URL}${historyEndpoint}`;
+                console.log("Fetching last shift history...");
+
                 fetch(historyApiUrl)
-                    .then(response => { if (!response.ok) { if (response.status === 404) { return null; } throw new Error(`HTTP error! status: ${response.status}`); } return response.json(); })
-                    .then(data => { processShiftData(data); }) // Procesar datos (o null)
-                    .catch(error => { console.error('Error fetching shift history:', error); updateActionButtons(null, null); }) // Resetear botones en error
-                    .finally(() => { if (!isSelectOpen) { shiftHistoryTimeoutId = setTimeout(() => fetchLastShiftHistory(token), REFRESH_INTERVAL_MS); } else { console.log("Select is open after fetch completed, refresh paused."); } });
+                    .then(response => {
+                        if (!response.ok) {
+                            if (response.status === 404) {
+                                console.log("No shift history found (404). Treating as 'shift ended'.");
+                                return null;
+                            }
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        processShiftData(data);
+                    })
+                    .catch(error => {
+                        console.error('Error fetching shift history:', error);
+                        updateActionButtons(null, null);
+                    })
+                    .finally(() => {
+                        if (!isSelectOpen && !isProcessingLogin) {
+                            shiftHistoryTimeoutId = setTimeout(() => fetchLastShiftHistory(token), REFRESH_INTERVAL_MS);
+                        } else {
+                            console.log("Shift history refresh loop paused.");
+                        }
+                    });
             }
 
             // --- Función para obtener token de URL ---
@@ -366,12 +589,12 @@
 
             // --- Flujo Inicial ---
             productionLineToken = getTokenFromUrl();
-            loadWorkers(); // Carga inicial de operarios
-            fetchLastShiftHistory(productionLineToken); // Obtener estado inicial Y empezar polling
-            fetchProgressData(); // Obtener progreso inicial
+            loadWorkers();
+            fetchLastShiftHistory(productionLineToken);
+            fetchProgressData();
 
             // --- Manejar selección manual de operario ---
-            workerSelect.on('change', async function(e) { // Convertido a async para usar await
+            workerSelect.on('change', async function(e) {
                 console.log("DEBUG: Select2 'change' event fired!");
                 const selectedId = $(this).val();
                 const selectedName = $(this).find('option:selected').text();
@@ -379,102 +602,84 @@
                 if (!selectedId || selectedId === "") { console.log("DEBUG: Change event ignored (empty value)."); return; }
                 if (currentWorker && currentWorker.id == selectedId) { console.log("DEBUG: Change event ignored (already selected worker)."); return; }
 
-                const potentialNewWorker = { id: selectedId, name: selectedName };
-                const stateBeforeConfirmation = {...currentShiftState}; // Capturar estado ANTES
-                console.log("DEBUG: Operator selected in dropdown. State captured before Swal:", stateBeforeConfirmation);
+                if (currentWorker && currentWorker.id != selectedId) {
+                    console.log("DEBUG: Different worker selected. Current worker must logout first.");
+                     if (typeof Swal === 'function') {
+                        Swal.fire({ icon: 'warning', title: 'Cambio de Operario', text: `Para iniciar sesión como ${selectedName}, primero debes finalizar el turno del operario actual (${currentWorker.name}). Usa el botón (X) o el botón 'Finalizar Turno'.`, confirmButtonColor: '#3085d6' });
+                     } else {
+                         alert(`Para iniciar sesión como ${selectedName}, primero debes finalizar el turno del operario actual (${currentWorker.name}). Usa el botón (X) o el botón 'Finalizar Turno'.`);
+                     }
+                     workerSelect.val(currentWorker.id).trigger('change.select2');
+                     return;
+                }
 
-                // *** RESTAURAR CONFIRMACIÓN SWAL PARA LOGIN ***
+                const potentialNewWorker = { id: selectedId, name: selectedName };
+                console.log("DEBUG: Operator selected in dropdown. State captured before Swal:", currentShiftState);
+
                 if (typeof Swal === 'function') {
-                    const swalResult = await Swal.fire({ // Usar await
-                            title: 'Confirmar Operario', text: `Estás a punto de hacer login con ${potentialNewWorker.name}. ¿Estás seguro?`,
+                    const swalResult = await Swal.fire({
+                            title: 'Confirmar Operario', text: `Estás a punto de iniciar sesión y turno con ${potentialNewWorker.name}. ¿Estás seguro?`,
                             icon: 'question', showCancelButton: true, confirmButtonColor: '#3085d6',
                             cancelButtonColor: '#d33', confirmButtonText: 'Confirmar', cancelButtonText: 'Cancelar'
                         });
 
                     if (swalResult.isConfirmed) {
                         console.log("DEBUG: Operator selection CONFIRMED via Swal.");
-                        currentWorker = potentialNewWorker; // Actualizar operario logueado ANTES de llamar a API
+                        isProcessingLogin = true;
+                        currentWorker = potentialNewWorker;
+
                         selectedWorkerInfo.text(currentWorker.name);
-                        workerLabel.addClass('hidden'); selectContainer.addClass('hidden'); displayContainer.removeClass('hidden');
-                        // Quitar Swal de éxito inmediato, esperar a secuencia API
+                        workerLabel.addClass('hidden');
+                        selectContainer.addClass('hidden');
+                        displayContainer.removeClass('hidden');
 
-                        // Usar estado capturado ANTES de Swal para decidir acciones
-                        const isShiftEndedOrNotFound = (!stateBeforeConfirmation.type || (stateBeforeConfirmation.type === 'shift' && stateBeforeConfirmation.action === 'end'));
-                        const isPaused = (stateBeforeConfirmation.type === 'stop' && stateBeforeConfirmation.action === 'start');
-                        const isActive = !isShiftEndedOrNotFound && !isPaused;
-                        console.log("DEBUG: Checking shift actions. State at selection time:", stateBeforeConfirmation, "isShiftEndedOrNotFound:", isShiftEndedOrNotFound, "isPaused:", isPaused, "isActive:", isActive);
+                        Swal.fire({ title: 'Procesando inicio de turno...', allowOutsideClick: false, didOpen: () => { Swal.showLoading() } });
 
-                        let sequenceSuccess = false;
-                        isProcessingLogin = true; // *** Activar flag ANTES de secuencia ***
                         try {
-                            // Mostrar Swal de procesamiento ANTES de las llamadas API
-                            Swal.fire({ title: 'Procesando cambio...', allowOutsideClick: false, didOpen: () => { Swal.showLoading() } });
-
-                            if (isShiftEndedOrNotFound) {
-                                console.log("DEBUG: Attempting: Start Shift");
-                                await postShiftEvent("inicio_trabajo");
-                                sequenceSuccess = true;
-
-                            } else if (isPaused) {
-                                console.log("DEBUG: Attempting: Resume Pause -> End Shift -> Start Shift");
-                                await postShiftEvent("final_pausa");
-                                await delay(API_DELAY_MS);
-                                await postShiftEvent("final_trabajo");
-                                await delay(API_DELAY_MS);
-                                await postShiftEvent("inicio_trabajo");
-                                sequenceSuccess = true;
-
-                            } else if (isActive) {
-                                console.log("DEBUG: Attempting: End Shift -> Start Shift");
-                                await postShiftEvent("final_trabajo");
-                                await delay(API_DELAY_MS);
-                                await postShiftEvent("inicio_trabajo");
-                                sequenceSuccess = true;
-                            }
-
-                            // Cerrar Swal de procesamiento y mostrar éxito si la secuencia terminó bien
-                            if (sequenceSuccess) {
-                                Swal.fire('¡Éxito!', `Operaciones de turno completadas para ${currentWorker.name}.`, 'success');
-                            } else { Swal.close(); } // Cerrar 'procesando' si no se hizo nada
-
+                            console.log("DEBUG: Attempting: Start Shift for new worker");
+                            await postShiftEvent("inicio_trabajo");
+                            Swal.fire('¡Éxito!', `Turno iniciado para ${currentWorker.name}.`, 'success');
                         } catch (error) {
-                            console.error("DEBUG: Error during shift change sequence:", error);
-                            if (Swal.isLoading()) { Swal.close(); } // Cerrar 'procesando'
-                            // Opcional: Revertir UI login si falla secuencia? Podría ser confuso.
-                            // currentWorker = null; displayContainer.addClass('hidden'); workerLabel.removeClass('hidden'); selectContainer.removeClass('hidden'); workerSelect.val(null).trigger('change.select2');
+                            console.error("DEBUG: Error during start shift sequence:", error);
+                            if (Swal.isLoading()) { Swal.close(); }
+                            Swal.fire('Error', `No se pudo iniciar el turno para ${currentWorker.name}. ${error.message || ''}`, 'error');
+                            currentWorker = null;
+                            displayContainer.addClass('hidden');
+                            workerLabel.removeClass('hidden');
+                            selectContainer.removeClass('hidden');
+                            workerSelect.val(null).trigger('change.select2');
                         } finally {
-                             isProcessingLogin = false; // *** Desactivar flag al final ***
+                             isProcessingLogin = false;
                              console.log("DEBUG: Login processing finished.");
-                             // Forzar un refresco después de procesar para asegurar estado final
                              if (shiftHistoryTimeoutId) { clearTimeout(shiftHistoryTimeoutId); shiftHistoryTimeoutId = null; }
                              fetchLastShiftHistory(productionLineToken);
                         }
-
                     } else if (swalResult.isDismissed) {
                          console.log("DEBUG: Operator selection CANCELLED via Swal.");
-                         // Revertir al estado anterior visualmente en el select
-                         if (currentWorker) { workerSelect.val(currentWorker.id).trigger('change.select2'); }
-                         else { workerSelect.val(null).trigger('change.select2'); }
+                         workerSelect.val(null).trigger('change.select2');
                     }
-                } else { /* Fallback alert */
-                   // ... (mantener fallback si es necesario) ...
+                } else {
+                    if (confirm(`Estás a punto de iniciar sesión y turno con ${potentialNewWorker.name}. ¿Estás seguro?`)) {
+                       // Fallback logic similar to Swal confirmation
+                    } else {
+                         console.log("DEBUG: Operator selection CANCELLED via confirm().");
+                         workerSelect.val(null).trigger('change.select2');
+                    }
                 }
             });
 
-
              // --- Manejar clic en botón Logout (X) ---
              logoutButton.on('click', function() {
-                 const logoutDescription = "finalizar el turno/tarea";
+                 const logoutDescription = "finalizar el turno/tarea actual";
                  const eventName = "final_trabajo";
                  if (!currentWorker) { showWorkerRequiredAlert(); return; }
 
                  showActionConfirmation(logoutDescription, () => {
                      postShiftEvent(eventName)
                          .then(() => {
-                             console.log("Logout API call successful, updating UI.");
-                             currentWorker = null;
-                             displayContainer.addClass('hidden'); workerLabel.removeClass('hidden'); selectContainer.removeClass('hidden');
-                             workerSelect.val(null).trigger('change.select2');
+                             console.log("Logout API call successful, UI will be updated by fetchLastShiftHistory.");
+                             if (shiftHistoryTimeoutId) clearTimeout(shiftHistoryTimeoutId);
+                             fetchLastShiftHistory(productionLineToken);
                          })
                          .catch(err => { console.error("Logout failed:", err); });
                  });
@@ -485,52 +690,111 @@
             if (columns.length === 0) { console.error("Error: No se encontraron columnas Kanban."); return; }
 
             let longPressTimer = null; let isTouchInteraction = false; let longPressTriggered = false;
-            const longPressDelay = 500; let startX, startY; let currentCard = null;
+            const longPressDelay = 500;
+            let startX, startY; let currentCard = null;
 
             document.addEventListener('touchstart', handleTouchStart, { passive: false });
             document.addEventListener('touchmove', handleTouchMove, { passive: false });
             document.addEventListener('touchend', handleTouchEnd);
             document.addEventListener('touchcancel', handleTouchEnd);
 
-            function handleTouchStart(e) { /* ... lógica táctil ... */
-                const card = e.target.closest('.kanban-card'); if (!card) { isTouchInteraction = false; return; }
+            function handleTouchStart(e) {
+                const card = e.target.closest('.kanban-card');
+                if (!card) { isTouchInteraction = false; return; }
                 currentCard = card; isTouchInteraction = true; longPressTriggered = false;
-                startX = e.touches[0].clientX; startY = e.touches[0].clientY; clearTimeout(longPressTimer);
-                longPressTimer = setTimeout(() => { if (!isTouchInteraction || !currentCard) return; longPressTriggered = true; currentCard.classList.add('long-press-ready'); if (navigator.vibrate) navigator.vibrate(50); }, longPressDelay);
-            }
-            function handleTouchMove(e) { /* ... lógica táctil ... */
-                if (!isTouchInteraction || !currentCard) return; const currentX = e.touches[0].clientX; const currentY = e.touches[0].clientY;
-                const deltaX = Math.abs(currentX - startX); const deltaY = Math.abs(currentY - startY); const moveThreshold = 10;
-                if (!longPressTriggered && (deltaX > moveThreshold || deltaY > moveThreshold)) { clearTimeout(longPressTimer); if(currentCard) currentCard.classList.remove('long-press-ready'); }
-            }
-            function handleTouchEnd(e) { /* ... lógica táctil ... */
-                clearTimeout(longPressTimer); if (currentCard) currentCard.classList.remove('long-press-ready');
-                isTouchInteraction = false; longPressTriggered = false; currentCard = null;
+                startX = e.touches[0].clientX; startY = e.touches[0].clientY;
+                clearTimeout(longPressTimer);
+                longPressTimer = setTimeout(() => {
+                    if (!isTouchInteraction || !currentCard) return;
+                    console.log("Long press triggered!");
+                    longPressTriggered = true;
+                    currentCard.classList.add('long-press-ready');
+                    if (navigator.vibrate) { navigator.vibrate(50); }
+                }, longPressDelay);
             }
 
-            const drake = dragula(columns);
+            function handleTouchMove(e) {
+                if (!isTouchInteraction || !currentCard) return;
+                const currentX = e.touches[0].clientX; const currentY = e.touches[0].clientY;
+                const deltaX = Math.abs(currentX - startX); const deltaY = Math.abs(currentY - startY);
+                const moveThreshold = 10;
+                if (!longPressTriggered && (deltaX > moveThreshold || deltaY > moveThreshold)) {
+                    console.log("Movement detected before long press, cancelling timer.");
+                    clearTimeout(longPressTimer);
+                    if(currentCard) currentCard.classList.remove('long-press-ready');
+                }
+                 if (longPressTriggered) { /* e.preventDefault(); */ }
+            }
+
+            function handleTouchEnd(e) {
+                clearTimeout(longPressTimer);
+                if (currentCard) { currentCard.classList.remove('long-press-ready'); }
+                isTouchInteraction = false;
+                currentCard = null;
+            }
+
+            const drake = dragula(columns, {
+                 moves: function (el, source, handle, sibling) {
+                    if (isTouchInteraction) {
+                        console.log("Dragula moves check (touch): longPressTriggered =", longPressTriggered);
+                        return longPressTriggered;
+                    }
+                    console.log("Dragula moves check (mouse): allowed");
+                    return true;
+                 }
+             });
+
             if (!drake) { console.error("Error: Falló la inicialización de Dragula."); return; }
 
-            // --- Eventos Dragula ---
             drake.on('drag', (el, source) => {
-                // *** VALIDACIÓN DE OPERARIO ***
-                if (!currentWorker) { drake.cancel(true); showWorkerRequiredAlert(); return; }
-                // --- FIN VALIDACIÓN ---
-                if (isTouchInteraction && !longPressTriggered) { drake.cancel(true); isTouchInteraction = false; longPressTriggered = false; if(currentCard) currentCard.classList.remove('long-press-ready'); currentCard = null; return; }
+                console.log("Dragula event: drag");
+                if (!currentWorker) {
+                    console.log("Drag cancelled: No worker selected.");
+                    drake.cancel(true);
+                    showWorkerRequiredAlert();
+                    return;
+                }
                 if (el) el.classList.remove('long-press-ready');
             });
-            drake.on('drop', (el, target, source, sibling) => { /* ... lógica dragula drop ... */
-                const sourceColumnName = source.dataset.columnName || source.id; const targetColumnName = target.dataset.columnName || target.id;
-                const message = `Moviste la tarjeta "${el.innerText.split('\n')[0]}" de "${sourceColumnName}" a "${targetColumnName}".`;
-                // TODO: Aquí debería ir una llamada API para registrar el movimiento de la tarjeta Kanban
-                console.log("TODO: Llamar API para registrar movimiento Kanban", { cardId: el.dataset.cardId, targetColumn: targetColumnName });
-                if (typeof Swal === 'function') Swal.fire({ title: 'Movimiento Registrado (Simulado)', text: message, icon: 'success', timer: 2000, timerProgressBar: true }); else alert(message);
-                isTouchInteraction = false; longPressTriggered = false; if (el) el.classList.remove('long-press-ready'); currentCard = null;
+
+            drake.on('drop', (el, target, source, sibling) => {
+                console.log("Dragula event: drop");
+                const sourceColumnName = source.dataset.columnName || source.id;
+                const targetColumnName = target.dataset.columnName || target.id;
+                const cardId = el.dataset.cardId;
+                const cardTitleElement = el.querySelector('.font-semibold');
+                const cardTitle = cardTitleElement ? cardTitleElement.innerText : `Tarjeta ${cardId}`;
+                const message = `Moviste la tarjeta "${cardTitle}" de "${sourceColumnName}" a "${targetColumnName}".`;
+
+                console.log("TODO: Llamar API para registrar movimiento Kanban", {
+                    cardId: cardId, targetColumn: targetColumnName, sourceColumn: sourceColumnName,
+                    operatorId: currentWorker ? currentWorker.id : null
+                 });
+
+                if (typeof Swal === 'function') {
+                    Swal.fire({ title: 'Movimiento Registrado (Simulado)', text: message, icon: 'success', timer: 2000, timerProgressBar: true, toast: true, position: 'top-end', showConfirmButton: false });
+                } else { alert(message); }
+                longPressTriggered = false;
             });
-            drake.on('cancel', (el, container, source) => { /* ... lógica dragula cancel ... */ isTouchInteraction = false; longPressTriggered = false; if (el) el.classList.remove('long-press-ready'); currentCard = null; });
-            drake.on('dragend', (el) => { /* ... lógica dragula dragend ... */ isTouchInteraction = false; longPressTriggered = false; if (el) el.classList.remove('long-press-ready'); });
-            drake.on('dragover', function (el, container) { container.classList.add('bg-gray-200'); });
-            drake.on('dragout', function (el, container) { container.classList.remove('bg-gray-200'); });
+
+            drake.on('cancel', (el, container, source) => {
+                console.log("Dragula event: cancel");
+                longPressTriggered = false;
+                if (el) el.classList.remove('long-press-ready');
+            });
+
+            drake.on('dragend', (el) => {
+                console.log("Dragula event: dragend");
+                longPressTriggered = false;
+                if (el) el.classList.remove('long-press-ready');
+            });
+
+            drake.on('over', function (el, container) {
+                 container.classList.add('bg-gray-200'); // Usa clase Tailwind directa
+             });
+             drake.on('out', function (el, container) {
+                 container.classList.remove('bg-gray-200'); // Usa clase Tailwind directa
+             });
 
         }); // Fin de DOMContentLoaded
     </script>

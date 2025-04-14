@@ -191,7 +191,7 @@ class MqttShiftSubscriber extends Command
             if ($sensors->isEmpty()) {
                 $this->info("[". Carbon::now()->toDateTimeString() . "]No sensors found for production line ID {$productionLineId}");
                 //pero reseteamos los contadores de usuarios y ponemos log 
-                $this->resetOperators();
+               // $this->resetOperators();
             }else {
                 // Procesar cada sensor encontrado
                 foreach ($sensors as $sensor) {
@@ -253,7 +253,7 @@ class MqttShiftSubscriber extends Command
             if ($mosbuses->isEmpty()) {
                 $this->info("[". Carbon::now()->toDateTimeString() . "]No modbus found for production line ID: {$productionLineId}");
                 //pero reseteamos los contadores de usuarios y ponemos log 
-                $this->resetOperators();
+                //$this->resetOperators();
             } else {
                 // Procesar cada modbus asociado a esta línea de producción
                 foreach ($mosbuses as $modbus) {
@@ -295,7 +295,7 @@ class MqttShiftSubscriber extends Command
             if ($mosbuses->isEmpty()) {
                 $this->info("[". Carbon::now()->toDateTimeString() . "]No modbus found for production line ID: {$productionLineId}");
                 //pero reseteamos los contadores de usuarios y ponemos log 
-                $this->resetOperators();
+                //$this->resetOperators();
             } else {
                 // Procesar cada modbus asociado a esta línea de producción
                 foreach ($mosbuses as $modbus) {
@@ -337,7 +337,7 @@ class MqttShiftSubscriber extends Command
             if ($rfidDetails->isEmpty()) {
                 $this->info("[". Carbon::now()->toDateTimeString() . "]No se encontraron registros en rfid_details para production line ID: {$productionLineId}");
                 // Opcional: reiniciar contadores de operadores o realizar otra acción
-                $this->resetOperators();
+               // $this->resetOperators();
             } else {
                 $this->info("[". Carbon::now()->toDateTimeString() . "]Se encontraron registros en rfid_details para production line ID: {$productionLineId}");
                 foreach ($rfidDetails as $rfidDetail) {

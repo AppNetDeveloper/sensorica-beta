@@ -287,9 +287,13 @@ class SensorController extends Controller
                     if ($orderStats->units_made_real === 1) {
                         $orderStats->prepair_time = Carbon::now()->diffInSeconds($orderStats->created_at);
                     }
+                    $unitsPending = $units - $orderStats->units_made_real - 1;
+                    if($unitsPending<1){
+                        $unitsPending=0;
+                    }
 
                     // Recalculamos las unidades pendientes con el valor recién incrementado
-                    $orderStats->units_pending = $units - $orderStats->units_made_real - 1;
+                    $orderStats->units_pending = $unitsPending;
 
                     // Guardamos los cambios
                     $orderStats->save();
