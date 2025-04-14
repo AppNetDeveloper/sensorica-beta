@@ -9,27 +9,30 @@
 @endsection
 @section('content')
     <div class="row">
-    <div class="mb-3">
-                        <a href="{{ route('productionlines.create', ['customer_id' => $customer_id]) }}" class="btn btn-primary">Añadir Nueva Línea</a>
-
-                    </div>
+        <div class="mb-3">
+            <a href="{{ route('productionlines.create', ['customer_id' => $customer_id]) }}" class="btn btn-primary">
+                {{ __('Añadir Nueva Línea') }}
+            </a>
+        </div>
         <div class="col-lg-12">
             <div class="card">
                 <div class="card-body">
+                    <!-- Tabla con clase 'data-table' y 'responsive' para DataTables -->
                     <div class="table-responsive py-5 pb-4 dropdown_2">
                         <div class="container-fluid">
-                            <table class="table table-bordered data-table">
+                            <table class="table table-bordered data-table" style="width:100%">
                                 <thead>
                                     <tr>
+                                        {{-- Columna para el ícono + (child rows) --}}
+                                        <th></th>
                                         <th>ID</th>
-                                        <th>Name</th>
-                                        <th>Token</th>
-                                        <th>Created At</th>
-                                        <th>Updated At</th>
-                                        <th>Action</th>
+                                        <th>{{ __('Name') }}</th>
+                                        <th>{{ __('Token') }}</th>
+                                        <th>{{ __('Action') }}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
+                                    <!-- DataTables cargará aquí los registros -->
                                 </tbody>
                             </table>
                         </div>
@@ -42,33 +45,60 @@
 
 @push('style')
     @include('layouts.includes.datatable_css')
+    <!-- CSS de DataTables Responsive (si no lo tienes cargado en tu layout principal) -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.4.1/css/responsive.dataTables.min.css">
 @endpush
 
 @push('scripts')
     @include('layouts.includes.datatable_js')
+    <!-- JS de DataTables Responsive (si no lo tienes cargado en tu layout principal) -->
+    <script src="https://cdn.datatables.net/responsive/2.4.1/js/dataTables.responsive.min.js"></script>
+
     <script type="text/javascript">
         $(function () {
             var customer_id = "{{ $customer_id }}";
-            $('.data-table').DataTable({
+
+            // Inicializamos la DataTable con modo responsive + columna "control"
+            var table = $('.data-table').DataTable({
                 processing: true,
                 serverSide: true,
                 ajax: "/customers/" + customer_id + "/productionlinesjson",
+                responsive: {
+                    details: {
+                        type: 'column',      // Indica que la columna será la encargada de mostrar/ocultar detalles
+                        target: 0           // La primera columna (índice 0) es donde estará el ícono "+"
+                    }
+                },
+                // Definición de columnas
                 columns: [
-                    {data: 'id', name: 'id'},
-                    {data: 'name', name: 'name'},
-                    {data: 'token', name: 'token'},
-                    {data: 'created_at', name: 'created_at'},
-                    {data: 'updated_at', name: 'updated_at'},
-                    {data: 'action', name: 'action', orderable: false, searchable: false},
-                ],
-                "columnDefs": [
-                    { "targets": [0], "visible": true, "searchable": true, "sortable": true },
-                    { "targets": [1], "visible": true, "searchable": true, "sortable": true },
-                    { "targets": [5], "render": function (data, type, full, meta) {
-                        return data;
-                    }},
-                ],
+                    // Columna "control" para el ícono "+"
+                    {
+                        className: 'control', // Clave para que DataTables sepa que aquí va el "+"
+                        orderable: false,
+                        data:  null,
+                        defaultContent: ''
+                    },
+                    { data: 'id', name: 'id' },
+                    { data: 'name', name: 'name' },
+                    { data: 'token', name: 'token' },
+                    {
+                        data: 'action',
+                        name: 'action',
+                        orderable: false,
+                        searchable: false
+                    }
+                ]
             });
+
+            // OPCIONAL: si quisieras definir algunas columnas que se oculten automáticamente,
+            // puedes usar columnDefs con responsivePriority, por ejemplo:
+            /*
+            columnDefs: [
+                { responsivePriority: 1, targets: 1 }, // la columna ID siempre visible
+                { responsivePriority: 2, targets: 2 }, // la columna Name con prioridad alta
+                { responsivePriority: 3, targets: 3 },
+            ],
+            */
         });
     </script>
 @endpush

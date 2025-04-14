@@ -93,41 +93,35 @@
         }
 
         /* --- Colores de icono por defecto --- */
-        /* Icono Play/Resume: Verde por defecto */
         #start-shift-button .action-icon,
-        #resume-button .action-icon {
-            color: #22c55e; /* green-500 */
-        }
-        /* Icono Pause: Amarillo por defecto */
-        #start-pause-button .action-icon {
-            color: #eab308; /* yellow-500 */
-        }
-        /* Icono Stop: Rojo por defecto */
+        #resume-button .action-icon { color: #22c55e; }
+        #start-pause-button .action-icon { color: #eab308; }
         #end-shift-button .action-icon,
-        #end-pause-button .action-icon {
-            color: #ef4444; /* red-500 */
-        }
+        #end-pause-button .action-icon { color: #ef4444; }
 
         /* --- Estilo al pasar el ratón por encima (Hover) --- */
         .action-button:hover {
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); /* Sombra suave */
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
         }
-
-        /* Icono se vuelve blanco y opaco al pasar el ratón (REGLA CORREGIDA) */
         #start-shift-button:hover .action-icon,
         #resume-button:hover .action-icon,
         #start-pause-button:hover .action-icon,
         #end-shift-button:hover .action-icon,
         #end-pause-button:hover .action-icon {
-            color: white !important; /* Icono blanco - Añadido !important por si acaso */
-            opacity: 1 !important; /* Opacidad completa - Añadido !important por si acaso */
+            color: white !important;
+            opacity: 1 !important;
         }
+        #start-shift-button:hover, #resume-button:hover { background-color: #22c55e; }
+        #start-pause-button:hover { background-color: #eab308; }
+        #end-shift-button:hover, #end-pause-button:hover { background-color: #ef4444; }
 
-        /* Fondo del botón aparece al pasar el ratón */
-        #start-shift-button:hover, #resume-button:hover { background-color: #22c55e; } /* green-500 */
-        #start-pause-button:hover { background-color: #eab308; } /* yellow-500 */
-        #end-shift-button:hover, #end-pause-button:hover { background-color: #ef4444; } /* red-500 */
-
+        /* Estilo para el select de turnos */
+        #shift-select-container { margin-top: 1rem; }
+        #shift-select {
+             width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d1d5db;
+             border-radius: 0.375rem; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+             background-color: white; font-size: 0.875rem; line-height: 1.25rem;
+        }
     </style>
      <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -173,7 +167,7 @@
                             <path d="M12 9v4"/>
                             <path d="M12 17h.01"/>
                         </svg>
-                        </div>
+                    </div>
                     <div class="flex justify-between items-center text-gray-500">
                         <span>04/03/2025</span>
                         <span>MATERIAL A0013</span>
@@ -326,6 +320,12 @@
                         </button>
                     </div>
                 </div>
+                 <div id="shift-select-container" class="w-full max-w-sm text-center hidden">
+                    <label for="shift-select" class="block text-sm font-medium text-gray-700 mb-1">TURNO</label>
+                    <select id="shift-select">
+                        <option value="">Selecciona un turno...</option>
+                        </select>
+                 </div>
                  <div class="text-sm w-full max-w-sm">
                     <div class="flex justify-between py-1"><span class="text-gray-600">TIEMPO EN PARADA</span><span class="font-mono font-medium text-gray-800">00:00:00</span></div>
                     <div class="flex justify-between py-1"><span class="text-gray-600">TIEMPO LENTO</span><span class="font-mono font-medium text-gray-800">00:00:00</span></div>
@@ -374,27 +374,33 @@
             const actionButtonsContainer = document.getElementById('action-buttons-container');
             const progressIndicator = document.getElementById('progress-indicator');
             const progressValue = document.getElementById('progress-value');
+            const shiftSelectContainer = $('#shift-select-container');
+            const shiftSelect = $('#shift-select');
             let currentWorker = null;
             let currentShiftState = { type: null, action: null };
+            let selectedShiftId = null;
+            let potentialNewWorker = null;
             let shiftHistoryTimeoutId = null;
             let productionLineToken = null;
             let isSelectOpen = false;
-            let isProcessingLogin = false;
+            let isProcessingLogin = false; // Flag para bloquear refresh durante selección/login
 
             // --- Función de utilidad para Delay ---
             const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-            // --- Función para mostrar alerta de operario requerido ---
+            // --- Función para mostrar alerta de operario/turno requerido ---
             function showWorkerRequiredAlert() {
                  if (typeof Swal === 'function') { Swal.fire({ icon: 'warning', title: 'Acción no permitida', text: 'Por favor, selecciona un operario primero.', confirmButtonColor: '#3085d6' }); }
                  else { alert('Por favor, selecciona un operario primero.'); }
+            }
+            function showShiftRequiredAlert() {
+                 if (typeof Swal === 'function') { Swal.fire({ icon: 'warning', title: 'Acción no permitida', text: 'Por favor, selecciona un turno primero.', confirmButtonColor: '#3085d6' }); }
+                 else { alert('Por favor, selecciona un turno primero.'); }
             }
 
              // --- Función para mostrar confirmación genérica ---
              function showActionConfirmation(actionDescription, callback) {
                  const isLogoutAction = actionDescription.includes("finalizar el turno/tarea");
-                 // Permitir logout aunque no haya trabajador seleccionado (si el botón está visible)
-                 // Permitir otras acciones solo si hay trabajador seleccionado
                  if (!isLogoutAction && !currentWorker) { showWorkerRequiredAlert(); return; }
 
                  if (typeof Swal === 'function') {
@@ -408,35 +414,48 @@
                             else if (isLogoutAction && currentWorker) { console.log(`Acción '${actionDescription}' (logout) confirmada por ${currentWorker.name}`); }
                             else if (isLogoutAction && !currentWorker) { console.log(`Acción '${actionDescription}' (logout) confirmada sin operario activo.`); }
                             callback();
-                        } else { console.log(`Acción '${actionDescription}' cancelada.`); }
+                        } else {
+                            console.log(`Acción '${actionDescription}' cancelada.`);
+                            if (!isLogoutAction) {
+                                resetShiftSelection(); // Resetear si se cancela una acción que no sea logout
+                            }
+                        }
                     });
-                 } else { /* Fallback */
+                 } else {
                      if (confirm(`Estás a punto de ${actionDescription}. ¿Estás seguro?`)) {
                          if (!isLogoutAction && currentWorker) { console.log(`Acción '${actionDescription}' confirmada por ${currentWorker.name}`); }
                          else if (isLogoutAction && currentWorker) { console.log(`Acción '${actionDescription}' (logout) confirmada por ${currentWorker.name}`); }
                          else if (isLogoutAction && !currentWorker) { console.log(`Acción '${actionDescription}' (logout) confirmada sin operario activo.`); }
                          callback();
-                     } else { console.log(`Acción '${actionDescription}' cancelada.`); }
+                     } else {
+                        console.log(`Acción '${actionDescription}' cancelada.`);
+                        if (!isLogoutAction) {
+                            resetShiftSelection();
+                        }
+                     }
                  }
              }
 
             // --- Función para enviar evento de turno a la API ---
+            // *** FIX V3: Quitado el refresh de aquí ***
             function postShiftEvent(eventName) {
-                // Permitir 'final_trabajo' incluso sin currentWorker, ya que el botón puede estar visible después de un error
                 if (eventName !== 'final_trabajo' && (!productionLineToken || !currentWorker || !currentWorker.id)) {
                     console.error("Falta token o ID de operario para enviar evento:", eventName);
                     showWorkerRequiredAlert();
                     return Promise.reject("Faltan datos para enviar evento");
                 }
-                 // Para 'final_trabajo', si no hay currentWorker, intentamos enviarlo sin operator_id (la API debería manejarlo o usar el token)
+                if (eventName === 'inicio_trabajo' && !selectedShiftId) {
+                    console.error("Falta ID de turno para enviar evento inicio_trabajo");
+                    showShiftRequiredAlert();
+                    return Promise.reject("Falta ID de turno");
+                }
+
                 const payload = { production_line_token: productionLineToken, event: eventName };
                 if (currentWorker && currentWorker.id) {
                     payload.operator_id = currentWorker.id;
-                } else if (eventName !== 'final_trabajo') {
-                    // Si no es final_trabajo y no hay operario, es un error real
-                     console.error("Intento de enviar evento sin operario (no permitido para este evento):", eventName);
-                     showWorkerRequiredAlert();
-                     return Promise.reject("Falta operario para este evento");
+                }
+                if (eventName === 'inicio_trabajo' && selectedShiftId) {
+                    payload.shift_id = selectedShiftId;
                 }
 
                 const eventEndpoint = '/api/shift-event';
@@ -450,20 +469,22 @@
                 })
                 .then(data => {
                     console.log(`Evento ${eventName} enviado con éxito. Respuesta:`, data);
-                    // Forzar refresco inmediato para ver el cambio de estado de botones
-                    if (shiftHistoryTimeoutId) clearTimeout(shiftHistoryTimeoutId);
-                    fetchLastShiftHistory(productionLineToken); // Actualiza estado inmediatamente
-                    // Opcional: Actualizar también el progreso si es relevante
-                    // fetchProgressData();
-                    return data;
+                    // YA NO SE LLAMA A fetchLastShiftHistory aquí
+                    return data; // Devolver datos para el siguiente .then()
                 })
                 .catch(error => {
                     console.error(`Fallo al enviar evento ${eventName}:`, error);
                     if (typeof Swal === 'function') { Swal.fire('Error', `No se pudo ${eventName}. ${error.message || ''}`, 'error'); }
                     else { alert(`Error al ${eventName}.`); }
-                    throw error; // Propagar error
+                    if (error.message !== "Falta ID de turno") {
+                        if (eventName === 'inicio_trabajo') {
+                             resetShiftSelection();
+                        }
+                    }
+                    throw error; // Propagar el error para que el catch superior lo maneje
                 });
             }
+            // ****************************************
 
             // --- Función para actualizar el círculo de progreso ---
             function updateProgress(percent) {
@@ -505,48 +526,108 @@
                     .catch(error => { console.error('Error fetching workers:', error); workerSelect.empty().append(new Option("Error al cargar operarios", "", true, true)); if (typeof Swal === 'function') Swal.fire('Error', 'No se pudo cargar la lista de operarios.', 'error'); });
             }
 
-            // --- Pausar/Reanudar polling al abrir/cerrar Select2 ---
+            // --- Función para cargar y mostrar turnos ---
+            async function loadAndShowShifts() {
+                if (!productionLineToken) {
+                    console.error("No hay token para cargar turnos.");
+                    return Promise.reject("No hay token");
+                }
+                const shiftsEndpoint = `/api/shift-lists?token=${productionLineToken}`;
+                const shiftsApiUrl = `${API_BASE_URL}${shiftsEndpoint}`;
+                console.log("Fetching shifts from:", shiftsApiUrl);
+
+                try {
+                    const response = await fetch(shiftsApiUrl);
+                    if (!response.ok) {
+                        throw new Error(`Error ${response.status} al cargar turnos`);
+                    }
+                    const shifts = await response.json();
+
+                    shiftSelect.empty();
+                    shiftSelect.append(new Option("Selecciona un turno...", "", true, true));
+
+                    if (shifts && Array.isArray(shifts) && shifts.length > 0) {
+                        shifts.forEach(shift => {
+                            if (shift && typeof shift.id !== 'undefined' && shift.start && shift.end) {
+                                const startTime = shift.start.substring(0, 5);
+                                const endTime = shift.end.substring(0, 5);
+                                const optionText = `Turno ${startTime} - ${endTime}`;
+                                shiftSelect.append(new Option(optionText, shift.id));
+                            }
+                        });
+                        shiftSelectContainer.removeClass('hidden');
+                        return true;
+                    } else {
+                        console.warn("No se encontraron turnos o la respuesta no es válida.");
+                        shiftSelect.append(new Option("No hay turnos disponibles", "", false, true));
+                        shiftSelectContainer.removeClass('hidden');
+                        return false;
+                    }
+                } catch (error) {
+                    console.error('Error fetching shifts:', error);
+                    if (typeof Swal === 'function') { Swal.fire('Error', `No se pudo cargar la lista de turnos. ${error.message || ''}`, 'error'); }
+                    else { alert('Error al cargar turnos.'); }
+                    shiftSelectContainer.addClass('hidden');
+                    return Promise.reject(error);
+                }
+            }
+
+            // --- Función para resetear selección de turno ---
+            function resetShiftSelection() {
+                selectedShiftId = null;
+                potentialNewWorker = null; // Limpiar también el operario temporal
+                shiftSelect.val("");
+                if (!shiftSelectContainer.hasClass('hidden')) {
+                    shiftSelectContainer.addClass('hidden');
+                    console.log("Shift selection reset and hidden.");
+                } else {
+                    console.log("Shift selection reset.");
+                }
+            }
+
+            // --- Pausar/Reanudar polling al abrir/cerrar Select2 de Operarios ---
             workerSelect.on('select2:opening', function (e) {
                 isSelectOpen = true;
-                if (shiftHistoryTimeoutId) { clearTimeout(shiftHistoryTimeoutId); shiftHistoryTimeoutId = null; console.log('Shift history refresh PAUSED.'); }
+                if (shiftHistoryTimeoutId) { clearTimeout(shiftHistoryTimeoutId); shiftHistoryTimeoutId = null; console.log('Shift history refresh PAUSED (worker select open).'); }
             });
              workerSelect.on('select2:close', function (e) {
                  isSelectOpen = false;
-                 console.log('Select2 closed, restarting history refresh.');
-                 if (productionLineToken && !shiftHistoryTimeoutId) { fetchLastShiftHistory(productionLineToken); }
+                 console.log('Worker Select2 closed, attempting to restart history refresh.');
+                 // *** FIX V3: Usar isProcessingLogin para bloquear ***
+                 if (productionLineToken && !shiftHistoryTimeoutId && !isProcessingLogin) {
+                     console.log('Restarting refresh after worker select close.');
+                     fetchLastShiftHistory(productionLineToken);
+                 } else {
+                     console.log(`Refresh restart skipped (processing: ${isProcessingLogin}, timer active: ${!!shiftHistoryTimeoutId})`);
+                 }
              });
 
              // --- Función para actualizar botones de acción ---
              function updateActionButtons(type, action) {
                  console.log("Updating buttons for state:", type, action);
-                 const buttons = actionButtonsContainer.querySelectorAll('button.action-button'); // Seleccionar solo los botones de acción
-                 buttons.forEach(btn => btn.classList.add('hidden')); // Ocultar todos primero
+                 const buttons = actionButtonsContainer.querySelectorAll('button.action-button');
+                 buttons.forEach(btn => btn.classList.add('hidden'));
 
                  if (type === 'shift' && action === 'start') {
-                    // Turno iniciado: mostrar Pausar y Finalizar Turno
                     $('#start-pause-button').removeClass('hidden');
                     $('#end-shift-button').removeClass('hidden');
                     $('#pause-notification').addClass('hidden');
                     console.log("Buttons: Start Pause, End Shift");
                  } else if (type === 'stop' && action === 'start') {
-                    // Pausa iniciada: mostrar Reanudar y Finalizar Parada
                     $('#resume-button').removeClass('hidden');
-                    $('#end-pause-button').removeClass('hidden'); // Mostrar Finalizar Parada
+                    $('#end-pause-button').removeClass('hidden');
                     $('#pause-notification').removeClass('hidden');
                      console.log("Buttons: Resume, End Pause");
                  } else if (type === 'shift' && action === 'end') {
-                    // Turno finalizado: mostrar Iniciar Turno
                     $('#start-shift-button').removeClass('hidden');
                     $('#pause-notification').addClass('hidden');
                      console.log("Buttons: Start Shift");
                  } else if (type === 'stop' && action === 'end') {
-                    // Pausa finalizada (implica que el turno sigue activo): mostrar Pausar y Finalizar Turno
                     $('#start-pause-button').removeClass('hidden');
                     $('#end-shift-button').removeClass('hidden');
                     $('#pause-notification').addClass('hidden');
                      console.log("Buttons: Start Pause, End Shift (after pause end)");
                  } else {
-                    // Estado inicial o desconocido: mostrar Iniciar Turno
                     $('#start-shift-button').removeClass('hidden');
                     $('#pause-notification').addClass('hidden');
                      console.log("Buttons: Start Shift (Default/Unknown)");
@@ -555,40 +636,42 @@
 
               // --- Añadir listeners genéricos a los botones de acción ---
               actionButtonsContainer.addEventListener('click', function(event) {
-                  const button = event.target.closest('button.action-button'); // Asegurarse que es un botón de acción
-                  if (!button) return; // Ignorar clics fuera de los botones de acción
+                  const button = event.target.closest('button.action-button');
+                  if (!button) return;
                   const actionType = button.dataset.actionType;
                   let actionDescription = "realizar esta acción";
                   let eventName = null;
-                  switch (actionType) {
-                      case 'start-shift': actionDescription = "iniciar el turno/tarea"; eventName = "inicio_trabajo"; break;
-                      case 'start-pause': actionDescription = "iniciar una parada"; eventName = "inicio_pausa"; break;
-                      case 'resume-pause': actionDescription = "reanudar la tarea"; eventName = "final_pausa"; break; // Reanudar es finalizar la pausa
-                      case 'end-shift': actionDescription = "finalizar el turno/tarea"; eventName = "final_trabajo"; break;
-                      case 'end-pause': actionDescription = "finalizar la parada"; eventName = "final_pausa"; break; // Finalizar parada directamente
-                  }
-                  if (!eventName) { console.error("Tipo de acción desconocida:", actionType); return; }
 
-                  // Permitir 'end-shift' incluso sin operario seleccionado (botón X o estado recuperado)
-                  // Para el resto, requerir operario
-                  if (actionType !== 'end-shift' && !currentWorker) {
-                      showWorkerRequiredAlert();
-                      return;
-                  }
-
-                  // Caso especial: Iniciar turno requiere selección previa si no hay nadie logueado
-                  if (actionType === 'start-shift' && !currentWorker) {
-                      // No mostrar confirmación aquí, la selección del operario ya la pide
-                      console.log("Start shift button clicked without worker, relying on Select2 change handler.");
-                      // Opcional: indicar al usuario que seleccione un operario
-                      if (typeof Swal === 'function') {
-                          Swal.fire({ icon: 'info', title: 'Selecciona Operario', text: 'Por favor, selecciona tu nombre en la lista para iniciar el turno.', confirmButtonColor: '#3085d6' });
-                      } else {
-                          alert('Por favor, selecciona tu nombre en la lista para iniciar el turno.');
+                  if (actionType === 'start-shift') {
+                      console.log("Start shift button clicked, initiating worker/shift selection process.");
+                      if (!currentWorker && selectContainer.is(':visible')) {
+                           if (typeof Swal === 'function') {
+                               Swal.fire({ icon: 'info', title: 'Selecciona Operario', text: 'Por favor, selecciona tu nombre en la lista para iniciar el turno.', confirmButtonColor: '#3085d6' });
+                           } else {
+                               alert('Por favor, selecciona tu nombre en la lista para iniciar el turno.');
+                           }
+                      } else if (currentWorker) {
+                           if (typeof Swal === 'function') {
+                               Swal.fire({ icon: 'warning', title: 'Turno ya iniciado', text: `El turno ya está iniciado para ${currentWorker.name}. Finaliza el turno actual si quieres empezar uno nuevo.`, confirmButtonColor: '#3085d6' });
+                           } else {
+                               alert(`El turno ya está iniciado para ${currentWorker.name}.`);
+                           }
                       }
                       return;
                   }
 
+                  switch (actionType) {
+                      case 'start-pause': actionDescription = "iniciar una parada"; eventName = "inicio_pausa"; break;
+                      case 'resume-pause': actionDescription = "reanudar la tarea"; eventName = "final_pausa"; break;
+                      case 'end-shift': actionDescription = "finalizar el turno/tarea"; eventName = "final_trabajo"; break;
+                      case 'end-pause': actionDescription = "finalizar la parada"; eventName = "final_pausa"; break;
+                  }
+                  if (!eventName) { console.error("Tipo de acción desconocida o ya manejada:", actionType); return; }
+
+                  if (actionType !== 'end-shift' && !currentWorker) {
+                      showWorkerRequiredAlert();
+                      return;
+                  }
 
                   showActionConfirmation(actionDescription, () => {
                       postShiftEvent(eventName).catch(err => { console.error(`Error en la acción ${actionType} (API):`, err); });
@@ -600,28 +683,29 @@
                  let operator = null; let type = null; let action = null;
                  let previousState = {...currentShiftState};
                  if (shiftData && shiftData.data) { operator = shiftData.data.operator; type = shiftData.data.type; action = shiftData.data.action; }
-                 else if (shiftData === null) { // Caso 404 o sin historial
-                     type = 'shift'; action = 'end'; // Asumir turno finalizado
+                 else if (shiftData === null) {
+                     type = 'shift'; action = 'end';
                      console.log("No shift data received (or 404), assuming shift ended.");
                  }
 
                  const isShiftEnded = (type === 'shift' && action === 'end');
 
-                 // Actualizar estado global SOLO si ha cambiado
                  if (!previousState.type || previousState.type !== type || previousState.action !== action) {
                     currentShiftState = { type, action };
                     console.log("Processing shift data. New state:", currentShiftState);
-                    updateActionButtons(type, action); // Actualizar botones basado en el nuevo estado
+                    updateActionButtons(type, action);
                  } else {
                     console.log("Shift state unchanged:", currentShiftState);
-                    // Aunque el estado no cambie, asegurarse que los botones son correctos
-                    // Esto es útil si hubo un error previo y los botones quedaron mal
                     updateActionButtons(currentShiftState.type, currentShiftState.action);
                  }
 
-                 // Lógica para mostrar/ocultar selector de operario
+                 if (isShiftEnded || (!operator && currentWorker) || (operator && !currentWorker) || (!operator && !currentWorker)) {
+                     if (!isProcessingLogin) {
+                        resetShiftSelection();
+                     }
+                 }
+
                  if (isShiftEnded && !isProcessingLogin) {
-                     // Si el turno terminó, desloguear operario y mostrar selector
                      if (currentWorker) {
                          console.log("Shift ended, logging out current worker:", currentWorker.name);
                          currentWorker = null;
@@ -629,43 +713,41 @@
                      displayContainer.addClass('hidden');
                      workerLabel.removeClass('hidden');
                      selectContainer.removeClass('hidden');
-                     workerSelect.val(null).trigger('change.select2'); // Resetear select
+                     workerSelect.val(null).trigger('change.select2');
 
                  } else if (operator && !isProcessingLogin) {
-                     // Si hay operario en la API, mostrarlo (auto-login o refresco)
                      if (!currentWorker || currentWorker.id != operator.id) {
                         console.log("Operator found in API. Auto-displaying/updating:", operator.name);
                         currentWorker = { id: operator.id, name: operator.name };
                         selectedWorkerInfo.text(currentWorker.name);
-                        workerSelect.val(currentWorker.id).trigger('change.select2'); // Sincronizar select
+                        workerSelect.val(currentWorker.id).trigger('change.select2');
                      }
                      workerLabel.addClass('hidden');
                      selectContainer.addClass('hidden');
                      displayContainer.removeClass('hidden');
 
                  } else if (!operator && currentWorker && !isProcessingLogin) {
-                     // Si no hay operario en API pero sí localmente (error?), forzar logout local
                      console.warn("No operator in API, but worker logged in locally. Forcing local logout.");
                      currentWorker = null;
                      displayContainer.addClass('hidden');
                      workerLabel.removeClass('hidden');
                      selectContainer.removeClass('hidden');
-                     workerSelect.val(null).trigger('change.select2'); // Resetear select
+                     workerSelect.val(null).trigger('change.select2');
 
                  } else if (!operator && !currentWorker && !isProcessingLogin) {
-                      // Si no hay operario ni local ni en API, asegurar que el selector está visible
                      if (selectContainer.hasClass('hidden')) {
                          console.log("No worker manually logged in and no operator in API. Ensuring selector is visible.");
                          displayContainer.addClass('hidden');
                          workerLabel.removeClass('hidden');
                          selectContainer.removeClass('hidden');
-                         workerSelect.val(null).trigger('change.select2'); // Resetear select
+                         workerSelect.val(null).trigger('change.select2');
                      }
                  }
              }
 
             // --- Función para obtener el último historial de turno (y auto-refrescar) ---
             function fetchLastShiftHistory(token) {
+                // *** FIX V3: Usar isProcessingLogin para bloquear ***
                 if (isSelectOpen || isProcessingLogin) {
                     console.log(`Shift history refresh SKIPPED (Select open: ${isSelectOpen}, Processing login: ${isProcessingLogin})`);
                     if (!shiftHistoryTimeoutId) {
@@ -673,12 +755,12 @@
                     }
                     return;
                 }
+                // ***************************************************
 
                 if (shiftHistoryTimeoutId) { clearTimeout(shiftHistoryTimeoutId); shiftHistoryTimeoutId = null; }
                 if (!token) {
                     console.error("Token no encontrado en la URL.");
-                    processShiftData(null); // Tratar como turno finalizado si no hay token
-                    // No reiniciar el timer si no hay token
+                    processShiftData(null);
                     return;
                  }
 
@@ -691,7 +773,7 @@
                         if (!response.ok) {
                             if (response.status === 404) {
                                 console.log("No shift history found (404). Treating as 'shift ended'.");
-                                return null; // Devolver null para que processShiftData lo maneje
+                                return null;
                             }
                             throw new Error(`HTTP error! status: ${response.status}`);
                         }
@@ -702,15 +784,16 @@
                     })
                     .catch(error => {
                         console.error('Error fetching shift history:', error);
-                        processShiftData(null); // Asumir turno finalizado en caso de error de red/API
+                        processShiftData(null);
                     })
                     .finally(() => {
-                        // Volver a programar el refresco solo si hay token y no hay interrupciones
+                        // *** FIX V3: Usar isProcessingLogin para bloquear ***
                         if (token && !isSelectOpen && !isProcessingLogin) {
                             shiftHistoryTimeoutId = setTimeout(() => fetchLastShiftHistory(token), REFRESH_INTERVAL_MS);
                         } else {
                             console.log("Shift history refresh loop paused.");
                         }
+                        // ***************************************************
                     });
             }
 
@@ -722,154 +805,186 @@
 
             // --- Flujo Inicial ---
             productionLineToken = getTokenFromUrl();
-            loadWorkers(); // Cargar lista de operarios
-            fetchLastShiftHistory(productionLineToken); // Obtener estado inicial y empezar polling
-            fetchProgressData(); // Obtener progreso inicial
+            loadWorkers();
+            fetchLastShiftHistory(productionLineToken);
+            fetchProgressData();
 
             // --- Manejar selección manual de operario ---
             workerSelect.on('change', async function(e) {
-                console.log("DEBUG: Select2 'change' event fired!");
+                console.log("DEBUG: Worker Select 'change' event fired!");
                 const selectedId = $(this).val();
+                resetShiftSelection(); // Resetear turno anterior si lo hubiera
 
-                // Ignorar si el valor es vacío (causado por allowClear o deselección)
                 if (!selectedId || selectedId === "") {
-                    console.log("DEBUG: Change event ignored (empty value selected).");
-                    // Si había un operario logueado, NO hacer nada aquí. El logout se maneja con el botón X o fin de turno.
-                    // Si no había operario, simplemente se queda sin seleccionar.
+                    console.log("DEBUG: Worker change ignored (empty value selected).");
+                     isProcessingLogin = false; // Asegurarse que no queda bloqueado
                     return;
                 }
 
                 const selectedName = $(this).find('option:selected').text();
 
-                // Ignorar si se selecciona el mismo operario que ya está logueado
                 if (currentWorker && currentWorker.id == selectedId) {
-                    console.log("DEBUG: Change event ignored (already selected worker).");
-                    // Asegurarse de que la UI está correcta (ocultar selector, mostrar nombre)
-                    if (selectContainer.is(':visible')) {
-                         workerLabel.addClass('hidden');
-                         selectContainer.addClass('hidden');
-                         displayContainer.removeClass('hidden');
-                         selectedWorkerInfo.text(currentWorker.name);
-                    }
+                    console.log("DEBUG: Worker change ignored (already selected worker).");
                     return;
                 }
-
-                // Si ya hay un operario diferente logueado, informar y resetear
                 if (currentWorker && currentWorker.id != selectedId) {
                     console.log("DEBUG: Different worker selected. Current worker must logout first.");
                      if (typeof Swal === 'function') {
                         Swal.fire({ icon: 'warning', title: 'Cambio de Operario', text: `Para iniciar sesión como ${selectedName}, primero debes finalizar el turno del operario actual (${currentWorker.name}). Usa el botón (X) o el botón 'Finalizar Turno'.`, confirmButtonColor: '#3085d6' });
-                     } else {
-                         alert(`Para iniciar sesión como ${selectedName}, primero debes finalizar el turno del operario actual (${currentWorker.name}). Usa el botón (X) o el botón 'Finalizar Turno'.`);
-                     }
-                     // Resetear el select al operario actual que está logueado
+                     } else { alert(`Para iniciar sesión como ${selectedName}, primero debes finalizar el turno del operario actual (${currentWorker.name}). Usa el botón (X) o el botón 'Finalizar Turno'.`); }
                      workerSelect.val(currentWorker.id).trigger('change.select2');
                      return;
                 }
 
-                // Si no hay operario logueado, proceder con la confirmación de inicio de sesión/turno
-                const potentialNewWorker = { id: selectedId, name: selectedName };
-                console.log("DEBUG: New operator selected in dropdown. Current shift state before Swal:", currentShiftState);
+                potentialNewWorker = { id: selectedId, name: selectedName };
+                console.log("DEBUG: Potential worker selected:", potentialNewWorker.name);
 
-                // Detener el polling mientras se confirma
+                isProcessingLogin = true;
                 if (shiftHistoryTimeoutId) { clearTimeout(shiftHistoryTimeoutId); shiftHistoryTimeoutId = null; }
-                isProcessingLogin = true; // Bloquear refresco automático y otras acciones
+                console.log("DEBUG: Processing login START, refresh blocked.");
+
+                try {
+                    const shiftsLoaded = await loadAndShowShifts();
+                    if (!shiftsLoaded) {
+                         console.warn("Shifts not loaded or empty, resetting worker selection.");
+                         workerSelect.val(null).trigger('change.select2');
+                         resetShiftSelection(); // Limpia potentialNewWorker
+                         isProcessingLogin = false; // Desbloquear refresh
+                         console.log("DEBUG: Processing login END (no shifts), refresh unblocked.");
+                         if (!shiftHistoryTimeoutId) fetchLastShiftHistory(productionLineToken);
+                    } else {
+                         console.log("Shifts loaded, waiting for shift selection. Refresh remains blocked.");
+                         // No desbloquear isProcessingLogin aquí
+                    }
+                } catch (error) {
+                     console.error("Error during shift loading initiated by worker change:", error);
+                     workerSelect.val(null).trigger('change.select2');
+                     resetShiftSelection(); // Limpia potentialNewWorker
+                     isProcessingLogin = false; // Desbloquear refresh
+                     console.log("DEBUG: Processing login END (shift load error), refresh unblocked.");
+                     if (!shiftHistoryTimeoutId) fetchLastShiftHistory(productionLineToken);
+                }
+                // No reiniciar refresh en el finally aquí
+            });
+
+            // --- Manejar selección de turno ---
+            shiftSelect.on('change', async function(e) {
+                console.log("DEBUG: Shift Select 'change' event fired!");
+                selectedShiftId = $(this).val();
+
+                if (!selectedShiftId || selectedShiftId === "") {
+                    console.log("DEBUG: Shift selection cleared or placeholder selected.");
+                    selectedShiftId = null;
+                    return;
+                }
+
+                if (!potentialNewWorker) {
+                    console.error("Error: Shift selected but no potential worker stored.");
+                    workerSelect.val(null).trigger('change.select2');
+                    resetShiftSelection();
+                    isProcessingLogin = false;
+                    if (!shiftHistoryTimeoutId) fetchLastShiftHistory(productionLineToken);
+                    return;
+                }
+
+                console.log("DEBUG: Shift selected:", selectedShiftId, "for worker:", potentialNewWorker.name);
+
+                const selectedShiftText = $(this).find('option:selected').text();
+                // isProcessingLogin ya es true
 
                 try {
                     if (typeof Swal === 'function') {
                         const swalResult = await Swal.fire({
-                                title: 'Confirmar Operario', text: `Estás a punto de iniciar sesión y turno con ${potentialNewWorker.name}. ¿Estás seguro?`,
-                                icon: 'question', showCancelButton: true, confirmButtonColor: '#3085d6',
-                                cancelButtonColor: '#d33', confirmButtonText: 'Confirmar', cancelButtonText: 'Cancelar'
-                            });
+                            title: 'Confirmar Inicio de Turno',
+                            html: `Vas a iniciar sesión como <b>${potentialNewWorker.name}</b> en el <b>${selectedShiftText}</b>.<br>¿Estás seguro?`,
+                            icon: 'question', showCancelButton: true, confirmButtonColor: '#3085d6',
+                            cancelButtonColor: '#d33', confirmButtonText: 'Confirmar', cancelButtonText: 'Cancelar'
+                        });
 
                         if (swalResult.isConfirmed) {
-                            console.log("DEBUG: Operator selection CONFIRMED via Swal.");
-                            currentWorker = potentialNewWorker; // Asignar nuevo operario
+                            console.log("DEBUG: Start shift CONFIRMED via Swal.");
+                            currentWorker = potentialNewWorker;
+                            // potentialNewWorker se limpia en resetShiftSelection
 
-                            // Actualizar UI inmediatamente para mostrar el nombre
                             selectedWorkerInfo.text(currentWorker.name);
                             workerLabel.addClass('hidden');
                             selectContainer.addClass('hidden');
                             displayContainer.removeClass('hidden');
+                            // *** FIX V3: Mover resetShiftSelection DESPUÉS de postShiftEvent ***
+                            // resetShiftSelection(); // NO AQUI
 
-                            // Mostrar indicador de carga mientras se llama a la API
                             Swal.fire({ title: 'Procesando inicio de turno...', allowOutsideClick: false, didOpen: () => { Swal.showLoading() } });
 
                             try {
-                                console.log("DEBUG: Attempting: Start Shift for new worker");
-                                await postShiftEvent("inicio_trabajo"); // Llamar a la API para iniciar turno
-                                // La llamada a postShiftEvent ya incluye fetchLastShiftHistory al final
-                                if (Swal.isLoading()) { Swal.close(); } // Cerrar modal de carga si sigue abierto
+                                console.log("DEBUG: Attempting: Start Shift API call");
+                                await postShiftEvent("inicio_trabajo"); // Llama a la API (NECESITA selectedShiftId)
+                                if (Swal.isLoading()) { Swal.close(); }
 
-                                // Mostrar alerta de éxito y forzar refresh al cerrarla
+                                resetShiftSelection(); // Resetear AHORA, después de que postShiftEvent usó el ID
+
                                 Swal.fire({
-                                    title: '¡Éxito!',
-                                    text: `Turno iniciado para ${currentWorker.name}.`,
-                                    icon: 'success',
-                                    timer: 2500, // Cerrar automáticamente después de 2.5 segundos
-                                    timerProgressBar: true,
-                                    didClose: () => { // Usar didClose o then() para ejecutar al cerrar
-                                        console.log("Success alert closed, forcing refresh.");
-                                        if (shiftHistoryTimeoutId) clearTimeout(shiftHistoryTimeoutId); // Asegurar que no hay timers pendientes
-                                        fetchLastShiftHistory(productionLineToken); // Volver a cargar el estado
-                                    }
+                                    title: '¡Éxito!', text: `Turno iniciado para ${currentWorker.name}.`,
+                                    icon: 'success', timer: 2500, timerProgressBar: true,
+                                    didClose: () => { console.log("Success alert closed."); }
                                 });
 
                             } catch (error) {
-                                console.error("DEBUG: Error during start shift sequence:", error);
-                                if (Swal.isLoading()) { Swal.close(); } // Cerrar modal de carga
+                                console.error("DEBUG: Error during start shift API call:", error);
+                                if (Swal.isLoading()) { Swal.close(); }
                                 Swal.fire('Error', `No se pudo iniciar el turno para ${currentWorker.name}. ${error.message || ''}`, 'error');
-                                // Revertir estado: desloguear localmente y mostrar selector
                                 currentWorker = null;
+                                selectedShiftId = null;
                                 displayContainer.addClass('hidden');
                                 workerLabel.removeClass('hidden');
                                 selectContainer.removeClass('hidden');
-                                workerSelect.val(null).trigger('change.select2'); // Resetear select
+                                workerSelect.val(null).trigger('change.select2');
+                                resetShiftSelection();
                             }
                         } else if (swalResult.isDismissed) {
-                             console.log("DEBUG: Operator selection CANCELLED via Swal.");
-                             // Resetear el select a "Selecciona operario"
+                             console.log("DEBUG: Start shift CANCELLED via Swal.");
                              workerSelect.val(null).trigger('change.select2');
+                             resetShiftSelection();
                         }
                     } else { // Fallback sin Swal
-                        if (confirm(`Estás a punto de iniciar sesión y turno con ${potentialNewWorker.name}. ¿Estás seguro?`)) {
-                           console.log("DEBUG: Operator selection CONFIRMED via confirm().");
+                        if (confirm(`Vas a iniciar sesión como ${potentialNewWorker.name} en el ${selectedShiftText}. ¿Estás seguro?`)) {
+                           console.log("DEBUG: Start shift CONFIRMED via confirm().");
                            currentWorker = potentialNewWorker;
                            selectedWorkerInfo.text(currentWorker.name);
                            workerLabel.addClass('hidden');
                            selectContainer.addClass('hidden');
                            displayContainer.removeClass('hidden');
-                           alert('Procesando inicio de turno...'); // Indicador simple
+                           // No resetear shift selection todavía
+                           alert('Procesando inicio de turno...');
                            try {
                                await postShiftEvent("inicio_trabajo");
+                               resetShiftSelection(); // Resetear después del éxito
                                alert(`¡Éxito! Turno iniciado para ${currentWorker.name}.`);
-                               // Forzar refresh después de la alerta de éxito en el fallback
-                               console.log("Fallback success alert closed, forcing refresh.");
-                               if (shiftHistoryTimeoutId) clearTimeout(shiftHistoryTimeoutId);
-                               fetchLastShiftHistory(productionLineToken);
                            } catch (error) {
                                alert(`Error al iniciar el turno para ${currentWorker.name}. ${error.message || ''}`);
                                currentWorker = null;
+                               selectedShiftId = null;
                                displayContainer.addClass('hidden');
                                workerLabel.removeClass('hidden');
                                selectContainer.removeClass('hidden');
                                workerSelect.val(null).trigger('change.select2');
+                               resetShiftSelection();
                            }
                         } else {
-                             console.log("DEBUG: Operator selection CANCELLED via confirm().");
+                             console.log("DEBUG: Start shift CANCELLED via confirm().");
                              workerSelect.val(null).trigger('change.select2');
+                             resetShiftSelection();
                         }
                     }
                 } finally {
-                    // Asegurarse de que el bloqueo se quita y el polling se reanuda
+                    // *** FIX V3: Desbloquear refresh y reanudar AL FINAL ***
                     isProcessingLogin = false;
-                    console.log("DEBUG: Login processing finished.");
-                    // Reiniciar el polling (postShiftEvent y el then/didClose de Swal ya lo hacen si tiene éxito,
-                    // pero lo hacemos aquí por si acaso se canceló o hubo error antes de Swal)
+                    console.log("DEBUG: Processing login END, refresh unblocked.");
+                    // Llamar a fetchLastShiftHistory aquí para asegurar que se obtiene el estado final
+                    // y se reinicia el bucle de refresco si no hay otro timer activo.
                     if (!shiftHistoryTimeoutId) {
                         fetchLastShiftHistory(productionLineToken);
                     }
+                    // *********************************************************
                 }
             });
 
@@ -878,231 +993,60 @@
                  const logoutDescription = "finalizar el turno/tarea actual";
                  const eventName = "final_trabajo";
 
-                 // No requerir currentWorker aquí, ya que el botón X es para desloguear al que esté activo (o forzar si hay inconsistencia)
                  if (!currentWorker) {
                      console.log("Logout button clicked, but no worker seems active locally. Attempting API call anyway.");
-                     // Podríamos mostrar una alerta diferente o simplemente intentar la llamada API
                       if (typeof Swal === 'function') {
                           Swal.fire({ icon: 'info', title: 'Finalizar Turno', text: 'Intentando finalizar cualquier turno activo para esta línea...', confirmButtonColor: '#3085d6' });
-                      } else {
-                          alert('Intentando finalizar cualquier turno activo para esta línea...');
-                      }
+                      } else { alert('Intentando finalizar cualquier turno activo para esta línea...'); }
                  }
 
                  showActionConfirmation(logoutDescription, () => {
-                     // Detener polling temporalmente
                      if (shiftHistoryTimeoutId) clearTimeout(shiftHistoryTimeoutId);
-                     isProcessingLogin = true; // Usar el flag para evitar conflictos
+                     isProcessingLogin = true; // Bloquear refresh durante logout
 
                      postShiftEvent(eventName)
-                         .then(() => {
-                             console.log("Logout API call successful, UI will be updated by fetchLastShiftHistory.");
-                             // No necesitamos hacer nada más aquí, fetchLastShiftHistory se llamará al finalizar
-                         })
-                         .catch(err => {
-                             console.error("Logout failed:", err);
-                             // Informar al usuario del error
-                             if (typeof Swal === 'function') { Swal.fire('Error', `No se pudo finalizar el turno. ${err.message || ''}`, 'error'); }
-                             else { alert(`Error al finalizar el turno. ${err.message || ''}`); }
-                         })
+                         .then(() => { console.log("Logout API call successful."); })
+                         .catch(err => { console.error("Logout failed:", err); })
                          .finally(() => {
+                             // *** FIX V3: Desbloquear y refrescar SIEMPRE al final ***
                              isProcessingLogin = false;
-                             // Reiniciar el polling inmediatamente después del intento de logout
-                             fetchLastShiftHistory(productionLineToken);
+                             console.log("DEBUG: Processing logout END, refresh unblocked.");
+                             if (shiftHistoryTimeoutId) clearTimeout(shiftHistoryTimeoutId); // Limpiar por si acaso
+                             fetchLastShiftHistory(productionLineToken); // Llamar para estado final y reanudar loop
+                             // **********************************************************
                          });
                  });
              });
 
             // --- Lógica Kanban (Dragula) ---
+            // ... (sin cambios) ...
             const columns = Array.from(document.querySelectorAll('.kanban-column'));
             if (columns.length === 0) { console.error("Error: No se encontraron columnas Kanban."); return; }
-
             let longPressTimer = null; let isTouchInteraction = false; let longPressTriggered = false;
-            const longPressDelay = 500; // Milisegundos para considerar long press
-            let startX, startY; let currentCard = null;
-
-            // --- Eventos Táctiles para Long Press ---
+            const longPressDelay = 500; let startX, startY; let currentCard = null;
             document.addEventListener('touchstart', handleTouchStart, { passive: false });
             document.addEventListener('touchmove', handleTouchMove, { passive: false });
             document.addEventListener('touchend', handleTouchEnd);
-            document.addEventListener('touchcancel', handleTouchEnd); // También maneja cancelaciones
-
+            document.addEventListener('touchcancel', handleTouchEnd);
             function handleTouchStart(e) {
-                const card = e.target.closest('.kanban-card');
-                if (!card) { isTouchInteraction = false; return; } // No iniciar si no es una tarjeta
+                const card = e.target.closest('.kanban-card'); if (!card) { isTouchInteraction = false; return; }
                 currentCard = card; isTouchInteraction = true; longPressTriggered = false;
-                startX = e.touches[0].clientX; startY = e.touches[0].clientY;
-                // Iniciar temporizador para long press
-                clearTimeout(longPressTimer); // Limpiar cualquier timer anterior
-                longPressTimer = setTimeout(() => {
-                    if (!isTouchInteraction || !currentCard) return; // Si ya se soltó o movió mucho, no hacer nada
-                    console.log("Long press triggered!");
-                    longPressTriggered = true;
-                    currentCard.classList.add('long-press-ready'); // Añadir clase visual (opcional)
-                    // Vibrar si es posible (feedback táctil)
-                    if (navigator.vibrate) { navigator.vibrate(50); }
-                    // IMPORTANTE: No iniciar el drag aquí, Dragula lo hará basado en 'moves'
-                }, longPressDelay);
+                startX = e.touches[0].clientX; startY = e.touches[0].clientY; clearTimeout(longPressTimer);
+                longPressTimer = setTimeout(() => { if (!isTouchInteraction || !currentCard) return; console.log("Long press triggered!"); longPressTriggered = true; currentCard.classList.add('long-press-ready'); if (navigator.vibrate) { navigator.vibrate(50); } }, longPressDelay);
             }
-
             function handleTouchMove(e) {
-                if (!isTouchInteraction || !currentCard) return;
-                const currentX = e.touches[0].clientX; const currentY = e.touches[0].clientY;
-                const deltaX = Math.abs(currentX - startX); const deltaY = Math.abs(currentY - startY);
-                const moveThreshold = 10; // Píxeles de tolerancia antes de cancelar long press
-
-                // Si se mueve más allá del umbral ANTES de que salte el long press, cancelar el timer
-                if (!longPressTriggered && (deltaX > moveThreshold || deltaY > moveThreshold)) {
-                    console.log("Movement detected before long press, cancelling timer.");
-                    clearTimeout(longPressTimer);
-                    if(currentCard) currentCard.classList.remove('long-press-ready');
-                    // No establecer isTouchInteraction = false aquí, podría ser scroll
-                }
-
-                // Si el long press ya se activó y se está moviendo, podríamos querer prevenir el scroll de la página
-                // Sin embargo, preventDefault() puede interferir con Dragula. Probar con cuidado.
-                // if (longPressTriggered) {
-                //    e.preventDefault(); // Descomentar con precaución
-                // }
+                if (!isTouchInteraction || !currentCard) return; const currentX = e.touches[0].clientX; const currentY = e.touches[0].clientY; const deltaX = Math.abs(currentX - startX); const deltaY = Math.abs(currentY - startY); const moveThreshold = 10;
+                if (!longPressTriggered && (deltaX > moveThreshold || deltaY > moveThreshold)) { console.log("Movement detected before long press, cancelling timer."); clearTimeout(longPressTimer); if(currentCard) currentCard.classList.remove('long-press-ready'); }
             }
-
-            function handleTouchEnd(e) {
-                clearTimeout(longPressTimer); // Siempre limpiar el timer al soltar
-                if (currentCard) { currentCard.classList.remove('long-press-ready'); } // Limpiar clase visual
-                // NO resetear longPressTriggered aquí, Dragula lo necesita en 'moves'
-                // Se reseteará en dragend o cancel
-                isTouchInteraction = false; // Indicar que la interacción táctil directa ha terminado
-                currentCard = null; // Limpiar referencia a la tarjeta
-            }
-
-
-            // --- Inicialización de Dragula ---
-            const drake = dragula(columns, {
-                 moves: function (el, source, handle, sibling) {
-                    // Permitir mover con ratón siempre
-                    if (!isTouchInteraction) {
-                        console.log("Dragula moves check (mouse): allowed");
-                        return true;
-                    }
-                    // Permitir mover con táctil SOLO si se activó el long press
-                    console.log("Dragula moves check (touch): longPressTriggered =", longPressTriggered);
-                    return longPressTriggered; // Solo permite iniciar drag si longPressTriggered es true
-                 },
-                 // Opciones adicionales si son necesarias (accepts, invalid, etc.)
-             });
-
+            function handleTouchEnd(e) { clearTimeout(longPressTimer); if (currentCard) { currentCard.classList.remove('long-press-ready'); } isTouchInteraction = false; currentCard = null; }
+            const drake = dragula(columns, { moves: function (el, source, handle, sibling) { if (!isTouchInteraction) { return true; } return longPressTriggered; } });
             if (!drake) { console.error("Error: Falló la inicialización de Dragula."); return; }
-
-            // --- Eventos de Dragula ---
-            drake.on('drag', (el, source) => {
-                console.log("Dragula event: drag (started)");
-                // Comprobar si hay operario al INICIAR el drag
-                if (!currentWorker) {
-                    console.log("Drag cancelled: No worker selected.");
-                    drake.cancel(true); // Cancelar el drag inmediatamente
-                    showWorkerRequiredAlert();
-                    return; // Salir del handler
-                }
-                // Limpiar la clase de long press si aún estuviera por alguna razón
-                if (el) el.classList.remove('long-press-ready');
-                // Opcional: Añadir una clase al body mientras se arrastra
-                // document.body.classList.add('dragging-active');
-            });
-
-            drake.on('drop', (el, target, source, sibling) => {
-                console.log("Dragula event: drop");
-                const sourceColumnName = source.dataset.columnName || source.id;
-                const targetColumnName = target.dataset.columnName || target.id;
-                const cardId = el.dataset.cardId;
-                const cardTitleElement = el.querySelector('.font-semibold'); // Asumiendo que el título está aquí
-                const cardTitle = cardTitleElement ? cardTitleElement.innerText : `Tarjeta ${cardId}`; // Texto del título o ID
-
-                // Mensaje para el usuario
-                const message = `Moviste la tarjeta "${cardTitle}" de "${sourceColumnName}" a "${targetColumnName}".`;
-
-                // **AQUÍ: Llamada a la API para registrar el movimiento**
-                console.log("TODO: Llamar API para registrar movimiento Kanban", {
-                    card_id: cardId,
-                    target_column: targetColumnName,
-                    source_column: sourceColumnName,
-                    operator_id: currentWorker ? currentWorker.id : null // Enviar ID del operario
-                 });
-                 // Ejemplo de llamada API (simulada con fetch)
-                 /*
-                 const moveEndpoint = '/api/kanban/move';
-                 const moveApiUrl = `${API_BASE_URL}${moveEndpoint}`;
-                 fetch(moveApiUrl, {
-                     method: 'POST',
-                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                     body: JSON.stringify({
-                         card_id: cardId,
-                         target_column: targetColumnName,
-                         operator_id: currentWorker ? currentWorker.id : null,
-                         production_line_token: productionLineToken // Puede ser útil enviar el token también
-                     })
-                 })
-                 .then(response => {
-                     if (!response.ok) { throw new Error(`Error ${response.status} al mover tarjeta`); }
-                     return response.json();
-                 })
-                 .then(data => {
-                     console.log("Movimiento Kanban registrado en API:", data);
-                     // Mostrar confirmación al usuario (ya se hace abajo con Swal/alert)
-                 })
-                 .catch(error => {
-                     console.error("Error al registrar movimiento Kanban en API:", error);
-                     // Informar al usuario del error
-                     if (typeof Swal === 'function') { Swal.fire('Error', `No se pudo registrar el movimiento de la tarjeta. ${error.message || ''}`, 'error'); }
-                     else { alert(`Error al registrar el movimiento. ${error.message || ''}`); }
-                     // Opcional: Revertir el movimiento visualmente si falla la API
-                     // drake.cancel(true); // Esto puede ser confuso, quizás mejor solo mostrar error
-                 });
-                 */
-
-                // Mostrar notificación (simulada)
-                if (typeof Swal === 'function') {
-                    // Usar toast para una notificación menos intrusiva
-                    Swal.fire({
-                        title: 'Movimiento Registrado (Simulado)',
-                        text: message,
-                        icon: 'success',
-                        timer: 2000, // Desaparece después de 2 segundos
-                        timerProgressBar: true,
-                        toast: true, // Mostrar como notificación pequeña
-                        position: 'top-end', // Posición en la esquina superior derecha
-                        showConfirmButton: false // No mostrar botón de confirmación
-                    });
-                } else {
-                    alert(message); // Fallback si Swal no está disponible
-                }
-
-                // Resetear estado de long press al finalizar correctamente
-                longPressTriggered = false;
-            });
-
-            drake.on('cancel', (el, container, source) => {
-                console.log("Dragula event: cancel");
-                // Resetear estado de long press si se cancela
-                longPressTriggered = false;
-                if (el) el.classList.remove('long-press-ready');
-                // document.body.classList.remove('dragging-active');
-            });
-
-            drake.on('dragend', (el) => {
-                console.log("Dragula event: dragend (finished, dropped or cancelled)");
-                // Resetear estado de long press SIEMPRE al finalizar el drag (sea drop o cancel)
-                longPressTriggered = false;
-                if (el) el.classList.remove('long-press-ready'); // Asegurarse de limpiar la clase
-                // document.body.classList.remove('dragging-active');
-            });
-
-            // Opcional: Cambiar fondo de columna al pasar por encima
-             drake.on('over', function (el, container) {
-                 container.classList.add('bg-gray-300'); // Hacer la columna un poco más oscura
-             });
-             drake.on('out', function (el, container) {
-                 container.classList.remove('bg-gray-300'); // Restaurar color original
-             });
+            drake.on('drag', (el, source) => { console.log("Dragula event: drag (started)"); if (!currentWorker) { console.log("Drag cancelled: No worker selected."); drake.cancel(true); showWorkerRequiredAlert(); return; } if (el) el.classList.remove('long-press-ready'); });
+            drake.on('drop', (el, target, source, sibling) => { console.log("Dragula event: drop"); const sourceColumnName = source.dataset.columnName || source.id; const targetColumnName = target.dataset.columnName || target.id; const cardId = el.dataset.cardId; const cardTitleElement = el.querySelector('.font-semibold'); const cardTitle = cardTitleElement ? cardTitleElement.innerText : `Tarjeta ${cardId}`; const message = `Moviste la tarjeta "${cardTitle}" de "${sourceColumnName}" a "${targetColumnName}".`; console.log("TODO: Llamar API para registrar movimiento Kanban", { card_id: cardId, target_column: targetColumnName, source_column: sourceColumnName, operator_id: currentWorker ? currentWorker.id : null }); if (typeof Swal === 'function') { Swal.fire({ title: 'Movimiento Registrado (Simulado)', text: message, icon: 'success', timer: 2000, timerProgressBar: true, toast: true, position: 'top-end', showConfirmButton: false }); } else { alert(message); } longPressTriggered = false; });
+            drake.on('cancel', (el, container, source) => { console.log("Dragula event: cancel"); longPressTriggered = false; if (el) el.classList.remove('long-press-ready'); });
+            drake.on('dragend', (el) => { console.log("Dragula event: dragend (finished, dropped or cancelled)"); longPressTriggered = false; if (el) el.classList.remove('long-press-ready'); });
+            drake.on('over', function (el, container) { container.classList.add('bg-gray-300'); });
+            drake.on('out', function (el, container) { container.classList.remove('bg-gray-300'); });
 
         }); // Fin de DOMContentLoaded
     </script>

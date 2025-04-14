@@ -616,5 +616,12 @@
     "Max Correction Percentage": "Porcentaje de Corrección Máximo (98%)",
     "Materia Prima": "Materia Prima",
     "Conteo": "Contador",
-    "Reanudar": "Reanudar"
+    "Reanudar": "Reanudar",
+    "buttons.edit": "Editar",
+    "buttons.sensors": "Sensores",
+    "buttons.orders": "Pedidos",
+    "buttons.live_view": "Vista en vivo",
+    "buttons.live_machine": "Máquina en vivo",
+    "buttons.delete": "Eliminar",
+    "buttons.delete_confirm": "Estás seguro de eliminar"
   }
