@@ -284,6 +284,14 @@
                             const url = '/workers/workers-live.html?shift=true&order=true&name=true&id=true&nameSize=1.2rem&numberSize=2rem&idSize=1rem&labelSize=1rem';
                             window.open(url, '_blank'); // Abre el enlace en una nueva pestaña
                         }
+                    },
+                    {
+                        text: 'Export Shift List',
+                        className: 'btn btn-primary', // Estilo del botón
+                        action: function () {
+                            const url = '/workers/export.html';
+                            window.open(url, '_blank'); // Abre el enlace en una nueva pestaña
+                        }
                     }
                 ]
             });
