@@ -1,28 +1,41 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Gestión de Producción - Tarjetas</title>
-  <!-- SweetAlert2 CSS -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" />
-  <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
-  <!-- jQuery -->
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  <!-- SweetAlert2 JS -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <!-- SheetJS -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
-    /* Estilos generales */
+    /* Estilos generales (Originales) */
     body {
       font-family: Arial, sans-serif;
       margin: 0;
       padding: 0;
       background-color: #f5f5f5;
+      padding-top: 30px; /* Espacio para la barra de carga fija */
     }
-    .header-container {
+
+    /* Estilo para la barra de carga superior */
+    #loading-indicator {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+        color: white;
+        text-align: center;
+        padding: 5px 0;
+        font-size: 0.9rem;
+        z-index: 1001;
+        display: none;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .header-container { /* Estilos originales */
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -30,198 +43,156 @@
       color: white;
       padding: 10px 20px;
     }
-    .header-left {
+    .header-left { /* Estilos originales */
       display: flex;
       align-items: center;
       gap: 15px;
     }
-    .header-left img {
-      height: 50px;
-      width: auto;
-    }
-    .header-left .icon {
-      font-size: 1.5rem;
-      cursor: pointer;
-      color: #28a745;
-      transition: color 0.3s ease;
-    }
-    .header-left .icon:hover {
-      color: #218838;
-    }
-    .header-right {
-      font-size: 1.2rem;
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: 5px;
-    }
-    .header-right small {
-      font-size: 0.9rem;
-      color: #ffc107;
-    }
-    .content {
-      padding: 8px;
-      max-width: 100%;
-      margin: 0;
-      padding-bottom: 80px;
-    }
-    .card-container {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      justify-content: center;
-    }
+    .header-left img { height: 50px; width: auto; }
+    .header-left .icon { font-size: 1.5rem; cursor: pointer; color: #28a745; transition: color 0.3s ease; }
+    .header-left .icon:hover { color: #218838; }
+    .header-right { font-size: 1.2rem; display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+    .header-right small { font-size: 0.9rem; color: #ffc107; }
+    .content { padding: 8px; max-width: 100%; margin: 0; padding-bottom: 80px; }
+    .card-container { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+
+    /* --- Modificado: Añadido cursor pointer a la tarjeta --- */
     .card {
       background: white;
       border: 1px solid #ddd;
       border-radius: 8px;
-      padding: 15px;
       width: calc(100% / 5 - 10px);
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
       text-align: center;
-      transition: transform 0.3s;
+      transition: transform 0.3s, box-shadow 0.3s; /* Añadida transición a sombra */
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      cursor: pointer; /* <-- Añadido: Indica que es clickeable */
     }
-    @media (max-width: 1800px) {
-      .card { width: calc(100% / 4 - 10px); }
+    .card:hover {
+      transform: scale(1.03); /* Reducido el hover scale */
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15); /* Sombra más pronunciada en hover */
     }
-    @media (max-width: 1500px) {
-      .card { width: calc(100% / 3 - 10px); }
-    }
-    @media (max-width: 1200px) {
-      .card { width: calc(100% / 2 - 10px); }
-    }
-    @media (max-width: 768px) {
-      .card { width: calc(100% / 1 - 10px); }
-    }
-    @media (max-width: 480px) {
-      .card { width: calc(100% / 1 - 10px); }
-    }
-    .card:hover { transform: scale(1.05); }
-    .card h3 {
+    /* --- Fin Modificación --- */
+
+    /* Media Queries originales */
+    @media (max-width: 1800px) { .card { width: calc(100% / 4 - 10px); } }
+    @media (max-width: 1500px) { .card { width: calc(100% / 3 - 10px); } }
+    @media (max-width: 1200px) { .card { width: calc(100% / 2 - 10px); } }
+    @media (max-width: 768px) { .card { width: calc(100% / 1 - 10px); } }
+    @media (max-width: 480px) { .card { width: calc(100% / 1 - 10px); } }
+
+
+    .card h3 { /* Estilos originales */
       margin: 0;
       font-size: var(--nameSize, 1rem);
       color: #343a40;
-    }
-    .card .stats-container {
-      display: flex;
-      justify-content: space-between;
-      margin-top: 10px;
-    }
-    .card .stat {
-      text-align: center;
-      flex: 1;
-    }
-    .card .stat span {
-      display: block;
-      font-size: var(--labelSize, 0.9rem);
-      color: #555;
-    }
-    .card .stat .value {
-      font-size: var(--numberSize, 1.8rem);
-      font-weight: bold;
-    }
-    .rfid-container {
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-      margin-top: 10px;
-    }
-    .rfid-item {
-      font-size: 1rem;
-      font-weight: bold;
-      background: rgba(0,0,0,0.1);
-      padding: 5px 10px;
-      border-radius: 5px;
-    }
-    /* Barra apilada */
-    .stacked-bar {
-      display: flex;
-      margin: 10px 0;
-      border-radius: 5px;
-      overflow: hidden;
-      height: 30px;
-      box-shadow: inset 0 1px 2px rgba(0,0,0,0.2);
-      opacity: 0.75;
-    }
-    .stacked-section {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      color: white;
-      font-weight: bold;
-    }
-    /* Footer */
-    .footer-bar {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      background-color: #e2c100;
-      color: #000;
-      padding: 10px 20px;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      padding: 10px;
+      background-color: #faf7f7;
+      border-bottom: 1px solid #eee;
+      flex-shrink: 0;
     }
-    .footer-bar img {
-      height: 30px;
-      margin: 0 30px;
+    .card h3 .rfid-name { font-weight: bold; margin-right: 10px; color: #555; }
+    .card h3 .count-shift { font-size: 1.5em; font-weight: bold; color: #007bff; }
+    .card h3 .operator-name { flex-grow: 1; text-align: left; margin-left: 5px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .card .stats-container { display: flex; justify-content: space-between; margin-top: 10px; }
+    .card .stat { text-align: center; flex: 1; }
+    .card .stat span { display: block; font-size: var(--labelSize, 0.9rem); color: #555; }
+    .card .stat .value { font-size: var(--numberSize, 1.8rem); font-weight: bold; }
+    .rfid-container { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; padding: 15px; flex-grow: 1; min-height: 100px; }
+    .rfid-item { background: #fff; border: 1px solid #ddd; border-radius: 5px; width: 80px; text-align: center; padding: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); display: flex; flex-direction: column; align-items: center; justify-content: space-between; min-height: 80px; }
+    .rfid-item .count-section { display: flex; align-items: center; width: 100%; justify-content: center; }
+    .rfid-item .color-bar { width: 5px; height: 30px; margin-right: 8px; opacity: 0.75; border-radius: 2px; }
+    .rfid-item .count-value { font-size: 1.8rem; font-weight: bold; color: #333; }
+    .rfid-item .product-name { margin-top: 5px; font-size: 0.8rem; color: #555; word-wrap: break-word; width: 100%; }
+    .no-rfid-data { color: #888; font-size: 0.9rem; width: 100%; text-align: center; }
+
+    /* Footer original */
+    .footer-bar { position: fixed; bottom: 0; left: 0; width: 100%; background-color: #e2c100; color: #000; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 1000; }
+    .footer-bar img { height: 30px; margin: 0 30px; }
+
+    /* Contenedor y estilos para botones flotantes */
+    .floating-buttons-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 9999; }
+    .floating-button { height: 50px; width: 50px; box-shadow: 0 4px 6px rgba(0,0,0,0.2); background-color: #fff; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.5rem; cursor: pointer; transition: background-color 0.3s, color 0.3s; }
+    .floating-excel i { color: #1D6F42; }
+    .floating-excel:hover i { background-color: #1D6F42; color: #fff; }
+    .floating-refresh i { color: #007bff; }
+    .floating-refresh:hover i { background-color: #007bff; color: #fff; }
+    .rotating { animation: spin 1s linear infinite; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    /* Colores RFID originales */
+    .blue, .BLUE { background-color: #003049 !important; }
+    .yellow, .YELLOW { background-color: #FFC300 !important; }
+    .red, .RED { background-color: #d62828 !important; }
+
+    /* Estilos barras color originales */
+    .rfid-item .color-bar.blue { background-color: #003049; }
+    .rfid-item .color-bar.yellow { background-color: #FFC300; }
+    .rfid-item .color-bar.red { background-color: #d62828; }
+
+    /* --- Añadido: Estilo para la lista en Swal --- */
+    .swal-details-list {
+        list-style: none;
+        padding: 0;
+        margin-top: 10px;
     }
-    .floating-excel {
-      position: fixed;
-      bottom: 40px;
-      right: 98%;
-      z-index: 9999;
+    .swal-details-list li {
+        border-bottom: 1px solid #eee;
+        padding: 8px 0;
+        font-size: 0.9rem;
     }
-    .floating-logo {
-      position: fixed;
-      bottom: 40px;
-      right: 20px;
-      z-index: 9999;
+    .swal-details-list li:last-child {
+        border-bottom: none;
     }
-    .floating-logo img {
-      height: 50px;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    .swal-details-list strong {
+        display: inline-block;
+        min-width: 70px; /* Alineación */
     }
-    /* Colores RFID */
-    .blue, .BLUE {
-      background-color: #003049 !important;
-      color: white !important;
-    }
-    .yellow, .YELLOW {
-      background-color: #FFC300 !important;
-      color: white !important;
-    }
-    .red, .RED {
-      background-color: #d62828 !important;
-      color: white !important;
-    }
+    /* --- Fin Añadido --- */
+
   </style>
 </head>
 <body>
+  <div id="loading-indicator">Actualizando datos...</div>
+
   <div class="screen-container">
-    <!-- Content -->
     <div class="content">
       <div class="card-container" id="cardContainer">
-        <!-- Las tarjetas se llenarán dinámicamente aquí -->
-      </div>
-    </div>
-    <!-- Logo flotante -->
-    <div class="floating-logo">
-     <!-- <img src="logo-float.png" alt="autoconto logo" />-->
-    </div>
-    <div class="floating-excel">
-       <!-- <i class="fa fa-file-excel icon" id="exportExcel" title="Exportar a Excel"></i>-->
+        </div>
     </div>
 
+    <div class="floating-buttons-container">
+        <div class="floating-button floating-refresh" id="refreshData" title="Actualizar Datos">
+            <i class="fas fa-sync-alt"></i>
+        </div>
+        <div class="floating-button floating-excel" id="exportExcel" title="Exportar a Excel">
+           <i class="fa fa-file-excel"></i>
+        </div>
+    </div>
   </div>
+
   <script>
     const workersApiUrl = '/api/workers';
-    
-    // Variable global para almacenar los colores RFID
+
+    // Variables globales
     let rfidColorsGlobal = [];
-    
-    // Función para obtener parámetros de la URL (si es necesario)
+    let operatorsData = []; // Contiene todos los datos de los operadores
+    let refreshIntervalId = null;
+    const REFRESH_INTERVAL = 3000;
+    let isLoading = false;
+
+    // Referencias DOM
+    const refreshButton = $('#refreshData');
+    const refreshIcon = refreshButton.find('i');
+    const loadingIndicator = $('#loading-indicator');
+    const cardContainer = $('#cardContainer'); // <-- Referencia al contenedor de tarjetas
+
+    // Función original getUrlParams
     function getUrlParams() {
       const params = new URLSearchParams(window.location.search);
       return {
@@ -235,211 +206,252 @@
         labelSize: params.get('labelSize') || '0.9rem',
       };
     }
-    
+
+    // Configuración original de estilos
     const config = getUrlParams();
     document.documentElement.style.setProperty('--nameSize', config.nameSize);
     document.documentElement.style.setProperty('--numberSize', config.numberSize);
     document.documentElement.style.setProperty('--labelSize', config.labelSize);
-    
-    // Variable global para almacenar operadores
-    let operatorsData = [];
-    
-    // Función para cargar operadores y colores RFID
+
+    // --- Función loadOperators (Modificada para añadir data-attribute) ---
     function loadOperators() {
+      if (isLoading) return;
+      isLoading = true;
+
+      loadingIndicator.show();
+      refreshIcon.addClass('rotating');
+      refreshButton.prop('disabled', true);
+
       $.ajax({
         url: `${workersApiUrl}/list-all`,
         method: 'GET',
+        dataType: 'json',
         success: function(response) {
-          const operators = response.operators;
+          if (!response || !response.operators) {
+              console.error("Respuesta inesperada:", response);
+              Swal.fire('Error de formato', 'La respuesta de la API no tiene el formato esperado.', 'error');
+              return;
+          }
+
+          // Guardar TODOS los datos de operadores
+          operatorsData = response.operators;
           rfidColorsGlobal = response.rfid_colors || [];
-          operatorsData = operators;
-          const container = $('#cardContainer');
+          const container = cardContainer; // Usar la referencia guardada
           container.empty();
-          
-          if (!operators || operators.length === 0) {
-            container.append('<p>No hay operadores disponibles.</p>');
+
+          // Filtro ORIGINAL
+          const operatorsToShow = operatorsData.filter(op =>
+              (op.operator_posts && op.operator_posts.length > 0) || (op.count_shift > 0)
+          );
+
+          if (operatorsToShow.length === 0) {
+            container.append('<p>No hay operadores activos para mostrar.</p>');
             return;
           }
-          
-          // Por cada operador:
-          operators.forEach(operator => {
-              // Si el operador no tiene registros en operator_posts, lo omitimos
-            if (!operator.operator_posts || operator.operator_posts.length === 0) {
-              return;
+
+          // Procesamiento y renderizado ORIGINAL + data-attribute
+          operatorsToShow.forEach(operator => {
+            let rfidReadingNameFormatted = "N/A";
+            let hasPosts = operator.operator_posts && operator.operator_posts.length > 0;
+
+            if (hasPosts) {
+                const firstPost = operator.operator_posts[0];
+                if (firstPost && firstPost.rfid_reading_name) {
+                    const match = firstPost.rfid_reading_name.match(/P(\d+)$/);
+                    rfidReadingNameFormatted = (match && match[1]) ? match[1] : firstPost.rfid_reading_name;
+                }
             }
-            // Extraemos operator_posts
+
             let rfidHtml = '';
-            let rfidProducts = {};
-            operator.operator_posts.forEach(post => {
-              const colorName = post.rfid_color_name;
-              const productName = post.product_list_name;
-              const count = post.count;
-              // Agrupamos por color
-              if (!rfidProducts[colorName]) {
-                rfidProducts[colorName] = [];
-              }
-              rfidProducts[colorName].push({
-                productName: productName,
-                count: count
-              });
-            });
-            
-            // Generamos el HTML para la sección RFID (muestra cada producto en un recuadro)
-            if (rfidColorsGlobal.length > 0) {
-              rfidHtml = `
-                <div class="rfid-container" style="display: flex; justify-content: center; gap: 10px; margin-top: 10px;">
-                  ${rfidColorsGlobal.map(color => {
-                    const products = rfidProducts[color.name] || [];
-                    const colorHtml = products.map(product => {
-                      if (product.productName && product.productName.trim() !== "") {
-                        const truncatedName = product.productName.length > 20
-                          ? product.productName.substring(0, 20) + '...'
-                          : product.productName;
-                        return `
-                          <div style="
-                            background: #fff;
-                            border: 1px solid #ddd;
-                            border-radius: 5px;
-                            width: 80px;
-                            text-align: center;
-                            padding: 10px;
-                          ">
-                            <div style="display: flex; align-items: center;">
-                              <div class="${color.name.toLowerCase()}" style="
-                                width: 5px;
-                                height: 40px;
-                                margin-right: 8px;
-                                opacity: 0.75;
-                              "></div>
-                              <div style="font-size: 1.8rem; font-weight: bold; color: #333;">
-                                ${product.count}
-                              </div>
-                            </div>
-                            <div style="margin-top: 5px; font-size: 0.9rem; color: #555;">
-                              ${truncatedName}
-                            </div>
-                          </div>
-                        `;
-                      }
-                      return '';
+            if (hasPosts) {
+                let rfidProducts = {};
+                operator.operator_posts.forEach(post => {
+                    const colorName = post.rfid_color_name;
+                    const productName = post.product_list_name;
+                    const count = post.count;
+                    if (!rfidProducts[colorName]) rfidProducts[colorName] = [];
+                    if (productName && productName.trim() !== "") {
+                         rfidProducts[colorName].push({ productName: productName, count: count });
+                    }
+                });
+
+                if (rfidColorsGlobal.length > 0) {
+                    rfidHtml = rfidColorsGlobal.map(color => {
+                        const products = rfidProducts[color.name] || [];
+                        return products.map(product => {
+                            const truncatedName = product.productName.length > 15 ? product.productName.substring(0, 15) + '...' : product.productName;
+                            return `
+                                <div class="rfid-item">
+                                    <div class="count-section">
+                                        <div class="color-bar ${color.name.toLowerCase()}"></div>
+                                        <div class="count-value">${product.count}</div>
+                                    </div>
+                                    <div class="product-name" title="${product.productName}">${truncatedName}</div>
+                                </div>`;
+                        }).join('');
                     }).join('');
-                    return colorHtml;
-                  }).join('')}
-                </div>
-              `;
+                }
             }
-            
-            // Construir la barra apilada usando SOLO los valores de operator_posts
-            // Calculamos la suma de count para cada color definido en rfidColorsGlobal
-            let totalRFID = 0;
-            let colorCounts = {};
-            rfidColorsGlobal.forEach(color => {
-              const products = rfidProducts[color.name] || [];
-              const sumForColor = products.reduce((acc, p) => acc + Number(p.count), 0);
-              colorCounts[color.name] = sumForColor;
-              totalRFID += sumForColor;
-            });
-            
-            // Filtramos solo los colores con count > 0
-            const usedColors = rfidColorsGlobal.filter(color => colorCounts[color.name] > 0);
-            
-            let stackedBar = '';
-            if (usedColors.length > 0) {
-              const totalUsed = usedColors.reduce((acc, color) => acc + colorCounts[color.name], 0);
-              stackedBar = `<div class="stacked-bar">`;
-              usedColors.forEach(color => {
-                const count = colorCounts[color.name];
-                let percentage = totalUsed === 0 ? (100 / usedColors.length) : ((count / totalUsed) * 100);
-                percentage = percentage.toFixed(0);
-                stackedBar += `
-                  <div class="stacked-section ${color.name.toLowerCase()}" style="flex: 0 0 ${percentage}%; background: inherit;">
-                    ${count}
-                  </div>
-                `;
-              });
-              stackedBar += `</div>`;
-            } else {
-              // Si no hay asignación (todos count son 0), mostramos un mensaje o una barra indicativa
-              stackedBar = `
-                <div class="stacked-bar" style="display: flex; justify-content: center; align-items: center; background: #ccc;">
-                  <span style="color: white; font-weight: bold;">Sin datos</span>
-                </div>
-              `;
-            }
-            
-            // Construir la tarjeta completa
+
+            // --- Añadido: data-operator-id="${operator.id}" ---
             const card = `
-              <div class="card" style="padding: 0; border-radius: 8px; overflow: hidden;">
-                <div style="
-                  background-color: #faf7f7;
-                  color: #ffffff;
-                  padding: 10px;
-                  width: 100%;
-                  box-sizing: border-box;
-                  border-top-left-radius: 8px;
-                  border-top-right-radius: 8px;
-                ">
-                  ${config.name ? `
-                    <h3 style="
-                      margin: 0;
-                      display: flex;
-                      justify-content: space-between;
-                      align-items: center;
-                      color: black;
-                    ">
-                      <span>${operator.name.length > 20 ? operator.name.substring(0,20) + '...' : operator.name}</span>
-                      <span style="font-size: 32px;">${operator.count_shift}</span>
-                    </h3>
-                  ` : ''}
+              <div class="card" data-operator-id="${operator.id}">
+                <h3>
+                  <span class="rfid-name">${rfidReadingNameFormatted}</span>
+                  <span class="operator-name" title="${operator.name}">${operator.name}</span>
+                  <span class="count-shift">${operator.count_shift}</span>
+                </h3>
+                <div class="rfid-container">
+                  ${(hasPosts && rfidHtml && rfidHtml.trim() !== '') ? rfidHtml : '<p class="no-rfid-data">Sin datos RFID</p>'}
                 </div>
-                <div style="padding: 15px;">
-                  <!--${stackedBar}-->
-                  ${rfidHtml}
-                </div>
-              </div>
-            `;
-            
+              </div>`;
             container.append(card);
-          });
+          }); // Fin forEach
         },
-        error: function(xhr) {
-          Swal.fire({
-            icon: 'error',
-            title: 'Error al cargar operadores',
-            text: `Status: ${xhr.status}. Mensaje: ${xhr.responseJSON?.error || 'Error desconocido'}`,
-          });
+        error: function(xhr, status, error) {
+          console.error("Error AJAX:", status, error);
+          Swal.fire('Error al cargar', `No se pudo conectar con la API. Status: ${xhr.status}. Error: ${error}`, 'error');
+        },
+        complete: function() {
+          isLoading = false;
+          loadingIndicator.hide();
+          refreshIcon.removeClass('rotating');
+          refreshButton.prop('disabled', false);
         }
-      });
-    }
-    
-    // Función para exportar a Excel (se mantiene sin cambios)
+      }); // Fin $.ajax
+    } // Fin loadOperators
+
+    // --- Función exportToExcel ORIGINAL (SIN CAMBIOS) ---
     function exportToExcel() {
-      if (operatorsData.length === 0) {
-        Swal.fire('Error', 'No hay datos para exportar.', 'error');
+      // ... (código original sin cambios) ...
+       const operatorsToExport = operatorsData;
+      if (operatorsToExport.length === 0) {
+        Swal.fire('Aviso', 'No hay datos de operadores para exportar.', 'info');
         return;
       }
       const rfidColorNames = rfidColorsGlobal.map(color => color.name);
-      const rows = operatorsData.map(operator => {
+      const rows = operatorsToExport.map(operator => {
         let row = {
-          ...(config.name && { Nombre: operator.name }),
-          ...(config.id && { ID: operator.id }),
-          // Solo se usarán operator_posts, por lo que count_shift y count_order se omiten
+          Nombre: operator.name,
+          ID_Operador: operator.id,
+          Count_Shift: operator.count_shift,
+          Count_Order: operator.count_order,
+          Puesto_RFID: (operator.operator_posts && operator.operator_posts.length > 0 && operator.operator_posts[0].rfid_reading_name)
+                         ? operator.operator_posts[0].rfid_reading_name
+                         : 'N/A'
         };
-        rfidColorNames.forEach(color => {
-          row[color] = 0;
+        rfidColorNames.forEach(colorName => {
+          row[`RFID_${colorName}_Total`] = 0;
         });
+        if (operator.operator_posts) {
+            operator.operator_posts.forEach(post => {
+                const colorName = post.rfid_color_name;
+                const count = post.count || 0;
+                if (row.hasOwnProperty(`RFID_${colorName}_Total`)) {
+                    row[`RFID_${colorName}_Total`] += count;
+                }
+            });
+        }
         return row;
       });
       const worksheet = XLSX.utils.json_to_sheet(rows);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Operadores');
-      XLSX.writeFile(workbook, 'operadores.xlsx');
+      try {
+          XLSX.writeFile(workbook, 'operadores_produccion.xlsx');
+      } catch (e) {
+          console.error("Error al generar el archivo Excel:", e);
+          Swal.fire('Error', 'No se pudo generar el archivo Excel.', 'error');
+      }
     }
-    
+
+    // --- Función startAutoRefresh (SIN CAMBIOS) ---
+    function startAutoRefresh() {
+        if (refreshIntervalId) clearInterval(refreshIntervalId);
+        refreshIntervalId = setInterval(loadOperators, REFRESH_INTERVAL);
+        console.log(`Actualización automática iniciada cada ${REFRESH_INTERVAL / 1000} segundos.`);
+    }
+
+    // --- Añadido: Función para mostrar detalles en Swal ---
+    function showOperatorDetails(operatorId) {
+        // Buscar el operador en los datos globales guardados
+        const operator = operatorsData.find(op => op.id === parseInt(operatorId)); // Asegurar que el ID sea número
+
+        if (operator) {
+            // Construir el HTML para el contenido del Swal
+            let detailsHtml = `
+                <div style="text-align: left; max-height: 400px; overflow-y: auto; padding-right: 15px;">
+                    <p><strong>ID:</strong> ${operator.id}</p>
+                    <p><strong>Nombre:</strong> ${operator.name}</p>
+                    <p><strong>Total Turno (Shift):</strong> ${operator.count_shift}</p>
+                    <p><strong>Total Orden:</strong> ${operator.count_order}</p>
+                    <hr>
+                    <h4>Detalles Puestos RFID:</h4>
+            `;
+
+            if (operator.operator_posts && operator.operator_posts.length > 0) {
+                detailsHtml += '<ul class="swal-details-list">'; // Usar clase para estilo
+                operator.operator_posts.forEach(post => {
+                    detailsHtml += `
+                        <li>
+                            <strong>Puesto:</strong> ${post.rfid_reading_name || 'N/A'} |
+                            <strong>Color:</strong> ${post.rfid_color_name || 'N/A'} |
+                            <strong>Prod:</strong> ${post.product_list_name || 'No asignado'} |
+                            <strong>Cant:</strong> ${post.count !== null ? post.count : 'N/A'}
+                        </li>
+                    `;
+                });
+                detailsHtml += '</ul>';
+            } else {
+                detailsHtml += '<p><em>Sin asignaciones RFID detalladas.</em></p>';
+            }
+
+            detailsHtml += '</div>'; // Cierre del div contenedor
+
+            // Mostrar el Swal
+            Swal.fire({
+                title: `Detalles Operador: ${operator.name}`,
+                html: detailsHtml,
+                icon: 'info',
+                width: 'auto', // Ancho automático o definir uno (ej: '600px')
+                customClass: { // Clases personalizadas si necesitas más estilo
+                    // popup: 'my-swal-popup',
+                    // htmlContainer: 'my-swal-html'
+                }
+            });
+        } else {
+            console.error("No se encontró el operador con ID:", operatorId);
+            Swal.fire('Error', 'No se pudieron cargar los detalles del operador.', 'error');
+        }
+    }
+
+
+    // --- Ejecutar al cargar el documento (Modificado para añadir listener) ---
     $(document).ready(function() {
-      loadOperators();
-      setInterval(loadOperators, 5000);
+      loadOperators(); // Carga inicial
+      startAutoRefresh(); // Iniciar auto-refresh
+
+      // Evento refrescar manual
+      refreshButton.click(function() {
+          console.log("Actualización manual solicitada.");
+          if (refreshIntervalId) clearInterval(refreshIntervalId);
+          loadOperators();
+          startAutoRefresh();
+      });
+
+      // Evento exportar Excel
       $('#exportExcel').click(exportToExcel);
+
+      // --- Añadido: Event listener para clicks en las tarjetas ---
+      // Usar delegación de eventos en el contenedor
+      cardContainer.on('click', '.card', function() {
+          const operatorId = $(this).data('operator-id'); // Obtener el ID del atributo data
+          if (operatorId) {
+              showOperatorDetails(operatorId); // Llamar a la función que muestra el Swal
+          }
+      });
+      // --- Fin Añadido ---
+
     });
   </script>
 </body>

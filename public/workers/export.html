@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tabla de Trabajadores Optimizada</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        @media print {
+            .no-print { display: none !important; }
+            body { padding: 0; }
+            .container { box-shadow: none; margin: 0; max-width: 100%; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-4 md:p-8">
+
+<div class="container mx-auto bg-white rounded-lg shadow-md overflow-hidden">
+    <div class="p-4 md:p-6 border-b border-gray-200">
+        <div class="flex flex-col sm:flex-row justify-between sm:items-center mb-4 gap-4">
+             <h1 class="text-2xl font-bold text-gray-700 mb-2 sm:mb-0">Vista de Trabajadores y Puestos</h1>
+             <div class="flex flex-col sm:flex-row sm:items-center gap-4 no-print">
+                 <div class="flex items-center space-x-2">
+                     <label for="dateRangeSelect" class="text-sm font-medium text-gray-700">Periodo:</label>
+                     <select id="dateRangeSelect" name="dateRange" class="block w-full sm:w-auto pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 rounded-md shadow-sm">
+                         <option value="today" selected>Hoy</option>
+                         <option value="yesterday">Ayer</option>
+                         <option value="day_minus_2">Hace 2 días</option>
+                         <option value="day_minus_3">Hace 3 días</option>
+                         <option value="day_minus_4">Hace 4 días</option>
+                         <option value="day_minus_5">Hace 5 días</option>
+                         <option value="day_minus_6">Hace 6 días</option>
+                         <option value="day_minus_7">Hace 7 días</option>
+                         <option value="last7days">Últimos 7 días (rango)</option>
+                         <option value="last30days">Últimos 30 días (rango)</option>
+                     </select>
+                 </div>
+                  <div class="flex items-center">
+                    <input id="filterPostsCheckbox" type="checkbox" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" checked>
+                    <label for="filterPostsCheckbox" class="ml-2 block text-sm text-gray-900">
+                        Mostrar solo con puestos
+                    </label>
+                </div>
+             </div>
+        </div>
+         <div class="flex justify-end space-x-2 no-print">
+            <button id="exportExcelBtn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed">
+                Exportar a Excel
+            </button>
+            <button id="printBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-150 ease-in-out">
+                Imprimir
+            </button>
+        </div>
+    </div>
+
+    <div class="overflow-x-auto p-4 md:p-6">
+        <table id="workersTable" class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Codigo Trabajador</th>
+                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
+                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unidades (Turno)</th>
+                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Inicio Puesto</th>
+                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fin Puesto</th>
+                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cantidad</th>
+                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Confection</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200" id="workersTableBody">
+                <tr id="loadingRow">
+                    <td colspan="7" class="px-4 py-4 text-center text-gray-500">Cargando datos...</td>
+                </tr>
+                <tr id="errorRow" class="hidden">
+                     <td colspan="7" class="px-4 py-4 text-center text-red-500"></td>
+                </tr>
+                 <tr id="noDataRow" class="hidden">
+                     <td colspan="7" class="px-4 py-4 text-center text-gray-500">No se encontraron datos para el periodo seleccionado.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // URL base de la API (sin fechas)
+    const apiBaseUrl = '/api/workers/all-list/completed';
+    const tableBody = document.getElementById('workersTableBody');
+    const loadingRow = document.getElementById('loadingRow');
+    const errorRow = document.getElementById('errorRow');
+    const errorCell = errorRow.querySelector('td');
+    const noDataRow = document.getElementById('noDataRow');
+    const exportExcelBtn = document.getElementById('exportExcelBtn');
+    const printBtn = document.getElementById('printBtn');
+    const dateRangeSelect = document.getElementById('dateRangeSelect');
+    const filterPostsCheckbox = document.getElementById('filterPostsCheckbox');
+
+    // Variable para almacenar los datos originales (sin filtrar) una vez cargados
+    let originalWorkersData = [];
+
+    // Opciones para formatear la fecha y hora localmente para visualización
+    const dateTimeFormatOptions = {
+        year: 'numeric', month: 'numeric', day: 'numeric',
+        hour: 'numeric', minute: 'numeric', second: 'numeric',
+        hour12: false // Formato de 24 horas
+    };
+    const dateFormatter = new Intl.DateTimeFormat(navigator.language || 'es-ES', dateTimeFormatOptions);
+
+    // --- Funciones ---
+
+    function formatDateForAPI(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    function getDateRange(selectedValue) {
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        let fromDate = new Date(today); let endDate = new Date(today);
+        switch (selectedValue) {
+            case 'today': break;
+            case 'yesterday': fromDate.setDate(today.getDate() - 1); endDate.setDate(today.getDate() - 1); break;
+            case 'day_minus_2': fromDate.setDate(today.getDate() - 2); endDate.setDate(today.getDate() - 2); break;
+            case 'day_minus_3': fromDate.setDate(today.getDate() - 3); endDate.setDate(today.getDate() - 3); break;
+            case 'day_minus_4': fromDate.setDate(today.getDate() - 4); endDate.setDate(today.getDate() - 4); break;
+            case 'day_minus_5': fromDate.setDate(today.getDate() - 5); endDate.setDate(today.getDate() - 5); break;
+            case 'day_minus_6': fromDate.setDate(today.getDate() - 6); endDate.setDate(today.getDate() - 6); break;
+            case 'day_minus_7': fromDate.setDate(today.getDate() - 7); endDate.setDate(today.getDate() - 7); break;
+            case 'last7days': fromDate.setDate(today.getDate() - 6); break;
+            case 'last30days': fromDate.setDate(today.getDate() - 29); break;
+            default: break;
+        }
+        let apiToDate = new Date(endDate); apiToDate.setDate(endDate.getDate() + 1);
+        return { from: formatDateForAPI(fromDate), to: formatDateForAPI(apiToDate) };
+    }
+
+    function filterData(data) {
+        if (filterPostsCheckbox.checked) {
+            return data.filter(worker => worker.operator_posts && worker.operator_posts.length > 0);
+        }
+        return data;
+    }
+
+    function populateTable(data) {
+        tableBody.querySelectorAll('tr:not(#loadingRow):not(#errorRow):not(#noDataRow)').forEach(row => row.remove());
+        const dataToDisplay = filterData(data);
+
+        if (dataToDisplay.length === 0) {
+            if (filterPostsCheckbox.checked && data.length > 0) {
+                 noDataRow.querySelector('td').textContent = 'Ningún trabajador con puestos coincide con el filtro.';
+            } else {
+                 noDataRow.querySelector('td').textContent = 'No se encontraron datos para el periodo seleccionado.';
+            }
+            noDataRow.classList.remove('hidden');
+            exportExcelBtn.disabled = true;
+            return;
+        }
+
+        exportExcelBtn.disabled = false;
+        noDataRow.classList.add('hidden');
+
+        dataToDisplay.forEach((worker) => {
+            const workerRow = tableBody.insertRow();
+            workerRow.classList.add('bg-blue-50', 'hover:bg-blue-100', 'transition-colors', 'duration-150', 'ease-in-out');
+            workerRow.insertCell().textContent = worker.client_id ?? '-';
+            workerRow.insertCell().textContent = worker.name ?? 'Sin Nombre';
+            workerRow.insertCell().textContent = worker.count_order ?? 0; // Dato es count_order
+            workerRow.insertCell().textContent = ''; workerRow.insertCell().textContent = ''; workerRow.insertCell().textContent = ''; workerRow.insertCell().textContent = '';
+            Array.from(workerRow.cells).forEach(cell => cell.classList.add('px-4', 'py-3', 'text-sm', 'font-medium', 'text-gray-900', 'whitespace-nowrap'));
+
+             if (worker.operator_posts && worker.operator_posts.length > 0) {
+                worker.operator_posts.forEach((post, index) => {
+                    const postRow = tableBody.insertRow();
+                    postRow.classList.add(index % 2 === 0 ? 'bg-white' : 'bg-gray-50', 'hover:bg-gray-100', 'transition-colors', 'duration-150', 'ease-in-out');
+                    postRow.insertCell().textContent = ''; postRow.insertCell().textContent = ''; postRow.insertCell().textContent = '';
+                    let startDate = '-'; if (post.created_at) { try { startDate = dateFormatter.format(new Date(post.created_at)); } catch (e) {} }
+                    let endDate = '-'; if (post.finish_at) { try { endDate = dateFormatter.format(new Date(post.finish_at)); } catch (e) {} }
+                    postRow.insertCell().textContent = startDate; postRow.insertCell().textContent = endDate; postRow.insertCell().textContent = post.count ?? 0; postRow.insertCell().textContent = post.product_list?.name ?? 'N/A';
+                    Array.from(postRow.cells).forEach(cell => cell.classList.add('px-4', 'py-3', 'text-sm', 'text-gray-600', 'whitespace-nowrap'));
+                    postRow.cells[3].classList.add('pl-8');
+                });
+            }
+        });
+    }
+
+    function exportToExcel() {
+        const dataToExport = filterData(originalWorkersData);
+
+        if (!dataToExport || dataToExport.length === 0) {
+            alert("No hay datos (que coincidan con el filtro) para exportar.");
+            return;
+        }
+        const flattenedData = [];
+        dataToExport.forEach(worker => {
+            if (worker.operator_posts && worker.operator_posts.length > 0) {
+                worker.operator_posts.forEach(post => {
+                    flattenedData.push({
+                        'Codigo Trabajador': worker.client_id ?? '-',
+                        'Nombre Trabajador': worker.name ?? 'Sin Nombre',
+                        'Unidades Turno': worker.count_order ?? 0, // Dato es count_order
+                        'Inicio Puesto': post.created_at ? dateFormatter.format(new Date(post.created_at)) : '-',
+                        'Fin Puesto': post.finish_at ? dateFormatter.format(new Date(post.finish_at)) : '-',
+                        'Cantidad Puesto': post.count ?? 0,
+                        'Confection': post.product_list?.name ?? 'N/A'
+                    });
+                });
+            }
+        });
+
+        if (flattenedData.length === 0 && filterPostsCheckbox.checked) {
+             alert("Los trabajadores seleccionados por el filtro no tienen detalles de puestos para exportar.");
+             return;
+        }
+         if (flattenedData.length === 0) {
+             alert("No hay detalles de puestos para exportar.");
+             return;
+        }
+
+        const worksheet = XLSX.utils.json_to_sheet(flattenedData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "TrabajadoresDetalle");
+        const colWidths = Object.keys(flattenedData[0]).map(key => ({ wch: flattenedData.reduce((w, r) => Math.max(w, (r[key]?.toString() ?? '').length), key.length) + 2 }));
+        worksheet["!cols"] = colWidths;
+        const selectedOptionText = dateRangeSelect.options[dateRangeSelect.selectedIndex].text;
+        const fileNameDate = selectedOptionText.replace(/ /g, '_');
+        XLSX.writeFile(workbook, `Informe_Trabajadores_${fileNameDate}${filterPostsCheckbox.checked ? '_ConPuestos' : ''}.xlsx`);
+    }
+
+    function printTable() { window.print(); }
+
+    function fetchData(fromDate, toDate) {
+        const apiUrl = `${apiBaseUrl}?from_date=${fromDate}&to_date=${toDate}`;
+
+        loadingRow.classList.remove('hidden');
+        errorRow.classList.add('hidden');
+        noDataRow.classList.add('hidden');
+        tableBody.querySelectorAll('tr:not(#loadingRow):not(#errorRow):not(#noDataRow)').forEach(row => row.remove());
+        exportExcelBtn.disabled = true;
+        originalWorkersData = [];
+
+        fetch(apiUrl)
+            .then(response => {
+                if (!response.ok) {
+                     return response.text().then(text => { throw new Error(`Error HTTP: ${response.status} - ${response.statusText}. Respuesta: ${text}`); });
+                }
+                return response.json();
+            })
+            .then(apiResponse => {
+                loadingRow.classList.add('hidden');
+                if (apiResponse.success && Array.isArray(apiResponse.data)) {
+                    originalWorkersData = apiResponse.data;
+                    originalWorkersData.sort((a, b) => (b.count_order ?? 0) - (a.count_order ?? 0)); // Ordenar por count_order
+                    populateTable(originalWorkersData);
+                } else {
+                     if(apiResponse.success && (!Array.isArray(apiResponse.data) || apiResponse.data.length === 0)) {
+                         noDataRow.classList.remove('hidden');
+                         exportExcelBtn.disabled = true;
+                     } else {
+                        errorCell.textContent = 'Error: Respuesta inesperada de la API.';
+                        errorRow.classList.remove('hidden');
+                        exportExcelBtn.disabled = true;
+                     }
+                }
+            })
+            .catch(error => {
+                loadingRow.classList.add('hidden');
+                errorCell.textContent = `Error al cargar datos: ${error.message}`;
+                errorRow.classList.remove('hidden');
+                exportExcelBtn.disabled = true;
+            });
+    }
+
+    // --- Lógica Principal ---
+    exportExcelBtn.disabled = true;
+    exportExcelBtn.addEventListener('click', exportToExcel);
+    printBtn.addEventListener('click', printTable);
+
+    dateRangeSelect.addEventListener('change', (event) => {
+        const selectedRange = event.target.value;
+        const { from, to } = getDateRange(selectedRange);
+        fetchData(from, to);
+    });
+
+    filterPostsCheckbox.addEventListener('change', () => {
+        populateTable(originalWorkersData);
+    });
+
+    function loadInitialData() {
+         const initialRangeValue = dateRangeSelect.value;
+         const { from, to } = getDateRange(initialRangeValue);
+         fetchData(from, to);
+    }
+    loadInitialData();
+
+</script>
+
+</body>
+</html>
