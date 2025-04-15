@@ -349,6 +349,10 @@
                         <span class="text-gray-600">TIEMPO ATRASADO</span>
                         <span id="tiempo-atrasado-val" class="font-mono font-medium text-gray-800">00:10:00</span>
                     </div>
+                    <div class="flex justify-between py-1">
+                        <span class="text-gray-600">TIEMPO PAUSA</span>
+                        <span id="tiempo-pausa-val" class="font-mono font-medium text-gray-800">00:00:00</span>
+                    </div>
                 </div>
                  </div>
 
@@ -785,7 +789,12 @@
                  let previousState = {...currentShiftState};
                  if (shiftData && shiftData.data) {
                      operator = shiftData.data.operator; type = shiftData.data.type; action = shiftData.data.action;
-                     shiftList = shiftData.data.shift_list; eventCreatedAt = shiftData.data.created_at;
+                     shiftList = shiftData.data.shift_list; eventCreatedAt = shiftData.shift_start_date;
+                     // Convertir los segundos a milisegundos
+                     const totalPauseMs = shiftData.total_pause_duration_seconds * 1000;
+                     // Formatear la duración al formato HH:MM:SS
+                    const formattedPause = formatDuration(totalPauseMs);
+                    $('#tiempo-pausa-val').text(formattedPause);
                  }
                  else if (shiftData === null) { type = 'shift'; action = 'end'; console.log("No shift data received (or 404), assuming shift ended."); }
 
@@ -814,6 +823,7 @@
                  } else if (!operator && !currentWorker && !isProcessingLogin) {
                      if (selectContainer.hasClass('hidden')) { console.log("No worker manually logged in and no operator in API. Ensuring selector is visible."); displayContainer.addClass('hidden'); workerLabel.removeClass('hidden'); selectContainer.removeClass('hidden'); workerSelect.val(null).trigger('change.select2'); }
                  }
+                 
 
                  // Actualizar Barra de Progreso Inferior con Tiempos Específicos
                  if ((isShiftActive || isPaused) && eventCreatedAt && shiftList && shiftList.start && shiftList.end) {
