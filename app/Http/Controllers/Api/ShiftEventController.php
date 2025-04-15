@@ -39,6 +39,7 @@ class ShiftEventController extends Controller
         $productionLineToken = $request->production_line_token;
         $event = $request->event;
         $operatorId = $request->operator_id;
+        $shiftListId=$request->shift_id;
 
         // Buscar la línea de producción utilizando el token recibido.
         $productionLine = ProductionLine::where('token', $productionLineToken)->first();
@@ -78,6 +79,7 @@ class ShiftEventController extends Controller
         // Agregar los campos adicionales al mensaje
         $data['description'] = 'Manual';
         $data['operator_id'] = $operatorId;
+        $data['shift_list_id'] = $shiftListId;
 
         // Obtener el registro de Barcode asociado a la línea de producción
         $barcode = Barcode::where('production_line_id', $productionLine->id)->first();

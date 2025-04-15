@@ -572,5 +572,12 @@
     "Max Correction Percentage": "Percentage of Correction Maximum (98%)",
     "Materia Prima": "Product Material",
     "Conteo": "Counting",
-    "Reanudar": "Resume"
+    "Reanudar": "Resume",
+    "buttons.edit": "Edit",
+    "buttons.sensors": "Sensors",
+    "buttons.orders": "Orders",
+    "buttons.live_view": "Live View",
+    "buttons.live_machine": "Live Machine",
+    "buttons.delete": "Delete",
+    "buttons.delete_confirm": "Are you sure you want to delete"
   }

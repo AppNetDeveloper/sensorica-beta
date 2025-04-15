@@ -37,6 +37,10 @@ use App\Http\Controllers\Api\ServerMonitorController;
 use App\Http\Controllers\Api\CalculateProductionDowntimeController;
 use App\Http\Controllers\Api\ShiftHistoryController;
 use App\Http\Controllers\Api\ShiftEventController;
+use App\Http\Controllers\Api\ShiftListController;
+
+
+
 
 
 
@@ -123,6 +127,10 @@ Route::get('/shift-history/production-line/{token}/last', [ShiftHistoryControlle
 //shift publicar mesajes en mqtt
 
 Route::post('shift-event', [ShiftEventController::class, 'publishShiftEvent']);
+
+//listdao de turnos por production_line_id
+Route::get('/shift-lists', [ShiftListController::class, 'index']);
+
 
 //api rfid
 Route::post('/rfid-insert', [RfidDetailController::class, 'store']);

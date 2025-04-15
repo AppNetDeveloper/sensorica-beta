@@ -44,22 +44,42 @@ class ShiftHistoryController extends Controller
     {
         // Buscar la línea de producción por token
         $productionLine = ProductionLine::where('token', $token)->first();
-
+    
         if (!$productionLine) {
             return response()->json(['message' => 'Línea de producción no encontrada'], 404);
         }
-
+    
         // Buscar la última entrada en shift_history para la línea de producción
-        // Usamos with('operator') para cargar la relación del operario
-        $shiftHistory = ShiftHistory::with('operator')
+        // Cargando las relaciones operator y shiftList
+        $shiftHistory = ShiftHistory::with(['operator', 'shiftList'])
             ->where('production_line_id', $productionLine->id)
             ->orderBy('created_at', 'desc')
             ->first();
-
+    
         if (!$shiftHistory) {
             return response()->json(['message' => 'No se encontró historial de turnos para esta línea de producción'], 404);
         }
-
+    
+        // Si el último registro no es de type "shift" y action "start", buscar el último "shift_start"
+        if ($shiftHistory->type !== 'shift' || $shiftHistory->action !== 'start') {
+            $shiftStart = ShiftHistory::with(['operator', 'shiftList'])
+                ->where('production_line_id', $productionLine->id)
+                ->where('type', 'shift')
+                ->where('action', 'start')
+                ->orderBy('created_at', 'desc')
+                ->first();
+    
+            if (!$shiftStart) {
+                return response()->json(['message' => 'No se encontró un registro de inicio de turno (shift start) para esta línea de producción'], 404);
+            }
+    
+            return response()->json([
+                'data' => $shiftStart,
+                'shift_start_date' => $shiftStart->created_at
+            ]);
+        }
+    
         return response()->json(['data' => $shiftHistory]);
     }
+    
 }
