@@ -370,7 +370,7 @@
                         action: function (e, dt, node, config) {
                             Swal.fire({
                                 title: 'Añadir Relación',
-                                width: '800px',
+                                width: '1000px',
                                 padding: '2em',
                                 html: `
                                     <select id="operatorId" class="swal2-input custom-select-style">
@@ -570,6 +570,14 @@
                         extend: 'excelHtml5',
                         text: 'Exportar a Excel',
                         className: 'btn btn-success'
+                    },
+                    {
+                        text: 'Live Rfid',
+                        className: 'btn btn-primary', // Estilo del botón
+                        action: function () {
+                            const url = '/live-rfid/';
+                            window.open(url, '_blank'); // Abre el enlace en una nueva pestaña
+                        }
                     }
                 ],
                 order: [[7, 'desc'], [0, 'desc'], [1, 'desc']],

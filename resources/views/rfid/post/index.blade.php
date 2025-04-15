@@ -26,6 +26,7 @@
                     <tr>
                         <th>Confección</th>
                         <th>Puesto</th>
+                        <th>Operario</th> 
                         <th>Fecha Inicio</th>
                         <th>Fecha Fin</th>
                         <th>Báscula</th>
@@ -456,6 +457,11 @@
                         },
                         defaultContent: 'Sin asignar'
                     },
+                    { // --- INICIO: NUEVA DEFINICIÓN DE COLUMNA OPERARIO ---
+                        data: 'operator_name', // Accede a la propiedad añadida en la API
+                        name: 'operator_name', // Nombre opcional para referencia
+                        defaultContent: 'Sin asignar' // Valor si operator_name es null o undefined
+                    }, // --- FIN: NUEVA DEFINICIÓN DE COLUMNA OPERARIO ---
                     { data: 'created_at', render: data => new Date(data).toLocaleString('es-ES') },
                     { data: 'finish_at', render: data => !data ? 'En curso' : new Date(data).toLocaleString('es-ES') },
                     { data: 'modbus.name', defaultContent: 'N/A', render: (data, type, row) => row.modbus ? data : 'N/A' },
@@ -504,7 +510,7 @@
 
                                 Swal.fire({
                                     title: 'Asignar Confección',
-                                    width: '800px',
+                                    width: '1000px',
                                     padding: '2em',
                                     html: `
                                         ${productSelectHtml}
@@ -661,9 +667,17 @@
                         extend: 'excelHtml5',
                         text: 'Exportar a Excel',
                         className: 'btn btn-success'
+                    },
+                    {
+                        text: 'Live Rfid',
+                        className: 'btn btn-primary', // Estilo del botón
+                        action: function () {
+                            const url = '/live-rfid/';
+                            window.open(url, '_blank'); // Abre el enlace en una nueva pestaña
+                        }
                     }
                 ],
-                order: [[3, 'desc'],[1, 'desc']],
+                order: [[4, 'desc'],[1, 'desc'],[2, 'asc']],
                 responsive: true
             });
 

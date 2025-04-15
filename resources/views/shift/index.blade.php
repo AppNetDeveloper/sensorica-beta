@@ -233,6 +233,7 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
     {{-- Botones de DataTables (para exportar Excel, etc.) --}}
     <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+    
 @endpush
 
 @push('scripts')

@@ -98,7 +98,7 @@ class ShiftEventController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'MQTT message published'
+            'message' => 'Cambio en turno registrado con éxito'
         ]);
     }
 

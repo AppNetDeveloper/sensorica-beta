@@ -268,6 +268,43 @@ else{
     @yield('javascript')
 
     @stack('scripts')
+
+
+    <style>
+        /* --- Danger --- */
+        .btn-outline-danger { color: #DC3545 !important; border-color: #DC3545 !important; background-color: transparent !important; }
+        .btn-outline-danger:hover, .btn-outline-danger:focus, .btn-outline-danger:active, .btn-outline-danger.active, .btn-check:active + .btn-outline-danger, .btn-check:checked + .btn-outline-danger { color: #fff !important; background-color: #DC3545 !important; border-color: #DC3545 !important; box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.5) !important; }
+        .btn-outline-danger:disabled, .btn-outline-danger.disabled { color: #DC3545 !important; border-color: #DC3545 !important; background-color: transparent !important; }
+
+        /* --- Warning --- */
+        .btn-outline-warning { color: #ffc107 !important; border-color: #ffc107 !important; background-color: transparent !important; }
+        .btn-outline-warning:hover, .btn-outline-warning:focus, .btn-outline-warning:active, .btn-outline-warning.active, .btn-check:active + .btn-outline-warning, .btn-check:checked + .btn-outline-warning { color: #000 !important; /* Texto negro en hover */ background-color: #ffc107 !important; border-color: #ffc107 !important; box-shadow: 0 0 0 0.25rem rgba(255, 193, 7, 0.5) !important; }
+        .btn-outline-warning:disabled, .btn-outline-warning.disabled { color: #ffc107 !important; border-color: #ffc107 !important; background-color: transparent !important; }
+
+        /* --- Success --- */
+        .btn-outline-success { color: #198754 !important; border-color: #198754 !important; background-color: transparent !important; }
+        .btn-outline-success:hover, .btn-outline-success:focus, .btn-outline-success:active, .btn-outline-success.active, .btn-check:active + .btn-outline-success, .btn-check:checked + .btn-outline-success { color: #fff !important; background-color: #198754 !important; border-color: #198754 !important; box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.5) !important; }
+        .btn-outline-success:disabled, .btn-outline-success.disabled { color: #198754 !important; border-color: #198754 !important; background-color: transparent !important; }
+
+        /* --- Info --- */
+        .btn-outline-info { color: #0dcaf0 !important; border-color: #0dcaf0 !important; background-color: transparent !important; }
+        .btn-outline-info:hover, .btn-outline-info:focus, .btn-outline-info:active, .btn-outline-info.active, .btn-check:active + .btn-outline-info, .btn-check:checked + .btn-outline-info { color: #000 !important; /* Texto negro en hover (BS5) */ background-color: #0dcaf0 !important; border-color: #0dcaf0 !important; box-shadow: 0 0 0 0.25rem rgba(13, 202, 240, 0.5) !important; }
+        .btn-outline-info:disabled, .btn-outline-info.disabled { color: #0dcaf0 !important; border-color: #0dcaf0 !important; background-color: transparent !important; }
+
+        /* --- Primary --- */
+        .btn-outline-primary { color: #0d6efd !important; border-color: #0d6efd !important; background-color: transparent !important; }
+        .btn-outline-primary:hover, .btn-outline-primary:focus, .btn-outline-primary:active, .btn-outline-primary.active, .btn-check:active + .btn-outline-primary, .btn-check:checked + .btn-outline-primary { color: #fff !important; background-color: #0d6efd !important; border-color: #0d6efd !important; box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.5) !important; }
+        .btn-outline-primary:disabled, .btn-outline-primary.disabled { color: #0d6efd !important; border-color: #0d6efd !important; background-color: transparent !important; }
+
+        /* --- Secondary --- */
+        .btn-outline-secondary { color: #6c757d !important; border-color: #6c757d !important; background-color: transparent !important; }
+        .btn-outline-secondary:hover, .btn-outline-secondary:focus, .btn-outline-secondary:active, .btn-outline-secondary.active, .btn-check:active + .btn-outline-secondary, .btn-check:checked + .btn-outline-secondary { color: #fff !important; background-color: #6c757d !important; border-color: #6c757d !important; box-shadow: 0 0 0 0.25rem rgba(108, 117, 125, 0.5) !important; }
+        .btn-outline-secondary:disabled, .btn-outline-secondary.disabled { color: #6c757d !important; border-color: #6c757d !important; background-color: transparent !important; }
+
+        /* Puedes añadir .btn-outline-light y .btn-outline-dark aquí si los necesitas */
+
+    </style>
+
 </body>
 
 </html>

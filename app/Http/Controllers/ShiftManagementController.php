@@ -179,7 +179,7 @@ class ShiftManagementController extends Controller
 
         $this->publishMqttMessage($mqttTopic, $jsonMessage);
 
-        return response()->json(['success' => true, 'message' => 'MQTT message published']);
+        return response()->json(['success' => true, 'message' => 'Cambio en turno realizado correctamente']);
     }
 
     /**

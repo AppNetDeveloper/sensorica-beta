@@ -40,7 +40,30 @@ class ProductListSelectedsController extends Controller
             'modbus',
             'sensor'
         ])->get();
-        
+
+        // --- INICIO: Añadir información del operario ---
+        foreach ($relations as $relation) {
+            $operatorName = 'Sin asignar'; // Valor por defecto
+
+            // Verificar si hay una lectura RFID asociada
+            if ($relation->rfidReading && $relation->rfidReading->id) {
+                // Buscar la asignación de operario activa para este RFID
+                $activeOperatorPost = OperatorPost::where('rfid_reading_id', $relation->rfidReading->id)
+                                                  ->whereNull('finish_at') // Clave: buscar la asignación activa
+                                                  ->with('operator') // Cargar la relación con el modelo Operator
+                                                  ->first();
+
+                // Si se encontró una asignación activa y el operario existe
+                if ($activeOperatorPost && $activeOperatorPost->operator) {
+                    $operatorName = $activeOperatorPost->operator->name;
+                }
+            }
+
+            // Añadir el nombre del operario al objeto de la relación
+            $relation->operator_name = $operatorName;
+        }
+        // --- FIN: Añadir información del operario ---
+
         return response()->json($relations, 200);
     }
 
