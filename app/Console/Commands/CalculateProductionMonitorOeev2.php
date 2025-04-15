@@ -298,6 +298,10 @@ class CalculateProductionMonitorOeev2 extends Command
             
             // Calcular la diferencia entre unidades teóricas y reales
             $unitsDelayed = $unitsMadeTheoretical - $unitsMadeReal;
+            if($unitsDelayed<0){
+                $unitsDelayed=0;
+            }
+            
             //$this->info("[" . Carbon::now()->toDateTimeString() . "] Unidades teóricas: $unitsMadeTheoretical");
             //$this->info("[" . Carbon::now()->toDateTimeString() . "] Unidades reales: $unitsMadeReal");
             //$this->info("[" . Carbon::now()->toDateTimeString() . "] Unidades retrasadas: $unitsDelayed");
@@ -345,7 +349,9 @@ class CalculateProductionMonitorOeev2 extends Command
             }
 
             $totalOee = ($oee + $oeeModbus + $oeeRfid) / $monitorOee;
-            
+            if ($totalOee > 100) {
+                $totalOee = 100;
+            }
             // Actualizar la orden si existe
             if ($currentOrder) {
                 $currentOrder->units_per_minute_real = $unitsMadeTheoretical;

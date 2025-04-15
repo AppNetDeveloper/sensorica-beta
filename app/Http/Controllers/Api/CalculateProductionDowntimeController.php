@@ -141,16 +141,25 @@ class CalculateProductionDowntimeController extends Controller
                                 ->orderBy('id', 'desc')
                                 ->first();
     
-        if ($atLeastOneStopped) {
-            \Log::info("La línea de producción con ID {$productionLineId} está parada con al menos un sensor de tipo non 0 activo.");
-            if ($orderStat) {
-                $orderStat->increment('down_time');
+        // Intervalo de tiempo a sumar (asumiendo que el script se ejecuta cada 1 segundo)
+        $intervalInSeconds = 1;
+
+        if ($orderStat) { // Asegúrate de que $orderStat existe antes de intentar usarlo
+            if ($atLeastOneStopped) {
+                \Log::info("La línea de producción con ID {$productionLineId} está parada con al menos un sensor de tipo non 0 activo. Sumando {$intervalInSeconds}s a down_time.");
+                // --- LÍNEA CAMBIADA ---
+                $orderStat->down_time += $intervalInSeconds;
+                $orderStat->save();
+                // --- FIN LÍNEA CAMBIADA ---
+            } else {
+                \Log::info("La línea de producción con ID {$productionLineId} está parada sin ningún sensor de tipo non 0 activo. Sumando {$intervalInSeconds}s a production_stops_time.");
+                // --- LÍNEA CAMBIADA ---
+                $orderStat->production_stops_time += $intervalInSeconds;
+                $orderStat->save();
+                // --- FIN LÍNEA CAMBIADA ---
             }
         } else {
-            \Log::info("La línea de producción con ID {$productionLineId} está parada sin ningún sensor de tipo non 0 activo.");
-            if ($orderStat) {
-                $orderStat->increment('production_stops_time');
-            }
+             \Log::warning("No se encontró OrderStat para la línea de producción ID: {$productionLineId}");
         }
     }
     
@@ -249,8 +258,9 @@ class CalculateProductionDowntimeController extends Controller
             ->whereNull('end_time')
             ->first();
 
+        $intervalInSeconds = 1;
         if ($downtime) {
-            $downtime->count_time += $downtimeTime;
+            $downtime->count_time += $intervalInSeconds;
             $downtime->save();
             \Log::info("Updated downtime for sensor: {$sensor->name}. Incremented count_time by {$downtimeTime} seconds.");
         } else {
@@ -263,7 +273,7 @@ class CalculateProductionDowntimeController extends Controller
             \Log::info("New downtime record created for sensor: {$sensor->name}.");
         }
 
-        $sensor->downtime_count++;
+        $sensor->downtime_count += $intervalInSeconds;
         $sensor->save();
         \Log::info("Downtime count for sensor {$sensor->name} incremented to {$sensor->downtime_count}.");
     }

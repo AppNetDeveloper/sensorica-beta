@@ -74,7 +74,7 @@ class ShiftHistoryController extends Controller
             }
     
             return response()->json([
-                'data' => $shiftStart,
+                'data' => $shiftHistory ,
                 'shift_start_date' => $shiftStart->created_at
             ]);
         }
