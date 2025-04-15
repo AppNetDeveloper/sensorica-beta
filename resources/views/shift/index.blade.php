@@ -55,7 +55,7 @@
                                                 </button>
                                             @elseif($last->type === 'stop' && $last->action === 'start')
                                                 {{-- Pausa iniciada: mostrar sólo Finalizar pausa --}}
-                                                <button type="button" class="btn btn-outline-danger" style="padding: 1rem 2rem; font-size: 1.25rem;"
+                                                <button type="button" class="btn-outline-warning btn btn-outline-warning" style="padding: 1rem 2rem; font-size: 1.25rem;"
                                                         data-action="final_pausa"
                                                         data-line-id="{{ $line->id }}"
                                                         title="{{ __('Reanudar') }}">
@@ -63,7 +63,7 @@
                                                 </button>
                                             @elseif($last->type === 'stop' && $last->action === 'end')
                                                 {{-- Pausa finalizada: mostrar Inicio pausa y Finalizar Turno --}}
-                                                <button type="button" class="btn btn-outline-success" style="padding: 1rem 2rem; font-size: 1.25rem;"
+                                                <button type="button" class="btn-outline-warning" style="padding: 1rem 2rem; font-size: 1.25rem;"
                                                         data-action="inicio_pausa"
                                                         data-line-id="{{ $line->id }}"
                                                         title="{{ __('Pause') }}">
