@@ -301,7 +301,56 @@ else{
         .btn-outline-secondary:hover, .btn-outline-secondary:focus, .btn-outline-secondary:active, .btn-outline-secondary.active, .btn-check:active + .btn-outline-secondary, .btn-check:checked + .btn-outline-secondary { color: #fff !important; background-color: #6c757d !important; border-color: #6c757d !important; box-shadow: 0 0 0 0.25rem rgba(108, 117, 125, 0.5) !important; }
         .btn-outline-secondary:disabled, .btn-outline-secondary.disabled { color: #6c757d !important; border-color: #6c757d !important; background-color: transparent !important; }
 
-        /* Puedes añadir .btn-outline-light y .btn-outline-dark aquí si los necesitas */
+        /* --- Light --- */
+        /* Nota: El botón 'light' está pensado para usarse sobre fondos oscuros */
+        .btn-outline-light {
+            color: #f8f9fa !important; /* Color texto/borde: Casi blanco */
+            border-color: #f8f9fa !important;
+            background-color: transparent !important;
+        }
+        .btn-outline-light:hover,
+        .btn-outline-light:focus,
+        .btn-outline-light:active,
+        .btn-outline-light.active,
+        .btn-check:active + .btn-outline-light,
+        .btn-check:checked + .btn-outline-light {
+            color: #000 !important; /* Texto negro en hover/activo para contraste */
+            background-color: #f8f9fa !important; /* Fondo casi blanco */
+            border-color: #f8f9fa !important;
+            box-shadow: 0 0 0 0.25rem rgba(248, 249, 250, 0.5) !important; /* Sombra clara */
+        }
+        /* Opcional deshabilitado */
+        .btn-outline-light:disabled,
+        .btn-outline-light.disabled {
+            color: #f8f9fa !important;
+            border-color: #f8f9fa !important;
+            background-color: transparent !important;
+        }
+
+        /* --- Dark --- */
+        .btn-outline-dark {
+            color: #212529 !important; /* Color texto/borde: Casi negro */
+            border-color: #212529 !important;
+            background-color: transparent !important;
+        }
+        .btn-outline-dark:hover,
+        .btn-outline-dark:focus,
+        .btn-outline-dark:active,
+        .btn-outline-dark.active,
+        .btn-check:active + .btn-outline-dark,
+        .btn-check:checked + .btn-outline-dark {
+            color: #fff !important; /* Texto blanco en hover/activo */
+            background-color: #212529 !important; /* Fondo casi negro */
+            border-color: #212529 !important;
+            box-shadow: 0 0 0 0.25rem rgba(33, 37, 41, 0.5) !important; /* Sombra oscura */
+        }
+        /* Opcional deshabilitado */
+        .btn-outline-dark:disabled,
+        .btn-outline-dark.disabled {
+            color: #212529 !important;
+            border-color: #212529 !important;
+            background-color: transparent !important;
+        }
 
     </style>
 
