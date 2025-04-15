@@ -15,7 +15,7 @@
             font-family: 'Inter', sans-serif;
             overscroll-behavior-y: contain;
         }
-        /* --- Estilos Círculo de Progreso Dinámico (sin cambios) --- */
+        /* --- Estilos Círculo de Progreso Dinámico --- */
         .progress-circle {
             width: 180px; height: 180px; border-radius: 50%; display: grid; place-items: center;
             background: conic-gradient(#4ade80 calc(var(--progress-percent, 0) * 1%), #e5e7eb 0);
@@ -26,7 +26,7 @@
         }
         #progress-value { z-index: 2; position: relative; }
 
-        /* --- Estilos Tarjeta Kanban Refactorizados (sin cambios) --- */
+        /* --- Estilos Tarjeta Kanban Refactorizados --- */
         .kanban-card {
             padding: 0.75rem; border-radius: 0.375rem;
             box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
@@ -39,7 +39,7 @@
         #col-finalizadas .kanban-card { background-color: #f9fafb; border-color: #e5e7eb; }
         #col-incidencias .kanban-card { background-color: #fef2f2; border-color: #fecaca; }
 
-        /* --- Estilos Etiquetas OPE (sin cambios) --- */
+        /* --- Estilos Etiquetas OPE --- */
          .ope-tag {
             display: inline-block; padding-left: 0.5rem; padding-right: 0.5rem;
             padding-top: 0.125rem; padding-bottom: 0.125rem; border-radius: 0.25rem;
@@ -52,7 +52,7 @@
         .ope-incidencia { background-color: #fecaca; color: #991b1b; }
         .ope-default { background-color: #e5e7eb; color: #374151; }
 
-        /* --- Otros estilos (Columnas, Títulos, Dragula, Select2, Hidden) (sin cambios) --- */
+        /* --- Otros estilos --- */
         .kanban-column { background-color: #f3f4f6; padding: 1rem; border-radius: 0.5rem; height: 100%; min-height: 200px; }
         .kanban-title { font-weight: 600; color: #374151; margin-bottom: 1rem; text-align: center; }
         .gu-mirror {
@@ -122,11 +122,15 @@
              border-radius: 0.375rem; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
              background-color: white; font-size: 0.875rem; line-height: 1.25rem;
         }
-        /* Estilo para la barra de progreso y retraso */
+        /* Estilo para la barra de progreso y sus segmentos */
         .progress-bar-segment {
             transition: width 0.5s ease-in-out; /* Animación suave del ancho */
             height: 100%; /* Ocupar altura del contenedor flex */
         }
+        /* Clases específicas para colores de segmentos (si se quieren diferentes amarillos) */
+        #shift-pause-bar { background-color: #facc15; } /* yellow-400 */
+        #shift-slow-bar { background-color: #fde047; } /* yellow-300 */
+        #shift-late-bar { background-color: #fef08a; } /* yellow-200 */
 
     </style>
      <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -333,11 +337,20 @@
                         </select>
                  </div>
                  <div class="text-sm w-full max-w-sm">
-                    <div class="flex justify-between py-1"><span class="text-gray-600">TIEMPO EN PARADA</span><span class="font-mono font-medium text-gray-800">00:00:00</span></div>
-                    <div class="flex justify-between py-1"><span class="text-gray-600">TIEMPO LENTO</span><span class="font-mono font-medium text-gray-800">00:00:00</span></div>
-                    <div class="flex justify-between py-1"><span class="text-gray-600">TIEMPO ATRASADO</span><span class="font-mono font-medium text-gray-800">00:00:00</span></div>
+                    <div class="flex justify-between py-1">
+                        <span class="text-gray-600">TIEMPO EN PARADA</span>
+                        <span id="tiempo-parada-val" class="font-mono font-medium text-gray-800">00:04:00</span>
+                    </div>
+                    <div class="flex justify-between py-1">
+                        <span class="text-gray-600">TIEMPO LENTO</span>
+                        <span id="tiempo-lento-val" class="font-mono font-medium text-gray-800">00:5:00</span>
+                    </div>
+                    <div class="flex justify-between py-1">
+                        <span class="text-gray-600">TIEMPO ATRASADO</span>
+                        <span id="tiempo-atrasado-val" class="font-mono font-medium text-gray-800">00:10:00</span>
+                    </div>
                 </div>
-            </div>
+                 </div>
 
             <div class="flex justify-center items-start">
                  <div id="progress-indicator" class="progress-circle"> <span id="progress-value">0</span> </div>
@@ -349,9 +362,9 @@
                 <span id="shift-start-time-label">HORA INICIO</span> <span id="shift-end-time-label">HORA FIN</span>     </div>
             <div id="progress-bar-container" class="w-full bg-gray-200 rounded-full h-4 overflow-hidden flex">
                  <div id="shift-delay-bar" class="progress-bar-segment bg-red-500" style="width: 0%;"></div>
-                 <div id="shift-progress-bar" class="progress-bar-segment bg-green-500" style="width: 0%;"></div>
+                 <div id="shift-pause-bar" class="progress-bar-segment bg-yellow-500" style="width: 0%;"></div> <div id="shift-slow-bar" class="progress-bar-segment bg-yellow-400" style="width: 0%;"></div> <div id="shift-late-bar" class="progress-bar-segment bg-yellow-300" style="width: 0%;"></div> <div id="shift-progress-bar" class="progress-bar-segment bg-green-500" style="width: 0%;"></div>
             </div>
-             <div id="shift-info-text" class="text-right text-sm text-gray-500 mt-1">SIN DATOS</div>
+            <div id="shift-info-text" class="text-right text-sm text-gray-500 mt-1">SIN DATOS</div>
         </div>
         </div>
 
@@ -361,6 +374,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dragula/3.7.3/dragula.min.js" crossorigin="anonymous" referrerpolicy="no-referrer" defer onerror="console.error('Error loading Dragula script:', event)"></script>
 
     <script>
+        // *** DOMContentLoaded Wrapper DESCOMENTADO ***
         document.addEventListener('DOMContentLoaded', function() {
             // --- Configuración ---
             const API_BASE_URL = window.location.origin;
@@ -387,10 +401,16 @@
             const shiftSelect = $('#shift-select');
             const shiftStartTimeLabel = $('#shift-start-time-label');
             const shiftEndTimeLabel = $('#shift-end-time-label');
-            const progressBarContainer = $('#progress-bar-container'); // ID del contenedor
+            const progressBarContainer = $('#progress-bar-container');
             const shiftDelayBar = $('#shift-delay-bar');
+            const shiftPauseBar = $('#shift-pause-bar');
+            const shiftSlowBar = $('#shift-slow-bar');
+            const shiftLateBar = $('#shift-late-bar');
             const shiftProgressBar = $('#shift-progress-bar');
             const shiftInfoText = $('#shift-info-text');
+            const tiempoParadaVal = $('#tiempo-parada-val');
+            const tiempoLentoVal = $('#tiempo-lento-val');
+            const tiempoAtrasadoVal = $('#tiempo-atrasado-val');
             let currentWorker = null;
             let currentShiftState = { type: null, action: null };
             let selectedShiftId = null;
@@ -422,7 +442,7 @@
 
             // --- Función para formatear duración (HH:MM:SS) ---
             function formatDuration(ms) {
-                if (ms < 0) ms = 0;
+                if (isNaN(ms) || ms < 0) ms = 0; // Validar entrada
                 const totalSeconds = Math.floor(ms / 1000);
                 const hours = Math.floor(totalSeconds / 3600);
                 const minutes = Math.floor((totalSeconds % 3600) / 60);
@@ -431,6 +451,21 @@
                 const paddedMinutes = minutes.toString().padStart(2, '0');
                 const paddedSeconds = seconds.toString().padStart(2, '0');
                 return `${paddedHours}:${paddedMinutes}:${paddedSeconds}`;
+            }
+
+            // --- Función para parsear duración "HH:MM:SS" a ms ---
+            function parseDuration(timeString) {
+                if (!timeString || typeof timeString !== 'string' || !timeString.includes(':')) return 0;
+                try {
+                    const parts = timeString.split(':').map(Number);
+                    if (parts.length === 3 && parts.every(num => !isNaN(num))) {
+                        const [hours, minutes, seconds] = parts;
+                        return (hours * 3600 + minutes * 60 + seconds) * 1000;
+                    }
+                } catch (e) {
+                    console.error("Error parsing duration string:", timeString, e);
+                }
+                return 0; // Devolver 0 si el formato es incorrecto
             }
 
             // --- Función para mostrar alerta de operario/turno requerido ---
@@ -630,8 +665,12 @@
                  shiftStartTimeLabel.text("HORA INICIO");
                  shiftEndTimeLabel.text("HORA FIN");
                  shiftInfoText.text("SIN DATOS");
-                 shiftDelayBar.css('width', '0%').attr('title', ''); // Limpiar tooltip
-                 shiftProgressBar.css('width', '0%').attr('title', ''); // Limpiar tooltip
+                 // Resetear todas las barras y tooltips
+                 shiftDelayBar.css('width', '0%').attr('title', '');
+                 shiftPauseBar.css('width', '0%').attr('title', '');
+                 shiftSlowBar.css('width', '0%').attr('title', '');
+                 shiftLateBar.css('width', '0%').attr('title', '');
+                 shiftProgressBar.css('width', '0%').attr('title', '');
                  progressBarContainer.attr('title', ''); // Limpiar tooltip del contenedor
                  console.log("Shift progress bar reset.");
             }
@@ -776,7 +815,7 @@
                      if (selectContainer.hasClass('hidden')) { console.log("No worker manually logged in and no operator in API. Ensuring selector is visible."); displayContainer.addClass('hidden'); workerLabel.removeClass('hidden'); selectContainer.removeClass('hidden'); workerSelect.val(null).trigger('change.select2'); }
                  }
 
-                 // Actualizar Barra de Progreso Inferior con Retraso
+                 // Actualizar Barra de Progreso Inferior con Tiempos Específicos
                  if ((isShiftActive || isPaused) && eventCreatedAt && shiftList && shiftList.start && shiftList.end) {
                      const eventStartTimeStr = formatTime(eventCreatedAt);
                      const shiftStartTimeStr = formatTime(shiftList.start);
@@ -784,44 +823,61 @@
                      shiftStartTimeLabel.text(`INICIO: ${eventStartTimeStr}`);
                      shiftEndTimeLabel.text(`FIN TURNO: ${shiftEndTimeStr}`);
                      shiftInfoText.text(`TURNO: ${shiftStartTimeStr} - ${shiftEndTimeStr}`);
+
                      try {
+                         // Leer tiempos específicos del HTML (y parsearlos a ms)
+                         const pauseTimeMs = parseDuration(tiempoParadaVal.text());
+                         const slowTimeMs = parseDuration(tiempoLentoVal.text());
+                         const lateTimeMs = parseDuration(tiempoAtrasadoVal.text());
+                         console.log(`Read times (ms) - Pause: ${pauseTimeMs}, Slow: ${slowTimeMs}, Late: ${lateTimeMs}`);
+
                          const now = new Date(); const eventStartDateTime = new Date(eventCreatedAt);
                          const [startHours, startMinutes] = shiftStartTimeStr.split(':').map(Number); const [endHours, endMinutes] = shiftEndTimeStr.split(':').map(Number);
                          let shiftStartDateTime = new Date(eventStartDateTime); shiftStartDateTime.setHours(startHours, startMinutes, 0, 0);
                          let shiftEndDateTime = new Date(eventStartDateTime); shiftEndDateTime.setHours(endHours, endMinutes, 0, 0);
-                         if (shiftEndDateTime <= shiftStartDateTime) { shiftEndDateTime.setDate(shiftEndDateTime.getDate() + 1); console.log("Shift end time adjusted to next day."); }
-                         if (eventStartDateTime > shiftEndDateTime) { shiftStartDateTime.setDate(shiftStartDateTime.getDate() -1); shiftEndDateTime.setDate(shiftEndDateTime.getDate() -1); console.log("Shift start/end time adjusted to previous day (night shift case)."); }
+                         if (shiftEndDateTime <= shiftStartDateTime) { shiftEndDateTime.setDate(shiftEndDateTime.getDate() + 1); }
+                         if (eventStartDateTime > shiftEndDateTime) { shiftStartDateTime.setDate(shiftStartDateTime.getDate() -1); shiftEndDateTime.setDate(shiftEndDateTime.getDate() -1); }
+
                          const totalShiftDurationMs = shiftEndDateTime.getTime() - shiftStartDateTime.getTime();
                          let actualStartDelayMs = eventStartDateTime.getTime() - shiftStartDateTime.getTime();
                          let elapsedSinceActualStartMs = now.getTime() - eventStartDateTime.getTime();
-                         let remainingMs = shiftEndDateTime.getTime() - now.getTime(); // Calcular tiempo restante
+                         let remainingMs = shiftEndDateTime.getTime() - now.getTime();
 
                          actualStartDelayMs = Math.max(0, actualStartDelayMs); elapsedSinceActualStartMs = Math.max(0, elapsedSinceActualStartMs);
-                         remainingMs = Math.max(0, remainingMs); // Asegurar que no sea negativo
+                         remainingMs = Math.max(0, remainingMs);
 
-                         let delayPercentage = 0; let progressPercentage = 0;
-                         let formattedDelay = ''; let formattedProgress = ''; let formattedRemaining = ''; // Variables para tooltips
+                         let delayPercentage = 0; let pausePercentage = 0; let slowPercentage = 0; let latePercentage = 0; let productivePercentage = 0;
+                         let formattedDelay = ''; let formattedPause = formatDuration(pauseTimeMs); let formattedSlow = formatDuration(slowTimeMs);
+                         let formattedLate = formatDuration(lateTimeMs); let formattedProductive = ''; let formattedRemaining = formatDuration(remainingMs);
 
                          if (totalShiftDurationMs > 0) {
-                             if (actualStartDelayMs > 0) {
-                                 delayPercentage = (actualStartDelayMs / totalShiftDurationMs) * 100;
-                                 formattedDelay = formatDuration(actualStartDelayMs);
-                             }
-                             progressPercentage = (elapsedSinceActualStartMs / totalShiftDurationMs) * 100;
-                             formattedProgress = formatDuration(elapsedSinceActualStartMs);
-                             formattedRemaining = formatDuration(remainingMs); // Formatear tiempo restante
+                             if (actualStartDelayMs > 0) { delayPercentage = (actualStartDelayMs / totalShiftDurationMs) * 100; formattedDelay = formatDuration(actualStartDelayMs); }
+                             pausePercentage = (pauseTimeMs / totalShiftDurationMs) * 100;
+                             slowPercentage = (slowTimeMs / totalShiftDurationMs) * 100;
+                             latePercentage = (lateTimeMs / totalShiftDurationMs) * 100;
 
-                             let totalPercentage = delayPercentage + progressPercentage;
-                             if (totalPercentage > 100) { progressPercentage = 100 - delayPercentage; totalPercentage = 100; }
-                             delayPercentage = Math.max(0, Math.min(100, delayPercentage)); progressPercentage = Math.max(0, Math.min(100 - delayPercentage, progressPercentage));
-                             console.log(`Delay: ${delayPercentage.toFixed(2)}%, Progress: ${progressPercentage.toFixed(2)}%`);
+                             // Calcular tiempo productivo transcurrido en ms (Total transcurrido desde inicio real - paradas - lento - atrasado)
+                             let productiveElapsedMs = elapsedSinceActualStartMs - pauseTimeMs - slowTimeMs - lateTimeMs; // Corrected calculation
+                             productiveElapsedMs = Math.max(0, productiveElapsedMs); // Asegurar que no sea negativo
+                             formattedProductive = formatDuration(productiveElapsedMs);
+                             productivePercentage = (productiveElapsedMs / totalShiftDurationMs) * 100;
+
+                             // Clamp individual y total para evitar que la suma exceda 100%
+                             delayPercentage = Math.max(0, Math.min(100, delayPercentage));
+                             pausePercentage = Math.max(0, Math.min(100 - delayPercentage, pausePercentage));
+                             slowPercentage = Math.max(0, Math.min(100 - delayPercentage - pausePercentage, slowPercentage));
+                             latePercentage = Math.max(0, Math.min(100 - delayPercentage - pausePercentage - slowPercentage, latePercentage));
+                             productivePercentage = Math.max(0, Math.min(100 - delayPercentage - pausePercentage - slowPercentage - latePercentage, productivePercentage));
+
+                             console.log(`Percentages - Delay: ${delayPercentage.toFixed(2)}%, Pause: ${pausePercentage.toFixed(2)}%, Slow: ${slowPercentage.toFixed(2)}%, Late: ${latePercentage.toFixed(2)}%, Productive: ${productivePercentage.toFixed(2)}%`);
 
                              // Actualizar barras y tooltips
                              shiftDelayBar.css('width', `${delayPercentage}%`).attr('title', delayPercentage > 0 ? `Retraso inicio turno: ${formattedDelay}` : '');
-                             shiftProgressBar.css('width', `${progressPercentage}%`).attr('title', `Transcurrido: ${formattedProgress}`);
-                             // *** NUEVO: Tooltip para contenedor (tiempo restante) ***
+                             shiftPauseBar.css('width', `${pausePercentage}%`).attr('title', `Tiempo Parada: ${formattedPause}`);
+                             shiftSlowBar.css('width', `${slowPercentage}%`).attr('title', `Tiempo Lento: ${formattedSlow}`);
+                             shiftLateBar.css('width', `${latePercentage}%`).attr('title', `Tiempo Atrasado: ${formattedLate}`);
+                             shiftProgressBar.css('width', `${productivePercentage}%`).attr('title', `Tiempo Productivo: ${formattedProductive}`);
                              progressBarContainer.attr('title', `Faltante: ${formattedRemaining}`);
-                             // ******************************************************
 
                          } else { console.warn("Total shift duration is zero or negative."); resetShiftProgressBar(); }
                      } catch(e) { console.error("Error calculating progress:", e); resetShiftProgressBar(); }
@@ -950,7 +1006,39 @@
             function handleTouchStart(e) { const card = e.target.closest('.kanban-card'); if (!card) { isTouchInteraction = false; return; } currentCard = card; isTouchInteraction = true; longPressTriggered = false; startX = e.touches[0].clientX; startY = e.touches[0].clientY; clearTimeout(longPressTimer); longPressTimer = setTimeout(() => { if (!isTouchInteraction || !currentCard) return; console.log("Long press triggered!"); longPressTriggered = true; currentCard.classList.add('long-press-ready'); if (navigator.vibrate) { navigator.vibrate(50); } }, longPressDelay); }
             function handleTouchMove(e) { if (!isTouchInteraction || !currentCard) return; const currentX = e.touches[0].clientX; const currentY = e.touches[0].clientY; const deltaX = Math.abs(currentX - startX); const deltaY = Math.abs(currentY - startY); const moveThreshold = 10; if (!longPressTriggered && (deltaX > moveThreshold || deltaY > moveThreshold)) { console.log("Movement detected before long press, cancelling timer."); clearTimeout(longPressTimer); if(currentCard) currentCard.classList.remove('long-press-ready'); } }
             function handleTouchEnd(e) { clearTimeout(longPressTimer); if (currentCard) { currentCard.classList.remove('long-press-ready'); } isTouchInteraction = false; currentCard = null; }
-            const drake = dragula(columns, { moves: function (el, source, handle, sibling) { if (!isTouchInteraction) { return true; } return longPressTriggered; } });
+            const drake = dragula(columns, {
+                moves: function (el, source, handle, sibling) {
+                    if (!isTouchInteraction) { return true; }
+                    return longPressTriggered;
+                 },
+                 // *** NUEVO: Opción accepts para limitar columna "En Curso" ***
+                 accepts: function (el, target, source, sibling) {
+                    if (target.id === 'col-en-curso') {
+                        // Comprobar si ya hay una tarjeta Y si la tarjeta que se mueve NO viene de esta columna
+                        const cardsInTarget = target.querySelectorAll('.kanban-card').length;
+                        if (cardsInTarget > 0 && source.id !== 'col-en-curso') {
+                             if (typeof Swal === 'function') {
+                                Swal.fire({
+                                    icon: 'warning',
+                                    title: 'Movimiento no permitido',
+                                    text: 'Solo puede haber una tarea en la columna "En Curso".',
+                                    toast: true,
+                                    position: 'top-end',
+                                    showConfirmButton: false,
+                                    timer: 3000,
+                                    timerProgressBar: true
+                                });
+                             } else {
+                                 alert('Solo puede haber una tarea en la columna "En Curso".');
+                             }
+                             console.log("Drop rejected: 'En Curso' column already has a card.");
+                             return false; // No permitir soltar
+                        }
+                    }
+                    return true; // Permitir soltar por defecto
+                 }
+                 // **********************************************************
+             });
             if (!drake) { console.error("Error: Falló la inicialización de Dragula."); return; }
             drake.on('drag', (el, source) => { console.log("Dragula event: drag (started)"); if (!currentWorker) { console.log("Drag cancelled: No worker selected."); drake.cancel(true); showWorkerRequiredAlert(); return; } if (el) el.classList.remove('long-press-ready'); });
             drake.on('drop', (el, target, source, sibling) => { console.log("Dragula event: drop"); const sourceColumnName = source.dataset.columnName || source.id; const targetColumnName = target.dataset.columnName || target.id; const cardId = el.dataset.cardId; const cardTitleElement = el.querySelector('.font-semibold'); const cardTitle = cardTitleElement ? cardTitleElement.innerText : `Tarjeta ${cardId}`; const message = `Moviste la tarjeta "${cardTitle}" de "${sourceColumnName}" a "${targetColumnName}".`; console.log("TODO: Llamar API para registrar movimiento Kanban", { card_id: cardId, target_column: targetColumnName, source_column: sourceColumnName, operator_id: currentWorker ? currentWorker.id : null }); if (typeof Swal === 'function') { Swal.fire({ title: 'Movimiento Registrado (Simulado)', text: message, icon: 'success', timer: 2000, timerProgressBar: true, toast: true, position: 'top-end', showConfirmButton: false }); } else { alert(message); } longPressTriggered = false; });
@@ -959,9 +1047,9 @@
             drake.on('over', function (el, container) { container.classList.add('bg-gray-300'); });
             drake.on('out', function (el, container) { container.classList.remove('bg-gray-300'); });
 
-        }); // Fin de DOMContentLoaded
+        // *** Fin de DOMContentLoaded ***
+        });
     </script>
 
 </body>
 </html>
-
