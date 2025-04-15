@@ -159,9 +159,23 @@ class MqttShiftSubscriber extends Command
         $baseTopic = str_replace('/timeline_event', '', $topic);
 
         $barcode = Barcode::where('mqtt_topic_barcodes', $baseTopic)->first();
-
                 // Obtener el production_line_id desde barcode
-                $productionLineId = $barcode->production_line_id;
+        $productionLineId = $barcode->production_line_id;
+
+        $shiftListId = $data['shift_list_id'];
+        // Si shiftListId es null o está vacío, se intenta recuperar el id desde el último shift start
+        if ($shiftListId === null || empty($shiftListId)) {
+            $shiftHistory = ShiftHistory::where('production_line_id', $productionLineId)
+                ->orderBy('created_at', 'desc')
+                ->first();
+            if ($shiftHistory && $shiftHistory->shift_list_id) {
+                $shiftListId = $shiftHistory->shift_list_id;
+            } else {
+                $shiftListId = null;
+            }
+        }
+
+
 
                 // Insertar el registro en shift_history con los datos recibidos
                 // Asegúrate de que el JSON incluya 'type', 'action' y 'description'
@@ -172,7 +186,7 @@ class MqttShiftSubscriber extends Command
                         'action'             => $data['action'] ?? null,
                         'description'        => $data['description'] ?? null,
                         'operator_id'        => $data['operator_id'] ?? null,
-                        'shift_list_id'        => $data['shift_list_id'] ?? null,
+                        'shift_list_id'        => $shiftListId ?? null,
                     ]);
                 } catch (\Exception $e) {
                    $this->info("[". Carbon::now()->toDateTimeString() . "]Error al crear registro en shift_history: " . $e->getMessage());
