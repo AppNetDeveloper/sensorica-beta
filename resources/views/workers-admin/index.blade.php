@@ -278,7 +278,7 @@
                         }
                     },
                     {
-                        text: 'Live Workers',
+                        text: 'Monitor',
                         className: 'btn btn-primary', // Estilo del botón
                         action: function () {
                             const url = '/workers/workers-live.html?shift=true&order=true&name=true&id=true&nameSize=1.2rem&numberSize=2rem&idSize=1rem&labelSize=1rem';
@@ -286,7 +286,7 @@
                         }
                     },
                     {
-                        text: 'Export Shift List',
+                        text: 'Imprimir Listado',
                         className: 'btn btn-primary', // Estilo del botón
                         action: function () {
                             const url = '/workers/export.html';
