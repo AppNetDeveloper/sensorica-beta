@@ -85,7 +85,7 @@
 
 <script>
     // URL base de la API (sin fechas)
-    const apiBaseUrl = '/api/workers/all-list/completed';
+    const apiBaseUrl = '/api/workers/all-list/completed'; // Asegúrate que esta URL sea correcta
     const tableBody = document.getElementById('workersTableBody');
     const loadingRow = document.getElementById('loadingRow');
     const errorRow = document.getElementById('errorRow');
@@ -96,8 +96,10 @@
     const dateRangeSelect = document.getElementById('dateRangeSelect');
     const filterPostsCheckbox = document.getElementById('filterPostsCheckbox');
 
-    // Variable para almacenar los datos originales (sin filtrar) una vez cargados
+    // Variable para almacenar los datos originales (sin filtrar por checkbox) una vez cargados
     let originalWorkersData = [];
+    // Variable para contar cuántas filas de puestos se muestran realmente
+    let displayedPostRowsCount = 0;
 
     // Opciones para formatear la fecha y hora localmente para visualización
     const dateTimeFormatOptions = {
@@ -109,6 +111,11 @@
 
     // --- Funciones ---
 
+    /**
+     * Formatea un objeto Date a 'YYYY-MM-DD' para la API.
+     * @param {Date} date - La fecha a formatear.
+     * @returns {string} La fecha formateada.
+     */
     function formatDateForAPI(date) {
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -116,9 +123,18 @@
         return `${year}-${month}-${day}`;
     }
 
+    /**
+     * Calcula las fechas de inicio y fin para la API según la opción seleccionada.
+     * @param {string} selectedValue - El valor del select de rango de fechas.
+     * @returns {{from: string, to: string}} Las fechas de inicio y fin formateadas.
+     */
     function getDateRange(selectedValue) {
-        const today = new Date(); today.setHours(0, 0, 0, 0);
-        let fromDate = new Date(today); let endDate = new Date(today);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Asegura que la hora sea 00:00:00
+
+        let fromDate = new Date(today);
+        let endDate = new Date(today); // Por defecto es hoy
+
         switch (selectedValue) {
             case 'today': break;
             case 'yesterday': fromDate.setDate(today.getDate() - 1); endDate.setDate(today.getDate() - 1); break;
@@ -132,24 +148,42 @@
             case 'last30days': fromDate.setDate(today.getDate() - 29); break;
             default: break;
         }
-        let apiToDate = new Date(endDate); apiToDate.setDate(endDate.getDate() + 1);
-        return { from: formatDateForAPI(fromDate), to: formatDateForAPI(apiToDate) };
+
+        let apiToDate = new Date(endDate);
+        apiToDate.setDate(endDate.getDate() + 1);
+
+        return {
+            from: formatDateForAPI(fromDate),
+            to: formatDateForAPI(apiToDate)
+        };
     }
 
-    function filterData(data) {
+    /**
+     * Filtra los datos según el estado del checkbox "Mostrar solo con puestos".
+     * @param {Array} data - Los datos originales de los trabajadores.
+     * @returns {Array} Los datos filtrados.
+     */
+    function filterDataByCheckbox(data) {
         if (filterPostsCheckbox.checked) {
             return data.filter(worker => worker.operator_posts && worker.operator_posts.length > 0);
         }
         return data;
     }
 
+    /**
+     * Rellena la tabla HTML con los datos de los trabajadores y sus puestos.
+     * Filtra los puestos con cantidad 0.
+     * Calcula la suma de cantidades para la columna "Unidades (Turno)".
+     * @param {Array} data - Los datos de los trabajadores (ya filtrados por checkbox si aplica).
+     */
     function populateTable(data) {
         tableBody.querySelectorAll('tr:not(#loadingRow):not(#errorRow):not(#noDataRow)').forEach(row => row.remove());
-        const dataToDisplay = filterData(data);
+        displayedPostRowsCount = 0;
+        const dataToDisplay = filterDataByCheckbox(data);
 
         if (dataToDisplay.length === 0) {
             if (filterPostsCheckbox.checked && data.length > 0) {
-                 noDataRow.querySelector('td').textContent = 'Ningún trabajador con puestos coincide con el filtro.';
+                 noDataRow.querySelector('td').textContent = 'Ningún trabajador con puestos asignados en este periodo.';
             } else {
                  noDataRow.querySelector('td').textContent = 'No se encontraron datos para el periodo seleccionado.';
             }
@@ -158,78 +192,195 @@
             return;
         }
 
-        exportExcelBtn.disabled = false;
         noDataRow.classList.add('hidden');
+        let workersWithVisiblePosts = 0;
 
         dataToDisplay.forEach((worker) => {
+            let hasVisiblePosts = false;
+            let totalQuantitySum = 0; // Variable para la suma de cantidades del trabajador
+
+            // Calcula la suma total de cantidades ANTES de decidir si mostrar el trabajador
+            if (worker.operator_posts && worker.operator_posts.length > 0) {
+                 totalQuantitySum = worker.operator_posts.reduce((sum, post) => {
+                    // Suma solo si la cantidad es mayor que 0 (consistente con el filtro de filas)
+                    const count = post.count ?? 0;
+                    return sum + (count > 0 ? count : 0);
+                }, 0);
+                // Comprueba si hay algún puesto con cantidad > 0 para el filtro del checkbox
+                hasVisiblePosts = worker.operator_posts.some(post => (post.count ?? 0) > 0);
+            }
+
+
+            // Si el checkbox está activo y el trabajador no tiene puestos visibles (count > 0), no lo mostramos
+            if (filterPostsCheckbox.checked && !hasVisiblePosts) {
+                return; // Saltar al siguiente trabajador
+            }
+
+            // Si llegamos aquí, mostramos la fila del trabajador
+            workersWithVisiblePosts++;
+
             const workerRow = tableBody.insertRow();
             workerRow.classList.add('bg-blue-50', 'hover:bg-blue-100', 'transition-colors', 'duration-150', 'ease-in-out');
+            // Añade las celdas del trabajador
             workerRow.insertCell().textContent = worker.client_id ?? '-';
             workerRow.insertCell().textContent = worker.name ?? 'Sin Nombre';
-            workerRow.insertCell().textContent = worker.count_order ?? 0; // Dato es count_order
-            workerRow.insertCell().textContent = ''; workerRow.insertCell().textContent = ''; workerRow.insertCell().textContent = ''; workerRow.insertCell().textContent = '';
+            // *** CAMBIO: Mostrar la suma calculada en lugar de count_order ***
+            workerRow.insertCell().textContent = totalQuantitySum;
+            // Celdas vacías para alinear
+            workerRow.insertCell().textContent = '';
+            workerRow.insertCell().textContent = '';
+            workerRow.insertCell().textContent = '';
+            workerRow.insertCell().textContent = '';
             Array.from(workerRow.cells).forEach(cell => cell.classList.add('px-4', 'py-3', 'text-sm', 'font-medium', 'text-gray-900', 'whitespace-nowrap'));
 
+            // Itera sobre los puestos para mostrarlos (si los tiene y count > 0)
              if (worker.operator_posts && worker.operator_posts.length > 0) {
                 worker.operator_posts.forEach((post, index) => {
-                    const postRow = tableBody.insertRow();
-                    postRow.classList.add(index % 2 === 0 ? 'bg-white' : 'bg-gray-50', 'hover:bg-gray-100', 'transition-colors', 'duration-150', 'ease-in-out');
-                    postRow.insertCell().textContent = ''; postRow.insertCell().textContent = ''; postRow.insertCell().textContent = '';
-                    let startDate = '-'; if (post.created_at) { try { startDate = dateFormatter.format(new Date(post.created_at)); } catch (e) {} }
-                    let endDate = '-'; if (post.finish_at) { try { endDate = dateFormatter.format(new Date(post.finish_at)); } catch (e) {} }
-                    postRow.insertCell().textContent = startDate; postRow.insertCell().textContent = endDate; postRow.insertCell().textContent = post.count ?? 0; postRow.insertCell().textContent = post.product_list?.name ?? 'N/A';
-                    Array.from(postRow.cells).forEach(cell => cell.classList.add('px-4', 'py-3', 'text-sm', 'text-gray-600', 'whitespace-nowrap'));
-                    postRow.cells[3].classList.add('pl-8');
+                    if ((post.count ?? 0) > 0) { // Filtro para mostrar solo puestos con cantidad > 0
+                        displayedPostRowsCount++;
+                        const postRow = tableBody.insertRow();
+                        postRow.classList.add(index % 2 === 0 ? 'bg-white' : 'bg-gray-50', 'hover:bg-gray-100', 'transition-colors', 'duration-150', 'ease-in-out');
+                        // Celdas vacías
+                        postRow.insertCell().textContent = '';
+                        postRow.insertCell().textContent = '';
+                        postRow.insertCell().textContent = '';
+                        // Formatea fechas
+                        let startDate = '-';
+                        if (post.created_at) { try { startDate = dateFormatter.format(new Date(post.created_at)); } catch (e) { console.error("Error formateando fecha inicio:", post.created_at, e); } }
+                        let endDate = '-';
+                        if (post.finish_at) { try { endDate = dateFormatter.format(new Date(post.finish_at)); } catch (e) { console.error("Error formateando fecha fin:", post.finish_at, e); } }
+                        // Celdas del puesto
+                        postRow.insertCell().textContent = startDate;
+                        postRow.insertCell().textContent = endDate;
+                        postRow.insertCell().textContent = post.count ?? 0;
+                        postRow.insertCell().textContent = post.product_list?.name ?? 'N/A';
+                        Array.from(postRow.cells).forEach(cell => cell.classList.add('px-4', 'py-3', 'text-sm', 'text-gray-600', 'whitespace-nowrap'));
+                        postRow.cells[3].classList.add('pl-8');
+                    }
                 });
             }
         });
+
+        // Comprobación final si se mostró algo
+        if (workersWithVisiblePosts === 0) {
+             noDataRow.querySelector('td').textContent = 'Ningún trabajador cumple los criterios de filtro (con puestos y cantidad > 0).';
+             noDataRow.classList.remove('hidden');
+             exportExcelBtn.disabled = true;
+        } else {
+             exportExcelBtn.disabled = false;
+        }
     }
 
-    function exportToExcel() {
-        const dataToExport = filterData(originalWorkersData);
 
-        if (!dataToExport || dataToExport.length === 0) {
-            alert("No hay datos (que coincidan con el filtro) para exportar.");
+    /**
+     * Exporta los datos visibles a Excel.
+     * Calcula la suma de cantidades para la columna "Unidades Turno".
+     */
+    function exportToExcel() {
+        const dataFilteredByCheckbox = filterDataByCheckbox(originalWorkersData);
+
+        if (!dataFilteredByCheckbox || dataFilteredByCheckbox.length === 0) {
+            alert("No hay datos que coincidan con el filtro de 'Mostrar solo con puestos' para exportar.");
             return;
         }
+
         const flattenedData = [];
-        dataToExport.forEach(worker => {
+        dataFilteredByCheckbox.forEach(worker => {
+            let workerHasVisiblePosts = false; // Flag para saber si este trabajador tiene puestos > 0
+            let totalQuantitySum = 0; // Suma para este trabajador
+
+            // Calcula la suma y verifica si hay puestos visibles ANTES de generar filas de Excel
+            if (worker.operator_posts && worker.operator_posts.length > 0) {
+                 totalQuantitySum = worker.operator_posts.reduce((sum, post) => {
+                    const count = post.count ?? 0;
+                    return sum + (count > 0 ? count : 0); // Suma solo cantidades > 0
+                }, 0);
+                 workerHasVisiblePosts = worker.operator_posts.some(post => (post.count ?? 0) > 0);
+            }
+
+             // Si el checkbox está activo y el trabajador no tiene puestos visibles, no lo incluimos en el Excel
+            if (filterPostsCheckbox.checked && !workerHasVisiblePosts) {
+                return; // Saltar al siguiente trabajador
+            }
+
+
+            // Solo procesa los puestos si el trabajador debe ser incluido
             if (worker.operator_posts && worker.operator_posts.length > 0) {
                 worker.operator_posts.forEach(post => {
-                    flattenedData.push({
-                        'Codigo Trabajador': worker.client_id ?? '-',
-                        'Nombre Trabajador': worker.name ?? 'Sin Nombre',
-                        'Unidades Turno': worker.count_order ?? 0, // Dato es count_order
-                        'Inicio Puesto': post.created_at ? dateFormatter.format(new Date(post.created_at)) : '-',
-                        'Fin Puesto': post.finish_at ? dateFormatter.format(new Date(post.finish_at)) : '-',
-                        'Cantidad Puesto': post.count ?? 0,
-                        'Confection': post.product_list?.name ?? 'N/A'
-                    });
+                    if ((post.count ?? 0) > 0) { // Filtro para incluir solo puestos con cantidad > 0
+                        let startDateExcel = '-';
+                        if (post.created_at) { try { startDateExcel = dateFormatter.format(new Date(post.created_at)); } catch (e) {} }
+                        let endDateExcel = '-';
+                        if (post.finish_at) { try { endDateExcel = dateFormatter.format(new Date(post.finish_at)); } catch (e) {} }
+
+                        flattenedData.push({
+                            'Codigo Trabajador': worker.client_id ?? '-',
+                            'Nombre Trabajador': worker.name ?? 'Sin Nombre',
+                             // *** CAMBIO: Usar la suma calculada ***
+                            'Unidades Turno': totalQuantitySum,
+                            'Inicio Puesto': startDateExcel,
+                            'Fin Puesto': endDateExcel,
+                            'Cantidad Puesto': post.count ?? 0,
+                            'Confeccion': post.product_list?.name ?? 'N/A'
+                        });
+                    }
                 });
-            }
+             } else if (!filterPostsCheckbox.checked) {
+                 // Si el checkbox NO está activo, y el trabajador NO tiene puestos,
+                 // podríamos querer añadir una fila solo con los datos del trabajador y suma 0.
+                 // Decide si este comportamiento es deseado. Por ahora, lo omitimos
+                 // para ser consistente con la tabla (que no mostraría detalles).
+                 // Si quieres incluirlo, descomenta la siguiente sección:
+                 /*
+                 flattenedData.push({
+                     'Codigo Trabajador': worker.client_id ?? '-',
+                     'Nombre Trabajador': worker.name ?? 'Sin Nombre',
+                     'Unidades Turno': 0, // No tiene puestos, la suma es 0
+                     'Inicio Puesto': '-',
+                     'Fin Puesto': '-',
+                     'Cantidad Puesto': '-',
+                     'Confeccion': '-'
+                 });
+                 */
+             }
         });
 
-        if (flattenedData.length === 0 && filterPostsCheckbox.checked) {
-             alert("Los trabajadores seleccionados por el filtro no tienen detalles de puestos para exportar.");
-             return;
-        }
-         if (flattenedData.length === 0) {
-             alert("No hay detalles de puestos para exportar.");
+        if (flattenedData.length === 0) {
+             alert("No hay detalles de puestos con cantidad mayor que 0 para exportar (según los filtros aplicados).");
              return;
         }
 
         const worksheet = XLSX.utils.json_to_sheet(flattenedData);
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "TrabajadoresDetalle");
-        const colWidths = Object.keys(flattenedData[0]).map(key => ({ wch: flattenedData.reduce((w, r) => Math.max(w, (r[key]?.toString() ?? '').length), key.length) + 2 }));
+
+        const colWidths = Object.keys(flattenedData[0]).map(key => {
+            const maxContentWidth = flattenedData.reduce((w, r) => Math.max(w, (r[key]?.toString() ?? '').length), 0);
+            const headerWidth = key.length;
+            return { wch: Math.max(headerWidth, maxContentWidth) + 2 };
+        });
         worksheet["!cols"] = colWidths;
+
         const selectedOptionText = dateRangeSelect.options[dateRangeSelect.selectedIndex].text;
         const fileNameDate = selectedOptionText.replace(/ /g, '_');
-        XLSX.writeFile(workbook, `Informe_Trabajadores_${fileNameDate}${filterPostsCheckbox.checked ? '_ConPuestos' : ''}.xlsx`);
+        const filterSuffix = filterPostsCheckbox.checked ? '_ConPuestos_SumaCant' : '_SumaCant'; // Actualizado sufijo
+        const fileName = `Informe_Trabajadores_${fileNameDate}${filterSuffix}.xlsx`;
+
+        XLSX.writeFile(workbook, fileName);
     }
 
-    function printTable() { window.print(); }
+    /**
+     * Activa la función de impresión del navegador.
+     */
+    function printTable() {
+        window.print();
+    }
 
+    /**
+     * Obtiene los datos de la API para el rango de fechas especificado.
+     * @param {string} fromDate - Fecha de inicio (YYYY-MM-DD).
+     * @param {string} toDate - Fecha de fin (YYYY-MM-DD, día siguiente al último deseado).
+     */
     function fetchData(fromDate, toDate) {
         const apiUrl = `${apiBaseUrl}?from_date=${fromDate}&to_date=${toDate}`;
 
@@ -243,7 +394,9 @@
         fetch(apiUrl)
             .then(response => {
                 if (!response.ok) {
-                     return response.text().then(text => { throw new Error(`Error HTTP: ${response.status} - ${response.statusText}. Respuesta: ${text}`); });
+                     return response.text().then(text => {
+                         throw new Error(`Error HTTP: ${response.status} - ${response.statusText}. Respuesta: ${text || '(sin cuerpo)'}`);
+                     });
                 }
                 return response.json();
             })
@@ -251,20 +404,21 @@
                 loadingRow.classList.add('hidden');
                 if (apiResponse.success && Array.isArray(apiResponse.data)) {
                     originalWorkersData = apiResponse.data;
-                    originalWorkersData.sort((a, b) => (b.count_order ?? 0) - (a.count_order ?? 0)); // Ordenar por count_order
+                    // Ya no ordenamos por count_order aquí, la relevancia es la suma
+                    // Si quieres mantener un orden (p.ej. por nombre), hazlo aquí:
+                    // originalWorkersData.sort((a, b) => a.name.localeCompare(b.name));
+                    populateTable(originalWorkersData);
+                } else if (apiResponse.success && (!Array.isArray(apiResponse.data) || apiResponse.data.length === 0)) {
+                    originalWorkersData = [];
                     populateTable(originalWorkersData);
                 } else {
-                     if(apiResponse.success && (!Array.isArray(apiResponse.data) || apiResponse.data.length === 0)) {
-                         noDataRow.classList.remove('hidden');
-                         exportExcelBtn.disabled = true;
-                     } else {
-                        errorCell.textContent = 'Error: Respuesta inesperada de la API.';
-                        errorRow.classList.remove('hidden');
-                        exportExcelBtn.disabled = true;
-                     }
+                    errorCell.textContent = `Error: Respuesta inesperada de la API. Mensaje: ${apiResponse.message || 'No especificado'}`;
+                    errorRow.classList.remove('hidden');
+                    exportExcelBtn.disabled = true;
                 }
             })
             .catch(error => {
+                console.error("Error detallado en fetch:", error);
                 loadingRow.classList.add('hidden');
                 errorCell.textContent = `Error al cargar datos: ${error.message}`;
                 errorRow.classList.remove('hidden');
@@ -272,7 +426,7 @@
             });
     }
 
-    // --- Lógica Principal ---
+    // --- Lógica Principal (Event Listeners e Inicialización) ---
     exportExcelBtn.disabled = true;
     exportExcelBtn.addEventListener('click', exportToExcel);
     printBtn.addEventListener('click', printTable);
@@ -292,7 +446,8 @@
          const { from, to } = getDateRange(initialRangeValue);
          fetchData(from, to);
     }
-    loadInitialData();
+
+    document.addEventListener('DOMContentLoaded', loadInitialData);
 
 </script>
 
