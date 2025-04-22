@@ -15,6 +15,7 @@ use GuzzleHttp\Client;
 use App\Models\OperatorPost;  // Asegúrate de tener este modelo
 use App\Models\Operator;      // Asegúrate de tener este modelo
 use App\Models\RfidBlocked;   // Importamos el modelo para la tabla rfid_blocked
+use App\Models\ShiftHistory;
 
 class RfidDetailController extends Controller
 {
@@ -152,6 +153,30 @@ class RfidDetailController extends Controller
                 if ($currentTid !== $masterReset->tid) {
                     // Caso: La tarjeta leída NO es la maestra
                     if ($lastMasterRecord) {
+
+                    //buscamos en shift_history el ultimo registro por production_line_id  que type= shift y action = start
+                    $shiftHistory = ShiftHistory::where('production_line_id', $rfidReading->production_line_id)
+                        ->where('type', 'shift')
+                        ->where('action', 'start')
+                        ->orderBy('created_at', 'desc')
+                        ->first();
+                    Log::info("Ultimo registro de shift_history encontrado: " . json_encode($shiftHistory));
+
+                    //buscamos que el created_at del shift _history sea mayor o igual al created_at de la última tarjeta maestra si no es asi hacemos return
+                    if ($shiftHistory->created_at->lt($lastMasterRecord->created_at)) {
+                        Log::info("El registro de shift_history es anterior que el último registro de la tarjeta maestra. Tarjeta permitida en este filtro");
+                        Log::info("Fecha del ultimo registro de shift_history: " . $shiftHistory->created_at);
+                        Log::info("Fecha del ultimo registro de la tarjeta maestra: " . $lastMasterRecord->created_at);
+
+                    }else{
+                        Log::info("La tarjeta no es permitida todavia por no pasar el punto en este turno.");
+                        Log::info("Fecha del ultimo registro de shift_history: " . $shiftHistory->created_at);
+                        Log::info("Fecha del ultimo registro de la tarjeta maestra: " . $lastMasterRecord->created_at);
+                        // return response()->json([
+                        //   'success' => false,
+                        // 'message' => 'La tarjeta no es permitida todavia por no pasar el punto en este turno.'
+                        //], 200);
+                    }
                         // Verificar si ya se ha insertado la tarjeta actual desde el último registro de la maestra
                         $registroExistente = RfidList::where('tid', $currentTid)
                             ->where('created_at', '>=', $lastMasterRecord->created_at)
@@ -283,7 +308,7 @@ class RfidDetailController extends Controller
             return response()->json([
                 'success'   => true,
                 'message'   => 'Registro insertado en RFID list con éxito',
-                'rfid_list' => $rfidList
+                //'rfid_list' => $rfidList
             ], 201);
         } catch (\Exception $e) {
             Log::error("Error en el método store: " . $e->getMessage());

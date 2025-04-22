@@ -25,7 +25,7 @@
                     <thead>
                         <tr>
                             <th>Trabajador</th>
-                            <th>RFID</th>
+                            <th>Puesto/th>
                             <th>Sensor</th>
                             <th>Báscula</th>
                             <th>Contador</th>
@@ -567,7 +567,15 @@
                     url: apiIndexUrl,
                     dataSrc: 'data',
                     error: function (xhr) {
-                        Swal.fire('Error', 'Error al cargar datos de relaciones.', 'error');
+                        Swal.fire({
+                            toast: true,
+                            position: 'top-end',
+                            icon: 'error',
+                            title: 'Error al cargar datos de relaciones.',
+                            timer: 1000,
+                            showConfirmButton: false,
+                            timerProgressBar: true
+                        });
                     }
                 },
                 columns: [
