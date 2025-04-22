@@ -10,7 +10,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
-    /* Estilos generales (Originales) */
+    /* Estilos generales */
     body {
       font-family: Arial, sans-serif;
       margin: 0;
@@ -35,7 +35,8 @@
         box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     }
 
-    .header-container { /* Estilos originales */
+    /* Contenedor principal y contenido */
+    .header-container {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -43,7 +44,7 @@
       color: white;
       padding: 10px 20px;
     }
-    .header-left { /* Estilos originales */
+    .header-left {
       display: flex;
       align-items: center;
       gap: 15px;
@@ -53,40 +54,39 @@
     .header-left .icon:hover { color: #218838; }
     .header-right { font-size: 1.2rem; display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
     .header-right small { font-size: 0.9rem; color: #ffc107; }
-    .content { padding: 8px; max-width: 100%; margin: 0; padding-bottom: 80px; }
+    .content { padding: 8px; max-width: 100%; margin: 0; padding-bottom: 80px; } /* Padding inferior para no solapar con footer */
     .card-container { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
 
-    /* --- Modificado: Añadido cursor pointer a la tarjeta --- */
+    /* Estilos de las tarjetas */
     .card {
       background: white;
       border: 1px solid #ddd;
       border-radius: 8px;
-      width: calc(100% / 5 - 10px);
+      width: calc(100% / 5 - 10px); /* 5 tarjetas por fila por defecto */
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
       text-align: center;
-      transition: transform 0.3s, box-shadow 0.3s; /* Añadida transición a sombra */
+      transition: transform 0.3s, box-shadow 0.3s;
       overflow: hidden;
       display: flex;
       flex-direction: column;
-      cursor: pointer; /* <-- Añadido: Indica que es clickeable */
+      cursor: pointer; /* Indica que es clickeable */
     }
     .card:hover {
-      transform: scale(1.03); /* Reducido el hover scale */
-      box-shadow: 0 4px 8px rgba(0,0,0,0.15); /* Sombra más pronunciada en hover */
+      transform: scale(1.03);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
     }
-    /* --- Fin Modificación --- */
 
-    /* Media Queries originales */
-    @media (max-width: 1800px) { .card { width: calc(100% / 4 - 10px); } }
-    @media (max-width: 1500px) { .card { width: calc(100% / 3 - 10px); } }
-    @media (max-width: 1200px) { .card { width: calc(100% / 2 - 10px); } }
-    @media (max-width: 768px) { .card { width: calc(100% / 1 - 10px); } }
-    @media (max-width: 480px) { .card { width: calc(100% / 1 - 10px); } }
+    /* Media Queries para responsividad de tarjetas */
+    @media (max-width: 1800px) { .card { width: calc(100% / 4 - 10px); } } /* 4 tarjetas */
+    @media (max-width: 1500px) { .card { width: calc(100% / 3 - 10px); } } /* 3 tarjetas */
+    @media (max-width: 1200px) { .card { width: calc(100% / 2 - 10px); } } /* 2 tarjetas */
+    @media (max-width: 768px)  { .card { width: calc(100% / 1 - 10px); } } /* 1 tarjeta */
+    @media (max-width: 480px)  { .card { width: calc(100% / 1 - 10px); } } /* 1 tarjeta */
 
-
-    .card h3 { /* Estilos originales */
+    /* Encabezado de la tarjeta */
+    .card h3 {
       margin: 0;
-      font-size: var(--nameSize, 1rem);
+      font-size: var(--nameSize, 1rem); /* Tamaño nombre operador */
       color: #343a40;
       display: flex;
       justify-content: space-between;
@@ -94,66 +94,169 @@
       padding: 10px;
       background-color: #faf7f7;
       border-bottom: 1px solid #eee;
-      flex-shrink: 0;
+      flex-shrink: 0; /* Evita que el h3 se encoja */
     }
-    .card h3 .rfid-name { font-weight: bold; margin-right: 10px; color: #555; }
-    .card h3 .count-shift { font-size: 1.5em; font-weight: bold; color: #007bff; }
-    .card h3 .operator-name { flex-grow: 1; text-align: left; margin-left: 5px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-    .card .stats-container { display: flex; justify-content: space-between; margin-top: 10px; }
-    .card .stat { text-align: center; flex: 1; }
-    .card .stat span { display: block; font-size: var(--labelSize, 0.9rem); color: #555; }
-    .card .stat .value { font-size: var(--numberSize, 1.8rem); font-weight: bold; }
-    .rfid-container { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; padding: 15px; flex-grow: 1; min-height: 100px; }
-    .rfid-item { background: #fff; border: 1px solid #ddd; border-radius: 5px; width: 80px; text-align: center; padding: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); display: flex; flex-direction: column; align-items: center; justify-content: space-between; min-height: 80px; }
-    .rfid-item .count-section { display: flex; align-items: center; width: 100%; justify-content: center; }
-    .rfid-item .color-bar { width: 5px; height: 30px; margin-right: 8px; opacity: 0.75; border-radius: 2px; }
-    .rfid-item .count-value { font-size: 1.8rem; font-weight: bold; color: #333; }
-    .rfid-item .product-name { margin-top: 5px; font-size: 0.8rem; color: #555; word-wrap: break-word; width: 100%; }
-    .no-rfid-data { color: #888; font-size: 0.9rem; width: 100%; text-align: center; }
+    .card h3 .rfid-name { font-weight: bold; margin-right: 10px; color: #555; } /* Nombre/Número Puesto RFID */
+    .card h3 .count-shift { font-size: 1.5em; font-weight: bold; color: #007bff; } /* Contador Turno */
+    .card h3 .operator-name {
+        flex-grow: 1; /* Ocupa espacio disponible */
+        text-align: left;
+        margin-left: 5px;
+        overflow: hidden; /* Oculta texto sobrante */
+        white-space: nowrap; /* Evita salto de línea */
+        text-overflow: ellipsis; /* Añade '...' */
+    }
 
-    /* Footer original */
-    .footer-bar { position: fixed; bottom: 0; left: 0; width: 100%; background-color: #e2c100; color: #000; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 1000; }
-    .footer-bar img { height: 30px; margin: 0 30px; }
+    /* Contenedor y elementos RFID */
+    .rfid-container {
+        display: flex;
+        justify-content: center;
+        align-items: center; /* Alinea verticalmente si hay pocos items */
+        gap: 10px;
+        margin-top: 10px;
+        flex-wrap: wrap; /* Permite que los items pasen a la siguiente línea */
+        padding: 15px;
+        flex-grow: 1; /* Ocupa el espacio restante en la tarjeta */
+        min-height: 100px; /* Altura mínima para consistencia */
+        align-content: flex-start; /* Alinea las líneas de items arriba */
+    }
+    .rfid-item {
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        width: 80px; /* Ancho fijo para cada item RFID */
+        text-align: center;
+        padding: 10px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: space-between; /* Espacio entre contador y nombre */
+        min-height: 80px; /* Altura mínima */
+    }
+    .rfid-item .count-section { /* Contenedor para barra y contador */
+        display: flex;
+        align-items: center;
+        width: 100%;
+        justify-content: center; /* Centra barra y contador */
+    }
+    .rfid-item .color-bar { /* Barra de color RFID */
+        width: 5px;
+        height: 30px;
+        margin-right: 8px;
+        opacity: 0.75;
+        border-radius: 2px;
+    }
+    .rfid-item .count-value { /* Valor contador RFID */
+        font-size: var(--numberSize, 1.8rem); /* Tamaño números */
+        font-weight: bold;
+        color: #333;
+    }
+    .rfid-item .product-name { /* Nombre producto RFID */
+        margin-top: 5px;
+        font-size: var(--labelSize, 0.8rem); /* Tamaño etiquetas */
+        color: #555;
+        word-wrap: break-word; /* Permite que el texto largo se divida */
+        width: 100%; /* Asegura que use el ancho del rfid-item */
+    }
+    .no-rfid-data { /* Mensaje si no hay datos RFID */
+        color: #888;
+        font-size: 0.9rem;
+        width: 100%;
+        text-align: center;
+        align-self: center; /* Centra verticalmente en el contenedor */
+    }
 
-    /* Contenedor y estilos para botones flotantes */
-    .floating-buttons-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 9999; }
-    .floating-button { height: 50px; width: 50px; box-shadow: 0 4px 6px rgba(0,0,0,0.2); background-color: #fff; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.5rem; cursor: pointer; transition: background-color 0.3s, color 0.3s; }
-    .floating-excel i { color: #1D6F42; }
-    .floating-excel:hover i { background-color: #1D6F42; color: #fff; }
-    .floating-refresh i { color: #007bff; }
-    .floating-refresh:hover i { background-color: #007bff; color: #fff; }
-    .rotating { animation: spin 1s linear infinite; }
+    /* Footer */
+    .footer-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background-color: #e2c100; /* Color corporativo */
+      color: #000;
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 1000;
+    }
+    .footer-bar img { height: 30px; margin: 0 30px; } /* Logo en footer */
+
+    /* Botones flotantes */
+    .floating-buttons-container {
+      position: fixed;
+      bottom: 70px; /* Elevado para no solapar con footer */
+      right: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 9999; /* Encima de otros elementos */
+    }
+    .floating-button {
+      height: 50px;
+      width: 50px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+      background-color: #fff;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 1.5rem;
+      cursor: pointer;
+      transition: background-color 0.3s, color 0.3s, transform 0.2s;
+      border: none; /* Quitar borde por defecto si es button */
+    }
+    .floating-button:hover {
+        transform: translateY(-2px); /* Efecto hover */
+    }
+    .floating-excel i { color: #1D6F42; } /* Color icono Excel */
+    .floating-excel:hover { background-color: #1D6F42; }
+    .floating-excel:hover i { color: #fff; }
+    .floating-refresh i { color: #007bff; } /* Color icono Refresh */
+    .floating-refresh:hover { background-color: #007bff; }
+    .floating-refresh:hover i { color: #fff; }
+    .rotating { animation: spin 1s linear infinite; } /* Animación rotar */
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-    /* Colores RFID originales */
-    .blue, .BLUE { background-color: #003049 !important; }
-    .yellow, .YELLOW { background-color: #FFC300 !important; }
-    .red, .RED { background-color: #d62828 !important; }
+    /* Colores RFID (Clases para las barras) */
+    .rfid-item .color-bar.blue, .rfid-item .color-bar.BLUE { background-color: #003049; }
+    .rfid-item .color-bar.yellow, .rfid-item .color-bar.YELLOW { background-color: #FFC300; }
+    .rfid-item .color-bar.red, .rfid-item .color-bar.RED { background-color: #d62828; }
+    /* Añadir más colores si es necesario */
+    .rfid-item .color-bar.green, .rfid-item .color-bar.GREEN { background-color: #28a745; }
+    .rfid-item .color-bar.purple, .rfid-item .color-bar.PURPLE { background-color: #6f42c1; }
 
-    /* Estilos barras color originales */
-    .rfid-item .color-bar.blue { background-color: #003049; }
-    .rfid-item .color-bar.yellow { background-color: #FFC300; }
-    .rfid-item .color-bar.red { background-color: #d62828; }
 
-    /* --- Añadido: Estilo para la lista en Swal --- */
+    /* Estilos para el modal de detalles (SweetAlert) */
     .swal-details-list {
         list-style: none;
         padding: 0;
         margin-top: 10px;
+        text-align: left; /* Alineación izquierda para la lista */
+        max-height: 400px; /* Altura máxima y scroll */
+        overflow-y: auto;
+        padding-right: 15px; /* Espacio para la barra de scroll */
     }
     .swal-details-list li {
         border-bottom: 1px solid #eee;
         padding: 8px 0;
         font-size: 0.9rem;
+        display: flex; /* Flex para alinear mejor */
+        flex-wrap: wrap; /* Permitir salto de línea en móviles */
+        gap: 5px; /* Espacio entre elementos */
     }
     .swal-details-list li:last-child {
         border-bottom: none;
     }
     .swal-details-list strong {
-        display: inline-block;
-        min-width: 70px; /* Alineación */
+        font-weight: bold;
+        color: #555;
+         min-width: 50px; /* Ancho mínimo para etiquetas */
     }
-    /* --- Fin Añadido --- */
+     .swal-details-list span {
+        margin-right: 10px; /* Espacio entre datos */
+    }
 
   </style>
 </head>
@@ -177,282 +280,398 @@
   </div>
 
   <script>
-    const workersApiUrl = '/api/workers';
+    // URL de la API (ajustar si es necesario)
+    const workersApiUrl = '/api/workers'; // Cambiar si la ruta de la API es diferente
 
-    // Variables globales
-    let rfidColorsGlobal = [];
-    let operatorsData = []; // Contiene todos los datos de los operadores
-    let refreshIntervalId = null;
-    const REFRESH_INTERVAL = 3000;
-    let isLoading = false;
+    // --- Variables Globales ---
+    let rfidColorsGlobal = []; // Almacena los colores RFID disponibles
+    let operatorsData = []; // Almacena todos los datos de los operadores recibidos de la API
+    let refreshIntervalId = null; // ID del intervalo para auto-refresco
+    const REFRESH_INTERVAL = 5000; // Intervalo de auto-refresco en milisegundos (ej. 5 segundos)
+    let isLoading = false; // Flag para evitar múltiples cargas simultáneas
 
-    // Referencias DOM
-    const refreshButton = $('#refreshData');
-    const refreshIcon = refreshButton.find('i');
-    const loadingIndicator = $('#loading-indicator');
-    const cardContainer = $('#cardContainer'); // <-- Referencia al contenedor de tarjetas
+    // --- Referencias a elementos del DOM (usando jQuery) ---
+    const refreshButton = $('#refreshData'); // Botón de refrescar
+    const refreshIcon = refreshButton.find('i'); // Icono dentro del botón de refrescar
+    const loadingIndicator = $('#loading-indicator'); // Barra/mensaje de carga
+    const cardContainer = $('#cardContainer'); // Contenedor de las tarjetas
 
-    // Función original getUrlParams
+    // --- Funciones ---
+
+    /**
+     * Obtiene parámetros de la URL para configuración inicial.
+     * @returns {object} Objeto con los parámetros de configuración.
+     */
     function getUrlParams() {
       const params = new URLSearchParams(window.location.search);
       return {
+        // Parámetros de visualización (si existen)
         shift: params.get('shift') === 'true',
         order: params.get('order') === 'true',
         name: params.get('name') === 'true',
         id: params.get('id') === 'true',
+        // Parámetros de tamaño de fuente (con valores por defecto)
         nameSize: params.get('nameSize') || '1rem',
         numberSize: params.get('numberSize') || '1.8rem',
-        idSize: params.get('idSize') || '1rem',
-        labelSize: params.get('labelSize') || '0.9rem',
+        idSize: params.get('idSize') || '1rem', // No usado actualmente en CSS, pero se obtiene
+        labelSize: params.get('labelSize') || '0.8rem', // Ajustado tamaño por defecto
       };
     }
 
-    // Configuración original de estilos
-    const config = getUrlParams();
-    document.documentElement.style.setProperty('--nameSize', config.nameSize);
-    document.documentElement.style.setProperty('--numberSize', config.numberSize);
-    document.documentElement.style.setProperty('--labelSize', config.labelSize);
+    /**
+     * Aplica la configuración inicial obtenida de la URL (tamaños de fuente).
+     */
+    function applyInitialConfig() {
+        const config = getUrlParams();
+        // Establece las variables CSS personalizadas para los tamaños
+        document.documentElement.style.setProperty('--nameSize', config.nameSize);
+        document.documentElement.style.setProperty('--numberSize', config.numberSize);
+        document.documentElement.style.setProperty('--labelSize', config.labelSize);
+        // Nota: --idSize no se usa en los estilos actuales
+    }
 
-    // --- Función loadOperators (Modificada para añadir data-attribute) ---
+    /**
+     * Carga los datos de los operadores desde la API y los muestra.
+     */
     function loadOperators() {
+      // Evita ejecutar si ya hay una carga en progreso
       if (isLoading) return;
       isLoading = true;
 
+      // Muestra indicador de carga y anima el icono de refresco
       loadingIndicator.show();
       refreshIcon.addClass('rotating');
-      refreshButton.prop('disabled', true);
+      refreshButton.prop('disabled', true); // Deshabilita botón mientras carga
 
+      // Petición AJAX para obtener los datos
       $.ajax({
-        url: `${workersApiUrl}/list-all`,
+        url: `${workersApiUrl}/list-all`, // URL completa de la API
         method: 'GET',
         dataType: 'json',
         success: function(response) {
+          // Verifica si la respuesta es válida
           if (!response || !response.operators) {
-              console.error("Respuesta inesperada:", response);
+              console.error("Respuesta inesperada de la API:", response);
               Swal.fire('Error de formato', 'La respuesta de la API no tiene el formato esperado.', 'error');
-              return;
+              operatorsData = []; // Limpia datos anteriores en caso de error
+              rfidColorsGlobal = [];
+              cardContainer.empty().append('<p>Error al cargar datos. Formato inesperado.</p>'); // Muestra mensaje de error
+              return; // Termina la ejecución de success
           }
 
-          // Guardar TODOS los datos de operadores
+          // Guarda los datos globales
           operatorsData = response.operators;
-          rfidColorsGlobal = response.rfid_colors || [];
-          const container = cardContainer; // Usar la referencia guardada
-          container.empty();
+          rfidColorsGlobal = response.rfid_colors || []; // Guarda colores RFID o un array vacío
 
-          // Filtro ORIGINAL
-          const operatorsToShow = operatorsData.filter(op =>
-              (op.operator_posts && op.operator_posts.length > 0) || (op.count_shift > 0)
-          );
+          // Limpia el contenedor de tarjetas antes de añadir las nuevas
+          cardContainer.empty();
 
+          // --- FILTRO MODIFICADO ---
+          // Filtra los operadores que se deben mostrar:
+          // - count_shift > 0
+          // - O tiene al menos un post con product_list_name válido
+          const operatorsToShow = operatorsData.filter(op => {
+              // Condición 1: Mostrar si count_shift es positivo
+              if (op.count_shift > 0) {
+                  return true;
+              }
+              // Condición 2: Mostrar si hay posts con nombre de producto válido
+              if (op.operator_posts && op.operator_posts.length > 0) {
+                  // Usamos 'some' para verificar si al menos un post cumple la condición
+                  const hasMeaningfulPost = op.operator_posts.some(post =>
+                      post.product_list_name && post.product_list_name.trim() !== ""
+                  );
+                  if (hasMeaningfulPost) {
+                      return true; // Mostrar si encuentra al menos uno
+                  }
+              }
+              // Si ninguna condición se cumple, no mostrar (return false)
+              return false;
+          });
+          // --- FIN FILTRO MODIFICADO ---
+
+
+          // Si no hay operadores para mostrar después del filtro
           if (operatorsToShow.length === 0) {
-            container.append('<p>No hay operadores activos para mostrar.</p>');
-            return;
+            cardContainer.append('<p>No hay operadores activos para mostrar según los criterios.</p>');
+            return; // Termina si no hay nada que mostrar
           }
 
-          // Procesamiento y renderizado ORIGINAL + data-attribute
+          // --- Renderizado de Tarjetas ---
           operatorsToShow.forEach(operator => {
-            let rfidReadingNameFormatted = "N/A";
+            // Determina si el operador tiene asignaciones de puesto
             let hasPosts = operator.operator_posts && operator.operator_posts.length > 0;
+            let rfidReadingNameFormatted = "N/A"; // Valor por defecto para el nombre del puesto
 
-            if (hasPosts) {
-                const firstPost = operator.operator_posts[0];
-                if (firstPost && firstPost.rfid_reading_name) {
-                    const match = firstPost.rfid_reading_name.match(/P(\d+)$/);
-                    rfidReadingNameFormatted = (match && match[1]) ? match[1] : firstPost.rfid_reading_name;
-                }
+            // Intenta obtener el nombre del primer puesto si existe
+            if (hasPosts && operator.operator_posts[0] && operator.operator_posts[0].rfid_reading_name) {
+                const firstPostName = operator.operator_posts[0].rfid_reading_name;
+                // Intenta extraer solo el número si el formato es P<numero>
+                const match = firstPostName.match(/P(\d+)$/);
+                rfidReadingNameFormatted = (match && match[1]) ? match[1] : firstPostName;
             }
 
+            // --- Generación del HTML para los items RFID ---
             let rfidHtml = '';
+            let hasMeaningfulRfidData = false; // Flag para saber si hay datos RFID válidos para mostrar
+
             if (hasPosts) {
+                // Agrupa los productos por color RFID
                 let rfidProducts = {};
                 operator.operator_posts.forEach(post => {
-                    const colorName = post.rfid_color_name;
-                    const productName = post.product_list_name;
-                    const count = post.count;
-                    if (!rfidProducts[colorName]) rfidProducts[colorName] = [];
-                    if (productName && productName.trim() !== "") {
-                         rfidProducts[colorName].push({ productName: productName, count: count });
+                    // Solo procesa posts con nombre de producto válido
+                    if (post.product_list_name && post.product_list_name.trim() !== "") {
+                        const colorName = post.rfid_color_name || 'unknown'; // Usa 'unknown' si no hay color
+                        const productName = post.product_list_name;
+                        const count = post.count !== null ? post.count : 0; // Usa 0 si count es null
+
+                        if (!rfidProducts[colorName]) {
+                            rfidProducts[colorName] = [];
+                        }
+                        rfidProducts[colorName].push({ productName: productName, count: count });
+                        hasMeaningfulRfidData = true; // Marca que hay datos válidos
                     }
                 });
 
+                // Genera el HTML para cada color y producto si hay colores definidos globalmente
                 if (rfidColorsGlobal.length > 0) {
                     rfidHtml = rfidColorsGlobal.map(color => {
-                        const products = rfidProducts[color.name] || [];
+                        const products = rfidProducts[color.name] || []; // Obtiene productos para este color
                         return products.map(product => {
-                            const truncatedName = product.productName.length > 15 ? product.productName.substring(0, 15) + '...' : product.productName;
+                            // Acorta nombres de producto largos para visualización
+                            const truncatedName = product.productName.length > 15
+                                ? product.productName.substring(0, 15) + '...'
+                                : product.productName;
+                            // Genera el HTML para un item RFID
                             return `
                                 <div class="rfid-item">
                                     <div class="count-section">
-                                        <div class="color-bar ${color.name.toLowerCase()}"></div>
+                                        <div class="color-bar ${color.name ? color.name.toLowerCase() : ''}"></div>
                                         <div class="count-value">${product.count}</div>
                                     </div>
                                     <div class="product-name" title="${product.productName}">${truncatedName}</div>
                                 </div>`;
-                        }).join('');
-                    }).join('');
+                        }).join(''); // Une los HTML de productos del mismo color
+                    }).join(''); // Une los HTML de todos los colores
+                } else if (hasMeaningfulRfidData) {
+                    // Si no hay colores globales pero sí datos, muestra un mensaje genérico
+                    // (O podrías intentar mostrar los datos sin colores)
+                     rfidHtml = '<p class="no-rfid-data">Datos RFID presentes, pero colores no definidos.</p>';
                 }
-            }
+            } // Fin if (hasPosts)
 
-            // --- Añadido: data-operator-id="${operator.id}" ---
+            // --- Creación de la Tarjeta HTML ---
             const card = `
-              <div class="card" data-operator-id="${operator.id}">
-                <h3>
-                  <span class="rfid-name">${rfidReadingNameFormatted}</span>
-                  <span class="operator-name" title="${operator.name}">${operator.name}</span>
-                  <span class="count-shift">${operator.count_shift}</span>
-                </h3>
+              <div class="card" data-operator-id="${operator.id}"> <h3>
+                  <span class="rfid-name">${rfidReadingNameFormatted}</span> <span class="operator-name" title="${operator.name}">${operator.name}</span> <span class="count-shift">${operator.count_shift}</span> </h3>
                 <div class="rfid-container">
-                  ${(hasPosts && rfidHtml && rfidHtml.trim() !== '') ? rfidHtml : '<p class="no-rfid-data">Sin datos RFID</p>'}
+                  ${(hasMeaningfulRfidData && rfidHtml && rfidHtml.trim() !== '') ? rfidHtml : '<p class="no-rfid-data">Sin datos RFID</p>'}
                 </div>
               </div>`;
-            container.append(card);
-          }); // Fin forEach
+            // Añade la tarjeta al contenedor
+            cardContainer.append(card);
+          }); // Fin forEach operator
         },
         error: function(xhr, status, error) {
-          console.error("Error AJAX:", status, error);
-          Swal.fire('Error al cargar', `No se pudo conectar con la API. Status: ${xhr.status}. Error: ${error}`, 'error');
+          // Manejo de errores de la petición AJAX
+          console.error("Error AJAX al cargar operadores:", status, error, xhr.responseText);
+          Swal.fire(
+            'Error de Carga',
+            `No se pudo conectar con la API o hubo un error en el servidor.<br><small>Status: ${xhr.status}. Error: ${error}</small>`,
+            'error'
+          );
+          operatorsData = []; // Limpia datos en caso de error
+          rfidColorsGlobal = [];
+          cardContainer.empty().append('<p>Error al cargar datos. Intente refrescar.</p>'); // Mensaje en contenedor
         },
         complete: function() {
-          isLoading = false;
-          loadingIndicator.hide();
-          refreshIcon.removeClass('rotating');
-          refreshButton.prop('disabled', false);
+          // Se ejecuta siempre, al finalizar success o error
+          isLoading = false; // Resetea el flag de carga
+          loadingIndicator.hide(); // Oculta indicador de carga
+          refreshIcon.removeClass('rotating'); // Detiene animación icono
+          refreshButton.prop('disabled', false); // Rehabilita botón
         }
       }); // Fin $.ajax
     } // Fin loadOperators
 
-    // --- Función exportToExcel ORIGINAL (SIN CAMBIOS) ---
+    /**
+     * Exporta los datos de TODOS los operadores (visibles o no) a un archivo Excel.
+     */
     function exportToExcel() {
-      // ... (código original sin cambios) ...
-       const operatorsToExport = operatorsData;
-      if (operatorsToExport.length === 0) {
+      // Usa los datos globales completos
+      const operatorsToExport = operatorsData;
+
+      if (!operatorsToExport || operatorsToExport.length === 0) {
         Swal.fire('Aviso', 'No hay datos de operadores para exportar.', 'info');
         return;
       }
+
+      // Obtiene los nombres de los colores RFID para las columnas
       const rfidColorNames = rfidColorsGlobal.map(color => color.name);
+
+      // Mapea los datos de los operadores al formato necesario para la hoja de cálculo
       const rows = operatorsToExport.map(operator => {
+        // Datos básicos del operador
         let row = {
-          Nombre: operator.name,
-          ID_Operador: operator.id,
-          Count_Shift: operator.count_shift,
-          Count_Order: operator.count_order,
-          Puesto_RFID: (operator.operator_posts && operator.operator_posts.length > 0 && operator.operator_posts[0].rfid_reading_name)
-                         ? operator.operator_posts[0].rfid_reading_name
-                         : 'N/A'
+          'Nombre Operador': operator.name,
+          'ID Operador': operator.id,
+          'Total Turno': operator.count_shift,
+          'Total Orden': operator.count_order, // Asumiendo que existe este campo
+          'Puesto RFID (Primario)': 'N/A' // Valor por defecto
         };
+
+        // Añade columnas para el total de cada color RFID
         rfidColorNames.forEach(colorName => {
-          row[`RFID_${colorName}_Total`] = 0;
+          row[`Total RFID ${colorName}`] = 0; // Inicializa contadores por color
         });
-        if (operator.operator_posts) {
+
+        // Si hay datos de puestos
+        if (operator.operator_posts && operator.operator_posts.length > 0) {
+            // Asigna el nombre del primer puesto
+            row['Puesto RFID (Primario)'] = operator.operator_posts[0].rfid_reading_name || 'N/A';
+
+            // Suma los contadores por color
             operator.operator_posts.forEach(post => {
                 const colorName = post.rfid_color_name;
-                const count = post.count || 0;
-                if (row.hasOwnProperty(`RFID_${colorName}_Total`)) {
-                    row[`RFID_${colorName}_Total`] += count;
+                const count = post.count || 0; // Usa 0 si count es null/undefined
+                // Verifica si existe la columna para ese color y suma
+                if (row.hasOwnProperty(`Total RFID ${colorName}`)) {
+                    row[`Total RFID ${colorName}`] += count;
                 }
+                // Podrías añadir una columna 'Otros' si el color no está en rfidColorsGlobal
             });
         }
         return row;
-      });
-      const worksheet = XLSX.utils.json_to_sheet(rows);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Operadores');
+      }); // Fin map operators
+
+      // Crea la hoja de cálculo y el libro Excel
       try {
+          const worksheet = XLSX.utils.json_to_sheet(rows);
+          // Ajustar ancho de columnas (opcional, mejora visualización)
+          const colWidths = Object.keys(rows[0] || {}).map(key => ({ wch: Math.max(key.length, 15) })); // Ancho mínimo 15 o longitud del título
+          worksheet['!cols'] = colWidths;
+
+          const workbook = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(workbook, worksheet, 'Operadores Produccion'); // Nombre de la hoja
+
+          // Descarga el archivo Excel
           XLSX.writeFile(workbook, 'operadores_produccion.xlsx');
+
       } catch (e) {
           console.error("Error al generar el archivo Excel:", e);
           Swal.fire('Error', 'No se pudo generar el archivo Excel.', 'error');
       }
-    }
+    } // Fin exportToExcel
 
-    // --- Función startAutoRefresh (SIN CAMBIOS) ---
+    /**
+     * Inicia el proceso de auto-refresco de datos.
+     */
     function startAutoRefresh() {
-        if (refreshIntervalId) clearInterval(refreshIntervalId);
+        // Limpia cualquier intervalo anterior para evitar duplicados
+        if (refreshIntervalId) {
+            clearInterval(refreshIntervalId);
+        }
+        // Establece un nuevo intervalo que llama a loadOperators
         refreshIntervalId = setInterval(loadOperators, REFRESH_INTERVAL);
         console.log(`Actualización automática iniciada cada ${REFRESH_INTERVAL / 1000} segundos.`);
     }
 
-    // --- Añadido: Función para mostrar detalles en Swal ---
+    /**
+     * Muestra un modal (SweetAlert) con los detalles completos de un operador.
+     * @param {number|string} operatorId - El ID del operador a mostrar.
+     */
     function showOperatorDetails(operatorId) {
-        // Buscar el operador en los datos globales guardados
-        const operator = operatorsData.find(op => op.id === parseInt(operatorId)); // Asegurar que el ID sea número
+        // Busca el operador en los datos globales usando su ID (convierte a número por si acaso)
+        const operator = operatorsData.find(op => op.id === parseInt(operatorId));
 
         if (operator) {
-            // Construir el HTML para el contenido del Swal
+            // Construye el HTML para mostrar en el modal
             let detailsHtml = `
-                <div style="text-align: left; max-height: 400px; overflow-y: auto; padding-right: 15px;">
+                <div style="text-align: left;">
                     <p><strong>ID:</strong> ${operator.id}</p>
                     <p><strong>Nombre:</strong> ${operator.name}</p>
                     <p><strong>Total Turno (Shift):</strong> ${operator.count_shift}</p>
-                    <p><strong>Total Orden:</strong> ${operator.count_order}</p>
+                    <p><strong>Total Orden:</strong> ${operator.count_order !== null ? operator.count_order : 'N/A'}</p>
                     <hr>
                     <h4>Detalles Puestos RFID:</h4>
             `;
 
+            // Verifica si hay datos de puestos
             if (operator.operator_posts && operator.operator_posts.length > 0) {
-                detailsHtml += '<ul class="swal-details-list">'; // Usar clase para estilo
+                detailsHtml += '<ul class="swal-details-list">'; // Usa clase para estilo
                 operator.operator_posts.forEach(post => {
+                    // Formatea cada línea de detalle del puesto
                     detailsHtml += `
                         <li>
-                            <strong>Puesto:</strong> ${post.rfid_reading_name || 'N/A'} |
-                            <strong>Color:</strong> ${post.rfid_color_name || 'N/A'} |
-                            <strong>Prod:</strong> ${post.product_list_name || 'No asignado'} |
-                            <strong>Cant:</strong> ${post.count !== null ? post.count : 'N/A'}
+                           <span><strong>Puesto:</strong> ${post.rfid_reading_name || 'N/A'}</span>
+                           <span><strong>Color:</strong> ${post.rfid_color_name || 'N/A'}</span>
+                           <span><strong>Producto:</strong> ${post.product_list_name || 'No asignado'}</span>
+                           <span><strong>Cantidad:</strong> ${post.count !== null ? post.count : 'N/A'}</span>
                         </li>
                     `;
                 });
                 detailsHtml += '</ul>';
             } else {
+                // Mensaje si no hay puestos asignados
                 detailsHtml += '<p><em>Sin asignaciones RFID detalladas.</em></p>';
             }
 
             detailsHtml += '</div>'; // Cierre del div contenedor
 
-            // Mostrar el Swal
+            // Muestra el modal SweetAlert
             Swal.fire({
-                title: `Detalles Operador: ${operator.name}`,
-                html: detailsHtml,
-                icon: 'info',
+                title: `Detalles Operador`, // Título del modal
+                html: detailsHtml, // Contenido HTML generado
+                icon: 'info', // Icono informativo
                 width: 'auto', // Ancho automático o definir uno (ej: '600px')
-                customClass: { // Clases personalizadas si necesitas más estilo
-                    // popup: 'my-swal-popup',
-                    // htmlContainer: 'my-swal-html'
-                }
+                // Puedes añadir clases personalizadas si necesitas más estilos específicos
+                // customClass: {
+                //     popup: 'my-swal-popup',
+                //     htmlContainer: 'my-swal-html'
+                // }
             });
         } else {
+            // Error si no se encuentra el operador (no debería pasar si se clickea una tarjeta existente)
             console.error("No se encontró el operador con ID:", operatorId);
             Swal.fire('Error', 'No se pudieron cargar los detalles del operador.', 'error');
         }
-    }
+    } // Fin showOperatorDetails
 
 
-    // --- Ejecutar al cargar el documento (Modificado para añadir listener) ---
+    // --- Ejecución al Cargar el Documento ---
     $(document).ready(function() {
-      loadOperators(); // Carga inicial
-      startAutoRefresh(); // Iniciar auto-refresh
+      applyInitialConfig(); // Aplica tamaños de fuente de la URL
+      loadOperators();      // Carga inicial de datos
+      startAutoRefresh();   // Inicia el auto-refresco
 
-      // Evento refrescar manual
+      // --- Event Listeners ---
+
+      // Click en el botón de refrescar manual
       refreshButton.click(function() {
           console.log("Actualización manual solicitada.");
+          // Detiene temporalmente el auto-refresco, carga manualmente y lo reinicia
           if (refreshIntervalId) clearInterval(refreshIntervalId);
           loadOperators();
-          startAutoRefresh();
+          startAutoRefresh(); // Reinicia el intervalo después de la carga manual
       });
 
-      // Evento exportar Excel
+      // Click en el botón de exportar a Excel
       $('#exportExcel').click(exportToExcel);
 
-      // --- Añadido: Event listener para clicks en las tarjetas ---
-      // Usar delegación de eventos en el contenedor
+      // Click en una tarjeta de operador (usando delegación de eventos)
+      // Se asigna el listener al contenedor y se filtra por clicks en elementos '.card'
       cardContainer.on('click', '.card', function() {
-          const operatorId = $(this).data('operator-id'); // Obtener el ID del atributo data
+          // Obtiene el ID del operador desde el atributo 'data-operator-id' de la tarjeta clickeada
+          const operatorId = $(this).data('operator-id');
           if (operatorId) {
-              showOperatorDetails(operatorId); // Llamar a la función que muestra el Swal
+              // Llama a la función para mostrar los detalles si se encontró un ID
+              showOperatorDetails(operatorId);
+          } else {
+              console.warn("Se hizo click en una tarjeta sin data-operator-id.");
           }
       });
-      // --- Fin Añadido ---
 
-    });
+    }); // Fin $(document).ready
   </script>
 </body>
 </html>

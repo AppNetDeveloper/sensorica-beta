@@ -12,7 +12,7 @@ CURRENT_SIZE=$(stat -c%s "$LOG_FILE")
 if [ "$CURRENT_SIZE" -gt "$MAX_SIZE_BYTES" ]; then
     # Si el tamaño actual es mayor que el máximo, truncar el archivo
     echo "Truncando laravel.log..."
-    truncate -s 0 "$LOG_FILE"  # Truncar el archivo (dejarlo vacío)
+    truncate -s 100 "$LOG_FILE"  # Truncar el archivo (dejarlo vacío)
 else
     echo "El tamaño de laravel.log está dentro del límite."
 fi
