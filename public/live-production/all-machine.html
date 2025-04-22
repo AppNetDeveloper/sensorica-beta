@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plantilla Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Estilos personalizados */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* Color de fondo ligero */
+        }
+        /* Estilo para los círculos indicadores */
+        .status-circle {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 4rem; /* Ancho */
+            height: 4rem; /* Alto */
+            border-radius: 50%;
+            font-weight: bold;
+            font-size: 1.25rem; /* Tamaño de fuente */
+            /* color: white;  <- Eliminado: el color del texto dependerá del borde */
+            background-color: white; /* Fondo siempre blanco */
+            border: 3px solid; /* Borde con grosor */
+            /* El color del borde y del texto se aplicará con clases de Tailwind */
+        }
+        .status-indicator {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 0.5rem; /* Espacio inferior */
+        }
+        .status-labels {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem; /* Espacio entre letras */
+            font-weight: bold;
+            margin-top: 0.25rem; /* Espacio superior */
+        }
+        .machine-card {
+            border: 1px solid #e5e7eb; /* Borde gris claro */
+            border-radius: 0.5rem; /* Bordes redondeados */
+            padding: 1rem; /* Relleno */
+            text-align: center;
+            background-color: white; /* Fondo blanco */
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); /* Sombra ligera */
+            transition: box-shadow 0.3s ease; /* Transición suave para hover */
+        }
+        .machine-card:hover {
+             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* Sombra más pronunciada en hover */
+        }
+        .machine-card img {
+            max-width: 100px; /* Ancho máximo de la imagen */
+            height: auto;
+            margin: 0.5rem auto; /* Centrar imagen y añadir margen */
+            display: block;
+        }
+        .details-panel {
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            background-color: white;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        }
+        .details-column {
+            padding: 1rem;
+        }
+        .details-item {
+            border: 1px solid #e5e7eb;
+            border-radius: 0.375rem; /* Bordes redondeados más pequeños */
+            padding: 0.75rem;
+            margin-bottom: 0.75rem;
+            font-size: 0.875rem; /* Tamaño de fuente pequeño */
+        }
+        .details-item-header {
+            display: flex;
+            justify-content: space-between;
+            font-weight: 600; /* Semi-bold */
+            margin-bottom: 0.25rem;
+        }
+        .details-item-meta {
+            display: flex;
+            justify-content: space-between;
+            color: #6b7280; /* Gris */
+            margin-bottom: 0.25rem;
+        }
+         .details-item-ops span {
+            display: inline-block;
+            border: 1px solid #d1d5db; /* Borde gris */
+            border-radius: 0.25rem;
+            padding: 0.1rem 0.4rem;
+            margin-right: 0.25rem;
+            font-size: 0.75rem; /* Tamaño de fuente muy pequeño */
+            background-color: #f3f4f6; /* Fondo gris claro */
+         }
+         .details-item-material {
+            display: flex;
+            justify-content: space-between;
+            font-weight: 500; /* Medium */
+            margin-top: 0.5rem;
+         }
+         .highlight-yellow {
+            background-color: #fef9c3; /* Amarillo muy claro */
+            border-color: #fde047; /* Amarillo */
+         }
+         .highlight-green {
+             background-color: #dcfce7; /* Verde muy claro */
+             border-color: #4ade80; /* Verde */
+         }
+    </style>
+</head>
+<body class="p-8">
+
+    <div class="mb-12">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="machine-card border-yellow-400 border-2"> <div class="status-indicator">
+                        <div class="flex gap-2">
+                            <div class="status-circle bg-white border-green-500 text-green-600">87</div>
+                            <div class="status-circle bg-white border-red-500 text-red-600">75</div>
+                        </div>
+                        <div class="status-labels">
+                            <span>A</span><span>B</span>
+                        </div>
+                    </div>
+                    <div class="text-sm font-semibold mb-1">1 GRUPO A</div>
+                    <div class="text-sm font-semibold mb-2">2 GRUPO B</div>
+                    <img src="https://placehold.co/100x60/e0e0e0/777?text=COR-01" alt="Imagen de Máquina COR-01" onerror="this.onerror=null;this.src='https://placehold.co/100x60/e0e0e0/cccccc?text=Imagen+no+disponible';">
+                    <div class="font-bold mt-2">COR-01</div>
+                </div>
+
+                <div class="machine-card">
+                     <div class="status-indicator">
+                        <div class="flex gap-2">
+                             <div class="status-circle bg-white border-green-500 text-green-600">85</div>
+                            <div class="status-circle bg-white border-red-500 text-red-600">71</div>
+                        </div>
+                        <div class="status-labels">
+                            <span>B</span><span>A</span>
+                        </div>
+                    </div>
+                    <div class="text-sm font-semibold mb-1">GRUPO B</div>
+                    <div class="text-sm font-semibold mb-2">GRUPO A</div>
+                    <img src="https://placehold.co/100x60/e0e0e0/777?text=COR-02" alt="Imagen de Máquina COR-02" onerror="this.onerror=null;this.src='https://placehold.co/100x60/e0e0e0/cccccc?text=Imagen+no+disponible';">
+                    <div class="font-bold mt-2">COR-02</div>
+                </div>
+
+                <div class="machine-card">
+                     <div class="status-indicator">
+                        <div class="flex gap-2">
+                             <div class="status-circle bg-white border-green-500 text-green-600">89</div>
+                        </div>
+                         <div class="status-labels">
+                            <span>C</span>
+                        </div>
+                    </div>
+                    <div class="text-sm font-semibold mb-1">GRUPO C</div>
+                    <div class="text-sm font-semibold mb-2 invisible">Placeholder</div> <img src="https://placehold.co/100x60/e0e0e0/777?text=COR-03" alt="Imagen de Máquina COR-03" onerror="this.onerror=null;this.src='https://placehold.co/100x60/e0e0e0/cccccc?text=Imagen+no+disponible';">
+                    <div class="font-bold mt-2">COR-03</div>
+                </div>
+
+                <div class="machine-card">
+                    <div class="status-indicator invisible"> <div class="flex gap-2">
+                            <div class="status-circle bg-white border-gray-400 text-gray-500">0</div>
+                        </div>
+                        <div class="status-labels"><span>X</span></div>
+                    </div>
+                    <div class="text-sm font-semibold mb-1">PULMÓN</div>
+                     <div class="text-sm font-semibold mb-2 invisible">Placeholder</div> <img src="https://placehold.co/100x60/e0e0e0/777?text=COR-04" alt="Imagen de Máquina COR-04" onerror="this.onerror=null;this.src='https://placehold.co/100x60/e0e0e0/cccccc?text=Imagen+no+disponible';">
+                    <div class="font-bold mt-2">COR-04</div>
+                </div>
+            </div>
+
+            <div class="details-panel">
+                <h2 class="text-xl font-bold text-center mb-4">COR-01</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="details-column">
+                        <h3 class="font-semibold text-center mb-3 text-gray-600">PENDIENTE</h3>
+                        <div class="details-item highlight-yellow">
+                            <div class="details-item-header">
+                                <span>2025-003552-02</span>
+                                <span>CLIENTE 062</span>
+                            </div>
+                            <div class="details-item-ops mb-1">
+                                <span class="bg-red-200 border-red-400">OPE-01</span> <span>OPE-02</span>
+                                <span>OPE-03</span>
+                            </div>
+                            <div class="details-item-meta">
+                                <span>05/03/2025</span>
+                            </div>
+                            <div class="details-item-material">
+                                <span>MATERIAL A0015</span>
+                                <span>411 Uds</span>
+                            </div>
+                        </div>
+                        <div class="details-item highlight-yellow">
+                            <div class="details-item-header">
+                                <span>2025-002252-01</span>
+                                <span>CLIENTE 019</span>
+                            </div>
+                            <div class="details-item-ops mb-1">
+                                <span>OPE-01</span>
+                                <span>OPE-02</span>
+                                <span>OPE-03</span>
+                            </div>
+                             <div class="details-item-meta">
+                                <span>04/03/2025</span>
+                            </div>
+                            <div class="details-item-material">
+                                <span>MATERIAL A0013</span>
+                                <span>244 Uds</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="details-column">
+                        <h3 class="font-semibold text-center mb-3 text-gray-600">FINALIZADAS</h3>
+                         <div class="details-item highlight-green">
+                            <div class="details-item-header">
+                                <span>2025-003552-02</span>
+                                <span>CLIENTE 0221</span>
+                            </div>
+                             <div class="details-item-ops mb-1">
+                                <span>OPE-01</span>
+                                <span>OPE-02</span>
+                                <span>OPE-03</span>
+                            </div>
+                            <div class="details-item-meta">
+                                <span>04/03/2025</span>
+                            </div>
+                            <div class="details-item-material">
+                                <span>MATERIAL A0015</span>
+                                <span>71 Uds</span>
+                            </div>
+                        </div>
+                         <div class="details-item highlight-green">
+                            <div class="details-item-header">
+                                <span>2025-003552-02</span>
+                                <span>CLIENTE 087</span>
+                            </div>
+                             <div class="details-item-ops mb-1">
+                                <span>OPE-01</span>
+                                <span>OPE-02</span>
+                                <span>OPE-03</span>
+                            </div>
+                            <div class="details-item-meta">
+                                <span>03/03/2025</span>
+                            </div>
+                            <div class="details-item-material">
+                                <span>MATERIAL A0054</span>
+                                <span>121 Uds</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                 <div class="machine-card">
+                    <div class="status-indicator">
+                        <div class="flex gap-2">
+                            <div class="status-circle bg-white border-green-500 text-green-600">85</div>
+                             <div class="status-circle bg-white border-red-500 text-red-600">71</div>
+                        </div>
+                        <div class="status-labels">
+                            <span>A</span><span>B</span>
+                        </div>
+                    </div>
+                    <div class="text-sm font-semibold mb-1">1 ACABADO A</div>
+                    <div class="text-sm font-semibold mb-2">2 ACABADO B</div>
+                    <img src="https://placehold.co/100x60/e0e0e0/777?text=CAN-01" alt="Imagen de Máquina CAN-01" onerror="this.onerror=null;this.src='https://placehold.co/100x60/e0e0e0/cccccc?text=Imagen+no+disponible';">
+                    <div class="font-bold mt-2">CAN-01</div>
+                </div>
+
+                <div class="machine-card border-yellow-400 border-2"> <div class="status-indicator">
+                        <div class="flex gap-2">
+                            <div class="status-circle bg-white border-green-500 text-green-600">87</div>
+                            <div class="status-circle bg-white border-red-500 text-red-600">63</div>
+                        </div>
+                        <div class="status-labels">
+                            <span>B</span><span>A</span>
+                        </div>
+                    </div>
+                    <div class="text-sm font-semibold mb-1">ACABADO B</div>
+                    <div class="text-sm font-semibold mb-2">ACABADO A</div>
+                    <img src="https://placehold.co/100x60/e0e0e0/777?text=CAN-02" alt="Imagen de Máquina CAN-02" onerror="this.onerror=null;this.src='https://placehold.co/100x60/e0e0e0/cccccc?text=Imagen+no+disponible';">
+                    <div class="font-bold mt-2">CAN-02</div>
+                </div>
+
+                <div class="machine-card">
+                     <div class="status-indicator">
+                        <div class="flex gap-2">
+                             <div class="status-circle bg-white border-green-500 text-green-600">91</div>
+                        </div>
+                         <div class="status-labels">
+                            <span>A</span>
+                        </div>
+                    </div>
+                    <div class="text-sm font-semibold mb-1">ACABADO A</div>
+                     <div class="text-sm font-semibold mb-2 invisible">Placeholder</div> <img src="https://placehold.co/100x60/e0e0e0/777?text=CAN-03" alt="Imagen de Máquina CAN-03" onerror="this.onerror=null;this.src='https://placehold.co/100x60/e0e0e0/cccccc?text=Imagen+no+disponible';">
+                    <div class="font-bold mt-2">CAN-03</div>
+                </div>
+
+                 <div class="machine-card">
+                     <div class="status-indicator invisible"> <div class="flex gap-2">
+                             <div class="status-circle bg-white border-gray-400 text-gray-500">0</div>
+                        </div>
+                        <div class="status-labels"><span>X</span></div>
+                    </div>
+                    <div class="text-sm font-semibold mb-1">PULMÓN</div>
+                    <div class="text-sm font-semibold mb-2 invisible">Placeholder</div> <img src="https://placehold.co/100x60/e0e0e0/777?text=CAN-04" alt="Imagen de Máquina CAN-04" onerror="this.onerror=null;this.src='https://placehold.co/100x60/e0e0e0/cccccc?text=Imagen+no+disponible';">
+                    <div class="font-bold mt-2">CAN-04</div>
+                </div>
+            </div>
+
+             <div class="details-panel">
+                <h2 class="text-xl font-bold text-center mb-4">CAN-02</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="details-column">
+                        <h3 class="font-semibold text-center mb-3 text-gray-600">PENDIENTE</h3>
+                        <div class="details-item highlight-yellow">
+                            <div class="details-item-header">
+                                <span>2025-003552-02</span>
+                                <span>CLIENTE 0221</span>
+                            </div>
+                             <div class="details-item-ops mb-1">
+                                <span>OPE-01</span>
+                                <span>OPE-02</span>
+                                <span>OPE-03</span>
+                            </div>
+                            <div class="details-item-meta">
+                                <span>04/03/2025</span>
+                            </div>
+                            <div class="details-item-material">
+                                <span>MATERIAL A0015</span>
+                                <span>71 Uds</span>
+                            </div>
+                        </div>
+                          <div class="details-item highlight-yellow">
+                            <div class="details-item-header">
+                                <span>2025-003552-02</span>
+                                <span>CLIENTE 087</span>
+                            </div>
+                             <div class="details-item-ops mb-1">
+                                <span>OPE-01</span>
+                                <span>OPE-02</span>
+                                <span>OPE-03</span>
+                            </div>
+                            <div class="details-item-meta">
+                                <span>03/03/2025</span>
+                            </div>
+                            <div class="details-item-material">
+                                <span>MATERIAL A0054</span>
+                                <span>121 Uds</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="details-column">
+                        <h3 class="font-semibold text-center mb-3 text-gray-600">FINALIZADAS</h3>
+                        <div class="text-center text-gray-500 italic mt-4">No hay elementos finalizados</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

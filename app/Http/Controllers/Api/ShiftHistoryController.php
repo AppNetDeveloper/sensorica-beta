@@ -46,63 +46,69 @@ class ShiftHistoryController extends Controller
      */
     public function getLastByProductionLineToken($token)
     {
-        // Buscar la línea de producción por token
         $productionLine = ProductionLine::where('token', $token)->first();
-
+    
         if (!$productionLine) {
             return response()->json(['message' => 'Línea de producción no encontrada'], 404);
         }
-
-        // Buscar la última entrada en shift_history para la línea de producción
-        // Cargando las relaciones operator y shiftList
+    
+        // 1) Obtengo el último registro
         $shiftHistory = ShiftHistory::with(['operator', 'shiftList'])
             ->where('production_line_id', $productionLine->id)
             ->orderBy('created_at', 'desc')
             ->first();
-
+    
         if (!$shiftHistory) {
             return response()->json(['message' => 'No se encontró historial de turnos para esta línea de producción'], 404);
         }
-
-        // --- MODIFICACIÓN INICIO ---
-        // Si el último registro no es de type "shift" y action "start"...
-        if ($shiftHistory->type !== 'shift' || $shiftHistory->action !== 'start') {
-            // ...buscar el último "shift_start"
-            $shiftStart = ShiftHistory::with(['operator', 'shiftList']) // Cargar relaciones aquí también si las necesitas del shiftStart
-                ->where('production_line_id', $productionLine->id)
+    
+        // 2) Compruebo si es 'shift start'
+        $isShiftStart = $shiftHistory->type === 'shift' && $shiftHistory->action === 'start';
+    
+        // 3) Si no, busco el último 'shift start' para calcular pausas
+        if (! $isShiftStart) {
+            $shiftStart = ShiftHistory::where('production_line_id', $productionLine->id)
                 ->where('type', 'shift')
                 ->where('action', 'start')
                 ->orderBy('created_at', 'desc')
                 ->first();
-
-            if (!$shiftStart) {
-                // No podemos calcular pausas si no hay un inicio de turno previo
-                return response()->json(['message' => 'No se encontró un registro de inicio de turno (shift start) previo para calcular pausas.'], 404);
+    
+            if (! $shiftStart) {
+                return response()->json([
+                    'message' => 'No se encontró un registro de inicio de turno (shift start) previo para calcular pausas.'
+                ], 404);
             }
-
-            // Calcular la duración total de las pausas desde el último shiftStart hasta ahora
-            $totalPauseSeconds = $this->calculateTotalPauseDuration(
+    
+            $shiftStartDate = $shiftStart->created_at;
+            $totalPause     = $this->calculateTotalPauseDuration(
                 $productionLine->id,
-                $shiftStart->created_at,
-                now() // Calcular hasta el momento actual
+                $shiftStartDate,
+                now()
             );
-
-            // Devolver el último historial, la fecha del último inicio de turno y la duración total de la pausa
-            return response()->json([
-                'data' => $shiftHistory,
-                'shift_start_date' => $shiftStart->created_at,
-                'total_pause_duration_seconds' => $totalPauseSeconds // Nuevo campo
-            ]);
+        } else {
+            $shiftStartDate = $shiftHistory->created_at;
+            $totalPause     = 0;
         }
-        // --- MODIFICACIÓN FIN ---
-
-        // Si el último registro SÍ es un 'shift start', devolverlo directamente
+    
+        // 4) Transformo el modelo a array y sobreescribo shift_list si es null
+        $data = $shiftHistory->toArray();
+    
+        if (is_null($data['shift_list'])) {
+            $data['shift_list'] = [
+                'id'    => 'especial',
+                'start' => Carbon::parse($shiftStartDate)->format('H:i:s'),
+                'end'   => Carbon::now()->format('H:i:s'),
+            ];
+        }
+    
+        // 5) Devuelvo la respuesta
         return response()->json([
-            'data' => $shiftHistory,
-            'shift_start_date' => $shiftHistory->created_at,
-            'total_pause_duration_seconds' => 0
+            'data'                         => $data,
+            'shift_start_date'            => $shiftStartDate,
+            'total_pause_duration_seconds'=> $totalPause,
         ]);
     }
+    
 
     /**
      * Calcula la duración total en segundos de las pausas (stop start/end)

@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Autoconto</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <!-- Cargar Google Charts -->
+  <script src="https://www.gstatic.com/charts/loader.js"></script>
+  <script>
+    google.charts.load('current', { packages: ['sankey'] });
+  </script>
+  <style>
+    /* Estilos generales */
+    .card-custom {
+      background-color: #f8f9fa;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      border-radius: 12px;
+    }
+    .card-header-custom {
+      background-color: #343a40;
+      color: #fff;
+      padding: 15px;
+      font-size: 1.2rem;
+      border-radius: 12px 12px 0 0;
+    }
+    .progress-bar-label {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: white;
+      font-weight: bold;
+      font-size: 1.25rem;
+      text-align: right;
+    }
+    .progress {
+      position: relative;
+      height: 25px;
+      margin-bottom: 20px;
+    }
+    .small-card {
+      background-color: #343a40;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+      color: white;
+    }
+    .small-card-white {
+      background-color: #fff;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+      color: #333;
+    }
+    .small-card .metric, 
+    .small-card-white .metric {
+      font-size: 2rem;
+      color: #f39c12;
+    }
+    .small-card .metric-label, 
+    .small-card-white .metric-label {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-top: 5px;
+    }
+    .metric-red {
+      color: #e74c3c;
+    }
+    .metric-yellow {
+      color: #f39c12;
+    }
+    .header-container {
+      width: 100%;
+      background-color: #343a40;
+      color: white;
+      padding: 10px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header-left img {
+      max-height: 60px;
+      width: auto;
+    }
+    .header-center {
+      text-align: center;
+      font-size: 1.3rem;
+    }
+    .header-right {
+      font-size: 1.5rem;
+      text-align: right;
+      margin: 0;
+      padding: 0;
+    }
+    .header-right small {
+      display: block;
+      font-size: 1.3rem;
+      color: #ffc107;
+      text-align: right;
+      margin: 0;
+      padding: 0;
+    }
+    .logo {
+      font-size: 2rem;
+      font-weight: bold;
+      color: #f39c12;
+    }
+    .small-text {
+      font-size: 1rem;
+      color: #888;
+    }
+    .oee-box {
+      background-color: #343a40;
+      color: white;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+      font-size: 1.2rem;
+      font-weight: bold;
+    }
+    .oee-percentage {
+      font-size: 2rem;
+      color: #f39c12;
+    }
+    .progress-container {
+      max-width: 100%;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="header-container">
+    <div class="header-left">
+      <img src="logo.png" alt="Logo de Autoconto">
+    </div>
+    <div class="header-center">
+      <div id="order-id">Cargando...</div>
+      <div id="created-at" style="font-size: 1rem;">Iniciada ...</div>
+    </div>
+    <div class="header-right">
+      <div id="clock">--:--:--</div>
+      <small id="production-line-name">Cargando...</small>
+    </div>
+  </header>
+
+  <!-- Contenedor Principal -->
+  <div class="container-fluid mt-4">
+    <div class="row">
+      <!-- Card 1: 3 filas de pequeños cards -->
+      <div class="col-lg-6 mb-4">
+        <div class="card card-custom">
+          <div class="card-body">
+            <div class="row">
+              <!-- Fila 1 -->
+              <div class="col-md-4">
+                <div class="small-card">
+                  <div class="metric" id="units-made-real">--</div>
+                  <div class="metric-label">Uds Fabricadas</div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="small-card">
+                  <div class="metric" id="units-pending">--</div>
+                  <div class="metric-label">Uds Pendientes</div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="small-card">
+                  <div class="metric" id="units-delayed">--</div>
+                  <div class="metric-label">Uds Atrasadas</div>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <!-- Fila 2 -->
+              <div class="col-md-4">
+                <div class="small-card">
+                  <div class="metric" id="sensor-stops-time">--:--</div>
+                  <div class="metric-label">Paradas Sensores</div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="small-card">
+                  <div class="metric" id="preparing-time">--:--</div>
+                  <div class="metric-label">Tiempo de Preparación</div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="small-card">
+                  <div class="metric metric-red" id="unidentified-time">--:--</div>
+                  <div class="metric-label">No Identificadas</div>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <!-- Fila 2 -->
+              <div class="col-md-4">
+                <div class="small-card">
+                  <div class="metric" id="slow-time">--:--</div>
+                  <div class="metric-label">Tiempo Lento</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2: Métricas de Producción y Ciclo -->
+      <div class="col-lg-6 mb-4">
+        <div class="card card-custom">
+          <div class="card-body">
+            <div class="row">
+              <!-- Fila 1 -->
+              <div class="col-md-4">
+                <div class="small-card-white">
+                  <div class="metric" id="box">--</div>
+                  <div class="metric-label">Cajas/Pedido</div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="small-card-white">
+                  <div class="metric" id="units-box">--</div>
+                  <div class="metric-label">Uds/Caja</div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="small-card-white">
+                  <div class="metric" id="units">--</div>
+                  <div class="metric-label">Uds Total Pedido</div>
+                </div>
+              </div>
+              <!-- Fila 2 -->
+              <div class="col-md-4">
+                <div class="small-card-white">
+                  <div class="metric" id="time-box">--:--:--</div>
+                  <div class="metric-label">TC Teórico/Caja</div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="small-card-white">
+                  <div class="metric" id="theoretical-cycle-time">--</div>
+                  <div class="metric-label">TC Teórico(seg)/Ud</div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="small-card-white">
+                  <div class="metric" id="theoretical-end-time">--:--:--</div>
+                  <div class="metric-label">T Hasta Fin Orden (Teórico)</div>
+                </div>
+              </div>
+              <!-- Fila 3 -->
+              <div class="col-md-4">
+                <div class="small-card-white">
+                  <div class="metric" id="total-downtime">--</div>
+                  <div class="metric-label">Tiempo Total Perdido</div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="small-card-white">
+                  <div class="metric" id="real-cycle-time">--</div>
+                  <div class="metric-label">TC Real(seg)/Ud</div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="small-card-white">
+                  <div class="metric" id="real-end-time">--:--:--</div>
+                  <div class="metric-label">T Hasta Fin Orden (Real)</div>
+                </div>
+              </div>   
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 3: Eficiencia y Disponibilidad -->
+      <div class="col-lg-6 mb-4">
+        <div class="card card-custom">
+          <div class="card-body d-flex">
+            <!-- Barras de Disponibilidad, Rendimiento y Calidad -->
+            <div class="card card-custom flex-grow-1 me-3">
+              <div class="card-body">
+                <!-- Disponibilidad -->
+                <div class="mb-4">
+                  <div class="metric-label" style="text-align: left;">Disponibilidad</div>
+                  <div class="progress" style="height: 35px;">
+                    <div id="availability-progress-bar" class="progress-bar" style="background-color: gray;"></div>
+                    <div id="availability-progress-bar-stop" class="progress-bar bg-danger"></div>
+                    <span id="availability-progress-bar-label" class="progress-bar-label">--:--:--</span>
+                  </div>
+                </div>
+                <!-- Rendimiento -->
+                <div class="mb-4">
+                  <div class="metric-label" style="text-align: left;">Rendimiento</div>
+                  <div class="progress" id="performance-progress-container" style="height: 35px;">
+                    <div id="performance-progress-bar" class="progress-bar" style="background-color: gray;"></div>
+                    <div id="performance-progress-bar-slow" class="progress-bar bg-warning"></div>
+                    <span id="performance-progress-bar-label" class="progress-bar-label">--:--:--</span>
+                  </div>
+                </div>
+                <!-- Calidad -->
+                <div class="mb-4">
+                  <div class="metric-label" style="text-align: left;">Calidad</div>
+                  <div class="progress" id="quality-progress-container" style="height: 35px;">
+                    <div id="quality-progress-bar" class="progress-bar" style="background-color: gray;"></div>
+                    <div id="quality-progress-bar-defects" class="progress-bar bg-success"></div>
+                    <span id="quality-progress-bar-label" class="progress-bar-label">--:--:--</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- Tarjeta de OEE -->
+            <div class="card card-custom" style="width: 250px;">
+              <div class="card-body d-flex flex-column align-items-center justify-content-center" style="height: 100%;">
+                <div style="font-size:1.2rem; font-weight:bold;">EFECTIVIDAD / OEE</div>
+                <div class="oee-percentage" id="oee-percentage" style="font-size:5rem; color: #f39c12;">--%</div>
+                <div class="small-text">ORDEN ACTUAL</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 4: Turnos y Producción con el Sankey Diagram -->
+      <div class="col-lg-6 mb-4">
+        <div class="card card-custom">
+          <div class="card-body">
+            <div class="row">
+              <!-- Área del Sankey -->
+              <div class="col-lg-9 mb-4">
+                <div class="card card-custom">
+                  <div class="card-body">
+                    <div class="grafico-container">
+                      <!-- Contenedor del Sankey con botones para fullscreen -->
+                      <div id="sankey_fullscreen_container" style="position: relative;">
+                        <!-- Botón para entrar en fullscreen (icono de flechas) -->
+                        <button id="enter_fullscreen" onclick="enterFullScreen()" 
+                                style="position: absolute; top: 10px; right: 10px; z-index: 1000; background: transparent; border: none;">
+                          <i class="bi bi-arrows-fullscreen" style="font-size: 1.5rem; color: #333;"></i>
+                        </button>
+                        <!-- Botón para salir del fullscreen (icono de X) -->
+                        <button id="exit_fullscreen" onclick="exitFullScreen()" 
+                                style="position: absolute; top: 10px; right: 10px; z-index: 1000; background: transparent; border: none; display: none;">
+                          <i class="bi bi-x-lg" style="font-size: 1.5rem; color: #333;"></i>
+                        </button>
+                        <div id="sankey_chart" style="width: 100%; height: 400px;"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- Tarjetas de Pesaje (u otros elementos) -->
+              <div class="col-lg-3 mb-4">
+                <div class="col-md-10">
+                  <div class="small-card-white">
+                    <div class="metric" id="box-finalized">--</div>
+                    <div class="metric-label">Cajas Finalizadas</div>
+                  </div>
+                </div>
+                <div class="col-md-10">
+                  <div class="small-card-white">
+                    <div class="metric" id="total-weight">--%</div>
+                    <div class="metric-label">Peso Acumulado</div>
+                  </div>
+                </div>
+                <div class="col-md-10">
+                  <div class="small-card-white">
+                    <div class="metric" id="box-pending">--%</div>
+                    <div class="metric-label">Cajas Pendientes</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Funciones JS: Reloj, fullscreen y actualización de datos -->
+  <script>
+    // Actualizar el reloj cada segundo
+    function updateClock() {
+      const now = new Date();
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const seconds = String(now.getSeconds()).padStart(2, '0');
+      document.getElementById('clock').textContent = `${hours}:${minutes}:${seconds}`;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // Función para formatear segundos a hh:mm:ss
+    function formatTime(seconds) {
+      const hrs = Math.floor(seconds / 3600).toString().padStart(2, '0');
+      const mins = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+      const secs = Math.floor(seconds % 60).toString().padStart(2, '0');
+      return `${hrs}:${mins}:${secs}`;
+    }
+
+    // Funciones para entrar y salir de fullscreen
+    function enterFullScreen() {
+      const container = document.getElementById('sankey_fullscreen_container');
+      if (container.requestFullscreen) {
+        container.requestFullscreen();
+      } else if (container.mozRequestFullScreen) {
+        container.mozRequestFullScreen();
+      } else if (container.webkitRequestFullscreen) {
+        container.webkitRequestFullscreen();
+      } else if (container.msRequestFullscreen) {
+        container.msRequestFullscreen();
+      }
+    }
+    function exitFullScreen() {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      } else if (document.mozCancelFullScreen) {
+        document.mozCancelFullScreen();
+      } else if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
+      } else if (document.msExitFullscreen) {
+        document.msExitFullscreen();
+      }
+    }
+
+    // Escuchar cambios en el estado fullscreen para ajustar estilos
+    document.addEventListener("fullscreenchange", function() {
+      const container = document.getElementById('sankey_fullscreen_container');
+      if (document.fullscreenElement) {
+        document.getElementById('enter_fullscreen').style.display = 'none';
+        document.getElementById('exit_fullscreen').style.display = 'block';
+        // Establece display flex, centra contenido y asigna fondo y padding lateral
+        container.style.display = 'flex';
+        container.style.justifyContent = 'center';
+        container.style.alignItems = 'center';
+        container.style.flexDirection = 'column';
+        container.style.height = '100vh';
+        container.style.backgroundColor = 'white';
+        container.style.padding = '0 20px';
+        document.getElementById('sankey_chart').style.height = '80vh';
+      } else {
+        document.getElementById('enter_fullscreen').style.display = 'block';
+        document.getElementById('exit_fullscreen').style.display = 'none';
+        container.style.display = 'block';
+        container.style.height = 'auto';
+        container.style.backgroundColor = 'transparent';
+        container.style.padding = '0';
+        document.getElementById('sankey_chart').style.height = '400px';
+      }
+    });
+
+    // Función para actualizar datos (ejemplo de obtención de datos desde API)
+    async function fetchProductionData() {
+      try {
+        // Obtén el token de la URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+        if (!token) {
+          throw new Error('Token no encontrado en la URL');
+        }
+        const response = await fetch(`/api/order-stats?token=${token}`);
+        const data = await response.json();
+
+        // Actualizar datos en los elementos correspondientes
+        document.getElementById("production-line-name").textContent = data.production_line_name;
+        document.getElementById("order-id").textContent = data.order_id;
+
+        const createdAt = new Date(data.created_at);
+        const updatedAt = new Date(data.updated_at);
+        const formattedDate = createdAt.toLocaleDateString('es-ES', { year: 'numeric', month: '2-digit', day: '2-digit' });
+        const formattedTime = createdAt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+        document.getElementById("created-at").textContent = `Iniciada ${formattedDate} ${formattedTime}`;
+
+        document.getElementById("units-made-real").textContent = data.units_made_real;
+        document.getElementById("units-pending").textContent = data.units_pending;
+        document.getElementById("units-delayed").textContent = data.units_delayed;
+
+        document.getElementById("box").textContent = data.box;
+        document.getElementById("units-box").textContent = data.units_box;
+        document.getElementById("units").textContent = data.units;
+
+        const slowTimeInSeconds = data.units_delayed * data.seconds_per_unit_theoretical;
+        document.getElementById("slow-time").textContent = formatTime(slowTimeInSeconds); 
+
+        document.getElementById("preparing-time").textContent = formatTime(data.prepair_time); 
+
+        const totalStopsTimeInSeconds = data.production_stops_time + data.down_time + slowTimeInSeconds + data.prepair_time;
+        document.getElementById("total-downtime").textContent = formatTime(totalStopsTimeInSeconds);
+        document.getElementById("theoretical-cycle-time").textContent = data.seconds_per_unit_theoretical;
+        document.getElementById("real-cycle-time").textContent = data.seconds_per_unit_real;
+
+        const sensorStopsTimeInSeconds = data.production_stops_time;
+        document.getElementById("sensor-stops-time").textContent = formatTime(sensorStopsTimeInSeconds);
+
+        document.getElementById("unidentified-time").textContent = formatTime(data.down_time);
+
+        const timeDifferenceInSeconds = Math.floor((updatedAt - createdAt) / 1000);
+        const timeOneBox = timeDifferenceInSeconds / data.weights_0_orderNumber;
+        document.getElementById("time-box").textContent = formatTime(timeOneBox);
+
+        const theoreticalEndTimeInSeconds = data.theoretical_end_time;
+        document.getElementById("theoretical-end-time").textContent = formatTime(theoreticalEndTimeInSeconds);
+
+        const realEndTimeInSeconds = data.real_end_time;
+        document.getElementById("real-end-time").textContent = formatTime(realEndTimeInSeconds);
+
+        document.getElementById("oee-percentage").textContent = Math.round(data.oee);
+
+        document.getElementById("box-finalized").textContent = data.weights_0_orderNumber;
+        document.getElementById("box-pending").textContent = data.box - data.weights_0_orderNumber;
+        document.getElementById("total-weight").textContent = data.weights_0_orderKg;
+
+        const totalStopTimeInSeconds = sensorStopsTimeInSeconds + data.down_time + data.prepair_time;
+        let availabilityPercentage = 0;
+        let stopPercentage = 0;
+        if (timeDifferenceInSeconds > 0) {
+          availabilityPercentage = ((timeDifferenceInSeconds - totalStopTimeInSeconds) / timeDifferenceInSeconds) * 100;
+          stopPercentage = (totalStopTimeInSeconds / timeDifferenceInSeconds) * 100;
+        }
+        availabilityPercentage = availabilityPercentage.toFixed(2);
+        stopPercentage = stopPercentage.toFixed(2);
+
+        document.getElementById('availability-progress-bar').style.width = availabilityPercentage + '%';
+        document.getElementById('availability-progress-bar-stop').style.width = stopPercentage + '%';
+        document.getElementById('availability-progress-bar-label').textContent = formatTime(totalStopTimeInSeconds);
+
+        const timeWithoutStopsInSeconds = timeDifferenceInSeconds - totalStopTimeInSeconds;
+        document.getElementById('performance-progress-container').style.width = availabilityPercentage + '%';
+        document.getElementById('performance-progress-container').style.margin = '0';
+
+        let performancePercentage = 0;
+        let slowPercentage = 0;
+        if (timeWithoutStopsInSeconds > 0) {
+          performancePercentage = ((timeWithoutStopsInSeconds - slowTimeInSeconds) / timeWithoutStopsInSeconds) * 100;
+          slowPercentage = (slowTimeInSeconds / timeWithoutStopsInSeconds) * 100;
+        }
+        performancePercentage = performancePercentage.toFixed(2);
+        slowPercentage = slowPercentage.toFixed(2);
+
+        document.getElementById('performance-progress-bar').style.width = performancePercentage + '%';
+        document.getElementById('performance-progress-bar-slow').style.width = slowPercentage + '%';
+        document.getElementById('performance-progress-bar-label').textContent = formatTime(slowTimeInSeconds);
+
+        const timeAtTheoreticalSpeedInSeconds = timeWithoutStopsInSeconds - slowTimeInSeconds;
+        const calidadBarWidth = (availabilityPercentage * performancePercentage) / 100;
+        document.getElementById('quality-progress-container').style.width = calidadBarWidth + '%';
+        document.getElementById('quality-progress-container').style.margin = '0';
+
+
+
+        // Cálculos para el Sankey Diagram
+        const boxFinalized = parseFloat(data.weights_0_orderNumber || 0);
+        const totalWeightBoxFinalized = parseFloat(data.weights_0_orderKg || 0);
+        const unitsPerBox = parseFloat(data.units_box || 0);
+        const unitsMadeReal = parseFloat(data.units_made_real || 0);
+        const totalWeightBoxFinalized1 = parseFloat(data.weights_1_orderKg || 0);
+        const totalWeightBoxFinalized2 = parseFloat(data.weights_2_orderKg || 0);
+
+        const weightPerBox = totalWeightBoxFinalized / boxFinalized || 0;
+        const weightPerUnit = weightPerBox / unitsPerBox || 0;
+        const totalMaterialUsed = unitsMadeReal * weightPerUnit || 0;
+        const udsNotEnvasadas = Math.round(unitsMadeReal - (unitsPerBox * boxFinalized));
+        const totalWeightFromAllUnitsCreated = Math.round(unitsMadeReal * weightPerUnit) || 0;
+        const totalWeightFromAll = Math.round(totalWeightFromAllUnitsCreated  + totalWeightBoxFinalized1 + totalWeightBoxFinalized2 ) || 0;
+        //Fin calculo Sankey
+
+        //volvemos a Calidad
+        let qualityPercentage = 0;
+        let sensorStopsPercentage = 0;
+        if (timeAtTheoreticalSpeedInSeconds > 0) {
+          qualityPercentage = ((timeAtTheoreticalSpeedInSeconds - sensorStopsTimeInSeconds) / timeAtTheoreticalSpeedInSeconds) * 100;
+          sensorStopsPercentage = ((totalWeightBoxFinalized1 / weightPerUnit) / timeAtTheoreticalSpeedInSeconds) * 100;
+        }
+        qualityPercentage = qualityPercentage.toFixed(2);
+        sensorStopsPercentage = sensorStopsPercentage.toFixed(2);
+
+        document.getElementById('quality-progress-bar').style.width = qualityPercentage + '%';
+        document.getElementById('quality-progress-bar-defects').style.width = sensorStopsPercentage + '%';
+        document.getElementById('quality-progress-bar-label').textContent = formatTime(Math.round(totalWeightBoxFinalized1 / weightPerUnit) * data.seconds_per_unit_real);
+
+
+        //volvemos a Sankey
+        function drawChart() {
+          const dataTable = new google.visualization.DataTable();
+          dataTable.addColumn('string', 'From');
+          dataTable.addColumn('string', 'To');
+          dataTable.addColumn('number', 'Weight');
+          dataTable.addColumn({ type: 'string', role: 'tooltip' });
+          
+          dataTable.addRows([
+            ['Peso Total', 'Uds', totalWeightFromAll, `Total Peso: ${totalWeightFromAll} kg`],
+            ['Uds', 'Rechazo', totalWeightBoxFinalized2, `Rechazo Peso: ${totalWeightBoxFinalized2} kg`],
+            ['Uds', 'Uds Fabricadas', Math.round(unitsMadeReal * weightPerUnit), `Fabricadas: ${unitsMadeReal} uds y ${Math.round(unitsMadeReal * weightPerUnit)} kg`],
+            ['Uds Fabricadas', 'Unidades Envasadas', totalWeightBoxFinalized, `Envasadas: ${unitsPerBox * boxFinalized} uds y ${totalWeightBoxFinalized} kg`],
+            [
+              'Uds Fabricadas',
+              'Unidades Sin Envasar',
+              Math.round((udsNotEnvasadas - (totalWeightBoxFinalized1 / weightPerUnit)) * weightPerUnit),
+              `Sin Envasar: ${Math.round(udsNotEnvasadas - (totalWeightBoxFinalized1 / weightPerUnit))} uds y ${Math.round((udsNotEnvasadas - (totalWeightBoxFinalized1 / weightPerUnit)) * weightPerUnit)} kg`
+            ],
+            [
+              'Uds Fabricadas',
+              'Rechazo',
+              totalWeightBoxFinalized1,
+              `Rechazo: ${Math.round(totalWeightBoxFinalized1 / weightPerUnit)} uds y ${totalWeightBoxFinalized1} kg`
+            ]
+          ]);
+
+          const options = {
+            width: '100%',
+            height: 400,
+            sankey: {
+              node: {
+                label: { fontSize: 12 },
+                colors: ['#FFA07A', '#87CEEB', '#FFD700'],
+              },
+              link: { colorMode: 'gradient', colors: ['#FFA07A', '#87CEEB'] },
+            },
+          };
+
+          const chart = new google.visualization.Sankey(document.getElementById('sankey_chart'));
+          chart.draw(dataTable, options);
+        }
+
+        google.charts.setOnLoadCallback(drawChart);
+
+      } catch (error) {
+        console.error("Error al obtener los datos:", error);
+        // Valores por defecto en caso de error
+        document.getElementById("production-line-name").textContent = "Error al cargar";
+        document.getElementById("order-id").textContent = "Error al cargar";
+        document.getElementById("created-at").textContent = "Error al cargar";
+        document.getElementById("units-made-real").textContent = "--";
+        document.getElementById("units-pending").textContent = "--";
+        document.getElementById("units-delayed").textContent = "--";
+        document.getElementById("box").textContent = "--";
+        document.getElementById("units-box").textContent = "--";
+        document.getElementById("units").textContent = "--";
+        document.getElementById("total-downtime").textContent = "--";
+        document.getElementById("theoretical-cycle-time").textContent = "--";
+        document.getElementById("real-cycle-time").textContent = "--";
+        document.getElementById("sensor-stops-time").textContent = "--:--";
+        document.getElementById("slow-time").textContent = "--:--";
+        document.getElementById("unidentified-time").textContent = "--:--";
+        document.getElementById("time-box").textContent = "--:--:--";
+        document.getElementById("theoretical-end-time").textContent = "--:--:--";
+        document.getElementById("real-end-time").textContent = "--:--:--";
+        document.getElementById("oee-percentage").textContent = "--%";
+        document.getElementById('availability-progress-bar').style.width = '0%';
+        document.getElementById('availability-progress-bar-stop').style.width = '0%';
+        document.getElementById('availability-progress-bar-label').textContent = '--:--:--';
+        document.getElementById('performance-progress-bar').style.width = '0%';
+        document.getElementById('performance-progress-bar-slow').style.width = '0%';
+        document.getElementById('performance-progress-container').style.width = '0%';
+        document.getElementById('performance-progress-bar-label').textContent = '--:--:--';
+        document.getElementById('quality-progress-bar').style.width = '0%';
+        document.getElementById('quality-progress-bar-defects').style.width = '0%';
+        document.getElementById('quality-progress-container').style.width = '0%';
+        document.getElementById('quality-progress-bar-label').textContent = '--:--:--';
+      }
+    }
+
+    setInterval(fetchProductionData, 1000);
+    fetchProductionData();
+  </script>
+
+</body>
+</html>
