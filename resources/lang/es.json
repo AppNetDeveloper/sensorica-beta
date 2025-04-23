@@ -623,5 +623,6 @@
     "buttons.live_view": "Vista en vivo",
     "buttons.live_machine": "Máquina en vivo",
     "buttons.delete": "Eliminar",
-    "buttons.delete_confirm": "Estás seguro de eliminar"
+    "buttons.delete_confirm": "Estás seguro de eliminar",
+    "Reset RFID POINT": "Reiniciar Punto RFID"
   }
