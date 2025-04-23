@@ -3,35 +3,38 @@
 @section('breadcrumb')
     <ul class="breadcrumb">
         <li class="breadcrumb-item"><a href="{{ route('home') }}">{{ __('Dashboard') }}</a></li>
-        <li class="breadcrumb-item">{{ __('Customers') }}
-        </li>
+        <li class="breadcrumb-item">{{ __('Customers') }}</li>
     </ul>
 @endsection
+
 @section('content')
     <div class="row">
         <div class="col-lg-12">
-        <div class="mb-3">
-            <a href="{{ route('customers.create') }}" class="btn btn-primary">{{ __('Add Customers') }}</a>
-        </div>
-
+            <div class="mb-3">
+                {{-- Botón para añadir clientes con un icono --}}
+                <a href="{{ route('customers.create') }}" class="btn btn-primary">
+                    <i class="fas fa-plus me-1"></i> {{ __('Add Customers') }}
+                </a>
+            </div>
             <div class="card">
                 <div class="card-body">
-                    <div class="table-responsive py-5 pb-4 dropdown_2">
+                    {{-- *** CAMBIO: Añadido margen superior mt-4 aquí *** --}}
+                    <div class="table-responsive mt-4">
                         <div class="container-fluid">
-                            <table class="table table-bordered data-table">
-                                <!-- Encabezados de las columnas aquí -->
+                            {{-- Añade la clase 'dt-responsive' y 'nowrap' para el correcto funcionamiento de DataTables Responsive --}}
+                            <table class="table table-bordered data-table dt-responsive nowrap" style="width:100%">
                                 <thead>
                                     <tr>
                                         <th>ID</th>
-                                        <th>Name</th>
-                                        <th>Token ZeroTier</th>
-                                        <th>Created At</th>
-                                        <th>Updated At</th>
-                                        <th>Action</th>
+                                        <th>{{ __('Name') }}</th>
+                                        <th>{{ __('Token ZeroTier') }}</th>
+                                        <th>{{ __('Created At') }}</th>
+                                        <th>{{ __('Updated At') }}</th>
+                                        <th>{{ __('Action') }}</th> {{-- Asegúrate que esta columna sea la última --}}
                                     </tr>
                                 </thead>
-                                <!-- Cuerpo de la tabla se llenará automáticamente -->
                                 <tbody>
+                                    {{-- El cuerpo se llena vía AJAX --}}
                                 </tbody>
                             </table>
                         </div>
@@ -43,40 +46,78 @@
 @endsection
 
 @push('style')
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.10.25/css/jquery.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/2.1.5/css/dataTables.dataTables.min.css">
+    {{-- DataTables CSS --}}
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+    {{-- DataTables Responsive CSS --}}
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
+    {{-- Font Awesome para iconos (Asegúrate de tenerlo cargado en tu layout principal o inclúyelo aquí) --}}
+    {{-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" /> --}}
 @endpush
 
 @push('scripts')
-    <script src="https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/2.1.5/js/dataTables.min.js"></script>
-    
+    {{-- jQuery (Asegúrate que esté cargado antes de DataTables) --}}
+    {{-- <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script> --}}
+    {{-- DataTables JS --}}
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    {{-- DataTables Responsive JS --}}
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
+    {{-- Moment.js para formatear fechas (si aún lo necesitas) --}}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/locale/es.js"></script> {{-- Locale español --}}
+
     <script type="text/javascript">
         $(function () {
-            $('.data-table').DataTable({
-                processing: true,
-                serverSide: true,
-                responsive: true,
-                scrollX: true,
-                ajax: "/customers/getCustomers",
+            // Configura Moment.js al español
+            moment.locale('es');
+
+            var table = $('.data-table').DataTable({
+                processing: true, // Muestra un indicador de procesamiento
+                serverSide: true, // Habilita el procesamiento del lado del servidor
+                responsive: true, // Habilita la funcionalidad responsive
+                ajax: "/customers/getCustomers", // URL relativa para evitar Mixed Content
                 columns: [
                     {data: 'id', name: 'id'},
                     {data: 'name', name: 'name'},
                     {data: 'token_zerotier', name: 'token_zerotier'},
-                    {data: 'created_at', name: 'created_at', render: function (data, type, row) {
-                        return moment(data).format('DD-MM-YYYY HH:mm:ss');
-                    }},
-                    {data: 'updated_at', name: 'updated_at', render: function (data, type, row) {
-                        return moment(data).format('DD-MM-YYYY HH:mm:ss');
-                    }},
-                    {data: 'action', name: 'action', orderable: false, searchable: false},
+                    {
+                        data: 'created_at',
+                        name: 'created_at',
+                        render: function (data, type, row) {
+                            // Formatea la fecha usando Moment.js
+                            return data ? moment(data).format('DD-MM-YYYY HH:mm:ss') : '';
+                        }
+                    },
+                    {
+                        data: 'updated_at',
+                        name: 'updated_at',
+                        render: function (data, type, row) {
+                            // Formatea la fecha usando Moment.js
+                            return data ? moment(data).format('DD-MM-YYYY HH:mm:ss') : '';
+                        }
+                    },
+                    {
+                        data: 'action', // Esta columna contendrá los botones
+                        name: 'action',
+                        orderable: false, // No se puede ordenar por esta columna
+                        searchable: false, // No se puede buscar en esta columna
+                    },
                 ],
-                "columnDefs": [
-                    { "targets": [0], "visible": true, "searchable": true, "sortable": true },
-                    { "targets": [5], "render": function (data, type, full, meta) {
-                        return data;
-                    }},
+                columnDefs: [
+                    { responsivePriority: 1, targets: 1 }, // Prioridad 1 para el Nombre
+                    { responsivePriority: 2, targets: -1 }, // Prioridad 2 para la última columna (Acciones)
+                    {
+                        targets: -1, // Última columna (Acción)
+                        render: function (data, type, full, meta) {
+                             // Devuelve el HTML que viene del servidor para las acciones
+                            return data;
+                        }
+                    }
                 ],
+                language: {
+                    url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json" // URL para español
+                }
             });
         });
     </script>

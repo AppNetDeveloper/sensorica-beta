@@ -163,23 +163,9 @@ class MqttShiftSubscriber extends Command
         $productionLineId = $barcode->production_line_id;
 
         $shiftListId = $data['shift_list_id'] ?? null; // Asegurarse de que exista la clave
+        $this->info('[' . Carbon::now()->toDateTimeString() . '] shift_list_id: ' . $shiftListId);
         if ($shiftListId === null || empty($shiftListId)) {
-            try {
-                $shiftHistory = ShiftHistory::where('production_line_id', $productionLineId)
-                    ->orderBy('created_at', 'desc')
-                    ->first();
-                // Si se encontró un historial y tiene un shift_list_id válido, se asigna; de lo contrario, se mantiene null
-                if ($shiftHistory && $shiftHistory->shift_list_id) {
-                    $shiftListId = $shiftHistory->shift_list_id;
-                } else {
-                    $shiftListId = null;
-                }
-            } catch (\Exception $e) {
-                // Manejo del error: se puede registrar el error y asignar un valor por defecto (null, en este caso)
-                // O, en función del comportamiento deseado, tal vez lanzar nuevamente la excepción
-                \Log::error("Error al obtener el último shift_list_id: " . $e->getMessage());
-                $shiftListId = null;
-            }
+            $shiftListId = null;
         }
         
 

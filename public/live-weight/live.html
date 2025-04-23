@@ -2,516 +2,551 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>BOISOLO Autoconto</title>
-  <!-- jQuery (Requerido por Bootstrap) -->
-  <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-  <!-- Bootstrap CSS -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BOISOLO Autoconto - Barra e Indicador Más Gruesos</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-  <!-- JsBarcode Library -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
-  <!-- QRCode.js Library -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
   <style>
+    /* --- Variables CSS --- */
+    :root {
+      --primary-dark: #2c3e50;
+      --primary-light-bg: #ecf0f1;
+      --accent-color: #e67e22;
+      --text-light: #ffffff;
+      --text-dark: #34495e;
+      --text-muted: #7f8c8d;
+      --card-bg: #ffffff;
+      --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      --border-radius: 8px;
+      --font-family: 'Poppins', sans-serif;
+      --success-color: #2ecc71;
+      --warning-color: #f1c40f;
+      --danger-color: #e74c3c;
+      --info-color: #3498db;
+      --info-box-bg: #f8f9fa;
+      --info-box-border: #e9ecef;
+      --black-color: #000000;
+    }
+
     html, body {
-      width: 100%;
-      height: 100%;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-      background-color: #ffffff; /* Fondo blanco */
-      color: #000000; /* Texto negro */
-      font-family: 'Roboto', sans-serif;
-      box-sizing: border-box;
-      overflow: hidden;
+      width: 100%; height: 100%; margin: 0; padding: 0; display: flex; flex-direction: column;
+      background-color: var(--primary-light-bg); color: var(--text-dark); font-family: var(--font-family);
+      box-sizing: border-box; overflow: hidden;
     }
-    
-    /* Header modificado */
-    .header-container {
-      width: 100%;
-      background-color: #343a40; /* Color gris oscuro */
-      color: white;
-      padding: 10px 30px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+
+    /* --- Header --- */
+    .header-container { width: 100%; background-color: var(--primary-dark); color: var(--text-light); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); flex-shrink: 0; }
+    .header-left img { max-height: 50px; width: auto; }
+    .header-center { text-align: center; font-size: 1.1rem; font-weight: 500; }
+    .header-center #created-at { font-size: 0.9rem; color: #bdc3c7; }
+    .header-right { text-align: right; }
+    .header-right #timeDisplay { font-size: 1.4rem; font-weight: 600; margin: 0; padding: 0; }
+    .header-right #scaleName { display: block; font-size: 1.1rem; color: var(--accent-color); font-weight: 600; margin: 0; padding: 0; }
+
+    /* --- Contenido Principal --- */
+    main { display: flex; flex-direction: column; align-items: center; width: 100%; flex-grow: 1; padding: 20px; overflow-y: auto; }
+
+    /* --- Cajas Principales --- */
+    .box { background-color: var(--card-bg); padding: 25px; margin-bottom: 25px; border-radius: var(--border-radius); width: 98%; max-width: 2400px; box-shadow: var(--card-shadow); border: none; display: flex; flex-direction: column; align-items: center; }
+    .box h5 { color: var(--primary-dark); font-weight: 600; margin-bottom: 20px; align-self: flex-start; display: flex; align-items: center; }
+
+    .box-content { display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px; width: 100%; }
+
+    /* --- Cajas de Información Internas --- */
+    .info-box { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 20px; border-radius: var(--border-radius); background-color: var(--info-box-bg); border: 1px solid var(--info-box-border); }
+    .info-box i.display-icon { font-size: 2.8rem; color: var(--accent-color); margin-bottom: 15px; line-height: 1; }
+    .live-data-box .info-box { background-color: #ffffff; }
+
+    /* --- Tipografía Principal (Números grandes) --- */
+    .weight-display, .dimension-display, #boxNumberDisplay, #lastBoxNumberDisplay,
+    #weightDisplay, #dimensionDisplay, #lastWeightDisplay, #lastDimensionDisplay {
+      font-size: 5rem; font-weight: 600; color: var(--text-dark); line-height: 1.1; word-wrap: break-word; margin-bottom: 5px;
+      transition: transform 0.3s ease-in-out, color 0.3s ease-in-out;
     }
-    .header-left img {
-      max-height: 60px;
-      width: auto;
+    .unit { font-size: 1.8rem; font-weight: 500; vertical-align: baseline; color: var(--text-muted); margin-left: 8px; }
+     @media (max-width: 1200px) { .weight-display, .dimension-display, #boxNumberDisplay, #lastBoxNumberDisplay, #weightDisplay, #dimensionDisplay, #lastWeightDisplay, #lastDimensionDisplay { font-size: 4rem; } .unit { font-size: 1.5rem; } .info-box i.display-icon { font-size: 2.5rem; } }
+     @media (max-width: 768px) { .weight-display, .dimension-display, #boxNumberDisplay, #lastBoxNumberDisplay, #weightDisplay, #dimensionDisplay, #lastWeightDisplay, #lastDimensionDisplay { font-size: 3.5rem; } .unit { font-size: 1.2rem; } .info-box i.display-icon { font-size: 2.2rem; } }
+
+    .info-box p:not(.weight-display):not(.dimension-display) { font-size: 1.1rem; color: var(--text-dark); margin-top: 10px; }
+
+    /* --- Sección Inferior (Barcode, QR, RFID) --- */
+    .bottom-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; width: 100%; padding-top: 25px; margin-top: 20px; border-top: 1px solid var(--info-box-border); }
+    .barcode-container { display: flex; align-items: center; justify-content: center; flex-grow: 1; min-width: 250px; }
+    .barcode-section { display: flex; flex-direction: column; align-items: center; text-align: center; }
+    .barcode-container p { font-size: 1rem; color: var(--text-dark); margin-bottom: 8px; font-weight: 500; }
+    #lastBarcode { width: 100%; max-width: 400px; height: auto; margin-top: 5px; }
+    .qr-rfid-container { display: flex; flex-direction: row; align-items: center; gap: 40px; flex-grow: 1; justify-content: center; min-width: 250px; margin-top: 15px; }
+    .qr-rfid-container div { display: flex; flex-direction: column; align-items: center; }
+    .qr-rfid-container p { font-size: 1rem; color: var(--text-dark); margin-bottom: 8px; font-weight: 500; }
+    .rfid-logo, #qrCode { width: 100px; height: 100px; object-fit: contain; background-color: transparent; padding: 0; border: none; border-radius: 0; display: flex; justify-content: center; align-items: center; }
+    #qrCode { background-color: white; border: 1px solid var(--info-box-border); }
+
+    /* --- Media Queries --- */
+    @media (max-width: 992px) { .box-content { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); } .bottom-row { justify-content: center; gap: 30px; } }
+    @media (max-width: 768px) { .box-content { grid-template-columns: 1fr; } .bottom-row { flex-direction: column; align-items: center; gap: 25px; } .qr-rfid-container { margin-top: 20px; gap: 25px; } }
+
+    /* --- Animaciones --- */
+    @keyframes zoomEffect { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+    .zoom { animation: zoomEffect 1s ease-in-out; }
+    @keyframes zoomEffectRed { 0% { transform: scale(1); color: var(--text-dark); } 50% { transform: scale(1.1); color: var(--danger-color); } 100% { transform: scale(1); color: var(--text-dark); } }
+    .zoom-red { animation: zoomEffectRed 1s ease-in-out; }
+    .live-indicator { display: inline-block; width: 10px; height: 10px; background-color: var(--success-color); border-radius: 50%; margin-left: 10px; animation: pulse 1.5s infinite ease-in-out; }
+    @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.3; transform: scale(0.8); } 100% { opacity: 1; transform: scale(1); } }
+
+    /* <<< ESTILOS BARRA TOLERANCIA >>> */
+    .tolerance-bar-container {
+        width: 80%;
+        max-width: 400px;
+        margin-top: 15px;
+        margin-bottom: 5px;
     }
-    .header-center {
-      text-align: center;
-      font-size: 1.3rem;
+    .tolerance-bar-track {
+        position: relative;
+        /* <<< CAMBIO: Aumentar altura de la barra de colores >>> */
+        height: 15px;
+        background-color: var(--info-box-border);
+        border-radius: 7px; /* Ajustar redondeo */
+        display: flex;
+        overflow: hidden;
     }
-    .header-right {
-      font-size: 1.5rem;
-      text-align: right;
-      margin: 0;
-      padding: 0;
+    .tolerance-zone {
+        height: 100%;
     }
-    .header-right small {
-      display: block;
-      font-size: 1.3rem;
-      color: #ffc107;
-      text-align: right;
-      margin: 0;
-      padding: 0;
+    .zone-low {
+        background-color: var(--danger-color);
+        flex-basis: 48%;
     }
-    
-    main {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      width: 100%;
-      height: 100%;
-      padding: 20px;
-      overflow-y: auto;
+    .zone-target {
+        background-color: var(--success-color);
+        flex-basis: 4%;
     }
-    
-    .box {
-      background-color: #f8f9fa; /* Color gris claro */
-      padding: 20px;
-      margin-bottom: 20px;
-      border-radius: 10px;
-      width: 98%;
-      max-width: 2400px;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
+    .zone-high {
+        background-color: var(--danger-color);
+        flex-basis: 48%;
     }
-    
-    .box-content {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 20px;
-      width: 100%;
+    .tolerance-indicator {
+        position: absolute;
+        /* Mantener el solapamiento vertical (ajustar si se ve mal con la nueva altura) */
+        top: -6px;
+        bottom: -6px;
+        /* <<< CAMBIO: Hacer la línea indicadora más ancha (gruesa) >>> */
+        width: 12px;
+        background-color: var(--black-color);
+        border-radius: 3px; /* Ajustar redondeo */
+        left: 50%;
+        transform: translateX(-50%);
+        transition: left 0.4s ease-in-out;
+        box-shadow: 0 0 5px rgba(0,0,0,0.6);
+        z-index: 1;
+        border: 1px solid white;
+        box-sizing: border-box;
     }
-    
-    .info-box {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      text-align: center;
-      padding: 15px;
-      border-radius: 8px;
-      background-color: #e9ecef; /* Color gris claro */
-      box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.05);
-    }
-    
-    .weight-display, .dimension-display, .boxNumberDisplay, .lastBoxNumberDisplay {
-      font-size: 5vw;
-      font-weight: bold;
-      color: #343a40; /* Color gris oscuro */
-      line-height: 1;
-      word-wrap: break-word;
-    }
-    
-    #weightDisplay, #dimensionDisplay, #lastWeightDisplay, #lastDimensionDisplay, #boxNumberDisplay, #lastBoxNumberDisplay {
-      font-size: 5vw;
-      font-weight: bold;
-      line-height: 1;
-      word-wrap: break-word;
-      color: #343a40; /* Color gris oscuro */
-    }
-    
-    .unit {
-      font-size: 40%;
-      vertical-align: baseline;
-      color: #6c757d; /* Color gris medio */
-    }
-    
-    .info-box img {
-      width: 8vh;
-      margin-bottom: 10px;
-      filter: brightness(0); /* Mantener el color original de la imagen */
-    }
-    
-    .info-box p {
-      font-size: 2.5vh;
-      color: #343a40; /* Color gris oscuro */
-    }
-    
-    .barcode p {
-      font-size: 2vh;
-      color: #343a40; /* Color gris oscuro */
-    }
-    
-    /* Estilos para la sección inferior */
-    .bottom-row {
-      display: flex;
-      align-items: center;
-      width: 100%;
-      padding-top: 10px;
-      padding-bottom: 10px;
-    }
-    
-    .barcode-container {
-      display: flex;
-      align-items: center;
-    }
-    
-    .barcode-section {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    
-    .barcode-container p {
-      font-size: 1.2rem;
-      color: #343a40;
-      margin-bottom: 5px; /* Ajusta el margen según sea necesario */
-      text-align: center;
-    }
-    
-    #lastBarcode {
-      width: 100%; /* Ajusta el ancho según sea necesario */
-      height: auto;
-      margin-top: 5px; /* Ajusta el margen según sea necesario */
-    }
-    
-    
-    .qr-rfid-container {
-      display: flex;
-      flex-direction: row;
-      align-items: center;
-      gap: 30px;
-      margin-left: auto; /* Empuja este contenedor hacia la derecha */
-    }
-    
-    .qr-rfid-container div {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    
-    .qr-rfid-container p {
-      font-size: 1.2rem;
-      color: #343a40;
-      margin-bottom: 5px;
-    }
-    
-    .rfid-logo, .qr-code {
-      width: 100px;
-      height: 100px;
-    }
-    
-    @media (max-width: 768px) {
-      .box-content {
-        grid-template-columns: 1fr;
-      }
-    
-      .weight-display, .dimension-display {
-        font-size: 20vw;
-      }
-    
-      .info-box img {
-        width: 12vh;
-      }
-    
-      .info-box p {
-        font-size: 2vh;
-      }
-    
-      /* Aseguramos que en móviles los elementos se apilen */
-      .bottom-row {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-    
-      .qr-rfid-container {
-        margin-left: 0;
-        margin-top: 20px;
-        justify-content: flex-start;
-      }
-    }
-    
-    @keyframes zoomEffect {
-      0% {
-        transform: scale(1);
-      }
-      50% {
-        transform: scale(1.2);
-      }
-      100% {
-        transform: scale(1);
-      }
-    }
-    
-    .zoom {
-      animation: zoomEffect 2s;
-    }
-    
-    @keyframes zoomEffectRed {
-      0% {
-        transform: scale(1);
-        color: #343a40; /* Color gris oscuro */
-      }
-      50% {
-        transform: scale(1.2);
-        color: red;
-      }
-      100% {
-        transform: scale(1);
-        color: #343a40; /* Color gris oscuro */
-      }
-    }
-    
-    .zoom-red {
-      animation: zoomEffectRed 2s;
-    }
-    
+
   </style>
 </head>
 <body>
-  <!-- Header modificado -->
   <header class="header-container">
     <div class="header-left">
-      <img src="logo.png" alt="Logo de Autoconto">
+      <img src="logo.png" alt="Logo de Autoconto" onerror="this.style.display='none'">
     </div>
     <div class="header-center">
-      <div id="orderId">15/4611</div>
+      <div id="orderId">Cargando...</div>
       <div id="created-at" style="font-size: 1rem;">Iniciada ...</div>
     </div>
     <div class="header-right">
       <div id="timeDisplay">--:--:--</div>
-      <small id="scaleName">BÁSCULA FLEJADORA</small>
+      <small id="scaleName">Cargando...</small>
     </div>
   </header>
 
   <main>
-    <div class="box">
+    <div class="box live-data-box">
+      <h5 class="mb-3 fw-semibold">Datos en Directo<span class="live-indicator"></span></h5>
       <div class="box-content">
         <div class="info-box">
-          <img src="bascula.png" alt="Weight">
-          <p class="weight-display" id="weightDisplay">0.0 <b class="unit">Kg</b></p>
+          <i class="bi bi-speedometer2 display-icon" aria-hidden="true"></i>
+          <span class="weight-display" id="weightDisplay">-- <b class="unit">Kg</b></span>
+          <div class="tolerance-bar-container">
+            <div class="tolerance-bar-track">
+              <div class="tolerance-zone zone-low"></div>
+              <div class="tolerance-zone zone-target"></div>
+              <div class="tolerance-zone zone-high"></div>
+              <div class="tolerance-indicator" id="weight-tolerance-indicator"></div>
+            </div>
+          </div>
         </div>
         <div class="info-box">
-          <img src="medida.png" alt="DimensionsLive">
-          <p class="dimension-display" id="dimensionDisplay">0 <b class="unit">mm</b></p>
+           <i class="bi bi-rulers display-icon" id="iconDimensionLive" aria-hidden="true"></i>
+          <span class="dimension-display" id="dimensionDisplay">-- <b class="unit">mm</b></span>
         </div>
         <div class="info-box">
-          <img src="recuento.png" alt="Pallets">
-          <p id="boxNumberDisplay">1120 <b class="unit">Cajas</b></p>
+           <i class="bi bi-box-seam display-icon" aria-hidden="true"></i>
+          <span id="boxNumberDisplay">-- <b class="unit">Cajas</b></span>
         </div>
       </div>
     </div>
 
     <div class="box">
+       <h5 class="mb-3 fw-semibold">Última Caja Registrada</h5>
       <div class="box-content">
         <div class="info-box">
-          <img src="bascula.png" alt="Weight">
-          <p class="weight-display" id="lastWeightDisplay">44.0 <b class="unit">Kg</b></p>
+           <i class="bi bi-speedometer2 display-icon" aria-hidden="true"></i>
+          <span class="weight-display" id="lastWeightDisplay">-- <b class="unit">Kg</b></span>
         </div>
         <div class="info-box">
-          <img src="medida.png" alt="Dimensions">
-          <p class="dimension-display" id="lastDimensionDisplay">0 <b class="unit">mm</b></p>
+           <i class="bi bi-rulers display-icon" id="iconDimensionLast" aria-hidden="true"></i>
+          <span class="dimension-display" id="lastDimensionDisplay">-- <b class="unit">mm</b></span>
         </div>
         <div class="info-box">
-          <img src="recuento.png" alt="Pallets">
-          <p id="lastBoxNumberDisplay">1119 <b class="unit">Cajas</b></p>
+            <i class="bi bi-box-seam display-icon" aria-hidden="true"></i>
+          <span id="lastBoxNumberDisplay">-- <b class="unit">Cajas</b></span>
         </div>
       </div>
       <div class="bottom-row">
         <div class="barcode-container">
           <div class="barcode-section">
-            <p>Código de Barras de la Última <b id="boxTypeModel">Cajas</b></p>
+            <p>Código Barras Última <b id="boxTypeModel">Caja</b></p>
             <svg id="lastBarcode"></svg>
           </div>
         </div>
         <div class="qr-rfid-container">
           <div class="rfid-section">
             <p>RFID Code</p>
-            <img src="rfid-logo.png" alt="RFID Code" class="rfid-logo">
+             <img src="rfid-logo.png" alt="RFID Code" class="rfid-logo" onerror="this.alt='RFID Logo no disponible'; this.src='https://placehold.co/100x100/cccccc/333333?text=RFID';">
           </div>
           <div class="qr-section">
             <p>QR Code</p>
             <div id="qrCode" class="qr-code"></div>
           </div>
         </div>
-      </div>  
+      </div>
     </div>
   </main>
 
-  <!-- Scripts -->
-  <!-- Bootstrap JS -->
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
   <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-  <!-- JsBarcode Library -->
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
-  <!-- JavaScript -->
+
   <script>
-    let lastWeight = null;
-    let lastDimension = null;
-    let lastBoxNumber = null;
+        // --- Variables Globales ---
+        let lastWeight = null, lastDimension = null, lastBoxNumber = null;
+        let liveWeight = null, liveDimension = null, liveBoxNumber = null;
+        let qrCodeInstance = null; // Instancia del código QR
+        const qrCodeElement = document.getElementById("qrCode"); // Elemento contenedor del QR
+        let updateInterval = null; // ID del intervalo para actualizar datos
 
-    let liveWeight = null;
-    let liveDimension = null;
-    let liveBoxNumber = null;
+        // --- Funciones Auxiliares ---
 
-    function getTokenFromUrl() {
-      const urlParams = new URLSearchParams(window.location.search);
-      return urlParams.get('token');
-    }
-
-    const token = getTokenFromUrl();
-    const apiUrl = `/api/control-weight/${token}`;
-
-    // Detectar parámetro m3 en la URL
-    function hasM3Param() {
-      const urlParams = new URLSearchParams(window.location.search);
-      return urlParams.get('m3') === 'true';
-    }
-    const isM3Active = hasM3Param();
-    // Cambiar imagen si m3=true
-    if (isM3Active) {
-      const imageElements = document.querySelectorAll('img[alt="Dimensions"]');
-      imageElements.forEach(img => img.src = '8052211.png');
-    }
-
-    var qrCodeElement = document.getElementById("qrCode");
-    var qrCodeInstance = null;
-
-    async function updateData() {
-      try {
-        const response = await fetch(apiUrl);
-
-        if (!response.ok) {
-          throw new Error(`Error HTTP: ${response.status}`);
+        /**
+         * Obtiene el valor de un parámetro de la URL.
+         * @param {string} name - Nombre del parámetro.
+         * @returns {string|null} - Valor del parámetro o null si no existe.
+         */
+        function getUrlParameter(name) {
+          const urlParams = new URLSearchParams(window.location.search);
+          return urlParams.get(name);
         }
 
-        const data = await response.json();
-        console.log("Datos recibidos:", data);
+        const token = getUrlParameter('token'); // Obtener token de la URL
+        const apiUrl = token ? `/api/control-weight/${token}` : null; // Construir URL de la API
+        const isM3Active = getUrlParameter('m3') === 'true'; // Verificar si el modo m³ está activo
 
-        const grossWeight = parseFloat(data.gross_weight) || 0;
-        const lastControlWeight = parseFloat(data.last_control_weight) || 0;
-
-        document.getElementById('scaleName').innerHTML = data.name || "Nombre de la Báscula";
-        document.getElementById('orderId').textContent = data.order_id || "Nº de Orden";
-
-        // Actualizar fecha de inicio
-        if (data.created_at) {
-          const createdAt = new Date(data.created_at);
-          const formattedDate = createdAt.toLocaleDateString('es-ES', { year: 'numeric', month: '2-digit', day: '2-digit' });
-          const formattedTime = createdAt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-          document.getElementById('created-at').textContent = `Iniciada ${formattedDate} ${formattedTime}`;
-        } else {
-          document.getElementById('created-at').textContent = "Iniciada ...";
-        }
-
-        // Detectar cambios en los datos en vivo y aplicar efecto de zoom
-        if (grossWeight !== liveWeight) {
-          const weightDisplay = document.getElementById('weightDisplay');
-          weightDisplay.classList.add('zoom');
-          setTimeout(() => {
-            weightDisplay.classList.remove('zoom');
-          }, 2000);
-        }
-
-        if (data.dimension !== liveDimension) {
-          const dimensionDisplay = document.getElementById('dimensionDisplay');
-          dimensionDisplay.classList.add('zoom');
-          setTimeout(() => {
-            dimensionDisplay.classList.remove('zoom');
-          }, 2000);
-        }
-
-        if (data.box_number !== liveBoxNumber) {
-          const boxNumberDisplay = document.getElementById('boxNumberDisplay');
-          boxNumberDisplay.classList.add('zoom');
-          setTimeout(() => {
-            boxNumberDisplay.classList.remove('zoom');
-          }, 2000);
-        }
-
-        document.getElementById('weightDisplay').innerHTML = grossWeight.toFixed(2) + ' <b class="unit">Kg</b>';
-        document.getElementById('dimensionDisplay').innerHTML = data.dimension + ' <b class="unit">mm</b>';
-        document.getElementById('boxNumberDisplay').innerHTML = data.box_number  + ' <b class="unit">'+ data.box_type +'</b>';
-
-        // Detectar cambios en los últimos datos y aplicar efecto de zoom con color rojo
-        if (lastControlWeight !== lastWeight) {
-          const lastWeightDisplay = document.getElementById('lastWeightDisplay');
-          lastWeightDisplay.classList.add('zoom-red');
-          setTimeout(() => {
-            lastWeightDisplay.classList.remove('zoom-red');
-          }, 2000);
-        }
-
-        if (data.last_dimension !== lastDimension) {
-          const lastDimensionDisplay = document.getElementById('lastDimensionDisplay');
-          lastDimensionDisplay.classList.add('zoom-red');
-          setTimeout(() => {
-            lastDimensionDisplay.classList.remove('zoom-red');
-          }, 2000);
-        }
-
-        if (data.last_box_number !== lastBoxNumber) {
-          const lastBoxNumberDisplay = document.getElementById('lastBoxNumberDisplay');
-          lastBoxNumberDisplay.classList.add('zoom-red');
-          setTimeout(() => {
-            lastBoxNumberDisplay.classList.remove('zoom-red');
-          }, 2000);
-        }
-
-        document.getElementById('lastWeightDisplay').innerHTML = lastControlWeight.toFixed(2) + ' <b class="unit">Kg</b>';
-            // Mostrar `box_m3` si m3=true
+        // Cambiar icono de dimensión si m3=true
         if (isM3Active) {
-          document.getElementById('lastDimensionDisplay').innerHTML = (data.box_m3 / 1000000).toFixed(2) + ' <b class="unit">m³</b>';
-
-        } else {
-          document.getElementById('lastDimensionDisplay').innerHTML = data.last_dimension + ' <b class="unit">mm</b>';
+          const iconLive = document.getElementById('iconDimensionLive');
+          const iconLast = document.getElementById('iconDimensionLast');
+          if (iconLive) { iconLive.classList.replace('bi-rulers', 'bi-box'); }
+          if (iconLast) { iconLast.classList.replace('bi-rulers', 'bi-box'); }
         }
 
-        document.getElementById('lastBoxNumberDisplay').innerHTML = data.last_box_number + ' <b class="unit">'+ data.box_type +'</b>';
-        document.getElementById('boxTypeModel').innerHTML =data.box_type;
-
-        // Generar código de barras
-        JsBarcode("#lastBarcode", data.last_barcoder.toString(), {
-          format: "CODE128",
-          displayValue: true,
-          fontSize: 20,
-          height: 80
-        });
-
-          // Generar o actualizar el código QR
-        if (qrCodeInstance === null) {
-          qrCodeInstance = new QRCode(qrCodeElement, {
-            text: data.last_barcoder.toString(),
-            width: 100,
-            height: 100
-          });
-        } else {
-          qrCodeInstance.clear();
-          qrCodeInstance.makeCode(data.last_barcoder.toString());
+        /**
+         * Actualiza el contenido de texto de un elemento HTML.
+         * @param {string} id - ID del elemento.
+         * @param {string} text - Texto a establecer.
+         */
+        function setTextContent(id, text) {
+          const element = document.getElementById(id);
+          if (element) {
+            element.textContent = text;
+          } else {
+            console.warn(`Elemento ID '${id}' no encontrado.`);
+          }
         }
 
-        // Actualizar valores anteriores
-        lastWeight = lastControlWeight;
-        lastDimension = data.last_dimension;
-        lastBoxNumber = data.last_box_number;
+        /**
+         * Actualiza el contenido HTML de un elemento.
+         * @param {string} id - ID del elemento.
+         * @param {string} html - Contenido HTML a establecer.
+         */
+        function setHTMLContent(id, html) {
+          const element = document.getElementById(id);
+          if (element) {
+            element.innerHTML = html;
+          } else {
+            console.warn(`Elemento ID '${id}' no encontrado.`);
+          }
+        }
 
-        // Actualizar valores en vivo
-        liveWeight = grossWeight;
-        liveDimension = data.dimension;
-        liveBoxNumber = data.box_number;
+        /**
+         * Aplica una clase de animación CSS a un elemento temporalmente.
+         * @param {string} elementId - ID del elemento.
+         * @param {string} animationClass - Clase CSS de la animación.
+         * @param {number} [duration=1000] - Duración de la animación en ms.
+         */
+        function applyAnimation(elementId, animationClass, duration = 1000) {
+          const element = document.getElementById(elementId);
+          if (element) {
+            element.classList.add(animationClass);
+            setTimeout(() => {
+              element.classList.remove(animationClass);
+            }, duration);
+          }
+        }
 
-      } catch (error) {
-        console.error("Error al obtener o procesar datos de la API:", error);
-      }
-    }
+        /**
+         * Genera un código de barras en un elemento SVG.
+         * @param {string} elementId - ID del elemento SVG.
+         * @param {string} value - Valor para el código de barras.
+         */
+        function generateBarcode(elementId, value) {
+            const element = document.getElementById(elementId);
+            if (!element) {
+                console.error(`Elemento SVG con ID '${elementId}' no encontrado para barcode.`);
+                return;
+            }
+            if (value) {
+                try {
+                    JsBarcode(element, value, {
+                        format: "CODE128",
+                        displayValue: true, // Mostrar valor debajo
+                        textMargin: 5,
+                        fontSize: 18,
+                        height: 100, // Altura del código de barras
+                        margin: 10 // Margen alrededor
+                    });
+                    element.style.display = 'block'; // Mostrar el SVG
+                } catch (e) {
+                    console.error("Error al generar código de barras:", e);
+                    element.style.display = 'none'; // Ocultar si hay error
+                }
+            } else {
+                element.style.display = 'none'; // Ocultar si no hay valor
+            }
+        }
 
-    function updateTime() {
-      const timeElement = document.getElementById('timeDisplay');
-      const now = new Date();
-      const options = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
-      timeElement.textContent = now.toLocaleTimeString('es-ES', options);
-    }
+        /**
+         * Genera un código QR en un elemento DIV.
+         * @param {HTMLElement} element - Elemento HTML donde generar el QR.
+         * @param {string} value - Valor para el código QR.
+         */
+        function generateQRCode(element, value) {
+            if (!element) {
+                console.error("Elemento para QR no proporcionado.");
+                return;
+            }
+            // Limpiar QR anterior
+            element.innerHTML = '';
+            qrCodeInstance = null;
 
-    setInterval(updateData, 300);
-    setInterval(updateTime, 1000);
+            if (value) {
+                try {
+                    qrCodeInstance = new QRCode(element, {
+                        text: value,
+                        width: 100,
+                        height: 100,
+                        colorDark : "#000000", // Color de los módulos oscuros
+                        colorLight : "#ffffff", // Color de los módulos claros
+                        correctLevel : QRCode.CorrectLevel.H // Nivel de corrección de errores (Alto)
+                    });
+                    element.style.display = 'flex'; // Mostrar el contenedor del QR
+                } catch (e) {
+                    console.error("Error al generar código QR:", e);
+                    element.style.display = 'none'; // Ocultar si hay error
+                }
+            } else {
+                element.style.display = 'none'; // Ocultar si no hay valor
+            }
+        }
 
-    updateData();
-    updateTime();
-  </script>
+        /**
+         * Actualiza la posición del indicador en la barra de tolerancia de peso.
+         * @param {number} currentWeight - Peso actual.
+         * @param {number} theoreticalWeight - Peso teórico de referencia.
+         */
+        function updateToleranceBar(currentWeight, theoreticalWeight) {
+            const indicator = document.getElementById('weight-tolerance-indicator');
+            if (!indicator) return; // Salir si el indicador no existe
+
+            // Ocultar indicador si no hay peso teórico válido
+            if (isNaN(theoreticalWeight) || theoreticalWeight <= 0) {
+                indicator.style.display = 'none';
+                return;
+            }
+
+            // --- Cálculo de la posición del indicador ---
+            const rangeMargin = 0.20; // 20% de margen visual
+            const minRange = theoreticalWeight * (1 - rangeMargin);
+            const maxRange = theoreticalWeight * (1 + rangeMargin);
+            const rangeSpan = maxRange - minRange;
+
+            let indicatorPositionPercent = 50; // Posición por defecto (centro)
+
+            if (rangeSpan > 0) { // Evitar división por cero
+                const relativePosition = (currentWeight - minRange) / rangeSpan;
+                indicatorPositionPercent = Math.max(0, Math.min(100, relativePosition * 100));
+            } else {
+                if (currentWeight < theoreticalWeight) indicatorPositionPercent = 0;
+                else if (currentWeight > theoreticalWeight) indicatorPositionPercent = 100;
+            }
+
+            // Mover el indicador aplicando el porcentaje calculado a 'left'
+            indicator.style.left = indicatorPositionPercent + '%';
+            indicator.style.display = 'block'; // Asegurar que sea visible
+        }
+
+
+        /**
+         * Obtiene los datos de la API y actualiza la interfaz de usuario.
+         */
+        async function updateData() {
+          // Verificar si la URL de la API está disponible
+          if (!apiUrl) {
+            console.warn("No se puede actualizar: falta token en la URL.");
+            setTextContent('orderId', 'Error: Falta Token');
+            if (updateInterval) clearInterval(updateInterval);
+            return;
+          }
+
+          try {
+            // Realizar la petición a la API
+            const response = await fetch(apiUrl);
+            if (!response.ok) throw new Error(`Error HTTP: ${response.status} ${response.statusText}`);
+            const data = await response.json();
+
+            // --- 1. Extraer y procesar datos ---
+            const grossWeight = parseFloat(data.gross_weight) || 0;
+            const theoreticalWeight = parseFloat(data.teoretico_weight);
+            const dimensionValue = data.dimension ?? '--';
+            const boxNumberValue = data.box_number ?? '--';
+            const boxType = data.box_type || 'Caja';
+            const lastControlWeight = parseFloat(data.last_control_weight) || 0;
+            const lastDimensionValue = data.last_dimension ?? '--';
+            const lastBoxM3 = data.box_m3;
+            const lastBoxNumberValue = data.last_box_number ?? '--';
+            const lastBarcodeValue = data.last_barcoder ? data.last_barcoder.toString() : '';
+
+            // --- 2. Actualizar UI General ---
+            setTextContent('scaleName', data.name || "Báscula Desconocida");
+            setTextContent('orderId', data.order_id || "N/A");
+            if (data.created_at) {
+              const createdAt = new Date(data.created_at);
+              const formattedDate = createdAt.toLocaleDateString('es-ES', { year: 'numeric', month: '2-digit', day: '2-digit' });
+              const formattedTime = createdAt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+              setTextContent('created-at', `Iniciada ${formattedDate} ${formattedTime}`);
+            } else {
+              setTextContent('created-at', "Iniciada ...");
+            }
+
+            // --- 3. Actualizar Datos en Vivo ---
+            if (grossWeight !== liveWeight) {
+              applyAnimation('weightDisplay', 'zoom');
+              setHTMLContent('weightDisplay', `${grossWeight.toFixed(2)} <b class="unit">Kg</b>`);
+              liveWeight = grossWeight;
+              updateToleranceBar(grossWeight, theoreticalWeight); // Actualizar barra/indicador
+            }
+            if (dimensionValue !== liveDimension) {
+              applyAnimation('dimensionDisplay', 'zoom');
+              setHTMLContent('dimensionDisplay', `${dimensionValue} <b class="unit">mm</b>`);
+              liveDimension = dimensionValue;
+            }
+            if (boxNumberValue !== liveBoxNumber) {
+              applyAnimation('boxNumberDisplay', 'zoom');
+              setHTMLContent('boxNumberDisplay', `${boxNumberValue} <b class="unit">${boxType}</b>`);
+              liveBoxNumber = boxNumberValue;
+            }
+
+            // --- 4. Actualizar Última Caja ---
+            if (lastControlWeight !== lastWeight) {
+              applyAnimation('lastWeightDisplay', 'zoom-red');
+              setHTMLContent('lastWeightDisplay', `${lastControlWeight.toFixed(2)} <b class="unit">Kg</b>`);
+              lastWeight = lastControlWeight;
+            }
+            // Lógica para mostrar última dimensión (mm o m³)
+            let lastDimensionDisplayValue = '--';
+            let lastDimensionUnit = 'mm';
+            if (isM3Active && lastBoxM3 !== null && lastBoxM3 !== undefined && !isNaN(parseFloat(lastBoxM3))) {
+              lastDimensionDisplayValue = (parseFloat(lastBoxM3) / 1000000).toFixed(3);
+              lastDimensionUnit = 'm³';
+            } else {
+              lastDimensionDisplayValue = lastDimensionValue;
+              lastDimensionUnit = 'mm';
+            }
+            const currentLastDimensionHTML = `${lastDimensionDisplayValue} <b class="unit">${lastDimensionUnit}</b>`;
+            if (document.getElementById('lastDimensionDisplay').innerHTML !== currentLastDimensionHTML) {
+                applyAnimation('lastDimensionDisplay', 'zoom-red');
+                setHTMLContent('lastDimensionDisplay', currentLastDimensionHTML);
+                lastDimension = lastDimensionValue;
+            }
+            if (lastBoxNumberValue !== lastBoxNumber) {
+              applyAnimation('lastBoxNumberDisplay', 'zoom-red');
+              setHTMLContent('lastBoxNumberDisplay', `${lastBoxNumberValue} <b class="unit">${boxType}</b>`);
+              lastBoxNumber = lastBoxNumberValue;
+            }
+            setTextContent('boxTypeModel', boxType);
+
+            // --- 5. Generar Barcode y QR ---
+            generateBarcode('lastBarcode', lastBarcodeValue);
+            generateQRCode(qrCodeElement, lastBarcodeValue);
+
+          } catch (error) {
+            console.error("Error al obtener o procesar datos de la API:", error);
+          }
+        }
+
+        /**
+         * Actualiza la hora mostrada en el header.
+         */
+        function updateTime() {
+          const timeElement = document.getElementById('timeDisplay');
+          if (!timeElement) return;
+          const now = new Date();
+          const options = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+          timeElement.textContent = now.toLocaleTimeString('es-ES', options);
+        }
+
+        // --- Inicialización ---
+        function initializeApp() {
+            updateTime();
+            setInterval(updateTime, 1000);
+
+            if (apiUrl) {
+                updateData();
+                updateInterval = setInterval(updateData, 300);
+            } else {
+                setTextContent('orderId', 'Error: Falta Token');
+                console.error("No se iniciará la actualización automática: falta token en la URL.");
+                 const liveIndicator = document.querySelector('.live-indicator');
+                 if(liveIndicator) liveIndicator.style.display = 'none';
+                 const toleranceIndicator = document.getElementById('weight-tolerance-indicator');
+                 if(toleranceIndicator) toleranceIndicator.style.display = 'none';
+            }
+
+            window.addEventListener('beforeunload', () => {
+                if (updateInterval) clearInterval(updateInterval);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeApp);
+
+      </script>
 </body>
 </html>

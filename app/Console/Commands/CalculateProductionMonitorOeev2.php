@@ -72,8 +72,8 @@ class CalculateProductionMonitorOeev2 extends Command
                     $timeData = $this->orderTimeService->getTimeOrder($productionLineId);
                    $this->info("[" . Carbon::now()->toDateTimeString() . "] Tiempo en segundos: {$timeData['timeOnSeconds']}");
                     //$this->info("[" . Carbon::now()->toDateTimeString() . "] Tiempo en formato: {$timeData['timeOnFormatted']}");
-                    $orderTimeActivitySeconds  = $timeData['timeOnSeconds'];
-                    $orderTimeActivityFormatted = $timeData['timeOnFormatted'];
+                   // $orderTimeActivitySeconds  = $timeData['timeOnSeconds'];
+                   // $orderTimeActivityFormatted = $timeData['timeOnFormatted'];
 
                     //obtenemos el order en curso el ultimo por production_line_id
                     $currentOrder = OrderStat::where('production_line_id', $productionLineId)
@@ -135,8 +135,7 @@ class CalculateProductionMonitorOeev2 extends Command
                         $this->sendProductionDataToMQTT($totalUnitsShift, $totalUnitsWeek, $monitor);
 
 
-                        //llamamos a un funciona para calcular el oee para sensores y le pasamos $orderTimeActivitySeconds  $currentOrder 
-                        $this->calculateOeeForSensors($orderTimeActivitySeconds, $currentOrder, $countSensors, $monitor);
+                        $this->calculateOeeForSensors( $currentOrder, $countSensors, $monitor);
 
                     }else{
                         $this->info("[" . Carbon::now()->toDateTimeString() . "] Monitor Sensor desactivado para la Linea de production ".$productionLineId);
@@ -217,14 +216,16 @@ class CalculateProductionMonitorOeev2 extends Command
 
     }
 
-    private function calculateOeeForSensors($orderTimeActivitySeconds, $currentOrder, $countSensors, $monitor)
+    private function calculateOeeForSensors($currentOrder, $countSensors, $monitor)
     {
         try {
-            $this->info("[" . Carbon::now()->toDateTimeString() . "] Calculando OEE para sensores... Con tiempo total: {$orderTimeActivitySeconds} segundos");
             
+            $orderTimeActivitySeconds= $currentOrder->on_time + 1;
             // Obtener datos de la orden
+            $this->info("[" . Carbon::now()->toDateTimeString() . "] Calculando OEE para sensores... Con tiempo total: {$orderTimeActivitySeconds} segundos");
             $unitsMadeReal = $currentOrder ? $currentOrder->units_made_real : 0;
             $downTime = $currentOrder ? $currentOrder->down_time : 0;
+            $prepairTime = $currentOrder ? $currentOrder->prepair_time : 0;
             $productionStopTime = $currentOrder ? $currentOrder->production_stops_time : 0;
             
             // Validar que no se intente dividir por cero
@@ -232,7 +233,7 @@ class CalculateProductionMonitorOeev2 extends Command
                 $this->error("[" . Carbon::now()->toDateTimeString() . "] units_made_real es 0 o negativo, no se puede calcular secondsPerUnitReal.");
                 $secondsPerUnitReal = 0;
             } else {
-                $secondsPerUnitReal = ($orderTimeActivitySeconds - ($downTime + $productionStopTime)) / $unitsMadeReal;
+                $secondsPerUnitReal = ($orderTimeActivitySeconds - ($downTime + $productionStopTime + $prepairTime)) / $unitsMadeReal;
                 $this->info("[" . Carbon::now()->toDateTimeString() . "] secondsPerUnitReal calculado: {$secondsPerUnitReal} segundos");
             }
             

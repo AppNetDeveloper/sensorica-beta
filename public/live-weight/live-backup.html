@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>BOISOLO Autoconto</title>
+  <!-- jQuery (Requerido por Bootstrap) -->
+  <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+  <!-- Bootstrap CSS -->
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <!-- JsBarcode Library -->
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
+  <!-- QRCode.js Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      background-color: #ffffff; /* Fondo blanco */
+      color: #000000; /* Texto negro */
+      font-family: 'Roboto', sans-serif;
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+    
+    /* Header modificado */
+    .header-container {
+      width: 100%;
+      background-color: #343a40; /* Color gris oscuro */
+      color: white;
+      padding: 10px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header-left img {
+      max-height: 60px;
+      width: auto;
+    }
+    .header-center {
+      text-align: center;
+      font-size: 1.3rem;
+    }
+    .header-right {
+      font-size: 1.5rem;
+      text-align: right;
+      margin: 0;
+      padding: 0;
+    }
+    .header-right small {
+      display: block;
+      font-size: 1.3rem;
+      color: #ffc107;
+      text-align: right;
+      margin: 0;
+      padding: 0;
+    }
+    
+    main {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      height: 100%;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    
+    .box {
+      background-color: #f8f9fa; /* Color gris claro */
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 10px;
+      width: 98%;
+      max-width: 2400px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    .box-content {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      width: 100%;
+    }
+    
+    .info-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 15px;
+      border-radius: 8px;
+      background-color: #e9ecef; /* Color gris claro */
+      box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.05);
+    }
+    
+    .weight-display, .dimension-display, .boxNumberDisplay, .lastBoxNumberDisplay {
+      font-size: 5vw;
+      font-weight: bold;
+      color: #343a40; /* Color gris oscuro */
+      line-height: 1;
+      word-wrap: break-word;
+    }
+    
+    #weightDisplay, #dimensionDisplay, #lastWeightDisplay, #lastDimensionDisplay, #boxNumberDisplay, #lastBoxNumberDisplay {
+      font-size: 5vw;
+      font-weight: bold;
+      line-height: 1;
+      word-wrap: break-word;
+      color: #343a40; /* Color gris oscuro */
+    }
+    
+    .unit {
+      font-size: 40%;
+      vertical-align: baseline;
+      color: #6c757d; /* Color gris medio */
+    }
+    
+    .info-box img {
+      width: 8vh;
+      margin-bottom: 10px;
+      filter: brightness(0); /* Mantener el color original de la imagen */
+    }
+    
+    .info-box p {
+      font-size: 2.5vh;
+      color: #343a40; /* Color gris oscuro */
+    }
+    
+    .barcode p {
+      font-size: 2vh;
+      color: #343a40; /* Color gris oscuro */
+    }
+    
+    /* Estilos para la sección inferior */
+    .bottom-row {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      padding-top: 10px;
+      padding-bottom: 10px;
+    }
+    
+    .barcode-container {
+      display: flex;
+      align-items: center;
+    }
+    
+    .barcode-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    .barcode-container p {
+      font-size: 1.2rem;
+      color: #343a40;
+      margin-bottom: 5px; /* Ajusta el margen según sea necesario */
+      text-align: center;
+    }
+    
+    #lastBarcode {
+      width: 100%; /* Ajusta el ancho según sea necesario */
+      height: auto;
+      margin-top: 5px; /* Ajusta el margen según sea necesario */
+    }
+    
+    
+    .qr-rfid-container {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 30px;
+      margin-left: auto; /* Empuja este contenedor hacia la derecha */
+    }
+    
+    .qr-rfid-container div {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    .qr-rfid-container p {
+      font-size: 1.2rem;
+      color: #343a40;
+      margin-bottom: 5px;
+    }
+    
+    .rfid-logo, .qr-code {
+      width: 100px;
+      height: 100px;
+    }
+    
+    @media (max-width: 768px) {
+      .box-content {
+        grid-template-columns: 1fr;
+      }
+    
+      .weight-display, .dimension-display {
+        font-size: 20vw;
+      }
+    
+      .info-box img {
+        width: 12vh;
+      }
+    
+      .info-box p {
+        font-size: 2vh;
+      }
+    
+      /* Aseguramos que en móviles los elementos se apilen */
+      .bottom-row {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    
+      .qr-rfid-container {
+        margin-left: 0;
+        margin-top: 20px;
+        justify-content: flex-start;
+      }
+    }
+    
+    @keyframes zoomEffect {
+      0% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.2);
+      }
+      100% {
+        transform: scale(1);
+      }
+    }
+    
+    .zoom {
+      animation: zoomEffect 2s;
+    }
+    
+    @keyframes zoomEffectRed {
+      0% {
+        transform: scale(1);
+        color: #343a40; /* Color gris oscuro */
+      }
+      50% {
+        transform: scale(1.2);
+        color: red;
+      }
+      100% {
+        transform: scale(1);
+        color: #343a40; /* Color gris oscuro */
+      }
+    }
+    
+    .zoom-red {
+      animation: zoomEffectRed 2s;
+    }
+    
+  </style>
+</head>
+<body>
+  <!-- Header modificado -->
+  <header class="header-container">
+    <div class="header-left">
+      <img src="logo.png" alt="Logo de Autoconto">
+    </div>
+    <div class="header-center">
+      <div id="orderId">15/4611</div>
+      <div id="created-at" style="font-size: 1rem;">Iniciada ...</div>
+    </div>
+    <div class="header-right">
+      <div id="timeDisplay">--:--:--</div>
+      <small id="scaleName">BÁSCULA FLEJADORA</small>
+    </div>
+  </header>
+
+  <main>
+    <div class="box">
+      <div class="box-content">
+        <div class="info-box">
+          <img src="bascula.png" alt="Weight">
+          <p class="weight-display" id="weightDisplay">0.0 <b class="unit">Kg</b></p>
+        </div>
+        <div class="info-box">
+          <img src="medida.png" alt="DimensionsLive">
+          <p class="dimension-display" id="dimensionDisplay">0 <b class="unit">mm</b></p>
+        </div>
+        <div class="info-box">
+          <img src="recuento.png" alt="Pallets">
+          <p id="boxNumberDisplay">1120 <b class="unit">Cajas</b></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="box">
+      <div class="box-content">
+        <div class="info-box">
+          <img src="bascula.png" alt="Weight">
+          <p class="weight-display" id="lastWeightDisplay">44.0 <b class="unit">Kg</b></p>
+        </div>
+        <div class="info-box">
+          <img src="medida.png" alt="Dimensions">
+          <p class="dimension-display" id="lastDimensionDisplay">0 <b class="unit">mm</b></p>
+        </div>
+        <div class="info-box">
+          <img src="recuento.png" alt="Pallets">
+          <p id="lastBoxNumberDisplay">1119 <b class="unit">Cajas</b></p>
+        </div>
+      </div>
+      <div class="bottom-row">
+        <div class="barcode-container">
+          <div class="barcode-section">
+            <p>Código de Barras de la Última <b id="boxTypeModel">Cajas</b></p>
+            <svg id="lastBarcode"></svg>
+          </div>
+        </div>
+        <div class="qr-rfid-container">
+          <div class="rfid-section">
+            <p>RFID Code</p>
+            <img src="rfid-logo.png" alt="RFID Code" class="rfid-logo">
+          </div>
+          <div class="qr-section">
+            <p>QR Code</p>
+            <div id="qrCode" class="qr-code"></div>
+          </div>
+        </div>
+      </div>  
+    </div>
+  </main>
+
+  <!-- Scripts -->
+  <!-- Bootstrap JS -->
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+  <!-- JsBarcode Library -->
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
+  <!-- JavaScript -->
+  <script>
+    let lastWeight = null;
+    let lastDimension = null;
+    let lastBoxNumber = null;
+
+    let liveWeight = null;
+    let liveDimension = null;
+    let liveBoxNumber = null;
+
+    function getTokenFromUrl() {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get('token');
+    }
+
+    const token = getTokenFromUrl();
+    const apiUrl = `/api/control-weight/${token}`;
+
+    // Detectar parámetro m3 en la URL
+    function hasM3Param() {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get('m3') === 'true';
+    }
+    const isM3Active = hasM3Param();
+    // Cambiar imagen si m3=true
+    if (isM3Active) {
+      const imageElements = document.querySelectorAll('img[alt="Dimensions"]');
+      imageElements.forEach(img => img.src = '8052211.png');
+    }
+
+    var qrCodeElement = document.getElementById("qrCode");
+    var qrCodeInstance = null;
+
+    async function updateData() {
+      try {
+        const response = await fetch(apiUrl);
+
+        if (!response.ok) {
+          throw new Error(`Error HTTP: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log("Datos recibidos:", data);
+
+        const grossWeight = parseFloat(data.gross_weight) || 0;
+        const lastControlWeight = parseFloat(data.last_control_weight) || 0;
+
+        document.getElementById('scaleName').innerHTML = data.name || "Nombre de la Báscula";
+        document.getElementById('orderId').textContent = data.order_id || "Nº de Orden";
+
+        // Actualizar fecha de inicio
+        if (data.created_at) {
+          const createdAt = new Date(data.created_at);
+          const formattedDate = createdAt.toLocaleDateString('es-ES', { year: 'numeric', month: '2-digit', day: '2-digit' });
+          const formattedTime = createdAt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+          document.getElementById('created-at').textContent = `Iniciada ${formattedDate} ${formattedTime}`;
+        } else {
+          document.getElementById('created-at').textContent = "Iniciada ...";
+        }
+
+        // Detectar cambios en los datos en vivo y aplicar efecto de zoom
+        if (grossWeight !== liveWeight) {
+          const weightDisplay = document.getElementById('weightDisplay');
+          weightDisplay.classList.add('zoom');
+          setTimeout(() => {
+            weightDisplay.classList.remove('zoom');
+          }, 2000);
+        }
+
+        if (data.dimension !== liveDimension) {
+          const dimensionDisplay = document.getElementById('dimensionDisplay');
+          dimensionDisplay.classList.add('zoom');
+          setTimeout(() => {
+            dimensionDisplay.classList.remove('zoom');
+          }, 2000);
+        }
+
+        if (data.box_number !== liveBoxNumber) {
+          const boxNumberDisplay = document.getElementById('boxNumberDisplay');
+          boxNumberDisplay.classList.add('zoom');
+          setTimeout(() => {
+            boxNumberDisplay.classList.remove('zoom');
+          }, 2000);
+        }
+
+        document.getElementById('weightDisplay').innerHTML = grossWeight.toFixed(2) + ' <b class="unit">Kg</b>';
+        document.getElementById('dimensionDisplay').innerHTML = data.dimension + ' <b class="unit">mm</b>';
+        document.getElementById('boxNumberDisplay').innerHTML = data.box_number  + ' <b class="unit">'+ data.box_type +'</b>';
+
+        // Detectar cambios en los últimos datos y aplicar efecto de zoom con color rojo
+        if (lastControlWeight !== lastWeight) {
+          const lastWeightDisplay = document.getElementById('lastWeightDisplay');
+          lastWeightDisplay.classList.add('zoom-red');
+          setTimeout(() => {
+            lastWeightDisplay.classList.remove('zoom-red');
+          }, 2000);
+        }
+
+        if (data.last_dimension !== lastDimension) {
+          const lastDimensionDisplay = document.getElementById('lastDimensionDisplay');
+          lastDimensionDisplay.classList.add('zoom-red');
+          setTimeout(() => {
+            lastDimensionDisplay.classList.remove('zoom-red');
+          }, 2000);
+        }
+
+        if (data.last_box_number !== lastBoxNumber) {
+          const lastBoxNumberDisplay = document.getElementById('lastBoxNumberDisplay');
+          lastBoxNumberDisplay.classList.add('zoom-red');
+          setTimeout(() => {
+            lastBoxNumberDisplay.classList.remove('zoom-red');
+          }, 2000);
+        }
+
+        document.getElementById('lastWeightDisplay').innerHTML = lastControlWeight.toFixed(2) + ' <b class="unit">Kg</b>';
+            // Mostrar `box_m3` si m3=true
+        if (isM3Active) {
+          document.getElementById('lastDimensionDisplay').innerHTML = (data.box_m3 / 1000000).toFixed(2) + ' <b class="unit">m³</b>';
+
+        } else {
+          document.getElementById('lastDimensionDisplay').innerHTML = data.last_dimension + ' <b class="unit">mm</b>';
+        }
+
+        document.getElementById('lastBoxNumberDisplay').innerHTML = data.last_box_number + ' <b class="unit">'+ data.box_type +'</b>';
+        document.getElementById('boxTypeModel').innerHTML =data.box_type;
+
+        // Generar código de barras
+        JsBarcode("#lastBarcode", data.last_barcoder.toString(), {
+          format: "CODE128",
+          displayValue: true,
+          fontSize: 20,
+          height: 80
+        });
+
+          // Generar o actualizar el código QR
+        if (qrCodeInstance === null) {
+          qrCodeInstance = new QRCode(qrCodeElement, {
+            text: data.last_barcoder.toString(),
+            width: 100,
+            height: 100
+          });
+        } else {
+          qrCodeInstance.clear();
+          qrCodeInstance.makeCode(data.last_barcoder.toString());
+        }
+
+        // Actualizar valores anteriores
+        lastWeight = lastControlWeight;
+        lastDimension = data.last_dimension;
+        lastBoxNumber = data.last_box_number;
+
+        // Actualizar valores en vivo
+        liveWeight = grossWeight;
+        liveDimension = data.dimension;
+        liveBoxNumber = data.box_number;
+
+      } catch (error) {
+        console.error("Error al obtener o procesar datos de la API:", error);
+      }
+    }
+
+    function updateTime() {
+      const timeElement = document.getElementById('timeDisplay');
+      const now = new Date();
+      const options = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+      timeElement.textContent = now.toLocaleTimeString('es-ES', options);
+    }
+
+    setInterval(updateData, 300);
+    setInterval(updateTime, 1000);
+
+    updateData();
+    updateTime();
+  </script>
+</body>
+</html>
