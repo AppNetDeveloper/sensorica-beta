@@ -51,9 +51,17 @@
             </div>
 
             <div class="form-group mt-3">
-                <label for="epc">{{ __('Rfid Point Reser') }} 1= YES 0 = NO</label>
-                <input type="text" name="reset" id="reset" class="form-control" value="{{ old('reset', $rfidDevice->reset) }}" required>
+                <label for="reset">{{ __('Rfid Point Reset') }}</label>
+                <select name="reset" id="reset" class="form-control" required>
+                    <option value="1" {{ old('reset', $rfidDevice->reset) == 1 ? 'selected' : '' }}>
+                        {{ __('Sí') }}
+                    </option>
+                    <option value="0" {{ old('reset', $rfidDevice->reset) == 0 ? 'selected' : '' }}>
+                        {{ __('No') }}
+                    </option>
+                </select>
             </div>
+
 
             <div class="form-group mt-3">
                 <label for="tid">{{ __('TID') }}</label>
@@ -189,11 +197,6 @@
             <div class="form-group mt-3">
                 <label for="last_status_detect">{{ __('Último Estado Detectado') }}</label>
                 <input type="text" name="last_status_detect" id="last_status_detect" class="form-control" value="{{ old('last_status_detect', $rfidDevice->last_status_detect) }}">
-            </div>
-
-            <div class="form-group mt-3">
-                <label for="reset">{{ __('RFID RESSET') }}</label>
-                <input type="text" name="reset" id="reset" class="form-control" value="{{ old('reset', $rfidDevice->reset) }}">
             </div>
 
             <input type="hidden" name="production_line_id" value="{{ $production_line_id }}">

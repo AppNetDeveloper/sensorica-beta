@@ -57,6 +57,7 @@
                                         <th class="d-none">{{ __('Multiplicador velocidad reducida') }}</th>
                                         <th>{{ __('EPC') }}</th>
                                         <th>{{ __('TID') }}</th>
+                                        <th>{{ __('Reset RFID POINT') }}</th> 
                                         <!-- Columna de acciones (no se exporta) -->
                                         <th>{{ __('Acciones') }}</th>
                                     </tr>
@@ -76,6 +77,12 @@
                                             <td class="d-none">{{ $device->reduced_speed_time_multiplier }}</td>
                                             <td>{{ $device->epc }}</td>
                                             <td>{{ $device->tid }}</td>
+                                            <td>
+                                                {{ $device->reset == 1 
+                                                    ? __('Sí') 
+                                                    : __('No') 
+                                                }}
+                                            </td>  
                                             <td>
                                                 <a href="{{ route('rfid.devices.edit', $device->id) }}" 
                                                    class="btn btn-sm btn-primary">
