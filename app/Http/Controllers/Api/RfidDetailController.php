@@ -193,12 +193,25 @@ class RfidDetailController extends Controller
                 } else {
                     // Caso: La tarjeta leída ES la maestra (reset)
                     if ($lastMasterRecord) {
+                        $fechaMaster = $lastMasterRecord->created_at;
+                        $inicioHoy    = Carbon::today(); // 00:00 del día actual
+
                         // Verificar que, después de la última inserción de la tarjeta maestra,
                         // se haya insertado al menos otro registro (de otra tarjeta)
-                        $otroRegistroExiste = RfidList::where('rfid_reading_id', $rfidReading->id)
-                            ->where('tid', '<>', $masterReset->tid)
-                            ->where('created_at', '>', $lastMasterRecord->created_at)
-                            ->exists();
+                        if ($fechaMaster->lt($inicioHoy)) {
+                            // Si la última master es de ayer o antes, consideramos
+                            // que ya hubo otro registro “válido”
+                            $otroRegistroExiste = true;
+                            Log::info("La última tarjeta maestra es de {$fechaMaster->toDateString()}, fuera de hoy: forzando otroRegistroExiste = true.");
+                        } else {
+                            // Si la master fue hoy, evaluamos normalmente
+                            $otroRegistroExiste = RfidList::where('rfid_reading_id', $rfidReading->id)
+                                ->where('tid', '<>', $masterReset->tid)
+                                ->where('created_at', '>', $fechaMaster)
+                                ->whereDate('created_at', $inicioHoy)
+                                ->exists();
+                            Log::info("Chequeo normal de otros registros hoy: " . ($otroRegistroExiste ? 'sí' : 'no'));
+                        }
 
                         // Calcular la diferencia en minutos desde la última inserción de la tarjeta maestra
                         $minutosTranscurridos = Carbon::now()->diffInMinutes(Carbon::parse($lastMasterRecord->created_at));

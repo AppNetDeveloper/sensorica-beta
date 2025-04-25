@@ -745,12 +745,10 @@ public function verifyPassword(Request $request)
         $fromDate = $request->get('from_date');
         $toDate   = $request->get('to_date');
     
-        $operators = Operator::with(['operatorPosts' => function($query) use ($fromDate, $toDate) {
-            // Agregar la relación anidada para ProductList
-            $query->with('productList');
-    
+        $operators = Operator::with(['operatorPosts' => function ($query) use ($fromDate, $toDate) {
+            $query->with(['productList', 'rfidReading']);  // Aquí cargas tu relación existente
+        
             if ($fromDate && $toDate) {
-                // Filtrar utilizando whereBetween para el campo 'created_at'
                 $query->whereBetween('created_at', [$fromDate, $toDate]);
             } elseif ($fromDate) {
                 $query->whereDate('created_at', '>=', $fromDate);
@@ -764,5 +762,4 @@ public function verifyPassword(Request $request)
             'data'    => $operators
         ]);
     }
-    
 }

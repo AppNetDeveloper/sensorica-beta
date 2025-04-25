@@ -19,35 +19,41 @@
         {{-- Contenido del header si es necesario --}}
     </div>
     <div class="card-body">
+        {{-- Contenedor para controles adicionales (Switch) --}}
+        {{-- Este div se moverá con JS a la posición correcta --}}
+        <div class="history-switch-container d-flex justify-content-end mb-2" style="display: none;"> {{-- Oculto inicialmente --}}
+             <div class="form-check form-switch">
+               <input class="form-check-input" type="checkbox" role="switch" id="showHistorySwitch">
+               <label class="form-check-label" for="showHistorySwitch">Mostrar historial</label>
+             </div>
+        </div>
         <div class="table-responsive p-3">
             <table id="relationsTable" class="display table table-striped table-bordered" style="width:100%">
+                {{-- Orden de las columnas en la cabecera --}}
                 <thead>
                     <tr>
-                        <th>Confección</th>
-                        <th>Puesto</th>
-                        <th>Operario</th>
-                        <th>Fecha Inicio</th>
-                        <th>Fecha Fin</th>
-                        <th>Báscula</th>
-                        <th>Sensor</th>
-                        <th>Acciones</th>
-                    </tr>
+                        <th>Confección</th>  <th>Puesto</th>      <th>Báscula</th>     <th>Sensor</th>      <th>Operario</th>    <th>Fecha Inicio</th><th>Fecha Fin</th>   <th>Acciones</th>    </tr>
                 </thead>
                 <tbody></tbody>
             </table>
         </div>
     </div>
 </div>
+
+{{-- Botón flotante para refrescar --}}
+<button id="refreshTableBtn" class="btn btn-primary btn-float" title="Refrescar Tabla">
+    <i class="bi bi-arrow-clockwise"></i>
+</button>
+
 @endsection
 
 @push('style')
-    {{-- Links CSS --}}
+    {{-- Links CSS específicos para esta vista --}}
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.4.1/css/responsive.dataTables.min.css">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    {{-- Font Awesome y Bootstrap Icons son cargados por el layout principal --}}
 
     <style>
         /* Espaciado entre selects en el modal */
@@ -67,7 +73,7 @@
             margin-right: auto;
         }
         /* Responsive: en pantallas pequeñas */
-        @media (max-width: 576px) {
+        @media (max-width: 767px) { /* Ajustado breakpoint para mejor responsividad */
             .swal2-popup {
                 width: 95% !important;
                 max-width: none !important;
@@ -75,6 +81,40 @@
             .custom-select-style {
                 width: 100% !important;
             }
+            /* Ajustar posición del switch y botones en móviles */
+            .top-controls-row .dt-buttons-placeholder, /* Usar los placeholders del DOM */
+            .top-controls-row .switch-placeholder {
+                width: 100%; /* Ocupar todo el ancho */
+                text-align: left; /* Alinear a la izquierda */
+                margin-bottom: 0.5em; /* Espacio entre filas de controles */
+            }
+             .top-controls-row .switch-placeholder {
+                 justify-content: flex-start !important; /* Alinear switch a la izquierda */
+                 padding-left: 0; /* Quitar padding si es necesario */
+             }
+             .dt-buttons .btn {
+                 margin-right: 5px; /* Espacio entre botones */
+                 margin-bottom: 5px;
+             }
+             /* Ajustar filtro y length menu en móviles */
+             .filter-length-row .col-md-6 {
+                 width: 100%;
+                 text-align: left;
+                 margin-bottom: 0.5em;
+             }
+             .dataTables_filter {
+                 float: none !important; /* Quitar float */
+             }
+             .dataTables_length {
+                 float: none !important; /* Quitar float */
+             }
+             /* Ajustar botón flotante en móviles */
+             .btn-float {
+                bottom: 15px;
+                right: 15px;
+                width: 45px;
+                height: 45px;
+             }
         }
         /* Ícono QR en el campo de búsqueda de Select2 */
         .select2-container--default .select2-search--dropdown .select2-search__field {
@@ -83,7 +123,7 @@
         }
         .select2-container--default .select2-search--dropdown .select2-search__field::after {
             content: "\f029"; /* Código FontAwesome para QR */
-            font-family: "Font Awesome 6 Free"; /* Actualizado a FA6 */
+            font-family: "Font Awesome 6 Free"; /* Asume que FA6 está cargado por el layout */
             font-weight: 900;
             position: absolute;
             right: 8px;
@@ -142,7 +182,6 @@
             font-size: 1.5em;
             color: #007bff; /* Color base por defecto */
         }
-        /* --- MODIFICADO: Tamaño de fuente para el número --- */
         .rfid-option-card .rfid-text {
             font-size: 1.1em; /* Aumentado el tamaño */
             font-weight: bold;
@@ -191,7 +230,7 @@
             background-color: transparent !important;
         }
 
-        /* --- MODIFICADO: Layout de columnas auto-adaptable --- */
+        /* Layout de columnas auto-adaptable */
         .select2-container--default .select2-results__options {
             display: grid; /* Usar Grid */
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); /* Columnas automáticas */
@@ -207,8 +246,6 @@
             font-size: 1rem;
             font-weight: normal;
         }
-        /* --- FIN MODIFICACIÓN --- */
-
 
         /* Botones personalizados */
         .btn-custom-success { background-color: green !important; border-color: green !important; color: #fff !important; }
@@ -241,14 +278,85 @@
         /* Etiquetas modal */
         .swal2-html-container label { display: block; margin-top: 0.8em; margin-bottom: 0.2em; font-weight: bold; text-align: left; margin-left: 6%; }
         @media (max-width: 576px) { .swal2-html-container label { margin-left: 0; } }
+
+        /* Estilos para el botón de visibilidad de columnas */
+        .dt-button.buttons-collection {
+            background-color: #6c757d !important; /* Color secundario de Bootstrap */
+            border-color: #6c757d !important;
+            color: #fff !important;
+        }
+        .dt-button.buttons-columnVisibility.active {
+            background-color: #5a6268 !important; /* Un poco más oscuro cuando activo */
+            border-color: #545b62 !important;
+        }
+        .dt-button-collection .dt-button {
+            min-width: 150px; /* Ancho mínimo para cada opción de columna */
+        }
+        /* Estilo para el contenedor del length menu, filtro y controles personalizados */
+        .dataTables_wrapper .top-controls-row { margin-bottom: 1em; } /* Fila para botones y switch */
+        .dataTables_wrapper .filter-length-row { margin-bottom: 1em; } /* Fila para length y filter */
+
+        .dataTables_wrapper .dataTables_length label,
+        .dataTables_wrapper .dataTables_filter label {
+             margin-right: 0.5em; /* Espacio entre etiqueta y control */
+             margin-bottom: 0; /* Evitar margen extra */
+        }
+         .dataTables_wrapper .dataTables_length select {
+             width: auto; /* Ajusta el ancho del select */
+             display: inline-block; /* Permite que esté en línea con la etiqueta */
+             padding: 0.375rem 1.75rem 0.375rem 0.75rem; /* Ajusta padding */
+             border: 1px solid #ced4da;
+             border-radius: 0.25rem;
+             vertical-align: middle; /* Alinear verticalmente */
+         }
+         /* Ancho fijo al input de búsqueda */
+         .dataTables_filter input.form-control {
+             width: 300px !important; /* Ajusta este valor según necesites */
+             display: inline-block !important; /* Para que no ocupe toda la fila si hay espacio */
+             vertical-align: middle; /* Alinear verticalmente */
+         }
+         /* Estilo para el switch */
+         .form-switch .form-check-input {
+             cursor: pointer;
+             width: 3em; /* Ancho del switch */
+             height: 1.5em; /* Alto del switch */
+             margin-left: -0.5em; /* Ajuste de posición */
+         }
+         .form-switch .form-check-label {
+             padding-left: 1em; /* Espacio entre switch y etiqueta */
+             vertical-align: middle;
+         }
+         /* Alineación de botones y switch */
+         .dt-buttons .btn { margin-right: 0.25em;} /* Pequeño espacio entre botones */
+         .switch-placeholder { /* Contenedor del switch */
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+         }
+
+         /* Estilos para el botón flotante */
+         .btn-float {
+            position: fixed;
+            width: 50px;
+            height: 50px;
+            bottom: 30px;
+            right: 30px;
+            border-radius: 50%;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1050; /* Asegura que esté por encima de otros elementos */
+            font-size: 1.5rem; /* Tamaño del icono */
+         }
     </style>
 @endpush
 
 @push('scripts')
-    {{-- Links JS --}}
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    {{-- Links JS específicos para esta vista --}}
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.colVis.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
     <script src="https://cdn.datatables.net/responsive/2.4.1/js/dataTables.responsive.min.js"></script>
@@ -256,29 +364,54 @@
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
 
+
     <script>
         // Variable global para guardar el color del primer RFID seleccionado
         let selectedRfidColor = null;
+        // Variable para el intervalo de actualización
+        let refreshIntervalId = null;
+        const REFRESH_INTERVAL = 3000; // 3 segundos en milisegundos
+
+        // Función para iniciar el intervalo de refresco
+        function startRefreshInterval() {
+            // Limpiar intervalo anterior si existe para evitar duplicados
+            if (refreshIntervalId) {
+                clearInterval(refreshIntervalId);
+            }
+            // Iniciar nuevo intervalo
+            refreshIntervalId = setInterval(function() {
+                if (table) { // Asegurarse de que la tabla esté inicializada
+                    console.log('Actualizando tabla automáticamente...');
+                    table.ajax.reload(null, false); // Recarga datos sin resetear paginación
+                }
+            }, REFRESH_INTERVAL);
+            console.log('Intervalo de refresco iniciado.');
+        }
+
+        // Función para detener el intervalo de refresco
+        function stopRefreshInterval() {
+            if (refreshIntervalId) {
+                clearInterval(refreshIntervalId);
+                refreshIntervalId = null; // Poner a null para saber que está parado
+                console.log('Intervalo de refresco detenido.');
+            }
+        }
+
 
         // Función matcher para filtrar opciones por color y texto
         function rfidMatcher(params, data) {
             if (!data.element) { return data; }
             const optionColor = $(data.element).data('color');
-            if (selectedRfidColor && optionColor && optionColor.toLowerCase() !== selectedRfidColor.toLowerCase()) {
-                return null;
-            }
+            if (selectedRfidColor && optionColor && optionColor.toLowerCase() !== selectedRfidColor.toLowerCase()) { return null; }
             if ($.trim(params.term) === '') { return data; }
-            if (typeof data.text === 'undefined' || data.text.toLowerCase().indexOf(params.term.toLowerCase()) === -1) {
-                return null;
-            }
+            if (typeof data.text === 'undefined' || data.text.toLowerCase().indexOf(params.term.toLowerCase()) === -1) { return null; }
             return data;
         }
 
         // Función sorter para ordenar numéricamente las opciones del dropdown RFID
         function numericSorter(data) {
             return data.sort(function(a, b) {
-                const numA = parseInt(a.text, 10);
-                const numB = parseInt(b.text, 10);
+                const numA = parseInt(a.text, 10); const numB = parseInt(b.text, 10);
                 if (!isNaN(numA) && !isNaN(numB)) { return numA - numB; }
                 return a.text.localeCompare(b.text);
             });
@@ -292,34 +425,29 @@
         const sensorsApiUrl   = '/api/product-list-selecteds/sensors';
 
         // Variables globales para opciones
-        let productListOptions = '';
-        let rfidOptions = '';
-        let modbusOptions = '';
-        let sensorOptions = '';
+        let productListOptions = ''; let rfidOptions = ''; let modbusOptions = ''; let sensorOptions = '';
         let table;
 
         // --- Funciones de formato para Select2 ---
-        function formatOption(option) { // Opciones dropdown
+        function formatOption(option) {
             if (!option.id || !option.element) return option.text;
-            let color = option.element.getAttribute('data-color') || '';
-            let text = option.text;
+            let color = option.element.getAttribute('data-color') || ''; let text = option.text;
             let colorMap = { red: "#dc3545", blue: "#007bff", yellow: "#ffc107", green: "#28a745" };
-            let iconColor = colorMap[color.toLowerCase()] || "#6c757d";
-            return $(`<div class="rfid-option-card"><div class="rfid-text">${text}</div><div class="rfid-icon" style="color: ${iconColor};"><i class="fas fa-id-card"></i></div></div>`);
+            let iconColor = colorMap[color.toLowerCase()] || "#6c757d"; let iconClass = "fas fa-id-card";
+            return $(`<div class="rfid-option-card"><div class="rfid-text">${text}</div><div class="rfid-icon" style="color: ${iconColor};"><i class="${iconClass}"></i></div></div>`);
         }
-        function formatSelection(option) { return option.text; } // Selección Modbus/Sensor
-        function formatProductOption(option) { // Opción Producto dropdown
+        function formatSelection(option) { return option.text; }
+        function formatProductOption(option) {
             if (!option.id) return option.text;
             return $(`<div class="rfid-option-card"><div class="rfid-text">${option.text}</div><div class="rfid-icon" style="color: #17a2b8;"><i class="fas fa-box"></i></div></div>`);
         }
-        function formatProductSelection(option) { // Selección Producto
+        function formatProductSelection(option) {
              if (!option.id) return option.text;
              return $(`<span><i class="fas fa-box" style="color: #17a2b8; margin-right: 5px;"></i>${option.text}</span>`);
         }
-        function formatRfidSelection(option) { // Selección RFID (tag)
+        function formatRfidSelection(option) {
             if (!option.id || !option.element) return option.text;
-            let color = option.element.getAttribute('data-color') || '';
-            let text = option.text;
+            let color = option.element.getAttribute('data-color') || ''; let text = option.text;
             let colorMap = { red: "#dc3545", blue: "#007bff", yellow: "#ffc107", green: "#28a745" };
             let iconColor = colorMap[color.toLowerCase()] || "#6c757d";
             return $(`<span><i class="fas fa-id-card" style="color: ${iconColor};"></i> <span class="rfid-selected-text">${text}</span></span>`);
@@ -327,109 +455,109 @@
 
         // Función para cargar opciones de los selects vía AJAX
         function loadSelectOptions() {
-            const productsPromise = $.get(productsApiUrl).done(data => {
-                productListOptions = data.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
-            }).fail(() => console.error('Error al cargar productos.'));
-
-            const rfidsPromise = $.get(rfidsApiUrl).done(data => {
-                rfidOptions = data.map(r => `<option value="${r.id}" data-color="${r.rfid_color?.name?.toLowerCase() || ''}">${r.name}</option>`).join('');
-            }).fail(() => console.error('Error al cargar RFIDs.'));
-
-            const modbusesPromise = $.get(modbusesApiUrl).done(data => {
-                modbusOptions = data.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
-            }).fail(() => console.error('Error al cargar básculas.'));
-
-            const sensorsPromise = $.get(sensorsApiUrl).done(data => {
-                sensorOptions = data.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
-            }).fail(() => console.error('Error al cargar sensores.'));
-
+            const productsPromise = $.get(productsApiUrl).done(data => { productListOptions = data.map(p => `<option value="${p.id}">${p.name}</option>`).join(''); }).fail(() => console.error('Error al cargar productos.'));
+            const rfidsPromise = $.get(rfidsApiUrl).done(data => { rfidOptions = data.map(r => `<option value="${r.id}" data-color="${r.rfid_color?.name?.toLowerCase() || ''}">${r.name}</option>`).join(''); }).fail(() => console.error('Error al cargar RFIDs.'));
+            const modbusesPromise = $.get(modbusesApiUrl).done(data => { modbusOptions = data.map(m => `<option value="${m.id}">${m.name}</option>`).join(''); }).fail(() => console.error('Error al cargar básculas.'));
+            const sensorsPromise = $.get(sensorsApiUrl).done(data => { sensorOptions = data.map(s => `<option value="${s.id}">${s.name}</option>`).join(''); }).fail(() => console.error('Error al cargar sensores.'));
             return $.when(productsPromise, rfidsPromise, modbusesPromise, sensorsPromise);
         }
 
         // --- Document Ready ---
         $(document).ready(function() {
+
+            // Filtro personalizado para mostrar/ocultar historial
+            $.fn.dataTable.ext.search.push(
+                function( settings, data, dataIndex, rowData, counter ) {
+                    if (settings.nTable.id !== 'relationsTable') { return true; }
+                    var showHistory = $('#showHistorySwitch').is(':checked');
+                    // Accede al dato original de la columna Fecha Fin (índice 6)
+                    var finishDate = rowData.finish_at;
+                    if (showHistory) { return true; }
+                    else { return finishDate === null || finishDate === undefined || finishDate === ''; }
+                }
+            );
+
+            // Carga las opciones primero
             loadSelectOptions().always(function() {
+                // Inicializa DataTable DESPUÉS de cargar las opciones
                 table = $('#relationsTable').DataTable({
                     responsive: true,
-                    pageLength: 20,
-                    lengthMenu: [ [10, 20, 50, -1], [10, 20, 50, "All"] ],
+                    pageLength: 300,
+                    lengthMenu: [ [10, 20, 50, 300, -1], [10, 20, 50, 300,  "All"] ],
+                    stateSave: true,
                     ajax: {
                         url: relationsApiUrl,
                         dataSrc: '',
-                        error: function(xhr) {
-                            let errorMsg = 'Error desconocido al cargar datos.';
-                            if (xhr.responseJSON?.message) { 
-                                errorMsg = xhr.responseJSON.message; 
-                            } else if (xhr.responseText) { 
-                                try { 
-                                    errorMsg = JSON.parse(xhr.responseText).message || xhr.responseText.substring(0,200); 
-                                } catch(e){ 
-                                    errorMsg = xhr.responseText.substring(0,200); 
-                                }
+                        error: function(xhr, error, thrown) {
+                            // **MODIFICADO**: Ignorar errores 'abort' causados intencionalmente
+                            if (error === 'abort') {
+                                console.warn('Petición AJAX de DataTables abortada (probablemente por refresco o nueva acción).');
+                                return;
                             }
-                            console.error("Error AJAX DataTable:", xhr);
-                            Swal.fire({ icon: 'error', title: 'Error al Cargar Datos', text: errorMsg });
+                            let errorMsg = 'Error desconocido al cargar datos.';
+                            if (xhr.responseJSON?.message) errorMsg = xhr.responseJSON.message;
+                            else if (xhr.responseText) { try { errorMsg = JSON.parse(xhr.responseText).message || xhr.responseText.substring(0,200); } catch(e){ errorMsg = xhr.responseText.substring(0,200); } }
+                            console.error("Error AJAX DataTable:", xhr.status, error, thrown, xhr.responseText);
+                            Swal.fire({
+                                toast: true,
+                                position: 'top-end',
+                                icon: 'error',
+                                title: 'Error al cargar datos de relaciones.',
+                                timer: 1000,
+                                showConfirmButton: false,
+                                timerProgressBar: true
+                            });
                         }
                     },
                     columns: [
-                        { data: 'product_list.name', defaultContent: 'Sin asignar' },
-                        { data: 'rfid_reading', render: function(data) {
-                                if (data?.name && data?.rfid_color?.name) {
+                        { data: 'product_list.name', defaultContent: 'Sin asignar' }, // 0
+                        { // 1
+                            data: 'rfid_reading',
+                            render: function(data, type, row) {
+                                if (data && data.name && data.rfid_color && data.rfid_color.name) {
                                     const colorMap = { red: "#dc3545", blue: "#007bff", yellow: "#ffc107", green: "#28a745" };
                                     const colorName = data.rfid_color.name.toLowerCase();
                                     const iconColor = colorMap[colorName] || "#6c757d";
                                     return `<div class="rfid-option-card"><div class="rfid-text">${data.name}</div><div class="rfid-icon" style="color: ${iconColor};"><i class="fas fa-id-card"></i></div></div>`;
-                                }
-                                return 'Sin asignar';
-                            },
-                          defaultContent: 'Sin asignar'
+                                } return 'Sin asignar';
+                            }, defaultContent: 'Sin asignar'
                         },
-                        { data: 'operator_name', name: 'operator_name', defaultContent: 'Sin asignar' },
-                        { data: 'created_at', render: data => data ? new Date(data).toLocaleString('es-ES') : 'N/A' },
-                        { data: 'finish_at', render: data => !data ? 'En curso' : new Date(data).toLocaleString('es-ES') },
-                        { data: 'modbus.name', defaultContent: 'N/A', render: (d, t, r) => r.modbus?.name || 'N/A' },
-                        { data: 'sensor.name', defaultContent: 'N/A', render: (d, t, r) => r.sensor?.name || 'N/A' },
-                        { 
+                        { data: 'modbus.name', defaultContent: 'N/A', render: (d, t, r) => r.modbus?.name || 'N/A' }, // 2
+                        { data: 'sensor.name', defaultContent: 'N/A', render: (d, t, r) => r.sensor?.name || 'N/A' }, // 3
+                        { data: 'operator_name', name: 'operator_name', defaultContent: 'Sin asignar' }, // 4
+                        { // 5
+                            data: 'created_at',
+                            render: function(data) { if (!data) return 'N/A'; const date = new Date(data); return !isNaN(date.getTime()) ? date.toLocaleString('es-ES') : 'Fecha inválida'; }
+                        },
+                        { // 6
+                            data: 'finish_at',
+                            render: function(data) { if (!data) return 'En curso'; const date = new Date(data); return !isNaN(date.getTime()) ? date.toLocaleString('es-ES') : 'Fecha inválida'; }
+                        },
+                        { // 7
                             data: null, orderable: false, searchable: false,
                             render: function(data, type, row) {
                                 return `
-                                    @can('rfid-post-edit')
-                                        <button class="btn btn-sm btn-secondary edit-btn"
-                                                data-id="${row.id}"
-                                                data-product_list_id="${row.product_list_id || ''}"
-                                                data-rfid_reading_id="${row.rfid_reading_id || ''}"
-                                                data-modbus_id="${row.modbus_id || ''}"
-                                                data-sensor_id="${row.sensor_id || ''}"
-                                                style="margin-right: 5px;">
-                                            Editar
-                                        </button>
-                                    @endcan
-                                    @can('rfid-post-delete')
-                                        <button class="btn btn-sm btn-danger delete-btn"
-                                                data-id="${row.id}">
-                                            Eliminar
-                                        </button>
-                                    @endcan
+                                    @can('rfid-post-edit') <button class="btn btn-sm btn-secondary edit-btn" data-id="${row.id}" data-product_list_id="${row.product_list_id || ''}" data-rfid_reading_id="${row.rfid_reading_id || ''}" data-modbus_id="${row.modbus_id || ''}" data-sensor_id="${row.sensor_id || ''}" style="margin-right: 5px;">Editar</button> @endcan
+                                    @can('rfid-post-delete') <button class="btn btn-sm btn-danger delete-btn" data-id="${row.id}">Eliminar</button> @endcan
                                 `;
                             }
                         }
                     ],
-                    dom: 'Bfrtip',
-                    buttons: [
-                         {
+                    // Usar estructura DOM estándar de Bootstrap y DataTables
+                    dom: "<'row top-controls-row'<'col-sm-12 col-md-6 dt-buttons-placeholder'><'col-sm-12 col-md-6 switch-placeholder'>>" + // Fila para botones y switch
+                         "<'row filter-length-row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" + // Fila para length y filter
+                         "<'row'<'col-sm-12'tr>>" + // Fila para la tabla
+                         "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>", // Fila para info y paginación
+                    buttons: [ // Definición de botones
+                        {
                             text: '<i class="bi bi-plus-circle"></i> Asignar Confección',
-                            className: 'btn btn-primary mb-2',
+                            className: 'btn btn-primary',
                             action: function(e, dt, node, config) {
+                                // --- Código del modal de Asignar ---
                                 let modalHtml = `<div class="select-block"><label for="productListId">Producto:</label><select id="productListId" class="swal2-input custom-select-style"><option value="" disabled selected>-- Seleccione Producto --</option>${productListOptions}</select></div>`;
-                                if (rfidOptions.trim() !== '') {
-                                    modalHtml += `<div class="select-block"><label for="rfidReadingId">RFID:</label><select id="rfidReadingId" class="swal2-input custom-select-style" multiple>${rfidOptions}</select></div>`;
-                                }
-                                if (modbusOptions.trim() !== '') {
-                                    modalHtml += `<div class="select-block"><label for="modbusId">Báscula:</label><select id="modbusId" class="swal2-input custom-select-style" multiple>${modbusOptions}</select></div>`;
-                                }
-                                if (sensorOptions.trim() !== '') {
-                                    modalHtml += `<div class="select-block"><label for="sensorId">Sensor:</label><select id="sensorId" class="swal2-input custom-select-style" multiple>${sensorOptions}</select></div>`;
-                                }
+                                if (rfidOptions.trim() !== '') modalHtml += `<div class="select-block"><label for="rfidReadingId">RFID:</label><select id="rfidReadingId" class="swal2-input custom-select-style" multiple>${rfidOptions}</select></div>`;
+                                if (modbusOptions.trim() !== '') modalHtml += `<div class="select-block"><label for="modbusId">Báscula:</label><select id="modbusId" class="swal2-input custom-select-style" multiple>${modbusOptions}</select></div>`;
+                                if (sensorOptions.trim() !== '') modalHtml += `<div class="select-block"><label for="sensorId">Sensor:</label><select id="sensorId" class="swal2-input custom-select-style" multiple>${sensorOptions}</select></div>`;
                                 modalHtml += `<div id="qr-reader" style="width:300px; max-width: 100%; margin: 1em auto; display: none; border: 1px solid #ccc; border-radius: 5px;"></div>`;
 
                                 Swal.fire({
@@ -440,353 +568,217 @@
                                     denyButtonText: '<i class="bi bi-qr-code"></i> ESCANEAR',
                                     customClass: { confirmButton: 'btn btn-success mx-1', denyButton: 'btn btn-info mx-1', cancelButton: 'btn btn-danger mx-1' },
                                     buttonsStyling: false,
-                                    preDeny: () => {
-                                        if (rfidOptions.trim() !== '') {
-                                            startQrScanner('rfidReadingId');
-                                        } else {
-                                            Swal.showValidationMessage('No hay RFIDs disponibles para escanear.');
-                                        }
-                                        return false;
-                                     },
+                                    preDeny: () => { if (rfidOptions.trim() !== '') startQrScanner('rfidReadingId'); else Swal.showValidationMessage('No hay RFIDs disponibles.'); return false; },
                                     didOpen: () => {
+                                        selectedRfidColor = null //reinicial color
+                                        // **MODIFICADO**: Pausar refresco al abrir modal
+                                        stopRefreshInterval();
+                                        let rfidScrollPosition = 0;
                                         $('#productListId').select2({ dropdownParent: Swal.getPopup(), width: 'resolve', templateResult: formatProductOption, templateSelection: formatProductSelection });
                                         if (rfidOptions.trim() !== '') {
-                                            $('#rfidReadingId').select2({ dropdownParent: Swal.getPopup(), width: 'resolve', placeholder: '-- Seleccione RFID --', closeOnSelect: false, templateResult: formatOption, templateSelection: formatRfidSelection, matcher: rfidMatcher, sorter: numericSorter });
-                                            $('#rfidReadingId').on('select2:closing', e => { if (e.originalEvent && $(e.originalEvent.target).closest('.select2-results__option').length) e.preventDefault(); });
-                                            $('#rfidReadingId').on('change', function() {
-                                                let selectedValues = $(this).val();
-                                                if (selectedValues && selectedValues.length > 0) {
-                                                    if (selectedRfidColor === null) {
-                                                        let firstSelectedOption = $(this).find(`option[value="${selectedValues[0]}"]`);
-                                                        selectedRfidColor = firstSelectedOption.data('color');
-                                                    }
-                                                } else {
-                                                    selectedRfidColor = null;
-                                                }
-                                                if ($(this).data('select2')?.isOpen()) {
-                                                    $(this).select2('close').select2('open');
-                                                }
-                                            });
+                                            const $rfidSelect = $('#rfidReadingId');
+                                            $rfidSelect.select2({ dropdownParent: Swal.getPopup(), width: 'resolve', placeholder: '-- Seleccione RFID --', closeOnSelect: false, templateResult: formatOption, templateSelection: formatRfidSelection, matcher: rfidMatcher, sorter: numericSorter });
+                                            $rfidSelect.on('change', function() { const resultsContainer = $('.select2-results__options'); if (resultsContainer.length > 0) rfidScrollPosition = resultsContainer.scrollTop(); let selectedValues = $(this).val(); if (selectedValues && selectedValues.length > 0) { if (selectedRfidColor === null) { let firstSelectedOption = $(this).find(`option[value="${selectedValues[0]}"]`); selectedRfidColor = firstSelectedOption.data('color'); } } else { selectedRfidColor = null; } if ($(this).data('select2')?.isOpen()) $(this).select2('close').select2('open'); });
+                                            $rfidSelect.on('select2:open', function() { setTimeout(() => { const resultsContainer = $('.select2-results__options'); if (resultsContainer.length > 0) resultsContainer.scrollTop(rfidScrollPosition); }, 0); });
                                         }
-                                        if (modbusOptions.trim() !== '') {
-                                            $('#modbusId').select2({ dropdownParent: Swal.getPopup(), width: 'resolve', placeholder: '-- Seleccione Báscula --', closeOnSelect: false, templateResult: formatOption, templateSelection: formatSelection });
-                                            $('#modbusId').on('select2:closing', e => { if (e.originalEvent && $(e.originalEvent.target).closest('.select2-results__option').length) e.preventDefault(); });
-                                        }
-                                        if (sensorOptions.trim() !== '') {
-                                            $('#sensorId').select2({ dropdownParent: Swal.getPopup(), width: 'resolve', placeholder: '-- Seleccione Sensor --', closeOnSelect: false, templateResult: formatOption, templateSelection: formatSelection });
-                                            $('#sensorId').on('select2:closing', e => { if (e.originalEvent && $(e.originalEvent.target).closest('.select2-results__option').length) e.preventDefault(); });
-                                        }
+                                        if (modbusOptions.trim() !== '') { $('#modbusId').select2({ dropdownParent: Swal.getPopup(), width: 'resolve', placeholder: '-- Seleccione Báscula --', closeOnSelect: false, templateResult: formatOption, templateSelection: formatSelection }); $('#modbusId').on('select2:closing', e => { if (e.originalEvent && $(e.originalEvent.target).closest('.select2-results__option').length) e.preventDefault(); }); }
+                                        if (sensorOptions.trim() !== '') { $('#sensorId').select2({ dropdownParent: Swal.getPopup(), width: 'resolve', placeholder: '-- Seleccione Sensor --', closeOnSelect: false, templateResult: formatOption, templateSelection: formatSelection }); $('#sensorId').on('select2:closing', e => { if (e.originalEvent && $(e.originalEvent.target).closest('.select2-results__option').length) e.preventDefault(); }); }
                                         $('#productListId').val(null).trigger('change');
                                     },
                                     preConfirm: () => {
-                                        const pId = $('#productListId').val();
-                                        const rIds = rfidOptions.trim() !== '' ? ($('#rfidReadingId').val() || []) : [];
-                                        const mIds = modbusOptions.trim() !== '' ? ($('#modbusId').val() || []) : [];
-                                        const sIds = sensorOptions.trim() !== '' ? ($('#sensorId').val() || []) : [];
-                                        if (!pId) { 
-                                            Swal.showValidationMessage('Producto obligatorio.');
-                                            $('#productListId').select2('open');
-                                            return false;
-                                        }
-                                        if (rIds.length === 0 && mIds.length === 0 && sIds.length === 0) {
-                                            Swal.showValidationMessage('Seleccione RFID, Báscula o Sensor.');
-                                            if (rfidOptions.trim() !== '')
-                                                $('#rfidReadingId').select2('open');
-                                            else if (modbusOptions.trim() !== '')
-                                                $('#modbusId').select2('open');
-                                            else if (sensorOptions.trim() !== '')
-                                                $('#sensorId').select2('open');
-                                            return false;
-                                        }
-                                        return { 
-                                            client_id:       parseInt(pId),                             // renombrado
-                                            rfid_reading_ids: rIds.length  ? rIds.map(id => +id) : [],  // siempre array
-                                            modbus_ids:       mIds.length  ? mIds.map(id => +id) : [],  
-                                            sensor_ids:       sIds.length  ? sIds.map(id => +id) : []
-                                        };
-
+                                        const pId = $('#productListId').val(); const rIds = rfidOptions.trim() !== '' ? ($('#rfidReadingId').val() || []) : []; const mIds = modbusOptions.trim() !== '' ? ($('#modbusId').val() || []) : []; const sIds = sensorOptions.trim() !== '' ? ($('#sensorId').val() || []) : [];
+                                        if (!pId) { Swal.showValidationMessage('Producto obligatorio.'); $('#productListId').select2('open'); return false; }
+                                        if (rIds.length === 0 && mIds.length === 0 && sIds.length === 0) { Swal.showValidationMessage('Seleccione RFID, Báscula o Sensor.'); if (rfidOptions.trim() !== '') $('#rfidReadingId').select2('open'); else if (modbusOptions.trim() !== '') $('#modbusId').select2('open'); else if (sensorOptions.trim() !== '') $('#sensorId').select2('open'); return false; }
+                                        return { client_id: parseInt(pId), rfid_reading_ids: rIds.length ? rIds.map(id => +id) : [], modbus_ids: mIds.length ? mIds.map(id => +id) : [], sensor_ids: sIds.length ? sIds.map(id => +id) : [] };
                                     },
                                     didClose: () => {
-                                        console.log('Modal Asignar cerrado');
+                                        // **MODIFICADO**: Reanudar refresco al cerrar modal
                                         selectedRfidColor = null;
-                                        console.log('Borrado color seleccionado');
                                         stopQrScanner();
-                                        console.log('Desactivado scanner');
+                                        startRefreshInterval(); // Reanudar aquí
                                     }
                                 }).then((result) => {
                                     if (result.isConfirmed) {
-                                        // Antes de la llamada, loguea URL y payload:
-                                        console.log("URL a la que llama:", relationsApiUrl);
-                                        console.log("JSON que envía:", result.value);
                                         $.ajax({
-                                            url: relationsApiUrl,
-                                            method: 'POST',
-                                            contentType: 'application/json',
-                                            data: JSON.stringify(result.value),
-                                            success: function(response) {
-                                                console.log('Modal Asignar cerrado');
-                                                selectedRfidColor = null;
-                                                console.log('Borrado color seleccionado');
-                                                stopQrScanner();
-                                                console.log('Desactivado scanner');
-                                                Swal.fire({ title: 'Éxito', text: response.message || 'Relación añadida.', icon: 'success', timer: 2000, showConfirmButton: false });
-                                                table.ajax.reload();
-                                            },
-                                            error: function(xhr) {
-                                                console.log('Modal Asignar cerrado');
-                                                selectedRfidColor = null;
-                                                console.log('Borrado color seleccionado');
-                                                stopQrScanner();
-                                                console.log('Desactivado scanner');
-                                                let errorMsg = 'Error al añadir.';
-                                                if (xhr.responseJSON?.message)
-                                                    errorMsg = xhr.responseJSON.message;
-                                                console.error("Error POST:", xhr);
-                                                Swal.fire('Error', errorMsg, 'error');
-                                            }
+                                            url: relationsApiUrl, method: 'POST', contentType: 'application/json', data: JSON.stringify(result.value),
+                                            success: function(response) { Swal.fire({ title: 'Éxito', text: response.message || 'Relación añadida.', icon: 'success', timer: 2000, showConfirmButton: false }); table.ajax.reload(); }, // Recarga normal después de añadir
+                                            error: function(xhr) { let errorMsg = 'Error al añadir.'; if (xhr.responseJSON?.message) errorMsg = xhr.responseJSON.message; console.error("Error POST:", xhr); Swal.fire('Error', errorMsg, 'error'); }
                                         });
-                                    } else {
-                                        console.log('Modal Asignar cerrado');
-                                        selectedRfidColor = null;
-                                        console.log('Borrado color seleccionado');
-                                        stopQrScanner();
-                                        console.log('Desactivado scanner');
+                                        startRefreshInterval();
                                     }
                                 });
+                                // --- Fin Código del modal de Asignar ---
                             }
-                         },
-                         { extend: 'excelHtml5', text: '<i class="bi bi-file-earmark-excel"></i> Exportar a Excel', className: 'btn btn-success mb-2', titleAttr: 'Exportar tabla a Excel' },
-                         { text: '<i class="bi bi-broadcast"></i> Live Rfid', className: 'btn btn-info mb-2', action: function () { window.open('/live-rfid/', '_blank'); }, titleAttr: 'Ver lecturas RFID en tiempo real' }
+                        },
+                        { extend: 'excelHtml5', text: '<i class="bi bi-file-earmark-excel"></i> Excel', className: 'btn btn-success', titleAttr: 'Exportar a Excel' },
+                        { extend: 'colvis', text: '<i class="bi bi-eye"></i> Columnas', className: 'btn btn-secondary', titleAttr: 'Mostrar/Ocultar columnas' },
+                        { text: '<i class="bi bi-broadcast"></i> Live Rfid', className: 'btn btn-info', action: function () { window.open('/live-rfid/', '_blank'); }, titleAttr: 'Ver RFID en tiempo real' }
                     ],
-                    order: [[4, 'desc'], [2, 'asc'], [1, 'asc']],
-                    language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json', search: "_INPUT_", searchPlaceholder: "Buscar..." },
-                    initComplete: function() {
-                        $('.dataTables_filter input').addClass('form-control form-control-sm');
-                        $('.dt-buttons').addClass('mb-2');
+                    order: [[6, 'desc'], [4, 'asc'], [1, 'asc']],
+                    language: {
+                        url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json',
+                        search: "_INPUT_",
+                        searchPlaceholder: "Buscar..."
+                    },
+                    initComplete: function(settings, json) {
+                        const api = this.api();
+
+                        // Mover los botones al placeholder definido en 'dom'
+                        api.buttons().container().appendTo('.dt-buttons-placeholder');
+
+                        // Mover el switch HTML al placeholder definido en 'dom'
+                        $('.history-switch-container').appendTo('.switch-placeholder').show(); // Mover y mostrar
+
+                        // Estilo para los inputs y selects generados por DataTables
+                        $('.dataTables_filter input').addClass('form-control');
+                        $('.dataTables_length select').addClass('form-select form-select-sm');
+
+                        // Aplicar filtro inicial al cargar
+                         table.draw();
+
+                         // Event listener para el switch
+                         $('#showHistorySwitch').on('change', function() {
+                             table.draw(); // Redibuja la tabla para aplicar/quitar el filtro
+                         });
+
+                         // Iniciar el intervalo de actualización automática INICIAL
+                         startRefreshInterval();
+
                     }
                 });
 
-                // --- Delegación de eventos ---
+                // --- Delegación de eventos para botones dentro de la tabla ---
                 // Editar Relación
                 $('#relationsTable tbody').on('click', '.edit-btn', function() {
-                    const $button = $(this);
-                    const currentId = $button.data('id');
+                    const $button = $(this); const currentId = $button.data('id');
                     const getIdsArray = (data) => (data || '').toString().split(',').map(id => id.trim()).filter(Boolean);
-                    const currentProductListId = $button.data('product_list_id');
-                    const currentRfidReadingIds = getIdsArray($button.data('rfid_reading_id'));
-                    const currentModbusIds = getIdsArray($button.data('modbus_id'));
-                    const currentSensorIds = getIdsArray($button.data('sensor_id'));
-
+                    const currentProductListId = $button.data('product_list_id'); const currentRfidReadingIds = getIdsArray($button.data('rfid_reading_id')); const currentModbusIds = getIdsArray($button.data('modbus_id')); const currentSensorIds = getIdsArray($button.data('sensor_id'));
                     let modalHtmlEdit = `<input type="hidden" id="editRelationId" value="${currentId}">`;
                     modalHtmlEdit += `<div class="select-block"><label for="editProductListId">Producto:</label><select id="editProductListId" class="swal2-input custom-select-style"><option value="" disabled>-- Seleccione Producto --</option>${productListOptions}</select></div>`;
-                    if (rfidOptions.trim() !== '') {
-                        modalHtmlEdit += `<div class="select-block"><label for="editRfidReadingId">RFID:</label><select id="editRfidReadingId" class="swal2-input custom-select-style" multiple>${rfidOptions}</select></div>`;
-                    }
-                    if (modbusOptions.trim() !== '') {
-                        modalHtmlEdit += `<div class="select-block"><label for="editModbusId">Báscula:</label><select id="editModbusId" class="swal2-input custom-select-style" multiple>${modbusOptions}</select></div>`;
-                    }
-                    if (sensorOptions.trim() !== '') {
-                        modalHtmlEdit += `<div class="select-block"><label for="editSensorId">Sensor:</label><select id="editSensorId" class="swal2-input custom-select-style" multiple>${sensorOptions}</select></div>`;
-                    }
+                    if (rfidOptions.trim() !== '') modalHtmlEdit += `<div class="select-block"><label for="editRfidReadingId">RFID:</label><select id="editRfidReadingId" class="swal2-input custom-select-style" multiple>${rfidOptions}</select></div>`;
+                    if (modbusOptions.trim() !== '') modalHtmlEdit += `<div class="select-block"><label for="editModbusId">Báscula:</label><select id="editModbusId" class="swal2-input custom-select-style" multiple>${modbusOptions}</select></div>`;
+                    if (sensorOptions.trim() !== '') modalHtmlEdit += `<div class="select-block"><label for="editSensorId">Sensor:</label><select id="editSensorId" class="swal2-input custom-select-style" multiple>${sensorOptions}</select></div>`;
                     modalHtmlEdit += `<div id="qr-reader-edit" style="width:300px; max-width: 100%; margin: 1em auto; display: none; border: 1px solid #ccc; border-radius: 5px;"></div>`;
 
                     Swal.fire({
                         title: 'Editar Relación', width: '80%', html: modalHtmlEdit,
                         showCancelButton: true, showDenyButton: true,
-                        confirmButtonText: '<i class="bi bi-save"></i> ACTUALIZAR',
-                        cancelButtonText: '<i class="bi bi-x-square"></i> CANCELAR',
-                        denyButtonText: '<i class="bi bi-qr-code"></i> ESCANEAR',
-                        customClass: { confirmButton: 'btn btn-success mx-1', denyButton: 'btn btn-info mx-1', cancelButton: 'btn btn-danger mx-1' },
-                        buttonsStyling: false,
-                        preDeny: () => {
-                            if (rfidOptions.trim() !== '') {
-                                startQrScanner('editRfidReadingId');
-                            } else {
-                                Swal.showValidationMessage('No hay RFIDs disponibles para escanear.');
-                            }
-                            return false;
-                         },
+                        confirmButtonText: '<i class="bi bi-save"></i> ACTUALIZAR', cancelButtonText: '<i class="bi bi-x-square"></i> CANCELAR', denyButtonText: '<i class="bi bi-qr-code"></i> ESCANEAR',
+                        customClass: { confirmButton: 'btn btn-success mx-1', denyButton: 'btn btn-info mx-1', cancelButton: 'btn btn-danger mx-1' }, buttonsStyling: false,
+                        preDeny: () => { if (rfidOptions.trim() !== '') startQrScanner('editRfidReadingId'); else Swal.showValidationMessage('No hay RFIDs disponibles.'); return false; },
                         didOpen: () => {
+                            // **MODIFICADO**: Pausar refresco al abrir modal
+                            stopRefreshInterval();
+                            let editRfidScrollPosition = 0;
                             $('#editProductListId').select2({ dropdownParent: Swal.getPopup(), width: 'resolve', templateResult: formatProductOption, templateSelection: formatProductSelection }).val(currentProductListId).trigger('change');
                             if (rfidOptions.trim() !== '') {
-                                $('#editRfidReadingId').select2({ dropdownParent: Swal.getPopup(), width: 'resolve', placeholder: '-- Seleccione RFID --', closeOnSelect: false, templateResult: formatOption, templateSelection: formatRfidSelection, matcher: rfidMatcher, sorter: numericSorter }).val(currentRfidReadingIds).trigger('change');
-                                $('#editRfidReadingId').on('select2:closing', e => { if (e.originalEvent && $(e.originalEvent.target).closest('.select2-results__option').length) e.preventDefault(); });
-                                $('#editRfidReadingId').on('change', function() {
-                                    let selectedValues = $(this).val();
-                                    if (selectedValues && selectedValues.length > 0) {
-                                        let firstSelectedOption = $(this).find(`option[value="${selectedValues[0]}"]`);
-                                        selectedRfidColor = firstSelectedOption.data('color');
-                                    } else {
-                                        selectedRfidColor = null;
-                                    }
-                                    if ($(this).data('select2')?.isOpen()) {
-                                        $(this).select2('close').select2('open');
-                                    }
-                                });
-                                $('#editRfidReadingId').trigger('change');
+                                const $editRfidSelect = $('#editRfidReadingId');
+                                $editRfidSelect.select2({ dropdownParent: Swal.getPopup(), width: 'resolve', placeholder: '-- Seleccione RFID --', closeOnSelect: false, templateResult: formatOption, templateSelection: formatRfidSelection, matcher: rfidMatcher, sorter: numericSorter }).val(currentRfidReadingIds).trigger('change');
+                                $editRfidSelect.on('change', function() { const resultsContainer = $('.select2-results__options'); if (resultsContainer.length > 0) editRfidScrollPosition = resultsContainer.scrollTop(); let selectedValues = $(this).val(); if (selectedValues && selectedValues.length > 0) { let firstSelectedOption = $(this).find(`option[value="${selectedValues[0]}"]`); selectedRfidColor = firstSelectedOption.data('color'); } else { selectedRfidColor = null; } if ($(this).data('select2')?.isOpen()) $(this).select2('close').select2('open'); });
+                                $editRfidSelect.on('select2:open', function() { setTimeout(() => { const resultsContainer = $('.select2-results__options'); if (resultsContainer.length > 0) resultsContainer.scrollTop(editRfidScrollPosition); }, 0); });
                             }
-                            if (modbusOptions.trim() !== '') {
-                                $('#editModbusId').select2({ dropdownParent: Swal.getPopup(), width: 'resolve', placeholder: '-- Seleccione Báscula --', closeOnSelect: false, templateResult: formatOption, templateSelection: formatSelection }).val(currentModbusIds).trigger('change');
-                                $('#editModbusId').on('select2:closing', e => { if (e.originalEvent && $(e.originalEvent.target).closest('.select2-results__option').length) e.preventDefault(); });
-                            }
-                            if (sensorOptions.trim() !== '') {
-                                $('#editSensorId').select2({ dropdownParent: Swal.getPopup(), width: 'resolve', placeholder: '-- Seleccione Sensor --', closeOnSelect: false, templateResult: formatOption, templateSelection: formatSelection }).val(currentSensorIds).trigger('change');
-                                $('#editSensorId').on('select2:closing', e => { if (e.originalEvent && $(e.originalEvent.target).closest('.select2-results__option').length) e.preventDefault(); });
-                            }
+                            if (modbusOptions.trim() !== '') { $('#editModbusId').select2({ dropdownParent: Swal.getPopup(), width: 'resolve', placeholder: '-- Seleccione Báscula --', closeOnSelect: false, templateResult: formatOption, templateSelection: formatSelection }).val(currentModbusIds).trigger('change'); $('#editModbusId').on('select2:closing', e => { if (e.originalEvent && $(e.originalEvent.target).closest('.select2-results__option').length) e.preventDefault(); }); }
+                            if (sensorOptions.trim() !== '') { $('#editSensorId').select2({ dropdownParent: Swal.getPopup(), width: 'resolve', placeholder: '-- Seleccione Sensor --', closeOnSelect: false, templateResult: formatOption, templateSelection: formatSelection }).val(currentSensorIds).trigger('change'); $('#editSensorId').on('select2:closing', e => { if (e.originalEvent && $(e.originalEvent.target).closest('.select2-results__option').length) e.preventDefault(); }); }
                         },
                         preConfirm: () => {
-                            const pId = $('#editProductListId').val();
-                            const rIds = rfidOptions.trim() !== '' ? ($('#editRfidReadingId').val() || []) : [];
-                            const mIds = modbusOptions.trim() !== '' ? ($('#editModbusId').val() || []) : [];
-                            const sIds = sensorOptions.trim() !== '' ? ($('#editSensorId').val() || []) : [];
-                            if (!pId) {
-                                Swal.showValidationMessage('Producto obligatorio.');
-                                $('#editProductListId').select2('open');
-                                return false;
-                            }
-                            if (rIds.length === 0 && mIds.length === 0 && sIds.length === 0) {
-                                Swal.showValidationMessage('Seleccione RFID, Báscula o Sensor.');
-                                if (rfidOptions.trim() !== '')
-                                    $('#editRfidReadingId').select2('open');
-                                else if (modbusOptions.trim() !== '')
-                                    $('#editModbusId').select2('open');
-                                else if (sensorOptions.trim() !== '')
-                                    $('#editSensorId').select2('open');
-                                return false;
-                            }
-                            return {
-                                product_list_id: parseInt(pId),
-                                rfid_reading_ids: rIds.map(id => parseInt(id)),
-                                modbus_ids: mIds.map(id => parseInt(id)),
-                                sensor_ids: sIds.map(id => parseInt(id))
-                            };
+                            const pId = $('#editProductListId').val(); const rIds = rfidOptions.trim() !== '' ? ($('#editRfidReadingId').val() || []) : []; const mIds = modbusOptions.trim() !== '' ? ($('#editModbusId').val() || []) : []; const sIds = sensorOptions.trim() !== '' ? ($('#editSensorId').val() || []) : [];
+                            if (!pId) { Swal.showValidationMessage('Producto obligatorio.'); $('#editProductListId').select2('open'); return false; }
+                            if (rIds.length === 0 && mIds.length === 0 && sIds.length === 0) { Swal.showValidationMessage('Seleccione RFID, Báscula o Sensor.'); if (rfidOptions.trim() !== '') $('#editRfidReadingId').select2('open'); else if (modbusOptions.trim() !== '') $('#editModbusId').select2('open'); else if (sensorOptions.trim() !== '') $('#editSensorId').select2('open'); return false; }
+                            return { product_list_id: parseInt(pId), rfid_reading_ids: rIds.map(id => parseInt(id)), modbus_ids: mIds.map(id => parseInt(id)), sensor_ids: sIds.map(id => parseInt(id)) };
                         },
                         didClose: () => {
+                            // **MODIFICADO**: Reanudar refresco al cerrar modal
                             selectedRfidColor = null;
                             stopQrScanner();
+                            startRefreshInterval(); // Reanudar aquí
                         }
                     }).then((result) => {
                         if (result.isConfirmed) {
                             const relationId = $('#editRelationId').val();
                             $.ajax({
-                                url: `${relationsApiUrl}/${relationId}`,
-                                method: 'PUT',
-                                contentType: 'application/json',
-                                data: JSON.stringify(result.value),
-                                success: function(response) {
-                                    Swal.fire({ title: 'Éxito', text: response.message || 'Relación actualizada.', icon: 'success', timer: 2000, showConfirmButton: false });
-                                    table.ajax.reload();
-                                },
-                                error: function(xhr) {
-                                    let errorMsg = 'Error al actualizar.';
-                                    if (xhr.responseJSON?.message)
-                                        errorMsg = xhr.responseJSON.message;
-                                    console.error("Error PUT:", xhr);
-                                   // Swal.fire('Error', errorMsg, 'error');
-                                }
+                                url: `${relationsApiUrl}/${relationId}`, method: 'PUT', contentType: 'application/json', data: JSON.stringify(result.value),
+                                success: function(response) { Swal.fire({ title: 'Éxito', text: response.message || 'Relación actualizada.', icon: 'success', timer: 2000, showConfirmButton: false }); table.ajax.reload(null, false); }, // Recarga sin resetear paginación
+                                error: function(xhr) { let errorMsg = 'Error al actualizar.'; if (xhr.responseJSON?.message) errorMsg = xhr.responseJSON.message; console.error("Error PUT/PATCH:", xhr); /* Swal.fire('Error', errorMsg, 'error'); */ }
                             });
-                        } else {
-                            console.log('Modal Editar cerrado');
                         }
                     });
                 });
 
                 // Eliminar Relación
                 $('#relationsTable tbody').on('click', '.delete-btn', function() {
-                    const id = $(this).data('id');
+                    const button = this; // Guardar referencia al botón
+                    const id = $(button).data('id');
                     Swal.fire({
-                        title: '¿Estás seguro?',
-                        text: "¡Esta acción no se puede deshacer!",
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonColor: '#dc3545',
-                        cancelButtonColor: '#6c757d',
-                        confirmButtonText: '<i class="bi bi-trash"></i> Sí, eliminar',
-                        cancelButtonText: '<i class="bi bi-x-circle"></i> Cancelar',
-                        customClass: { confirmButton: 'btn btn-danger mx-1', cancelButton: 'btn btn-secondary mx-1' },
-                        buttonsStyling: false
+                        title: '¿Estás seguro?', text: "¡No se puede deshacer!", icon: 'warning',
+                        showCancelButton: true, confirmButtonColor: '#dc3545', cancelButtonColor: '#6c757d',
+                        confirmButtonText: '<i class="bi bi-trash"></i> Sí, eliminar', cancelButtonText: '<i class="bi bi-x-circle"></i> Cancelar',
+                        customClass: { confirmButton: 'btn btn-danger mx-1', cancelButton: 'btn btn-secondary mx-1' }, buttonsStyling: false
                     }).then((result) => {
                         if (result.isConfirmed) {
                             $.ajax({
-                                url: `${relationsApiUrl}/${id}`,
-                                method: 'DELETE',
+                                url: `${relationsApiUrl}/${id}`, method: 'DELETE',
                                 success: function(response) {
-                                    Swal.fire({ title: 'Eliminado', text: response.message || 'Relación eliminada.', icon: 'success', timer: 2000, showConfirmButton: false });
-                                    table.ajax.reload();
-                                },
-                                error: function(xhr) {
-                                    let errorMsg = 'Error al eliminar.';
-                                    if (xhr.responseJSON?.message)
-                                        errorMsg = xhr.responseJSON.message;
-                                    console.error("Error DELETE:", xhr);
-                                    Swal.fire('Error', errorMsg, 'error');
-                                }
+                                     Swal.fire({ title: 'Eliminado', text: response.message || 'Relación eliminada.', icon: 'success', timer: 2000, showConfirmButton: false });
+                                     // Eliminar la fila de la tabla sin recargar toda la tabla
+                                     table.row($(button).closest('tr')).remove().draw(false); // draw(false) para no resetear paginación
+                                 },
+                                error: function(xhr) { let errorMsg = 'Error al eliminar.'; if (xhr.responseJSON?.message) errorMsg = xhr.responseJSON.message; console.error("Error DELETE:", xhr); Swal.fire('Error', errorMsg, 'error'); }
                             });
                         }
                     });
                 });
+
+                // Event listener para el botón flotante de refrescar
+                $('#refreshTableBtn').on('click', function() {
+                    console.log('Refrescando tabla manualmente...');
+                    if (table) {
+                        table.ajax.reload(null, false); // Recarga sin resetear paginación
+                        // Opcional: Mostrar una pequeña notificación
+                        const toastMixin = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 1500, timerProgressBar: true });
+                        toastMixin.fire({ icon: 'info', title: 'Tabla actualizada' });
+                    }
+                });
+
+            }); // Fin de .always() de loadSelectOptions
+
+            // Limpiar el intervalo cuando la página se descarga
+            $(window).on('unload', function() {
+                stopRefreshInterval(); // Usa la función para detener y limpiar
             });
-        });
+
+        }); // Fin de $(document).ready()
 
         // --- Funciones Escáner QR ---
-        let html5QrCode = null; // Instancia del escáner
+        let html5QrCode = null;
 
         function startQrScanner(targetSelectId) {
             const qrReaderId = targetSelectId.startsWith('edit') ? 'qr-reader-edit' : 'qr-reader';
             const qrReaderElement = document.getElementById(qrReaderId);
             if (!qrReaderElement) { console.error(`Elemento ${qrReaderId} no encontrado.`); return; }
-            if (html5QrCode?.isScanning) { console.warn("El escáner ya está activo."); return; }
+            if (html5QrCode && html5QrCode.isScanning) { console.warn("El escáner ya está activo."); return; }
             qrReaderElement.style.display = 'block';
             if (!html5QrCode) { html5QrCode = new Html5Qrcode(qrReaderId); }
             const config = { fps: 10, qrbox: { width: 250, height: 250 } };
             const toastMixin = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timerProgressBar: true });
             html5QrCode.start( { facingMode: "environment" }, config,
                 (decodedText, decodedResult) => {
-                    console.log(`QR detectado: ${decodedText}`);
                     stopQrScanner();
                     const $targetSelect = $(`#${targetSelectId}`);
                     const $option = $targetSelect.find('option').filter((i, opt) => $(opt).text().trim() === decodedText.trim());
                     if ($option.length > 0) {
-                        const optionValue = $option.val();
-                        let currentValues = $targetSelect.val() || [];
-                        if (!Array.isArray(currentValues)) { currentValues = [currentValues]; }
-                        if (!currentValues.includes(optionValue)) {
-                            currentValues.push(optionValue);
-                            $targetSelect.val(currentValues).trigger('change');
-                            toastMixin.fire({ icon: 'success', title: `RFID ${decodedText} añadido`, timer: 1500 });
-                        } else {
-                            toastMixin.fire({ icon: 'info', title: `RFID ${decodedText} ya seleccionado`, timer: 1500 });
-                        }
-                    } else {
-                        toastMixin.fire({ icon: 'warning', title: `RFID ${decodedText} no encontrado`, timer: 2000 });
-                    }
-                },
-                (errorMessage) => { /* Ignorar error continuo */ }
-            ).catch((err) => {
-                console.error("Error al iniciar el escáner QR:", err);
-                Swal.fire('Error', 'No se pudo iniciar el escáner QR. Verifica los permisos de la cámara.', 'error');
-                qrReaderElement.style.display = 'none';
-                html5QrCode = null;
-            });
+                        const optionValue = $option.val(); let currentValues = $targetSelect.val() || []; if (!Array.isArray(currentValues)) { currentValues = [currentValues]; }
+                        if (!currentValues.includes(optionValue)) { currentValues.push(optionValue); $targetSelect.val(currentValues).trigger('change'); toastMixin.fire({ icon: 'success', title: `RFID ${decodedText} añadido`, timer: 1500 }); }
+                        else { toastMixin.fire({ icon: 'info', title: `RFID ${decodedText} ya seleccionado`, timer: 1500 }); }
+                    } else { toastMixin.fire({ icon: 'warning', title: `RFID ${decodedText} no encontrado`, timer: 2000 }); }
+                }, (errorMessage) => { /* Ignorar */ }
+            ).catch((err) => { console.error("Error al iniciar escáner:", err); Swal.fire('Error', 'No se pudo iniciar el escáner QR.', 'error'); qrReaderElement.style.display = 'none'; });
         }
 
         function stopQrScanner() {
-            const qrReaderEdit = document.getElementById('qr-reader-edit');
-            const qrReaderAdd = document.getElementById('qr-reader');
-            if (html5QrCode?.isScanning) {
-                html5QrCode.stop().then(() => {
-                    console.log("Escáner QR detenido.");
-                    if (qrReaderAdd) qrReaderAdd.style.display = 'none';
-                    if (qrReaderEdit) qrReaderEdit.style.display = 'none';
-                }).catch(err => {
-                    console.error("Error al detener el escáner QR:", err);
-                    if (qrReaderAdd) qrReaderAdd.style.display = 'none';
-                    if (qrReaderEdit) qrReaderEdit.style.display = 'none';
-                });
-            } else {
-                if (qrReaderAdd) qrReaderAdd.style.display = 'none';
-                if (qrReaderEdit) qrReaderEdit.style.display = 'none';
-            }
+            const qrReaderEdit = document.getElementById('qr-reader-edit'); const qrReaderAdd = document.getElementById('qr-reader');
+            if (html5QrCode && html5QrCode.isScanning) {
+                html5QrCode.stop().then(() => { console.log("Escáner detenido."); if (qrReaderAdd) qrReaderAdd.style.display = 'none'; if (qrReaderEdit) qrReaderEdit.style.display = 'none'; }).catch(err => { console.error("Error al detener escáner:", err); if (qrReaderAdd) qrReaderAdd.style.display = 'none'; if (qrReaderEdit) qrReaderEdit.style.display = 'none'; });
+            } else { if (qrReaderAdd) qrReaderAdd.style.display = 'none'; if (qrReaderEdit) qrReaderEdit.style.display = 'none'; }
         }
     </script>
 @endpush

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tabla de Trabajadores Optimizada</title>
+    <title>Tabla Trabajadores Ordenada por Primer Puesto</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
@@ -62,6 +62,7 @@
                     <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Codigo Trabajador</th>
                     <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
                     <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unidades (Turno)</th>
+                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Puesto</th>
                     <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Inicio Puesto</th>
                     <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fin Puesto</th>
                     <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cantidad</th>
@@ -70,13 +71,13 @@
             </thead>
             <tbody class="bg-white divide-y divide-gray-200" id="workersTableBody">
                 <tr id="loadingRow">
-                    <td colspan="7" class="px-4 py-4 text-center text-gray-500">Cargando datos...</td>
+                    <td colspan="8" class="px-4 py-4 text-center text-gray-500">Cargando datos...</td>
                 </tr>
                 <tr id="errorRow" class="hidden">
-                     <td colspan="7" class="px-4 py-4 text-center text-red-500"></td>
+                     <td colspan="8" class="px-4 py-4 text-center text-red-500"></td>
                 </tr>
                  <tr id="noDataRow" class="hidden">
-                     <td colspan="7" class="px-4 py-4 text-center text-gray-500">No se encontraron datos para el periodo seleccionado.</td>
+                     <td colspan="8" class="px-4 py-4 text-center text-gray-500">No se encontraron datos para el periodo seleccionado.</td>
                 </tr>
             </tbody>
         </table>
@@ -149,6 +150,7 @@
             default: break;
         }
 
+        // La API espera que 'to_date' sea el día *después* del último día que quieres incluir
         let apiToDate = new Date(endDate);
         apiToDate.setDate(endDate.getDate() + 1);
 
@@ -165,159 +167,209 @@
      */
     function filterDataByCheckbox(data) {
         if (filterPostsCheckbox.checked) {
-            return data.filter(worker => worker.operator_posts && worker.operator_posts.length > 0);
+            // Filtra trabajadores que tengan al menos un puesto con cantidad > 0
+            return data.filter(worker =>
+                worker.operator_posts && worker.operator_posts.some(post => (post.count ?? 0) > 0)
+            );
         }
-        return data;
+        return data; // Devuelve todos si el checkbox no está marcado
     }
 
     /**
      * Rellena la tabla HTML con los datos de los trabajadores y sus puestos.
      * Filtra los puestos con cantidad 0.
      * Calcula la suma de cantidades para la columna "Unidades (Turno)".
-     * @param {Array} data - Los datos de los trabajadores (ya filtrados por checkbox si aplica).
+     * @param {Array} data - Los datos de los trabajadores (ya filtrados por checkbox y ordenados).
      */
     function populateTable(data) {
+        // Limpia filas existentes excepto las de estado
         tableBody.querySelectorAll('tr:not(#loadingRow):not(#errorRow):not(#noDataRow)').forEach(row => row.remove());
-        displayedPostRowsCount = 0;
+        displayedPostRowsCount = 0; // Resetea contador de filas de puestos
+        // Aplica filtro de checkbox a los datos ya ordenados
         const dataToDisplay = filterDataByCheckbox(data);
 
+        // Si no hay datos para mostrar después del filtro
         if (dataToDisplay.length === 0) {
             if (filterPostsCheckbox.checked && data.length > 0) {
-                 noDataRow.querySelector('td').textContent = 'Ningún trabajador con puestos asignados en este periodo.';
+                 noDataRow.querySelector('td').textContent = 'Ningún trabajador con puestos asignados (con cantidad > 0) en este periodo.';
             } else {
                  noDataRow.querySelector('td').textContent = 'No se encontraron datos para el periodo seleccionado.';
             }
-            noDataRow.classList.remove('hidden');
-            exportExcelBtn.disabled = true;
-            return;
+            noDataRow.classList.remove('hidden'); // Muestra mensaje "Sin datos"
+            exportExcelBtn.disabled = true; // Deshabilita exportar
+            return; // Termina la función
         }
 
-        noDataRow.classList.add('hidden');
-        let workersWithVisiblePosts = 0;
+        noDataRow.classList.add('hidden'); // Oculta mensaje "Sin datos"
+        let workersWithVisiblePosts = 0; // Contador de trabajadores que se mostrarán
 
+        // Itera sobre cada trabajador en los datos filtrados Y ORDENADOS
         dataToDisplay.forEach((worker) => {
-            let hasVisiblePosts = false;
-            let totalQuantitySum = 0; // Variable para la suma de cantidades del trabajador
+            let totalQuantitySum = 0; // Suma de cantidades para este trabajador
 
-            // Calcula la suma total de cantidades ANTES de decidir si mostrar el trabajador
+            // Calcula la suma total de cantidades de los puestos del trabajador
             if (worker.operator_posts && worker.operator_posts.length > 0) {
                  totalQuantitySum = worker.operator_posts.reduce((sum, post) => {
-                    // Suma solo si la cantidad es mayor que 0 (consistente con el filtro de filas)
-                    const count = post.count ?? 0;
-                    return sum + (count > 0 ? count : 0);
+                    const count = post.count ?? 0; // Obtiene cantidad del puesto (o 0 si es null/undefined)
+                    return sum + (count > 0 ? count : 0); // Suma solo si la cantidad es mayor que 0
                 }, 0);
-                // Comprueba si hay algún puesto con cantidad > 0 para el filtro del checkbox
-                hasVisiblePosts = worker.operator_posts.some(post => (post.count ?? 0) > 0);
             }
 
-
-            // Si el checkbox está activo y el trabajador no tiene puestos visibles (count > 0), no lo mostramos
+            // Esta comprobación es redundante si filterDataByCheckbox ya se aplicó,
+            // pero la dejamos por seguridad.
+            const hasVisiblePosts = worker.operator_posts && worker.operator_posts.some(post => (post.count ?? 0) > 0);
             if (filterPostsCheckbox.checked && !hasVisiblePosts) {
                 return; // Saltar al siguiente trabajador
             }
 
-            // Si llegamos aquí, mostramos la fila del trabajador
-            workersWithVisiblePosts++;
+            workersWithVisiblePosts++; // Incrementa contador de trabajadores mostrados
 
+            // --- Crear fila del trabajador ---
             const workerRow = tableBody.insertRow();
             workerRow.classList.add('bg-blue-50', 'hover:bg-blue-100', 'transition-colors', 'duration-150', 'ease-in-out');
-            // Añade las celdas del trabajador
+            // Celdas del trabajador
             workerRow.insertCell().textContent = worker.client_id ?? '-';
             workerRow.insertCell().textContent = worker.name ?? 'Sin Nombre';
-            // *** CAMBIO: Mostrar la suma calculada en lugar de count_order ***
-            workerRow.insertCell().textContent = totalQuantitySum;
-            // Celdas vacías para alinear
-            workerRow.insertCell().textContent = '';
-            workerRow.insertCell().textContent = '';
-            workerRow.insertCell().textContent = '';
-            workerRow.insertCell().textContent = '';
+            workerRow.insertCell().textContent = totalQuantitySum; // Muestra la suma calculada
+            // Celdas vacías para alinear con las columnas de puesto
+            workerRow.insertCell().textContent = ''; // Puesto
+            workerRow.insertCell().textContent = ''; // Inicio Puesto
+            workerRow.insertCell().textContent = ''; // Fin Puesto
+            workerRow.insertCell().textContent = ''; // Cantidad
+            workerRow.insertCell().textContent = ''; // Confeccion
+            // Aplica estilos a las celdas de la fila del trabajador
             Array.from(workerRow.cells).forEach(cell => cell.classList.add('px-4', 'py-3', 'text-sm', 'font-medium', 'text-gray-900', 'whitespace-nowrap'));
 
-            // Itera sobre los puestos para mostrarlos (si los tiene y count > 0)
+            // --- Crear filas de los puestos (si existen y tienen cantidad > 0) ---
              if (worker.operator_posts && worker.operator_posts.length > 0) {
-                worker.operator_posts.forEach((post, index) => {
-                    if ((post.count ?? 0) > 0) { // Filtro para mostrar solo puestos con cantidad > 0
-                        displayedPostRowsCount++;
+                 // Ordena los puestos de ESTE trabajador por fecha de creación para mostrar en orden cronológico
+                 const sortedPosts = [...worker.operator_posts].sort((postA, postB) => {
+                    const dateA = postA.created_at ? new Date(postA.created_at) : null;
+                    const dateB = postB.created_at ? new Date(postB.created_at) : null;
+                    if (dateA && dateB) return dateA - dateB;
+                    if (dateA) return -1; // Pone los que tienen fecha antes
+                    if (dateB) return 1;
+                    return 0; // Si ninguno tiene fecha, mantiene orden relativo
+                 });
+
+                sortedPosts.forEach((post, index) => {
+                    // Solo muestra la fila del puesto si su cantidad es mayor que 0
+                    if ((post.count ?? 0) > 0) {
+                        displayedPostRowsCount++; // Incrementa contador de filas de puestos mostradas
                         const postRow = tableBody.insertRow();
+                        // Alterna color de fondo para las filas de puestos
                         postRow.classList.add(index % 2 === 0 ? 'bg-white' : 'bg-gray-50', 'hover:bg-gray-100', 'transition-colors', 'duration-150', 'ease-in-out');
-                        // Celdas vacías
-                        postRow.insertCell().textContent = '';
-                        postRow.insertCell().textContent = '';
-                        postRow.insertCell().textContent = '';
-                        // Formatea fechas
+
+                        // Celdas vacías para alinear con las columnas de trabajador
+                        postRow.insertCell().textContent = ''; // Codigo Trabajador
+                        postRow.insertCell().textContent = ''; // Nombre
+                        postRow.insertCell().textContent = ''; // Unidades (Turno)
+
+                        // *** CELDA PUESTO ***
+                        const puestoCell = postRow.insertCell();
+                        puestoCell.textContent = post.rfid_reading?.name ?? 'N/A';
+
+                        // Celdas de Inicio y Fin Puesto (formateadas)
                         let startDate = '-';
                         if (post.created_at) { try { startDate = dateFormatter.format(new Date(post.created_at)); } catch (e) { console.error("Error formateando fecha inicio:", post.created_at, e); } }
                         let endDate = '-';
                         if (post.finish_at) { try { endDate = dateFormatter.format(new Date(post.finish_at)); } catch (e) { console.error("Error formateando fecha fin:", post.finish_at, e); } }
-                        // Celdas del puesto
-                        postRow.insertCell().textContent = startDate;
-                        postRow.insertCell().textContent = endDate;
-                        postRow.insertCell().textContent = post.count ?? 0;
-                        postRow.insertCell().textContent = post.product_list?.name ?? 'N/A';
+                        postRow.insertCell().textContent = startDate; // Inicio Puesto
+                        postRow.insertCell().textContent = endDate;   // Fin Puesto
+
+                        // Celdas de Cantidad y Confección
+                        postRow.insertCell().textContent = post.count ?? 0; // Cantidad
+                        postRow.insertCell().textContent = post.product_list?.name ?? 'N/A'; // Confeccion
+
+                        // Aplica estilos a las celdas de la fila del puesto
                         Array.from(postRow.cells).forEach(cell => cell.classList.add('px-4', 'py-3', 'text-sm', 'text-gray-600', 'whitespace-nowrap'));
-                        postRow.cells[3].classList.add('pl-8');
+                        // Añade padding izquierdo a la primera celda de datos del puesto (Puesto) para indentar
+                        postRow.cells[3].classList.add('pl-8'); // Indentar la celda de Puesto
                     }
                 });
             }
         });
 
-        // Comprobación final si se mostró algo
+        // Comprobación final: si después de iterar, no se mostró ningún trabajador
         if (workersWithVisiblePosts === 0) {
-             noDataRow.querySelector('td').textContent = 'Ningún trabajador cumple los criterios de filtro (con puestos y cantidad > 0).';
+             // Mensaje ajustado por si el filtro de checkbox está activo
+             if (filterPostsCheckbox.checked) {
+                 noDataRow.querySelector('td').textContent = 'Ningún trabajador cumple los criterios de filtro (con puestos y cantidad > 0).';
+             } else {
+                 noDataRow.querySelector('td').textContent = 'No se encontraron datos para el periodo seleccionado.';
+             }
              noDataRow.classList.remove('hidden');
              exportExcelBtn.disabled = true;
         } else {
-             exportExcelBtn.disabled = false;
+             exportExcelBtn.disabled = false; // Habilita exportar si hay datos visibles
         }
     }
 
 
     /**
      * Exporta los datos visibles a Excel.
+     * Los datos ya estarán ordenados según el primer puesto del trabajador.
+     * Incluye la columna renombrada 'Puesto'.
      * Calcula la suma de cantidades para la columna "Unidades Turno".
      */
     function exportToExcel() {
+        // Obtiene los datos originales (ya ordenados por fetchData) y aplica el filtro del checkbox
         const dataFilteredByCheckbox = filterDataByCheckbox(originalWorkersData);
 
+        // Verifica si hay datos después de filtrar por checkbox
         if (!dataFilteredByCheckbox || dataFilteredByCheckbox.length === 0) {
             alert("No hay datos que coincidan con el filtro de 'Mostrar solo con puestos' para exportar.");
             return;
         }
 
-        const flattenedData = [];
+        const flattenedData = []; // Array para almacenar los datos aplanados para Excel
+
+        // Itera sobre los trabajadores filtrados Y ORDENADOS
         dataFilteredByCheckbox.forEach(worker => {
-            let workerHasVisiblePosts = false; // Flag para saber si este trabajador tiene puestos > 0
             let totalQuantitySum = 0; // Suma para este trabajador
 
-            // Calcula la suma y verifica si hay puestos visibles ANTES de generar filas de Excel
+            // Calcula la suma total de cantidades > 0 ANTES de generar filas de Excel
             if (worker.operator_posts && worker.operator_posts.length > 0) {
                  totalQuantitySum = worker.operator_posts.reduce((sum, post) => {
                     const count = post.count ?? 0;
                     return sum + (count > 0 ? count : 0); // Suma solo cantidades > 0
                 }, 0);
-                 workerHasVisiblePosts = worker.operator_posts.some(post => (post.count ?? 0) > 0);
             }
 
-             // Si el checkbox está activo y el trabajador no tiene puestos visibles, no lo incluimos en el Excel
+            // Comprueba si el trabajador tiene al menos un puesto con cantidad > 0 (redundante si se filtró)
+            const workerHasVisiblePosts = worker.operator_posts && worker.operator_posts.some(post => (post.count ?? 0) > 0);
+
+            // Si el checkbox está activo y el trabajador no tiene puestos visibles, no lo incluimos en el Excel
             if (filterPostsCheckbox.checked && !workerHasVisiblePosts) {
                 return; // Saltar al siguiente trabajador
             }
 
-
-            // Solo procesa los puestos si el trabajador debe ser incluido
+            // Procesa los puestos del trabajador si debe ser incluido
             if (worker.operator_posts && worker.operator_posts.length > 0) {
-                worker.operator_posts.forEach(post => {
-                    if ((post.count ?? 0) > 0) { // Filtro para incluir solo puestos con cantidad > 0
+                 // Ordena los puestos también para el Excel por consistencia con la tabla
+                 const sortedPostsExcel = [...worker.operator_posts].sort((postA, postB) => {
+                    const dateA = postA.created_at ? new Date(postA.created_at) : null;
+                    const dateB = postB.created_at ? new Date(postB.created_at) : null;
+                    if (dateA && dateB) return dateA - dateB;
+                    if (dateA) return -1;
+                    if (dateB) return 1;
+                    return 0;
+                 });
+
+                sortedPostsExcel.forEach(post => {
+                    // Incluye en Excel solo los puestos con cantidad > 0
+                    if ((post.count ?? 0) > 0) {
                         let startDateExcel = '-';
                         if (post.created_at) { try { startDateExcel = dateFormatter.format(new Date(post.created_at)); } catch (e) {} }
                         let endDateExcel = '-';
                         if (post.finish_at) { try { endDateExcel = dateFormatter.format(new Date(post.finish_at)); } catch (e) {} }
 
+                        // Añade una fila al array de datos para Excel
                         flattenedData.push({
                             'Codigo Trabajador': worker.client_id ?? '-',
                             'Nombre Trabajador': worker.name ?? 'Sin Nombre',
-                             // *** CAMBIO: Usar la suma calculada ***
-                            'Unidades Turno': totalQuantitySum,
+                            'Unidades Turno': totalQuantitySum, // Usa la suma calculada
+                            'Puesto': post.rfid_reading?.name ?? 'N/A',
                             'Inicio Puesto': startDateExcel,
                             'Fin Puesto': endDateExcel,
                             'Cantidad Puesto': post.count ?? 0,
@@ -326,34 +378,23 @@
                     }
                 });
              } else if (!filterPostsCheckbox.checked) {
-                 // Si el checkbox NO está activo, y el trabajador NO tiene puestos,
-                 // podríamos querer añadir una fila solo con los datos del trabajador y suma 0.
-                 // Decide si este comportamiento es deseado. Por ahora, lo omitimos
-                 // para ser consistente con la tabla (que no mostraría detalles).
-                 // Si quieres incluirlo, descomenta la siguiente sección:
-                 /*
-                 flattenedData.push({
-                     'Codigo Trabajador': worker.client_id ?? '-',
-                     'Nombre Trabajador': worker.name ?? 'Sin Nombre',
-                     'Unidades Turno': 0, // No tiene puestos, la suma es 0
-                     'Inicio Puesto': '-',
-                     'Fin Puesto': '-',
-                     'Cantidad Puesto': '-',
-                     'Confeccion': '-'
-                 });
-                 */
+                 // Opcional: Incluir trabajadores sin puestos si el filtro no está activo
+                 // Actualmente se omite para consistencia con la tabla filtrada por count > 0
              }
         });
 
+        // Si después de procesar, no hay filas de detalles de puestos para exportar
         if (flattenedData.length === 0) {
              alert("No hay detalles de puestos con cantidad mayor que 0 para exportar (según los filtros aplicados).");
              return;
         }
 
+        // --- Creación del archivo Excel ---
         const worksheet = XLSX.utils.json_to_sheet(flattenedData);
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "TrabajadoresDetalle");
 
+        // Ajusta el ancho de las columnas automáticamente
         const colWidths = Object.keys(flattenedData[0]).map(key => {
             const maxContentWidth = flattenedData.reduce((w, r) => Math.max(w, (r[key]?.toString() ?? '').length), 0);
             const headerWidth = key.length;
@@ -361,11 +402,13 @@
         });
         worksheet["!cols"] = colWidths;
 
+        // Genera el nombre del archivo
         const selectedOptionText = dateRangeSelect.options[dateRangeSelect.selectedIndex].text;
         const fileNameDate = selectedOptionText.replace(/ /g, '_');
-        const filterSuffix = filterPostsCheckbox.checked ? '_ConPuestos_SumaCant' : '_SumaCant'; // Actualizado sufijo
+        const filterSuffix = filterPostsCheckbox.checked ? '_ConPuestos_SumaCant' : '_SumaCant';
         const fileName = `Informe_Trabajadores_${fileNameDate}${filterSuffix}.xlsx`;
 
+        // Descarga el archivo Excel
         XLSX.writeFile(workbook, fileName);
     }
 
@@ -377,7 +420,8 @@
     }
 
     /**
-     * Obtiene los datos de la API para el rango de fechas especificado.
+     * Obtiene y ordena los datos de la API para el rango de fechas especificado.
+     * Ordena los trabajadores por el nombre de su primer puesto activo (cantidad > 0).
      * @param {string} fromDate - Fecha de inicio (YYYY-MM-DD).
      * @param {string} toDate - Fecha de fin (YYYY-MM-DD, día siguiente al último deseado).
      */
@@ -404,11 +448,55 @@
                 loadingRow.classList.add('hidden');
                 if (apiResponse.success && Array.isArray(apiResponse.data)) {
                     originalWorkersData = apiResponse.data;
-                    // Ya no ordenamos por count_order aquí, la relevancia es la suma
-                    // Si quieres mantener un orden (p.ej. por nombre), hazlo aquí:
-                    // originalWorkersData.sort((a, b) => a.name.localeCompare(b.name));
-                    populateTable(originalWorkersData);
-                } else if (apiResponse.success && (!Array.isArray(apiResponse.data) || apiResponse.data.length === 0)) {
+
+                    // *** INICIO: Lógica de Ordenación por Primer Puesto Activo ***
+                    originalWorkersData.sort((workerA, workerB) => {
+                        // Función auxiliar para encontrar el primer puesto activo
+                        const findFirstActivePost = (worker) => {
+                            if (!worker.operator_posts || worker.operator_posts.length === 0) {
+                                return null; // No tiene puestos
+                            }
+                            // Filtra puestos activos (count > 0) y con fecha válida
+                            const activePosts = worker.operator_posts
+                                .filter(p => (p.count ?? 0) > 0 && p.created_at)
+                                .map(p => ({ ...p, createdAtDate: new Date(p.created_at) })) // Añade fecha parseada
+                                .filter(p => !isNaN(p.createdAtDate)); // Filtra fechas inválidas
+
+                            if (activePosts.length === 0) {
+                                return null; // No tiene puestos activos con fecha válida
+                            }
+                            // Ordena por fecha de creación ascendente
+                            activePosts.sort((a, b) => a.createdAtDate - b.createdAtDate);
+                            return activePosts[0]; // Devuelve el primero
+                        };
+
+                        const firstPostA = findFirstActivePost(workerA);
+                        const firstPostB = findFirstActivePost(workerB);
+
+                        const puestoNameA = firstPostA?.rfid_reading?.name ?? null;
+                        const puestoNameB = firstPostB?.rfid_reading?.name ?? null;
+
+                        // Lógica de comparación
+                        if (puestoNameA && puestoNameB) {
+                            // Ambos tienen primer puesto, compara nombres
+                            const nameComparison = puestoNameA.localeCompare(puestoNameB);
+                            if (nameComparison !== 0) return nameComparison;
+                            // Si los nombres son iguales, ordena por nombre de trabajador
+                            return (workerA.name ?? '').localeCompare(workerB.name ?? '');
+                        } else if (puestoNameA) {
+                            return -1; // A tiene puesto, B no -> A va primero
+                        } else if (puestoNameB) {
+                            return 1; // B tiene puesto, A no -> B va primero
+                        } else {
+                            // Ninguno tiene puesto activo, ordena por nombre de trabajador
+                            return (workerA.name ?? '').localeCompare(workerB.name ?? '');
+                        }
+                    });
+                    // *** FIN: Lógica de Ordenación ***
+
+                    populateTable(originalWorkersData); // Rellena la tabla con los datos ordenados
+                }
+                else if (apiResponse.success && (!Array.isArray(apiResponse.data) || apiResponse.data.length === 0)) {
                     originalWorkersData = [];
                     populateTable(originalWorkersData);
                 } else {
@@ -427,6 +515,7 @@
     }
 
     // --- Lógica Principal (Event Listeners e Inicialización) ---
+
     exportExcelBtn.disabled = true;
     exportExcelBtn.addEventListener('click', exportToExcel);
     printBtn.addEventListener('click', printTable);
@@ -434,17 +523,18 @@
     dateRangeSelect.addEventListener('change', (event) => {
         const selectedRange = event.target.value;
         const { from, to } = getDateRange(selectedRange);
-        fetchData(from, to);
+        fetchData(from, to); // fetchData ahora ordena los datos
     });
 
     filterPostsCheckbox.addEventListener('change', () => {
+        // Solo necesita repintar la tabla, los datos en originalWorkersData ya están ordenados
         populateTable(originalWorkersData);
     });
 
     function loadInitialData() {
          const initialRangeValue = dateRangeSelect.value;
          const { from, to } = getDateRange(initialRangeValue);
-         fetchData(from, to);
+         fetchData(from, to); // Carga y ordena los datos iniciales
     }
 
     document.addEventListener('DOMContentLoaded', loadInitialData);
