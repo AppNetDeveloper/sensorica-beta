@@ -227,6 +227,7 @@
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.colVis.min.js"></script> {{-- JS para ColVis --}}
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdn.datatables.net/responsive/2.4.1/js/dataTables.responsive.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -473,7 +474,26 @@
                             });
                         }
                     },
-                    { extend: 'excelHtml5', text: '<i class="bi bi-file-earmark-excel"></i> Excel', className: 'btn btn-success', titleAttr: 'Exportar tabla a Excel' }, // Quitado mb-2
+                        // Botón para exportar a Excel
+                        {
+                            extend: 'excelHtml5',
+                            text: '<i class="bi bi-file-earmark-excel"></i> Excel',
+                            className: 'btn btn-success',
+                            titleAttr: 'Exportar a Excel',
+                            exportOptions: {
+                                columns: ':visible' // Exportar solo columnas visibles
+                            }
+                        },
+                        // ** MODIFICADO **: Botón para imprimir (solo columnas visibles)
+                        {
+                            extend: 'print',
+                            text: '<i class="bi bi-printer"></i> Imprimir',
+                            className: 'btn btn-secondary',
+                            titleAttr: 'Imprimir tabla',
+                            exportOptions: {
+                                columns: ':visible' // Asegurar que solo se impriman las columnas visibles
+                            }
+                        },
                     { extend: 'colvis', text: '<i class="bi bi-eye"></i> Columnas', className: 'btn btn-secondary', titleAttr: 'Mostrar/Ocultar columnas' }, // **NUEVO**: Botón ColVis
                     { text: '<i class="bi bi-broadcast"></i> Live Rfid', className: 'btn btn-info', action: function () { window.open('/live-rfid/', '_blank'); }, titleAttr: 'Ver lecturas RFID en tiempo real' } // Quitado mb-2
                 ],

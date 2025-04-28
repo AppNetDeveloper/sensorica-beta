@@ -449,15 +449,19 @@ class RfidDetailController extends Controller
 
     public function getFilters()
     {
-        $antennas = RfidAnt::select('name')->get(); // Solo obtén el nombre de la antena
-        $epcs     = RfidDetail::select('epc')->distinct()->pluck('epc');
-        $tids     = RfidDetail::select('tid')->distinct()->pluck('tid');
+        $antennas   = RfidAnt::select('name')->get(); // Solo obtén el nombre de la antena
+        $epcs       = RfidDetail::select('epc')->distinct()->pluck('epc');
+        $tids       = RfidDetail::select('tid')->distinct()->pluck('tid');
+
+        //obtenemos el listado de tid derfid_details where reset = 1
+        $tidspoints = RfidDetail::select('tid')->where('reset', 1)->distinct()->pluck('tid');
 
         return response()->json([
             'success'  => true,
             'antennas' => $antennas,
             'epcs'     => $epcs,
-            'tids'     => $tids
+            'tids'     => $tids,
+            'tids_master_reset'     => $tidspoints
         ]);
     }
 }

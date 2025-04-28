@@ -13,10 +13,12 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
 
   <style>
+    /* Estilos generales del cuerpo */
     body {
       background-color: #f8f9fa;
       font-family: 'Roboto', sans-serif;
     }
+    /* Contenedor del encabezado */
     .header-container {
       width: 100%;
       background-color: #343a40;
@@ -31,27 +33,86 @@
     .header-center { text-align: center; font-size: 1.3rem; font-weight: 500; }
     .header-right { font-size: 1.5rem; text-align: right; margin: 0; padding: 0; }
     .header-right small { display: block; font-size: 1.0rem; color: #ffc107; text-align: right; margin: 0; padding: 0; }
-    .card-custom { background-color: #fff; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05); border-radius: 12px; margin-bottom: 20px; border: none; }
-    .filter-header { background-color: #6c757d; color: #fff; padding: 15px 20px; font-size: 1.1rem; font-weight: 500; border-radius: 12px 12px 0 0; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: background-color 0.2s ease; }
+    /* Estilo personalizado para las tarjetas */
+    .card-custom {
+      background-color: #fff;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+      border-radius: 12px;
+      margin-bottom: 20px;
+      border: none;
+    }
+    /* Encabezado del filtro */
+    .filter-header {
+      background-color: #6c757d;
+      color: #fff;
+      padding: 15px 20px;
+      font-size: 1.1rem;
+      font-weight: 500;
+      border-radius: 12px 12px 0 0;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: background-color 0.2s ease;
+    }
     .filter-header:hover { background-color: #5a6268; }
-    .filter-container { padding: 20px; background-color: #fff; border-radius: 0 0 12px 12px; transition: max-height 0.3s ease-in-out, padding 0.3s ease-in-out; overflow: hidden; border: 1px solid #dee2e6; border-top: none; }
-    .filter-container { position: relative; z-index: 10; }
-    .filter-content { display: flex; flex-wrap: wrap; gap: 15px; opacity: 1; transition: opacity 0.2s ease-in-out; }
-    .filter-container.collapsed { padding-top: 0; padding-bottom: 0; max-height: 0; border-width: 0; overflow: hidden; }
+    /* Contenedor del filtro */
+    .filter-container {
+      padding: 20px;
+      background-color: #fff;
+      border-radius: 0 0 12px 12px;
+      transition: max-height 0.3s ease-in-out, padding 0.3s ease-in-out;
+      overflow: hidden;
+      border: 1px solid #dee2e6;
+      border-top: none;
+      position: relative;
+      z-index: 10;
+    }
+    .filter-content {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      opacity: 1;
+      transition: opacity 0.2s ease-in-out;
+    }
+    .filter-container.collapsed {
+      padding-top: 0;
+      padding-bottom: 0;
+      max-height: 0;
+      border-width: 0;
+      overflow: hidden;
+    }
     .filter-container.collapsed .filter-content { opacity: 0; }
-    .filter-container label { color: #495057; font-weight: 500; margin-bottom: 5px; display: block; }
+    .filter-container label {
+      color: #495057;
+      font-weight: 500;
+      margin-bottom: 5px;
+      display: block;
+    }
     .table-container {
-        background-color: #fff;
-        border-radius: 12px;
-        padding: 20px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
-        overflow-x: auto;
+      background-color: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+      overflow-x: auto;
     }
     .rotate-icon { transition: transform 0.3s ease-in-out; }
     .filter-header:not(.collapsed) .rotate-icon { transform: rotate(180deg); }
     table.dataTable { border-collapse: collapse !important; width: 100% !important; border: 1px solid #dee2e6; }
-    table.dataTable thead th { background-color: #f8f9fa; color: #495057; border-bottom: 2px solid #dee2e6; padding: 12px 15px; text-align: left; font-weight: 600; white-space: nowrap; /* Prevent header text wrapping */ }
-    table.dataTable tbody td { padding: 10px 15px; border-bottom: 1px solid #dee2e6; vertical-align: middle; }
+    table.dataTable thead th {
+      background-color: #f8f9fa;
+      color: #495057;
+      border-bottom: 2px solid #dee2e6;
+      padding: 12px 15px;
+      text-align: left;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    table.dataTable tbody td {
+      padding: 10px 15px;
+      border-bottom: 1px solid #dee2e6;
+      vertical-align: middle;
+    }
     table.dataTable tbody tr:nth-of-type(odd) { background-color: rgba(0, 0, 0, 0.02); }
     .form-control, .form-select, .select2-container .select2-selection--single {
       border-radius: 6px !important;
@@ -67,36 +128,50 @@
       box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
     }
     .select2-container--bootstrap-5 .select2-selection--single .select2-selection__arrow {
-        height: calc(1.5em + 0.75rem);
-        top: 1px;
+      height: calc(1.5em + 0.75rem);
+      top: 1px;
     }
     .select2-dropdown {
-        border-radius: 6px !important;
-        border: 1px solid #ced4da !important;
-        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
-        z-index: 1056;
+      border-radius: 6px !important;
+      border: 1px solid #ced4da !important;
+      box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+      z-index: 1056;
     }
-     .filter-content > div {
-        flex: 1 1 200px;
-        min-width: 180px;
-        display: flex;
-        flex-direction: column;
+    .filter-content > div {
+      flex: 1 1 200px;
+      min-width: 180px;
+      display: flex;
+      flex-direction: column;
     }
     .filter-content .select2-container {
-        flex-grow: 1;
-        width: 100% !important;
+      flex-grow: 1;
+      width: 100% !important;
     }
     .dataTables_length select, .dataTables_filter input, .dt-buttons .btn {
-        display: inline-block; width: auto; margin-left: 0.5em; margin-right: 0.5em; padding: 0.375rem 0.75rem; border-radius: 6px; border: 1px solid #ced4da; vertical-align: middle;
+      display: inline-block;
+      width: auto;
+      margin: 0 0.5em;
+      padding: 0.375rem 0.75rem;
+      border-radius: 6px;
+      border: 1px solid #ced4da;
+      vertical-align: middle;
     }
     .dt-buttons .btn { background-color: #6c757d; color: white; border: none; }
     .dt-buttons .btn:hover { background-color: #5a6268; }
-    .dataTables_wrapper .dataTables_length, .dataTables_wrapper .dataTables_filter, .dataTables_wrapper .dt-buttons {
-        margin-bottom: 1em; float: none; text-align: left; padding-top: 5px;
+    .dataTables_wrapper .dataTables_length, .dataTables_wrapper .dt-buttons {
+      margin-bottom: 1em;
+      float: none;
+      text-align: left;
+      padding-top: 5px;
     }
     .dataTables_wrapper .dataTables_filter { float: right; text-align: right; }
     .dataTables_wrapper .dt-buttons { float: left; text-align: left; margin-right: 1em; }
-    .dataTables_wrapper .dataTables_length label { display: inline-flex; align-items: center; gap: 0.5em; margin-bottom: 0; }
+    .dataTables_wrapper .dataTables_length label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5em;
+      margin-bottom: 0;
+    }
     .dataTables_wrapper::after { content: ""; clear: both; display: table; }
   </style>
 </head>
@@ -137,9 +212,16 @@
           </select>
         </div>
         <div>
-          <label for="tidSelect">TID</label>
+          <label for="tidSelect">TID (General)</label>
           <select id="tidSelect" class="form-select filter-select2">
             <option value="all" selected>Todos</option>
+          </select>
+        </div>
+        <div>
+          <label for="tidMasterResetSelect">TID Master Reset</label>
+          <select id="tidMasterResetSelect" class="form-select filter-select2">
+            <option value="all" selected>Todos</option>
+            <option value="__MASTER_RESET_ONLY__">Solo Master Reset</option>
           </select>
         </div>
         <div>
@@ -180,12 +262,12 @@
               <th>Fecha</th>
             </tr>
           </thead>
-          <tbody>
-            </tbody>
+          <tbody></tbody>
         </table>
       </div>
     </div>
   </div>
+
 </div>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -197,238 +279,189 @@
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <script>
-  $(document).ready(function() {
+$(document).ready(function() {
+  // Inicializar Select2 solo una vez
+  $('.filter-select2').select2({
+    theme: "bootstrap-5",
+    width: '100%',
+    placeholder: "Seleccionar...",
+    allowClear: true
+  })
+  .on('change.select2', function() {
+    stopAutoRefresh();
+    fetchAndDisplayRfidData();
+  })
+  .on('select2:open', function () {
+    setTimeout(() => { $('.select2-search__field').first().focus(); }, 100);
+  });
 
-    // --- Function to format date as YYYY-MM-DD ---
-    function formatDate(date) {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
+  // Toggle filtros
+  $('#filterToggle').on('click', function() {
+    const container = $('#filterContainer');
+    const header = $(this);
+    header.toggleClass('collapsed');
+    container.toggleClass('collapsed');
+    if (container.hasClass('collapsed')) {
+      container.css({ 'max-height': '0', 'overflow': 'hidden' });
+    } else {
+      container.css('overflow','visible');
+      const h = container[0].scrollHeight + 'px';
+      container.css('max-height', h);
+      setTimeout(() => {
+        if (!container.hasClass('collapsed')) container.css('max-height','none');
+        container.css('overflow','hidden');
+      }, 350);
     }
+  });
 
-    // --- Set Default Dates ---
-    function setDefaultDates() {
-        const today = new Date();
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        $('#dateStart').val(formatDate(today));
-        $('#dateEnd').val(formatDate(tomorrow));
-    }
+  // Reloj del header
+  function updateTime() {
+    $('#headerTime').text(new Date().toLocaleTimeString('es-ES',{hour12:false}));
+  }
+  setInterval(updateTime,1000);
+  updateTime();
 
-    // --- Filter Toggle Functionality ---
-    $('#filterToggle').on('click', function() {
-      const container = $('#filterContainer');
-      const header = $(this);
-      header.toggleClass('collapsed');
-      container.toggleClass('collapsed');
-      if (container.hasClass('collapsed')) {
-        container.css('max-height', '0');
-      } else {
-        container.css('overflow', 'visible');
-        container.css('max-height', container[0].scrollHeight + 'px');
-        setTimeout(() => {
-            if (!container.hasClass('collapsed')) { container.css('max-height', 'none'); }
-             container.css('overflow', 'hidden');
-        }, 350);
+  // Formateo de fechas
+  function formatDate(d) {
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+  function setDefaultDates() {
+    const t = new Date(), m = new Date(t);
+    m.setDate(m.getDate()+1);
+    $('#dateStart').val(formatDate(t));
+    $('#dateEnd').val(formatDate(m));
+  }
+
+  const API = {
+    filters: '/api/get-filters',
+    rfidHistory: '/api/rfid-history'
+  };
+
+  // Cargar opciones de filtros
+  let masterResetTids = [];
+  function loadFilters() {
+    $.ajax({
+      url: API.filters, method: 'GET', dataType: 'json',
+      success(data) {
+        if (data.success) {
+          // Antennas
+          const a = $('#antennaSelect').empty().append(new Option('Todos','all',true,true));
+          (data.antennas||[]).forEach(x => a.append(new Option(x.name,x.name)));
+          // EPCs
+          const e = $('#epcSelect').empty().append(new Option('Todos','all',true,true));
+          (data.epcs||[]).forEach(x => e.append(new Option(x,x)));
+          // TIDs generales
+          const t = $('#tidSelect').empty().append(new Option('Todos','all',true,true));
+          (data.tids||[]).forEach(x => t.append(new Option(x,x)));
+          // TID Master Reset
+          const tm = $('#tidMasterResetSelect').empty()
+            .append(new Option('Todos','all',true,true))
+            .append(new Option('Solo Master Reset','__MASTER_RESET_ONLY__',false,false));
+          masterResetTids = data.tids_master_reset||[];
+          masterResetTids.forEach(x => tm.append(new Option(x,x)));
+        }
       }
     });
+  }
 
-    // --- Header Clock ---
-    function updateTime() {
-      const now = new Date();
-      const timeString = now.toLocaleTimeString('es-ES', { hour12: false });
-      $('#headerTime').text(timeString);
-    }
-    setInterval(updateTime, 1000);
-    updateTime();
+  // DataTable
+  const table = $('#rfidTable').DataTable({
+    language: { url: '//cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json' },
+    pageLength: 10,
+    order: [[8,'desc']],
+    responsive: true,
+    processing: true,
+    deferRender: true,
+    dom: 'lBfrtip',
+    buttons: [{
+      extend:'excelHtml5',
+      text:'<i class="fas fa-file-excel"></i> Exportar a Excel',
+      className:'btn btn-success btn-sm',
+      title:'Datos_RFID_Autoconto',
+      exportOptions:{columns:':visible'}
+    }]
+  });
 
-    // --- API Endpoints Configuration ---
-     const API_ENDPOINTS = {
-        filters: '/api/get-filters',
-        rfidHistory: '/api/rfid-history'
+  // Fetch y render
+  let isFetching=false, refreshId=null;
+  function fetchAndDisplayRfidData() {
+    if (isFetching) return;
+    isFetching = true;
+    const filters = {
+      antenna_name: $('#antennaSelect').val()==='all'?null:$('#antennaSelect').val(),
+      epc:          $('#epcSelect').val()==='all'?null:$('#epcSelect').val(),
+      date_start:   $('#dateStart').val()||null,
+      date_end:     $('#dateEnd').val()||null,
+      show:         $('#showSelect').val()==='all'?null:parseInt($('#showSelect').val(),10)
     };
+    Object.keys(filters).forEach(k=> filters[k]==null&&delete filters[k]);
 
-    // --- Initialize Select2 ---
-    function initializeSelect2() {
-        const select2Options = {
-            theme: "bootstrap-5", width: '100%', placeholder: "Seleccionar...", allowClear: true, dropdownParent: $('body')
-        };
-        $('#antennaSelect').select2(select2Options);
-        $('#epcSelect').select2(select2Options);
-        $('#tidSelect').select2(select2Options);
-        $('.filter-select2').on('select2:open', function (e) {
-             setTimeout(() => { $('.select2-search__field').first().focus(); }, 100);
-        });
-         $('#antennaSelect, #epcSelect, #tidSelect').on('change.select2', function() {
-            console.log("Filtro Select2 cambiado, actualizando datos...");
-            fetchAndDisplayRfidData();
-        });
-    }
+    const valGen = $('#tidSelect').val();
+    const valMas = $('#tidMasterResetSelect').val();
+    const soloMas = valMas==='__MASTER_RESET_ONLY__';
+    const especMas = valMas!=='all' && !soloMas;
+    const especGen = valGen!=='all';
 
-    // --- Load Filter Options from API ---
-    function loadFilters() {
-       $.ajax({
-        url: API_ENDPOINTS.filters, method: 'GET', dataType: 'json',
-        success: function(data) {
-          if (data && data.success && data.antennas && data.epcs && data.tids) {
-            // Populate selects
-            try {
-                const antennaSelect = $('#antennaSelect');
-                antennaSelect.find('option:not(:first)').remove();
-                data.antennas.forEach((antenna) => {
-                  if (antenna && typeof antenna.name !== 'undefined') { antennaSelect.append(new Option(antenna.name, antenna.name, false, false)); }
-                });
-            } catch (e) { console.error("API Filtros: Error procesando data.antennas:", e); }
-             try {
-                const epcSelect = $('#epcSelect');
-                epcSelect.find('option:not(:first)').remove();
-                data.epcs.forEach((epc) => {
-                  if (typeof epc === 'string' || typeof epc === 'number') { epcSelect.append(new Option(epc, epc, false, false)); }
-                });
-             } catch (e) { console.error("API Filtros: Error procesando data.epcs:", e); }
-             try {
-                const tidSelect = $('#tidSelect');
-                tidSelect.find('option:not(:first)').remove();
-                data.tids.forEach((tid) => {
-                  if (typeof tid === 'string' || typeof tid === 'number') { tidSelect.append(new Option(tid, tid, false, false)); }
-                });
-             } catch (e) { console.error("API Filtros: Error procesando data.tids:", e); }
-             // Initialize Select2 AFTER options are loaded
-             initializeSelect2();
-          } else { /* Handle errors */ }
-        },
-        error: function(jqXHR, textStatus, errorThrown) { /* Handle error */ },
-        complete: function() {
-            // Fallback initialization
-            if ($('.filter-select2').length > 0 && !$('.filter-select2').data('select2')) { initializeSelect2(); }
-        }
-      });
-    }
-
-
-    // --- Initialize DataTable ---
-    const rfidDataTable = $('#rfidTable').DataTable({
-      language: {
-        url: '//cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json',
-        buttons: { copy: 'Copiar', excel: 'Exportar a Excel', csv: 'CSV', pdf: 'PDF', print: 'Imprimir' },
-        lengthMenu: "Mostrar _MENU_ registros por página"
-      },
-      pageLength: 10,
-      lengthMenu: [ [10, 25, 50, 100, -1], [10, 25, 50, 100, "Todos"] ],
-      // UPDATED: Default sort order now points to the new index for 'Fecha'
-      order: [[8, 'desc']],
-      responsive: true,
-      processing: true,
-      deferRender: true,
-      stateSave: false,
-      dom: 'lBfrtip',
-      buttons: [
-        {
-          extend: 'excelHtml5',
-          text: '<i class="fas fa-file-excel"></i> Exportar a Excel',
-          titleAttr: 'Exportar a Excel',
-          className: 'btn btn-success',
-          title: 'Datos_RFID_Autoconto',
-          exportOptions: { columns: ':visible' } // Exports only visible columns
-        }
-      ]
-    });
-
-    // --- Fetch and Display RFID Data ---
-    let isFetching = false;
-    let refreshIntervalId = null;
-
-    function fetchAndDisplayRfidData() {
-      if (isFetching) { return; }
-      isFetching = true;
-
-      const filters = {
-        antenna_name: $('#antennaSelect').val() === 'all' ? null : $('#antennaSelect').val(),
-        epc:          $('#epcSelect').val() === 'all' ? null : $('#epcSelect').val(),
-        tid:          $('#tidSelect').val() === 'all' ? null : $('#tidSelect').val(),
-        date_start:   $('#dateStart').val() || null,
-        date_end:     $('#dateEnd').val() || null,
-        show:         $('#showSelect').val() === 'all' ? null : parseInt($('#showSelect').val(), 10)
-      };
-      Object.keys(filters).forEach(key => (filters[key] == null || filters[key] === '') && delete filters[key]);
-
-      $.ajax({
-        url: API_ENDPOINTS.rfidHistory, method: 'GET', data: filters, dataType: 'json',
-        success: function(response) {
-          if (response && response.success && Array.isArray(response.data)) {
-            const currentSearch = rfidDataTable.search();
-            const currentPageLength = rfidDataTable.page.len();
-            const scrollPos = $(window).scrollTop();
-
-            rfidDataTable.clear();
-
-            response.data.forEach((item) => {
-              if (item && typeof item === 'object') {
-                  // UPDATED: Added data for the new columns
-                  rfidDataTable.row.add([
-                    item.id || 'N/A',
-                    item.rfid_ant_name || 'N/A',
-                    item.ant || 'N/A',
-                    item.epc || 'N/A',
-                    item.tid || 'N/A',
-                    item.rssi !== undefined && item.rssi !== null ? item.rssi : 'N/A',
-                    // New data fields
-                    item.count_shift_1 !== undefined && item.count_shift_1 !== null ? item.count_shift_1 : 'N/A', // Contador Turno
-                    item.count_order_1 !== undefined && item.count_order_1 !== null ? item.count_order_1 : 'N/A',  // Contador Orden
-                    // Date field (now at index 8)
-                    item.created_at ? new Date(item.created_at).toLocaleString('es-ES') : 'N/A'
-                  ]);
-              }
-            });
-
-            rfidDataTable.page.len(currentPageLength);
-            rfidDataTable.search(currentSearch).draw('page');
-            $(window).scrollTop(scrollPos);
-
-          } else { /* Handle error */
-             const currentSearchOnError = rfidDataTable.search();
-             const currentPageLengthOnError = rfidDataTable.page.len();
-             rfidDataTable.clear();
-             rfidDataTable.page.len(currentPageLengthOnError);
-             rfidDataTable.search(currentSearchOnError).draw('page');
+    $.ajax({
+      url: API.rfidHistory, method:'GET', data:filters, dataType:'json',
+      success(resp) {
+        if (resp.success && Array.isArray(resp.data)) {
+          let data = resp.data;
+          if (soloMas) {
+            data = data.filter(i=> typeof i.tid==='string' && masterResetTids.includes(i.tid));
+          } else if (especMas) {
+            data = data.filter(i=>i.tid===valMas);
+          } else if (especGen) {
+            data = data.filter(i=>i.tid===valGen);
           }
-        },
-        error: function(jqXHR, textStatus, errorThrown) { /* Handle error */
-           const currentSearchOnAjaxError = rfidDataTable.search();
-           const currentPageLengthOnAjaxError = rfidDataTable.page.len();
-           rfidDataTable.clear();
-           rfidDataTable.page.len(currentPageLengthOnAjaxError);
-           rfidDataTable.search(currentSearchOnAjaxError).draw('page');
-        },
-        complete: function() { isFetching = false; }
-      });
-    }
-
-    // --- Auto-Refresh Control ---
-    function startAutoRefresh(intervalMs = 5000) {
-        if (refreshIntervalId) { clearInterval(refreshIntervalId); }
-        console.log(`Iniciando auto-refresh cada ${intervalMs / 1000} segundos.`);
-        fetchAndDisplayRfidData();
-        refreshIntervalId = setInterval(fetchAndDisplayRfidData, intervalMs);
-    }
-
-    function stopAutoRefresh() {
-        if (refreshIntervalId) { clearInterval(refreshIntervalId); refreshIntervalId = null; console.log("Auto-refresh detenido."); }
-    }
-
-    // --- Event Listeners for Standard Filter Changes ---
-    $('#dateStart, #dateEnd, #showSelect').on('change', function() {
-        console.log("Filtro estándar cambiado, actualizando datos...");
-        fetchAndDisplayRfidData();
+          const order = table.order(), len = table.page.len(), search = table.search(), scroll = $(window).scrollTop();
+          table.clear();
+          table.rows.add(data.map(i=>[
+            i.id||'N/A',
+            i.rfid_ant_name||'N/A',
+            i.ant||'N/A',
+            i.epc||'N/A',
+            i.tid||'N/A',
+            i.rssi||'N/A',
+            i.count_shift_1||'N/A',
+            i.count_order_1||'N/A',
+            i.created_at? new Date(i.created_at).toLocaleString('es-ES',{dateStyle:'short',timeStyle:'medium'}):'N/A'
+          ]));
+          table.order(order).page.len(len).search(search).draw('page');
+          $(window).scrollTop(scroll);
+        } else {
+          table.clear().draw();
+        }
+      },
+      error() {
+        table.clear().draw();
+      },
+      complete() {
+        isFetching=false;
+      }
     });
+  }
 
-    // --- Initial Setup ---
-    setDefaultDates();
-    loadFilters();
-    startAutoRefresh(3000);
+  // Auto-refresh
+  function startAutoRefresh(ms=5000) {
+    stopAutoRefresh();
+    fetchAndDisplayRfidData();
+    refreshId = setInterval(fetchAndDisplayRfidData, ms);
+  }
+  function stopAutoRefresh() {
+    if (refreshId) { clearInterval(refreshId); refreshId=null; }
+  }
 
-  }); // End of document ready
+  $('#dateStart, #dateEnd, #showSelect').on('change', () => {
+    stopAutoRefresh();
+    fetchAndDisplayRfidData();
+  });
+
+  // Inicialización
+  setDefaultDates();
+  loadFilters();
+  startAutoRefresh(3000);
+});
 </script>
 
 </body>
