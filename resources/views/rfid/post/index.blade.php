@@ -664,7 +664,7 @@
                                         const pId = $('#productListId').val(); const rIds = rfidOptions.trim() !== '' ? ($('#rfidReadingId').val() || []) : []; const mIds = modbusOptions.trim() !== '' ? ($('#modbusId').val() || []) : []; const sIds = sensorOptions.trim() !== '' ? ($('#sensorId').val() || []) : [];
                                         if (!pId) { Swal.showValidationMessage('Debe seleccionar un Producto.'); $('#productListId').select2('open'); return false; }
                                         if (rIds.length === 0 && mIds.length === 0 && sIds.length === 0) { Swal.showValidationMessage('Debe seleccionar al menos un Puesto (RFID), Báscula o Sensor.'); if (rfidOptions.trim() !== '') $('#rfidReadingId').select2('open'); else if (modbusOptions.trim() !== '') $('#modbusId').select2('open'); else if (sensorOptions.trim() !== '') $('#sensorId').select2('open'); return false; }
-                                        return { product_list_id: parseInt(pId), rfid_reading_ids: rIds.length ? rIds.map(id => parseInt(id)) : [], modbus_ids: mIds.length ? mIds.map(id => parseInt(id)) : [], sensor_ids: sIds.length ? sIds.map(id => parseInt(id)) : [] };
+                                        return { client_id: parseInt(pId), rfid_reading_ids: rIds.length ? rIds.map(id => parseInt(id)) : [], modbus_ids: mIds.length ? mIds.map(id => parseInt(id)) : [], sensor_ids: sIds.length ? sIds.map(id => parseInt(id)) : [] };
                                     },
                                     didClose: () => { selectedRfidColor = null; stopQrScanner(); startRefreshInterval(); }
                                 }).then((result) => {
