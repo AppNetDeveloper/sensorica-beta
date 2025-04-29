@@ -38,6 +38,7 @@ use App\Http\Controllers\Api\CalculateProductionDowntimeController;
 use App\Http\Controllers\Api\ShiftHistoryController;
 use App\Http\Controllers\Api\ShiftEventController;
 use App\Http\Controllers\Api\ShiftListController;
+use App\Http\Controllers\Api\WorkerController; 
 
 
 
@@ -335,4 +336,8 @@ Route::post('/supplier-order/store', [SupplierOrderController::class, 'store']);
 
 //api para downtime calculate
 Route::match(['get', 'post'], '/calculate-production-downtime', [CalculateProductionDowntimeController::class, 'calculateDowntime']);
+
+// Nueva ruta para generar el Excel de forma independiente
+Route::get('/workers/generate-excel', [WorkerController::class, 'generateExcelStandalone'])
+     ->name('workers.generate-excel'); // Opcional: dar un nombre a la ruta
 

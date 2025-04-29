@@ -15,163 +15,190 @@
   <style>
     /* Estilos generales del cuerpo */
     body {
-      background-color: #f8f9fa;
-      font-family: 'Roboto', sans-serif;
+      background-color: #f8f9fa; /* Color de fondo suave */
+      font-family: 'Roboto', sans-serif; /* Fuente principal */
     }
     /* Contenedor del encabezado */
     .header-container {
       width: 100%;
-      background-color: #343a40;
-      color: white;
-      padding: 10px 30px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      background-color: #343a40; /* Color de fondo oscuro para el header */
+      color: white; /* Texto blanco */
+      padding: 10px 30px; /* Relleno interno */
+      display: flex; /* Usar flexbox para alinear elementos */
+      justify-content: space-between; /* Distribuir espacio entre elementos */
+      align-items: center; /* Alinear verticalmente al centro */
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Sombra sutil */
     }
-    .header-left img { max-height: 60px; width: auto; }
-    .header-center { text-align: center; font-size: 1.3rem; font-weight: 500; }
-    .header-right { font-size: 1.5rem; text-align: right; margin: 0; padding: 0; }
-    .header-right small { display: block; font-size: 1.0rem; color: #ffc107; text-align: right; margin: 0; padding: 0; }
+    .header-left img { max-height: 60px; width: auto; } /* Ajuste del logo */
+    .header-center { text-align: center; font-size: 1.3rem; font-weight: 500; } /* Estilo del título central */
+    .header-right { font-size: 1.5rem; text-align: right; margin: 0; padding: 0; } /* Estilo del texto derecho (reloj) */
+    .header-right small { display: block; font-size: 1.0rem; color: #ffc107; text-align: right; margin: 0; padding: 0; } /* Estilo del subtítulo */
+
     /* Estilo personalizado para las tarjetas */
     .card-custom {
-      background-color: #fff;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
-      border-radius: 12px;
-      margin-bottom: 20px;
-      border: none;
+      background-color: #fff; /* Fondo blanco */
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05); /* Sombra suave */
+      border-radius: 12px; /* Bordes redondeados */
+      margin-bottom: 20px; /* Margen inferior */
+      border: none; /* Sin borde */
     }
-    /* Encabezado del filtro */
+    /* Encabezado del filtro (colapsable) */
     .filter-header {
-      background-color: #6c757d;
-      color: #fff;
-      padding: 15px 20px;
-      font-size: 1.1rem;
-      font-weight: 500;
-      border-radius: 12px 12px 0 0;
-      cursor: pointer;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      transition: background-color 0.2s ease;
+      background-color: #6c757d; /* Color de fondo gris */
+      color: #fff; /* Texto blanco */
+      padding: 15px 20px; /* Relleno */
+      font-size: 1.1rem; /* Tamaño de fuente */
+      font-weight: 500; /* Peso de fuente */
+      border-radius: 12px 12px 0 0; /* Bordes redondeados solo arriba */
+      cursor: pointer; /* Cursor de mano */
+      display: flex; /* Flexbox */
+      justify-content: space-between; /* Espacio entre texto e icono */
+      align-items: center; /* Alinear verticalmente */
+      transition: background-color 0.2s ease; /* Transición suave al pasar el ratón */
     }
-    .filter-header:hover { background-color: #5a6268; }
+    .filter-header:hover { background-color: #5a6268; } /* Cambio de color al pasar el ratón */
+
     /* Contenedor del filtro */
     .filter-container {
-      padding: 20px;
-      background-color: #fff;
-      border-radius: 0 0 12px 12px;
-      transition: max-height 0.3s ease-in-out, padding 0.3s ease-in-out;
-      overflow: hidden;
-      border: 1px solid #dee2e6;
-      border-top: none;
-      position: relative;
-      z-index: 10;
+      padding: 20px; /* Relleno */
+      background-color: #fff; /* Fondo blanco */
+      border-radius: 0 0 12px 12px; /* Bordes redondeados solo abajo */
+      transition: max-height 0.3s ease-in-out, padding 0.3s ease-in-out; /* Transición para colapsar/expandir */
+      overflow: hidden; /* Ocultar contenido que desborda */
+      border: 1px solid #dee2e6; /* Borde sutil */
+      border-top: none; /* Sin borde superior */
+      position: relative; /* Posición relativa para z-index */
+      z-index: 10; /* Asegurar que esté sobre otros elementos si es necesario */
     }
+    /* Contenido dentro del filtro */
     .filter-content {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 15px;
-      opacity: 1;
-      transition: opacity 0.2s ease-in-out;
+      display: flex; /* Flexbox */
+      flex-wrap: wrap; /* Permitir que los elementos pasen a la siguiente línea */
+      gap: 15px; /* Espacio entre elementos del filtro */
+      opacity: 1; /* Opacidad inicial */
+      transition: opacity 0.2s ease-in-out; /* Transición de opacidad */
     }
+    /* Estilos cuando el filtro está colapsado */
     .filter-container.collapsed {
-      padding-top: 0;
-      padding-bottom: 0;
-      max-height: 0;
-      border-width: 0;
-      overflow: hidden;
+      padding-top: 0; /* Sin relleno superior */
+      padding-bottom: 0; /* Sin relleno inferior */
+      max-height: 0; /* Altura máxima 0 para ocultar */
+      border-width: 0; /* Sin borde */
+      overflow: hidden; /* Ocultar contenido */
     }
-    .filter-container.collapsed .filter-content { opacity: 0; }
+    .filter-container.collapsed .filter-content { opacity: 0; } /* Hacer invisible el contenido */
+
+    /* Estilos para las etiquetas de los filtros */
     .filter-container label {
-      color: #495057;
-      font-weight: 500;
-      margin-bottom: 5px;
-      display: block;
+      color: #495057; /* Color de texto gris oscuro */
+      font-weight: 500; /* Peso de fuente */
+      margin-bottom: 5px; /* Margen inferior */
+      display: block; /* Ocupar todo el ancho */
     }
+    /* Contenedor de la tabla */
     .table-container {
-      background-color: #fff;
-      border-radius: 12px;
-      padding: 20px;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
-      overflow-x: auto;
+      background-color: #fff; /* Fondo blanco */
+      border-radius: 12px; /* Bordes redondeados */
+      padding: 20px; /* Relleno */
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05); /* Sombra suave */
+      overflow-x: auto; /* Permitir scroll horizontal si la tabla es muy ancha */
     }
-    .rotate-icon { transition: transform 0.3s ease-in-out; }
-    .filter-header:not(.collapsed) .rotate-icon { transform: rotate(180deg); }
-    table.dataTable { border-collapse: collapse !important; width: 100% !important; border: 1px solid #dee2e6; }
+    /* Icono de rotación para el colapso */
+    .rotate-icon { transition: transform 0.3s ease-in-out; } /* Transición suave de rotación */
+    .filter-header:not(.collapsed) .rotate-icon { transform: rotate(180deg); } /* Rotar icono cuando está expandido */
+
+    /* Estilos específicos para DataTables */
+    table.dataTable {
+      border-collapse: collapse !important; /* Evitar doble borde */
+      width: 100% !important; /* Ancho completo */
+      border: 1px solid #dee2e6; /* Borde de la tabla */
+    }
     table.dataTable thead th {
-      background-color: #f8f9fa;
-      color: #495057;
-      border-bottom: 2px solid #dee2e6;
-      padding: 12px 15px;
-      text-align: left;
-      font-weight: 600;
-      white-space: nowrap;
+      background-color: #f8f9fa; /* Fondo claro para cabecera */
+      color: #495057; /* Texto oscuro */
+      border-bottom: 2px solid #dee2e6; /* Borde inferior más grueso */
+      padding: 12px 15px; /* Relleno */
+      text-align: left; /* Alinear texto a la izquierda */
+      font-weight: 600; /* Texto en negrita */
+      white-space: nowrap; /* Evitar que el texto se divida en varias líneas */
     }
     table.dataTable tbody td {
-      padding: 10px 15px;
-      border-bottom: 1px solid #dee2e6;
-      vertical-align: middle;
+      padding: 10px 15px; /* Relleno */
+      border-bottom: 1px solid #dee2e6; /* Borde inferior de las celdas */
+      vertical-align: middle; /* Alinear verticalmente al centro */
     }
-    table.dataTable tbody tr:nth-of-type(odd) { background-color: rgba(0, 0, 0, 0.02); }
+    table.dataTable tbody tr:nth-of-type(odd) { background-color: rgba(0, 0, 0, 0.02); } /* Color alterno para filas */
+
+    /* Estilos para controles de formulario (inputs, selects) y Select2 */
     .form-control, .form-select, .select2-container .select2-selection--single {
-      border-radius: 6px !important;
-      border: 1px solid #ced4da !important;
-      padding: 0.375rem 0.75rem;
-      height: calc(1.5em + 0.75rem + 2px);
-      transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-      width: 100%;
-      box-sizing: border-box;
+      border-radius: 6px !important; /* Bordes redondeados consistentes */
+      border: 1px solid #ced4da !important; /* Borde estándar */
+      padding: 0.375rem 0.75rem; /* Relleno estándar de Bootstrap */
+      height: calc(1.5em + 0.75rem + 2px); /* Altura estándar de Bootstrap */
+      transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out; /* Transiciones suaves */
+      width: 100%; /* Ancho completo */
+      box-sizing: border-box; /* Incluir padding y borde en el ancho total */
     }
+    /* Estilo al enfocar */
     .form-control:focus, .form-select:focus, .select2-container--bootstrap-5 .select2-selection--single:focus {
-      border-color: #86b7fe !important;
-      box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
+      border-color: #86b7fe !important; /* Color de borde al enfocar */
+      box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important; /* Sombra al enfocar */
     }
+    /* Ajuste flecha Select2 */
     .select2-container--bootstrap-5 .select2-selection--single .select2-selection__arrow {
-      height: calc(1.5em + 0.75rem);
-      top: 1px;
+      height: calc(1.5em + 0.75rem); /* Ajustar altura de la flecha */
+      top: 1px; /* Ajustar posición vertical */
     }
+    /* Estilo del desplegable Select2 */
     .select2-dropdown {
-      border-radius: 6px !important;
-      border: 1px solid #ced4da !important;
-      box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
-      z-index: 1056;
+      border-radius: 6px !important; /* Bordes redondeados */
+      border: 1px solid #ced4da !important; /* Borde */
+      box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important; /* Sombra */
+      z-index: 1056; /* Asegurar que esté por encima de otros elementos (como modales de Bootstrap) */
     }
+    /* Contenedor de cada elemento del filtro */
     .filter-content > div {
-      flex: 1 1 200px;
-      min-width: 180px;
-      display: flex;
-      flex-direction: column;
+      flex: 1 1 200px; /* Flexbox: crecer, encoger, base de ancho */
+      min-width: 180px; /* Ancho mínimo */
+      display: flex; /* Flexbox */
+      flex-direction: column; /* Alinear elementos verticalmente */
     }
+    /* Asegurar que Select2 ocupe el espacio disponible */
     .filter-content .select2-container {
-      flex-grow: 1;
-      width: 100% !important;
+      flex-grow: 1; /* Permitir que crezca */
+      width: 100% !important; /* Ancho completo */
     }
+
+    /* Estilos para controles de DataTables (paginación, búsqueda, botones) */
     .dataTables_length select, .dataTables_filter input, .dt-buttons .btn {
-      display: inline-block;
-      width: auto;
-      margin: 0 0.5em;
-      padding: 0.375rem 0.75rem;
-      border-radius: 6px;
-      border: 1px solid #ced4da;
-      vertical-align: middle;
+      display: inline-block; /* Alinear en línea */
+      width: auto; /* Ancho automático */
+      margin: 0 0.5em; /* Margen horizontal */
+      padding: 0.375rem 0.75rem; /* Relleno */
+      border-radius: 6px; /* Bordes redondeados */
+      border: 1px solid #ced4da; /* Borde */
+      vertical-align: middle; /* Alinear verticalmente */
     }
+    /* Estilo específico para botones de DataTables */
     .dt-buttons .btn { background-color: #6c757d; color: white; border: none; }
     .dt-buttons .btn:hover { background-color: #5a6268; }
+
+    /* Ajustes de layout para controles de DataTables */
     .dataTables_wrapper .dataTables_length, .dataTables_wrapper .dt-buttons {
-      margin-bottom: 1em;
-      float: none;
-      text-align: left;
-      padding-top: 5px;
+      margin-bottom: 1em; /* Margen inferior */
+      float: none; /* Evitar flotación por defecto */
+      text-align: left; /* Alinear a la izquierda */
+      padding-top: 5px; /* Pequeño espacio superior */
     }
-    .dataTables_wrapper .dataTables_filter { float: right; text-align: right; }
-    .dataTables_wrapper .dt-buttons { float: left; text-align: left; margin-right: 1em; }
+    .dataTables_wrapper .dataTables_filter { float: right; text-align: right; } /* Alinear búsqueda a la derecha */
+    .dataTables_wrapper .dt-buttons { float: left; text-align: left; margin-right: 1em; } /* Alinear botones a la izquierda */
     .dataTables_wrapper .dataTables_length label {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5em;
-      margin-bottom: 0;
+      display: inline-flex; /* Flexbox en línea */
+      align-items: center; /* Alinear verticalmente */
+      gap: 0.5em; /* Espacio entre texto y select */
+      margin-bottom: 0; /* Sin margen inferior */
     }
+    /* Limpiar flotación después del wrapper de DataTables */
     .dataTables_wrapper::after { content: ""; clear: both; display: table; }
   </style>
 </head>
@@ -195,8 +222,7 @@
   <div class="card card-custom">
     <div class="filter-header collapsed" id="filterToggle">
       <span>Filtros de Búsqueda</span>
-      <i class="fas fa-chevron-down rotate-icon"></i>
-    </div>
+      <i class="fas fa-chevron-down rotate-icon"></i> </div>
     <div class="filter-container collapsed" id="filterContainer">
       <div class="filter-content">
         <div>
@@ -262,7 +288,8 @@
               <th>Fecha</th>
             </tr>
           </thead>
-          <tbody></tbody>
+          <tbody>
+            </tbody>
         </table>
       </div>
     </div>
@@ -274,193 +301,265 @@
 <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.2.2/js/dataTables.buttons.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
-<script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.html5.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script> <script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.html5.min.js"></script> <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <script>
 $(document).ready(function() {
-  // Inicializar Select2 solo una vez
+  // --- Inicialización de Select2 ---
+  // Aplicar Select2 a los elementos con la clase 'filter-select2'
   $('.filter-select2').select2({
-    theme: "bootstrap-5",
-    width: '100%',
-    placeholder: "Seleccionar...",
-    allowClear: true
+    theme: "bootstrap-5", // Usar tema compatible con Bootstrap 5
+    width: '100%', // Ocupar todo el ancho disponible
+    placeholder: "Seleccionar...", // Texto de placeholder
+    allowClear: true // Permitir borrar la selección
   })
+  // Evento 'change' para Select2: Detener refresco automático y cargar datos
   .on('change.select2', function() {
-    stopAutoRefresh();
-    fetchAndDisplayRfidData();
+    stopAutoRefresh(); // Detener el intervalo de refresco
+    fetchAndDisplayRfidData(); // Cargar datos con el nuevo filtro
   })
+  // Evento 'open' para Select2: Enfocar el campo de búsqueda automáticamente
   .on('select2:open', function () {
+    // Usar setTimeout para asegurar que el campo exista antes de enfocarlo
     setTimeout(() => { $('.select2-search__field').first().focus(); }, 100);
   });
 
-  // Toggle filtros
+  // --- Funcionalidad para Colapsar/Expandir Filtros ---
   $('#filterToggle').on('click', function() {
-    const container = $('#filterContainer');
-    const header = $(this);
-    header.toggleClass('collapsed');
-    container.toggleClass('collapsed');
+    const container = $('#filterContainer'); // Contenedor de filtros
+    const header = $(this); // Cabecera del filtro
+    header.toggleClass('collapsed'); // Añadir/quitar clase 'collapsed' a la cabecera
+    container.toggleClass('collapsed'); // Añadir/quitar clase 'collapsed' al contenedor
+
+    // Animación de altura al expandir/colapsar
     if (container.hasClass('collapsed')) {
+      // Si está colapsado, animar a altura 0 y ocultar overflow
       container.css({ 'max-height': '0', 'overflow': 'hidden' });
     } else {
-      container.css('overflow','visible');
-      const h = container[0].scrollHeight + 'px';
-      container.css('max-height', h);
+      // Si se expande:
+      container.css('overflow','visible'); // Mostrar overflow temporalmente para calcular altura
+      const h = container[0].scrollHeight + 'px'; // Calcular altura real del contenido
+      container.css('max-height', h); // Animar a la altura calculada
+      // Después de la animación, permitir altura automática y ocultar overflow de nuevo
       setTimeout(() => {
         if (!container.hasClass('collapsed')) container.css('max-height','none');
-        container.css('overflow','hidden');
-      }, 350);
+        container.css('overflow','hidden'); // Ocultar overflow para mantener el diseño
+      }, 350); // Duración un poco mayor que la transición CSS
     }
   });
 
-  // Reloj del header
+  // --- Reloj en el Header ---
   function updateTime() {
+    // Actualizar el texto del elemento #headerTime con la hora actual
     $('#headerTime').text(new Date().toLocaleTimeString('es-ES',{hour12:false}));
   }
-  setInterval(updateTime,1000);
-  updateTime();
+  setInterval(updateTime, 1000); // Actualizar cada segundo
+  updateTime(); // Llamar una vez al inicio
 
-  // Formateo de fechas
+  // --- Funciones de Fecha ---
+  // Formatear fecha a YYYY-MM-DD
   function formatDate(d) {
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   }
+  // Establecer fechas por defecto (hoy y mañana)
   function setDefaultDates() {
-    const t = new Date(), m = new Date(t);
-    m.setDate(m.getDate()+1);
-    $('#dateStart').val(formatDate(t));
-    $('#dateEnd').val(formatDate(m));
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1); // Añadir un día
+    $('#dateStart').val(formatDate(today)); // Fecha de inicio = hoy
+    $('#dateEnd').val(formatDate(tomorrow)); // Fecha de fin = mañana
   }
 
+  // --- Endpoints de la API ---
   const API = {
-    filters: '/api/get-filters',
-    rfidHistory: '/api/rfid-history'
+    filters: '/api/get-filters', // Endpoint para obtener opciones de filtros
+    rfidHistory: '/api/rfid-history' // Endpoint para obtener datos RFID
   };
 
-  // Cargar opciones de filtros
-  let masterResetTids = [];
+  // --- Carga de Opciones de Filtros ---
+  let masterResetTids = []; // Almacenar TIDs de Master Reset globalmente
   function loadFilters() {
     $.ajax({
-      url: API.filters, method: 'GET', dataType: 'json',
+      url: API.filters,
+      method: 'GET',
+      dataType: 'json',
       success(data) {
         if (data.success) {
-          // Antennas
-          const a = $('#antennaSelect').empty().append(new Option('Todos','all',true,true));
-          (data.antennas||[]).forEach(x => a.append(new Option(x.name,x.name)));
-          // EPCs
-          const e = $('#epcSelect').empty().append(new Option('Todos','all',true,true));
-          (data.epcs||[]).forEach(x => e.append(new Option(x,x)));
-          // TIDs generales
-          const t = $('#tidSelect').empty().append(new Option('Todos','all',true,true));
-          (data.tids||[]).forEach(x => t.append(new Option(x,x)));
-          // TID Master Reset
-          const tm = $('#tidMasterResetSelect').empty()
-            .append(new Option('Todos','all',true,true))
-            .append(new Option('Solo Master Reset','__MASTER_RESET_ONLY__',false,false));
-          masterResetTids = data.tids_master_reset||[];
-          masterResetTids.forEach(x => tm.append(new Option(x,x)));
+          // Llenar select de Lector Baliza (Antennas)
+          const antennaSelect = $('#antennaSelect').empty().append(new Option('Todos', 'all', true, true));
+          (data.antennas || []).forEach(item => antennaSelect.append(new Option(item.name, item.name)));
+
+          // Llenar select de EPCs
+          const epcSelect = $('#epcSelect').empty().append(new Option('Todos', 'all', true, true));
+          (data.epcs || []).forEach(epc => epcSelect.append(new Option(epc, epc)));
+
+          // Llenar select de TIDs generales
+          const tidSelect = $('#tidSelect').empty().append(new Option('Todos', 'all', true, true));
+          (data.tids || []).forEach(tid => tidSelect.append(new Option(tid, tid)));
+
+          // Llenar select de TID Master Reset
+          const tidMasterResetSelect = $('#tidMasterResetSelect').empty()
+            .append(new Option('Todos', 'all', true, true))
+            .append(new Option('Solo Master Reset', '__MASTER_RESET_ONLY__', false, false));
+          masterResetTids = data.tids_master_reset || []; // Guardar lista de TIDs Master Reset
+          masterResetTids.forEach(tid => tidMasterResetSelect.append(new Option(tid, tid)));
+
+          // Refrescar Select2 para mostrar las nuevas opciones
+          $('.filter-select2').trigger('change.select2');
+        } else {
+          console.error("Error al cargar filtros:", data.message);
         }
+      },
+      error(jqXHR, textStatus, errorThrown) {
+        console.error("Error de red al cargar filtros:", textStatus, errorThrown);
       }
     });
   }
 
-  // DataTable
+  // --- Inicialización de DataTable ---
   const table = $('#rfidTable').DataTable({
-    language: { url: '//cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json' },
-    pageLength: 10,
-    order: [[8,'desc']],
-    responsive: true,
-    processing: true,
-    deferRender: true,
-    dom: 'lBfrtip',
-    buttons: [{
-      extend:'excelHtml5',
-      text:'<i class="fas fa-file-excel"></i> Exportar a Excel',
-      className:'btn btn-success btn-sm',
-      title:'Datos_RFID_Autoconto',
-      exportOptions:{columns:':visible'}
-    }]
+    language: { url: '//cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json' }, // Idioma español
+    pageLength: 10, // Mostrar 10 entradas por página por defecto
+    order: [[8, 'desc']], // Ordenar por la columna de Fecha (índice 8) descendente
+    responsive: true, // Habilitar diseño responsivo
+    processing: true, // Mostrar indicador de procesamiento
+    deferRender: true, // Retrasar renderizado para mejor rendimiento
+    dom: 'lBfrtip', // Estructura DOM: l(Length changing), B(Buttons), f(filtering input), r(processing), t(table), i(information), p(pagination)
+    buttons: [ // Configuración de botones
+      {
+        extend: 'excelHtml5', // Botón para exportar a Excel
+        text: '<i class="fas fa-file-excel"></i> Exportar a Excel', // Texto e icono del botón
+        className: 'btn btn-success btn-sm', // Clases CSS para el botón
+        title: 'Datos_RFID_Autoconto', // Título del archivo Excel
+        exportOptions: { columns: ':visible' } // Exportar solo columnas visibles
+      }
+    ]
   });
 
-  // Fetch y render
-  let isFetching=false, refreshId=null;
+  // --- Carga y Visualización de Datos RFID ---
+  let isFetching = false; // Flag para evitar peticiones múltiples simultáneas
+  let refreshId = null; // ID del intervalo de refresco automático
+
   function fetchAndDisplayRfidData() {
-    if (isFetching) return;
-    isFetching = true;
+    if (isFetching) return; // Si ya se está haciendo una petición, salir
+    isFetching = true; // Marcar que se está haciendo una petición
+
+    // Recoger valores de los filtros
     const filters = {
-      antenna_name: $('#antennaSelect').val()==='all'?null:$('#antennaSelect').val(),
-      epc:          $('#epcSelect').val()==='all'?null:$('#epcSelect').val(),
-      date_start:   $('#dateStart').val()||null,
-      date_end:     $('#dateEnd').val()||null,
-      show:         $('#showSelect').val()==='all'?null:parseInt($('#showSelect').val(),10)
+      antenna_name: $('#antennaSelect').val() === 'all' ? null : $('#antennaSelect').val(),
+      epc:          $('#epcSelect').val() === 'all' ? null : $('#epcSelect').val(),
+      date_start:   $('#dateStart').val() || null,
+      date_end:     $('#dateEnd').val() || null,
+      show:         $('#showSelect').val() === 'all' ? null : parseInt($('#showSelect').val(), 10)
     };
-    Object.keys(filters).forEach(k=> filters[k]==null&&delete filters[k]);
+    // Eliminar filtros nulos o vacíos
+    Object.keys(filters).forEach(key => filters[key] == null && delete filters[key]);
 
-    const valGen = $('#tidSelect').val();
-    const valMas = $('#tidMasterResetSelect').val();
-    const soloMas = valMas==='__MASTER_RESET_ONLY__';
-    const especMas = valMas!=='all' && !soloMas;
-    const especGen = valGen!=='all';
+    // Lógica especial para filtros TID
+    const tidGeneralValue = $('#tidSelect').val();
+    const tidMasterResetValue = $('#tidMasterResetSelect').val();
+    const onlyMasterReset = tidMasterResetValue === '__MASTER_RESET_ONLY__';
+    const specificMasterReset = tidMasterResetValue !== 'all' && !onlyMasterReset;
+    const specificGeneralTid = tidGeneralValue !== 'all';
 
+    // Petición AJAX para obtener los datos
     $.ajax({
-      url: API.rfidHistory, method:'GET', data:filters, dataType:'json',
-      success(resp) {
-        if (resp.success && Array.isArray(resp.data)) {
-          let data = resp.data;
-          if (soloMas) {
-            data = data.filter(i=> typeof i.tid==='string' && masterResetTids.includes(i.tid));
-          } else if (especMas) {
-            data = data.filter(i=>i.tid===valMas);
-          } else if (especGen) {
-            data = data.filter(i=>i.tid===valGen);
+      url: API.rfidHistory,
+      method: 'GET',
+      data: filters, // Enviar filtros como parámetros GET
+      dataType: 'json',
+      success(response) {
+        if (response.success && Array.isArray(response.data)) {
+          let filteredData = response.data;
+
+          // Aplicar filtros TID del lado del cliente si es necesario
+          if (onlyMasterReset) {
+            // Filtrar para mostrar solo TIDs que están en la lista masterResetTids
+            filteredData = filteredData.filter(item => typeof item.tid === 'string' && masterResetTids.includes(item.tid));
+          } else if (specificMasterReset) {
+            // Filtrar por un TID Master Reset específico
+            filteredData = filteredData.filter(item => item.tid === tidMasterResetValue);
+          } else if (specificGeneralTid) {
+            // Filtrar por un TID General específico
+            filteredData = filteredData.filter(item => item.tid === tidGeneralValue);
           }
-          const order = table.order(), len = table.page.len(), search = table.search(), scroll = $(window).scrollTop();
+
+          // Guardar estado actual de la tabla (orden, longitud página, búsqueda, scroll)
+          const currentOrder = table.order();
+          const currentPageLength = table.page.len();
+          const currentSearch = table.search();
+          const currentScroll = $(window).scrollTop(); // Guardar posición de scroll
+
+          // Limpiar tabla y añadir nuevos datos
           table.clear();
-          table.rows.add(data.map(i=>[
-            i.id||'N/A',
-            i.rfid_ant_name||'N/A',
-            i.ant||'N/A',
-            i.epc||'N/A',
-            i.tid||'N/A',
-            i.rssi||'N/A',
-            i.count_shift_1||'N/A',
-            i.count_order_1||'N/A',
-            i.created_at? new Date(i.created_at).toLocaleString('es-ES',{dateStyle:'short',timeStyle:'medium'}):'N/A'
+          table.rows.add(filteredData.map(item => [
+            item.id || 'N/A',
+            item.rfid_ant_name || 'N/A',
+            item.ant || 'N/A',
+            item.epc || 'N/A',
+            item.tid || 'N/A',
+            item.rssi || 'N/A',
+            item.count_shift_1 || 'N/A',
+            item.count_order_1 || 'N/A',
+            item.created_at ? new Date(item.created_at).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'medium' }) : 'N/A'
           ]));
-          table.order(order).page.len(len).search(search).draw('page');
-          $(window).scrollTop(scroll);
+
+          // Redibujar la tabla MANTENIENDO la paginación actual
+          table.order(currentOrder)          // Restaurar orden
+               .page.len(currentPageLength)  // Restaurar longitud de página
+               .search(currentSearch)        // Restaurar búsqueda
+               .draw(false);                 // <--- CORRECCIÓN AQUÍ: false para no resetear paginación
+
+          // Restaurar posición de scroll
+          $(window).scrollTop(currentScroll);
+
         } else {
+          // Si no hay datos o hubo error en la respuesta, limpiar la tabla
+          console.warn("Respuesta no exitosa o datos no son un array:", response);
           table.clear().draw();
         }
       },
-      error() {
+      error(jqXHR, textStatus, errorThrown) {
+        // En caso de error de red, limpiar la tabla
+        console.error("Error de red al obtener datos RFID:", textStatus, errorThrown);
         table.clear().draw();
       },
       complete() {
-        isFetching=false;
+        // Marcar que la petición ha terminado
+        isFetching = false;
       }
     });
   }
 
-  // Auto-refresh
-  function startAutoRefresh(ms=5000) {
-    stopAutoRefresh();
-    fetchAndDisplayRfidData();
-    refreshId = setInterval(fetchAndDisplayRfidData, ms);
-  }
-  function stopAutoRefresh() {
-    if (refreshId) { clearInterval(refreshId); refreshId=null; }
+  // --- Funciones de Auto-Refresco ---
+  function startAutoRefresh(intervalMs = 5000) {
+    stopAutoRefresh(); // Limpiar cualquier intervalo existente
+    fetchAndDisplayRfidData(); // Cargar datos inmediatamente
+    // Iniciar nuevo intervalo
+    refreshId = setInterval(fetchAndDisplayRfidData, intervalMs);
+    console.log(`Auto-refresh iniciado cada ${intervalMs / 1000} segundos.`);
   }
 
+  function stopAutoRefresh() {
+    if (refreshId) {
+      clearInterval(refreshId); // Detener el intervalo
+      refreshId = null; // Limpiar el ID
+      console.log("Auto-refresh detenido.");
+    }
+  }
+
+  // --- Eventos para Filtros Manuales ---
+  // Cuando cambian las fechas o la cantidad a mostrar, detener auto-refresco y cargar datos
   $('#dateStart, #dateEnd, #showSelect').on('change', () => {
     stopAutoRefresh();
     fetchAndDisplayRfidData();
   });
 
-  // Inicialización
-  setDefaultDates();
-  loadFilters();
-  startAutoRefresh(3000);
+  // --- Inicialización al Cargar la Página ---
+  setDefaultDates(); // Establecer fechas por defecto
+  loadFilters(); // Cargar opciones de los selects
+  startAutoRefresh(3000); // Iniciar auto-refresco cada 3 segundos
+
 });
 </script>
 
