@@ -337,7 +337,16 @@ Route::post('/supplier-order/store', [SupplierOrderController::class, 'store']);
 //api para downtime calculate
 Route::match(['get', 'post'], '/calculate-production-downtime', [CalculateProductionDowntimeController::class, 'calculateDowntime']);
 
-// Nueva ruta para generar el Excel de forma independiente
-Route::get('/workers/generate-excel', [WorkerController::class, 'generateExcelStandalone'])
-     ->name('workers.generate-excel'); // Opcional: dar un nombre a la ruta
+// Ruta para generar Excel (existente)
+// (Actualizado para coincidir con tu último comentario)
+Route::get('/workers-export/generate-excel', [WorkerController::class, 'generateExcelStandalone'])
+     ->name('workers-export.generate-excel');
 
+// Ruta para generar PDF (existente)
+// (Actualizado para coincidir con tu último comentario)
+Route::get('/workers-export/generate-pdf', [WorkerController::class, 'generatePdfStandalone'])
+     ->name('workers-export.generate-pdf');
+
+// NUEVA RUTA para enviar informes por correo
+Route::get('/workers-export/send-email', [WorkerController::class, 'sendReportsByEmail'])
+     ->name('workers-export.send-email');
