@@ -261,7 +261,7 @@
         });
 
         // URLs originales
-        const baseUrl = "{{ rtrim(config('app.url'), '/') }}";
+        const baseUrl = window.location.origin;
         const apiIndexUrl = `${baseUrl}/shift-lists/api`;
         const storeUrl    = `${baseUrl}/shift-lists`;
         const updateUrlTemplate = `${baseUrl}/shift-lists/:id`;

@@ -1,6 +1,6 @@
 {{-- Usando la sintaxis @component compatible con Laravel 8 --}}
 @component('mail::message')
-# Informe Diario de Operadores ({{ $reportDate }})
+# Producción por Trabajador y Confecciones Asignadas turno: ({{ $reportDate }})
 
 Estimado/a usuario/a,
 

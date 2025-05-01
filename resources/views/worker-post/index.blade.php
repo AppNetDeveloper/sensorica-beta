@@ -238,7 +238,7 @@
     <script>
         // Variable para el intervalo de actualización
         let refreshIntervalIdWorker = null;
-        const REFRESH_INTERVAL_WORKER = 3000; // 3 segundos
+        const REFRESH_INTERVAL_WORKER = 6000; // 6 segundos
 
         // Función para iniciar el intervalo de refresco
         function startRefreshIntervalWorker() {
@@ -267,7 +267,7 @@
         });
 
         // Rutas base y URL de la API
-        const baseUrlWorker = "{{ rtrim(config('app.url'), '/') }}";
+        const baseUrlWorker = window.location.origin;
         const apiIndexUrlWorker = `${baseUrlWorker}/worker-post/api`;
         const storeUrlWorker = `${baseUrlWorker}/worker-post`;
         let updateUrlTemplateWorker = `${baseUrlWorker}/worker-post/:id`;
@@ -539,11 +539,22 @@
                     searchPlaceholder: "Buscar..."
                 },
                 initComplete: function(settings, json) {
+                    console.log("DataTable inicializado.");
                     const api = this.api();
 
-                    // Mover controles a los placeholders
-                    api.buttons().container().appendTo('.dt-buttons-placeholder');
-                    $('.history-switch-container').appendTo('.switch-placeholder').show();
+                    // Añadir un pequeño retraso antes de mover los botones y switches
+                    setTimeout(function() {
+                        // Volver a comprobar si la tabla todavía existe (por si se destruyó)
+                        if ($.fn.DataTable.isDataTable('#workerPostTable')) {
+                            console.log("Moviendo botones y switches tras el retraso...");
+
+                            // Mover controles a los placeholders
+                            api.buttons().container().appendTo('.dt-buttons-placeholder');
+                            $('.history-switch-container').appendTo('.switch-placeholder').show();
+                        } else {
+                            console.warn("La tabla ya no existe al intentar mover botones/switches.");
+                        }
+                    }, 2000); // 100 milisegundos de retraso (ajustable si es necesario)
 
                     // Estilos adicionales
                     $('.dataTables_filter input').addClass('form-control'); // Tamaño estándar

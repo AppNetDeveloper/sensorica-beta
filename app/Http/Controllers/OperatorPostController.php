@@ -9,6 +9,7 @@ use App\Models\Sensor;
 use App\Models\Modbus;
 use Illuminate\Http\Request;
 use App\Models\ProductListSelecteds;
+use Carbon\Carbon;
 
 class OperatorPostController extends Controller
 {
@@ -162,16 +163,27 @@ class OperatorPostController extends Controller
      */
     public function apiIndex()
     {
+        $tenDaysAgo = Carbon::now()->subDays(7);
+    
         $relations = OperatorPost::with([
-            'operator', 
-            'rfidReading', 
-            'sensor', 
-            'modbus', 
-            'productList' // Agregamos la relación aquí
-        ])->get();
+            'operator',
+            'rfidReading',
+            'sensor',
+            'modbus',
+            'productList',
+        ])
+        ->where(function($query) use ($tenDaysAgo) {
+            // finish_at nulo
+            $query->whereNull('finish_at')
+                  // o vacío (si fuera necesario)
+                  ->orWhere('finish_at', '=', '')
+                  // o en los últimos 10 días
+                  ->orWhere('finish_at', '>=', $tenDaysAgo);
+        })
+        ->get();
     
         return response()->json([
-            'data' => $relations // DataTables espera una clave 'data'
+            'data' => $relations
         ]);
     }
     

@@ -52,7 +52,7 @@ class OperatorReportMail extends Mailable implements ShouldQueue
         $formattedDate = \Carbon\Carbon::parse($this->reportDate)->format('d/m/Y');
 
         return $this
-            ->subject("Informes Operadores – Turno Cerrado ({$formattedDate})")
+            ->subject("Informe diario de producción y asignaciones ({$formattedDate})")
             ->markdown('emails.operator_report', [
                 'excelUrl'   => $this->excelUrl,
                 'pdfUrl'     => $this->pdfUrl,

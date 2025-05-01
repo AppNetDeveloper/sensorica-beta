@@ -287,8 +287,8 @@ async function processCallApi(topic, data) {
                 const response = await axios.post(`${apiBaseUrl}/api/rfid-insert`, dataToSend);
                 console.log(`[${getCurrentTimestamp()}] ${environment}.${info}: ✅ API Respuesta EPC ${epc} TID ${tid} y RSSI ${rssi}: ${JSON.stringify(response.data, null, 2)}`);
 
-                // Define el tiempo durante el cual se ignorará el TID según el éxito de la operación (300000 ms o 180000 ms)
-                const ignoreTime = response.data.success ? 300000 : 180000;
+                // Define el tiempo durante el cual se ignorará el TID según el éxito de la operación (300000 ms o 180000 ms) OJO ANTEAS EL 1000 era 180000
+                const ignoreTime = response.data.success ? 300000 : 20000;
                 ignoredTIDs.set(tid, Date.now());
                 setTimeout(() => ignoredTIDs.delete(tid), ignoreTime);
                 console.log(`[${getCurrentTimestamp()}] ${environment}.${info}: ⏳ TID ${tid} ignorado por ${ignoreTime / 60000} min.`);
