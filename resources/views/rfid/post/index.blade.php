@@ -566,6 +566,17 @@
                     lengthMenu: [ [10, 20, 50, 300, -1], [10, 20, 50, 300,  "Todas"] ],
                     stateSave: true,
                     stateDuration: -1,
+                    // ——— GUARDAR/RECUPERAR TODO EL ESTADO (incluye visibilidad de columnas) ———
+                    stateSaveCallback: function(settings, data) {
+                        const key = 'DataTables_' + window.location.pathname + '_' + settings.sInstance;
+                        localStorage.setItem(key, JSON.stringify(data));
+                    },
+                    stateLoadCallback: function(settings) {
+                        const key = 'DataTables_' + window.location.pathname + '_' + settings.sInstance;
+                        const stored = localStorage.getItem(key);
+                        return stored ? JSON.parse(stored) : null;
+                    },
+                    // —————————————————————————————————————————————————————————————————
                     ajax: {
                         url: relationsApiUrl,
                         dataSrc: '', // La respuesta API es directamente el array de datos

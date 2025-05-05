@@ -364,6 +364,19 @@
                     lengthMenu: [ [10, 20, 50, 300, -1], [10, 20, 50, 300,  "Todas"] ],
                     stateSave: true,
                     stateDuration: -1,
+
+                    // --- GUARDAR/RECUPERAR TODO EL ESTADO EN localStorage ---
+                    stateSaveCallback: function(settings, data) {
+                        // clave única por URL y tabla
+                        const key = 'DataTables_' + window.location.pathname + '_' + settings.sInstance;
+                        localStorage.setItem(key, JSON.stringify(data));
+                    },
+                    stateLoadCallback: function(settings) {
+                        const key = 'DataTables_' + window.location.pathname + '_' + settings.sInstance;
+                        const stored = localStorage.getItem(key);
+                        return stored ? JSON.parse(stored) : null;
+                    },
+                    // ---------------------------------------------------------
                     ajax: {
                         url: relationsApiUrl,
                         dataSrc: '',

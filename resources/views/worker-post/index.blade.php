@@ -407,6 +407,18 @@
                 stateSave: true, // **NUEVO**: Guardar estado
                 stateDuration: -1,
                 // **NUEVO**: DOM modificado para controles
+                // ——— GUARDAR/RECUPERAR TODO EL ESTADO (incluye visibilidad de columnas) ———
+                stateSaveCallback: function(settings, data) {
+                    const key = 'DataTables_' + window.location.pathname + '_' + settings.sInstance;
+                    localStorage.setItem(key, JSON.stringify(data));
+                },
+                stateLoadCallback: function(settings) {
+                    const key = 'DataTables_' + window.location.pathname + '_' + settings.sInstance;
+                    const stored = localStorage.getItem(key);
+                    return stored ? JSON.parse(stored) : null;
+                },
+                // ——————————————————————————————————————————————————————————————————————
+
                 dom: "<'row top-controls-row'<'col-sm-12 col-md-6 dt-buttons-placeholder'><'col-sm-12 col-md-6 switch-placeholder'>>" +
                      "<'row filter-length-row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
                      "<'row'<'col-sm-12'tr>>" +
