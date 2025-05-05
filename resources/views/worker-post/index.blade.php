@@ -405,6 +405,7 @@
                 pageLength: 300,
                 lengthMenu: [ [10, 20, 50, 300, -1], [10, 20, 50, 300,  "All"] ], // **NUEVO**: Length Menu
                 stateSave: true, // **NUEVO**: Guardar estado
+                stateDuration: -1,
                 // **NUEVO**: DOM modificado para controles
                 dom: "<'row top-controls-row'<'col-sm-12 col-md-6 dt-buttons-placeholder'><'col-sm-12 col-md-6 switch-placeholder'>>" +
                      "<'row filter-length-row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +

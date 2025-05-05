@@ -1,0 +1,116 @@
+// Nombre de la caché
+const CACHE_NAME = 'rfid-list-cache-v1'; // Puedes cambiar la versión si haces cambios grandes
+// Archivos a cachear
+const urlsToCache = [
+  '/confeccion-puesto-listado/', // Cachea el directorio (servirá index.html por defecto)
+  '/confeccion-puesto-listado/index.html', // Cachea explícitamente el index.html
+  '/confeccion-puesto-listado/manifest.json', // Manifest relativo al directorio
+  // Añade aquí las URLs de los CSS y JS de CDNs si quieres que funcionen offline
+  'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css',
+  'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css',
+   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
+   'https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css',
+   'https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css',
+   'https://cdn.datatables.net/responsive/2.4.1/css/responsive.dataTables.min.css',
+   'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css',
+   'https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css',
+   'https://code.jquery.com/jquery-3.7.0.min.js',
+   'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js',
+   'https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js',
+   'https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js',
+   'https://cdn.datatables.net/buttons/2.4.1/js/buttons.colVis.min.js',
+   'https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js',
+   'https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js',
+   'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
+   'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js',
+   'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js',
+   'https://cdn.datatables.net/responsive/2.4.1/js/dataTables.responsive.min.js',
+   'https://cdn.jsdelivr.net/npm/sweetalert2@11',
+   'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js',
+  // También puedes añadir los iconos relativos al directorio
+  '/confeccion-puesto-listado/icons/icon-192x192.png',
+  '/confeccion-puesto-listado/icons/icon-512x512.png'
+];
+
+// Evento 'install'
+self.addEventListener('install', (event) => {
+  console.log('Service Worker: Instalando...');
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then((cache) => {
+        console.log('Service Worker: Cache abierta, añadiendo archivos estáticos.');
+        // Usar addAll para cachear todos los recursos definidos
+        return cache.addAll(urlsToCache.map(url => new Request(url, { cache: 'reload' }))); // Forza la recarga desde la red al instalar
+      })
+      .then(() => {
+        console.log('Service Worker: Archivos estáticos cacheados correctamente.');
+        return self.skipWaiting(); // Activa el nuevo SW inmediatamente
+      })
+      .catch(error => {
+         console.error('Service Worker: Falló el cacheo inicial de archivos estáticos:', error);
+      })
+  );
+});
+
+// Evento 'activate'
+self.addEventListener('activate', (event) => {
+  console.log('Service Worker: Activando...');
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName !== CACHE_NAME) {
+            console.log('Service Worker: Borrando caché antigua:', cacheName);
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    }).then(() => {
+        console.log('Service Worker: Activado y caché limpia.');
+        return self.clients.claim(); // Toma control inmediato
+    })
+  );
+});
+
+// Evento 'fetch'
+self.addEventListener('fetch', (event) => {
+  // Ignorar peticiones que no son GET (ej. POST a la API)
+  if (event.request.method !== 'GET') {
+    return;
+  }
+
+  // Estrategia: Cache First para recursos cacheados, Network First para lo demás (incluyendo APIs)
+  event.respondWith(
+    caches.match(event.request)
+      .then((cachedResponse) => {
+        // Si está en caché (y es uno de los recursos que queremos servir desde caché), devolverlo
+        if (cachedResponse && urlsToCache.includes(new URL(event.request.url).pathname)) {
+           // console.log('Service Worker: Sirviendo desde caché:', event.request.url);
+           return cachedResponse;
+        }
+
+        // Si no está en caché o es una petición de API, ir a la red
+        return fetch(event.request).then(
+          (networkResponse) => {
+            // console.log('Service Worker: Sirviendo desde red:', event.request.url);
+
+            // Opcional: Si quieres cachear dinámicamente nuevos recursos estáticos
+            // podrías hacerlo aquí, pero con cuidado.
+            // const isStaticAsset = /\.(css|js|png|jpg|jpeg|svg|gif|woff|woff2|ttf|eot)$/i.test(event.request.url);
+            // if (networkResponse.ok && isStaticAsset) {
+            //   const responseToCache = networkResponse.clone();
+            //   caches.open(CACHE_NAME).then((cache) => {
+            //     cache.put(event.request, responseToCache);
+            //   });
+            // }
+            return networkResponse;
+          }
+        ).catch(error => {
+          console.error("Service Worker: Error al buscar en red:", error);
+          // Intentar devolver desde caché como último recurso si falla la red
+          // (útil si se cachearon APIs con otra estrategia o si falla un recurso estático)
+          return cachedResponse || caches.match('/confeccion-puesto-listado/index.html'); // O una página offline genérica
+        });
+      })
+  );
+});

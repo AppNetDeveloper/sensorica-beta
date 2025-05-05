@@ -565,6 +565,7 @@
                     pageLength: 300,
                     lengthMenu: [ [10, 20, 50, 300, -1], [10, 20, 50, 300,  "Todas"] ],
                     stateSave: true,
+                    stateDuration: -1,
                     ajax: {
                         url: relationsApiUrl,
                         dataSrc: '', // La respuesta API es directamente el array de datos
@@ -850,7 +851,8 @@
                         { extend: 'excelHtml5', text: '<i class="bi bi-file-earmark-excel"></i> Excel', className: 'btn btn-success', titleAttr: 'Exportar a Excel', exportOptions: { columns: ':visible' } },
                         { extend: 'print', text: '<i class="bi bi-printer"></i> Imprimir', className: 'btn btn-secondary', titleAttr: 'Imprimir tabla', exportOptions: { columns: ':visible' } },
                         { extend: 'colvis', text: '<i class="bi bi-eye"></i> Columnas', className: 'btn btn-secondary', titleAttr: 'Mostrar/Ocultar columnas' },
-                        { text: '<i class="bi bi-broadcast"></i> Live Rfid', className: 'btn btn-info', action: function () { window.open('/live-rfid/', '_blank'); }, titleAttr: 'Ver RFID en tiempo real' }
+                        { text: '<i class="bi bi-broadcast"></i> Live Rfid', className: 'btn btn-info', action: function () { window.open('/live-rfid/', '_blank'); }, titleAttr: 'Ver RFID en tiempo real' },
+                        { text: '<i class="bi bi-card-checklist"></i> Listado ', className: 'btn btn-info', action: function () { window.open('/confeccion-puesto-listado/', '_blank'); }, titleAttr: 'Ver Confeciones Asignadas' }
                     ],
                     order: [[6, 'desc'], [5, 'desc'], [0, 'asc']], // Orden inicial por Fecha Fin (desc), Fecha Inicio (desc), Confección (asc)
                     language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json', search: "_INPUT_", searchPlaceholder: "Buscar en la tabla..." },

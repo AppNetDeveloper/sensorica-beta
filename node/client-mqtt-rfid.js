@@ -261,6 +261,7 @@ async function processCallApi(topic, data) {
             
             // Validación: Si el EPC está bloqueado, se omite la llamada
             if (blockedEPCs.has(epc)) {
+                console.warn(`[${getCurrentTimestamp()}] ${environment}.${info}: ⚠️ EPC bloqueado: ${epc}. Se omite la llamada a la API.`);
                 return;
             }
 
@@ -273,6 +274,7 @@ async function processCallApi(topic, data) {
 
             // Validación: Si el TID ya fue registrado recientemente, se omite la llamada
             if (ignoredTIDs.has(tid)) {
+                console.log(`[${getCurrentTimestamp()}] ${environment}.${info}: ⚠️ TID ya registrado recientemente: tid: ${tid}. Se omite la llamada a la API.`);
                 return;
             }
 
@@ -288,7 +290,7 @@ async function processCallApi(topic, data) {
                 console.log(`[${getCurrentTimestamp()}] ${environment}.${info}: ✅ API Respuesta EPC ${epc} TID ${tid} y RSSI ${rssi}: ${JSON.stringify(response.data, null, 2)}`);
 
                 // Define el tiempo durante el cual se ignorará el TID según el éxito de la operación (300000 ms o 180000 ms) OJO ANTEAS EL 1000 era 180000
-                const ignoreTime = response.data.success ? 300000 : 20000;
+                const ignoreTime = response.data.success ? 300000 : 5000;
                 ignoredTIDs.set(tid, Date.now());
                 setTimeout(() => ignoredTIDs.delete(tid), ignoreTime);
                 console.log(`[${getCurrentTimestamp()}] ${environment}.${info}: ⏳ TID ${tid} ignorado por ${ignoreTime / 60000} min.`);
@@ -323,8 +325,8 @@ async function start() {
         await updateProductionLineCache();
     }, 60000); // Actualización cada 60 segundos
 
-    // Programa la limpieza de TIDs ignorados cada 60 segundos
-    setInterval(cleanupIgnoredTIDs, 60000);
+    // Programa la limpieza de TIDs ignorados cada 5 segundos, antes 60 segundos
+    setInterval(cleanupIgnoredTIDs, 5000);
 }
 
 // Inicia la aplicación
