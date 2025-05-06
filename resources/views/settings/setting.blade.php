@@ -52,7 +52,7 @@
                                 {{ __('Email') }} <div class="float-end"></div>
                             </a>
                             <a href="settings#useradd-4" class="list-group-item list-group-item-action useradd-4">
-                                {{ __('Worker Emails (comma separated)') }} <div class="float-end"></div>
+                                {{ __('Finish Shift Email Settings') }} <div class="float-end"></div>
                             </a>
                         </div>
                     </div>
