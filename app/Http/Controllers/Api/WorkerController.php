@@ -16,7 +16,21 @@ use Illuminate\Support\Facades\Mail; // Import Mail facade
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;          // Import Str facade for URL manipulation
 use Maatwebsite\Excel\Facades\Excel;
+// Asegúrate de que esta línea esté presente y sea EXACTA:
+use App\Mail\AssignmentListMail;
 
+/**
+ * @OA\Tag(
+ *     name="Workers-export",
+ *     description="Operaciones con informes y listados de trabajadores"
+ * )
+ *
+ * @OA\Info(
+ *     version="1.0.0",
+ *     title="API de Informes de trabajadores",
+ *     description="Endpoints para generar Excel, PDF y enviar correos"
+ * )
+ */
 class WorkerController extends Controller // Or the name you use
 {
     // --- OTHER METHODS ---
@@ -179,10 +193,43 @@ class WorkerController extends Controller // Or the name you use
 
 
     /**
-     * Genera y descarga un archivo Excel.
-     * (Código anterior refactorizado para usar el método helper)
-      * @param Request $request
-      * @return \Symfony\Component\HttpFoundation\BinaryFileResponse|\Illuminate\Http\JsonResponse
+     * @OA\Get(
+     *     path="/api/workers-export/generate-excel",
+     *     tags={"Workers-export"},
+     *     summary="Genera y descarga un Excel agrupado de trabajadores",
+     *     @OA\Parameter(
+     *         name="from_date",
+     *         in="query",
+     *         description="Fecha inicio (YYYY-MM-DD)",
+     *         required=true,
+     *         @OA\Schema(type="string", format="date")
+     *     ),
+     *     @OA\Parameter(
+     *         name="to_date",
+     *         in="query",
+     *         description="Fecha fin (YYYY-MM-DD)",
+     *         required=true,
+     *         @OA\Schema(type="string", format="date")
+     *     ),
+     *     @OA\Parameter(
+     *         name="filter_posts",
+     *         in="query",
+     *         description="Filtrar solo trabajadores con posts activos",
+     *         required=false,
+     *         @OA\Schema(type="boolean", default=true)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Archivo Excel descargable",
+     *         @OA\Header(
+     *             header="Content-Disposition",
+     *             description="attachment; filename=Informe_Operadores.xlsx",
+     *             @OA\Schema(type="string")
+     *         )
+     *     ),
+     *     @OA\Response(response=422, description="Parámetros inválidos"),
+     *     security={{"passport":{}}}
+     * )
      */
     public function generateExcelStandalone(Request $request)
     {
@@ -233,10 +280,43 @@ class WorkerController extends Controller // Or the name you use
     }
 
     /**
-     * Generates and downloads a PDF file.
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\Response|\Illuminate\Http\JsonResponse
+     * @OA\Get(
+     *     path="/api/workers-export/generate-pdf",
+     *     tags={"Workers-export"},
+     *     summary="Genera y descarga un PDF agrupado de trabajadores",
+     *     @OA\Parameter(
+     *         name="from_date",
+     *         in="query",
+     *         description="Fecha inicio (YYYY-MM-DD)",
+     *         required=true,
+     *         @OA\Schema(type="string", format="date")
+     *     ),
+     *     @OA\Parameter(
+     *         name="to_date",
+     *         in="query",
+     *         description="Fecha fin (YYYY-MM-DD)",
+     *         required=true,
+     *         @OA\Schema(type="string", format="date")
+     *     ),
+     *     @OA\Parameter(
+     *         name="filter_posts",
+     *         in="query",
+     *         description="Filtrar solo trabajadores con posts activos",
+     *         required=false,
+     *         @OA\Schema(type="boolean", default=true)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Archivo PDF descargable",
+     *         @OA\Header(
+     *             header="Content-Disposition",
+     *             description="attachment; filename=Informe_Operadores.pdf",
+     *             @OA\Schema(type="string")
+     *         )
+     *     ),
+     *     @OA\Response(response=422, description="Parámetros inválidos"),
+     *     security={{"passport":{}}}
+     * )
      */
     public function generatePdfStandalone(Request $request)
     {
@@ -296,14 +376,34 @@ class WorkerController extends Controller // Or the name you use
     }
 
     /**
-     * Sends operator reports (PDF & Excel links) via email.
-     * Uses current date for the reports.
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * @OA\Get(
+     *     path="/api/workers-export/send-reports",
+     *     tags={"Workers-export"},
+     *     summary="Envía por email los enlaces de Excel y PDF de informe",
+     *     @OA\Parameter(
+     *         name="email",
+     *         in="query",
+     *         description="Dirección de correo del destinatario",
+     *         required=true,
+     *         @OA\Schema(type="string", format="email")
+     *     ),
+     *     @OA\Parameter(
+     *         name="filter_posts",
+     *         in="query",
+     *         description="Filtrar solo operadores con posts activos",
+     *         required=false,
+     *         @OA\Schema(type="boolean", default=true)
+     *     ),
+     *     @OA\Response(response=200, description="Correo encolado correctamente"),
+     *     @OA\Response(response=422, description="Parámetros inválidos"),
+     *     security={{"passport":{}}}
+     * )
      */
+
     public function sendReportsByEmail(Request $request)
     {
+        // Ignorar desconexión del cliente
+        ignore_user_abort(true);
         Log::info('sendReportsByEmail: METHOD STARTED.');
 
         // 1. Validate Email Parameter
@@ -427,5 +527,78 @@ class WorkerController extends Controller // Or the name you use
              'data'    => $operators
          ]);
      }
+
+    /**
+     * @OA\Get(
+     *     path="/api/workers-export/send-assignment-list",
+     *     tags={"Workers-export"},
+     *     summary="Envía por email el Listado de Asignación de puestos",
+     *     @OA\Parameter(
+     *         name="email",
+     *         in="query",
+     *         description="Dirección de correo del destinatario",
+     *         required=true,
+     *         @OA\Schema(type="string", format="email")
+     *     ),
+     *     @OA\Response(response=200, description="Correo encolado correctamente"),
+     *     @OA\Response(response=422, description="Parámetros inválidos"),
+     *     security={{"passport":{}}}
+     * )
+     */
+    public function sendAssignmentListByEmail(Request $request)
+    {
+        // Ignorar desconexión del cliente
+        ignore_user_abort(true);
+        Log::info('sendAssignmentListByEmail: METHOD STARTED.');
+
+        // 1. Validar email
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email',
+        ]);
+
+        if ($validator->fails()) {
+            Log::error('sendAssignmentListByEmail: Validation failed.', ['errors' => $validator->errors()]);
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $recipientEmail = $validator->validated()['email'];
+        Log::info("sendAssignmentListByEmail: Email validated ({$recipientEmail}).");
+
+        // 2. Construir URL limpia de la aplicación
+        try {
+            $baseUrl = config('app.url');
+            // Eliminar cualquier slash al final
+            $baseUrl = rtrim($baseUrl, '/');
+            $assignmentUrl = $baseUrl . '/confeccion-puesto-listado/';
+            Log::info('sendAssignmentListByEmail: Assignment URL constructed.', ['url' => $assignmentUrl]);
+        } catch (\Exception $e) {
+            Log::error('sendAssignmentListByEmail: EXCEPTION building URL.', [
+                'message' => $e->getMessage(),
+                'trace'   => $e->getTraceAsString(),
+            ]);
+            return response()->json(['message' => 'Error interno construyendo la URL.'], 500);
+        }
+
+        // 3. Enviar correo
+        try {
+            $mailable = new AssignmentListMail($assignmentUrl);
+
+            // Aquí puedes usar ->queue() o ->send() según prefieras
+            Mail::to($recipientEmail)->queue($mailable);
+
+            Log::info('sendAssignmentListByEmail: Email queued.', ['recipient' => $recipientEmail]);
+            return response()->json([
+                'success' => true,
+                'message' => "El Listado de Asignación ha sido programado para envío a {$recipientEmail}.",
+            ]);
+        } catch (\Exception $e) {
+            Log::error('sendAssignmentListByEmail: EXCEPTION sending email.', [
+                'recipient' => $recipientEmail,
+                'message'   => $e->getMessage(),
+                'trace'     => $e->getTraceAsString(),
+            ]);
+            return response()->json(['message' => 'Error interno al enviar el correo.'], 500);
+        }
+    }
 
 }

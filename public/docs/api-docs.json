@@ -1336,6 +1336,30 @@ paths:
                 properties:
                   error: { type: string }
                 type: object
+  /api/workers/list-all2:
+    get:
+      tags:
+        - Workers
+      summary: 'Get all workers'
+      operationId: 1f6d02c2bf992ddea5614da00593ec2d
+      responses:
+        '200':
+          description: 'Returns all operators'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  properties: { id: { description: 'Client ID', type: integer }, name: { description: 'Operator Name', type: string }, email: { description: 'Operator Email', type: string }, phone: { description: 'Operator Phone', type: string }, operator_posts: { description: 'Operator Assignments', type: array, items: { properties: { rfid_reading_id: { description: 'RFID Reading ID', type: integer }, sensor_id: { description: 'Sensor ID', type: integer }, modbus_id: { description: 'Modbus ID', type: integer }, count: { description: Count, type: integer }, product_list_id: { description: 'Product List ID', type: integer } }, type: object } } }
+                  type: object
+        '500':
+          description: 'Internal server error'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string }
+                type: object
   '/api/workers/{id}':
     get:
       tags:
@@ -2801,6 +2825,80 @@ paths:
                   success: { type: boolean }
                   message: { type: string }
                 type: object
+  /api/register-server:
+    post:
+      tags:
+        - 'Server Registration'
+      summary: 'Registra un nuevo servidor'
+      description: 'Registra un nuevo servidor en host_lists.'
+      operationId: 07037f70e9b8fe986aad9e140bfd36b4
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - host
+                - name
+              properties:
+                host:
+                  type: string
+                  example: 192.168.1.100
+                name:
+                  type: string
+                  example: 'Servidor Xmart'
+                emails:
+                  type: string
+                  example: admin@example.com
+                phones:
+                  type: string
+                  example: '1234567890'
+                telegrams:
+                  type: string
+                  example: '@xmart_server'
+                token:
+                  type: string
+                  example: opcional-token-personalizado
+              type: object
+      responses:
+        '201':
+          description: 'Servidor registrado exitosamente'
+          content:
+            application/json:
+              schema:
+                properties:
+                  message: { type: string, example: 'Server registered successfully.' }
+                  data: { type: object }
+                type: object
+        '422':
+          description: 'Error de validación'
+  '/api/shift-history/production-line/{token}/last':
+    get:
+      tags:
+        - 'Shift History'
+      summary: 'Obtiene la última entrada de shift_history para una línea de producción por token, incluyendo datos del operario y posible cálculo de pausa.'
+      operationId: 896b055ecda030fdf9b072df96e6412c
+      parameters:
+        -
+          name: token
+          in: path
+          description: 'Token de la línea de producción'
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: "Operación exitosa. Puede incluir 'shift_start_date' y 'total_pause_duration_seconds' si el último registro no es un inicio de turno."
+          content:
+            application/json:
+              schema:
+                properties:
+                  data: { description: 'Último registro de ShiftHistory con relaciones cargadas.', type: object }
+                  shift_start_date: { description: 'Timestamp del último inicio de turno (si aplica).', type: string, format: date-time }
+                  total_pause_duration_seconds: { description: 'Duración total de las pausas en segundos desde el último inicio de turno (si aplica).', type: integer }
+                type: object
+        '404':
+          description: 'No se encontró la línea de producción, el historial de turnos o un inicio de turno previo.'
   /api/supplier-order/store:
     post:
       tags:
@@ -3572,6 +3670,148 @@ paths:
                   success: { type: boolean, example: false }
                   error: { type: string, example: 'Error en el procesamiento de la orden.' }
                 type: object
+  /api/workers-export/generate-excel:
+    get:
+      tags:
+        - Workers-export
+      summary: 'Genera y descarga un Excel agrupado de trabajadores'
+      operationId: d3e6cdd59d980683c66d3befd9b8dbb2
+      parameters:
+        -
+          name: from_date
+          in: query
+          description: 'Fecha inicio (YYYY-MM-DD)'
+          required: true
+          schema:
+            type: string
+            format: date
+        -
+          name: to_date
+          in: query
+          description: 'Fecha fin (YYYY-MM-DD)'
+          required: true
+          schema:
+            type: string
+            format: date
+        -
+          name: filter_posts
+          in: query
+          description: 'Filtrar solo trabajadores con posts activos'
+          required: false
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          description: 'Archivo Excel descargable'
+          headers:
+            Content-Disposition:
+              description: 'attachment; filename=Informe_Operadores.xlsx'
+              schema:
+                type: string
+        '422':
+          description: 'Parámetros inválidos'
+      security:
+        -
+          passport: []
+  /api/workers-export/generate-pdf:
+    get:
+      tags:
+        - Workers-export
+      summary: 'Genera y descarga un PDF agrupado de trabajadores'
+      operationId: c9d1d9021262ca0f049f0be696afb4a2
+      parameters:
+        -
+          name: from_date
+          in: query
+          description: 'Fecha inicio (YYYY-MM-DD)'
+          required: true
+          schema:
+            type: string
+            format: date
+        -
+          name: to_date
+          in: query
+          description: 'Fecha fin (YYYY-MM-DD)'
+          required: true
+          schema:
+            type: string
+            format: date
+        -
+          name: filter_posts
+          in: query
+          description: 'Filtrar solo trabajadores con posts activos'
+          required: false
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          description: 'Archivo PDF descargable'
+          headers:
+            Content-Disposition:
+              description: 'attachment; filename=Informe_Operadores.pdf'
+              schema:
+                type: string
+        '422':
+          description: 'Parámetros inválidos'
+      security:
+        -
+          passport: []
+  /api/workers-export/send-reports:
+    get:
+      tags:
+        - Workers-export
+      summary: 'Envía por email los enlaces de Excel y PDF de informe'
+      operationId: c0f7094a35415bae9494adac6d17fa20
+      parameters:
+        -
+          name: email
+          in: query
+          description: 'Dirección de correo del destinatario'
+          required: true
+          schema:
+            type: string
+            format: email
+        -
+          name: filter_posts
+          in: query
+          description: 'Filtrar solo operadores con posts activos'
+          required: false
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          description: 'Correo encolado correctamente'
+        '422':
+          description: 'Parámetros inválidos'
+      security:
+        -
+          passport: []
+  /api/workers-export/send-assignment-list:
+    get:
+      tags:
+        - Workers-export
+      summary: 'Envía por email el Listado de Asignación de puestos'
+      operationId: 82224797e0cab333f3be8fba62ac53f7
+      parameters:
+        -
+          name: email
+          in: query
+          description: 'Dirección de correo del destinatario'
+          required: true
+          schema:
+            type: string
+            format: email
+      responses:
+        '200':
+          description: 'Correo encolado correctamente'
+        '422':
+          description: 'Parámetros inválidos'
+      security:
+        -
+          passport: []
 components:
   schemas:
     GroupLevel:
@@ -3728,6 +3968,9 @@ components:
       type: object
 tags:
   -
+    name: Workers-export
+    description: 'Operaciones con informes y listados de trabajadores'
+  -
     name: Barcode
     description: Barcode
   -
@@ -3799,6 +4042,12 @@ tags:
   -
     name: 'SCADA Orders'
     description: 'SCADA Orders'
+  -
+    name: 'Server Registration'
+    description: 'Server Registration'
+  -
+    name: 'Shift History'
+    description: 'Shift History'
   -
     name: Sistema
     description: Sistema

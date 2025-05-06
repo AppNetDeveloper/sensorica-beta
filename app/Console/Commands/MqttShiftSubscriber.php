@@ -18,6 +18,9 @@ use App\Models\Operator;
 use App\Models\RfidDetail;
 use App\Models\ShiftHistory; // Importa el modelo ShiftControl
 use App\Models\OperatorPost;
+use Illuminate\Support\Str;
+use GuzzleHttp\Client;
+use Illuminate\Support\Facades\Http;
 
 class MqttShiftSubscriber extends Command
 {
@@ -642,6 +645,77 @@ class MqttShiftSubscriber extends Command
             $this->info("[". Carbon::now()->toDateTimeString() . "]No se creó nueva entrada en order_stats ya que el último registro es reciente para la línea de producción: {$productionLineId}");
         }
     }
+
+    public function sendFinishShiftEmails()
+    {
+        // 1. Leemos y explodemos las dos listas
+        $raw1  = trim(env('EMAIL_FINISH_SHIFT_LISTWORKERS', ''));
+        $raw2  = trim(env('EMAIL_FINISH_SHIFT_LISTCONFECCIONSIGNED', ''));
+        $list1 = array_filter(array_map('trim', explode(',', $raw1)));
+        $list2 = array_filter(array_map('trim', explode(',', $raw2)));
+    
+        // 2. Si ambas listas están vacías, no hacemos nada aquí
+        if (empty($list1) && empty($list2)) {
+            $this->info('sendFinishShiftEmails: No hay correos configurados en .env, abortando envío pero permitiendo continuar la ejecución externa.');
+            return; // salimos de este método, pero el código que lo llamó sigue
+        }
+    
+        // 3. Base URL limpia
+        $appUrl = rtrim(env('LOCAL_SERVER'), '/');
+    
+        // 4. Configuramos los jobs
+        $jobs = [
+            [
+                'emails'   => $list1,
+                'endpoint' => $appUrl . '/api/workers-export/send-email',
+                'log_key'  => 'report',
+            ],
+            [
+                'emails'   => $list2,
+                'endpoint' => $appUrl . '/api/workers-export/send-assignment-list',
+                'log_key'  => 'assignment',
+            ],
+        ];
+    
+        // 5. Cliente Guzzle
+        $client = new \GuzzleHttp\Client([
+            'timeout'     => 0.1,
+            'http_errors' => false,
+            'verify'      => false,
+        ]);
+    
+        // 6. Envío asíncrono
+        foreach ($jobs as $job) {
+            foreach ($job['emails'] as $email) {
+                $url = $job['endpoint'] . '?email=' . urlencode($email);
+                $promise = $client->getAsync($url);
+    
+                $promise->then(
+                    function ($response) use ($url, $job) {
+                        \Log::info(sprintf(
+                            "[%s][%s] GET %s → %d",
+                            Carbon::now()->toDateTimeString(),
+                            $job['log_key'],
+                            $url,
+                            $response->getStatusCode()
+                        ));
+                    },
+                    function ($e) use ($url, $job) {
+                        \Log::error(sprintf(
+                            "[%s][%s] Error GET %s: %s",
+                            Carbon::now()->toDateTimeString(),
+                            $job['log_key'],
+                            $url,
+                            $e->getMessage()
+                        ));
+                    }
+                );
+    
+                $promise->wait(false);
+            }
+        }
+    }
+    
     private function publishMqttMessage($topic, $message)
     {
 

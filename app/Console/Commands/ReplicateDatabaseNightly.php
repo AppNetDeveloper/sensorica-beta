@@ -3,162 +3,151 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Config; // Para leer la configuración de BD
-use Illuminate\Support\Facades\Log;     // Para escribir logs de errores
-use Symfony\Component\Process\Process; // Para ejecutar comandos de consola
-use Symfony\Component\Process\Exception\ProcessFailedException; // Para capturar errores del proceso
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Log;
+use Symfony\Component\Process\Process;
+use Symfony\Component\Process\Exception\ProcessFailedException;
 
 class ReplicateDatabaseNightly extends Command
 {
-    /**
-     * The name and signature of the console command.
-     * El nombre con el que llamarás al comando: php artisan db:replicate-nightly
-     * @var string
-     */
     protected $signature = 'db:replicate-nightly';
+    protected $description = 'Dumps the primary database (boisol) and fully replaces the secondary database (sol), reteniendo dumps fallidos 7 días.';
 
-    /**
-     * The console command description.
-     * Descripción que aparecerá cuando ejecutes php artisan list
-     * @var string
-     */
-    protected $description = 'Dumps the primary database (boisol) and restores it to the secondary database (sol).';
-
-    /**
-     * Execute the console command.
-     * Aquí va la lógica principal del comando.
-     * @return int 0 si éxito, 1 (u otro > 0) si falla
-     */
     public function handle()
     {
-        $this->info('>>> Iniciando proceso de copia nocturna de base de datos (boisol -> sol)...');
+        $this->info('>>> Iniciando proceso de copia nocturna de base de datos');
 
-        // --- Configuración ---
-        $dumpFile = storage_path('app/db_dump_boisol_' . date('YmdHis') . '.sql'); // Archivo temporal para el dump
+        // --- 0. Directorio temporal y retención de 7 días ---
+        $tempDir = storage_path('app/backup-temp');
+        if (! is_dir($tempDir)) {
+            mkdir($tempDir, 0755, true);
+        }
+        foreach (glob("{$tempDir}/*.sql") as $oldFile) {
+            if (filemtime($oldFile) < strtotime('-7 days')) {
+                @unlink($oldFile);
+                $this->info("-> Eliminado dump antiguo: " . basename($oldFile));
+            }
+        }
 
-        // --- Obtener detalles de la Base de Datos Origen (boisol) ---
-        // Asume que la conexión por defecto de Laravel apunta a 'boisol' según tu .env
-        $sourceConnectionName = Config::get('database.default');
-        $sourceConfig = Config::get('database.connections.' . $sourceConnectionName);
+        // --- 1. Variables y paths ---
+        $timestamp = date('YmdHis');
+        $dumpFile  = "{$tempDir}/db_dump_boisol_{$timestamp}.sql";
 
-        if (!$sourceConfig) {
-            $this->error("Error: No se encontró la configuración para la conexión de base de datos por defecto: {$sourceConnectionName}");
+        // --- 2. Configuración Origen ---
+        $sourceConn   = Config::get('database.default');
+        $sourceConfig = Config::get("database.connections.{$sourceConn}");
+        if (! $sourceConfig) {
+            $this->error("No se encontró la conexión de BD '{$sourceConn}'.");
             return 1;
         }
-        // Asegúrate de que la base de datos origen es 'boisol' según la configuración leída
-        if (strtolower($sourceConfig['database']) !== 'boisol') {
-             $this->warn("Advertencia: La conexión por defecto '{$sourceConnectionName}' apunta a la BD '{$sourceConfig['database']}' en lugar de 'boisol'. Continuando de todas formas...");
-             // Podrías parar aquí si quieres ser estricto:
-             // $this->error("Error: La conexión por defecto '{$sourceConnectionName}' no apunta a la BD 'boisol'. Revisa tu configuración.");
-             // return 1;
-        }
-        $sourceDbName = $sourceConfig['database']; // Nombre real leído (debería ser boisol)
-        $sourceDbUser = $sourceConfig['username'];
-        $sourceDbPassword = $sourceConfig['password'];
-        $sourceDbHost = $sourceConfig['host'];
-        $sourceDbPort = $sourceConfig['port'];
+        $srcDb   = $sourceConfig['database'];
+        $srcUser = $sourceConfig['username'];
+        $srcPass = $sourceConfig['password'];
+        $srcHost = $sourceConfig['host'];
+        $srcPort = $sourceConfig['port'];
 
+        // --- 3. Configuración Destino ---
+        $tgtDb   = env('REPLICA_DB_DATABASE');
+        $tgtUser = env('REPLICA_DB_USERNAME');
+        $tgtPass = env('REPLICA_DB_PASSWORD');
+        $tgtHost = env('REPLICA_DB_HOST');
+        $tgtPort = env('REPLICA_DB_PORT', 3306);
 
-        // --- Obtener detalles de la Base de Datos Destino (sol) ---
-        // Lee directamente de las variables .env que definimos
-        $targetDbName = env('REPLICA_DB_DATABASE'); // Debería ser 'sol'
-        $targetDbUser = env('REPLICA_DB_USERNAME');
-        $targetDbPassword = env('REPLICA_DB_PASSWORD');
-        $targetDbHost = env('REPLICA_DB_HOST');
-        $targetDbPort = env('REPLICA_DB_PORT', 3306); // Puerto por defecto si no está en .env
-
-        // Validar que tenemos los datos necesarios para el destino
-        if (!$targetDbName || !$targetDbUser || !$targetDbPassword || !$targetDbHost) {
-             $this->error("Error: Faltan variables de entorno para la base de datos destino (REPLICA_DB_DATABASE, REPLICA_DB_USERNAME, REPLICA_DB_PASSWORD, REPLICA_DB_HOST).");
-             return 1;
-        }
-         // Asegúrate de que la base de datos destino es 'sol'
-        if (strtolower($targetDbName) !== 'sol') {
-             $this->warn("Advertencia: La variable REPLICA_DB_DATABASE es '{$targetDbName}' en lugar de 'sol'. Se restaurará en '{$targetDbName}'.");
-             // Podrías parar aquí si quieres ser estricto:
-             // $this->error("Error: La variable REPLICA_DB_DATABASE no es 'sol'. Revisa tu .env.");
-             // return 1;
+        if (! $tgtDb || ! $tgtUser || ! $tgtPass || ! $tgtHost) {
+            $this->error("Faltan vars de entorno REPLICA_DB_* para BD destino.");
+            return 1;
         }
 
-
-        // --- 1. Crear Dump de la Base de Datos Origen (boisol) ---
-        $this->info("Paso 1: Creando volcado de la base de datos origen '{$sourceDbName}'...");
-
-        // NOTA IMPORTANTE SOBRE SEGURIDAD:
-        // Pasar la contraseña directamente con --password es inseguro porque puede aparecer
-        // en la lista de procesos del sistema. Es MUCHO MÁS SEGURO configurar un archivo
-        // de opciones .my.cnf para el usuario que ejecuta este script.
-        // Si usas .my.cnf, puedes omitir --user y --password aquí.
-        $dumpCommand = sprintf(
-            'mariadb-dump --host=%s --port=%s --user=%s --password=%s --single-transaction --skip-lock-tables --routines --events %s > %s',
-            escapeshellarg($sourceDbHost),
-            escapeshellarg($sourceDbPort),
-            escapeshellarg($sourceDbUser),
-            escapeshellarg($sourceDbPassword), // ¡INSEGURO! Considerar .my.cnf
-            escapeshellarg($sourceDbName),      // Base de datos específica a dumpear (boisol)
-            escapeshellarg($dumpFile)           // Archivo de salida
+        // --- 4. Dump con DROP TABLE ---
+        $this->info("Paso 1: Creando volcado de '{$srcDb}' en '{$dumpFile}'...");
+        $dumpCmd = sprintf(
+            'mariadb-dump --skip-tz-utc --host=%s --port=%s --user=%s --password=%s '.
+            '--single-transaction --skip-lock-tables --routines --events '.
+            '--add-drop-table %s > %s',
+            escapeshellarg($srcHost),
+            escapeshellarg($srcPort),
+            escapeshellarg($srcUser),
+            escapeshellarg($srcPass),
+            escapeshellarg($srcDb),
+            escapeshellarg($dumpFile)
         );
 
-        $processDump = Process::fromShellCommandline($dumpCommand);
-        $processDump->setTimeout(3600); // Timeout de 1 hora para el dump (ajusta si es necesario)
+        $procDump = Process::fromShellCommandline($dumpCmd);
+        $procDump->setTimeout(3600);
 
         try {
-            $processDump->mustRun();
-            $this->info("-> Volcado de '{$sourceDbName}' creado con éxito en: " . $dumpFile);
-        } catch (ProcessFailedException $exception) {
-            Log::error("Fallo al crear el dump de '{$sourceDbName}': " . $exception->getMessage());
-            $this->error("ERROR: Fallo al crear el dump de la base de datos origen.");
-            // Intenta borrar el archivo parcial si existe
-            if (file_exists($dumpFile)) {
-                 @unlink($dumpFile);
-            }
-            return 1; // Termina con error
+            $procDump->mustRun();
+            $this->info("-> Dump creado con éxito: {$dumpFile}");
+        } catch (ProcessFailedException $e) {
+            Log::error("Error al crear dump de '{$srcDb}': " . $e->getMessage());
+            $this->error("ERROR: Falló la creación del volcado. El archivo quedará retenido en '{$tempDir}' durante 7 días para diagnóstico.");
+            return 1;
         }
 
-        // --- 2. Restaurar Dump en la Base de Datos Destino (sol) ---
-        $this->info("Paso 2: Restaurando volcado en la base de datos destino '{$targetDbName}' en {$targetDbHost}...");
+        // --- 5. Recrear BD destino (DROP + CREATE) corregido ---
+        $this->info("Paso 2: Limpiando y recreando base de datos destino '{$tgtDb}'...");
+        $sql = sprintf(
+            "DROP DATABASE IF EXISTS `%s`; CREATE DATABASE `%s`;",
+            $tgtDb,
+            $tgtDb
+        );
+        $recreateCmd = sprintf(
+            'mariadb --host=%s --port=%s --user=%s --password=%s -e %s',
+            escapeshellarg($tgtHost),
+            escapeshellarg($tgtPort),
+            escapeshellarg($tgtUser),
+            escapeshellarg($tgtPass),
+            escapeshellarg($sql)
+        );
 
-        // ASUNCIÓN IMPORTANTE: Se asume que la base de datos destino ('sol') ya existe
-        // en el servidor destino. Este script no la crea.
+        $procRecreate = Process::fromShellCommandline($recreateCmd);
+        $procRecreate->setTimeout(300);
 
-        // Mismo comentario de seguridad sobre la contraseña que para mariadb-dump
-        $restoreCommand = sprintf(
+        try {
+            $procRecreate->mustRun();
+            $this->info("-> Base de datos destino '{$tgtDb}' recreada correctamente.");
+        } catch (ProcessFailedException $e) {
+            // Registra el mensaje de excepción
+            Log::error("Error recrear BD destino '{$tgtDb}': " . $e->getMessage());
+            // Muestra en consola el detalle de STDERR y STDOUT
+            $this->error("ERROR al limpiar la BD destino. Detalle:");
+            $this->error($procRecreate->getErrorOutput());
+            $this->error($procRecreate->getOutput());
+            return 1;
+        }
+        
+
+        // --- 6. Restaurar Dump en Destino ---
+        $this->info("Paso 3: Restaurando volcado en '{$tgtDb}'...");
+        $restoreCmd = sprintf(
             'mariadb --host=%s --port=%s --user=%s --password=%s %s < %s',
-            escapeshellarg($targetDbHost),
-            escapeshellarg($targetDbPort),
-            escapeshellarg($targetDbUser),
-            escapeshellarg($targetDbPassword), // ¡INSEGURO! Considerar .my.cnf
-            escapeshellarg($targetDbName),      // Base de datos específica donde restaurar (sol)
-            escapeshellarg($dumpFile)           // Archivo de entrada
+            escapeshellarg($tgtHost),
+            escapeshellarg($tgtPort),
+            escapeshellarg($tgtUser),
+            escapeshellarg($tgtPass),
+            escapeshellarg($tgtDb),
+            escapeshellarg($dumpFile)
         );
 
-        $processRestore = Process::fromShellCommandline($restoreCommand);
-        $processRestore->setTimeout(7200); // Timeout de 2 horas para restaurar (ajusta si es necesario)
+        $procRestore = Process::fromShellCommandline($restoreCmd);
+        $procRestore->setTimeout(7200);
 
         try {
-            $processRestore->mustRun();
-            $this->info("-> Volcado restaurado con éxito en la base de datos '{$targetDbName}'.");
-        } catch (ProcessFailedException $exception) {
-            Log::error("Fallo al restaurar el dump en '{$targetDbName}': " . $exception->getMessage());
-            $this->error("ERROR: Fallo al restaurar el dump en la base de datos destino.");
-            // No borres el dump aquí, puede ser útil para investigar el fallo manualmente
-            return 1; // Termina con error
-        } finally {
-            // --- 3. Limpieza ---
-            // Este bloque 'finally' se ejecuta siempre, haya habido éxito o error en la restauración
-            // (siempre que el dump se haya creado con éxito antes).
-            if (file_exists($dumpFile)) {
-                 $this->info("Paso 3: Limpiando archivo de volcado temporal...");
-                 if (@unlink($dumpFile)) {
-                    $this->info("-> Archivo temporal '{$dumpFile}' eliminado.");
-                 } else {
-                    Log::warning("No se pudo eliminar el archivo de volcado temporal: {$dumpFile}");
-                    $this->warn("Advertencia: No se pudo eliminar el archivo de volcado temporal: {$dumpFile}");
-                 }
-            }
+            $procRestore->mustRun();
+            $this->info("-> Dump restaurado con éxito en '{$tgtDb}'.");
+        } catch (ProcessFailedException $e) {
+            Log::error("Error restaurar en '{$tgtDb}': " . $e->getMessage());
+            $this->error("ERROR: Falló la restauración en la BD destino. El dump permanecerá hasta 7 días para diagnóstico.");
+            return 1;
         }
 
-        $this->info('>>> Proceso de copia nocturna de base de datos finalizado con éxito.');
-        return 0; // Termina con éxito
+        // --- 7. Limpieza del dump tras éxito completo ---
+        if (file_exists($dumpFile)) {
+            @unlink($dumpFile);
+            $this->info("-> Dump temporal eliminado: {$dumpFile}");
+        }
+
+        $this->info('>>> Proceso completado con éxito.');
+        return 0;
     }
 }

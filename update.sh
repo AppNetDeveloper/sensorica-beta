@@ -228,7 +228,8 @@ CRON_ENTRY2="30 14 * * * /bin/bash /var/www/html/clean_and_backup.sh >> /var/www
 CRON_ENTRY3="30 0 * * * python3 /var/www/html/python/entrena_shift.py >> /var/www/html/storage/logs/entrena_shift.log 2>&1"
 CRON_ENTRY4="*/10 * * * * find /var/www/html/storage/app/mqtt/server2 -type f -mmin +60 -delete"
 CRON_ENTRY5="*/10 * * * * find /var/www/html/storage/app/mqtt/server1 -type f -mmin +60 -delete"
-CRON_ENTRY3="40 0 * * * python3 /var/www/html/python/entrenar_produccion.py >> /var/www/html/storage/logs/entrena_produccion.log 2>&1"
+CRON_ENTRY6="40 0 * * * python3 /var/www/html/python/entrenar_produccion.py >> /var/www/html/storage/logs/entrena_produccion.log 2>&1"
+CRON_ENTRY7="30 3 * * * /usr/bin/php /var/www/html/artisan db:replicate-nightly >> /var/www/html/storage/logs/db_replicate.log 2>&1"
 
 # Obtiene la lista de cron actual
 CURRENT_CRON=$(crontab -l 2>/dev/null)
@@ -252,6 +253,7 @@ add_cron_entry "$CRON_ENTRY3"
 add_cron_entry "$CRON_ENTRY4"
 add_cron_entry "$CRON_ENTRY5"
 add_cron_entry "$CRON_ENTRY6"
+add_cron_entry "$CRON_ENTRY7"
 
 # Instala la nueva lista de cron
 echo "$CURRENT_CRON" | crontab -
