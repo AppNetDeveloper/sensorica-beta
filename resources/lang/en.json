@@ -580,5 +580,17 @@
     "buttons.live_machine": "Live Machine",
     "buttons.delete": "Delete",
     "buttons.delete_confirm": "Are you sure you want to delete",
-    "Reset RFID POINT": "Reset RFID Point"
+    "Reset RFID POINT": "Reset RFID Point",
+    "Save Finish Shift Emails": "Save Finish Shift Emails",
+    "Assignment Emails (comma separated)": "Emails of Assignment (separated by commas)",
+    "Worker Emails (comma separated)": "Emails of Worker (separated by commas)",
+    "Finish Shift Email Settings": "Finish Shift Email Settings",
+    "Finish Shift Emails List": "List of Finish Shift Emails",
+    "Finish Shift Emails List Workers": "Finish Shift Emails for Workers",
+    "Finish Shift Emails List Confeccionsigned": "Finish Shift Emails for Confirmed Orders",
+    "Finish Shift Emails List All": "List of Finish Shift Emails (All)",
+    "Finish Shift Emails List Workers All": "List of Finish Shift Emails for Workers (All)",
+    "Finish Shift Emails List Confeccionsigned All": "List of Finish Shift Emails for Confirmed Orders (All)",
+    "Finish Shift Emails List Workers and Confeccionsigned": "List of Finish Shift Emails for Workers and Confirmed Orders",
+    "Finish Shift Emails List Workers and Confeccionsigned All": "List of Finish Shift Emails for Workers and Confirmed Orders (All)"
   }

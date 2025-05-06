@@ -624,5 +624,17 @@
     "buttons.live_machine": "Máquina en vivo",
     "buttons.delete": "Eliminar",
     "buttons.delete_confirm": "Estás seguro de eliminar",
-    "Reset RFID POINT": "Reiniciar Punto RFID"
+    "Reset RFID POINT": "Reiniciar Punto RFID",
+    "Save Finish Shift Emails": "Guardar Correos informes",
+    "Assignment Emails (comma separated)": "Correos informe asignación (separados por comas)",
+    "Worker Emails (comma separated)": "Correos informe trabajadores (separados por comas)",
+    "Finish Shift Email Settings": "Configuración de Correos de Final Turno",
+    "Finish Shift Emails List": "Lista de Correcciones de Turno Final",
+    "Finish Shift Emails List Workers": "Correcciones de Turno Final para Trabajadores",
+    "Finish Shift Emails List Confeccionsigned": "Correcciones de Turno Final para Confecciones Firmadas",
+    "Finish Shift Emails List All": "Correcciones de Turno Final (Todos)",
+    "Finish Shift Emails List Workers All": "Correcciones de Turno Final para Trabajadores (Todos)",
+    "Finish Shift Emails List Confeccionsigned All": "Correcciones de Turno Final para Confecciones Firmadas (Todos)",
+    "Finish Shift Emails List Workers and Confeccionsigned": "Correcciones de Turno Final para Trabajadores y Confecciones Firmadas",
+    "Finish Shift Emails List Workers and Confeccionsigned All": "Correcciones de Turno Final para Trabajadores y Confecciones Firmadas (Todos)"
   }

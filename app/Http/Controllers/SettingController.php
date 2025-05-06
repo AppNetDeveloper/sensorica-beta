@@ -9,6 +9,10 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use File;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+use Carbon\Carbon;
 
 class SettingController extends Controller
 {
@@ -51,6 +55,28 @@ class SettingController extends Controller
 
         return redirect()->back()->with('success', __('Setting successfully updated.'));
     }
+
+    /**
+     * Guarda las variables de entorno para Finish Shift Emails.
+     */
+    public function saveFinishShiftEmailsSettings(Request $request)
+    {
+        $data = $request->validate([
+            'EMAIL_FINISH_SHIFT_LISTWORKERS'        => 'nullable|string',
+            'EMAIL_FINISH_SHIFT_LISTCONFECCIONSIGNED' => 'nullable|string',
+        ]);
+
+        // Reescribimos solo estas dos en el .env
+        UtilityFacades::setEnvironmentValue([
+            'EMAIL_FINISH_SHIFT_LISTWORKERS'         => $data['EMAIL_FINISH_SHIFT_LISTWORKERS'] ?? '',
+            'EMAIL_FINISH_SHIFT_LISTCONFECCIONSIGNED' => $data['EMAIL_FINISH_SHIFT_LISTCONFECCIONSIGNED'] ?? '',
+        ]);
+
+        return redirect()
+            ->back()
+            ->with('success', __('Finish Shift Email settings updated.'));
+    }
+
 
     public function getdate()
     {
@@ -159,5 +185,94 @@ class SettingController extends Controller
             return redirect()->back()->with('error', $smtp_error);
         }
         return redirect()->back()->with('success', __('Email send Successfully.'));
+    }
+    public function testFinishShiftEmails()
+    {
+        Log::info("message: Envio de test EMAIL SHIFT FIN ");
+        // Llamamos a tu método de envío
+        try {
+            $this->sendFinishShiftEmails();
+            return redirect()
+                ->back()
+                ->with('success', __('Test emails have been dispatched. Check logs for details.'));
+        } catch (\Throwable $e) {
+            Log::error('testFinishShiftEmails: ' . $e->getMessage());
+            return redirect()
+                ->back()
+                ->with('error', __('An error occurred while dispatching test emails.'));
+        }
+    }
+
+    /**
+     * Tu método existente (puede ser privado o público)
+     */
+    public function sendFinishShiftEmails()
+    {
+        // 1. Leemos y explodemos las dos listas
+        $raw1  = trim(env('EMAIL_FINISH_SHIFT_LISTWORKERS', ''));
+        $raw2  = trim(env('EMAIL_FINISH_SHIFT_LISTCONFECCIONSIGNED', ''));
+        $list1 = array_filter(array_map('trim', explode(',', $raw1)));
+        $list2 = array_filter(array_map('trim', explode(',', $raw2)));
+    
+        // 2. Si ambas listas están vacías, no hacemos nada aquí
+        if (empty($list1) && empty($list2)) {
+            $this->info('sendFinishShiftEmails: No hay correos configurados en .env, abortando envío pero permitiendo continuar la ejecución externa.');
+            return; // salimos de este método, pero el código que lo llamó sigue
+        }
+    
+        // 3. Base URL limpia
+        $appUrl = rtrim(env('LOCAL_SERVER'), '/');
+    
+        // 4. Configuramos los jobs
+        $jobs = [
+            [
+                'emails'   => $list1,
+                'endpoint' => $appUrl . '/api/workers-export/send-email',
+                'log_key'  => 'report',
+            ],
+            [
+                'emails'   => $list2,
+                'endpoint' => $appUrl . '/api/workers-export/send-assignment-list',
+                'log_key'  => 'assignment',
+            ],
+        ];
+    
+        // 5. Cliente Guzzle
+        $client = new \GuzzleHttp\Client([
+            'timeout'     => 0.1,
+            'http_errors' => false,
+            'verify'      => false,
+        ]);
+    
+        // 6. Envío asíncrono
+        foreach ($jobs as $job) {
+            foreach ($job['emails'] as $email) {
+                $url = $job['endpoint'] . '?email=' . urlencode($email);
+                $promise = $client->getAsync($url);
+    
+                $promise->then(
+                    function ($response) use ($url, $job) {
+                        \Log::info(sprintf(
+                            "[%s][%s] GET %s → %d",
+                            Carbon::now()->toDateTimeString(),
+                            $job['log_key'],
+                            $url,
+                            $response->getStatusCode()
+                        ));
+                    },
+                    function ($e) use ($url, $job) {
+                        \Log::error(sprintf(
+                            "[%s][%s] Error GET %s: %s",
+                            Carbon::now()->toDateTimeString(),
+                            $job['log_key'],
+                            $url,
+                            $e->getMessage()
+                        ));
+                    }
+                );
+    
+                $promise->wait(false);
+            }
+        }
     }
 }
