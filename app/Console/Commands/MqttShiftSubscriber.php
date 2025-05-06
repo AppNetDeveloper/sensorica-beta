@@ -158,6 +158,16 @@ class MqttShiftSubscriber extends Command
 
         $this->info('[' . Carbon::now()->toDateTimeString() . '] Message decoded: ' . json_encode($data));
 
+        try {
+            if ($data['type'] == 'shift' && $data['action'] == 'end') {
+
+                $this->sendFinishShiftEmails();
+                $this->info("[". Carbon::now()->toDateTimeString() . "]Email enviado con exito.");
+            }
+        } catch (\Exception $e) {
+            $this->error("[" . Carbon::now()->toDateTimeString() . "]Error envio email: " . $e->getMessage());
+        }
+    
         // Buscar el modbus que coincide con el tópico (sin '/timeline_event')
         $baseTopic = str_replace('/timeline_event', '', $topic);
 

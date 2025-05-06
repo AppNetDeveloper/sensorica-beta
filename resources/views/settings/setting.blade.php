@@ -51,6 +51,9 @@
                             <a href="settings#useradd-3" class="list-group-item list-group-item-action useradd-3">
                                 {{ __('Email') }} <div class="float-end"></div>
                             </a>
+                            <a href="settings#useradd-4" class="list-group-item list-group-item-action useradd-4">
+                                {{ __('Worker Emails (comma separated)') }} <div class="float-end"></div>
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -375,15 +378,19 @@
 
     $(document).on("click", ".useradd-1", function(){
         $(".useradd-1").addClass("active");
-        $(".useradd-2, .useradd-3").removeClass("active");
+        $(".useradd-2, .useradd-3, .useradd-4").removeClass("active");
     });
     $(document).on("click", ".useradd-2", function(){
         $(".useradd-2").addClass("active");
-        $(".useradd-1, .useradd-3").removeClass("active");
+        $(".useradd-1, .useradd-3, .useradd-4").removeClass("active");
     });
     $(document).on("click", ".useradd-3", function(){
         $(".useradd-3").addClass("active");
-        $(".useradd-1, .useradd-2").removeClass("active");
+        $(".useradd-1, .useradd-2, .useradd-4").removeClass("active");
+    });
+    $(document).on("click", ".useradd-4", function(){
+        $(".useradd-4").addClass("active");
+        $(".useradd-1, .useradd-2, .useradd-3").removeClass("active");
     });
 </script>
 @endpush
