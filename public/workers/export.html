@@ -59,7 +59,7 @@
         <table id="workersTable" class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
                 <tr>
-                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Codigo Trabajador</th>
+                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Codigo</th>
                     <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
                     <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unidades (Turno)</th>
                     <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Puesto</th>
@@ -261,7 +261,7 @@
                         postRow.classList.add(index % 2 === 0 ? 'bg-white' : 'bg-gray-50', 'hover:bg-gray-100', 'transition-colors', 'duration-150', 'ease-in-out');
 
                         // Celdas vacías para alinear con las columnas de trabajador
-                        postRow.insertCell().textContent = ''; // Codigo Trabajador
+                        postRow.insertCell().textContent = ''; // Codigo
                         postRow.insertCell().textContent = ''; // Nombre
                         postRow.insertCell().textContent = ''; // Unidades (Turno)
 
@@ -366,7 +366,7 @@
 
                         // Añade una fila al array de datos para Excel
                         flattenedData.push({
-                            'Codigo Trabajador': worker.client_id ?? '-',
+                            'Codigo': worker.client_id ?? '-',
                             'Nombre Trabajador': worker.name ?? 'Sin Nombre',
                             'Unidades Turno': totalQuantitySum, // Usa la suma calculada
                             'Puesto': post.rfid_reading?.name ?? 'N/A',
