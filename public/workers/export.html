@@ -13,6 +13,11 @@
             body { padding: 0; }
             .container { box-shadow: none; margin: 0; max-width: 100%; }
         }
+        .live-cajas-hora {
+            /* Puedes añadir un estilo sutil si quieres indicar que se actualiza, ej:
+            font-style: italic;
+            color: #2563eb; */
+        }
     </style>
 </head>
 <body class="bg-gray-100 p-4 md:p-8">
@@ -66,18 +71,19 @@
                     <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Inicio Puesto</th>
                     <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fin Puesto</th>
                     <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cantidad</th>
+                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cajas/Hora</th>
                     <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Confeccion</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200" id="workersTableBody">
                 <tr id="loadingRow">
-                    <td colspan="8" class="px-4 py-4 text-center text-gray-500">Cargando datos...</td>
+                    <td colspan="9" class="px-4 py-4 text-center text-gray-500">Cargando datos...</td>
                 </tr>
                 <tr id="errorRow" class="hidden">
-                     <td colspan="8" class="px-4 py-4 text-center text-red-500"></td>
+                     <td colspan="9" class="px-4 py-4 text-center text-red-500"></td>
                 </tr>
                  <tr id="noDataRow" class="hidden">
-                     <td colspan="8" class="px-4 py-4 text-center text-gray-500">No se encontraron datos para el periodo seleccionado.</td>
+                     <td colspan="9" class="px-4 py-4 text-center text-gray-500">No se encontraron datos para el periodo seleccionado.</td>
                 </tr>
             </tbody>
         </table>
@@ -97,26 +103,19 @@
     const dateRangeSelect = document.getElementById('dateRangeSelect');
     const filterPostsCheckbox = document.getElementById('filterPostsCheckbox');
 
-    // Variable para almacenar los datos originales (sin filtrar por checkbox) una vez cargados
     let originalWorkersData = [];
-    // Variable para contar cuántas filas de puestos se muestran realmente
     let displayedPostRowsCount = 0;
+    let liveUpdateIntervalId = null; // ID para el intervalo de actualización en vivo
 
-    // Opciones para formatear la fecha y hora localmente para visualización
     const dateTimeFormatOptions = {
         year: 'numeric', month: 'numeric', day: 'numeric',
         hour: 'numeric', minute: 'numeric', second: 'numeric',
-        hour12: false // Formato de 24 horas
+        hour12: false
     };
     const dateFormatter = new Intl.DateTimeFormat(navigator.language || 'es-ES', dateTimeFormatOptions);
 
     // --- Funciones ---
 
-    /**
-     * Formatea un objeto Date a 'YYYY-MM-DD' para la API.
-     * @param {Date} date - La fecha a formatear.
-     * @returns {string} La fecha formateada.
-     */
     function formatDateForAPI(date) {
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -124,17 +123,12 @@
         return `${year}-${month}-${day}`;
     }
 
-    /**
-     * Calcula las fechas de inicio y fin para la API según la opción seleccionada.
-     * @param {string} selectedValue - El valor del select de rango de fechas.
-     * @returns {{from: string, to: string}} Las fechas de inicio y fin formateadas.
-     */
     function getDateRange(selectedValue) {
         const today = new Date();
-        today.setHours(0, 0, 0, 0); // Asegura que la hora sea 00:00:00
+        today.setHours(0, 0, 0, 0);
 
         let fromDate = new Date(today);
-        let endDate = new Date(today); // Por defecto es hoy
+        let endDate = new Date(today);
 
         switch (selectedValue) {
             case 'today': break;
@@ -149,205 +143,126 @@
             case 'last30days': fromDate.setDate(today.getDate() - 29); break;
             default: break;
         }
-
-        // La API espera que 'to_date' sea el día *después* del último día que quieres incluir
         let apiToDate = new Date(endDate);
         apiToDate.setDate(endDate.getDate() + 1);
-
-        return {
-            from: formatDateForAPI(fromDate),
-            to: formatDateForAPI(apiToDate)
-        };
+        return { from: formatDateForAPI(fromDate), to: formatDateForAPI(apiToDate) };
     }
 
     /**
-     * Filtra los datos según el estado del checkbox "Mostrar solo con puestos".
-     * @param {Array} data - Los datos originales de los trabajadores.
-     * @returns {Array} Los datos filtrados.
+     * Calcula el valor de "Cajas/Hora".
+     * @param {number|string} count - La cantidad de cajas.
+     * @param {string} startTimeStr - La fecha/hora de inicio del puesto (ISO string).
+     * @param {string|null} endTimeStr - La fecha/hora de fin del puesto (ISO string) o null si no ha terminado.
+     * @returns {string|number} El ratio formateado o 'N/A' o 0.
      */
+    function calculateCajasHora(count, startTimeStr, endTimeStr) {
+        const quantity = parseFloat(count) || 0;
+
+        if (!startTimeStr) return 'N/A'; // No hay hora de inicio
+
+        const startTime = new Date(startTimeStr);
+        if (isNaN(startTime.getTime())) return 'N/A'; // Hora de inicio inválida
+
+        // Si no hay hora de fin, usa la hora actual para el cálculo
+        const endTime = endTimeStr ? new Date(endTimeStr) : new Date();
+        if (isNaN(endTime.getTime())) return 'N/A'; // Hora de fin inválida (poco probable para new Date())
+
+        // Si la hora de fin es anterior o igual a la de inicio, no se puede calcular una tasa positiva
+        if (endTime <= startTime) {
+             return quantity > 0 ? 'N/A' : 0; // Si hay cantidad, es N/A, si no, es 0
+        }
+
+        const diffMs = endTime.getTime() - startTime.getTime();
+        const diffHours = diffMs / (1000 * 60 * 60);
+
+        if (diffHours <= 0) { // Aunque ya cubierto por endTime <= startTime, es una doble verificación
+            return quantity > 0 ? 'N/A' : 0;
+        }
+        
+        if (quantity === 0) return '0.00'; // Si no hay cantidad, la tasa es 0
+
+        const rate = quantity / diffHours;
+        return rate.toFixed(2); // Formatea a 2 decimales
+    }
+
+    /**
+     * Actualiza las celdas de "Cajas/Hora" que están marcadas para actualización en vivo.
+     */
+    function updateLiveCajasHoraCells() {
+        const liveCells = document.querySelectorAll('.live-cajas-hora');
+        liveCells.forEach(cell => {
+            const startTimeStr = cell.dataset.startTime;
+            const count = cell.dataset.count;
+            // Pasa null como endTimeStr para que calculateCajasHora use la hora actual
+            cell.textContent = calculateCajasHora(count, startTimeStr, null);
+        });
+    }
+
+
     function filterDataByCheckbox(data) {
         if (filterPostsCheckbox.checked) {
-            // Filtra trabajadores que tengan al menos un puesto con cantidad > 0
             return data.filter(worker =>
                 worker.operator_posts && worker.operator_posts.some(post => (post.count ?? 0) > 0)
             );
         }
-        return data; // Devuelve todos si el checkbox no está marcado
+        return data;
     }
 
-    /**
-     * Rellena la tabla HTML con los datos de los trabajadores y sus puestos.
-     * Filtra los puestos con cantidad 0.
-     * Calcula la suma de cantidades para la columna "Unidades (Turno)".
-     * @param {Array} data - Los datos de los trabajadores (ya filtrados por checkbox y ordenados).
-     */
     function populateTable(data) {
-        // Limpia filas existentes excepto las de estado
+        if (liveUpdateIntervalId) { // Limpia el intervalo anterior si existe
+            clearInterval(liveUpdateIntervalId);
+            liveUpdateIntervalId = null;
+        }
+
         tableBody.querySelectorAll('tr:not(#loadingRow):not(#errorRow):not(#noDataRow)').forEach(row => row.remove());
-        displayedPostRowsCount = 0; // Resetea contador de filas de puestos
-        // Aplica filtro de checkbox a los datos ya ordenados
+        displayedPostRowsCount = 0;
         const dataToDisplay = filterDataByCheckbox(data);
 
-        // Si no hay datos para mostrar después del filtro
         if (dataToDisplay.length === 0) {
             if (filterPostsCheckbox.checked && data.length > 0) {
                  noDataRow.querySelector('td').textContent = 'Ningún trabajador con puestos asignados (con cantidad > 0) en este periodo.';
             } else {
                  noDataRow.querySelector('td').textContent = 'No se encontraron datos para el periodo seleccionado.';
             }
-            noDataRow.classList.remove('hidden'); // Muestra mensaje "Sin datos"
-            exportExcelBtn.disabled = true; // Deshabilita exportar
-            return; // Termina la función
+            noDataRow.classList.remove('hidden');
+            exportExcelBtn.disabled = true;
+            return;
         }
 
-        noDataRow.classList.add('hidden'); // Oculta mensaje "Sin datos"
-        let workersWithVisiblePosts = 0; // Contador de trabajadores que se mostrarán
+        noDataRow.classList.add('hidden');
+        let workersWithVisiblePosts = 0;
+        let hasLiveCells = false; // Flag para saber si necesitamos iniciar el intervalo
 
-        // Itera sobre cada trabajador en los datos filtrados Y ORDENADOS
         dataToDisplay.forEach((worker) => {
-            let totalQuantitySum = 0; // Suma de cantidades para este trabajador
-
-            // Calcula la suma total de cantidades de los puestos del trabajador
+            let totalQuantitySum = 0;
             if (worker.operator_posts && worker.operator_posts.length > 0) {
                  totalQuantitySum = worker.operator_posts.reduce((sum, post) => {
-                    const count = post.count ?? 0; // Obtiene cantidad del puesto (o 0 si es null/undefined)
-                    return sum + (count > 0 ? count : 0); // Suma solo si la cantidad es mayor que 0
+                    const count = post.count ?? 0;
+                    return sum + (count > 0 ? count : 0);
                 }, 0);
             }
 
-            // Esta comprobación es redundante si filterDataByCheckbox ya se aplicó,
-            // pero la dejamos por seguridad.
             const hasVisiblePosts = worker.operator_posts && worker.operator_posts.some(post => (post.count ?? 0) > 0);
             if (filterPostsCheckbox.checked && !hasVisiblePosts) {
-                return; // Saltar al siguiente trabajador
+                return;
             }
+            workersWithVisiblePosts++;
 
-            workersWithVisiblePosts++; // Incrementa contador de trabajadores mostrados
-
-            // --- Crear fila del trabajador ---
             const workerRow = tableBody.insertRow();
             workerRow.classList.add('bg-blue-50', 'hover:bg-blue-100', 'transition-colors', 'duration-150', 'ease-in-out');
-            // Celdas del trabajador
             workerRow.insertCell().textContent = worker.client_id ?? '-';
             workerRow.insertCell().textContent = worker.name ?? 'Sin Nombre';
-            workerRow.insertCell().textContent = totalQuantitySum; // Muestra la suma calculada
-            // Celdas vacías para alinear con las columnas de puesto
+            workerRow.insertCell().textContent = totalQuantitySum;
             workerRow.insertCell().textContent = ''; // Puesto
             workerRow.insertCell().textContent = ''; // Inicio Puesto
             workerRow.insertCell().textContent = ''; // Fin Puesto
             workerRow.insertCell().textContent = ''; // Cantidad
+            workerRow.insertCell().textContent = ''; // Cajas/Hora (vacío para fila de trabajador)
             workerRow.insertCell().textContent = ''; // Confeccion
-            // Aplica estilos a las celdas de la fila del trabajador
             Array.from(workerRow.cells).forEach(cell => cell.classList.add('px-4', 'py-3', 'text-sm', 'font-medium', 'text-gray-900', 'whitespace-nowrap'));
 
-            // --- Crear filas de los puestos (si existen y tienen cantidad > 0) ---
              if (worker.operator_posts && worker.operator_posts.length > 0) {
-                 // Ordena los puestos de ESTE trabajador por fecha de creación para mostrar en orden cronológico
                  const sortedPosts = [...worker.operator_posts].sort((postA, postB) => {
-                    const dateA = postA.created_at ? new Date(postA.created_at) : null;
-                    const dateB = postB.created_at ? new Date(postB.created_at) : null;
-                    if (dateA && dateB) return dateA - dateB;
-                    if (dateA) return -1; // Pone los que tienen fecha antes
-                    if (dateB) return 1;
-                    return 0; // Si ninguno tiene fecha, mantiene orden relativo
-                 });
-
-                sortedPosts.forEach((post, index) => {
-                    // Solo muestra la fila del puesto si su cantidad es mayor que 0
-                    if ((post.count ?? 0) > 0) {
-                        displayedPostRowsCount++; // Incrementa contador de filas de puestos mostradas
-                        const postRow = tableBody.insertRow();
-                        // Alterna color de fondo para las filas de puestos
-                        postRow.classList.add(index % 2 === 0 ? 'bg-white' : 'bg-gray-50', 'hover:bg-gray-100', 'transition-colors', 'duration-150', 'ease-in-out');
-
-                        // Celdas vacías para alinear con las columnas de trabajador
-                        postRow.insertCell().textContent = ''; // Codigo
-                        postRow.insertCell().textContent = ''; // Nombre
-                        postRow.insertCell().textContent = ''; // Unidades (Turno)
-
-                        // *** CELDA PUESTO ***
-                        const puestoCell = postRow.insertCell();
-                        puestoCell.textContent = post.rfid_reading?.name ?? 'N/A';
-
-                        // Celdas de Inicio y Fin Puesto (formateadas)
-                        let startDate = '-';
-                        if (post.created_at) { try { startDate = dateFormatter.format(new Date(post.created_at)); } catch (e) { console.error("Error formateando fecha inicio:", post.created_at, e); } }
-                        let endDate = '-';
-                        if (post.finish_at) { try { endDate = dateFormatter.format(new Date(post.finish_at)); } catch (e) { console.error("Error formateando fecha fin:", post.finish_at, e); } }
-                        postRow.insertCell().textContent = startDate; // Inicio Puesto
-                        postRow.insertCell().textContent = endDate;   // Fin Puesto
-
-                        // Celdas de Cantidad y Confección
-                        postRow.insertCell().textContent = post.count ?? 0; // Cantidad
-                        postRow.insertCell().textContent = post.product_list?.name ?? 'N/A'; // Confeccion
-
-                        // Aplica estilos a las celdas de la fila del puesto
-                        Array.from(postRow.cells).forEach(cell => cell.classList.add('px-4', 'py-3', 'text-sm', 'text-gray-600', 'whitespace-nowrap'));
-                        // Añade padding izquierdo a la primera celda de datos del puesto (Puesto) para indentar
-                        postRow.cells[3].classList.add('pl-8'); // Indentar la celda de Puesto
-                    }
-                });
-            }
-        });
-
-        // Comprobación final: si después de iterar, no se mostró ningún trabajador
-        if (workersWithVisiblePosts === 0) {
-             // Mensaje ajustado por si el filtro de checkbox está activo
-             if (filterPostsCheckbox.checked) {
-                 noDataRow.querySelector('td').textContent = 'Ningún trabajador cumple los criterios de filtro (con puestos y cantidad > 0).';
-             } else {
-                 noDataRow.querySelector('td').textContent = 'No se encontraron datos para el periodo seleccionado.';
-             }
-             noDataRow.classList.remove('hidden');
-             exportExcelBtn.disabled = true;
-        } else {
-             exportExcelBtn.disabled = false; // Habilita exportar si hay datos visibles
-        }
-    }
-
-
-    /**
-     * Exporta los datos visibles a Excel.
-     * Los datos ya estarán ordenados según el primer puesto del trabajador.
-     * Incluye la columna renombrada 'Puesto'.
-     * Calcula la suma de cantidades para la columna "Unidades Turno".
-     */
-    function exportToExcel() {
-        // Obtiene los datos originales (ya ordenados por fetchData) y aplica el filtro del checkbox
-        const dataFilteredByCheckbox = filterDataByCheckbox(originalWorkersData);
-
-        // Verifica si hay datos después de filtrar por checkbox
-        if (!dataFilteredByCheckbox || dataFilteredByCheckbox.length === 0) {
-            alert("No hay datos que coincidan con el filtro de 'Mostrar solo con puestos' para exportar.");
-            return;
-        }
-
-        const flattenedData = []; // Array para almacenar los datos aplanados para Excel
-
-        // Itera sobre los trabajadores filtrados Y ORDENADOS
-        dataFilteredByCheckbox.forEach(worker => {
-            let totalQuantitySum = 0; // Suma para este trabajador
-
-            // Calcula la suma total de cantidades > 0 ANTES de generar filas de Excel
-            if (worker.operator_posts && worker.operator_posts.length > 0) {
-                 totalQuantitySum = worker.operator_posts.reduce((sum, post) => {
-                    const count = post.count ?? 0;
-                    return sum + (count > 0 ? count : 0); // Suma solo cantidades > 0
-                }, 0);
-            }
-
-            // Comprueba si el trabajador tiene al menos un puesto con cantidad > 0 (redundante si se filtró)
-            const workerHasVisiblePosts = worker.operator_posts && worker.operator_posts.some(post => (post.count ?? 0) > 0);
-
-            // Si el checkbox está activo y el trabajador no tiene puestos visibles, no lo incluimos en el Excel
-            if (filterPostsCheckbox.checked && !workerHasVisiblePosts) {
-                return; // Saltar al siguiente trabajador
-            }
-
-            // Procesa los puestos del trabajador si debe ser incluido
-            if (worker.operator_posts && worker.operator_posts.length > 0) {
-                 // Ordena los puestos también para el Excel por consistencia con la tabla
-                 const sortedPostsExcel = [...worker.operator_posts].sort((postA, postB) => {
                     const dateA = postA.created_at ? new Date(postA.created_at) : null;
                     const dateB = postB.created_at ? new Date(postB.created_at) : null;
                     if (dateA && dateB) return dateA - dateB;
@@ -356,75 +271,178 @@
                     return 0;
                  });
 
-                sortedPostsExcel.forEach(post => {
-                    // Incluye en Excel solo los puestos con cantidad > 0
+                sortedPosts.forEach((post, index) => {
                     if ((post.count ?? 0) > 0) {
-                        let startDateExcel = '-';
-                        if (post.created_at) { try { startDateExcel = dateFormatter.format(new Date(post.created_at)); } catch (e) {} }
-                        let endDateExcel = '-';
-                        if (post.finish_at) { try { endDateExcel = dateFormatter.format(new Date(post.finish_at)); } catch (e) {} }
+                        displayedPostRowsCount++;
+                        const postRow = tableBody.insertRow();
+                        postRow.classList.add(index % 2 === 0 ? 'bg-white' : 'bg-gray-50', 'hover:bg-gray-100', 'transition-colors', 'duration-150', 'ease-in-out');
 
-                        // Añade una fila al array de datos para Excel
+                        postRow.insertCell().textContent = ''; // Codigo
+                        postRow.insertCell().textContent = ''; // Nombre
+                        postRow.insertCell().textContent = ''; // Unidades (Turno)
+                        postRow.insertCell().textContent = post.rfid_reading?.name ?? 'N/A'; // Puesto
+
+                        let startDate = '-';
+                        if (post.created_at) { try { startDate = dateFormatter.format(new Date(post.created_at)); } catch (e) { console.error("Error formateando fecha inicio:", post.created_at, e); } }
+                        let endDate = '-';
+                        if (post.finish_at) { try { endDate = dateFormatter.format(new Date(post.finish_at)); } catch (e) { console.error("Error formateando fecha fin:", post.finish_at, e); } }
+                        postRow.insertCell().textContent = startDate;
+                        postRow.insertCell().textContent = endDate;
+                        postRow.insertCell().textContent = post.count ?? 0; // Cantidad
+
+                        // --- Celda Cajas/Hora ---
+                        const cajasHoraCell = postRow.insertCell();
+                        const cajasHoraValue = calculateCajasHora(post.count, post.created_at, post.finish_at);
+                        cajasHoraCell.textContent = cajasHoraValue;
+
+                        // Si no hay fecha de fin y hay fecha de inicio, marcar para actualización en vivo
+                        if (!post.finish_at && post.created_at) {
+                            cajasHoraCell.classList.add('live-cajas-hora');
+                            cajasHoraCell.dataset.startTime = post.created_at;
+                            cajasHoraCell.dataset.count = post.count ?? 0;
+                            hasLiveCells = true; // Indicamos que hay celdas para actualizar
+                        }
+                        // --- Fin Celda Cajas/Hora ---
+
+                        postRow.insertCell().textContent = post.product_list?.name ?? 'N/A'; // Confeccion
+
+                        Array.from(postRow.cells).forEach(cell => cell.classList.add('px-4', 'py-3', 'text-sm', 'text-gray-600', 'whitespace-nowrap'));
+                        postRow.cells[3].classList.add('pl-8');
+                    }
+                });
+            }
+        });
+
+        if (workersWithVisiblePosts === 0) {
+             if (filterPostsCheckbox.checked) {
+                 noDataRow.querySelector('td').textContent = 'Ningún trabajador cumple los criterios de filtro (con puestos y cantidad > 0).';
+             } else {
+                 noDataRow.querySelector('td').textContent = 'No se encontraron datos para el periodo seleccionado.';
+             }
+             noDataRow.classList.remove('hidden');
+             exportExcelBtn.disabled = true;
+        } else {
+             exportExcelBtn.disabled = false;
+        }
+
+        // Inicia el intervalo de actualización solo si hay celdas que lo necesiten
+        if (hasLiveCells) {
+            liveUpdateIntervalId = setInterval(updateLiveCajasHoraCells, 5000); // Actualiza cada 5 segundos
+        }
+    }
+
+    /**
+     * Exporta los datos visibles a Excel.
+     * Los datos ya estarán ordenados según el primer puesto del trabajador.
+     * Incluye la columna renombrada 'Puesto'.
+     * Calcula la suma de cantidades para la columna "Unidades Turno".
+     * Calcula "Cajas/Hora" para cada puesto.
+     */
+    function exportToExcel() {
+        const dataFilteredByCheckbox = filterDataByCheckbox(originalWorkersData);
+        if (!dataFilteredByCheckbox || dataFilteredByCheckbox.length === 0) {
+            alert("No hay datos que coincidan con el filtro para exportar.");
+            return;
+        }
+
+        const flattenedData = [];
+        dataFilteredByCheckbox.forEach(worker => {
+            let totalQuantitySum = 0;
+            if (worker.operator_posts && worker.operator_posts.length > 0) {
+                 totalQuantitySum = worker.operator_posts.reduce((sum, post) => {
+                    const count = post.count ?? 0;
+                    return sum + (count > 0 ? count : 0);
+                }, 0);
+            }
+
+            const workerHasVisiblePosts = worker.operator_posts && worker.operator_posts.some(post => (post.count ?? 0) > 0);
+            if (filterPostsCheckbox.checked && !workerHasVisiblePosts) {
+                return; // Saltar al siguiente trabajador si el filtro está activo y no tiene puestos visibles
+            }
+
+            if (worker.operator_posts && worker.operator_posts.length > 0) {
+                 const sortedPostsExcel = [...worker.operator_posts].sort((postA, postB) => {
+                    const dateA = postA.created_at ? new Date(postA.created_at) : null;
+                    const dateB = postB.created_at ? new Date(postB.created_at) : null;
+                    if (dateA && dateB) return dateA - dateB;
+                    if (dateA) return -1; if (dateB) return 1; return 0;
+                 });
+
+                sortedPostsExcel.forEach(post => {
+                    if ((post.count ?? 0) > 0) { // Solo incluir puestos con cantidad > 0
+                        let startDateExcel = '-';
+                        if (post.created_at) { try { startDateExcel = dateFormatter.format(new Date(post.created_at)); } catch (e) {/* ignore */} }
+                        let endDateExcel = '-';
+                        if (post.finish_at) { try { endDateExcel = dateFormatter.format(new Date(post.finish_at)); } catch (e) {/* ignore */} }
+
+                        const cajasHoraExcelValue = calculateCajasHora(post.count, post.created_at, post.finish_at);
+
                         flattenedData.push({
                             'Codigo': worker.client_id ?? '-',
                             'Nombre Trabajador': worker.name ?? 'Sin Nombre',
-                            'Unidades Turno': totalQuantitySum, // Usa la suma calculada
+                            'Unidades Turno': totalQuantitySum,
                             'Puesto': post.rfid_reading?.name ?? 'N/A',
                             'Inicio Puesto': startDateExcel,
                             'Fin Puesto': endDateExcel,
                             'Cantidad Puesto': post.count ?? 0,
+                            'Cajas/Hora': cajasHoraExcelValue,
                             'Confeccion': post.product_list?.name ?? 'N/A'
                         });
                     }
                 });
-             } else if (!filterPostsCheckbox.checked) {
-                 // Opcional: Incluir trabajadores sin puestos si el filtro no está activo
-                 // Actualmente se omite para consistencia con la tabla filtrada por count > 0
              }
         });
 
-        // Si después de procesar, no hay filas de detalles de puestos para exportar
         if (flattenedData.length === 0) {
              alert("No hay detalles de puestos con cantidad mayor que 0 para exportar (según los filtros aplicados).");
              return;
         }
 
-        // --- Creación del archivo Excel ---
-        const worksheet = XLSX.utils.json_to_sheet(flattenedData);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "TrabajadoresDetalle");
+        // Definir el orden de las columnas para el Excel
+        const columnOrder = [
+            'Codigo', 'Nombre Trabajador', 'Unidades Turno', 'Puesto',
+            'Inicio Puesto', 'Fin Puesto', 'Cantidad Puesto', 'Cajas/Hora', 'Confeccion'
+        ];
 
-        // Ajusta el ancho de las columnas automáticamente
-        const colWidths = Object.keys(flattenedData[0]).map(key => {
-            const maxContentWidth = flattenedData.reduce((w, r) => Math.max(w, (r[key]?.toString() ?? '').length), 0);
+        // Reordenar los datos para asegurar que las columnas estén en el orden deseado
+        // y que todos los objetos tengan las mismas claves.
+        const reorderedData = flattenedData.map(row => {
+            const newRow = {};
+            columnOrder.forEach(colName => {
+                newRow[colName] = row[colName] !== undefined ? row[colName] : ''; // Usar '' para valores undefined
+            });
+            return newRow;
+        });
+
+        // Crear la hoja de cálculo usando los datos reordenados y el array columnOrder como encabezado
+        const worksheet = XLSX.utils.json_to_sheet(reorderedData, { header: columnOrder });
+
+        // Ajustar el ancho de las columnas
+        const colWidths = columnOrder.map(key => {
+            const maxContentWidth = reorderedData.reduce((w, r) => Math.max(w, (r[key]?.toString() ?? '').length), 0);
             const headerWidth = key.length;
-            return { wch: Math.max(headerWidth, maxContentWidth) + 2 };
+            return { wch: Math.max(headerWidth, maxContentWidth) + 2 }; // +2 para un poco de padding
         });
         worksheet["!cols"] = colWidths;
 
-        // Genera el nombre del archivo
+        // Crear un nuevo libro de trabajo y añadir la hoja
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "TrabajadoresDetalle");
+
+        // Generar nombre del archivo y descargar
         const selectedOptionText = dateRangeSelect.options[dateRangeSelect.selectedIndex].text;
         const fileNameDate = selectedOptionText.replace(/ /g, '_');
         const filterSuffix = filterPostsCheckbox.checked ? '_ConPuestos_SumaCant' : '_SumaCant';
         const fileName = `Informe_Trabajadores_${fileNameDate}${filterSuffix}.xlsx`;
 
-        // Descarga el archivo Excel
         XLSX.writeFile(workbook, fileName);
     }
 
-    /**
-     * Activa la función de impresión del navegador.
-     */
+
     function printTable() {
         window.print();
     }
 
-    /**
-     * Obtiene y ordena los datos de la API para el rango de fechas especificado.
-     * Ordena los trabajadores por el nombre de su primer puesto activo (cantidad > 0).
-     * @param {string} fromDate - Fecha de inicio (YYYY-MM-DD).
-     * @param {string} toDate - Fecha de fin (YYYY-MM-DD, día siguiente al último deseado).
-     */
     function fetchData(fromDate, toDate) {
         const apiUrl = `${apiBaseUrl}?from_date=${fromDate}&to_date=${toDate}`;
 
@@ -434,6 +452,11 @@
         tableBody.querySelectorAll('tr:not(#loadingRow):not(#errorRow):not(#noDataRow)').forEach(row => row.remove());
         exportExcelBtn.disabled = true;
         originalWorkersData = [];
+
+        if (liveUpdateIntervalId) {
+            clearInterval(liveUpdateIntervalId);
+            liveUpdateIntervalId = null;
+        }
 
         fetch(apiUrl)
             .then(response => {
@@ -448,53 +471,31 @@
                 loadingRow.classList.add('hidden');
                 if (apiResponse.success && Array.isArray(apiResponse.data)) {
                     originalWorkersData = apiResponse.data;
-
-                    // *** INICIO: Lógica de Ordenación por Primer Puesto Activo ***
                     originalWorkersData.sort((workerA, workerB) => {
-                        // Función auxiliar para encontrar el primer puesto activo
                         const findFirstActivePost = (worker) => {
-                            if (!worker.operator_posts || worker.operator_posts.length === 0) {
-                                return null; // No tiene puestos
-                            }
-                            // Filtra puestos activos (count > 0) y con fecha válida
+                            if (!worker.operator_posts || worker.operator_posts.length === 0) return null;
                             const activePosts = worker.operator_posts
                                 .filter(p => (p.count ?? 0) > 0 && p.created_at)
-                                .map(p => ({ ...p, createdAtDate: new Date(p.created_at) })) // Añade fecha parseada
-                                .filter(p => !isNaN(p.createdAtDate)); // Filtra fechas inválidas
-
-                            if (activePosts.length === 0) {
-                                return null; // No tiene puestos activos con fecha válida
-                            }
-                            // Ordena por fecha de creación ascendente
+                                .map(p => ({ ...p, createdAtDate: new Date(p.created_at) }))
+                                .filter(p => !isNaN(p.createdAtDate));
+                            if (activePosts.length === 0) return null;
                             activePosts.sort((a, b) => a.createdAtDate - b.createdAtDate);
-                            return activePosts[0]; // Devuelve el primero
+                            return activePosts[0];
                         };
-
                         const firstPostA = findFirstActivePost(workerA);
                         const firstPostB = findFirstActivePost(workerB);
-
                         const puestoNameA = firstPostA?.rfid_reading?.name ?? null;
                         const puestoNameB = firstPostB?.rfid_reading?.name ?? null;
 
-                        // Lógica de comparación
                         if (puestoNameA && puestoNameB) {
-                            // Ambos tienen primer puesto, compara nombres
                             const nameComparison = puestoNameA.localeCompare(puestoNameB);
                             if (nameComparison !== 0) return nameComparison;
-                            // Si los nombres son iguales, ordena por nombre de trabajador
                             return (workerA.name ?? '').localeCompare(workerB.name ?? '');
-                        } else if (puestoNameA) {
-                            return -1; // A tiene puesto, B no -> A va primero
-                        } else if (puestoNameB) {
-                            return 1; // B tiene puesto, A no -> B va primero
-                        } else {
-                            // Ninguno tiene puesto activo, ordena por nombre de trabajador
-                            return (workerA.name ?? '').localeCompare(workerB.name ?? '');
-                        }
+                        } else if (puestoNameA) return -1;
+                        else if (puestoNameB) return 1;
+                        else return (workerA.name ?? '').localeCompare(workerB.name ?? '');
                     });
-                    // *** FIN: Lógica de Ordenación ***
-
-                    populateTable(originalWorkersData); // Rellena la tabla con los datos ordenados
+                    populateTable(originalWorkersData);
                 }
                 else if (apiResponse.success && (!Array.isArray(apiResponse.data) || apiResponse.data.length === 0)) {
                     originalWorkersData = [];
@@ -515,7 +516,6 @@
     }
 
     // --- Lógica Principal (Event Listeners e Inicialización) ---
-
     exportExcelBtn.disabled = true;
     exportExcelBtn.addEventListener('click', exportToExcel);
     printBtn.addEventListener('click', printTable);
@@ -523,22 +523,20 @@
     dateRangeSelect.addEventListener('change', (event) => {
         const selectedRange = event.target.value;
         const { from, to } = getDateRange(selectedRange);
-        fetchData(from, to); // fetchData ahora ordena los datos
+        fetchData(from, to);
     });
 
     filterPostsCheckbox.addEventListener('change', () => {
-        // Solo necesita repintar la tabla, los datos en originalWorkersData ya están ordenados
         populateTable(originalWorkersData);
     });
 
     function loadInitialData() {
          const initialRangeValue = dateRangeSelect.value;
          const { from, to } = getDateRange(initialRangeValue);
-         fetchData(from, to); // Carga y ordena los datos iniciales
+         fetchData(from, to);
     }
 
     document.addEventListener('DOMContentLoaded', loadInitialData);
-
 </script>
 
 </body>

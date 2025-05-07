@@ -49,6 +49,7 @@ class WorkersStandaloneExport implements FromCollection, WithHeadings, WithMappi
             'Inicio Puesto',
             'Fin Puesto',
             'Cantidad Puesto', // Cantidad específica de ese puesto
+            'Cajas/Hora', // Nueva columna
             'Confeccion',
         ];
     }
@@ -58,20 +59,40 @@ class WorkersStandaloneExport implements FromCollection, WithHeadings, WithMappi
      * Aquí se realiza el formateo final.
      *
      * @param mixed $row Un elemento del array $this->data pasado en el constructor.
+     * Es un array asociativo como el que preparamos en el controlador.
      * @return array
      */
     public function map($row): array
     {
-        // $row es un array asociativo como el que preparamos en el controlador
+        // Formatear fechas para que coincidan con el formato del JS (dd/mm/yyyy hh:mm:ss)
+        // o devolver '-' si la fecha es nula o inválida.
+        $formattedCreatedAt = '-';
+        if (!empty($row['post_created_at'])) {
+            try {
+                $formattedCreatedAt = Carbon::parse($row['post_created_at'])->format('d/m/Y H:i:s');
+            } catch (\Exception $e) {
+                // Log::warning('Error al parsear post_created_at en Export: ' . $row['post_created_at']);
+            }
+        }
+
+        $formattedFinishAt = '-';
+        if (!empty($row['post_finish_at'])) {
+            try {
+                $formattedFinishAt = Carbon::parse($row['post_finish_at'])->format('d/m/Y H:i:s');
+            } catch (\Exception $e) {
+                // Log::warning('Error al parsear post_finish_at en Export: ' . $row['post_finish_at']);
+            }
+        }
+
         return [
             $row['worker_client_id'] ?? '-',
             $row['worker_name'] ?? 'Sin Nombre',
-            $row['total_quantity_sum'] ?? 0, // La suma total calculada en el controlador
+            $row['total_quantity_sum'] ?? 0,
             $row['post_name'] ?? 'N/A',
-            // Formatear fechas para que coincidan con el formato del JS (dd/mm/yyyy hh:mm:ss)
-            $row['post_created_at'] ? Carbon::parse($row['post_created_at'])->format('d/m/Y H:i:s') : '-',
-            $row['post_finish_at'] ? Carbon::parse($row['post_finish_at'])->format('d/m/Y H:i:s') : '-',
+            $formattedCreatedAt,
+            $formattedFinishAt,
             $row['post_count'] ?? 0,
+            $row['post_cajas_hora'] ?? 'N/A', // Mapeo del nuevo dato
             $row['product_name'] ?? 'N/A',
         ];
     }

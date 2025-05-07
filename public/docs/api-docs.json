@@ -3673,14 +3673,14 @@ paths:
   /api/workers-export/generate-excel:
     get:
       tags:
-        - Workers-export
-      summary: 'Genera y descarga un Excel agrupado de trabajadores'
+        - WorkersExport
+      summary: 'Genera un archivo Excel con el informe de operadores agrupado'
       operationId: d3e6cdd59d980683c66d3befd9b8dbb2
       parameters:
         -
           name: from_date
           in: query
-          description: 'Fecha inicio (YYYY-MM-DD)'
+          description: 'Fecha de inicio en formato YYYY-MM-DD'
           required: true
           schema:
             type: string
@@ -3688,7 +3688,7 @@ paths:
         -
           name: to_date
           in: query
-          description: 'Fecha fin (YYYY-MM-DD)'
+          description: 'Fecha de fin en formato YYYY-MM-DD'
           required: true
           schema:
             type: string
@@ -3696,35 +3696,31 @@ paths:
         -
           name: filter_posts
           in: query
-          description: 'Filtrar solo trabajadores con posts activos'
+          description: 'Si es true, solo incluye operadores con puestos activos'
           required: false
           schema:
             type: boolean
             default: true
       responses:
         '200':
-          description: 'Archivo Excel descargable'
-          headers:
-            Content-Disposition:
-              description: 'attachment; filename=Informe_Operadores.xlsx'
-              schema:
-                type: string
+          description: 'Descarga del archivo Excel'
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet: {  }
         '422':
-          description: 'Parámetros inválidos'
-      security:
-        -
-          passport: []
+          description: 'Errores de validación'
+        '500':
+          description: 'Error interno del servidor'
   /api/workers-export/generate-pdf:
     get:
       tags:
-        - Workers-export
-      summary: 'Genera y descarga un PDF agrupado de trabajadores'
+        - WorkersExport
+      summary: 'Genera un archivo PDF con el informe de operadores agrupado'
       operationId: c9d1d9021262ca0f049f0be696afb4a2
       parameters:
         -
           name: from_date
           in: query
-          description: 'Fecha inicio (YYYY-MM-DD)'
+          description: 'Fecha de inicio en formato YYYY-MM-DD'
           required: true
           schema:
             type: string
@@ -3732,7 +3728,7 @@ paths:
         -
           name: to_date
           in: query
-          description: 'Fecha fin (YYYY-MM-DD)'
+          description: 'Fecha de fin en formato YYYY-MM-DD'
           required: true
           schema:
             type: string
@@ -3740,78 +3736,125 @@ paths:
         -
           name: filter_posts
           in: query
-          description: 'Filtrar solo trabajadores con posts activos'
+          description: 'Si es true, solo incluye operadores con puestos activos'
           required: false
           schema:
             type: boolean
             default: true
       responses:
         '200':
-          description: 'Archivo PDF descargable'
-          headers:
-            Content-Disposition:
-              description: 'attachment; filename=Informe_Operadores.pdf'
+          description: 'Descarga del archivo PDF'
+          content:
+            application/pdf: {  }
+        '422':
+          description: 'Errores de validación'
+        '500':
+          description: 'Error interno del servidor'
+  /api/workers-export/send-reports-by-email:
+    post:
+      tags:
+        - WorkersExport
+      summary: 'Envía por correo los informes de operadores para la fecha actual'
+      operationId: 9b5a1c6a4f6bb7267bd5648448660bde
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - email
+              properties:
+                email:
+                  description: 'Correo electrónico del destinatario'
+                  type: string
+                  format: email
+                filter_posts:
+                  description: 'Si es true, solo incluye operadores con puestos activos'
+                  type: boolean
+                  default: true
+              type: object
+      responses:
+        '200':
+          description: 'Correo programado exitosamente'
+          content:
+            application/json:
               schema:
-                type: string
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                type: object
         '422':
-          description: 'Parámetros inválidos'
-      security:
-        -
-          passport: []
-  /api/workers-export/send-reports:
+          description: 'Errores de validación'
+        '500':
+          description: 'Error interno del servidor'
+  /api/workers-export/complete-list:
     get:
       tags:
-        - Workers-export
-      summary: 'Envía por email los enlaces de Excel y PDF de informe'
-      operationId: c0f7094a35415bae9494adac6d17fa20
+        - WorkersExport
+      summary: 'Obtiene la lista completa de operadores con sus posts en el rango de fechas'
+      operationId: 1b1916a22cad0d28a0d26f3a0db343ad
       parameters:
         -
-          name: email
+          name: from_date
           in: query
-          description: 'Dirección de correo del destinatario'
-          required: true
-          schema:
-            type: string
-            format: email
-        -
-          name: filter_posts
-          in: query
-          description: 'Filtrar solo operadores con posts activos'
+          description: 'Fecha de inicio en formato YYYY-MM-DD'
           required: false
           schema:
-            type: boolean
-            default: true
-      responses:
-        '200':
-          description: 'Correo encolado correctamente'
-        '422':
-          description: 'Parámetros inválidos'
-      security:
+            type: string
+            format: date
         -
-          passport: []
-  /api/workers-export/send-assignment-list:
-    get:
-      tags:
-        - Workers-export
-      summary: 'Envía por email el Listado de Asignación de puestos'
-      operationId: 82224797e0cab333f3be8fba62ac53f7
-      parameters:
-        -
-          name: email
+          name: to_date
           in: query
-          description: 'Dirección de correo del destinatario'
-          required: true
+          description: 'Fecha de fin en formato YYYY-MM-DD'
+          required: false
           schema:
             type: string
-            format: email
+            format: date
       responses:
         '200':
-          description: 'Correo encolado correctamente'
+          description: 'Listado de operadores con posts'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean }
+                  data: { type: array, items: { $ref: '#/components/schemas/Operator' } }
+                type: object
+        '500':
+          description: 'Error interno del servidor'
+  /api/workers-export/send-assignment-list-by-email:
+    post:
+      tags:
+        - WorkersExport
+      summary: 'Envía por correo el listado de asignación de puestos'
+      operationId: b7c115e6c371645ded4c25560974eae7
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - email
+              properties:
+                email:
+                  description: 'Correo electrónico del destinatario'
+                  type: string
+                  format: email
+              type: object
+      responses:
+        '200':
+          description: 'Correo de asignación programado'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                type: object
         '422':
-          description: 'Parámetros inválidos'
-      security:
-        -
-          passport: []
+          description: 'Errores de validación'
+        '500':
+          description: 'Error interno del servidor'
 components:
   schemas:
     GroupLevel:
@@ -3968,9 +4011,6 @@ components:
       type: object
 tags:
   -
-    name: Workers-export
-    description: 'Operaciones con informes y listados de trabajadores'
-  -
     name: Barcode
     description: Barcode
   -
@@ -4069,4 +4109,7 @@ tags:
   -
     name: TransferExternalDb
     description: TransferExternalDb
+  -
+    name: WorkersExport
+    description: WorkersExport
 

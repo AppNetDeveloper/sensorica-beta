@@ -1,58 +1,116 @@
 <?php
 
-namespace App\Http\Controllers\Api; // Make sure the namespace is correct
+namespace App\Http\Controllers\Api;
 
-use App\Exports\WorkersStandaloneExport; // Import your Excel export class
+use App\Exports\WorkersStandaloneExport;
 use App\Http\Controllers\Controller;
-// Make sure to import your Mailable class (adjust namespace if needed)
 use App\Mail\OperatorReportMail;
-use App\Models\Operator; // *** USE OPERATOR MODEL ***
-use Barryvdh\DomPDF\Facade\Pdf; // Import DomPDF facade
+use App\Models\Operator;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Log; // Important for logging
-use Illuminate\Support\Facades\Mail; // Import Mail facade
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Str;          // Import Str facade for URL manipulation
+use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
-// Asegúrate de que esta línea esté presente y sea EXACTA:
 use App\Mail\AssignmentListMail;
 
-/**
- * @OA\Tag(
- *     name="Workers-export",
- *     description="Operaciones con informes y listados de trabajadores"
- * )
- *
- * @OA\Info(
- *     version="1.0.0",
- *     title="API de Informes de trabajadores",
- *     description="Endpoints para generar Excel, PDF y enviar correos"
- * )
- */
-class WorkerController extends Controller // Or the name you use
+class WorkerController extends Controller
 {
-    // --- OTHER METHODS ---
-    // ... (getProcessedOperatorData, generateExcelStandalone, generatePdfStandalone) ...
-    // --- (Include the full code for getProcessedOperatorData, generateExcelStandalone, generatePdfStandalone as shown in previous responses) ---
 
-     /**
-     * Método privado para obtener, ordenar y procesar los datos del operador.
-     * Reutilizado por los métodos de exportación de Excel y PDF.
-     * Devuelve los datos con fechas SIN FORMATEAR (objetos Carbon o strings de DB).
-     *
-     * @param string $fromDate Fecha de inicio (YYYY-MM-DD)
-     * @param string $toDate Fecha de fin (YYYY-MM-DD)
-     * @param bool $filterPosts Si se deben filtrar operadores sin posts activos
-     * @return array Datos procesados listos para la exportación o vista, o null en caso de error.
-     */
+    private function calculateCajasPorHora($count, $startTime, $endTime): string
+    {
+        $quantity = (float)($count ?? 0);
+
+        if (!$startTime) {
+            Log::warning('calculateCajasPorHora: startTime es nulo o vacío.');
+            return 'N/A';
+        }
+
+        $carbonStartTime = null;
+        try {
+            if ($startTime instanceof Carbon) {
+                $carbonStartTime = $startTime;
+            } elseif (is_string($startTime)) {
+                $carbonStartTime = Carbon::parse($startTime); // Carbon intentará adivinar el formato
+            } else {
+                Log::warning('calculateCajasPorHora: startTime no es Carbon ni string.', ['startTime_type' => gettype($startTime)]);
+                return 'N/A';
+            }
+        } catch (\Exception $e) {
+            Log::error('calculateCajasPorHora: Excepción al parsear startTime.', [
+                'startTime_input' => $startTime,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return 'N/A';
+        }
+
+        $carbonEndTime = null;
+        if ($endTime) {
+            try {
+                if ($endTime instanceof Carbon) {
+                    $carbonEndTime = $endTime;
+                } elseif (is_string($endTime)) {
+                    $carbonEndTime = Carbon::parse($endTime);
+                } else {
+                    // Si no es Carbon ni string, pero existe, podríamos usar now() o retornar N/A
+                    Log::warning('calculateCajasPorHora: endTime no es Carbon ni string, usando Carbon::now().', ['endTime_type' => gettype($endTime)]);
+                    $carbonEndTime = Carbon::now(config('app.timezone'));
+                }
+            } catch (\Exception $e) {
+                Log::warning('calculateCajasPorHora: Excepción al parsear endTime, usando Carbon::now().', [
+                    'endTime_input' => $endTime,
+                    'error' => $e->getMessage()
+                ]);
+                $carbonEndTime = Carbon::now(config('app.timezone'));
+            }
+        } else {
+            $carbonEndTime = Carbon::now(config('app.timezone'));
+        }
+
+        // Log detallado antes de la comparación crucial
+        Log::debug('calculateCajasPorHora: DEBUG INFO', [
+            'input_startTime' => is_object($startTime) ? (method_exists($startTime, 'toDateTimeString') ? $startTime->toDateTimeString() : 'Carbon Object') : $startTime,
+            'input_endTime' => is_object($endTime) ? (method_exists($endTime, 'toDateTimeString') ? $endTime->toDateTimeString() : 'Carbon Object') : $endTime,
+            'parsed_carbonStartTime_val' => $carbonStartTime->toIso8601String(),
+            'parsed_carbonStartTime_tz' => $carbonStartTime->tzName,
+            'parsed_carbonEndTime_val' => $carbonEndTime->toIso8601String(),
+            'parsed_carbonEndTime_tz' => $carbonEndTime->tzName,
+            'app_timezone' => config('app.timezone'),
+            'is_endTime_less_or_equal_to_startTime' => $carbonEndTime->lessThanOrEqualTo($carbonStartTime),
+            'quantity' => $quantity
+        ]);
+
+        if ($carbonEndTime->lessThanOrEqualTo($carbonStartTime)) {
+            Log::warning('calculateCajasPorHora: carbonEndTime es menor o igual que carbonStartTime.', [
+                'carbonStartTime' => $carbonStartTime->toIso8601String(),
+                'carbonEndTime' => $carbonEndTime->toIso8601String(),
+            ]);
+            return $quantity > 0 ? 'N/A' : '0.00';
+        }
+
+        $diffInSeconds = $carbonEndTime->diffInSeconds($carbonStartTime);
+        if ($diffInSeconds <= 0) { // Doble chequeo
+             Log::warning('calculateCajasPorHora: diffInSeconds es cero o negativo.', ['diffInSeconds' => $diffInSeconds]);
+             return $quantity > 0 ? 'N/A' : '0.00';
+        }
+
+        $diffInHours = $diffInSeconds / 3600;
+
+        if ($quantity === 0.0) {
+            return '0.00';
+        }
+
+        $rate = $quantity / $diffInHours;
+        return number_format($rate, 2, '.', '');
+    }
+
     private function getProcessedOperatorData(string $fromDate, string $toDate, bool $filterPosts): ?array
     {
         Log::info('getProcessedOperatorData: Iniciando obtención y procesamiento de datos.');
-
-        // 2. Obtención de Datos Crudos
-        Log::info('getProcessedOperatorData: Iniciando consulta a la base de datos para Operators.');
         $operators = collect();
         try {
             $operatorsQuery = Operator::query()
@@ -69,54 +127,44 @@ class WorkerController extends Controller // Or the name you use
              Log::error('getProcessedOperatorData: EXCEPCIÓN durante la consulta a la base de datos.', [
                 'message' => $e->getMessage(), 'trace' => $e->getTraceAsString()
              ]);
-             return null; // Indicar fallo
+             return null;
         }
 
         if ($operators->isEmpty()) {
             Log::warning('getProcessedOperatorData: No se encontraron operadores para el rango de fechas especificado.');
-            return []; // Devolver array vacío si no hay operadores
+            return [];
         }
 
-        // 3. Procesamiento de Datos: Ordenar
         Log::info('getProcessedOperatorData: Iniciando ordenación de operadores.');
-        $sortedOperators = collect();
-        try {
-            $sortedOperators = $operators->sort(function ($operatorA, $operatorB) {
-                $findFirstActivePost = function ($operator) {
-                    if (empty($operator->operatorPosts)) { return null; }
-                    return $operator->operatorPosts
-                        ->filter(fn($post) => isset($post->count) && is_numeric($post->count) && $post->count > 0 && !empty($post->created_at))
-                        ->sortBy('created_at')
-                        ->first();
-                };
-                $firstPostA = $findFirstActivePost($operatorA);
-                $firstPostB = $findFirstActivePost($operatorB);
-                $puestoNameA = $firstPostA?->rfidReading?->name;
-                $puestoNameB = $firstPostB?->rfidReading?->name;
+        $sortedOperators = $operators->sort(function ($operatorA, $operatorB) {
+            $findFirstActivePost = function ($operator) {
+                if (empty($operator->operatorPosts)) { return null; }
+                return $operator->operatorPosts
+                    ->filter(fn($post) => isset($post->count) && is_numeric($post->count) && $post->count > 0 && !empty($post->created_at))
+                    ->sortBy('created_at')
+                    ->first();
+            };
+            $firstPostA = $findFirstActivePost($operatorA);
+            $firstPostB = $findFirstActivePost($operatorB);
+            $puestoNameA = $firstPostA?->rfidReading?->name;
+            $puestoNameB = $firstPostB?->rfidReading?->name;
 
-                if ($puestoNameA && $puestoNameB) {
-                    $nameComparison = strcmp($puestoNameA, $puestoNameB);
-                    if ($nameComparison !== 0) return $nameComparison;
-                    return strcmp($operatorA->name ?? '', $operatorB->name ?? '');
-                } elseif ($puestoNameA) { return -1; }
-                elseif ($puestoNameB) { return 1; }
-                else { return strcmp($operatorA->name ?? '', $operatorB->name ?? ''); }
-            });
-            Log::info('getProcessedOperatorData: Ordenación completada.');
-        } catch (\Exception $e) {
-            Log::error('getProcessedOperatorData: EXCEPCIÓN durante la ordenación.', [
-                'message' => $e->getMessage(), 'trace' => $e->getTraceAsString()
-            ]);
-            return null; // Indicar fallo
-        }
+            if ($puestoNameA && $puestoNameB) {
+                $nameComparison = strcmp($puestoNameA, $puestoNameB);
+                if ($nameComparison !== 0) return $nameComparison;
+                return strcmp($operatorA->name ?? '', $operatorB->name ?? '');
+            } elseif ($puestoNameA) { return -1; }
+            elseif ($puestoNameB) { return 1; }
+            else { return strcmp($operatorA->name ?? '', $operatorB->name ?? ''); }
+        });
+        Log::info('getProcessedOperatorData: Ordenación completada.');
 
-        // 4. Preparación Final de Datos (Formato Agrupado con Separador v2)
-        Log::info('getProcessedOperatorData: Iniciando preparación de datos (formato agrupado con separador v2).');
+        Log::info('getProcessedOperatorData: Iniciando preparación de datos.');
         $processedData = [];
-        $emptyRowStructure = [ // Estructura para datos y fila vacía
+        $emptyRowStructure = [
             'worker_client_id' => '', 'worker_name' => '', 'total_quantity_sum' => '',
             'post_name' => '', 'post_created_at' => '', 'post_finish_at' => '',
-            'post_count' => '', 'product_name' => ''
+            'post_count' => '', 'post_cajas_hora' => '', 'product_name' => ''
         ];
         $isFirstOperatorProcessed = true;
 
@@ -130,7 +178,7 @@ class WorkerController extends Controller // Or the name you use
                 if (!$showOperator) continue;
 
                 if (!$isFirstOperatorProcessed) {
-                    $processedData[] = $emptyRowStructure; // Añadir separador ANTES
+                    $processedData[] = $emptyRowStructure;
                 }
 
                 $totalQuantitySum = $activePosts->sum('count');
@@ -139,17 +187,17 @@ class WorkerController extends Controller // Or the name you use
 
                 if ($sortedActivePostsForProcessing->isNotEmpty()) {
                     foreach ($sortedActivePostsForProcessing as $post) {
+                         $cajasPorHora = $this->calculateCajasPorHora($post->count, $post->created_at, $post->finish_at);
                          if ($isFirstRowForWorker) {
                              $processedData[] = [
                                  'worker_client_id' => $operator->client_id ?? '-',
                                  'worker_name' => $operator->name ?? 'Sin Nombre',
                                  'total_quantity_sum' => $totalQuantitySum,
                                  'post_name' => $post->rfidReading?->name ?? 'N/A',
-                                 // --- NO FORMATEAR FECHAS AQUÍ ---
-                                 'post_created_at' => $post->created_at, // Pasar objeto/string original
-                                 'post_finish_at' => $post->finish_at,   // Pasar objeto/string original
-                                 // ------------------------------
+                                 'post_created_at' => $post->created_at,
+                                 'post_finish_at' => $post->finish_at,
                                  'post_count' => $post->count ?? 0,
+                                 'post_cajas_hora' => $cajasPorHora,
                                  'product_name' => $post->productList?->name ?? 'N/A',
                              ];
                              $isFirstRowForWorker = false;
@@ -157,26 +205,25 @@ class WorkerController extends Controller // Or the name you use
                              $processedData[] = [
                                  'worker_client_id' => '', 'worker_name' => '', 'total_quantity_sum' => '',
                                  'post_name' => $post->rfidReading?->name ?? 'N/A',
-                                 // --- NO FORMATEAR FECHAS AQUÍ ---
-                                 'post_created_at' => $post->created_at, // Pasar objeto/string original
-                                 'post_finish_at' => $post->finish_at,   // Pasar objeto/string original
-                                 // ------------------------------
+                                 'post_created_at' => $post->created_at,
+                                 'post_finish_at' => $post->finish_at,
                                  'post_count' => $post->count ?? 0,
+                                 'post_cajas_hora' => $cajasPorHora,
                                  'product_name' => $post->productList?->name ?? 'N/A',
                              ];
                          }
                     }
-                } else { // Operador sin posts activos (y filtro desactivado)
+                } else {
                     $processedData[] = [
                         'worker_client_id' => $operator->client_id ?? '-',
                         'worker_name' => $operator->name ?? 'Sin Nombre',
                         'total_quantity_sum' => 0,
                         'post_name' => '',
-                        // --- NO FORMATEAR FECHAS AQUÍ ---
-                        'post_created_at' => '', // O null si se prefiere
-                        'post_finish_at' => '',  // O null si se prefiere
-                         // ------------------------------
-                        'post_count' => '', 'product_name' => '',
+                        'post_created_at' => '',
+                        'post_finish_at' => '',
+                        'post_count' => '',
+                        'post_cajas_hora' => 'N/A',
+                        'product_name' => '',
                     ];
                 }
                 $isFirstOperatorProcessed = false;
@@ -187,48 +234,44 @@ class WorkerController extends Controller // Or the name you use
              Log::error('getProcessedOperatorData: EXCEPCIÓN durante la preparación de datos.', [
                 'message' => $e->getMessage(), 'trace' => $e->getTraceAsString()
              ]);
-             return null; // Indicar fallo
+             return null;
         }
     }
-
-
     /**
      * @OA\Get(
      *     path="/api/workers-export/generate-excel",
-     *     tags={"Workers-export"},
-     *     summary="Genera y descarga un Excel agrupado de trabajadores",
+     *     tags={"WorkersExport"},
+     *     summary="Genera un archivo Excel con el informe de operadores agrupado",
      *     @OA\Parameter(
      *         name="from_date",
      *         in="query",
-     *         description="Fecha inicio (YYYY-MM-DD)",
      *         required=true,
+     *         description="Fecha de inicio en formato YYYY-MM-DD",
      *         @OA\Schema(type="string", format="date")
      *     ),
      *     @OA\Parameter(
      *         name="to_date",
      *         in="query",
-     *         description="Fecha fin (YYYY-MM-DD)",
      *         required=true,
+     *         description="Fecha de fin en formato YYYY-MM-DD",
      *         @OA\Schema(type="string", format="date")
      *     ),
      *     @OA\Parameter(
      *         name="filter_posts",
      *         in="query",
-     *         description="Filtrar solo trabajadores con posts activos",
      *         required=false,
+     *         description="Si es true, solo incluye operadores con puestos activos",
      *         @OA\Schema(type="boolean", default=true)
      *     ),
      *     @OA\Response(
      *         response=200,
-     *         description="Archivo Excel descargable",
-     *         @OA\Header(
-     *             header="Content-Disposition",
-     *             description="attachment; filename=Informe_Operadores.xlsx",
-     *             @OA\Schema(type="string")
+     *         description="Descarga del archivo Excel",
+     *         @OA\MediaType(
+     *             mediaType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
      *         )
      *     ),
-     *     @OA\Response(response=422, description="Parámetros inválidos"),
-     *     security={{"passport":{}}}
+     *     @OA\Response(response=422, description="Errores de validación"),
+     *     @OA\Response(response=500, description="Error interno del servidor")
      * )
      */
     public function generateExcelStandalone(Request $request)
@@ -248,74 +291,65 @@ class WorkerController extends Controller // Or the name you use
         $filterPosts = $request->query('filter_posts', 'true') === 'true';
         Log::info('generateExcelStandalone: Parameters validated.', ['from' => $fromDate, 'to' => $toDate, 'filter' => $filterPosts]);
 
-        // Call helper method to get processed data (unformatted dates)
         $excelData = $this->getProcessedOperatorData($fromDate, $toDate, $filterPosts);
 
-        // Handle error if helper failed
         if ($excelData === null) {
              return response()->json(['message' => 'Internal server error while processing data.'], 500);
         }
 
-        // Generate Excel Filename
         $fileNameDatePart = $fromDate . '_a_' . $toDate;
         $filterSuffix = $filterPosts ? '_ConPuestosActivos' : '_Todos';
         $fileName = 'Informe_Operadores_' . $fileNameDatePart . $filterSuffix . '_Backend_Agrupado.xlsx';
         Log::info('generateExcelStandalone: Filename generated.', ['filename' => $fileName]);
 
-        // Download Excel File
-        Log::info('generateExcelStandalone: Attempting to generate and download Excel file.');
         try {
             if (!class_exists(WorkersStandaloneExport::class)) {
                  Log::critical('generateExcelStandalone: Export class WorkersStandaloneExport does not exist.');
                  return response()->json(['message' => 'Internal server error: Export class missing.'], 500);
             }
-            // Export class will format the received dates
             return Excel::download(new WorkersStandaloneExport($excelData), $fileName);
         } catch (\Exception $e) {
             Log::error('generateExcelStandalone: FINAL EXCEPTION during Excel generation/download.', [
-                'message' => $e->getMessage(), 'trace' => $e->getTraceAsString() // <-- REVISA ESTE LOG DETALLADO
+                'message' => $e->getMessage(), 'trace' => $e->getTraceAsString()
             ]);
             return response()->json(['message' => 'Error interno del servidor al generar el archivo Excel final.'], 500);
         }
     }
-
     /**
      * @OA\Get(
      *     path="/api/workers-export/generate-pdf",
-     *     tags={"Workers-export"},
-     *     summary="Genera y descarga un PDF agrupado de trabajadores",
+     *     tags={"WorkersExport"},
+     *     summary="Genera un archivo PDF con el informe de operadores agrupado",
      *     @OA\Parameter(
      *         name="from_date",
      *         in="query",
-     *         description="Fecha inicio (YYYY-MM-DD)",
      *         required=true,
+     *         description="Fecha de inicio en formato YYYY-MM-DD",
      *         @OA\Schema(type="string", format="date")
      *     ),
      *     @OA\Parameter(
      *         name="to_date",
      *         in="query",
-     *         description="Fecha fin (YYYY-MM-DD)",
      *         required=true,
+     *         description="Fecha de fin en formato YYYY-MM-DD",
      *         @OA\Schema(type="string", format="date")
      *     ),
      *     @OA\Parameter(
      *         name="filter_posts",
      *         in="query",
-     *         description="Filtrar solo trabajadores con posts activos",
      *         required=false,
+     *         description="Si es true, solo incluye operadores con puestos activos",
      *         @OA\Schema(type="boolean", default=true)
      *     ),
      *     @OA\Response(
      *         response=200,
-     *         description="Archivo PDF descargable",
-     *         @OA\Header(
-     *             header="Content-Disposition",
-     *             description="attachment; filename=Informe_Operadores.pdf",
-     *             @OA\Schema(type="string")
+     *         description="Descarga del archivo PDF",
+     *         @OA\MediaType(
+     *             mediaType="application/pdf"
      *         )
      *     ),
-     *     @OA\Response(response=422, description="Parámetros inválidos"),
-     *     security={{"passport":{}}}
+     *     @OA\Response(response=422, description="Errores de validación"),
+     *     @OA\Response(response=500, description="Error interno del servidor")
      * )
      */
     public function generatePdfStandalone(Request $request)
@@ -335,148 +369,103 @@ class WorkerController extends Controller // Or the name you use
         $filterPosts = $request->query('filter_posts', 'true') === 'true';
         Log::info('generatePdfStandalone: Parameters validated.', ['from' => $fromDate, 'to' => $toDate, 'filter' => $filterPosts]);
 
-        // Call helper method to get processed data (unformatted dates)
         $pdfData = $this->getProcessedOperatorData($fromDate, $toDate, $filterPosts);
 
-        // Handle error if helper failed
         if ($pdfData === null) {
              return response()->json(['message' => 'Internal server error while processing data.'], 500);
         }
 
-        // Generate PDF Filename
         $fileNameDatePart = $fromDate . '_a_' . $toDate;
         $filterSuffix = $filterPosts ? '_ConPuestosActivos' : '_Todos';
-        $fileName = 'Informe_Operadores_' . $fileNameDatePart . $filterSuffix . '_Backend_Agrupado.pdf'; // <-- .pdf extension
+        $fileName = 'Informe_Operadores_' . $fileNameDatePart . $filterSuffix . '_Backend_Agrupado.pdf';
         Log::info('generatePdfStandalone: Filename generated.', ['filename' => $fileName]);
 
-        // Generate and Download PDF using DomPDF
-        Log::info('generatePdfStandalone: Attempting to generate and download PDF file.');
         try {
-            // Pass data to Blade view 'exports.workers_pdf'
-            // Blade view will format the received dates
             $pdf = Pdf::loadView('exports.workers_pdf', [
                 'data' => $pdfData,
-                'fromDate' => $fromDate, // Pass dates to display in PDF title
+                'fromDate' => $fromDate,
                 'toDate' => $toDate
             ]);
-
-            // Optional: Set paper size and orientation
-            // $pdf->setPaper('a4', 'landscape');
-
-            // Download the PDF
             return $pdf->download($fileName);
-
         } catch (\Exception $e) {
             Log::error('generatePdfStandalone: EXCEPTION during PDF generation/download.', [
                 'message' => $e->getMessage(), 'trace' => $e->getTraceAsString()
             ]);
-            // Return JSON on error
             return response()->json(['message' => 'Internal server error generating the PDF file.'], 500);
         }
     }
-
     /**
-     * @OA\Get(
-     *     path="/api/workers-export/send-reports",
-     *     tags={"Workers-export"},
-     *     summary="Envía por email los enlaces de Excel y PDF de informe",
-     *     @OA\Parameter(
-     *         name="email",
-     *         in="query",
-     *         description="Dirección de correo del destinatario",
+     * @OA\Post(
+     *     path="/api/workers-export/send-reports-by-email",
+     *     tags={"WorkersExport"},
+     *     summary="Envía por correo los informes de operadores para la fecha actual",
+     *     @OA\RequestBody(
      *         required=true,
-     *         @OA\Schema(type="string", format="email")
+     *         @OA\JsonContent(
+     *             required={"email"},
+     *             @OA\Property(property="email", type="string", format="email", description="Correo electrónico del destinatario"),
+     *             @OA\Property(property="filter_posts", type="boolean", description="Si es true, solo incluye operadores con puestos activos", default=true)
+     *         )
      *     ),
-     *     @OA\Parameter(
-     *         name="filter_posts",
-     *         in="query",
-     *         description="Filtrar solo operadores con posts activos",
-     *         required=false,
-     *         @OA\Schema(type="boolean", default=true)
+     *     @OA\Response(
+     *         response=200,
+     *         description="Correo programado exitosamente",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean"),
+     *             @OA\Property(property="message", type="string")
+     *         )
      *     ),
-     *     @OA\Response(response=200, description="Correo encolado correctamente"),
-     *     @OA\Response(response=422, description="Parámetros inválidos"),
-     *     security={{"passport":{}}}
+     *     @OA\Response(response=422, description="Errores de validación"),
+     *     @OA\Response(response=500, description="Error interno del servidor")
      * )
      */
-
     public function sendReportsByEmail(Request $request)
     {
-        // Ignorar desconexión del cliente
         ignore_user_abort(true);
         Log::info('sendReportsByEmail: METHOD STARTED.');
-
-        // 1. Validate Email Parameter
         $validator = Validator::make($request->all(), [
             'email' => 'required|email',
-            'filter_posts' => 'sometimes|in:true,false', // Optional filter
+            'filter_posts' => 'sometimes|in:true,false',
         ]);
-
         if ($validator->fails()) {
             Log::error('sendReportsByEmail: Validation failed.', ['errors' => $validator->errors()]);
             return response()->json(['errors' => $validator->errors()], 422);
         }
-
         $recipientEmail = $validator->validated()['email'];
-        // Use current date for the report links
         $reportDate = Carbon::today()->format('Y-m-d');
-        $filterPosts = $request->query('filter_posts', 'true') === 'true'; // Default to true if not provided
+        $filterPosts = $request->query('filter_posts', 'true') === 'true';
         Log::info('sendReportsByEmail: Parameters validated.', ['email' => $recipientEmail, 'date' => $reportDate, 'filter' => $filterPosts]);
-
-        // 2. Construct Download URLs and Web Interface URL
         try {
-            // Build query parameters string for reports
             $queryParams = http_build_query([
                 'from_date' => $reportDate,
                 'to_date' => $reportDate,
-                'filter_posts' => $filterPosts ? 'true' : 'false' // Ensure boolean is string 'true'/'false'
+                'filter_posts' => $filterPosts ? 'true' : 'false'
             ]);
-
-            // Get base URL from config, remove trailing slash if present
             $baseUrl = rtrim(config('app.url'), '/');
             if (!$baseUrl) {
                  Log::error('sendReportsByEmail: APP_URL no está configurada en .env.');
                  throw new \Exception('APP_URL configuration is missing.');
             }
-
-            // Construct full URLs for Excel and PDF using absolute paths
             $excelUrl = $baseUrl . '/api/workers-export/generate-excel?' . $queryParams;
             $pdfUrl = $baseUrl . '/api/workers-export/generate-pdf?' . $queryParams;
-
-            // Construct URL for the web interface
-            $webInterfaceUrl = $baseUrl . '/workers/export.html'; // <-- NUEVA URL
-
+            $webInterfaceUrl = $baseUrl . '/workers/export.html';
             Log::info('sendReportsByEmail: Download and Web URLs constructed.', [
-                'excel' => $excelUrl,
-                'pdf' => $pdfUrl,
-                'web' => $webInterfaceUrl // <-- Log de la nueva URL
+                'excel' => $excelUrl, 'pdf' => $pdfUrl, 'web' => $webInterfaceUrl
             ]);
-
         } catch (\Exception $e) {
              Log::error('sendReportsByEmail: EXCEPTION during URL construction.', [
                 'message' => $e->getMessage(), 'trace' => $e->getTraceAsString()
              ]);
              return response()->json(['message' => 'Internal server error constructing report URLs.'], 500);
         }
-
-
-        // 3. Dispatch Email (Using Queue or Send based on previous debugging)
-        // --- IMPORTANTE: Decide si usar send() o queue() ---
-        $useQueue = true; // <-- Cambia a false si necesitas envío síncrono temporalmente
-        // ----------------------------------------------------
-
+        $useQueue = true;
         Log::info('sendReportsByEmail: Attempting to ' . ($useQueue ? 'queue' : 'send synchronously') . ' email.', ['recipient' => $recipientEmail]);
         try {
-            // Ensure the Mailable class exists
              if (!class_exists(OperatorReportMail::class)) {
                  Log::critical('sendReportsByEmail: Mailable class OperatorReportMail does not exist.');
                  return response()->json(['message' => 'Internal server error: Mailable class missing.'], 500);
             }
-
-            // Create the Mailable instance, passing all URLs
-            $mailable = new OperatorReportMail($excelUrl, $pdfUrl, $webInterfaceUrl, $reportDate); // <-- Pasar la nueva URL
-
-            // Send or Queue the email
+            $mailable = new OperatorReportMail($excelUrl, $pdfUrl, $webInterfaceUrl, $reportDate);
             if ($useQueue) {
                  Mail::to($recipientEmail)->queue($mailable);
                  Log::info('sendReportsByEmail: Email successfully queued.', ['recipient' => $recipientEmail]);
@@ -486,29 +475,50 @@ class WorkerController extends Controller // Or the name you use
                  Log::info('sendReportsByEmail: Email sent successfully (synchronously).', ['recipient' => $recipientEmail]);
                  $successMessage = 'El correo con los informes para ' . $reportDate . ' ha sido enviado a ' . $recipientEmail;
             }
-
-            // 4. Return Success Response
-            return response()->json([
-                'success' => true,
-                'message' => $successMessage
-            ]);
-
+            return response()->json(['success' => true, 'message' => $successMessage]);
         } catch (\Exception $e) {
-            // Log error if sending/queuing fails
             Log::error('sendReportsByEmail: EXCEPTION while ' . ($useQueue ? 'queueing' : 'sending synchronously') . ' email.', [
-                'recipient' => $recipientEmail,
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'recipient' => $recipientEmail, 'message' => $e->getMessage(), 'trace' => $e->getTraceAsString()
             ]);
             return response()->json(['message' => 'Error interno del servidor al intentar enviar el correo.'], 500);
         }
     }
-
-
-    // --- Your original method returning JSON ---
+    /**
+     * @OA\Get(
+     *     path="/api/workers-export/complete-list",
+     *     tags={"WorkersExport"},
+     *     summary="Obtiene la lista completa de operadores con sus posts en el rango de fechas",
+     *     @OA\Parameter(
+     *         name="from_date",
+     *         in="query",
+     *         required=false,
+     *         description="Fecha de inicio en formato YYYY-MM-DD",
+     *         @OA\Schema(type="string", format="date")
+     *     ),
+     *     @OA\Parameter(
+     *         name="to_date",
+     *         in="query",
+     *         required=false,
+     *         description="Fecha de fin en formato YYYY-MM-DD",
+     *         @OA\Schema(type="string", format="date")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Listado de operadores con posts",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="array",
+     *                 @OA\Items(ref="#/components/schemas/Operator")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(response=500, description="Error interno del servidor")
+     * )
+     */
      public function completeList(Request $request)
      {
-         // ... (code unchanged) ...
          $fromDate = $request->get('from_date');
          $toDate   = $request->get('to_date');
          $endDateForQuery = $toDate ? Carbon::parse($toDate)->endOfDay() : null;
@@ -527,65 +537,54 @@ class WorkerController extends Controller // Or the name you use
              'data'    => $operators
          ]);
      }
-
     /**
-     * @OA\Get(
-     *     path="/api/workers-export/send-assignment-list",
-     *     tags={"Workers-export"},
-     *     summary="Envía por email el Listado de Asignación de puestos",
-     *     @OA\Parameter(
-     *         name="email",
-     *         in="query",
-     *         description="Dirección de correo del destinatario",
+     * @OA\Post(
+     *     path="/api/workers-export/send-assignment-list-by-email",
+     *     tags={"WorkersExport"},
+     *     summary="Envía por correo el listado de asignación de puestos",
+     *     @OA\RequestBody(
      *         required=true,
-     *         @OA\Schema(type="string", format="email")
+     *         @OA\JsonContent(
+     *             required={"email"},
+     *             @OA\Property(property="email", type="string", format="email", description="Correo electrónico del destinatario")
+     *         )
      *     ),
-     *     @OA\Response(response=200, description="Correo encolado correctamente"),
-     *     @OA\Response(response=422, description="Parámetros inválidos"),
-     *     security={{"passport":{}}}
+     *     @OA\Response(
+     *         response=200,
+     *         description="Correo de asignación programado",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean"),
+     *             @OA\Property(property="message", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(response=422, description="Errores de validación"),
+     *     @OA\Response(response=500, description="Error interno del servidor")
      * )
      */
     public function sendAssignmentListByEmail(Request $request)
     {
-        // Ignorar desconexión del cliente
         ignore_user_abort(true);
         Log::info('sendAssignmentListByEmail: METHOD STARTED.');
-
-        // 1. Validar email
-        $validator = Validator::make($request->all(), [
-            'email' => 'required|email',
-        ]);
-
+        $validator = Validator::make($request->all(), ['email' => 'required|email']);
         if ($validator->fails()) {
             Log::error('sendAssignmentListByEmail: Validation failed.', ['errors' => $validator->errors()]);
             return response()->json(['errors' => $validator->errors()], 422);
         }
-
         $recipientEmail = $validator->validated()['email'];
         Log::info("sendAssignmentListByEmail: Email validated ({$recipientEmail}).");
-
-        // 2. Construir URL limpia de la aplicación
         try {
-            $baseUrl = config('app.url');
-            // Eliminar cualquier slash al final
-            $baseUrl = rtrim($baseUrl, '/');
+            $baseUrl = rtrim(config('app.url'), '/');
             $assignmentUrl = $baseUrl . '/confeccion-puesto-listado/';
             Log::info('sendAssignmentListByEmail: Assignment URL constructed.', ['url' => $assignmentUrl]);
         } catch (\Exception $e) {
             Log::error('sendAssignmentListByEmail: EXCEPTION building URL.', [
-                'message' => $e->getMessage(),
-                'trace'   => $e->getTraceAsString(),
+                'message' => $e->getMessage(), 'trace'   => $e->getTraceAsString(),
             ]);
             return response()->json(['message' => 'Error interno construyendo la URL.'], 500);
         }
-
-        // 3. Enviar correo
         try {
             $mailable = new AssignmentListMail($assignmentUrl);
-
-            // Aquí puedes usar ->queue() o ->send() según prefieras
             Mail::to($recipientEmail)->queue($mailable);
-
             Log::info('sendAssignmentListByEmail: Email queued.', ['recipient' => $recipientEmail]);
             return response()->json([
                 'success' => true,
@@ -593,12 +592,9 @@ class WorkerController extends Controller // Or the name you use
             ]);
         } catch (\Exception $e) {
             Log::error('sendAssignmentListByEmail: EXCEPTION sending email.', [
-                'recipient' => $recipientEmail,
-                'message'   => $e->getMessage(),
-                'trace'     => $e->getTraceAsString(),
+                'recipient' => $recipientEmail, 'message'   => $e->getMessage(), 'trace'     => $e->getTraceAsString(),
             ]);
             return response()->json(['message' => 'Error interno al enviar el correo.'], 500);
         }
     }
-
 }
