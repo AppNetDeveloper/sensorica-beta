@@ -350,3 +350,5 @@ Route::get('/workers-export/send-email', [WorkerController::class, 'sendReportsB
 
     // Ruta para enviar el Listado de Asignación por email
 Route::get('workers-export/send-assignment-list',[WorkerController::class, 'sendAssignmentListByEmail'])->name('workers.sendAssignmentList');
+
+Route::get('/workers-export/complete-list', [WorkerController::class, 'completeList'])->name('workers.completeListExportstandalone');
