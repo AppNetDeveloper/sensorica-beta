@@ -17,7 +17,39 @@ class ShiftHistory extends Model
         'type',
         'action',
         'description',
-        'operator_id' // Agregamos esta columna
+        'operator_id' ,
+        'on_time',
+        'down_time',
+        'production_stops_time',
+        'slow_time',
+        'theoretical_end_time',
+        'real_end_time',
+        'oee',
+        'prepair_time',
+    ];
+
+    // Valores por defecto al crear un modelo
+    protected $attributes = [
+        'on_time'               => 0,
+        'down_time'             => 0,
+        'production_stops_time' => 0,
+        'slow_time'             => 0,
+        'theoretical_end_time'  => 0,
+        'real_end_time'         => 0,
+        'oee'                   => 0.00,
+        'prepair_time'          => 0,
+    ];
+
+    // Castings para asegurar el tipo adecuado
+    protected $casts = [
+        'on_time'               => 'integer',
+        'down_time'             => 'integer',
+        'production_stops_time' => 'integer',
+        'slow_time'             => 'integer',
+        'theoretical_end_time'  => 'integer',
+        'real_end_time'         => 'integer',
+        'oee'                   => 'float',
+        'prepair_time'          => 'integer',
     ];
 
     /**

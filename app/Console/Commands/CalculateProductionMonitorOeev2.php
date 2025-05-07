@@ -227,6 +227,13 @@ class CalculateProductionMonitorOeev2 extends Command
             $downTime = $currentOrder ? $currentOrder->down_time : 0;
             $prepairTime = $currentOrder ? $currentOrder->prepair_time : 0;
             $productionStopTime = $currentOrder ? $currentOrder->production_stops_time : 0;
+
+            //obtenemos el ultimos regustro del shift_history por linea y con type= shift y action=start
+            $shiftHistory = ShiftHistory::where('production_line_id', $currentOrder->production_line_id)
+                ->where('type', 'shift')
+                ->where('action', 'start')
+                ->orderBy('id', 'desc')
+                ->first();
             
             // Validar que no se intente dividir por cero
             if ($unitsMadeReal <= 0) {
@@ -368,6 +375,12 @@ class CalculateProductionMonitorOeev2 extends Command
                 $currentOrder->oee = $totalOee;
                 $currentOrder->on_time = $orderTimeActivitySeconds;
                 $currentOrder->save();
+            }
+
+            if($shiftHistory){
+                $shiftHistory->on_time = $shiftHistory->on_time + 1;
+                $shiftHistory->oee = $totalOee;
+                $shiftHistory->save();
             }
 
         // Calcular el status basado en la producción real vs teórica

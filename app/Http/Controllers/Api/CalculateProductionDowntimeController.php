@@ -9,8 +9,11 @@ use App\Models\Sensor;
 use App\Models\DowntimeSensor;
 use App\Models\OrderStat;
 use App\Models\SensorCount;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Log; 
 use Exception;
+//anadimos modelo shifthistory
+use App\Models\ShiftHistory;
+
 
 
 class CalculateProductionDowntimeController extends Controller
@@ -140,26 +143,50 @@ class CalculateProductionDowntimeController extends Controller
         $orderStat = OrderStat::where('production_line_id', $productionLineId)
                                 ->orderBy('id', 'desc')
                                 ->first();
+        //obtenemos el ultimos regustro del shift_history por linea y con type= shift y action=start
+        $shiftHistory = ShiftHistory::where('production_line_id', $productionLineId)
+                                    ->where('type', 'shift')
+                                    ->where('action', 'start')
+                                    ->orderBy('id', 'desc')
+                                    ->first();
     
         // Intervalo de tiempo a sumar (asumiendo que el script se ejecuta cada 1 segundo)
         $intervalInSeconds = 1;
 
         if ($orderStat) { // Asegúrate de que $orderStat existe antes de intentar usarlo
             if ($atLeastOneStopped) {
-                \Log::info("La línea de producción con ID {$productionLineId} está parada con al menos un sensor de tipo non 0 activo. Sumando {$intervalInSeconds}s a down_time.");
+                Log::info("La línea de producción con ID {$productionLineId} está parada con al menos un sensor de tipo non 0 activo. Sumando {$intervalInSeconds}s a down_time.");
                 // --- LÍNEA CAMBIADA ---
                 $orderStat->down_time += $intervalInSeconds;
                 $orderStat->save();
                 // --- FIN LÍNEA CAMBIADA ---
             } else {
-                \Log::info("La línea de producción con ID {$productionLineId} está parada sin ningún sensor de tipo non 0 activo. Sumando {$intervalInSeconds}s a production_stops_time.");
+                Log::info("La línea de producción con ID {$productionLineId} está parada sin ningún sensor de tipo non 0 activo. Sumando {$intervalInSeconds}s a production_stops_time.");
                 // --- LÍNEA CAMBIADA ---
                 $orderStat->production_stops_time += $intervalInSeconds;
                 $orderStat->save();
                 // --- FIN LÍNEA CAMBIADA ---
             }
         } else {
-             \Log::warning("No se encontró OrderStat para la línea de producción ID: {$productionLineId}");
+             Log::warning("No se encontró OrderStat para la línea de producción ID: {$productionLineId}");
+        }
+
+        if ($shiftHistory) { // Asegúrate de que $orderStat existe antes de intentar usarlo
+            if ($atLeastOneStopped) {
+                Log::info("La línea de producción con ID {$productionLineId} está parada con al menos un sensor de tipo non 0 activo. Sumando {$intervalInSeconds}s a down_time.");
+                // --- LÍNEA CAMBIADA ---
+                $shiftHistory->down_time += $intervalInSeconds;
+                $shiftHistory->save();
+                // --- FIN LÍNEA CAMBIADA ---
+            } else {
+                Log::info("La línea de producción con ID {$productionLineId} está parada sin ningún sensor de tipo non 0 activo. Sumando {$intervalInSeconds}s a production_stops_time.");
+                // --- LÍNEA CAMBIADA ---
+                $shiftHistory->production_stops_time += $intervalInSeconds;
+                $shiftHistory->save();
+                // --- FIN LÍNEA CAMBIADA ---
+            }
+        } else {
+             Log::warning("No se encontró Shift_history  para la línea de producción ID: {$productionLineId}");
         }
     }
     
@@ -199,7 +226,7 @@ class CalculateProductionDowntimeController extends Controller
                 $this->sendMqttStatusMessage($sensor, 1);
             } else {
                 // Estable (no se amplía), mandamos mensaje con status=2
-                \Log::info("Sensor {$sensor->name} is stable.");
+                Log::info("Sensor {$sensor->name} is stable.");
                 $this->closeDowntime($sensor);
                 $this->sendMqttMessage($sensor, 2, 0); // status 2 para estable, tipo 0
             }
