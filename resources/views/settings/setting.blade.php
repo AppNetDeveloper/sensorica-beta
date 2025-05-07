@@ -51,6 +51,9 @@
                             <a href="settings#useradd-3" class="list-group-item list-group-item-action useradd-3">
                                 {{ __('Email') }} <div class="float-end"></div>
                             </a>
+                            <a href="settings#useradd-4" class="list-group-item list-group-item-action useradd-4">
+                                {{ __('Finish Shift Email Settings') }} <div class="float-end"></div>
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -282,6 +285,52 @@
                         </div>
                         {{ Form::close() }}
                     </div>
+                    {{-- Sección: Finish Shift Email Settings --}}
+                    <div id="useradd-4" class="card mb-4">
+                        <div class="card-header">
+                            <h5>{{ __('Finish Shift Email Settings') }}</h5>
+                        </div>
+                        {{ Form::open(['route' => 'settings.finishshiftemails', 'method' => 'post']) }}
+                        <div class="card-body container-fluid">
+                            <div class="row">
+                                <div class="col-sm-12 mb-3">
+                                    <div class="form-group">
+                                        {{ Form::label('EMAIL_FINISH_SHIFT_LISTWORKERS', __('Worker Emails (comma separated)'), ['class' => 'form-label']) }}
+                                        {{ Form::text(
+                                            'EMAIL_FINISH_SHIFT_LISTWORKERS',
+                                            old('EMAIL_FINISH_SHIFT_LISTWORKERS', env('EMAIL_FINISH_SHIFT_LISTWORKERS', '')),
+                                            ['class' => 'form-control', 'placeholder' => 'uno@ej.com, dos@ej.com']
+                                        ) }}
+                                    </div>
+                                </div>
+                                <div class="col-sm-12 mb-3">
+                                    <div class="form-group">
+                                        {{ Form::label('EMAIL_FINISH_SHIFT_LISTCONFECCIONSIGNED', __('Assignment Emails (comma separated)'), ['class' => 'form-label']) }}
+                                        {{ Form::text(
+                                            'EMAIL_FINISH_SHIFT_LISTCONFECCIONSIGNED',
+                                            old('EMAIL_FINISH_SHIFT_LISTCONFECCIONSIGNED', env('EMAIL_FINISH_SHIFT_LISTCONFECCIONSIGNED', '')),
+                                            ['class' => 'form-control', 'placeholder' => 'admin@ej.com, soporte@ej.com']
+                                        ) }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-whitesmoke">
+                            <button class="btn btn-primary" type="submit">
+                                {{ __('Save Finish Shift Emails') }}
+                            </button>
+                            <a href="{{ route('settings.index') }}" class="btn btn-secondary">
+                                {{ __('Cancel') }}
+                            </a>
+
+                            {{-- ← Aquí el botón de test --}}
+                            <a href="{{ route('settings.testFinishShifts') }}" class="btn btn-info ms-2"onclick="return confirm('{{ __('Are you sure you want to send test emails?') }}');">
+                                    {{ __('Test Finish Shift Emails') }}
+                            </a>
+                        </div>
+                        
+                        {{ Form::close() }}
+                    </div>
                 </div>
             </div>
             <!-- [ sample-page ] end -->
@@ -329,15 +378,19 @@
 
     $(document).on("click", ".useradd-1", function(){
         $(".useradd-1").addClass("active");
-        $(".useradd-2, .useradd-3").removeClass("active");
+        $(".useradd-2, .useradd-3, .useradd-4").removeClass("active");
     });
     $(document).on("click", ".useradd-2", function(){
         $(".useradd-2").addClass("active");
-        $(".useradd-1, .useradd-3").removeClass("active");
+        $(".useradd-1, .useradd-3, .useradd-4").removeClass("active");
     });
     $(document).on("click", ".useradd-3", function(){
         $(".useradd-3").addClass("active");
-        $(".useradd-1, .useradd-2").removeClass("active");
+        $(".useradd-1, .useradd-2, .useradd-4").removeClass("active");
+    });
+    $(document).on("click", ".useradd-4", function(){
+        $(".useradd-4").addClass("active");
+        $(".useradd-1, .useradd-2, .useradd-3").removeClass("active");
     });
 </script>
 @endpush

@@ -34,8 +34,7 @@ $profile = asset(Storage::url('uploads/avatar/'));
                 <a class="dash-head-link custom-header dropdown-toggle arrow-none" data-bs-toggle="dropdown"
                     href="#" role="button" aria-haspopup="false" aria-expanded="false" >
                     <img class="rounded-circle" width="35px"
-                    {{--  src="{{ !empty($users->avatar) ? $profile . $users->avatar : $profile . '/avatar.png' }}">  --}}
-                    src="{{ $profile . '/avatar.png' }}">
+                        src="{{ !empty(Auth::user()->avatar) ? $profile . '/' . Auth::user()->avatar : $profile . '/avatar.png' }}">
 
                     <span>
                         <h6 class="d-inline-block ps-2">{{ Auth::user()->name }}</h6>

@@ -38,6 +38,7 @@ use App\Http\Controllers\Api\CalculateProductionDowntimeController;
 use App\Http\Controllers\Api\ShiftHistoryController;
 use App\Http\Controllers\Api\ShiftEventController;
 use App\Http\Controllers\Api\ShiftListController;
+use App\Http\Controllers\Api\WorkerController; 
 
 
 
@@ -336,3 +337,18 @@ Route::post('/supplier-order/store', [SupplierOrderController::class, 'store']);
 //api para downtime calculate
 Route::match(['get', 'post'], '/calculate-production-downtime', [CalculateProductionDowntimeController::class, 'calculateDowntime']);
 
+// Ruta para generar Excel (existente)
+// (Actualizado para coincidir con tu último comentario)
+Route::get('/workers-export/generate-excel', [WorkerController::class, 'generateExcelStandalone'])->name('workers-export.generate-excel');
+
+// Ruta para generar PDF (existente)
+// (Actualizado para coincidir con tu último comentario)
+Route::get('/workers-export/generate-pdf', [WorkerController::class, 'generatePdfStandalone'])->name('workers-export.generate-pdf');
+
+// NUEVA RUTA para enviar informes por correo
+Route::get('/workers-export/send-email', [WorkerController::class, 'sendReportsByEmail'])->name('workers-export.send-email');
+
+    // Ruta para enviar el Listado de Asignación por email
+Route::get('workers-export/send-assignment-list',[WorkerController::class, 'sendAssignmentListByEmail'])->name('workers.sendAssignmentList');
+
+Route::get('/workers-export/complete-list', [WorkerController::class, 'completeList'])->name('workers.completeListExportstandalone');

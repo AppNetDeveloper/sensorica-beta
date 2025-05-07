@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use App\Models\OperatorPost;
+use App\Models\ShiftHistory;
 use Carbon\Carbon;
 
 class FinalizeOperatorPosts extends Command
@@ -20,7 +21,7 @@ class FinalizeOperatorPosts extends Command
      *
      * @var string
      */
-    protected $description = 'Finaliza los registros de los operadores a las 23:59:59 y los duplica al siguiente día.';
+    protected $description = 'Cierra y gestiona los registros de operadores según el inicio y fin de turno.';
 
     /**
      * Execute the console command.
@@ -29,81 +30,69 @@ class FinalizeOperatorPosts extends Command
      */
     public function handle()
     {
-        // Bucle infinito que ejecuta cada 20 segundos
         while (true) {
             try {
-                // Obtener la fecha y hora actual
-                $currentDate = Carbon::now();
+                $now = Carbon::now();
 
-                // Buscar solo los registros que no están finalizados (finish_at es null o vacío) y cuya fecha de creación no sea mayor que ahora
-                $operatorPosts = OperatorPost::whereNull('finish_at')
-                ->where('created_at', '<', Carbon::now()) // Filtramos para que 'created_at' no sea mayor a la fecha actual
-                ->get();
-            
+                // Obtener el último inicio de turno registrado
+                $lastShift = ShiftHistory::latest('created_at')->first();
 
-                foreach ($operatorPosts as $operatorPost) {
-                    // Obtener el 'created_at' del registro y convertirlo a objeto Carbon
-                    $createdAt = Carbon::parse($operatorPost->created_at);
-
-                    // Si la fecha de 'created_at' es anterior a la fecha actual, cerramos y duplicamos
-                    if ($createdAt->toDateString() < $currentDate->toDateString()) {
-                        // Si es antes de la fecha actual, se cierra el registro con la hora 23:59:59
-                        $operatorPost->update([
-                            'finish_at' => $createdAt->copy()->setTime(23, 59, 59),
-                        ]);
-
-                        // Duplicamos el registro con la fecha del siguiente día a las 00:00:01
-                        $newData = $operatorPost->toArray();
-                        unset($newData['id']); // Eliminar el campo 'id' para crear un nuevo registro
-                        $newData['count'] = 0; // Reiniciar el contador a 0 para el nuevo registro
-                        $newData['finish_at'] = null; // Dejar finish_at como null para el nuevo registro
-                        $newData['created_at'] = $createdAt->copy()->addDay()->setTime(0, 0, 1); // Fecha de mañana a las 00:00:01
-
-                        // Crear el nuevo registro duplicado
-                        OperatorPost::create($newData);
-
-                        // Mostrar mensaje en la consola
-                        $this->info("[" . Carbon::now()->toDateTimeString() . "]Se ha finalizado el operador post ID {$operatorPost->id} y duplicado para el siguiente día.");
-                    } else {
-                        $this->info("[" . Carbon::now()->toDateTimeString() . "]El operador post ID {$operatorPost->id} No necesita ser finalizado porque ya está en la fecha correcta.");
-                    }
-
-                    // Si el 'created_at' es de hoy y despues de 23:59:00, lo cerramos a las 23:59:59
-                    if ($createdAt->isToday() && $createdAt->format('H:i:s') >= '23:59:00' && $createdAt->format('H:i:s') < '23:59:59') {
-                        // Cerrar el registro a las 23:59:59
-                        $operatorPost->update([
-                            'finish_at' => $createdAt->copy()->setTime(23, 59, 59),
-                        ]);
-
-                        // Duplicamos el registro para el siguiente día a las 00:00:01
-                        $newData = $operatorPost->toArray();
-                        unset($newData['id']); // Eliminar el campo 'id' para crear un nuevo registro
-                        $newData['count'] = 0; // Reiniciar el contador a 0 para el nuevo registro
-                        $newData['finish_at'] = null; // Dejar finish_at como null para el nuevo registro
-                        $newData['created_at'] = $createdAt->copy()->addDay()->setTime(0, 0, 1); // Fecha de mañana a las 00:00:01
-
-                        // Crear el nuevo registro duplicado
-                        OperatorPost::create($newData);
-
-                        // Mostrar mensaje en la consola
-                        $this->info("[" . Carbon::now()->toDateTimeString() . "]Se ha finalizado el operador post ID {$operatorPost->id} y duplicado para el siguiente día.");
-                    }
-
-                    // Si la fecha de 'created_at' es del día siguiente (mañana), la ignoramos
-                    if ($createdAt->isTomorrow()) {
-                        $this->info("[" . Carbon::now()->toDateTimeString() . "]Se ha ignorado el operador post ID {$operatorPost->id} porque su fecha es de mañana.");
-                    }
+                // Si no hay turno registrado, esperar y volver a intentarlo
+                if (!$lastShift) {
+                    $this->info("[{$now->toDateTimeString()}] No se ha encontrado un inicio de turno válido (type=shift, action=start). Esperando...");
+                    usleep(20000000);
+                    continue;
+                }
+                //si el ultimo turno no es type=shift o action=start, esperar y volver a intentarlo
+                if ($lastShift->type != 'shift' || $lastShift->action != 'start') {
+                    $this->info("[{$now->toDateTimeString()}] El último inicio de turno registrado no es válido (type=shift, action=start). Esperando...");
+                    usleep(20000000);
+                    continue;
                 }
 
-                // Confirmación en consola de que el ciclo ha terminado sin errores
-                $this->info('Ciclo de finalización de registros de operadores completado.');
+                // Convertir inicio de turno a Carbon
+                $todayShiftStart = Carbon::parse($lastShift->created_at);
+
+                // Obtener el último fin de turno registrado
+                $lastShiftEnd = ShiftHistory::where('type', 'shift')
+                    ->where('action', 'end')
+                    ->latest('created_at')
+                    ->first();
+
+                // Buscar los posts no finalizados creados antes del inicio de turno actual
+                $operatorPosts = OperatorPost::whereNull('finish_at')
+                    ->where('created_at', '<', $todayShiftStart)
+                    ->get();
+
+                foreach ($operatorPosts as $post) {
+
+                    // Determinar finish_at usando el último fin de turno o, si no existe, el inicio de turno actual
+                    $finishAt = $lastShiftEnd
+                        ? Carbon::parse($lastShiftEnd->created_at)
+                        : $todayShiftStart;
+
+                    // Actualizar finish_at del registro original
+                    $post->update(['finish_at' => $finishAt]);
+
+                    // Preparar y crear nuevo registro duplicado para el turno actual
+                    $data = $post->toArray();
+                    unset($data['id']);
+                    $data['count']     = 0;
+                    $data['finish_at'] = null;
+                    $data['created_at'] = $todayShiftStart;
+
+                    OperatorPost::create($data);
+
+                    $this->info("[{$now->toDateTimeString()}] Post ID {$post->id} cerrado a {$finishAt} y duplicado con created_at={$todayShiftStart}.");
+                }
+
+                $this->info("[{$now->toDateTimeString()}] Ciclo completado sin errores.");
+
             } catch (\Exception $e) {
-                // Si ocurre un error, se captura y se muestra en consola
-                $this->error("[" . Carbon::now()->toDateTimeString() . "]Error al procesar los registros de operadores: " . $e->getMessage());
+                $this->error("[{$now->toDateTimeString()}] Error: {$e->getMessage()}");
             }
 
-            // Dormir 20 segundos antes de ejecutar el siguiente ciclo
-            usleep(20000000); // 20 segundos (en microsegundos)
+            usleep(20000000);
         }
     }
 }

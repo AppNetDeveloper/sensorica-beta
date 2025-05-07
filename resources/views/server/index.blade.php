@@ -26,6 +26,7 @@
                     <button id="restart-485" class="btn btn-primary mb-2">{{ __('Reiniciar 485') }}</button>
                     <button id="update-app" class="btn btn-dark mb-2">{{ __('Actualizar Software') }}</button>
                     <button id="verne-app" class="btn btn-danger mb-2">{{ __('Instalar Verne') }}</button>
+                    <button id="phpmyadmin" class="btn btn-warning mb-2">{{ __('Acceder a PHPMyAdmin') }}</button>
                     <button id="logs" class="btn btn-info mb-2">{{ __('Ver Log') }}</button>
                 </div>
             </div>
@@ -224,6 +225,9 @@
             window.location.href = '/log-viewer?file=laravel.log';
         });
 
+        document.getElementById('phpmyadmin').addEventListener('click', () => {
+            window.location.href = '/phpmyadmin';
+        });
         document.getElementById('get-ips').addEventListener('click', getServerIps);
 
         // Inicializar funciones al cargar la página

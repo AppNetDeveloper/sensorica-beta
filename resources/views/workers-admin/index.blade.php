@@ -494,7 +494,7 @@
                     }
 
                     console.log('Encabezados reales detectados:', rows[0]);
-                    const expectedHeaders = ['ID Cliente', 'Nombre', 'Email', 'Teléfono', 'Contraseña'];
+                    const expectedHeaders = ['Codigo Trabajador', 'Nombre', 'Email', 'Teléfono', 'Contraseña'];
                     const actualHeaders = rows[0].map(h => String(h).trim());
                     const missingHeaders = expectedHeaders.filter(h => !actualHeaders.includes(h));
                     if (missingHeaders.length > 0) {
@@ -527,7 +527,7 @@
                             icon: 'warning',
                             title: 'Error en el archivo',
                             text: `Se ignoraron ${invalidRows.length} filas con datos incompletos.`,
-                            footer: 'ID Cliente y Nombre son obligatorios.'
+                            footer: 'Codigo Trabajador y Nombre son obligatorios.'
                         });
                     }
 

@@ -216,6 +216,11 @@
     .floating-refresh i { color: #007bff; } /* Color icono Refresh */
     .floating-refresh:hover { background-color: #007bff; }
     .floating-refresh:hover i { color: #fff; }
+    /* Estilo para el nuevo botón de ordenar */
+    .floating-sort i { color: #6c757d; } /* Color icono Ordenar (gris) */
+    .floating-sort:hover { background-color: #6c757d; }
+    .floating-sort:hover i { color: #fff; }
+
     .rotating { animation: spin 1s linear infinite; } /* Animación rotar */
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
@@ -276,12 +281,15 @@
         <div class="floating-button floating-excel" id="exportExcel" title="Exportar a Excel">
            <i class="fa fa-file-excel"></i>
         </div>
+        <div class="floating-button floating-sort" id="sortOptionsButton" title="Ordenar Tarjetas">
+           <i class="fas fa-sort-amount-down"></i> </div>
     </div>
   </div>
 
   <script>
     // URL de la API (ajustar si es necesario)
     const workersApiUrl = '/api/workers'; // Cambiar si la ruta de la API es diferente
+    const LOCAL_STORAGE_SORT_KEY = 'productionSortOrder'; // Clave para localStorage
 
     // --- Variables Globales ---
     let rfidColorsGlobal = []; // Almacena los colores RFID disponibles
@@ -289,12 +297,15 @@
     let refreshIntervalId = null; // ID del intervalo para auto-refresco
     const REFRESH_INTERVAL = 5000; // Intervalo de auto-refresco en milisegundos (ej. 5 segundos)
     let isLoading = false; // Flag para evitar múltiples cargas simultáneas
+    // --- MODIFICADO: Se inicializa leyendo de localStorage o usa 'post' por defecto ---
+    let currentSortOrder = localStorage.getItem(LOCAL_STORAGE_SORT_KEY) || 'post';
 
     // --- Referencias a elementos del DOM (usando jQuery) ---
     const refreshButton = $('#refreshData'); // Botón de refrescar
     const refreshIcon = refreshButton.find('i'); // Icono dentro del botón de refrescar
     const loadingIndicator = $('#loading-indicator'); // Barra/mensaje de carga
     const cardContainer = $('#cardContainer'); // Contenedor de las tarjetas
+    const sortOptionsButton = $('#sortOptionsButton'); // Nuevo botón de ordenar
 
     // --- Funciones ---
 
@@ -331,7 +342,28 @@
     }
 
     /**
-     * Carga los datos de los operadores desde la API y los muestra.
+     * Extrae el número del nombre de un puesto RFID (ej. "P123" -> 123).
+     * @param {string} postName - El nombre del puesto RFID.
+     * @returns {number} El número extraído o Infinity si no se puede extraer.
+     */
+    function extractPostNumber(postName) {
+        if (!postName) return Infinity; // Si no hay nombre, va al final
+        const match = postName.match(/P(\d+)$/); // Busca el patrón P seguido de números al final
+        if (match && match[1]) {
+            return parseInt(match[1], 10); // Convierte el número encontrado a entero
+        }
+        // Si no coincide con P<numero>, intenta extraer cualquier número al final
+        const genericMatch = postName.match(/(\d+)$/);
+        if (genericMatch && genericMatch[1]) {
+            return parseInt(genericMatch[1], 10);
+        }
+        // Si no encuentra ningún número, considera que es un nombre sin número o N/A
+        // y lo pone al final
+        return Infinity;
+    }
+
+    /**
+     * Carga los datos de los operadores desde la API, los ordena según la preferencia actual y los muestra.
      */
     function loadOperators() {
       // Evita ejecutar si ya hay una carga en progreso
@@ -342,6 +374,7 @@
       loadingIndicator.show();
       refreshIcon.addClass('rotating');
       refreshButton.prop('disabled', true); // Deshabilita botón mientras carga
+      sortOptionsButton.prop('disabled', true); // Deshabilita también el botón de ordenar
 
       // Petición AJAX para obtener los datos
       $.ajax({
@@ -390,14 +423,36 @@
           });
           // --- FIN FILTRO MODIFICADO ---
 
-
           // Si no hay operadores para mostrar después del filtro
           if (operatorsToShow.length === 0) {
             cardContainer.append('<p>No hay operadores activos para mostrar según los criterios.</p>');
             return; // Termina si no hay nada que mostrar
           }
 
-          // --- Renderizado de Tarjetas ---
+          // --- ORDENACIÓN SEGÚN LA PREFERENCIA (currentSortOrder) ---
+          if (currentSortOrder === 'post') {
+              console.log("Ordenando por Puesto...");
+              operatorsToShow.sort((a, b) => {
+                  const postNameA = (a.operator_posts && a.operator_posts.length > 0) ? a.operator_posts[0].rfid_reading_name : null;
+                  const postNameB = (b.operator_posts && b.operator_posts.length > 0) ? b.operator_posts[0].rfid_reading_name : null;
+                  const numberA = extractPostNumber(postNameA);
+                  const numberB = extractPostNumber(postNameB);
+                  return numberA - numberB; // Orden ascendente por número de puesto
+              });
+          } else if (currentSortOrder === 'shift') {
+              console.log("Ordenando por Cantidad Turno...");
+              operatorsToShow.sort((a, b) => {
+                  // Orden descendente por count_shift (mayor cantidad primero)
+                  // Maneja nulls o undefined poniéndolos al final
+                  const countA = a.count_shift !== null ? a.count_shift : -Infinity;
+                  const countB = b.count_shift !== null ? b.count_shift : -Infinity;
+                  return countB - countA;
+              });
+          }
+          // --- FIN ORDENACIÓN ---
+
+
+          // --- Renderizado de Tarjetas (YA FILTRADAS Y ORDENADAS) ---
           operatorsToShow.forEach(operator => {
             // Determina si el operador tiene asignaciones de puesto
             let hasPosts = operator.operator_posts && operator.operator_posts.length > 0;
@@ -408,6 +463,7 @@
                 const firstPostName = operator.operator_posts[0].rfid_reading_name;
                 // Intenta extraer solo el número si el formato es P<numero>
                 const match = firstPostName.match(/P(\d+)$/);
+                // Usa el número extraído o el nombre completo si no coincide el patrón
                 rfidReadingNameFormatted = (match && match[1]) ? match[1] : firstPostName;
             }
 
@@ -455,15 +511,18 @@
                     }).join(''); // Une los HTML de todos los colores
                 } else if (hasMeaningfulRfidData) {
                     // Si no hay colores globales pero sí datos, muestra un mensaje genérico
-                    // (O podrías intentar mostrar los datos sin colores)
                      rfidHtml = '<p class="no-rfid-data">Datos RFID presentes, pero colores no definidos.</p>';
                 }
             } // Fin if (hasPosts)
 
             // --- Creación de la Tarjeta HTML ---
             const card = `
-              <div class="card" data-operator-id="${operator.id}"> <h3>
-                  <span class="rfid-name">${rfidReadingNameFormatted}</span> <span class="operator-name" title="${operator.name}">${operator.name}</span> <span class="count-shift">${operator.count_shift}</span> </h3>
+              <div class="card" data-operator-id="${operator.id}">
+                <h3>
+                  <span class="rfid-name">${rfidReadingNameFormatted}</span>
+                  <span class="operator-name" title="${operator.name}">${operator.name}</span>
+                  <span class="count-shift">${operator.count_shift}</span>
+                </h3>
                 <div class="rfid-container">
                   ${(hasMeaningfulRfidData && rfidHtml && rfidHtml.trim() !== '') ? rfidHtml : '<p class="no-rfid-data">Sin datos RFID</p>'}
                 </div>
@@ -490,6 +549,7 @@
           loadingIndicator.hide(); // Oculta indicador de carga
           refreshIcon.removeClass('rotating'); // Detiene animación icono
           refreshButton.prop('disabled', false); // Rehabilita botón
+          sortOptionsButton.prop('disabled', false); // Rehabilita botón de ordenar
         }
       }); // Fin $.ajax
     } // Fin loadOperators
@@ -538,7 +598,6 @@
                 if (row.hasOwnProperty(`Total RFID ${colorName}`)) {
                     row[`Total RFID ${colorName}`] += count;
                 }
-                // Podrías añadir una columna 'Otros' si el color no está en rfidColorsGlobal
             });
         }
         return row;
@@ -624,24 +683,58 @@
                 html: detailsHtml, // Contenido HTML generado
                 icon: 'info', // Icono informativo
                 width: 'auto', // Ancho automático o definir uno (ej: '600px')
-                // Puedes añadir clases personalizadas si necesitas más estilos específicos
-                // customClass: {
-                //     popup: 'my-swal-popup',
-                //     htmlContainer: 'my-swal-html'
-                // }
             });
         } else {
-            // Error si no se encuentra el operador (no debería pasar si se clickea una tarjeta existente)
+            // Error si no se encuentra el operador
             console.error("No se encontró el operador con ID:", operatorId);
             Swal.fire('Error', 'No se pudieron cargar los detalles del operador.', 'error');
         }
     } // Fin showOperatorDetails
 
+    /**
+     * Muestra el diálogo para seleccionar el criterio de ordenación y guarda la selección.
+     */
+    function showSortOptions() {
+        Swal.fire({
+            title: 'Ordenar Tarjetas Por',
+            input: 'radio',
+            inputOptions: {
+                'post': 'Número de Puesto (Ascendente)', // Opción 1
+                'shift': 'Cantidad Turno (Descendente)' // Opción 2
+            },
+            inputValue: currentSortOrder, // Pre-selecciona la opción actual
+            showCancelButton: true,
+            cancelButtonText: 'Cancelar',
+            confirmButtonText: 'Aplicar Orden',
+            inputValidator: (value) => {
+                if (!value) {
+                    return '¡Necesitas elegir una opción!'
+                }
+            }
+        }).then((result) => {
+            // Si el usuario confirma y ha elegido una opción diferente
+            if (result.isConfirmed && result.value && result.value !== currentSortOrder) {
+                console.log(`Cambiando orden a: ${result.value}`);
+                currentSortOrder = result.value; // Actualiza la preferencia global
+                // --- MODIFICADO: Guarda la nueva preferencia en localStorage ---
+                localStorage.setItem(LOCAL_STORAGE_SORT_KEY, currentSortOrder);
+                console.log('Nuevo orden guardado en localStorage:', currentSortOrder);
+                loadOperators(); // Recarga los datos con el nuevo orden
+            } else if (result.isConfirmed && result.value === currentSortOrder) {
+                 console.log("El orden seleccionado ya es el actual.");
+                 // Opcional: mostrar un mensaje corto indicando que no hubo cambio
+                 // Swal.fire({text: 'Ya se está ordenando de esa manera.', timer: 1500, showConfirmButton: false});
+            }
+        });
+    }
+
 
     // --- Ejecución al Cargar el Documento ---
     $(document).ready(function() {
+      // --- MODIFICADO: Se lee la preferencia guardada al inicio (ya se hace en la declaración de currentSortOrder) ---
+      console.log('Orden inicial cargado:', currentSortOrder); // Muestra el orden al cargar
       applyInitialConfig(); // Aplica tamaños de fuente de la URL
-      loadOperators();      // Carga inicial de datos
+      loadOperators();      // Carga inicial de datos (usará el currentSortOrder cargado o por defecto)
       startAutoRefresh();   // Inicia el auto-refresco
 
       // --- Event Listeners ---
@@ -658,13 +751,14 @@
       // Click en el botón de exportar a Excel
       $('#exportExcel').click(exportToExcel);
 
+      // Click en el nuevo botón de ordenar
+      sortOptionsButton.click(showSortOptions);
+
       // Click en una tarjeta de operador (usando delegación de eventos)
-      // Se asigna el listener al contenedor y se filtra por clicks en elementos '.card'
       cardContainer.on('click', '.card', function() {
-          // Obtiene el ID del operador desde el atributo 'data-operator-id' de la tarjeta clickeada
+          // Obtiene el ID del operador desde el atributo 'data-operator-id'
           const operatorId = $(this).data('operator-id');
           if (operatorId) {
-              // Llama a la función para mostrar los detalles si se encontró un ID
               showOperatorDetails(operatorId);
           } else {
               console.warn("Se hizo click en una tarjeta sin data-operator-id.");

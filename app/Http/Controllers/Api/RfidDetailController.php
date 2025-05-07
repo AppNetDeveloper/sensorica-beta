@@ -150,17 +150,19 @@ class RfidDetailController extends Controller
                     ->orderBy('created_at', 'desc')
                     ->first(); 
 
-                if ($currentTid !== $masterReset->tid) {
-                    // Caso: La tarjeta leída NO es la maestra
-                    if ($lastMasterRecord) {
-
-                    //buscamos en shift_history el ultimo registro por production_line_id  que type= shift y action = start
-                    $shiftHistory = ShiftHistory::where('production_line_id', $rfidReading->production_line_id)
+                //buscamos en shift_history el ultimo registro por production_line_id  que type= shift y action = start
+                $shiftHistory = ShiftHistory::where('production_line_id', $rfidReading->production_line_id)
                         ->where('type', 'shift')
                         ->where('action', 'start')
                         ->orderBy('created_at', 'desc')
                         ->first();
-                    Log::info("Ultimo registro de shift_history encontrado: " . json_encode($shiftHistory));
+                Log::info("Ultimo registro de shift_history encontrado: " . json_encode($shiftHistory));
+
+                if ($currentTid !== $masterReset->tid) {
+                    // Caso: La tarjeta leída NO es la maestra
+                    if ($lastMasterRecord) {
+
+
 
                     //buscamos que el created_at del shift _history sea mayor o igual al created_at de la última tarjeta maestra si no es asi hacemos return
                     if ($shiftHistory->created_at->lt($lastMasterRecord->created_at)) {
@@ -172,10 +174,10 @@ class RfidDetailController extends Controller
                         Log::info("La tarjeta no es permitida todavia por no pasar el punto en este turno.");
                         Log::info("Fecha del ultimo registro de shift_history: " . $shiftHistory->created_at);
                         Log::info("Fecha del ultimo registro de la tarjeta maestra: " . $lastMasterRecord->created_at);
-                        // return response()->json([
-                        //   'success' => false,
-                        // 'message' => 'La tarjeta no es permitida todavia por no pasar el punto en este turno.'
-                        //], 200);
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'La tarjeta no es permitida todavia por no pasar el punto en este turno.'
+                        ], 200);
                     }
                         // Verificar si ya se ha insertado la tarjeta actual desde el último registro de la maestra
                         $registroExistente = RfidList::where('tid', $currentTid)
@@ -193,12 +195,26 @@ class RfidDetailController extends Controller
                 } else {
                     // Caso: La tarjeta leída ES la maestra (reset)
                     if ($lastMasterRecord) {
+                        $fechaMaster = $lastMasterRecord->created_at;
+                        $inicioHoy    = Carbon::today(); // 00:00 del día actual
+                        $inicioTurno = $shiftHistory->created_at;
+
                         // Verificar que, después de la última inserción de la tarjeta maestra,
                         // se haya insertado al menos otro registro (de otra tarjeta)
-                        $otroRegistroExiste = RfidList::where('rfid_reading_id', $rfidReading->id)
-                            ->where('tid', '<>', $masterReset->tid)
-                            ->where('created_at', '>', $lastMasterRecord->created_at)
-                            ->exists();
+                        if ($fechaMaster->lt($inicioTurno)) {
+                            // Si la última master es de ayer o antes, consideramos
+                            // que ya hubo otro registro “válido”
+                            $otroRegistroExiste = true;
+                            Log::info("La última tarjeta maestra es de {$fechaMaster->toDateString()}, fuera de hoy: forzando otroRegistroExiste = true.");
+                        } else {
+                            // Si la master fue hoy, evaluamos normalmente
+                            $otroRegistroExiste = RfidList::where('rfid_reading_id', $rfidReading->id)
+                                ->where('tid', '<>', $masterReset->tid)
+                                ->where('created_at', '>', $fechaMaster)
+                                ->where('created_at', '>=', $inicioTurno)
+                                ->exists();
+                            Log::info("Chequeo normal de otros registros hoy: " . ($otroRegistroExiste ? 'sí' : 'no'));
+                        }
 
                         // Calcular la diferencia en minutos desde la última inserción de la tarjeta maestra
                         $minutosTranscurridos = Carbon::now()->diffInMinutes(Carbon::parse($lastMasterRecord->created_at));
@@ -436,15 +452,19 @@ class RfidDetailController extends Controller
 
     public function getFilters()
     {
-        $antennas = RfidAnt::select('name')->get(); // Solo obtén el nombre de la antena
-        $epcs     = RfidDetail::select('epc')->distinct()->pluck('epc');
-        $tids     = RfidDetail::select('tid')->distinct()->pluck('tid');
+        $antennas   = RfidAnt::select('name')->get(); // Solo obtén el nombre de la antena
+        $epcs       = RfidDetail::select('epc')->distinct()->pluck('epc');
+        $tids       = RfidDetail::select('tid')->distinct()->pluck('tid');
+
+        //obtenemos el listado de tid derfid_details where reset = 1
+        $tidspoints = RfidDetail::select('tid')->where('reset', 1)->distinct()->pluck('tid');
 
         return response()->json([
             'success'  => true,
             'antennas' => $antennas,
             'epcs'     => $epcs,
-            'tids'     => $tids
+            'tids'     => $tids,
+            'tids_master_reset'     => $tidspoints
         ]);
     }
 }

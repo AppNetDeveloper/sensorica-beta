@@ -276,6 +276,9 @@ Route::group(['middleware' => ['auth', 'XSS']], function () {
 
     Route::get('test-mail', [SettingController::class, 'testMail'])->name('test.mail');
     Route::post('test-mail', [SettingController::class, 'testSendMail'])->name('test.send.mail');
+
+    Route::post('settings/finish-shift-emails',[SettingController::class, 'saveFinishShiftEmailsSettings'])->name('settings.finishshiftemails');
+    Route::get('settings/action/test-finish-shift-emails', [SettingController::class, 'testFinishShiftEmails'])->name('settings.testFinishShifts');
 });
 
 Route::get('profile', [UserController::class, 'profile'])->name('profile')->middleware(['auth', 'XSS']);
