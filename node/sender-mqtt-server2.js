@@ -211,7 +211,7 @@ async function publishToMqtt(fileEntry) {
   }
 
   return new Promise((resolve, reject) => {
-    mqttClient.publish(data.topic, payload, { qos: 0, retain: true }, (err) => {
+    mqttClient.publish(data.topic, payload, { qos: 0, retain: false }, (err) => {
       if (err) {
         console.error(`${getFormattedDate()} ❌ Error publicando ${file} al topic ${data.topic} (Server2):`, err);
         reject(err); 
