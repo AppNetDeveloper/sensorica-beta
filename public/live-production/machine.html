@@ -15,79 +15,32 @@
             font-family: 'Inter', sans-serif;
             overscroll-behavior-y: contain;
         }
-        /* --- Estilos Círculo de Progreso Dinámico (OEE Orden) --- */
+        /* --- Estilos Círculo de Progreso Dinámico (OEE) --- */
+        /* --- Estilos Círculo de Progreso Dinámico (OEE) --- */
         .progress-circle {
-            width: 150px; height: 150px; border-radius: 50%; display: grid; place-items: center;
-            background: conic-gradient(#4ade80 calc(var(--progress-percent, 0) * 1%), #e5e7eb 0);
-            position: relative; font-size: 2.2rem; font-weight: bold; color: #16a34a; transition: background 0.3s ease;
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            background: conic-gradient(
+            #4ade80 calc(var(--progress-percent, 0) * 1%),
+            #e5e7eb 0
+            );
+            position: relative;
+            font-size: 2.2rem;
+            font-weight: bold;
+            color: #16a34a;
+            transition: background 0.3s ease;
+            margin-right: 20%    /* <--- aquí aumentas el espacio desde el borde  anterior 8rem;*/
         }
+
         .progress-circle::before {
             content: ""; position: absolute; border-radius: 50%; inset: 12px; background: #fff; z-index: 1;
         }
         .progress-circle > span {
              z-index: 2; position: relative;
         }
-
-        /* --- Estilos Medidor Semi-circular (OEE Máquina) --- */
-        .gauge-container {
-            width: 160px; /* Ancho reducido */
-            height: 80px; /* Mitad del ancho */
-            position: relative;
-            margin-bottom: 0.25rem; /* Espacio reducido antes de la etiqueta */
-        }
-        .gauge-semi-circle {
-            width: 100%;
-            height: 100%;
-            border: 12px solid #e5e7eb; /* Borde más fino */
-            border-bottom: none;
-            border-radius: 80px 80px 0 0; /* Ajustar radio */
-            box-sizing: border-box;
-            position: absolute;
-            top: 0;
-            left: 0;
-        }
-        .gauge-needle {
-            width: 3px; /* Aguja más fina */
-            height: 70px; /* Aguja más corta */
-            background-color: #374151;
-            position: absolute;
-            bottom: 0;
-            left: 50%;
-            transform-origin: bottom center;
-            transform: translateX(-50%) rotate(-90deg);
-            transition: transform 0.5s ease-in-out;
-            border-radius: 1.5px 1.5px 0 0;
-            z-index: 2;
-        }
-         .gauge-pivot {
-            width: 8px; /* Pivote más pequeño */
-            height: 8px;
-            background-color: #374151;
-            border-radius: 50%;
-            position: absolute;
-            bottom: -2px; /* Ajustar posición */
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 3;
-        }
-        .gauge-value {
-            position: absolute;
-            bottom: 10px; /* Posición del valor */
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 1.5rem; /* Tamaño del número */
-            font-weight: 600;
-            color: #1f2937;
-            z-index: 1;
-        }
-        .gauge-label {
-            font-size: 0.75rem; /* text-xs */
-            font-weight: 500; /* font-medium */
-            color: #6b7280; /* text-gray-500 */
-            text-align: center;
-            margin-top: 0.25rem; /* mt-1 */
-        }
-
 
         /* --- Estilos Tarjeta Kanban Refactorizados --- */
         .kanban-card {
@@ -120,12 +73,9 @@
             background-color: #f3f4f6;
             padding: 1rem;
             border-radius: 0.5rem;
-            /* height: 100%; Ya no es necesario height 100% si limitamos con max-height */
             min-height: 200px;
-            /* === Scroll vertical para columnas === */
-            max-height: 30rem; /* Límite de altura (ajustar si es necesario) */
-            overflow-y: auto; /* Scroll vertical automático */
-            /* ========================================== */
+            max-height: 30rem;
+            overflow-y: auto;
         }
         .kanban-title { font-weight: 600; color: #374151; margin-bottom: 1rem; text-align: center; }
         .gu-mirror {
@@ -137,8 +87,8 @@
         #col-finalizadas .gu-mirror { background-color: #f9fafb; border-color: #e5e7eb; }
         #col-incidencias .gu-mirror { background-color: #fef2f2; border-color: #fecaca; }
         .gu-transit { opacity: 0.5; }
-        .long-press-ready { /* Estilo opcional para feedback visual */
-             outline: 2px dashed #fbbf24; /* Ejemplo: Borde amarillo discontinuo */
+        .long-press-ready {
+             outline: 2px dashed #fbbf24;
              outline-offset: 2px;
         }
         .select2-container--default .select2-selection--single { border: 1px solid #d1d5db; border-radius: 0.375rem; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); height: 2.5rem; }
@@ -150,32 +100,21 @@
 
         /* Estilo base para los iconos de acción */
         #action-buttons-container .action-icon {
-           font-size: 3rem; /* Tamaño del icono */
+           font-size: 3rem;
            line-height: 1;
-           transition: color 0.15s ease-in-out, opacity 0.15s ease-in-out; /* Transición suave */
-           opacity: 0.6; /* Opacidad reducida por defecto */
+           transition: color 0.15s ease-in-out, opacity 0.15s ease-in-out;
+           opacity: 0.6;
         }
-         /* Estilo base para los botones de acción */
         .action-button {
-            width: 64px; /* Ancho */
-            height: 64px; /* Alto */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 0.375rem; /* Esquinas redondeadas (cuadrado) */
-            background-color: transparent; /* Sin fondo por defecto */
-            box-shadow: none; /* Sin sombra por defecto */
-            transition: background-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out; /* Transición suave */
+            width: 64px; height: 64px; display: flex; align-items: center; justify-content: center;
+            border-radius: 0.375rem; background-color: transparent; box-shadow: none;
+            transition: background-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
         }
-
-        /* --- Colores de icono por defecto --- */
         #start-shift-button .action-icon,
         #resume-button .action-icon { color: #22c55e; }
         #start-pause-button .action-icon { color: #eab308; }
         #end-shift-button .action-icon,
         #end-pause-button .action-icon { color: #ef4444; }
-
-        /* --- Estilo al pasar el ratón por encima (Hover) --- */
         .action-button:hover {
             box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
         }
@@ -191,20 +130,76 @@
         #start-pause-button:hover { background-color: #eab308; }
         #end-shift-button:hover, #end-pause-button:hover { background-color: #ef4444; }
 
-        /* Estilo para el select de turnos */
         #shift-select-container { margin-top: 1rem; }
         #shift-select {
-             width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d1d5db;
+             padding: 0.5rem 0.75rem; border: 1px solid #d1d5db;
              border-radius: 0.375rem; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
              background-color: white; font-size: 0.875rem; line-height: 1.25rem;
         }
-        /* Estilo para la barra de progreso y sus segmentos */
         .progress-bar-segment {
-            transition: width 0.5s ease-in-out; /* Animación suave del ancho */
-            height: 100%; /* Ocupar altura del contenedor flex */
+            transition: width 0.5s ease-in-out;
+            height: 100%;
         }
-        /* Clases específicas para colores de segmentos */
-        /* Nota: Se añaden colores Tailwind directamente en el HTML para los segmentos */
+        /* === Estilos para Paneles Flotantes === */
+        .floating-panel {
+            position: fixed;
+            background-color: white;
+            border: 1px solid #d1d5db; /* Tailwind gray-300 */
+            border-radius: 0.5rem; /* rounded-lg */
+            box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.15), 0 4px 8px -4px rgba(0, 0, 0, 0.1); /* Sombra más pronunciada */
+            transition: opacity 0.3s ease-in-out;
+            min-height: 100px; /* Altura mínima para que la cabecera sea visible */
+        }
+        .floating-panel-header {
+            padding: 0.75rem 1rem; /* p-3 px-4 */
+            background-color: #f3f4f6; /* Tailwind gray-100 */
+            border-bottom: 1px solid #d1d5db; /* Tailwind gray-300 */
+            cursor: move;
+            border-top-left-radius: 0.5rem;
+            border-top-right-radius: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .floating-panel-header h3 {
+            font-weight: 600; /* font-semibold */
+            color: #374151; /* text-gray-700 */
+        }
+        .floating-panel-content {
+            padding: 1.5rem; /* p-6 */
+        }
+        #floating-operator-panel {
+            top: 36%; /* Posición inicial ajustada */
+            right: 20px;
+            width: 320px; /* Ancho del panel de operario */
+            z-index: 1000;
+        }
+        #floating-actions-panel {
+            top: 36%; /* Posición inicial ajustada */
+            left: 20px;
+            width: 320px; /* Ancho fijo igual al panel de operario */
+            z-index: 990; /* Ligeramente por debajo del panel de operario */
+        }
+        #floating-actions-panel .floating-panel-content { /* Para centrar los botones */
+            display: flex;
+            justify-content: center; /* Centra el contenedor de botones si es más estrecho que el panel */
+        }
+        #action-buttons-container { /* Asegurar que los botones se distribuyan bien */
+            display: flex;
+            flex-wrap: wrap; /* Permitir que los botones pasen a la siguiente línea si no caben */
+            justify-content: center; /* Centrar los botones */
+            gap: 0.5rem; /* Espacio entre botones */
+        }
+        .select2-container--default .select2-dropdown {
+            z-index: 1050 !important; /* Asegurar que el dropdown de Select2 esté sobre otros elementos del panel */
+        }
+        /* === Estilo para alinear valores de datos === */
+        .data-value {
+            min-width: 80px; /* Ajustar según sea necesario para "00:00:00" */
+            text-align: right;
+            display: inline-block; /* Para que min-width funcione correctamente */
+        }
+        /* ========================================== */
 
     </style>
      <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -368,124 +363,70 @@
         </div>
 
         <div class="flex flex-wrap justify-between items-start border-t border-gray-200 pt-6 pb-6">
-
-            <div class="w-full md:w-auto lg:flex-1 mb-4 md:mb-0 px-2 md:pr-4">
-                 <div class="text-sm max-w-xs mx-auto md:mx-0">
-                     <div class="flex justify-between py-1">
-                         <span class="text-gray-600">TIEMPO EN PARADA / Maquina</span>
-                         <span class="font-mono font-medium text-gray-800">3</span>
-                     </div>
-                     <div class="flex justify-between py-1">
-                         <span class="text-gray-600">TIEMPO LENTO / Maquina</span>
-                         <span class="font-mono font-medium text-gray-800">3</span>
-                     </div>
-                     <div class="flex justify-between py-1">
-                         <span class="text-gray-600">TIEMPO ATRASADO / Maquina</span>
-                         <span class="font-mono font-medium text-gray-800">3</span>
-                     </div>
-                     <div class="flex justify-between py-1">
-                         <span class="text-gray-600">Campo Ficticio 4 / Maquina</span>
-                         <span class="font-mono font-medium text-gray-800">3</span>
-                     </div>
-                     <div class="flex justify-between py-1">
-                         <span class="text-gray-600">Campo Ficticio 5 / Maquina</span>
-                         <span class="font-mono font-medium text-gray-800">4</span>
-                     </div>
-                 </div>
-            </div>
-
-            <div class="text-sm w-full md:w-auto lg:flex-1 mb-4 md:mb-0 px-2 md:px-4">
-                 <div class="max-w-xs mx-auto">
+            <div class="w-full md:w-2/3 px-4 mb-4 md:mb-0"> <div class="max-w-md mx-auto md:mx-0">
                      <div class="flex justify-between py-1">
                          <span class="text-gray-600">TIEMPO EN PARADA / Orden</span>
-                         <span id="tiempo-parada-val" class="font-mono font-medium text-gray-800">00:00:00</span> </div>
+                         <span id="tiempo-parada-val" class="font-mono font-medium text-gray-800 data-value">00:00:00</span> </div>
                      <div class="flex justify-between py-1">
                          <span class="text-gray-600">TIEMPO LENTO / Orden</span>
-                         <span id="tiempo-lento-val" class="font-mono font-medium text-gray-800">00:00:00</span> </div>
+                         <span id="tiempo-lento-val" class="font-mono font-medium text-gray-800 data-value">00:00:00</span> </div>
                      <div class="flex justify-between py-1">
                          <span class="text-gray-600">TIEMPO PREPARACION / Orden</span>
-                         <span id="tiempo-preparacion-val" class="font-mono font-medium text-gray-800">00:00:00</span> </div>
+                         <span id="tiempo-preparacion-val" class="font-mono font-medium text-gray-800 data-value">00:00:00</span> </div>
                      <div class="flex justify-between py-1">
                          <span class="text-gray-600">Unidades Hechas / Orden</span>
-                         <span id="unidades-hechas-val" class="font-mono font-medium text-gray-800">0</span>
+                         <span id="unidades-hechas-val" class="font-mono font-medium text-gray-800 data-value">0</span>
                      </div>
                      <div class="flex justify-between py-1">
                          <span class="text-gray-600">Unidades Pendientes / Orden</span>
-                         <span id="unidades-pendientes-val" class="font-mono font-medium text-gray-800">0</span>
+                         <span id="unidades-pendientes-val" class="font-mono font-medium text-gray-800 data-value">0</span>
                      </div>
                      <div class="flex justify-between py-1">
                          <span class="text-gray-600">Unidades Retrasadas / Orden</span>
-                         <span id="unidades-retrasadas-val" class="font-mono font-medium text-gray-800">0</span>
+                         <span id="unidades-retrasadas-val" class="font-mono font-medium text-gray-800 data-value">0</span>
                      </div>
                  </div>
              </div>
 
-            <div class="flex flex-col items-center w-full md:w-auto lg:flex-1 px-2 md:pl-4">
-                 <span class="text-xs font-medium text-gray-500 mb-1">OEE Orden</span>
+            <div class="w-full md:w-1/3 px-4 flex flex-col items-center md:items-end">
                  <div id="progress-indicator" class="progress-circle">
                      <span id="progress-value">0</span>
                  </div>
             </div>
-
         </div>
-        <div class="flex flex-wrap justify-between items-center border-t border-gray-200 py-6">
-
-             <div class="w-full md:w-auto lg:flex-1 mb-4 md:mb-0 px-2 md:pr-4 flex justify-center md:justify-start">
-                 <div id="action-buttons-container" class="flex items-center justify-start space-x-4">
-                     <button id="start-shift-button" class="action-button hidden" data-action-type="start-shift" title="Iniciar Turno/Tarea">
-                         <i class="fa fa-play action-icon" aria-hidden="true"></i>
-                     </button>
-                     <button id="start-pause-button" class="action-button hidden" data-action-type="start-pause" title="Iniciar Parada">
-                         <i class="fa fa-pause action-icon" aria-hidden="true"></i>
-                     </button>
-                     <button id="resume-button" class="action-button hidden" data-action-type="resume-pause" title="Reanudar">
-                         <i class="fa fa-play action-icon" aria-hidden="true"></i>
-                     </button>
-                     <button id="end-shift-button" class="action-button hidden" data-action-type="end-shift" title="Finalizar Turno/Tarea">
-                         <i class="fa fa-stop action-icon" aria-hidden="true"></i>
-                     </button>
-                     <button id="end-pause-button" class="action-button hidden" data-action-type="end-pause" title="Finalizar Parada">
-                         <i class="fa fa-stop action-icon" aria-hidden="true"></i>
-                     </button>
-                 </div>
-             </div>
-
-             <div class="w-full md:w-auto lg:flex-1 mb-4 md:mb-0 px-2 md:px-4 flex flex-col items-center">
-                 <div id="gauge-oee-maquina" class="gauge-container">
-                     <div class="gauge-semi-circle"></div>
-                     <div class="gauge-needle" id="gauge-needle"></div>
-                     <div class="gauge-pivot"></div>
-                     <span class="gauge-value" id="gauge-value">0</span>
-                 </div>
-                 <span class="gauge-label">OEE Máquina</span>
-             </div>
-
-             <div class="flex flex-col items-center space-y-4 w-full md:w-auto lg:flex-1 px-2 md:pl-4">
-                  <div class="w-full max-w-xs text-center">
-                     <label id="worker-label" for="worker-select" class="block text-sm font-medium text-gray-700 mb-1">OPERARIO</label>
-                     <div id="select-container">
-                          <select id="worker-select" class="w-full" style="width: 100%"> <option value="">Cargando operarios...</option> </select>
+        <div class="flex flex-wrap justify-between items-start border-t border-gray-200 pt-6 pb-6">
+            <div class="w-full md:w-2/3 px-4 mb-4 md:mb-0"> <div class="text-sm max-w-md mx-auto md:mx-0">
+                     <div class="flex justify-between py-1">
+                         <span class="text-gray-600">TIEMPO EN PARADA / Maquina</span>
+                         <span class="font-mono font-medium text-gray-800 data-value">3</span>
                      </div>
-                     <div id="display-container" class="hidden mt-2 flex items-center justify-center space-x-3">
-                         <span id="selected-worker-info" class="text-lg text-gray-800 font-medium"></span>
-                         <button id="logout-button" title="Cambiar operario" class="text-red-500 hover:text-red-700 focus:outline-none p-1 rounded-full">
-                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-block">
-                                 <circle cx="12" cy="12" r="10"/>
-                                 <path d="m15 9-6 6"/>
-                                 <path d="m9 9 6 6"/>
-                             </svg>
-                         </button>
+                     <div class="flex justify-between py-1">
+                         <span class="text-gray-600">TIEMPO LENTO / Maquina</span>
+                         <span class="font-mono font-medium text-gray-800 data-value">3</span>
+                     </div>
+                     <div class="flex justify-between py-1">
+                         <span class="text-gray-600">TIEMPO ATRASADO / Maquina</span>
+                         <span class="font-mono font-medium text-gray-800 data-value">3</span>
+                     </div>
+                     <div class="flex justify-between py-1">
+                         <span class="text-gray-600">Campo Ficticio 4 / Maquina</span>
+                         <span class="font-mono font-medium text-gray-800 data-value">3</span>
+                     </div>
+                     <div class="flex justify-between py-1">
+                         <span class="text-gray-600">Campo Ficticio 5 / Maquina</span>
+                         <span class="font-mono font-medium text-gray-800 data-value">4</span>
                      </div>
                  </div>
-                 <div id="shift-select-container" class="w-full max-w-xs text-center hidden">
-                     <label for="shift-select" class="block text-sm font-medium text-gray-700 mb-1">TURNO</label>
-                     <select id="shift-select" class="w-full"> <option value="">Selecciona un turno...</option>
-                         </select>
-                 </div>
-             </div>
+            </div>
 
+            <div class="flex flex-col items-center w-full md:w-1/3 px-4 md:items-end"> 
+                 <div id="oee-maquina-indicator" class="progress-circle">
+                     <span id="oee-maquina-value">0</span>
+                 </div>
+            </div>
         </div>
-         <div class="pt-4"> <div class="flex justify-between text-sm text-gray-500 mb-1">
+        <div class="border-t border-gray-200 pt-6">
+            <div class="flex justify-between text-sm text-gray-500 mb-1">
                 <span id="shift-start-time-label">HORA INICIO</span> <span id="shift-end-time-label">HORA FIN</span>
             </div>
             <div id="progress-bar-container" class="w-full bg-gray-200 rounded-full h-4 overflow-hidden flex">
@@ -505,11 +446,64 @@
             </div>
         </div>
 
-        <button id="refresh-button" title="Refrescar Datos" class="fixed bottom-4 right-4 bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg z-50 transition-colors duration-150">
-            <i class="fas fa-sync-alt"></i>
-        </button>
+    </div> <div id="floating-actions-panel" class="floating-panel">
+        <div id="floating-actions-header">
+            <h3>Acciones</h3>
+        </div>
+        <div class="floating-panel-content">
+            <div id="action-buttons-container" class="flex items-center justify-center space-x-2">
+                <button id="start-shift-button" class="action-button hidden" data-action-type="start-shift" title="Iniciar Turno/Tarea">
+                    <i class="fa fa-play action-icon" aria-hidden="true"></i>
+                </button>
+                <button id="start-pause-button" class="action-button hidden" data-action-type="start-pause" title="Iniciar Parada">
+                    <i class="fa fa-pause action-icon" aria-hidden="true"></i>
+                </button>
+                <button id="resume-button" class="action-button hidden" data-action-type="resume-pause" title="Reanudar">
+                    <i class="fa fa-play action-icon" aria-hidden="true"></i>
+                </button>
+                <button id="end-shift-button" class="action-button hidden" data-action-type="end-shift" title="Finalizar Turno/Tarea">
+                    <i class="fa fa-stop action-icon" aria-hidden="true"></i>
+                </button>
+                <button id="end-pause-button" class="action-button hidden" data-action-type="end-pause" title="Finalizar Parada">
+                    <i class="fa fa-stop action-icon" aria-hidden="true"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    <div id="floating-operator-panel" class="floating-panel">
+        <div id="floating-panel-header">
+            <h3>Operario / Turno</h3>
+            </div>
+        <div id="floating-panel-content" class="space-y-4">
+            <div class="w-full text-center">
+                <label id="worker-label" for="worker-select" class="block text-sm font-medium text-gray-700 mb-1">OPERARIO</label>
+                <div id="select-container">
+                     <select id="worker-select" style="width: 90%; margin: 0 auto;"> <option value="">Cargando operarios...</option> </select>
+                </div>
+                <div id="display-container" class="hidden mt-2 flex items-center justify-center space-x-3">
+                    <span id="selected-worker-info" class="text-lg text-gray-800 font-medium"></span>
+                    <button id="logout-button" title="Cambiar operario" class="text-red-500 hover:text-red-700 focus:outline-none p-1 rounded-full">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-block">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="m15 9-6 6"/>
+                            <path d="m9 9 6 6"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div id="shift-select-container" class="w-full text-center hidden">
+                <label for="shift-select" class="block text-sm font-medium text-gray-700 mb-1">TURNO</label>
+                <select id="shift-select" style="width: 90%; margin: 0 auto;"> <option value="">Selecciona un turno...</option>
+                    </select>
+            </div>
+        </div>
+    </div>
+    <button id="refresh-button" title="Refrescar Datos" class="fixed bottom-4 right-4 bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg z-50 transition-colors duration-150">
+        <i class="fas fa-sync-alt"></i>
+    </button>
 
-    </div> <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer onerror="console.error('Error loading SweetAlert2 script:', event)"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dragula/3.7.3/dragula.min.js" crossorigin="anonymous" referrerpolicy="no-referrer" defer onerror="console.error('Error loading Dragula script:', event)"></script>
@@ -518,7 +512,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             // --- Configuración ---
             const API_BASE_URL = window.location.origin;
-            const REFRESH_INTERVAL_MS = 1000; // Intervalo común para ambas APIs
+            const REFRESH_INTERVAL_MS = 1000;
             const API_DELAY_MS = 500;
             console.log(`API Base URL set dynamically to: ${API_BASE_URL}`);
 
@@ -528,23 +522,24 @@
             if (typeof Swal !== 'function') { console.warn("Advertencia: SweetAlert2 (Swal) no cargado."); }
 
             // --- Elementos del DOM ---
-            const workerLabel = $('#worker-label');
-            const workerSelect = $('#worker-select');
-            const selectContainer = $('#select-container');
-            const displayContainer = $('#display-container');
-            const selectedWorkerInfo = $('#selected-worker-info');
-            const logoutButton = $('#logout-button');
-            const actionButtonsContainer = document.getElementById('action-buttons-container');
+            const workerLabel = $('#worker-label'); // Dentro del panel flotante
+            const workerSelect = $('#worker-select'); // Dentro del panel flotante
+            const selectContainer = $('#select-container'); // Dentro del panel flotante
+            const displayContainer = $('#display-container'); // Dentro del panel flotante
+            const selectedWorkerInfo = $('#selected-worker-info'); // Dentro del panel flotante
+            const logoutButton = $('#logout-button'); // Dentro del panel flotante
+            const shiftSelectContainer = $('#shift-select-container'); // Dentro del panel flotante
+            const shiftSelect = $('#shift-select'); // Dentro del panel flotante
+
+            const actionButtonsContainer = document.getElementById('action-buttons-container'); // Ahora dentro de su panel
             // Círculo OEE Orden
             const progressIndicator = document.getElementById('progress-indicator');
             const progressValue = document.getElementById('progress-value');
-            // Medidor OEE Máquina
-            const gaugeOeeMaquina = document.getElementById('gauge-oee-maquina');
-            const gaugeNeedle = document.getElementById('gauge-needle');
-            const gaugeValue = document.getElementById('gauge-value');
+            // Círculo OEE Máquina (NUEVO)
+            const oeeMaquinaIndicator = document.getElementById('oee-maquina-indicator');
+            const oeeMaquinaValue = document.getElementById('oee-maquina-value');
+
             // Selectores y barra de progreso inferior
-            const shiftSelectContainer = $('#shift-select-container');
-            const shiftSelect = $('#shift-select');
             const shiftStartTimeLabel = $('#shift-start-time-label');
             const shiftEndTimeLabel = $('#shift-end-time-label');
             const progressBarContainer = $('#progress-bar-container');
@@ -554,28 +549,101 @@
             const shiftSlowBar = $('#shift-slow-bar');
             const shiftLateBar = $('#shift-late-bar');
             const shiftProgressBar = $('#shift-progress-bar');
-            const shiftInfoText = $('#shift-info-text'); // Ahora es un span
+            const shiftInfoText = $('#shift-info-text');
             // Spans de tiempos y unidades
             const tiempoParadaVal = $('#tiempo-parada-val');
             const tiempoLentoVal = $('#tiempo-lento-val');
-            const tiempoPreparacionVal = $('#tiempo-preparacion-val'); // ID actualizado
-            const unidadesHechasVal = $('#unidades-hechas-val'); // ID actualizado
-            const unidadesPendientesVal = $('#unidades-pendientes-val'); // ID actualizado
-            const unidadesRetrasadasVal = $('#unidades-retrasadas-val'); // Nuevo ID
-            const tiempoPausaVal = $('#tiempo-pausa-val'); // Ahora está abajo
+            const tiempoPreparacionVal = $('#tiempo-preparacion-val');
+            const unidadesHechasVal = $('#unidades-hechas-val');
+            const unidadesPendientesVal = $('#unidades-pendientes-val');
+            const unidadesRetrasadasVal = $('#unidades-retrasadas-val');
+            const tiempoPausaVal = $('#tiempo-pausa-val');
             // Botón de refresco
-            const refreshButton = document.getElementById('refresh-button'); // NUEVO
+            const refreshButton = document.getElementById('refresh-button');
+            // Paneles Flotantes
+            const floatingOperatorPanel = document.getElementById('floating-operator-panel');
+            const operatorPanelHeader = document.getElementById('floating-panel-header'); // Cabecera del panel de operario
+            const floatingActionsPanel = document.getElementById('floating-actions-panel');
+            const actionsPanelHeader = document.getElementById('floating-actions-header');
+
 
             // --- Variables de Estado ---
             let currentWorker = null;
             let currentShiftState = { type: null, action: null };
             let selectedShiftId = null;
             let potentialNewWorker = null;
-            let shiftHistoryTimeoutId = null; // Timer para API shift-history
-            let orderStatsTimeoutId = null;   // Timer para API order-stats
+            let shiftHistoryTimeoutId = null;
+            let orderStatsTimeoutId = null;
             let productionLineToken = null;
             let isSelectOpen = false;
             let isProcessingLogin = false;
+            // Variables para arrastrar paneles
+            let isDraggingOperatorPanel = false;
+            let operatorPanelOffsetX, operatorPanelOffsetY;
+            let isDraggingActionsPanel = false;
+            let actionsPanelOffsetX, actionsPanelOffsetY;
+
+
+            // --- Lógica para arrastrar el panel flotante de OPERARIO ---
+            if (operatorPanelHeader && floatingOperatorPanel) {
+                operatorPanelHeader.addEventListener('mousedown', function(e) {
+                    isDraggingOperatorPanel = true;
+                    operatorPanelOffsetX = e.clientX - floatingOperatorPanel.offsetLeft;
+                    operatorPanelOffsetY = e.clientY - floatingOperatorPanel.offsetTop;
+                    floatingOperatorPanel.style.cursor = 'grabbing';
+                    e.preventDefault();
+                });
+            } else {
+                console.error("Panel flotante de operario o su cabecera no encontrados.");
+            }
+
+            // --- Lógica para arrastrar el panel flotante de ACCIONES ---
+            if (actionsPanelHeader && floatingActionsPanel) {
+                actionsPanelHeader.addEventListener('mousedown', function(e) {
+                    isDraggingActionsPanel = true;
+                    actionsPanelOffsetX = e.clientX - floatingActionsPanel.offsetLeft;
+                    actionsPanelOffsetY = e.clientY - floatingActionsPanel.offsetTop;
+                    floatingActionsPanel.style.cursor = 'grabbing';
+                    e.preventDefault();
+                });
+            } else {
+                console.error("Panel flotante de acciones o su cabecera no encontrados.");
+            }
+
+            document.addEventListener('mousemove', function(e) {
+                if (isDraggingOperatorPanel && floatingOperatorPanel) {
+                    let newLeft = e.clientX - operatorPanelOffsetX;
+                    let newTop = e.clientY - operatorPanelOffsetY;
+                    const maxLeft = window.innerWidth - floatingOperatorPanel.offsetWidth;
+                    const maxTop = window.innerHeight - floatingOperatorPanel.offsetHeight;
+                    newLeft = Math.max(0, Math.min(newLeft, maxLeft));
+                    newTop = Math.max(0, Math.min(newTop, maxTop));
+                    floatingOperatorPanel.style.left = newLeft + 'px';
+                    floatingOperatorPanel.style.top = newTop + 'px';
+                }
+                if (isDraggingActionsPanel && floatingActionsPanel) {
+                    let newLeft = e.clientX - actionsPanelOffsetX;
+                    let newTop = e.clientY - actionsPanelOffsetY;
+                    const maxLeft = window.innerWidth - floatingActionsPanel.offsetWidth;
+                    const maxTop = window.innerHeight - floatingActionsPanel.offsetHeight;
+                    newLeft = Math.max(0, Math.min(newLeft, maxLeft));
+                    newTop = Math.max(0, Math.min(newTop, maxTop));
+                    floatingActionsPanel.style.left = newLeft + 'px';
+                    floatingActionsPanel.style.top = newTop + 'px';
+                }
+            });
+
+            document.addEventListener('mouseup', function() {
+                if (isDraggingOperatorPanel) {
+                    isDraggingOperatorPanel = false;
+                    if(floatingOperatorPanel) floatingOperatorPanel.style.cursor = 'move';
+                }
+                if (isDraggingActionsPanel) {
+                    isDraggingActionsPanel = false;
+                    if(floatingActionsPanel) floatingActionsPanel.style.cursor = 'move';
+                }
+            });
+
 
             // --- Función de utilidad para Delay ---
             const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -731,22 +799,6 @@
                     // Ser más específico sobre qué elemento falta
                     if (!indicatorElement) console.error("Elemento indicador del círculo de progreso no encontrado.");
                     if (!valueElement) console.error("Elemento de valor del círculo de progreso no encontrado.");
-                }
-            }
-
-            // --- NUEVA: Función para actualizar el medidor semi-circular ---
-            function updateGauge(needleElem, valueElem, percent) {
-                const numericPercent = parseFloat(percent);
-                const clampedPercent = isNaN(numericPercent) ? 0 : Math.max(0, Math.min(100, numericPercent));
-
-                if (needleElem && valueElem) {
-                    // Calcular ángulo: 0% = -90deg, 100% = 90deg
-                    const angle = (clampedPercent / 100) * 180 - 90;
-                    needleElem.style.transform = `translateX(-50%) rotate(${angle}deg)`;
-                    valueElem.textContent = Math.round(clampedPercent); // Mostrar valor redondeado
-                } else {
-                    if (!needleElem) console.error("Elemento aguja del medidor no encontrado.");
-                    if (!valueElem) console.error("Elemento valor del medidor no encontrado.");
                 }
             }
 
@@ -1149,13 +1201,13 @@
                     // Si no hay datos de orden, resetear los valores asociados
                     tiempoParadaVal.text('00:00:00');
                     tiempoLentoVal.text('00:00:00');
-                    tiempoPreparacionVal.text('00:00:00'); // Resetear nuevo campo
-                    unidadesHechasVal.text('0'); // Resetear nuevo campo
-                    unidadesPendientesVal.text('0'); // Resetear nuevo campo
-                    unidadesRetrasadasVal.text('0'); // Resetear nuevo campo
-                    // Resetear OEE Orden y Medidor Máquina a 0
+                    tiempoPreparacionVal.text('00:00:00');
+                    unidadesHechasVal.text('0');
+                    unidadesPendientesVal.text('0');
+                    unidadesRetrasadasVal.text('0');
+                    // Resetear OEE Orden y OEE Máquina a 0
                     updateProgress(progressIndicator, progressValue, 0); // Círculo 1 (OEE Orden)
-                    updateGauge(gaugeNeedle, gaugeValue, 0); // Medidor (OEE Máquina)
+                    updateProgress(oeeMaquinaIndicator, oeeMaquinaValue, 0); // Círculo 2 (OEE Máquina)
                     return;
                 }
 
@@ -1172,12 +1224,12 @@
                     const slowTimeMs = slowTimeSec * 1000;
                     tiempoLentoVal.text(formatDuration(slowTimeMs));
 
-                    // --- NUEVO: Obtener Tiempo Preparación ---
+                    // --- Obtener Tiempo Preparación ---
                     const prepTimeSec = parseFloat(statsData.prepair_time) || 0;
                     const prepTimeMs = prepTimeSec * 1000;
                     tiempoPreparacionVal.text(formatDuration(prepTimeMs));
 
-                    // --- NUEVO: Obtener Unidades ---
+                    // --- Obtener Unidades ---
                     unidadesHechasVal.text(statsData.units_made !== null ? statsData.units_made : '0');
                     unidadesPendientesVal.text(statsData.units_pending !== null ? statsData.units_pending : '0');
                     unidadesRetrasadasVal.text(statsData.units_delayed !== null ? statsData.units_delayed : '0');
@@ -1196,8 +1248,8 @@
                     }
                     updateProgress(progressIndicator, progressValue, oeeOrdenValue); // Actualizar Círculo 1
 
-                    // --- OEE Máquina (Medidor) - Fijado a 0 por ahora ---
-                    updateGauge(gaugeNeedle, gaugeValue, 0); // <<< FIJADO A 0
+                    // --- OEE Máquina (Círculo 2) - Fijado a 0 por ahora ---
+                    updateProgress(oeeMaquinaIndicator, oeeMaquinaValue, 0); // <<< FIJADO A 0
                     // --- FIN Procesamiento OEEs ---
 
                 } catch (error) {
@@ -1210,7 +1262,7 @@
                     unidadesPendientesVal.text('0');
                     unidadesRetrasadasVal.text('0');
                     updateProgress(progressIndicator, progressValue, 0); // Resetear Círculo 1
-                    updateGauge(gaugeNeedle, gaugeValue, 0); // Resetear Medidor
+                    updateProgress(oeeMaquinaIndicator, oeeMaquinaValue, 0); // Resetear Círculo 2
                 }
             }
 
@@ -1385,7 +1437,7 @@
                             await postShiftEvent("inicio_trabajo");
                             if (typeof Swal === 'function' && Swal.isLoading()) { Swal.close(); }
                             resetShiftSelection(); // Ocultar selector turno
-                            if (typeof Swal === 'function') { Swal.fire({ title: '¡Éxito!', text: `Turno iniciado para ${currentWorker.name}.`, icon: 'success', timer: 2500, timerProgressBar: true }); } else { alert('¡Éxito!'); }
+                            if (typeof Swal === 'function') { Swal.fire({ title: '¡Éxito!', text: `Turno iniciado untuk ${currentWorker.name}.`, icon: 'success', timer: 2500, timerProgressBar: true }); } else { alert('¡Éxito!'); }
                         } catch (error) {
                             console.error("DEBUG: Error during start shift API call:", error);
                             if (typeof Swal === 'function' && Swal.isLoading()) { Swal.close(); }

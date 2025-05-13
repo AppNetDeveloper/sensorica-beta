@@ -362,6 +362,9 @@ class CalculateProductionMonitorOeev2 extends Command
             }
             // Actualizar la orden si existe
             if ($currentOrder) {
+                $slowTimeDif=   $slowTime - $currentOrder->slow_time;
+
+                $unitsMadeTheoretical = ($totalOee / 100) * 
                 $currentOrder->units_per_minute_real = $unitsMadeTheoretical;
                 $currentOrder->units_per_minute_theoretical = $unitsMadeTheoreticalPerMinute;
                 $currentOrder->seconds_per_unit_real = $secondsPerUnitReal;
@@ -375,11 +378,14 @@ class CalculateProductionMonitorOeev2 extends Command
                 $currentOrder->oee = $totalOee;
                 $currentOrder->on_time = $orderTimeActivitySeconds;
                 $currentOrder->save();
+            }else{
+                $slowTimeDif= 0;
             }
 
             if($shiftHistory){
                 $shiftHistory->on_time = $shiftHistory->on_time + 1;
                 $shiftHistory->oee = $totalOee;
+                $shiftHistory->slow_time += $slowTimeDif;
                 $shiftHistory->save();
             }
 

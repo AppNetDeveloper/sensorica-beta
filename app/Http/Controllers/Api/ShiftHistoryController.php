@@ -85,9 +85,21 @@ class ShiftHistoryController extends Controller
                 $shiftStartDate,
                 now()
             );
+            $onTime=$shiftStart->on_time;
+            $downTime=$shiftStart->down_time;
+            $oee=$shiftStart->oee;
+            $slowTime=$shiftStart->slow_time;
+            $prepareTime= $shiftStart->prepair_time;
+    
         } else {
             $shiftStartDate = $shiftHistory->created_at;
-            $totalPause     = 0;
+            $totalPause = 0;
+            $onTime= 0;
+            $downTime=0;
+            $oee=0;
+            $slowTime=0;
+            $prepareTime=0;
+            
         }
     
         // 4) Transformo el modelo a array y sobreescribo shift_list si es null
@@ -106,6 +118,11 @@ class ShiftHistoryController extends Controller
             'data'                         => $data,
             'shift_start_date'            => $shiftStartDate,
             'total_pause_duration_seconds'=> $totalPause,
+            'on_time'=> $onTime,
+            'down_time'=> $downTime,
+            'oee'=> $oee,
+            'slow_time'=> $slowTime,
+            'prepare_time'=> $prepareTime,
         ]);
     }
     
