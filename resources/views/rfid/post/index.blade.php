@@ -883,7 +883,7 @@
                             } else {
                                 console.warn("La tabla ya no existe al intentar mover botones/switches.");
                             }
-                        }, 2000); // 100 milisegundos de retraso (ajustable si es necesario)
+                        }, 100); // 100 milisegundos de retraso (ajustable si es necesario)
 
                         // Añadir clases de Bootstrap a los controles de DataTable
                         $('.dataTables_filter input').addClass('form-control');

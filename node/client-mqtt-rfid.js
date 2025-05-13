@@ -34,6 +34,8 @@ let ignoredTIDs = new Map();      // Mapa para ignorar TIDs que ya han sido proc
 let antennaData = {};             // Objeto que almacena datos de antenas asociadas a cada tópico
 // 🔄 Cache en memoria para almacenar production_line_id por mqtt_topic
 let productionLineCache = {};
+let epcReadCache = new Map();     // NUEVO: Cache para ignorar EPCs leídos recientemente por antena: Map<topic, Map<epc, expiryTimestamp>>
+
 
 // ⏰ Función para obtener la fecha y hora actual en formato 'en-GB' y en la zona horaria UTC, sin la coma
 function getCurrentTimestamp() {
@@ -184,14 +186,14 @@ async function subscribeToTopics() {
 
     try {
         // Consulta la base de datos para obtener los tópicos configurados en la tabla 'rfid_ants', ahora incluyendo el production_line_id
-        const [rows] = await dbConnection.execute('SELECT mqtt_topic, rssi_min, name, production_line_id FROM rfid_ants WHERE mqtt_topic IS NOT NULL AND mqtt_topic != ""');
+        const [rows] = await dbConnection.execute('SELECT mqtt_topic, rssi_min, name, production_line_id, min_read_interval_ms FROM rfid_ants WHERE mqtt_topic IS NOT NULL AND mqtt_topic != ""');
 
         // Crea un array con los nuevos tópicos obtenidos
         const newTopics = rows.map(row => row.mqtt_topic);
 
         // Actualiza la información de antena asociada a cada tópico
         rows.forEach(row => {
-            antennaData[row.mqtt_topic] = { rssi_min: row.rssi_min, antenna_name: row.name };
+            antennaData[row.mqtt_topic] = { rssi_min: row.rssi_min, antenna_name: row.name, min_read_interval_ms: row.min_read_interval_ms };
         });
 
         // Comprueba si la lista de tópicos ha cambiado comparando el array actual con el anterior
@@ -218,6 +220,21 @@ function cleanupIgnoredTIDs() {
     // Recorre cada TID y elimina los que excedan el tiempo límite
     ignoredTIDs.forEach((timestamp, tid) => {
         if (now - timestamp > 300000) ignoredTIDs.delete(tid);
+    });
+}
+// 🔄 Función para limpiar el cache de EPCs leídos recientemente por antena
+function cleanupEpcReadCache() {
+    const now = Date.now();
+    epcReadCache.forEach((topicCache, topic) => {
+        topicCache.forEach((expiry, epc) => {
+            if (now >= expiry) {
+                topicCache.delete(epc); // Elimina el EPC expirado del mapa del tópico
+            }
+        });
+        // Opcional: Si el mapa para un tópico queda vacío, eliminar el tópico del caché principal
+        if (topicCache.size === 0) {
+            epcReadCache.delete(topic);
+        }
     });
 }
 
@@ -249,6 +266,8 @@ async function processCallApi(topic, data) {
         // Se intenta parsear el JSON recibido en el mensaje
         const parsedData = JSON.parse(data);
 
+        const now = Date.now(); // <-- 'now' definido ANTES del map
+        
         // Se crean promesas para cada entrada y se ejecutan en paralelo
         const apiCalls = parsedData.map(async entry => {
             const { epc, rssi, serialno, tid, ant } = entry;
@@ -277,6 +296,52 @@ async function processCallApi(topic, data) {
                 console.log(`[${getCurrentTimestamp()}] ${environment}.${info}: ⚠️ TID ya registrado recientemente: tid: ${tid}. Se omite la llamada a la API.`);
                 return;
             }
+
+            // Obtener el intervalo configurado para esta antena (asumimos que está en segundos)
+            const intervalInSeconds = antennaInfo?.min_read_interval_ms;
+            // --- INICIO: COMPROBACIÓN DE CACHÉ epcReadCache ---
+            // Aplicar el chequeo solo si el intervalo es numérico y >= 1 segundo
+            if (typeof intervalInSeconds === 'number' && intervalInSeconds >= 1) {
+                // Intentar obtener el caché específico para este 'topic'
+                const topicCache = epcReadCache.get(topic);
+                // Si existe caché para este tópico...
+                if (topicCache) {
+                    // ...intentar obtener la expiración para este EPC específico
+                    const expiry = topicCache.get(epc);
+                    // Si se encontró una expiración (expiry) Y aún es futura (el momento actual 'now' es anterior a 'expiry')...
+                    if (expiry && now < expiry) {
+                        // ...entonces el EPC está registrado y activo, hay que omitirlo.
+                        console.log(`[${getCurrentTimestamp()}] ${environment}.${info}: ⚠️ EPC ${epc} en topic ${topic} omitido (intervalo activo: ${intervalInSeconds}s).`);
+                        // ---> HACEMOS EL RETURN AQUÍ <---
+                        return; // Salir del procesamiento para este EPC específico
+                    }
+                    // Si no se encontró 'expiry' o si 'now >= expiry', no hacemos nada aquí y simplemente continuamos.
+                }
+                // Si no existe 'topicCache' (es la primera vez para este topic), tampoco hacemos nada aquí y continuamos.
+            }
+            // --- FIN: COMPROBACIÓN DE CACHÉ epcReadCache ---
+            // --- INICIO: REGISTRO EN CACHÉ epcReadCache ---
+            // Solo registramos si el intervalo es numérico y >= 1 segundo
+            if (typeof intervalInSeconds === 'number' && intervalInSeconds >= 1) {
+                // Convertir los segundos a milisegundos para el cálculo del tiempo
+                const intervalInMillis = intervalInSeconds * 1000;
+                // Calcular el timestamp exacto de cuándo expirará esta entrada
+                const expiryTimestamp = now + intervalInMillis;
+
+                // Asegurarse de que el mapa para el 'topic' exista en el caché principal
+                // Si no existe, lo crea vacío.
+                if (!epcReadCache.has(topic)) {
+                    epcReadCache.set(topic, new Map());
+                }
+                // Ahora que estamos seguros de que existe, registrar (o actualizar) el EPC
+                // en el mapa del tópico con su nueva fecha de expiración.
+                epcReadCache.get(topic).set(epc, expiryTimestamp);
+
+                // Log opcional para confirmar el registro
+                console.log(`[${getCurrentTimestamp()}] ${environment}.${info}: ⏳ EPC ${epc} en topic ${topic} registrado/actualizado en caché (expira en ${intervalInSeconds}s).`);
+            }
+            // Si el intervalo no era válido, simplemente no se registra nada en este caché.
+            // --- FIN: REGISTRO EN CACHÉ epcReadCache ---
 
             // Prepara los datos a enviar a la API, incluyendo el nombre de la antena (si está disponible)
             const dataToSend = { epc, rssi, serialno, tid, ant, antenna_name: antennaInfo?.antenna_name || "Unknown" };
@@ -327,6 +392,10 @@ async function start() {
 
     // Programa la limpieza de TIDs ignorados cada 5 segundos, antes 60 segundos
     setInterval(cleanupIgnoredTIDs, 5000);
+
+    // ---- NUEVO: Intervalo para limpiar el caché de EPCs por intervalo de antena ----
+    setInterval(cleanupEpcReadCache, 1000); // Limpia cada 1 segundos (ajusta si es necesario)
+    // ---- FIN NUEVO ----
 }
 
 // Inicia la aplicación

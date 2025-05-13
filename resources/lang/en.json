@@ -592,5 +592,6 @@
     "Finish Shift Emails List Workers All": "List of Finish Shift Emails for Workers (All)",
     "Finish Shift Emails List Confeccionsigned All": "List of Finish Shift Emails for Confirmed Orders (All)",
     "Finish Shift Emails List Workers and Confeccionsigned": "List of Finish Shift Emails for Workers and Confirmed Orders",
-    "Finish Shift Emails List Workers and Confeccionsigned All": "List of Finish Shift Emails for Workers and Confirmed Orders (All)"
+    "Finish Shift Emails List Workers and Confeccionsigned All": "List of Finish Shift Emails for Workers and Confirmed Orders (All)",
+    "MIN TIME FROM READ SOME EPC": "Minimum Time from Reading Some EPC"
   }

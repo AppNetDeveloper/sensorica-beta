@@ -29,6 +29,11 @@
                 <input type="text" name="rssi_min" id="rssi_min" class="form-control" value="{{ old('rssi_min', $rfidAnt->rssi_min) }}" required>
             </div>
 
+            <div class="form-group mt-3">
+                <label for="rssi">{{ __('MIN TIME FROM READ SOME EPC') }}</label>
+                <input type="text" name="min_read_interval_ms" id="min_read_interval_ms" class="form-control" value="{{ old('min_read_interval_ms', $rfidAnt->min_read_interval_ms) }}" required>
+            </div>
+
             <input type="hidden" name="production_line_id" value="{{ $production_line_id }}">
 
             <button type="submit" class="btn btn-success mt-4">
