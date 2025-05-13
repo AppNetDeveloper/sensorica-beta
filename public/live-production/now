@@ -1,0 +1,7 @@
+            //funcoion para refrescar en inicio
+            function refreshData() {
+                fetchLastShiftHistory(productionLineToken);
+                fetchOrderStats(productionLineToken);
+            }
+            //funcion para refrescar cada 5 minutos
+            setInterval(refreshData, 5000); // 5 minutos en milisegundos

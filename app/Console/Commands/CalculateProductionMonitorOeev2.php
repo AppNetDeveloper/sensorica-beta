@@ -384,8 +384,27 @@ class CalculateProductionMonitorOeev2 extends Command
 
             if($shiftHistory){
                 $shiftHistory->on_time = $shiftHistory->on_time + 1;
-                $shiftHistory->oee = $totalOee;
+                //$shiftHistory->oee = $totalOee;
                 $shiftHistory->slow_time += $slowTimeDif;
+
+                // 3. Lectura de tiempos
+                $P = $shiftHistory->on_time;      // Tiempo planificado (s)
+                $D = $shiftHistory->down_time;    // Tiempo de paradas (s)
+                $S = $shiftHistory->slow_time;    // Tiempo lento (s)
+
+                // 4. Cálculo del tiempo productivo (no negativo)
+                $productive = max($P - $D - $S, 0);
+
+                // 5. Cálculo del OEE en porcentaje
+                if ($P > 0) {
+                    $oeePercent = round(($productive / $P) * 100, 2);  // 2 decimales
+                } else {
+                    $oeePercent = 0;
+                }
+
+                // 6. Guardar en el modelo
+                $shiftHistory->oee = $oeePercent;  // valor entre 0 y 100
+                
                 $shiftHistory->save();
             }
 
