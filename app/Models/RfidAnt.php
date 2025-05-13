@@ -12,6 +12,7 @@ class RfidAnt extends Model
 
     protected $fillable = [
         'rssi_min',
+        'min_read_interval_ms',
         'name',
         'production_line_id',
         'mqtt_topic',

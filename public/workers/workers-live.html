@@ -295,7 +295,7 @@
     let rfidColorsGlobal = []; // Almacena los colores RFID disponibles
     let operatorsData = []; // Almacena todos los datos de los operadores recibidos de la API
     let refreshIntervalId = null; // ID del intervalo para auto-refresco
-    const REFRESH_INTERVAL = 5000; // Intervalo de auto-refresco en milisegundos (ej. 5 segundos)
+    const REFRESH_INTERVAL = 3000; // Intervalo de auto-refresco en milisegundos (ej. 3 segundos)
     let isLoading = false; // Flag para evitar múltiples cargas simultáneas
     // --- MODIFICADO: Se inicializa leyendo de localStorage o usa 'post' por defecto ---
     let currentSortOrder = localStorage.getItem(LOCAL_STORAGE_SORT_KEY) || 'post';

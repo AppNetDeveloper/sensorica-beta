@@ -39,7 +39,7 @@ use App\Http\Controllers\Api\ShiftHistoryController;
 use App\Http\Controllers\Api\ShiftEventController;
 use App\Http\Controllers\Api\ShiftListController;
 use App\Http\Controllers\Api\WorkerController; 
-
+use App\Http\Controllers\Api\ShiftProcessEventController;
 
 
 
@@ -352,3 +352,5 @@ Route::get('/workers-export/send-email', [WorkerController::class, 'sendReportsB
 Route::get('workers-export/send-assignment-list',[WorkerController::class, 'sendAssignmentListByEmail'])->name('workers.sendAssignmentList');
 
 Route::get('/workers-export/complete-list', [WorkerController::class, 'completeList'])->name('workers.completeListExportstandalone');
+
+Route::post('/shift-process-events', [ShiftProcessEventController::class, 'store'])->name('shift-events.store');
