@@ -14,6 +14,7 @@ use App\Models\Operator;
 use App\Models\OrderStat;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use App\Models\ShiftHistory; // Asegúrate de que la ruta del modelo sea la correcta
 
 class SensorController extends Controller
 {
@@ -286,6 +287,17 @@ class SensorController extends Controller
                     $orderStats->increment('units_made', 1);
                     if ($orderStats->units_made_real === 1) {
                         $orderStats->prepair_time = Carbon::now()->diffInSeconds($orderStats->created_at);
+                         //obtenemos el ultimos regustro del shift_history por linea y con type= shift y action=start
+                        $shiftHistory = ShiftHistory::where('production_line_id', $orderStats->production_line_id)
+                            ->where('type', 'shift')
+                            ->where('action', 'start')
+                            ->orderBy('id', 'desc')
+                            ->first();
+
+                            if($shiftHistory){
+                                $shiftHistory->prepair_time = Carbon::now()->diffInSeconds($orderStats->created_at);
+                                $shiftHistory->save();
+                            }
                     }
                     $unitsPending = $units - $orderStats->units_made_real - 1;
                     if($unitsPending<1){

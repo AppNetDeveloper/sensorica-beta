@@ -15,79 +15,32 @@
             font-family: 'Inter', sans-serif;
             overscroll-behavior-y: contain;
         }
-        /* --- Estilos Círculo de Progreso Dinámico (OEE Orden) --- */
+
+        /* --- Estilos Círculo de Progreso Dinámico (OEE) --- */
         .progress-circle {
-            width: 150px; height: 150px; border-radius: 50%; display: grid; place-items: center;
-            background: conic-gradient(#4ade80 calc(var(--progress-percent, 0) * 1%), #e5e7eb 0);
-            position: relative; font-size: 2.2rem; font-weight: bold; color: #16a34a; transition: background 0.3s ease;
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            background: conic-gradient(
+            #4ade80 calc(var(--progress-percent, 0) * 1%),
+            #e5e7eb 0
+            );
+            position: relative;
+            font-size: 2.2rem;
+            font-weight: bold;
+            color: #16a34a;
+            transition: background 0.3s ease;
+            margin-right: auto;    /* <--- aquí aumentas el espacio desde el borde            ORIGINAL 2rem*/
         }
+
         .progress-circle::before {
             content: ""; position: absolute; border-radius: 50%; inset: 12px; background: #fff; z-index: 1;
         }
         .progress-circle > span {
              z-index: 2; position: relative;
         }
-
-        /* --- Estilos Medidor Semi-circular (OEE Máquina) --- */
-        .gauge-container {
-            width: 160px; /* Ancho reducido */
-            height: 80px; /* Mitad del ancho */
-            position: relative;
-            margin-bottom: 0.25rem; /* Espacio reducido antes de la etiqueta */
-        }
-        .gauge-semi-circle {
-            width: 100%;
-            height: 100%;
-            border: 12px solid #e5e7eb; /* Borde más fino */
-            border-bottom: none;
-            border-radius: 80px 80px 0 0; /* Ajustar radio */
-            box-sizing: border-box;
-            position: absolute;
-            top: 0;
-            left: 0;
-        }
-        .gauge-needle {
-            width: 3px; /* Aguja más fina */
-            height: 70px; /* Aguja más corta */
-            background-color: #374151;
-            position: absolute;
-            bottom: 0;
-            left: 50%;
-            transform-origin: bottom center;
-            transform: translateX(-50%) rotate(-90deg);
-            transition: transform 0.5s ease-in-out;
-            border-radius: 1.5px 1.5px 0 0;
-            z-index: 2;
-        }
-         .gauge-pivot {
-            width: 8px; /* Pivote más pequeño */
-            height: 8px;
-            background-color: #374151;
-            border-radius: 50%;
-            position: absolute;
-            bottom: -2px; /* Ajustar posición */
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 3;
-        }
-        .gauge-value {
-            position: absolute;
-            bottom: 10px; /* Posición del valor */
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 1.5rem; /* Tamaño del número */
-            font-weight: 600;
-            color: #1f2937;
-            z-index: 1;
-        }
-        .gauge-label {
-            font-size: 0.75rem; /* text-xs */
-            font-weight: 500; /* font-medium */
-            color: #6b7280; /* text-gray-500 */
-            text-align: center;
-            margin-top: 0.25rem; /* mt-1 */
-        }
-
 
         /* --- Estilos Tarjeta Kanban Refactorizados --- */
         .kanban-card {
@@ -120,12 +73,9 @@
             background-color: #f3f4f6;
             padding: 1rem;
             border-radius: 0.5rem;
-            /* height: 100%; Ya no es necesario height 100% si limitamos con max-height */
             min-height: 200px;
-            /* === Scroll vertical para columnas === */
-            max-height: 30rem; /* Límite de altura (ajustar si es necesario) */
-            overflow-y: auto; /* Scroll vertical automático */
-            /* ========================================== */
+            max-height: 30rem;
+            overflow-y: auto;
         }
         .kanban-title { font-weight: 600; color: #374151; margin-bottom: 1rem; text-align: center; }
         .gu-mirror {
@@ -137,8 +87,8 @@
         #col-finalizadas .gu-mirror { background-color: #f9fafb; border-color: #e5e7eb; }
         #col-incidencias .gu-mirror { background-color: #fef2f2; border-color: #fecaca; }
         .gu-transit { opacity: 0.5; }
-        .long-press-ready { /* Estilo opcional para feedback visual */
-             outline: 2px dashed #fbbf24; /* Ejemplo: Borde amarillo discontinuo */
+        .long-press-ready {
+             outline: 2px dashed #fbbf24;
              outline-offset: 2px;
         }
         .select2-container--default .select2-selection--single { border: 1px solid #d1d5db; border-radius: 0.375rem; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); height: 2.5rem; }
@@ -150,32 +100,21 @@
 
         /* Estilo base para los iconos de acción */
         #action-buttons-container .action-icon {
-           font-size: 3rem; /* Tamaño del icono */
+           font-size: 3rem;
            line-height: 1;
-           transition: color 0.15s ease-in-out, opacity 0.15s ease-in-out; /* Transición suave */
-           opacity: 0.6; /* Opacidad reducida por defecto */
+           transition: color 0.15s ease-in-out, opacity 0.15s ease-in-out;
+           opacity: 0.6;
         }
-         /* Estilo base para los botones de acción */
         .action-button {
-            width: 64px; /* Ancho */
-            height: 64px; /* Alto */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 0.375rem; /* Esquinas redondeadas (cuadrado) */
-            background-color: transparent; /* Sin fondo por defecto */
-            box-shadow: none; /* Sin sombra por defecto */
-            transition: background-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out; /* Transición suave */
+            width: 64px; height: 64px; display: flex; align-items: center; justify-content: center;
+            border-radius: 0.375rem; background-color: transparent; box-shadow: none;
+            transition: background-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
         }
-
-        /* --- Colores de icono por defecto --- */
         #start-shift-button .action-icon,
         #resume-button .action-icon { color: #22c55e; }
         #start-pause-button .action-icon { color: #eab308; }
         #end-shift-button .action-icon,
         #end-pause-button .action-icon { color: #ef4444; }
-
-        /* --- Estilo al pasar el ratón por encima (Hover) --- */
         .action-button:hover {
             box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
         }
@@ -191,20 +130,76 @@
         #start-pause-button:hover { background-color: #eab308; }
         #end-shift-button:hover, #end-pause-button:hover { background-color: #ef4444; }
 
-        /* Estilo para el select de turnos */
         #shift-select-container { margin-top: 1rem; }
         #shift-select {
-             width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d1d5db;
+             padding: 0.5rem 0.75rem; border: 1px solid #d1d5db;
              border-radius: 0.375rem; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
              background-color: white; font-size: 0.875rem; line-height: 1.25rem;
         }
-        /* Estilo para la barra de progreso y sus segmentos */
         .progress-bar-segment {
-            transition: width 0.5s ease-in-out; /* Animación suave del ancho */
-            height: 100%; /* Ocupar altura del contenedor flex */
+            transition: width 0.5s ease-in-out;
+            height: 100%;
         }
-        /* Clases específicas para colores de segmentos */
-        /* Nota: Se añaden colores Tailwind directamente en el HTML para los segmentos */
+        /* === Estilos para Paneles Flotantes === */
+        .floating-panel {
+            position: fixed;
+            background-color: white;
+            border: 1px solid #d1d5db; /* Tailwind gray-300 */
+            border-radius: 0.5rem; /* rounded-lg */
+            box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.15), 0 4px 8px -4px rgba(0, 0, 0, 0.1); /* Sombra más pronunciada */
+            transition: opacity 0.3s ease-in-out;
+            min-height: 100px; /* Altura mínima para que la cabecera sea visible */
+        }
+        .floating-panel-header {
+            padding: 0.75rem 1rem; /* p-3 px-4 */
+            background-color: #f3f4f6; /* Tailwind gray-100 */
+            border-bottom: 1px solid #d1d5db; /* Tailwind gray-300 */
+            cursor: move;
+            border-top-left-radius: 0.5rem;
+            border-top-right-radius: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .floating-panel-header h3 {
+            font-weight: 600; /* font-semibold */
+            color: #374151; /* text-gray-700 */
+        }
+        .floating-panel-content {
+            padding: 1.5rem; /* p-6 */
+        }
+        #floating-operator-panel {
+            top: 30%; /* Posición inicial ajustada */
+            right: 20px;
+            width: 320px; /* Ancho del panel de operario */
+            z-index: 1000;
+        }
+        #floating-actions-panel {
+            top: 30%; /* Posición inicial ajustada */
+            left: 20px;
+            width: 320px; /* Ancho fijo igual al panel de operario */
+            z-index: 990; /* Ligeramente por debajo del panel de operario */
+        }
+        #floating-actions-panel .floating-panel-content { /* Para centrar los botones */
+            display: flex;
+            justify-content: center; /* Centra el contenedor de botones si es más estrecho que el panel */
+        }
+        #action-buttons-container { /* Asegurar que los botones se distribuyan bien */
+            display: flex;
+            flex-wrap: wrap; /* Permitir que los botones pasen a la siguiente línea si no caben */
+            justify-content: center; /* Centrar los botones */
+            gap: 0.5rem; /* Espacio entre botones */
+        }
+        .select2-container--default .select2-dropdown {
+            z-index: 1050 !important; /* Asegurar que el dropdown de Select2 esté sobre otros elementos del panel */
+        }
+        /* === Estilo para alinear valores de datos === */
+        .data-value {
+            min-width: 80px; /* Ajustar según sea necesario para "00:00:00" */
+            text-align: right;
+            display: inline-block; /* Para que min-width funcione correctamente */
+        }
+        /* ========================================== */
 
     </style>
      <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -367,125 +362,64 @@
             </div>
         </div>
 
-        <div class="flex flex-wrap justify-between items-start border-t border-gray-200 pt-6 pb-6">
-
-            <div class="w-full md:w-auto lg:flex-1 mb-4 md:mb-0 px-2 md:pr-4">
-                 <div class="text-sm max-w-xs mx-auto md:mx-0">
-                     <div class="flex justify-between py-1">
-                         <span class="text-gray-600">TIEMPO EN PARADA / Maquina</span>
-                         <span class="font-mono font-medium text-gray-800">3</span>
-                     </div>
-                     <div class="flex justify-between py-1">
-                         <span class="text-gray-600">TIEMPO LENTO / Maquina</span>
-                         <span class="font-mono font-medium text-gray-800">3</span>
-                     </div>
-                     <div class="flex justify-between py-1">
-                         <span class="text-gray-600">TIEMPO ATRASADO / Maquina</span>
-                         <span class="font-mono font-medium text-gray-800">3</span>
-                     </div>
-                     <div class="flex justify-between py-1">
-                         <span class="text-gray-600">Campo Ficticio 4 / Maquina</span>
-                         <span class="font-mono font-medium text-gray-800">3</span>
-                     </div>
-                     <div class="flex justify-between py-1">
-                         <span class="text-gray-600">Campo Ficticio 5 / Maquina</span>
-                         <span class="font-mono font-medium text-gray-800">4</span>
-                     </div>
-                 </div>
-            </div>
-
-            <div class="text-sm w-full md:w-auto lg:flex-1 mb-4 md:mb-0 px-2 md:px-4">
-                 <div class="max-w-xs mx-auto">
+        <div class="md:grid md:grid-cols-3 md:gap-6 items-start border-t border-gray-200 pt-6 pb-6">
+            <div class="w-full mb-4 md:mb-0 px-2 md:col-span-2"> <div class="text-sm max-w-md mx-auto md:mx-0">
                      <div class="flex justify-between py-1">
                          <span class="text-gray-600">TIEMPO EN PARADA / Orden</span>
-                         <span id="tiempo-parada-val" class="font-mono font-medium text-gray-800">00:00:00</span> </div>
+                         <span id="tiempo-parada-val" class="font-mono font-medium text-gray-800 data-value">00:00:00</span> </div>
                      <div class="flex justify-between py-1">
                          <span class="text-gray-600">TIEMPO LENTO / Orden</span>
-                         <span id="tiempo-lento-val" class="font-mono font-medium text-gray-800">00:00:00</span> </div>
+                         <span id="tiempo-lento-val" class="font-mono font-medium text-gray-800 data-value">00:00:00</span> </div>
                      <div class="flex justify-between py-1">
                          <span class="text-gray-600">TIEMPO PREPARACION / Orden</span>
-                         <span id="tiempo-preparacion-val" class="font-mono font-medium text-gray-800">00:00:00</span> </div>
+                         <span id="tiempo-preparacion-val" class="font-mono font-medium text-gray-800 data-value">00:00:00</span> </div>
                      <div class="flex justify-between py-1">
                          <span class="text-gray-600">Unidades Hechas / Orden</span>
-                         <span id="unidades-hechas-val" class="font-mono font-medium text-gray-800">0</span>
+                         <span id="unidades-hechas-val" class="font-mono font-medium text-gray-800 data-value">0</span>
                      </div>
                      <div class="flex justify-between py-1">
                          <span class="text-gray-600">Unidades Pendientes / Orden</span>
-                         <span id="unidades-pendientes-val" class="font-mono font-medium text-gray-800">0</span>
+                         <span id="unidades-pendientes-val" class="font-mono font-medium text-gray-800 data-value">0</span>
                      </div>
                      <div class="flex justify-between py-1">
                          <span class="text-gray-600">Unidades Retrasadas / Orden</span>
-                         <span id="unidades-retrasadas-val" class="font-mono font-medium text-gray-800">0</span>
+                         <span id="unidades-retrasadas-val" class="font-mono font-medium text-gray-800 data-value">0</span>
                      </div>
                  </div>
              </div>
 
-            <div class="flex flex-col items-center w-full md:w-auto lg:flex-1 px-2 md:pl-4">
-                 <span class="text-xs font-medium text-gray-500 mb-1">OEE Orden</span>
+            <div class="w-full px-4 flex flex-col items-center md:items-end"> 
                  <div id="progress-indicator" class="progress-circle">
                      <span id="progress-value">0</span>
                  </div>
             </div>
-
         </div>
-        <div class="flex flex-wrap justify-between items-center border-t border-gray-200 py-6">
-
-             <div class="w-full md:w-auto lg:flex-1 mb-4 md:mb-0 px-2 md:pr-4 flex justify-center md:justify-start">
-                 <div id="action-buttons-container" class="flex items-center justify-start space-x-4">
-                     <button id="start-shift-button" class="action-button hidden" data-action-type="start-shift" title="Iniciar Turno/Tarea">
-                         <i class="fa fa-play action-icon" aria-hidden="true"></i>
-                     </button>
-                     <button id="start-pause-button" class="action-button hidden" data-action-type="start-pause" title="Iniciar Parada">
-                         <i class="fa fa-pause action-icon" aria-hidden="true"></i>
-                     </button>
-                     <button id="resume-button" class="action-button hidden" data-action-type="resume-pause" title="Reanudar">
-                         <i class="fa fa-play action-icon" aria-hidden="true"></i>
-                     </button>
-                     <button id="end-shift-button" class="action-button hidden" data-action-type="end-shift" title="Finalizar Turno/Tarea">
-                         <i class="fa fa-stop action-icon" aria-hidden="true"></i>
-                     </button>
-                     <button id="end-pause-button" class="action-button hidden" data-action-type="end-pause" title="Finalizar Parada">
-                         <i class="fa fa-stop action-icon" aria-hidden="true"></i>
-                     </button>
-                 </div>
-             </div>
-
-             <div class="w-full md:w-auto lg:flex-1 mb-4 md:mb-0 px-2 md:px-4 flex flex-col items-center">
-                 <div id="gauge-oee-maquina" class="gauge-container">
-                     <div class="gauge-semi-circle"></div>
-                     <div class="gauge-needle" id="gauge-needle"></div>
-                     <div class="gauge-pivot"></div>
-                     <span class="gauge-value" id="gauge-value">0</span>
-                 </div>
-                 <span class="gauge-label">OEE Máquina</span>
-             </div>
-
-             <div class="flex flex-col items-center space-y-4 w-full md:w-auto lg:flex-1 px-2 md:pl-4">
-                  <div class="w-full max-w-xs text-center">
-                     <label id="worker-label" for="worker-select" class="block text-sm font-medium text-gray-700 mb-1">OPERARIO</label>
-                     <div id="select-container">
-                          <select id="worker-select" class="w-full" style="width: 100%"> <option value="">Cargando operarios...</option> </select>
+        <div class="md:grid md:grid-cols-3 md:gap-6 items-start border-t border-gray-200 pt-6 pb-6">
+            <div class="w-full mb-4 md:mb-0 px-2 md:col-span-2"> <div class="text-sm max-w-md mx-auto md:mx-0">
+                     <div class="flex justify-between py-1">
+                         <span class="text-gray-600">TIEMPO EN PARADA / Maquina</span>
+                         <span id="tiempo-parada-maquina-val" class="font-mono font-medium text-gray-800 data-value">00:00:00</span>
                      </div>
-                     <div id="display-container" class="hidden mt-2 flex items-center justify-center space-x-3">
-                         <span id="selected-worker-info" class="text-lg text-gray-800 font-medium"></span>
-                         <button id="logout-button" title="Cambiar operario" class="text-red-500 hover:text-red-700 focus:outline-none p-1 rounded-full">
-                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-block">
-                                 <circle cx="12" cy="12" r="10"/>
-                                 <path d="m15 9-6 6"/>
-                                 <path d="m9 9 6 6"/>
-                             </svg>
-                         </button>
+                     <div class="flex justify-between py-1">
+                         <span class="text-gray-600">TIEMPO LENTO / Maquina</span>
+                         <span id="tiempo-lento-maquina-val" class="font-mono font-medium text-gray-800 data-value">00:00:00</span>
                      </div>
-                 </div>
-                 <div id="shift-select-container" class="w-full max-w-xs text-center hidden">
-                     <label for="shift-select" class="block text-sm font-medium text-gray-700 mb-1">TURNO</label>
-                     <select id="shift-select" class="w-full"> <option value="">Selecciona un turno...</option>
-                         </select>
-                 </div>
-             </div>
+                     <div class="flex justify-between py-1">
+                         <span class="text-gray-600">TIEMPO PREPARACION / Maquina</span>
+                         <span id="tiempo-preparacion-maquina-val" class="font-mono font-medium text-gray-800 data-value">00:00:00</span>
+                     </div>
 
+                 </div>
+            </div>
+
+            <div class="w-full px-4 flex flex-col items-center md:items-end">
+                 <div id="oee-maquina-indicator" class="progress-circle">
+                     <span id="oee-maquina-value">0</span>
+                 </div>
+            </div>
         </div>
-         <div class="pt-4"> <div class="flex justify-between text-sm text-gray-500 mb-1">
+        <div class="border-t border-gray-200 pt-6">
+            <div class="flex justify-between text-sm text-gray-500 mb-1">
                 <span id="shift-start-time-label">HORA INICIO</span> <span id="shift-end-time-label">HORA FIN</span>
             </div>
             <div id="progress-bar-container" class="w-full bg-gray-200 rounded-full h-4 overflow-hidden flex">
@@ -505,11 +439,62 @@
             </div>
         </div>
 
-        <button id="refresh-button" title="Refrescar Datos" class="fixed bottom-4 right-4 bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg z-50 transition-colors duration-150">
-            <i class="fas fa-sync-alt"></i>
-        </button>
-
-    </div> <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    </div> <div id="floating-actions-panel" class="floating-panel">
+        <div id="floating-actions-header">
+            <center>  <h3>Acciones</h3>  </center>
+        </div>
+        <div class="floating-panel-content">
+            <div id="action-buttons-container" class="flex items-center justify-center space-x-2">
+                <button id="start-shift-button" class="action-button hidden" data-action-type="start-shift" title="Iniciar Turno/Tarea">
+                    <i class="fa fa-play action-icon" aria-hidden="true"></i>
+                </button>
+                <button id="start-pause-button" class="action-button hidden" data-action-type="start-pause" title="Iniciar Parada">
+                    <i class="fa fa-pause action-icon" aria-hidden="true"></i>
+                </button>
+                <button id="resume-button" class="action-button hidden" data-action-type="resume-pause" title="Reanudar">
+                    <i class="fa fa-play action-icon" aria-hidden="true"></i>
+                </button>
+                <button id="end-shift-button" class="action-button hidden" data-action-type="end-shift" title="Finalizar Turno/Tarea">
+                    <i class="fa fa-stop action-icon" aria-hidden="true"></i>
+                </button>
+                <button id="end-pause-button" class="action-button hidden" data-action-type="end-pause" title="Finalizar Parada">
+                    <i class="fa fa-stop action-icon" aria-hidden="true"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    <div id="floating-operator-panel" class="floating-panel">
+        <div id="floating-panel-header">
+            <center>  <h3>Operario / Turno</h3>  </center>
+            </div>
+        <div id="floating-panel-content" class="space-y-4">
+            <div class="w-full text-center">
+                <label id="worker-label" for="worker-select" class="block text-sm font-medium text-gray-700 mb-1">OPERARIO</label>
+                <div id="select-container">
+                     <select id="worker-select" style="width: 90%; margin: 0 auto;"> <option value="">Cargando operarios...</option> </select>
+                </div>
+                <div id="display-container" class="hidden mt-2 flex items-center justify-center space-x-3">
+                    <span id="selected-worker-info" class="text-lg text-gray-800 font-medium"></span>
+                    <button id="logout-button" title="Cambiar operario" class="text-red-500 hover:text-red-700 focus:outline-none p-1 rounded-full">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-block">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="m15 9-6 6"/>
+                            <path d="m9 9 6 6"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div id="shift-select-container" class="w-full text-center hidden">
+                <label for="shift-select" class="block text-sm font-medium text-gray-700 mb-1">TURNO</label>
+                <select id="shift-select" style="width: 90%; margin: 0 auto;"> <option value="">Selecciona un turno...</option>
+                    </select>
+            </div>
+        </div>
+    </div>
+    <button id="refresh-button" title="Refrescar Datos" class="fixed bottom-4 right-4 bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg z-50 transition-colors duration-150">
+        <i class="fas fa-sync-alt"></i>
+    </button>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer onerror="console.error('Error loading SweetAlert2 script:', event)"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dragula/3.7.3/dragula.min.js" crossorigin="anonymous" referrerpolicy="no-referrer" defer onerror="console.error('Error loading Dragula script:', event)"></script>
@@ -517,8 +502,9 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // --- Configuración ---
-            const API_BASE_URL = window.location.origin;
-            const REFRESH_INTERVAL_MS = 1000; // Intervalo común para ambas APIs
+            const API_BASE_URL = window.location.origin; // Asume que la API está en el mismo dominio
+            const REFRESH_INTERVAL_MS = 1000; // Para shift-history y order-stats
+            const PRODUCTION_ORDERS_REFRESH_INTERVAL_MS = 5000; // Intervalo para las órdenes del Kanban
             const API_DELAY_MS = 500;
             console.log(`API Base URL set dynamically to: ${API_BASE_URL}`);
 
@@ -538,10 +524,10 @@
             // Círculo OEE Orden
             const progressIndicator = document.getElementById('progress-indicator');
             const progressValue = document.getElementById('progress-value');
-            // Medidor OEE Máquina
-            const gaugeOeeMaquina = document.getElementById('gauge-oee-maquina');
-            const gaugeNeedle = document.getElementById('gauge-needle');
-            const gaugeValue = document.getElementById('gauge-value');
+            // Círculo OEE Máquina
+            const oeeMaquinaIndicator = document.getElementById('oee-maquina-indicator');
+            const oeeMaquinaValue = document.getElementById('oee-maquina-value');
+
             // Selectores y barra de progreso inferior
             const shiftSelectContainer = $('#shift-select-container');
             const shiftSelect = $('#shift-select');
@@ -554,28 +540,116 @@
             const shiftSlowBar = $('#shift-slow-bar');
             const shiftLateBar = $('#shift-late-bar');
             const shiftProgressBar = $('#shift-progress-bar');
-            const shiftInfoText = $('#shift-info-text'); // Ahora es un span
-            // Spans de tiempos y unidades
+            const shiftInfoText = $('#shift-info-text');
+            // Spans de tiempos y unidades (Orden)
             const tiempoParadaVal = $('#tiempo-parada-val');
             const tiempoLentoVal = $('#tiempo-lento-val');
-            const tiempoPreparacionVal = $('#tiempo-preparacion-val'); // ID actualizado
-            const unidadesHechasVal = $('#unidades-hechas-val'); // ID actualizado
-            const unidadesPendientesVal = $('#unidades-pendientes-val'); // ID actualizado
-            const unidadesRetrasadasVal = $('#unidades-retrasadas-val'); // Nuevo ID
-            const tiempoPausaVal = $('#tiempo-pausa-val'); // Ahora está abajo
+            const tiempoPreparacionVal = $('#tiempo-preparacion-val');
+            const unidadesHechasVal = $('#unidades-hechas-val');
+            const unidadesPendientesVal = $('#unidades-pendientes-val');
+            const unidadesRetrasadasVal = $('#unidades-retrasadas-val');
+            // Span para Tiempo Pausa (Turno - debajo de la barra)
+            const tiempoPausaValSpan = $('#tiempo-pausa-val');
+
+            // Spans para Tiempos / Maquina
+            const tiempoParadaMaquinaVal = $('#tiempo-parada-maquina-val');
+            const tiempoLentoMaquinaVal = $('#tiempo-lento-maquina-val');
+            const tiempoPreparacionMaquinaVal = $('#tiempo-preparacion-maquina-val');
+
+
             // Botón de refresco
-            const refreshButton = document.getElementById('refresh-button'); // NUEVO
+            const refreshButton = document.getElementById('refresh-button');
+            // Paneles Flotantes
+            const floatingOperatorPanel = document.getElementById('floating-operator-panel');
+            const operatorPanelHeader = document.getElementById('floating-panel-header');
+            const floatingActionsPanel = document.getElementById('floating-actions-panel');
+            const actionsPanelHeader = document.getElementById('floating-actions-header');
+
+            // Columnas Kanban (IDs del HTML que proporcionaste)
+            const colPendiente = document.getElementById('col-pendiente');
+            const colEnCurso = document.getElementById('col-en-curso');
+            const colFinalizadas = document.getElementById('col-finalizadas');
+            const colIncidencias = document.getElementById('col-incidencias');
+
 
             // --- Variables de Estado ---
             let currentWorker = null;
             let currentShiftState = { type: null, action: null };
             let selectedShiftId = null;
             let potentialNewWorker = null;
-            let shiftHistoryTimeoutId = null; // Timer para API shift-history
-            let orderStatsTimeoutId = null;   // Timer para API order-stats
+            let shiftHistoryTimeoutId = null;
+            let orderStatsTimeoutId = null;
+            let productionOrdersTimeoutId = null; // Timer para las órdenes del Kanban
             let productionLineToken = null;
             let isSelectOpen = false;
             let isProcessingLogin = false;
+            // Variables para arrastrar paneles
+            let isDraggingOperatorPanel = false;
+            let operatorPanelOffsetX, operatorPanelOffsetY;
+            let isDraggingActionsPanel = false;
+            let actionsPanelOffsetX, actionsPanelOffsetY;
+
+
+            // --- Lógica para arrastrar el panel flotante de OPERARIO ---
+            if (operatorPanelHeader && floatingOperatorPanel) {
+                operatorPanelHeader.addEventListener('mousedown', function(e) {
+                    isDraggingOperatorPanel = true;
+                    operatorPanelOffsetX = e.clientX - floatingOperatorPanel.offsetLeft;
+                    operatorPanelOffsetY = e.clientY - floatingOperatorPanel.offsetTop;
+                    floatingOperatorPanel.style.cursor = 'grabbing';
+                    e.preventDefault();
+                });
+            } else {
+                console.error("Panel flotante de operario o su cabecera no encontrados.");
+            }
+
+            // --- Lógica para arrastrar el panel flotante de ACCIONES ---
+            if (actionsPanelHeader && floatingActionsPanel) {
+                actionsPanelHeader.addEventListener('mousedown', function(e) {
+                    isDraggingActionsPanel = true;
+                    actionsPanelOffsetX = e.clientX - floatingActionsPanel.offsetLeft;
+                    actionsPanelOffsetY = e.clientY - floatingActionsPanel.offsetTop;
+                    floatingActionsPanel.style.cursor = 'grabbing';
+                    e.preventDefault();
+                });
+            } else {
+                console.error("Panel flotante de acciones o su cabecera no encontrados.");
+            }
+
+            document.addEventListener('mousemove', function(e) {
+                if (isDraggingOperatorPanel && floatingOperatorPanel) {
+                    let newLeft = e.clientX - operatorPanelOffsetX;
+                    let newTop = e.clientY - operatorPanelOffsetY;
+                    const maxLeft = window.innerWidth - floatingOperatorPanel.offsetWidth;
+                    const maxTop = window.innerHeight - floatingOperatorPanel.offsetHeight;
+                    newLeft = Math.max(0, Math.min(newLeft, maxLeft));
+                    newTop = Math.max(0, Math.min(newTop, maxTop));
+                    floatingOperatorPanel.style.left = newLeft + 'px';
+                    floatingOperatorPanel.style.top = newTop + 'px';
+                }
+                if (isDraggingActionsPanel && floatingActionsPanel) {
+                    let newLeft = e.clientX - actionsPanelOffsetX;
+                    let newTop = e.clientY - actionsPanelOffsetY;
+                    const maxLeft = window.innerWidth - floatingActionsPanel.offsetWidth;
+                    const maxTop = window.innerHeight - floatingActionsPanel.offsetHeight;
+                    newLeft = Math.max(0, Math.min(newLeft, maxLeft));
+                    newTop = Math.max(0, Math.min(newTop, maxTop));
+                    floatingActionsPanel.style.left = newLeft + 'px';
+                    floatingActionsPanel.style.top = newTop + 'px';
+                }
+            });
+
+            document.addEventListener('mouseup', function() {
+                if (isDraggingOperatorPanel) {
+                    isDraggingOperatorPanel = false;
+                    if(floatingOperatorPanel) floatingOperatorPanel.style.cursor = 'move';
+                }
+                if (isDraggingActionsPanel) {
+                    isDraggingActionsPanel = false;
+                    if(floatingActionsPanel) floatingActionsPanel.style.cursor = 'move';
+                }
+            });
+
 
             // --- Función de utilidad para Delay ---
             const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -596,6 +670,22 @@
                 } catch (e) { console.error("Error formatting time:", dateTimeString, e); }
                 return '--:--';
             }
+             // --- Función para formatear fecha (DD/MM/YYYY) ---
+             function formatDate(dateString) {
+                if (!dateString) return 'N/A';
+                try {
+                    const date = new Date(dateString);
+                    if (isNaN(date.getTime())) return 'N/A'; // Fecha inválida
+                    const day = date.getDate().toString().padStart(2, '0');
+                    const month = (date.getMonth() + 1).toString().padStart(2, '0'); // Meses son 0-indexados
+                    const year = date.getFullYear();
+                    return `${day}/${month}/${year}`;
+                } catch (e) {
+                    console.error("Error formatting date:", dateString, e);
+                    return 'N/A';
+                }
+            }
+
 
             // --- Función para formatear duración (HH:MM:SS) ---
             function formatDuration(ms) {
@@ -675,7 +765,6 @@
 
             // --- Función para enviar evento de turno a la API ---
             function postShiftEvent(eventName) {
-                // ... (Validaciones de operario y turno como antes) ...
                 if (eventName !== 'final_trabajo' && (!productionLineToken || !currentWorker || !currentWorker.id)) {
                     console.error("Falta token o ID de operario para enviar evento:", eventName);
                     showWorkerRequiredAlert();
@@ -691,7 +780,6 @@
                 if (currentWorker && currentWorker.id) {
                     payload.operator_id = currentWorker.id;
                 }
-                // <<< MODIFICADO: Enviar null si el valor es "especial" >>>
                 if (eventName === 'inicio_trabajo' && selectedShiftId) {
                     payload.shift_id = (selectedShiftId === "especial") ? null : selectedShiftId;
                 }
@@ -707,7 +795,6 @@
                 })
                 .then(data => {
                     console.log(`Evento ${eventName} enviado con éxito. Respuesta:`, data);
-                    // NO resetear tiempoPausaVal aquí, se actualizará desde shift-history
                     return data;
                 })
                 .catch(error => {
@@ -720,44 +807,23 @@
 
             // --- Función para actualizar UN círculo de progreso específico ---
             function updateProgress(indicatorElement, valueElement, percent) {
-                // Asegurarse de que el porcentaje es un número válido entre 0 y 100
                 const numericPercent = parseFloat(percent);
                 const clampedPercent = isNaN(numericPercent) ? 0 : Math.max(0, Math.min(100, numericPercent));
 
                 if (indicatorElement && valueElement) {
                     indicatorElement.style.setProperty('--progress-percent', clampedPercent);
-                    valueElement.textContent = Math.round(clampedPercent); // Mostrar número redondeado
+                    valueElement.textContent = Math.round(clampedPercent);
                 } else {
-                    // Ser más específico sobre qué elemento falta
                     if (!indicatorElement) console.error("Elemento indicador del círculo de progreso no encontrado.");
                     if (!valueElement) console.error("Elemento de valor del círculo de progreso no encontrado.");
                 }
             }
-
-            // --- NUEVA: Función para actualizar el medidor semi-circular ---
-            function updateGauge(needleElem, valueElem, percent) {
-                const numericPercent = parseFloat(percent);
-                const clampedPercent = isNaN(numericPercent) ? 0 : Math.max(0, Math.min(100, numericPercent));
-
-                if (needleElem && valueElem) {
-                    // Calcular ángulo: 0% = -90deg, 100% = 90deg
-                    const angle = (clampedPercent / 100) * 180 - 90;
-                    needleElem.style.transform = `translateX(-50%) rotate(${angle}deg)`;
-                    valueElem.textContent = Math.round(clampedPercent); // Mostrar valor redondeado
-                } else {
-                    if (!needleElem) console.error("Elemento aguja del medidor no encontrado.");
-                    if (!valueElem) console.error("Elemento valor del medidor no encontrado.");
-                }
-            }
-
-            // --- ELIMINADA: Función fetchProgressData ---
 
             // --- Inicializar Select2 ---
             workerSelect.select2({ placeholder: "Selecciona un operario...", allowClear: true, language: "es" });
 
             // --- Función para cargar operarios ---
             function loadWorkers() {
-                // ... (Sin cambios) ...
                 const workersEndpoint = '/api/workers/list-all2';
                 const apiUrl = `${API_BASE_URL}${workersEndpoint}`;
                 console.log("Fetching workers...");
@@ -809,13 +875,11 @@
                         console.warn("No se encontraron turnos o la respuesta no es válida.");
                         shiftSelect.append(new Option("No hay turnos disponibles", "", false, true));
                     }
-
-                    // <<< MODIFICADO: Añadir la opción "Especial" con valor "especial" >>>
                     shiftSelect.append(new Option("Especial", "especial"));
                     console.log("Added 'Especial' shift option with value 'especial'.");
 
                     shiftSelectContainer.removeClass('hidden');
-                    return true; // Indicar que se cargaron turnos (aunque sea solo el especial)
+                    return true;
 
                 } catch (error) {
                     console.error('Error fetching shifts:', error);
@@ -829,7 +893,6 @@
 
             // --- Función para resetear selección de turno ---
             function resetShiftSelection() {
-                // ... (Sin cambios) ...
                 selectedShiftId = null;
                 potentialNewWorker = null;
                 shiftSelect.val("");
@@ -843,7 +906,6 @@
 
             // --- Función para resetear la barra de progreso inferior ---
             function resetShiftProgressBar() {
-                 // ... (Sin cambios, ya incluía el reset de shiftButtonPauseBar) ...
                  shiftStartTimeLabel.text("HORA INICIO");
                  shiftEndTimeLabel.text("HORA FIN");
                  shiftInfoText.text("SIN DATOS");
@@ -860,14 +922,13 @@
             // --- Pausar/Reanudar polling al abrir/cerrar Select2 de Operarios ---
             workerSelect.on('select2:opening', function (e) {
                 isSelectOpen = true;
-                // Detener ambos timers
                 if (shiftHistoryTimeoutId) { clearTimeout(shiftHistoryTimeoutId); shiftHistoryTimeoutId = null; console.log('Shift history refresh PAUSED (worker select open).'); }
                 if (orderStatsTimeoutId) { clearTimeout(orderStatsTimeoutId); orderStatsTimeoutId = null; console.log('Order stats refresh PAUSED (worker select open).'); }
+                if (productionOrdersTimeoutId) { clearTimeout(productionOrdersTimeoutId); productionOrdersTimeoutId = null; console.log('Production orders refresh PAUSED (worker select open).');}
             });
              workerSelect.on('select2:close', function (e) {
                  isSelectOpen = false;
                  console.log('Worker Select2 closed, attempting to restart refreshes.');
-                 // Reanudar ambos timers si es apropiado
                  if (productionLineToken && !isProcessingLogin) {
                      if (!shiftHistoryTimeoutId) {
                          console.log('Restarting shift history refresh after worker select close.');
@@ -877,6 +938,10 @@
                          console.log('Restarting order stats refresh after worker select close.');
                          fetchOrderStats(productionLineToken);
                      }
+                     if (!productionOrdersTimeoutId) {
+                        console.log('Restarting production orders refresh after worker select close.');
+                        fetchProductionOrders(productionLineToken);
+                     }
                  } else {
                      console.log(`Refresh restart skipped (processing: ${isProcessingLogin})`);
                  }
@@ -884,7 +949,6 @@
 
               // --- Función para actualizar botones de acción ---
               function updateActionButtons(type, action) {
-                  // ... (Sin cambios) ...
                   console.log("Updating buttons for state:", type, action);
                   const buttons = actionButtonsContainer.querySelectorAll('button.action-button');
                   buttons.forEach(btn => btn.classList.add('hidden'));
@@ -893,31 +957,25 @@
                       $('#start-pause-button').removeClass('hidden');
                       $('#end-shift-button').removeClass('hidden');
                       $('#pause-notification').addClass('hidden');
-                      console.log("Buttons: Start Pause, End Shift");
                   } else if (type === 'stop' && action === 'start') {
                       $('#resume-button').removeClass('hidden');
                       $('#end-pause-button').removeClass('hidden');
                       $('#pause-notification').removeClass('hidden');
-                       console.log("Buttons: Resume, End Pause");
                   } else if (type === 'shift' && action === 'end') {
                       $('#start-shift-button').removeClass('hidden');
                       $('#pause-notification').addClass('hidden');
-                       console.log("Buttons: Start Shift");
                   } else if (type === 'stop' && action === 'end') {
                       $('#start-pause-button').removeClass('hidden');
                       $('#end-shift-button').removeClass('hidden');
                       $('#pause-notification').addClass('hidden');
-                       console.log("Buttons: Start Pause, End Shift (after pause end)");
-                  } else {
+                  } else { // Default / Unknown state
                       $('#start-shift-button').removeClass('hidden');
                       $('#pause-notification').addClass('hidden');
-                       console.log("Buttons: Start Shift (Default/Unknown)");
                   }
               }
 
                // --- Añadir listeners genéricos a los botones de acción ---
                actionButtonsContainer.addEventListener('click', function(event) {
-                   // ... (Lógica interna sin cambios, pero el finally ahora reinicia ambos fetch) ...
                    const button = event.target.closest('button.action-button');
                    if (!button) return;
                    const actionType = button.dataset.actionType;
@@ -925,7 +983,6 @@
                    let eventName = null;
 
                    if (actionType === 'start-shift') {
-                       // Lógica especial para start-shift manejada en los 'change' de los selects
                        console.log("Start shift button clicked, initiating worker/shift selection process.");
                        if (!currentWorker && selectContainer.is(':visible')) {
                             if (typeof Swal === 'function') { Swal.fire({ icon: 'info', title: 'Selecciona Operario', text: 'Por favor, selecciona tu nombre en la lista para iniciar el turno.', confirmButtonColor: '#3085d6' }); }
@@ -947,9 +1004,9 @@
                    if (actionType !== 'end-shift' && !currentWorker) { showWorkerRequiredAlert(); return; }
 
                    showActionConfirmation(actionDescription, () => {
-                        // Detener ambos timers antes de la acción
                         if (shiftHistoryTimeoutId) clearTimeout(shiftHistoryTimeoutId);
                         if (orderStatsTimeoutId) clearTimeout(orderStatsTimeoutId);
+                        if (productionOrdersTimeoutId) clearTimeout(productionOrdersTimeoutId);
                         isProcessingLogin = true;
                         console.log(`DEBUG: Processing ${eventName} START, refreshes blocked.`);
 
@@ -958,176 +1015,233 @@
                            .finally(() => {
                                isProcessingLogin = false;
                                console.log(`DEBUG: Processing ${eventName} END, refreshes unblocked.`);
-                               // Reanudar ambos timers
                                if (shiftHistoryTimeoutId) clearTimeout(shiftHistoryTimeoutId);
                                if (orderStatsTimeoutId) clearTimeout(orderStatsTimeoutId);
+                               if (productionOrdersTimeoutId) clearTimeout(productionOrdersTimeoutId);
                                fetchLastShiftHistory(productionLineToken);
                                fetchOrderStats(productionLineToken);
+                               fetchProductionOrders(productionLineToken);
                            });
                    });
                });
 
                // --- Función para procesar datos del historial de turno (API shift-history) ---
                function processShiftData(shiftData) {
-                   // ... (Actualiza estado botones, operario, y barra de progreso) ...
-                   let operator = null; let type = null; let action = null;
-                   let shiftList = null; let eventCreatedAt = null;
-                   let totalPauseDurationSeconds = 0;
+                    let operator = null;
+                    let type = null;
+                    let action = null;
+                    let shiftList = null;
+                    let eventCreatedAt = null;
+                    let totalPauseDurationSeconds = 0; // Pausa por botones (desde la raíz de shiftData)
+                    let oeeMaquinaPercent = 0;
 
-                   let previousState = {...currentShiftState};
-                   if (shiftData && shiftData.data) {
-                       operator = shiftData.data.operator; type = shiftData.data.type; action = shiftData.data.action;
-                       shiftList = shiftData.data.shift_list; eventCreatedAt = shiftData.shift_start_date;
-                       totalPauseDurationSeconds = shiftData.total_pause_duration_seconds || 0;
-                   }
-                   else if (shiftData === null) { type = 'shift'; action = 'end'; console.log("No shift data received (or 404), assuming shift ended."); }
+                    // Variables para los tiempos de máquina (desde shiftData o shiftData.data)
+                    let machineDownTimeSec = 0;
+                    let machineSlowTimeSec = 0;
+                    let machinePrepTimeSec = 0;
 
-                   // Actualizar el span de Tiempo Pausa con el valor de ESTA API (shift-history)
-                   const totalPauseMs = totalPauseDurationSeconds * 1000;
-                   const formattedPause = formatDuration(totalPauseMs);
-                   tiempoPausaVal.text(formattedPause); // Actualizar UI con valor de shift-history
+                    let previousState = {...currentShiftState};
 
-                   const isShiftEnded = (type === 'shift' && action === 'end');
-                   const isShiftActive = (type === 'shift' && action === 'start') || (type === 'stop' && action === 'end');
-                   const isPaused = (type === 'stop' && action === 'start');
+                    if (shiftData) {
+                        totalPauseDurationSeconds = shiftData.total_pause_duration_seconds || 0; // Siempre desde la raíz
 
-                   // Actualizar botones
-                   if (!previousState.type || previousState.type !== type || previousState.action !== action) {
-                       currentShiftState = { type, action }; console.log("Processing shift data. New state:", currentShiftState); updateActionButtons(type, action);
-                   } else { console.log("Shift state unchanged:", currentShiftState); updateActionButtons(currentShiftState.type, currentShiftState.action); }
+                        if (shiftData.data) { // Si existe el objeto 'data'
+                            operator = shiftData.data.operator;
+                            type = shiftData.data.type;
+                            action = shiftData.data.action;
+                            shiftList = shiftData.data.shift_list;
+                            eventCreatedAt = shiftData.data.created_at || shiftData.data.updated_at || shiftData.shift_start_date;
 
-                   // Actualizar UI Operario/Selectores
-                   // ... (lógica de visibilidad de selectores sin cambios) ...
+                            if (type === 'shift' && action === 'start') {
+                                oeeMaquinaPercent = parseFloat(shiftData.data.oee) || 0;
+                                machineDownTimeSec = parseFloat(shiftData.data.down_time) || 0;
+                                machineSlowTimeSec = parseFloat(shiftData.data.slow_time) || 0;
+                                machinePrepTimeSec = parseFloat(shiftData.data.prepair_time) || 0; // 'prepair_time' desde data
+                            } else { // Si no es (shift && start), pero 'data' existe, intentar tomar de 'data' si no están en raíz
+                                oeeMaquinaPercent = parseFloat(shiftData.oee) || parseFloat(shiftData.data.oee) || 0;
+                                machineDownTimeSec = parseFloat(shiftData.down_time) || parseFloat(shiftData.data.down_time) || 0;
+                                machineSlowTimeSec = parseFloat(shiftData.slow_time) || parseFloat(shiftData.data.slow_time) || 0;
+                                machinePrepTimeSec = parseFloat(shiftData.prepare_time) || parseFloat(shiftData.data.prepair_time) || 0;
+                            }
+                        } else if (shiftData === null || !shiftData.data) { // No hay 'data' o shiftData es null (404)
+                           type = 'shift'; action = 'end';
+                           // Los tiempos de máquina y OEE se quedan en 0 si no hay 'data' ni datos en la raíz para ellos
+                           oeeMaquinaPercent = parseFloat(shiftData.oee) || 0; // Intentar desde raíz si está
+                           machineDownTimeSec = parseFloat(shiftData.down_time) || 0;
+                           machineSlowTimeSec = parseFloat(shiftData.slow_time) || 0;
+                           machinePrepTimeSec = parseFloat(shiftData.prepare_time) || 0;
+                           console.log("No shiftData.data or shiftData is null, assuming shift ended or using root values.");
+                        }
+                    } else { // shiftData es undefined o completamente inesperado
+                        console.warn("Unexpected or undefined shiftData structure, defaulting values.");
+                        type = 'shift'; action = 'end';
+                    }
+
+
+                    oeeMaquinaPercent = Math.max(0, Math.min(100, oeeMaquinaPercent));
+                    updateProgress(oeeMaquinaIndicator, oeeMaquinaValue, oeeMaquinaPercent);
+
+                    tiempoParadaMaquinaVal.text(formatDuration(machineDownTimeSec * 1000));
+                    tiempoLentoMaquinaVal.text(formatDuration(machineSlowTimeSec * 1000));
+                    tiempoPreparacionMaquinaVal.text(formatDuration(machinePrepTimeSec * 1000));
+
+                    const totalButtonPauseMs = totalPauseDurationSeconds * 1000;
+                    const formattedButtonPause = formatDuration(totalButtonPauseMs);
+                    tiempoPausaValSpan.text(formattedButtonPause);
+
+                    const isShiftEnded = (type === 'shift' && action === 'end');
+                    const isShiftActive = (type === 'shift' && action === 'start') || (type === 'stop' && action === 'end');
+                    const isPaused = (type === 'stop' && action === 'start');
+
+                    if (!previousState.type || previousState.type !== type || previousState.action !== action) {
+                        currentShiftState = { type, action };
+                        console.log("Processing shift data. New state:", currentShiftState);
+                        updateActionButtons(type, action);
+                    } else {
+                        console.log("Shift state unchanged:", currentShiftState);
+                        updateActionButtons(currentShiftState.type, currentShiftState.action);
+                    }
+
                     if (isShiftEnded || (!operator && currentWorker) || (operator && !currentWorker) || (!operator && !currentWorker)) {
-                       if (!isProcessingLogin) { resetShiftSelection(); }
-                   }
-                   if (isShiftEnded && !isProcessingLogin) {
-                       if (currentWorker) { console.log("Shift ended, logging out current worker:", currentWorker.name); currentWorker = null; }
-                       displayContainer.addClass('hidden'); workerLabel.removeClass('hidden'); selectContainer.removeClass('hidden'); workerSelect.val(null).trigger('change.select2');
-                   } else if (operator && !isProcessingLogin) {
-                       if (!currentWorker || currentWorker.id != operator.id) { console.log("Operator found in API. Auto-displaying/updating:", operator.name); currentWorker = { id: operator.id, name: operator.name }; selectedWorkerInfo.text(currentWorker.name); workerSelect.val(currentWorker.id).trigger('change.select2'); }
-                       workerLabel.addClass('hidden'); selectContainer.addClass('hidden'); displayContainer.removeClass('hidden');
-                   } else if (!operator && currentWorker && !isProcessingLogin) {
-                       console.warn("No operator in API, but worker logged in locally. Forcing local logout."); currentWorker = null;
-                       displayContainer.addClass('hidden'); workerLabel.removeClass('hidden'); selectContainer.removeClass('hidden'); workerSelect.val(null).trigger('change.select2');
-                   } else if (!operator && !currentWorker && !isProcessingLogin) {
-                       if (selectContainer.hasClass('hidden')) { console.log("No worker manually logged in and no operator in API. Ensuring selector is visible."); displayContainer.addClass('hidden'); workerLabel.removeClass('hidden'); selectContainer.removeClass('hidden'); workerSelect.val(null).trigger('change.select2'); }
-                   }
+                        if (!isProcessingLogin) { resetShiftSelection(); }
+                    }
 
+                    if (isShiftEnded && !isProcessingLogin) {
+                        if (currentWorker) { console.log("Shift ended, logging out current worker:", currentWorker.name); currentWorker = null; }
+                        displayContainer.addClass('hidden'); workerLabel.removeClass('hidden'); selectContainer.removeClass('hidden'); workerSelect.val(null).trigger('change.select2');
+                    } else if (operator && !isProcessingLogin) {
+                        if (!currentWorker || currentWorker.id != operator.id) {
+                            console.log("Operator found in API. Auto-displaying/updating:", operator.name);
+                            currentWorker = { id: operator.id, name: operator.name };
+                            selectedWorkerInfo.text(currentWorker.name);
+                            workerSelect.val(currentWorker.id).trigger('change.select2');
+                        }
+                        workerLabel.addClass('hidden'); selectContainer.addClass('hidden'); displayContainer.removeClass('hidden');
+                    } else if (!operator && currentWorker && !isProcessingLogin) {
+                        console.warn("No operator in API, but worker logged in locally. Forcing local logout.");
+                        currentWorker = null;
+                        displayContainer.addClass('hidden'); workerLabel.removeClass('hidden'); selectContainer.removeClass('hidden'); workerSelect.val(null).trigger('change.select2');
+                    } else if (!operator && !currentWorker && !isProcessingLogin) {
+                         if (selectContainer.hasClass('hidden')) {
+                            console.log("No worker manually logged in and no operator in API. Ensuring selector is visible.");
+                            displayContainer.addClass('hidden'); workerLabel.removeClass('hidden'); selectContainer.removeClass('hidden'); workerSelect.val(null).trigger('change.select2');
+                        }
+                    }
 
-                   // --- Actualizar Barra de Progreso Inferior ---
-                   // Esta parte AHORA usa los valores de los SPANs, que son actualizados
-                   // por processShiftData (para tiempoPausaVal) y processOrderStats (para los otros)
-                   if ((isShiftActive || isPaused) && eventCreatedAt && shiftList && shiftList.start && shiftList.end) {
-                       // ... (cálculo de horas y duración total del turno sin cambios) ...
-                        const eventStartTimeStr = formatTime(eventCreatedAt);
-                       const shiftStartTimeStr = formatTime(shiftList.start);
-                       const shiftEndTimeStr = formatTime(shiftList.end);
-                       shiftStartTimeLabel.text(`INICIO: ${eventStartTimeStr}`);
-                       shiftEndTimeLabel.text(`FIN TURNO: ${shiftEndTimeStr}`);
-                       shiftInfoText.text(`TURNO: ${shiftStartTimeStr} - ${shiftEndTimeStr}`);
+                    // --- Actualizar Barra de Progreso Inferior ---
+                    if ((isShiftActive || isPaused) && eventCreatedAt && shiftList && shiftList.start && shiftList.end) {
+                        const eventStartForBar = shiftData.shift_start_date || eventCreatedAt;
+                        const eventStartTimeStr = formatTime(eventStartForBar);
+                        const shiftStartTimeStr = formatTime(shiftList.start);
+                        const shiftEndTimeStr = formatTime(shiftList.end);
 
-                       try {
-                           // LEER los valores ACTUALES de los spans (que fueron actualizados por las APIs)
-                           const pauseTimeMs = parseDuration(tiempoParadaVal.text()); // 'Tiempo en Parada' (Actualizado por order-stats)
-                           const slowTimeMs = parseDuration(tiempoLentoVal.text());   // 'Tiempo Lento' (Actualizado por order-stats)
-                           const prepTimeMs = parseDuration(tiempoPreparacionVal.text()); // 'Tiempo Preparacion' (Actualizado por order-stats) <<< NUEVO
-                           const buttonPauseTimeMs = parseDuration(tiempoPausaVal.text()); // 'Tiempo Pausa Botones' (Actualizado por shift-history)
+                        shiftStartTimeLabel.text(`INICIO: ${eventStartTimeStr}`);
+                        shiftEndTimeLabel.text(`FIN TURNO: ${shiftEndTimeStr}`);
+                        shiftInfoText.text(`TURNO: ${shiftStartTimeStr} - ${shiftEndTimeStr}`);
 
-                           console.log(`Progress Bar Calc using (ms) - Pause: ${pauseTimeMs}, Button Pause: ${buttonPauseTimeMs}, Slow: ${slowTimeMs}, Prep: ${prepTimeMs}`);
+                        try {
+                            // Usar los tiempos de MÁQUINA para los segmentos correspondientes de la barra
+                            const pauseTimeMsForBar = machineDownTimeSec * 1000;
+                            const slowTimeMsForBar = machineSlowTimeSec * 1000;
+                            const prepTimeMsForBar = machinePrepTimeSec * 1000;
+                            const buttonPauseTimeMsForBar = totalButtonPauseMs; // Pausa por botón del turno actual
 
-                           // ... (resto del cálculo de la barra de progreso sin cambios lógicos,
-                           //      simplemente usará los nuevos valores leídos de los spans) ...
-                            const now = new Date(); const eventStartDateTime = new Date(eventCreatedAt);
-                           const [startHours, startMinutes] = shiftStartTimeStr.split(':').map(Number); const [endHours, endMinutes] = shiftEndTimeStr.split(':').map(Number);
-                           let shiftStartDateTime = new Date(eventStartDateTime); shiftStartDateTime.setHours(startHours, startMinutes, 0, 0);
-                           let shiftEndDateTime = new Date(eventStartDateTime); shiftEndDateTime.setHours(endHours, endMinutes, 0, 0);
-                           if (shiftEndDateTime <= shiftStartDateTime) { shiftEndDateTime.setDate(shiftEndDateTime.getDate() + 1); }
-                           if (eventStartDateTime > shiftEndDateTime) { shiftStartDateTime.setDate(shiftStartDateTime.getDate() -1); shiftEndDateTime.setDate(shiftEndDateTime.getDate() -1); }
+                            console.log(`Progress Bar Calc using (ms) - Machine Pause: ${pauseTimeMsForBar}, Button Pause (Shift): ${buttonPauseTimeMsForBar}, Machine Slow: ${slowTimeMsForBar}, Machine Prep: ${prepTimeMsForBar}`);
 
-                           const totalShiftDurationMs = shiftEndDateTime.getTime() - shiftStartDateTime.getTime();
-                           let actualStartDelayMs = eventStartDateTime.getTime() - shiftStartDateTime.getTime();
-                           let elapsedSinceActualStartMs = now.getTime() - eventStartDateTime.getTime();
-                           let remainingMs = shiftEndDateTime.getTime() - now.getTime();
+                            const now = new Date();
+                            const eventStartDateTime = new Date(eventStartForBar);
+                            const [startHours, startMinutes] = shiftStartTimeStr.split(':').map(Number);
+                            const [endHours, endMinutes] = shiftEndTimeStr.split(':').map(Number);
 
-                           actualStartDelayMs = Math.max(0, actualStartDelayMs); elapsedSinceActualStartMs = Math.max(0, elapsedSinceActualStartMs);
-                           remainingMs = Math.max(0, remainingMs);
+                            let shiftStartDateTime = new Date(eventStartDateTime);
+                            shiftStartDateTime.setHours(startHours, startMinutes, 0, 0);
+                            let shiftEndDateTime = new Date(eventStartDateTime);
+                            shiftEndDateTime.setHours(endHours, endMinutes, 0, 0);
 
-                           let delayPercentage = 0;
-                           let pausePercentage = 0; // Para 'Tiempo en Parada' (leído de span)
-                           let buttonPausePercentage = 0; // Para 'Tiempo Pausa' (leído de span)
-                           let slowPercentage = 0; // Para 'Tiempo Lento' (leído de span)
-                           let prepPercentage = 0; // Para 'Tiempo Preparacion' (leído de span) <<< NUEVO
-                           let productivePercentage = 0;
+                            if (shiftEndDateTime <= shiftStartDateTime) {
+                                shiftEndDateTime.setDate(shiftEndDateTime.getDate() + 1);
+                            }
+                            if (eventStartDateTime > shiftEndDateTime) {
+                                shiftStartDateTime.setDate(shiftStartDateTime.getDate() -1);
+                                shiftEndDateTime.setDate(shiftEndDateTime.getDate() -1);
+                            }
 
-                           let formattedDelay = '';
-                           let formattedPause = formatDuration(pauseTimeMs);
-                           let formattedButtonPause = formatDuration(buttonPauseTimeMs);
-                           let formattedSlow = formatDuration(slowTimeMs);
-                           let formattedPrep = formatDuration(prepTimeMs); // <<< NUEVO
-                           let formattedProductive = '';
-                           let formattedRemaining = formatDuration(remainingMs);
+                            const totalShiftDurationMs = shiftEndDateTime.getTime() - shiftStartDateTime.getTime();
+                            let actualStartDelayMs = eventStartDateTime.getTime() - shiftStartDateTime.getTime();
+                            actualStartDelayMs = Math.max(0, actualStartDelayMs);
 
-                           if (totalShiftDurationMs > 0) {
-                               if (actualStartDelayMs > 0) { delayPercentage = (actualStartDelayMs / totalShiftDurationMs) * 100; formattedDelay = formatDuration(actualStartDelayMs); }
-                               pausePercentage = (pauseTimeMs / totalShiftDurationMs) * 100;
-                               buttonPausePercentage = (buttonPauseTimeMs / totalShiftDurationMs) * 100;
-                               slowPercentage = (slowTimeMs / totalShiftDurationMs) * 100;
-                               prepPercentage = (prepTimeMs / totalShiftDurationMs) * 100; // <<< NUEVO
+                            let elapsedSinceActualStartMs = now.getTime() - eventStartDateTime.getTime();
+                            elapsedSinceActualStartMs = Math.max(0, elapsedSinceActualStartMs);
 
-                               // Tiempo productivo: Tiempo total transcurrido MENOS todas las pausas/retrasos leídos
-                               // <<< MODIFICADO: Restar también prepTimeMs >>>
-                               let productiveElapsedMs = elapsedSinceActualStartMs - pauseTimeMs - buttonPauseTimeMs - slowTimeMs - prepTimeMs;
-                               productiveElapsedMs = Math.max(0, productiveElapsedMs);
-                               formattedProductive = formatDuration(productiveElapsedMs);
-                               productivePercentage = (productiveElapsedMs / totalShiftDurationMs) * 100;
+                            let remainingMs = shiftEndDateTime.getTime() - now.getTime();
+                            remainingMs = Math.max(0, remainingMs);
 
-                               // Clamping para asegurar que no exceda 100%
-                               // <<< MODIFICADO: Incluir prepPercentage >>>
-                               delayPercentage = Math.max(0, Math.min(100, delayPercentage));
-                               pausePercentage = Math.max(0, Math.min(100 - delayPercentage, pausePercentage));
-                               buttonPausePercentage = Math.max(0, Math.min(100 - delayPercentage - pausePercentage, buttonPausePercentage));
-                               slowPercentage = Math.max(0, Math.min(100 - delayPercentage - pausePercentage - buttonPausePercentage, slowPercentage));
-                               prepPercentage = Math.max(0, Math.min(100 - delayPercentage - pausePercentage - buttonPausePercentage - slowPercentage, prepPercentage));
-                               productivePercentage = Math.max(0, Math.min(100 - delayPercentage - pausePercentage - buttonPausePercentage - slowPercentage - prepPercentage, productivePercentage));
+                            let delayPercentage = 0;
+                            let pausePercentage = 0;
+                            let buttonPausePercentage = 0;
+                            let slowPercentage = 0;
+                            let prepPercentage = 0;
+                            let productivePercentage = 0;
 
-                               console.log(`Percentages - Delay: ${delayPercentage.toFixed(2)}%, Pause: ${pausePercentage.toFixed(2)}%, Button Pause: ${buttonPausePercentage.toFixed(2)}%, Slow: ${slowPercentage.toFixed(2)}%, Prep: ${prepPercentage.toFixed(2)}%, Productive: ${productivePercentage.toFixed(2)}%`);
+                            let formattedDelay = formatDuration(actualStartDelayMs);
+                            let formattedPause = formatDuration(pauseTimeMsForBar);
+                            let formattedButtonPause = formatDuration(buttonPauseTimeMsForBar);
+                            let formattedSlow = formatDuration(slowTimeMsForBar);
+                            let formattedPrep = formatDuration(prepTimeMsForBar);
+                            let formattedRemaining = formatDuration(remainingMs);
 
-                               // Actualizar los anchos de las barras
-                               // <<< MODIFICADO: Cambiar late por prep >>>
-                               shiftDelayBar.css('width', `${delayPercentage}%`).attr('title', delayPercentage > 0 ? `Retraso inicio turno: ${formattedDelay}` : '');
-                               shiftPauseBar.css('width', `${pausePercentage}%`).attr('title', `Tiempo Parada: ${formattedPause}`);
-                               shiftButtonPauseBar.css('width', `${buttonPausePercentage}%`).attr('title', `Tiempo Pausa (Botón): ${formattedButtonPause}`);
-                               shiftSlowBar.css('width', `${slowPercentage}%`).attr('title', `Tiempo Lento: ${formattedSlow}`);
-                               shiftLateBar.css('width', `${prepPercentage}%`).attr('title', `Tiempo Preparación: ${formattedPrep}`); // Usamos la barra 'late' para 'prep'
-                               shiftProgressBar.css('width', `${productivePercentage}%`).attr('title', `Tiempo Productivo: ${formattedProductive}`);
-                               progressBarContainer.attr('title', `Faltante: ${formattedRemaining}`);
+                            if (totalShiftDurationMs > 0) {
+                                if (actualStartDelayMs > 0) { delayPercentage = (actualStartDelayMs / totalShiftDurationMs) * 100; }
+                                pausePercentage = (pauseTimeMsForBar / totalShiftDurationMs) * 100;
+                                buttonPausePercentage = (buttonPauseTimeMsForBar / totalShiftDurationMs) * 100;
+                                slowPercentage = (slowTimeMsForBar / totalShiftDurationMs) * 100;
+                                prepPercentage = (prepTimeMsForBar / totalShiftDurationMs) * 100;
 
-                           } else { console.warn("Total shift duration is zero or negative."); resetShiftProgressBar(); }
-                       } catch(e) { console.error("Error calculating progress:", e); resetShiftProgressBar(); }
-                   } else { resetShiftProgressBar(); }
+                                let productiveElapsedMs = elapsedSinceActualStartMs - pauseTimeMsForBar - buttonPauseTimeMsForBar - slowTimeMsForBar - prepTimeMsForBar - actualStartDelayMs;
+                                productiveElapsedMs = Math.max(0, productiveElapsedMs);
+                                formattedProductive = formatDuration(productiveElapsedMs);
+                                productivePercentage = (productiveElapsedMs / totalShiftDurationMs) * 100;
+
+                                delayPercentage = Math.max(0, Math.min(100, delayPercentage));
+                                pausePercentage = Math.max(0, Math.min(100 - delayPercentage, pausePercentage));
+                                buttonPausePercentage = Math.max(0, Math.min(100 - delayPercentage - pausePercentage, buttonPausePercentage));
+                                slowPercentage = Math.max(0, Math.min(100 - delayPercentage - pausePercentage - buttonPausePercentage, slowPercentage));
+                                prepPercentage = Math.max(0, Math.min(100 - delayPercentage - pausePercentage - buttonPausePercentage - slowPercentage, prepPercentage));
+                                productivePercentage = Math.max(0, Math.min(100 - delayPercentage - pausePercentage - buttonPausePercentage - slowPercentage - prepPercentage, productivePercentage));
+
+                                console.log(`Progress Bar - Delay: ${delayPercentage.toFixed(2)}%, Machine Pause: ${pausePercentage.toFixed(2)}%, Button Pause: ${buttonPausePercentage.toFixed(2)}%, Machine Slow: ${slowPercentage.toFixed(2)}%, Machine Prep: ${prepPercentage.toFixed(2)}%, Productive: ${productivePercentage.toFixed(2)}%`);
+
+                                shiftDelayBar.css('width', `${delayPercentage}%`).attr('title', delayPercentage > 0 ? `Retraso inicio turno: ${formattedDelay}` : '');
+                                shiftPauseBar.css('width', `${pausePercentage}%`).attr('title', `Tiempo Parada (Maquina): ${formattedPause}`);
+                                shiftButtonPauseBar.css('width', `${buttonPausePercentage}%`).attr('title', `Tiempo Pausa (Turno): ${formattedButtonPause}`);
+                                shiftSlowBar.css('width', `${slowPercentage}%`).attr('title', `Tiempo Lento (Maquina): ${formattedSlow}`);
+                                shiftLateBar.css('width', `${prepPercentage}%`).attr('title', `Tiempo Preparación (Maquina): ${formattedPrep}`);
+                                shiftProgressBar.css('width', `${productivePercentage}%`).attr('title', `Tiempo Productivo: ${formattedProductive}`);
+                                progressBarContainer.attr('title', `Faltante: ${formattedRemaining}`);
+
+                            } else { console.warn("Total shift duration is zero or negative."); resetShiftProgressBar(); }
+                        } catch(e) { console.error("Error calculating progress:", e); resetShiftProgressBar(); }
+                    } else { resetShiftProgressBar(); }
                } // Fin de processShiftData
 
             // --- Función para obtener el último historial de turno (API shift-history) ---
             function fetchLastShiftHistory(token) {
                 if (isSelectOpen || isProcessingLogin) {
                     console.log(`Shift history refresh SKIPPED (Select open: ${isSelectOpen}, Processing login: ${isProcessingLogin})`);
-                    // Reintentar después del intervalo si el timer no está activo
                     if (!shiftHistoryTimeoutId) { shiftHistoryTimeoutId = setTimeout(() => fetchLastShiftHistory(token), REFRESH_INTERVAL_MS); }
                     return;
                 }
-                if (shiftHistoryTimeoutId) { clearTimeout(shiftHistoryTimeoutId); shiftHistoryTimeoutId = null; } // Limpiar timer anterior
-                if (!token) { console.error("Token no encontrado para shift-history."); processShiftData(null); return; } // No continuar si no hay token
+                if (shiftHistoryTimeoutId) { clearTimeout(shiftHistoryTimeoutId); shiftHistoryTimeoutId = null; }
+                if (!token) { console.error("Token no encontrado para shift-history."); processShiftData(null); return; }
 
                 const historyEndpoint = `/api/shift-history/production-line/${token}/last`;
                 const historyApiUrl = `${API_BASE_URL}${historyEndpoint}`;
 
                 fetch(historyApiUrl)
                     .then(response => { if (!response.ok) { if (response.status === 404) { console.log("No shift history found (404). Treating as 'shift ended'."); return null; } throw new Error(`HTTP error! status: ${response.status}`); } return response.json(); })
-                    .then(data => { processShiftData(data); }) // Procesar los datos recibidos
-                    .catch(error => { console.error('Error fetching shift history:', error); processShiftData(null); }) // Procesar como turno finalizado en caso de error
+                    .then(data => { processShiftData(data); })
+                    .catch(error => { console.error('Error fetching shift history:', error); processShiftData(null); })
                     .finally(() => {
-                        // Volver a programar la próxima llamada solo si no estamos bloqueados
                         if (token && !isSelectOpen && !isProcessingLogin) {
                             shiftHistoryTimeoutId = setTimeout(() => fetchLastShiftHistory(token), REFRESH_INTERVAL_MS);
                         } else {
@@ -1136,54 +1250,42 @@
                     });
             }
 
-            // <<< ============================================================= >>>
-            // <<< NUEVA SECCIÓN: Funciones para API /api/order-stats           >>>
-            // <<< ============================================================= >>>
-
             // --- Función para procesar datos de estadísticas de orden (API order-stats) ---
             function processOrderStats(statsData) {
-                let oeeOrdenValue = 0; // Valor por defecto para OEE Orden
+                let oeeOrdenValue = 0;
 
                 if (!statsData) {
                     console.warn("No order stats data received. Resetting stats and OEEs.");
-                    // Si no hay datos de orden, resetear los valores asociados
                     tiempoParadaVal.text('00:00:00');
                     tiempoLentoVal.text('00:00:00');
-                    tiempoPreparacionVal.text('00:00:00'); // Resetear nuevo campo
-                    unidadesHechasVal.text('0'); // Resetear nuevo campo
-                    unidadesPendientesVal.text('0'); // Resetear nuevo campo
-                    unidadesRetrasadasVal.text('0'); // Resetear nuevo campo
-                    // Resetear OEE Orden y Medidor Máquina a 0
-                    updateProgress(progressIndicator, progressValue, 0); // Círculo 1 (OEE Orden)
-                    updateGauge(gaugeNeedle, gaugeValue, 0); // Medidor (OEE Máquina)
+                    tiempoPreparacionVal.text('00:00:00');
+                    unidadesHechasVal.text('0');
+                    unidadesPendientesVal.text('0');
+                    unidadesRetrasadasVal.text('0');
+                    updateProgress(progressIndicator, progressValue, 0);
+                    // OEE Maquina se actualiza desde shift-history, no aquí.
                     return;
                 }
 
                 try {
-                    // Calcular Tiempo en Parada Total (down_time + production_stops_time)
                     const downTimeSec = parseFloat(statsData.down_time) || 0;
                     const prodStopTimeSec = parseFloat(statsData.production_stops_time) || 0;
                     const totalStopTimeSec = downTimeSec + prodStopTimeSec;
                     const totalStopTimeMs = totalStopTimeSec * 1000;
                     tiempoParadaVal.text(formatDuration(totalStopTimeMs));
 
-                    // Obtener Tiempo Lento
                     const slowTimeSec = parseFloat(statsData.slow_time) || 0;
                     const slowTimeMs = slowTimeSec * 1000;
                     tiempoLentoVal.text(formatDuration(slowTimeMs));
 
-                    // --- NUEVO: Obtener Tiempo Preparación ---
                     const prepTimeSec = parseFloat(statsData.prepair_time) || 0;
                     const prepTimeMs = prepTimeSec * 1000;
                     tiempoPreparacionVal.text(formatDuration(prepTimeMs));
 
-                    // --- NUEVO: Obtener Unidades ---
                     unidadesHechasVal.text(statsData.units_made !== null ? statsData.units_made : '0');
                     unidadesPendientesVal.text(statsData.units_pending !== null ? statsData.units_pending : '0');
                     unidadesRetrasadasVal.text(statsData.units_delayed !== null ? statsData.units_delayed : '0');
 
-
-                    // --- Procesar OEE Orden (Círculo 1) ---
                     if (statsData.oee !== null && statsData.oee !== undefined) {
                         const parsedOee = parseFloat(statsData.oee);
                         if (!isNaN(parsedOee)) {
@@ -1194,23 +1296,17 @@
                     } else {
                          console.warn("OEE Orden value is null or undefined. Using 0.");
                     }
-                    updateProgress(progressIndicator, progressValue, oeeOrdenValue); // Actualizar Círculo 1
-
-                    // --- OEE Máquina (Medidor) - Fijado a 0 por ahora ---
-                    updateGauge(gaugeNeedle, gaugeValue, 0); // <<< FIJADO A 0
-                    // --- FIN Procesamiento OEEs ---
+                    updateProgress(progressIndicator, progressValue, oeeOrdenValue);
 
                 } catch (error) {
                     console.error("Error processing order stats data:", error, statsData);
-                    // Resetear valores en caso de error de procesamiento
                     tiempoParadaVal.text('00:00:00');
                     tiempoLentoVal.text('00:00:00');
                     tiempoPreparacionVal.text('00:00:00');
                     unidadesHechasVal.text('0');
                     unidadesPendientesVal.text('0');
                     unidadesRetrasadasVal.text('0');
-                    updateProgress(progressIndicator, progressValue, 0); // Resetear Círculo 1
-                    updateGauge(gaugeNeedle, gaugeValue, 0); // Resetear Medidor
+                    updateProgress(progressIndicator, progressValue, 0);
                 }
             }
 
@@ -1218,16 +1314,15 @@
             function fetchOrderStats(token) {
                 if (isSelectOpen || isProcessingLogin) {
                     console.log(`Order stats refresh SKIPPED (Select open: ${isSelectOpen}, Processing login: ${isProcessingLogin})`);
-                    // Reintentar después del intervalo si el timer no está activo
                     if (!orderStatsTimeoutId) { orderStatsTimeoutId = setTimeout(() => fetchOrderStats(token), REFRESH_INTERVAL_MS); }
                     return;
                 }
-                 if (orderStatsTimeoutId) { clearTimeout(orderStatsTimeoutId); orderStatsTimeoutId = null; } // Limpiar timer anterior
+                 if (orderStatsTimeoutId) { clearTimeout(orderStatsTimeoutId); orderStatsTimeoutId = null; }
                 if (!token) {
                     console.warn("Token no encontrado para order-stats. Resetting stats.");
-                    processOrderStats(null); // Resetear stats si no hay token
+                    processOrderStats(null);
                     return;
-                } // No hacer nada si no hay token
+                }
 
                 const statsEndpoint = `/api/order-stats?token=${token}`;
                 const statsApiUrl = `${API_BASE_URL}${statsEndpoint}`;
@@ -1235,25 +1330,22 @@
                 fetch(statsApiUrl)
                     .then(response => {
                         if (!response.ok) {
-                             // Si no se encuentra (404), no es necesariamente un error grave, puede que no haya orden activa
                              if (response.status === 404) {
                                  console.log("No active order stats found (404). Resetting stats.");
-                                 return null; // Devolver null para indicar que no hay datos
+                                 return null;
                              }
                              throw new Error(`HTTP error! status: ${response.status}`);
                         }
                         return response.json();
                     })
                     .then(data => {
-                        processOrderStats(data); // Procesar los datos (o null si fue 404)
+                        processOrderStats(data);
                     })
                     .catch(error => {
                         console.error('Error fetching order stats:', error);
-                        // En caso de error, resetear los valores que actualiza esta API
-                        processOrderStats(null); // Llamar a processOrderStats con null para resetear
+                        processOrderStats(null);
                     })
                     .finally(() => {
-                        // Volver a programar la próxima llamada solo si no estamos bloqueados
                         if (token && !isSelectOpen && !isProcessingLogin) {
                             orderStatsTimeoutId = setTimeout(() => fetchOrderStats(token), REFRESH_INTERVAL_MS);
                         } else {
@@ -1261,9 +1353,148 @@
                         }
                     });
             }
-            // <<< ============================================================= >>>
-            // <<< FIN NUEVA SECCIÓN                                             >>>
-            // <<< ============================================================= >>>
+
+
+            // --- NUEVO: Funciones para cargar y procesar Órdenes de Producción ---
+            function createKanbanCardHTML(order) {
+                const statusToColumnClass = {
+                    0: 'ope-pendiente', // PENDIENTE
+                    1: 'ope-en-curso',  // EN CURSO
+                    2: 'ope-finalizada',// FINALIZADA
+                    5: 'ope-incidencia' // INCIDENCIA
+                };
+                const defaultClass = 'ope-default';
+                const statusClass = statusToColumnClass[order.status] || defaultClass;
+
+                return `
+                    <div class="kanban-card" data-card-id="${order.id}" data-order-sort="${order.orden || 0}">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-semibold text-gray-800">${order.order_id || 'N/A'}</span>
+                            <span class="text-xs text-gray-600">${(order.json && order.json.refer && order.json.refer.customerId) ? order.json.refer.customerId : 'N/A'}</span>
+                        </div>
+                        <div class="mb-2 text-xs text-gray-700">
+                           ${(order.json && order.json.refer && order.json.refer.descrip) ? order.json.refer.descrip : 'Sin descripción'}
+                        </div>
+                        <div class="flex justify-between items-center text-xs text-gray-500">
+                            <span>${formatDate(order.created_at)}</span>
+                            <span class="font-medium text-gray-700">${order.units || 0} ${order.json && order.json.unit ? order.json.unit : ''}</span>
+                        </div>
+                    </div>
+                `;
+            }
+
+            function processProductionOrders(ordersData) {
+                if (!ordersData || !ordersData.data) {
+                    console.warn("No production orders data to process.");
+                    return;
+                }
+
+                [colPendiente, colEnCurso, colFinalizadas, colIncidencias].forEach(column => {
+                    if (column) {
+                        const titleElement = column.querySelector('h2.kanban-title');
+                        column.innerHTML = '';
+                        if (titleElement) {
+                             column.appendChild(titleElement);
+                        }
+                    }
+                });
+
+
+                const ordersByColumn = {
+                    '0': [], '1': [], '2': [], '5': []
+                };
+
+                ordersData.data.forEach(order => {
+                    const statusStr = String(order.status);
+                    if (ordersByColumn.hasOwnProperty(statusStr)) {
+                        ordersByColumn[statusStr].push(order);
+                    } else {
+                        console.warn(`Orden con estado desconocido ${order.status}, ID: ${order.id}. Colocando en Pendiente.`);
+                        ordersByColumn['0'].push(order);
+                    }
+                });
+
+                for (const status in ordersByColumn) {
+                    ordersByColumn[status].sort((a, b) => (a.orden || 0) - (b.orden || 0));
+                    ordersByColumn[status].forEach(order => {
+                        const cardHTML = createKanbanCardHTML(order);
+                        let targetColumnElement = null;
+                        switch (status) {
+                            case '0': targetColumnElement = colPendiente; break;
+                            case '1': targetColumnElement = colEnCurso; break;
+                            case '2': targetColumnElement = colFinalizadas; break;
+                            case '5': targetColumnElement = colIncidencias; break;
+                        }
+                        if (targetColumnElement) {
+                            targetColumnElement.insertAdjacentHTML('beforeend', cardHTML);
+                        }
+                    });
+                }
+                 console.log("Production orders processed and Kanban board updated.");
+            }
+
+
+            function fetchProductionOrders(token, page = 1) {
+                if (isSelectOpen || isProcessingLogin) {
+                    console.log(`Production orders refresh SKIPPED (Select open: ${isSelectOpen}, Processing login: ${isProcessingLogin})`);
+                    if (!productionOrdersTimeoutId) {
+                        productionOrdersTimeoutId = setTimeout(() => fetchProductionOrders(token), PRODUCTION_ORDERS_REFRESH_INTERVAL_MS);
+                    }
+                    return;
+                }
+                if (productionOrdersTimeoutId) { clearTimeout(productionOrdersTimeoutId); productionOrdersTimeoutId = null; }
+                if (!token) {
+                    console.warn("Token no encontrado para production-orders. No se cargarán las órdenes.");
+                     [colPendiente, colEnCurso, colFinalizadas, colIncidencias].forEach(column => {
+                        if (column) {
+                            const titleElement = column.querySelector('h2.kanban-title');
+                            column.innerHTML = '';
+                            if (titleElement) column.appendChild(titleElement);
+                        }
+                    });
+                    return;
+                }
+
+                const ordersEndpoint = `/api/production-orders?token=${token}&page=${page}`;
+                const ordersApiUrl = `${API_BASE_URL}${ordersEndpoint}`;
+                console.log(`Fetching production orders from: ${ordersApiUrl}`);
+
+                fetch(ordersApiUrl)
+                    .then(response => {
+                        if (!response.ok) {
+                            if (response.status === 404) {
+                                console.log("No production orders found (404).");
+                                processProductionOrders({ data: [] });
+                                return null;
+                            }
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data) {
+                            processProductionOrders(data);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching production orders:', error);
+                         [colPendiente, colEnCurso, colFinalizadas, colIncidencias].forEach(column => {
+                            if (column) {
+                                const titleElement = column.querySelector('h2.kanban-title');
+                                column.innerHTML = '';
+                                if (titleElement) column.appendChild(titleElement);
+                            }
+                        });
+                    })
+                    .finally(() => {
+                        if (token && !isSelectOpen && !isProcessingLogin) {
+                            productionOrdersTimeoutId = setTimeout(() => fetchProductionOrders(token), PRODUCTION_ORDERS_REFRESH_INTERVAL_MS);
+                        } else {
+                            console.log("Production orders refresh loop paused.");
+                        }
+                    });
+            }
+            // --- FIN NUEVO ---
 
 
             // --- Función para obtener token de URL ---
@@ -1275,31 +1506,27 @@
             // --- Flujo Inicial ---
             productionLineToken = getTokenFromUrl();
             loadWorkers();
-            fetchLastShiftHistory(productionLineToken); // Iniciar polling estado turno
-            fetchOrderStats(productionLineToken);       // Iniciar polling stats orden
-            // ELIMINADO: fetchProgressData();
+            fetchLastShiftHistory(productionLineToken);
+            fetchOrderStats(productionLineToken);
+            fetchProductionOrders(productionLineToken);
+
 
             // --- Manejar selección manual de operario ---
             workerSelect.on('change', async function(e) {
-                // ... (Lógica sin cambios, pero el finally ahora reinicia ambos fetch) ...
                 console.log("DEBUG: Worker Select 'change' event fired!");
                 const selectedId = $(this).val();
                 resetShiftSelection();
                 if (!selectedId || selectedId === "") {
-                    // Si se deselecciona el operario, PARAR los timers y resetear estado
                     potentialNewWorker = null;
-                    isProcessingLogin = false; // Asegurar que no esté bloqueado
+                    isProcessingLogin = false;
                     if (shiftHistoryTimeoutId) clearTimeout(shiftHistoryTimeoutId); shiftHistoryTimeoutId = null;
                     if (orderStatsTimeoutId) clearTimeout(orderStatsTimeoutId); orderStatsTimeoutId = null;
+                    if (productionOrdersTimeoutId) clearTimeout(productionOrdersTimeoutId); productionOrdersTimeoutId = null;
                     console.log("DEBUG: Worker deselected. Refreshes stopped.");
-                    // Podríamos incluso forzar un fetch del estado sin operario si fuera necesario
-                    // fetchLastShiftHistory(productionLineToken);
-                    // fetchOrderStats(productionLineToken);
                     return;
                 }
                 const selectedName = $(this).find('option:selected').text();
                 if (currentWorker && currentWorker.id != selectedId) {
-                    // ... (Mostrar alerta de cambio de operario) ...
                     if (typeof Swal === 'function') { Swal.fire({ icon: 'warning', title: 'Cambio de Operario', text: `Para iniciar sesión como ${selectedName}, primero debes finalizar el turno del operario actual (${currentWorker.name}). Usa el botón (X) o el botón 'Finalizar Turno'.`, confirmButtonColor: '#3085d6' }); } else { alert(`Para iniciar sesión como ${selectedName}, primero debes finalizar el turno del operario actual (${currentWorker.name}). Usa el botón (X) o el botón 'Finalizar Turno'.`); }
                     workerSelect.val(currentWorker.id).trigger('change.select2');
                     return;
@@ -1309,45 +1536,42 @@
                 potentialNewWorker = { id: selectedId, name: selectedName };
                 console.log("DEBUG: Potential worker selected:", potentialNewWorker.name);
 
-                // Bloquear ambos refrescos
                 isProcessingLogin = true;
                 if (shiftHistoryTimeoutId) { clearTimeout(shiftHistoryTimeoutId); shiftHistoryTimeoutId = null; }
                 if (orderStatsTimeoutId) { clearTimeout(orderStatsTimeoutId); orderStatsTimeoutId = null; }
+                if (productionOrdersTimeoutId) { clearTimeout(productionOrdersTimeoutId); productionOrdersTimeoutId = null; }
                 console.log("DEBUG: Processing login START, refreshes blocked.");
 
                 try {
                     const shiftsLoaded = await loadAndShowShifts();
                     if (!shiftsLoaded) {
-                        // ... (resetear selección) ...
                         workerSelect.val(null).trigger('change.select2'); potentialNewWorker = null;
                         isProcessingLogin = false;
                         console.log("DEBUG: Processing login END (no shifts), refreshes unblocked.");
-                        // Reanudar ambos timers
                         if (!shiftHistoryTimeoutId) fetchLastShiftHistory(productionLineToken);
                         if (!orderStatsTimeoutId) fetchOrderStats(productionLineToken);
+                        if (!productionOrdersTimeoutId) fetchProductionOrders(productionLineToken);
                     } else {
                         console.log("Shifts loaded, waiting for shift selection. Refreshes remain blocked.");
                     }
                 } catch (error) {
-                    // ... (resetear selección) ...
                      workerSelect.val(null).trigger('change.select2'); potentialNewWorker = null;
                     isProcessingLogin = false;
                     console.log("DEBUG: Processing login END (shift load error), refreshes unblocked.");
-                    // Reanudar ambos timers
                     if (!shiftHistoryTimeoutId) fetchLastShiftHistory(productionLineToken);
                     if (!orderStatsTimeoutId) fetchOrderStats(productionLineToken);
+                    if (!productionOrdersTimeoutId) fetchProductionOrders(productionLineToken);
                 }
             });
 
             // --- Manejar selección de turno ---
             shiftSelect.on('change', async function(e) {
-                 // ... (Lógica sin cambios internos, pero el finally ahora reinicia ambos fetch) ...
                 console.log("DEBUG: Shift Select 'change' event fired!");
                 selectedShiftId = $(this).val();
                 if (!selectedShiftId || selectedShiftId === "") {
                     console.log("DEBUG: Shift selection cleared or placeholder selected.");
                     selectedShiftId = null;
-                    return; // No hacer nada más, esperar a que elija un turno válido
+                    return;
                 }
                 if (!potentialNewWorker) {
                     console.error("Error: Shift selected but no potential worker stored.");
@@ -1355,6 +1579,7 @@
                     isProcessingLogin = false;
                     if (!shiftHistoryTimeoutId) fetchLastShiftHistory(productionLineToken);
                     if (!orderStatsTimeoutId) fetchOrderStats(productionLineToken);
+                    if (!productionOrdersTimeoutId) fetchProductionOrders(productionLineToken);
                     return;
                 }
 
@@ -1384,13 +1609,12 @@
                         try {
                             await postShiftEvent("inicio_trabajo");
                             if (typeof Swal === 'function' && Swal.isLoading()) { Swal.close(); }
-                            resetShiftSelection(); // Ocultar selector turno
-                            if (typeof Swal === 'function') { Swal.fire({ title: '¡Éxito!', text: `Turno iniciado para ${currentWorker.name}.`, icon: 'success', timer: 2500, timerProgressBar: true }); } else { alert('¡Éxito!'); }
+                            resetShiftSelection();
+                            if (typeof Swal === 'function') { Swal.fire({ title: '¡Éxito!', text: `Turno iniciado untuk ${currentWorker.name}.`, icon: 'success', timer: 2500, timerProgressBar: true }); } else { alert('¡Éxito!'); }
                         } catch (error) {
                             console.error("DEBUG: Error during start shift API call:", error);
                             if (typeof Swal === 'function' && Swal.isLoading()) { Swal.close(); }
                             if (typeof Swal === 'function') { Swal.fire('Error', `No se pudo iniciar el turno. ${error.message || ''}`, 'error'); } else { alert(`Error al iniciar turno. ${error.message || ''}`); }
-                            // Revertir
                             currentWorker = null; selectedShiftId = null;
                             displayContainer.addClass('hidden'); workerLabel.removeClass('hidden'); selectContainer.removeClass('hidden');
                             workerSelect.val(null).trigger('change.select2');
@@ -1398,19 +1622,19 @@
                         }
                     } else {
                          console.log("DEBUG: Start shift CANCELLED by user.");
-                        shiftSelect.val(""); selectedShiftId = null; // Resetear solo la selección de turno
+                        shiftSelect.val(""); selectedShiftId = null;
                     }
                 } finally {
-                    // Desbloquear y reanudar timers SOLO si se confirmó (haya ido bien o mal la API)
                     if (confirmed) {
                         isProcessingLogin = false;
                         console.log("DEBUG: Processing login END (Shift selected/processed), refreshes unblocked.");
                         if (shiftHistoryTimeoutId) clearTimeout(shiftHistoryTimeoutId);
                         if (orderStatsTimeoutId) clearTimeout(orderStatsTimeoutId);
+                        if (productionOrdersTimeoutId) clearTimeout(productionOrdersTimeoutId);
                         fetchLastShiftHistory(productionLineToken);
                         fetchOrderStats(productionLineToken);
+                        fetchProductionOrders(productionLineToken);
                     } else {
-                        // Si canceló, isProcessingLogin sigue true, timers parados
                         console.log("DEBUG: Shift selection cancelled, refreshes remain blocked until worker selection changes.");
                     }
                 }
@@ -1419,7 +1643,6 @@
 
                // --- Manejar clic en botón Logout (X) ---
                logoutButton.on('click', function() {
-                   // ... (Lógica sin cambios, pero el finally ahora reinicia ambos fetch) ...
                    const logoutDescription = "finalizar el turno/tarea actual";
                    const eventName = "final_trabajo";
                    if (!currentWorker) {
@@ -1428,9 +1651,9 @@
                     }
 
                    showActionConfirmation(logoutDescription, () => {
-                       // Detener ambos timers
                        if (shiftHistoryTimeoutId) clearTimeout(shiftHistoryTimeoutId);
                        if (orderStatsTimeoutId) clearTimeout(orderStatsTimeoutId);
+                       if (productionOrdersTimeoutId) clearTimeout(productionOrdersTimeoutId);
                        isProcessingLogin = true;
                        console.log("DEBUG: Processing final_trabajo START, refreshes blocked.");
 
@@ -1440,11 +1663,12 @@
                            .finally(() => {
                                isProcessingLogin = false;
                                console.log("DEBUG: Processing final_trabajo END, refreshes unblocked.");
-                               // Reanudar ambos timers
                                if (shiftHistoryTimeoutId) clearTimeout(shiftHistoryTimeoutId);
                                if (orderStatsTimeoutId) clearTimeout(orderStatsTimeoutId);
+                               if (productionOrdersTimeoutId) clearTimeout(productionOrdersTimeoutId);
                                fetchLastShiftHistory(productionLineToken);
                                fetchOrderStats(productionLineToken);
+                               fetchProductionOrders(productionLineToken);
                            });
                    });
                });
@@ -1458,12 +1682,12 @@
                     } else {
                         alert("Refrescando datos...");
                     }
-                    // Detener timers actuales para evitar llamadas duplicadas
                     if (shiftHistoryTimeoutId) clearTimeout(shiftHistoryTimeoutId);
                     if (orderStatsTimeoutId) clearTimeout(orderStatsTimeoutId);
-                    // Forzar la ejecución inmediata de las funciones de fetch
+                    if (productionOrdersTimeoutId) clearTimeout(productionOrdersTimeoutId);
                     fetchLastShiftHistory(productionLineToken);
                     fetchOrderStats(productionLineToken);
+                    fetchProductionOrders(productionLineToken); // Refrescar también las órdenes
                 });
             } else {
                 console.error("Refresh button not found!");
@@ -1483,13 +1707,13 @@
                 longPressTriggered = false;
                 startX = e.touches[0].clientX;
                 startY = e.touches[0].clientY;
-                clearTimeout(longPressTimer); // Limpiar timer anterior si existiera
+                clearTimeout(longPressTimer);
                 longPressTimer = setTimeout(() => {
-                    if (!isTouchInteraction || !currentCard) return; // Verificar si aún es válido
+                    if (!isTouchInteraction || !currentCard) return;
                     console.log("Long press triggered!");
                     longPressTriggered = true;
                     currentCard.classList.add('long-press-ready');
-                    if (navigator.vibrate) { navigator.vibrate(50); } // Vibración suave como feedback
+                    if (navigator.vibrate) { navigator.vibrate(50); }
                 }, longPressDelay);
             }
 
@@ -1499,41 +1723,32 @@
                 const currentY = e.touches[0].clientY;
                 const deltaX = Math.abs(currentX - startX);
                 const deltaY = Math.abs(currentY - startY);
-                const moveThreshold = 10; // Píxeles de tolerancia antes de cancelar long press
+                const moveThreshold = 10;
 
-                // Si no se ha disparado el long press y el dedo se mueve significativamente
                 if (!longPressTriggered && (deltaX > moveThreshold || deltaY > moveThreshold)) {
                     console.log("Movement detected before long press, cancelling timer.");
                     clearTimeout(longPressTimer);
                     if(currentCard) currentCard.classList.remove('long-press-ready');
-                    // No establecemos isTouchInteraction a false aquí, podría ser scroll
                 }
             }
 
             function handleTouchEnd(e) {
-                clearTimeout(longPressTimer); // Siempre limpiar el timer al levantar/cancelar
+                clearTimeout(longPressTimer);
                 if (currentCard) {
-                    currentCard.classList.remove('long-press-ready'); // Quitar feedback visual
+                    currentCard.classList.remove('long-press-ready');
                 }
-                // Resetear variables de estado táctil
-                // isTouchInteraction se maneja en Dragula para diferenciar click/drag
-                // longPressTriggered se resetea en drop/cancel/dragend de Dragula
                 currentCard = null;
             }
 
             const drake = dragula(columns, {
                 moves: function (el, source, handle, sibling) {
-                     // Permitir mover siempre con ratón
                      if (!isTouchInteraction) { return true; }
-                     // En táctil, solo permitir si se activó el long press
                      return longPressTriggered;
                  },
                 accepts: function (el, target, source, sibling) {
                      if (target.id === 'col-en-curso') {
-                         // Permitir mover DENTRO de la columna "En Curso"
                          if (source.id === 'col-en-curso') return true;
-                         // Si viene de otra columna y ya hay una tarjeta, no permitir
-                         const cardsInTarget = target.querySelectorAll('.kanban-card:not(.gu-transit)').length; // Excluir la que se está moviendo
+                         const cardsInTarget = target.querySelectorAll('.kanban-card:not(.gu-transit)').length;
                          if (cardsInTarget > 0) {
                               if (typeof Swal === 'function') {
                                   Swal.fire({
@@ -1546,10 +1761,10 @@
                                    alert('Solo puede haber una tarea en la columna "En Curso".');
                               }
                               console.log("Drop rejected: 'En Curso' column already has a card.");
-                              return false; // No permitir soltar
+                              return false;
                          }
                      }
-                     return true; // Permitir soltar por defecto en otras columnas
+                     return true;
                  }
             });
 
@@ -1557,48 +1772,114 @@
 
             drake.on('drag', (el, source) => {
                 console.log("Dragula event: drag (started)");
-                // Validar si hay operario seleccionado ANTES de permitir el drag
                 if (!currentWorker) {
                     console.log("Drag cancelled: No worker selected.");
-                    drake.cancel(true); // Cancelar el drag
+                    drake.cancel(true);
                     showWorkerRequiredAlert();
                     return;
                 }
-                if (el) el.classList.remove('long-press-ready'); // Quitar estilo long-press al empezar a arrastrar
-                isTouchInteraction = false; // Resetear flag táctil al iniciar drag real
+                if (el) el.classList.remove('long-press-ready');
+                isTouchInteraction = false;
             });
 
-            drake.on('drop', (el, target, source, sibling) => {
+            drake.on('drop', async (el, target, source, sibling) => {
                 console.log("Dragula event: drop");
-                const sourceColumnName = source.dataset.columnName || source.id;
-                const targetColumnName = target.dataset.columnName || target.id;
                 const cardId = el.dataset.cardId;
-                const cardTitleElement = el.querySelector('.font-semibold');
-                const cardTitle = cardTitleElement ? cardTitleElement.innerText : `Tarjeta ${cardId}`;
-                const message = `Moviste la tarjeta "${cardTitle}" de "${sourceColumnName}" a "${targetColumnName}".`;
+                const targetColumnId = target.id;
 
-                // TODO: Implementar la llamada a la API para registrar el movimiento Kanban
-                console.log("TODO: Llamar API para registrar movimiento Kanban", {
-                    card_id: cardId,
-                    target_column: targetColumnName,
-                    source_column: sourceColumnName,
-                    operator_id: currentWorker ? currentWorker.id : null // Asegurarse de que currentWorker existe
-                });
+                const columnIdToStatus = {
+                    'col-pendiente': 0,
+                    'col-en-curso': 1,
+                    'col-finalizadas': 2,
+                    'col-incidencias': 5
+                };
+                const newStatusKey = columnIdToStatus[targetColumnId];
 
-                // Mostrar notificación (simulada)
-                if (typeof Swal === 'function') {
-                    Swal.fire({ title: 'Movimiento Registrado (Simulado)', text: message, icon: 'success', timer: 2000, timerProgressBar: true, toast: true, position: 'top-end', showConfirmButton: false });
-                } else {
-                    alert(message);
+                if (typeof newStatusKey === 'undefined') {
+                    console.error(`Estado desconocido para la columna ID: ${targetColumnId}`);
+                    drake.cancel(true);
+                    return;
                 }
-                longPressTriggered = false; // Resetear estado long-press
+
+                let newOrderValue = 0;
+                const cardsInTargetColumn = Array.from(target.querySelectorAll('.kanban-card'));
+                const movedCardIndex = cardsInTargetColumn.findIndex(card => card === el);
+
+                if (movedCardIndex !== -1) {
+                    newOrderValue = (movedCardIndex + 1) * 10; // Asignar orden basado en la nueva posición visual
+                } else { // Fallback si la tarjeta no se encuentra (no debería ocurrir si el drop es válido)
+                    const lastCard = cardsInTargetColumn.length > 0 ? cardsInTargetColumn[cardsInTargetColumn.length - 1] : null;
+                    newOrderValue = lastCard ? (parseInt(lastCard.dataset.orderSort || "0") + 10) : 10;
+                }
+                el.dataset.orderSort = newOrderValue; // Actualizar en el DOM para referencia inmediata si es necesario
+
+                console.log(`Tarjeta ${cardId} movida a columna ${targetColumnId} (status ${newStatusKey}) con nuevo orden calculado: ${newOrderValue}`);
+
+                if (typeof Swal === 'function') {
+                    Swal.fire({
+                        title: 'Actualizando...',
+                        allowOutsideClick: false,
+                        didOpen: () => { Swal.showLoading(); }
+                    });
+                }
+
+                try {
+                    const payload = {
+                        status: parseInt(newStatusKey),
+                        orden: newOrderValue // Enviar el nuevo orden
+                    };
+                    console.log("Enviando payload a PATCH:", payload);
+
+                    const response = await fetch(`${API_BASE_URL}/api/production-orders/${cardId}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            // Si necesitas un token de autorización para esta API PATCH:
+                            // 'Authorization': `Bearer ${productionLineToken}` // O el token que corresponda
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (response.ok) {
+                        console.log(`Orden ${cardId} actualizada a status ${newStatusKey} y orden ${newOrderValue}`);
+                        if (typeof Swal === 'function') {
+                            Swal.close();
+                            Swal.fire({
+                                title: '¡Actualizado!',
+                                text: `La orden ha sido movida y reordenada.`,
+                                icon: 'success',
+                                timer: 1500,
+                                showConfirmButton: false,
+                                toast: true,
+                                position: 'top-end'
+                            });
+                        }
+                        // Refrescar todas las órdenes para reflejar el cambio y el orden correcto desde el backend
+                        fetchProductionOrders(productionLineToken, 1);
+                    } else {
+                        const errorData = await response.json().catch(() => ({ message: response.statusText }));
+                        throw new Error(`Error ${response.status} al actualizar: ${errorData.message || 'Error desconocido'}`);
+                    }
+                } catch (error) {
+                    console.error('Error al actualizar la orden:', error);
+                    if (typeof Swal === 'function') {
+                         Swal.close(); // Cerrar el modal de carga
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error de Actualización',
+                            text: `No se pudo actualizar la orden. ${error.message}`,
+                        });
+                    }
+                    fetchProductionOrders(productionLineToken, 1); // Intentar recargar para reflejar el estado real
+                }
+                longPressTriggered = false;
             });
 
             drake.on('cancel', (el, container, source) => {
                 console.log("Dragula event: cancel");
                 longPressTriggered = false;
                 if (el) el.classList.remove('long-press-ready');
-                 // Resetear estilos visuales de columnas si los hubiera
                  columns.forEach(col => col.classList.remove('bg-gray-300'));
             });
 
@@ -1606,17 +1887,16 @@
                 console.log("Dragula event: dragend (finished, dropped or cancelled)");
                 longPressTriggered = false;
                 if (el) el.classList.remove('long-press-ready');
-                 // Resetear estilos visuales de columnas si los hubiera
                  columns.forEach(col => col.classList.remove('bg-gray-300'));
-                 isTouchInteraction = false; // Asegurar reset del flag táctil
+                 isTouchInteraction = false;
             });
 
             drake.on('over', function (el, container) {
-                container.classList.add('bg-gray-300'); // Resaltar columna destino
+                container.classList.add('bg-gray-300');
             });
 
             drake.on('out', function (el, container) {
-                container.classList.remove('bg-gray-300'); // Quitar resaltado
+                container.classList.remove('bg-gray-300');
             });
 
         // *** Fin de DOMContentLoaded ***

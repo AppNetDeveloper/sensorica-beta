@@ -498,7 +498,7 @@
                     }
                 });
 
-                fetch('https://imperio.boisolo.dev/api/transfer-external-db', {
+                fetch('/api/transfer-external-db', {
                     method: 'POST',
                     headers: {
                         'accept': 'application/json',

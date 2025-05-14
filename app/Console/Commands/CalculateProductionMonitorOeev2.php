@@ -362,6 +362,9 @@ class CalculateProductionMonitorOeev2 extends Command
             }
             // Actualizar la orden si existe
             if ($currentOrder) {
+                $slowTimeDif=   $slowTime - $currentOrder->slow_time;
+
+                $unitsMadeTheoretical = ($totalOee / 100) * 
                 $currentOrder->units_per_minute_real = $unitsMadeTheoretical;
                 $currentOrder->units_per_minute_theoretical = $unitsMadeTheoreticalPerMinute;
                 $currentOrder->seconds_per_unit_real = $secondsPerUnitReal;
@@ -375,11 +378,33 @@ class CalculateProductionMonitorOeev2 extends Command
                 $currentOrder->oee = $totalOee;
                 $currentOrder->on_time = $orderTimeActivitySeconds;
                 $currentOrder->save();
+            }else{
+                $slowTimeDif= 0;
             }
 
             if($shiftHistory){
                 $shiftHistory->on_time = $shiftHistory->on_time + 1;
-                $shiftHistory->oee = $totalOee;
+                //$shiftHistory->oee = $totalOee;
+                $shiftHistory->slow_time += $slowTimeDif;
+
+                // 3. Lectura de tiempos
+                $P = $shiftHistory->on_time;      // Tiempo planificado (s)
+                $D = $shiftHistory->down_time;    // Tiempo de paradas (s)
+                $S = $shiftHistory->slow_time;    // Tiempo lento (s)
+
+                // 4. Cálculo del tiempo productivo (no negativo)
+                $productive = max($P - $D - $S, 0);
+
+                // 5. Cálculo del OEE en porcentaje
+                if ($P > 0) {
+                    $oeePercent = round(($productive / $P) * 100, 2);  // 2 decimales
+                } else {
+                    $oeePercent = 0;
+                }
+
+                // 6. Guardar en el modelo
+                $shiftHistory->oee = $oeePercent;  // valor entre 0 y 100
+                
                 $shiftHistory->save();
             }
 
