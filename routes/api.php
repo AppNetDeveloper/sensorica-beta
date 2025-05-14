@@ -40,7 +40,7 @@ use App\Http\Controllers\Api\ShiftEventController;
 use App\Http\Controllers\Api\ShiftListController;
 use App\Http\Controllers\Api\WorkerController; 
 use App\Http\Controllers\Api\ShiftProcessEventController;
-
+use App\Http\Controllers\Api\RfidErrorPointController;
 
 
 
@@ -354,3 +354,5 @@ Route::get('workers-export/send-assignment-list',[WorkerController::class, 'send
 Route::get('/workers-export/complete-list', [WorkerController::class, 'completeList'])->name('workers.completeListExportstandalone');
 
 Route::post('/shift-process-events', [ShiftProcessEventController::class, 'store'])->name('shift-events.store');
+
+Route::get('rfid-error-points', [RfidErrorPointController::class, 'byDate']);
