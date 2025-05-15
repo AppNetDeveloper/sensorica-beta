@@ -174,6 +174,7 @@ class RfidDetailController extends Controller
                         Log::info("La tarjeta no es permitida todavia por no pasar el punto en este turno.");
                         Log::info("Fecha del ultimo registro de shift_history: " . $shiftHistory->created_at);
                         Log::info("Fecha del ultimo registro de la tarjeta maestra: " . $lastMasterRecord->created_at);
+                        //aqui 
                         return response()->json([
                             'success' => false,
                             'message' => 'La tarjeta no es permitida todavia por no pasar el punto en este turno.'
@@ -185,6 +186,7 @@ class RfidDetailController extends Controller
                             ->exists();
 
                         if ($registroExistente) {
+                            //aqui
                             Log::info("La tarjeta con TID {$currentTid} ya fue registrada después del último reset.");
                             return response()->json([
                                 'success' => false,
