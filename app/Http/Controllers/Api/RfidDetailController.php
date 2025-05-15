@@ -193,7 +193,7 @@ class RfidDetailController extends Controller
                             
                             //aqui  ponemos para registrar las que posiblemente estan bien 
 
-                            $this->createRfidErrorPointSimple($rfidDetail, $rfidReading, $request, $rfidAnt, "La tarjeta con TID  ya fue registrada en este ciclo.");
+                            $this->createRfidErrorPointSimple($rfidDetail, $rfidReading, $request, $rfidAnt, "La tarjeta ya fue registrada en este ciclo.");
                             
                             Log::info("La tarjeta con TID {$currentTid} ya fue registrada después del último reset.");
                             return response()->json([
