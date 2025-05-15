@@ -18,6 +18,7 @@ class RfidErrorPointResource extends JsonResource
             'rfid_detail'     => $this->whenLoaded('rfidDetail'),
             'rfid_reading'    => $this->whenLoaded('rfidReading'),
             'rfid_color_name' => optional($this->rfidReading->rfidColor)->name,
+            'note' => $this->note,
         ]);
     }
 }

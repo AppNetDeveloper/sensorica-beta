@@ -42,6 +42,7 @@ class RfidErrorPoint extends Model
         'operator_post_id',
         'rfid_detail_id',
         'rfid_reading_id',
+        'note',
     ];
 
     /* -------------------------------------------------
