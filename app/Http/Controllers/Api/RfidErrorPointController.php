@@ -44,7 +44,7 @@ class RfidErrorPointController extends Controller
         ])
         ->whereBetween('created_at', [$start, $end])
         ->orderBy('created_at', 'desc')
-        ->paginate(50);
+        ->paginate(5050);
     
     
         return RfidErrorPointResource::collection($errorPoints);
