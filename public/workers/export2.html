@@ -280,7 +280,7 @@
 <script>
     const apiBaseUrl = '/api/workers/all-list/completed'; 
     const apiEditPostUrl = '/api/operator-post/update-count'; 
-    const ollamaApiUrl = 'http://185.26.5.37:11434//api/generate'; 
+    const ollamaApiUrl = '/workers/proxy.php'; // UPDATED OLLAMA IP
     const ollamaModelName = 'llama3.2'; 
 
     const tableBody = document.getElementById('workersTableBody');
@@ -739,52 +739,50 @@
 
     async function callOllamaAPI(prompt, modalTitleText = "Análisis (Ollama)") {
         showAnalysisModal(modalTitleText, "Ollama"); 
-        console.log("Intentando conectar a Ollama en URL:", ollamaApiUrl); // DEBUG
+        console.log("Intentando conectar a Ollama en URL:", ollamaApiUrl); 
         const payload = {
             model: ollamaModelName,
             prompt: prompt,
             stream: false 
         };
-        console.log("Payload para Ollama:", JSON.stringify(payload)); // DEBUG
+        console.log("Payload para Ollama:", JSON.stringify(payload)); 
 
         try {
             const response = await fetch(ollamaApiUrl, {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json'
-                    // No 'Authorization' header needed for Ollama by default
                 },
                 body: JSON.stringify(payload)
             });
-            console.log("Respuesta cruda de Ollama (status):", response.status); // DEBUG
+            console.log("Respuesta cruda de Ollama (status):", response.status); 
             
             if (!response.ok) {
                 const errorText = await response.text();
-                console.error("Texto del error de Ollama:", errorText); // DEBUG
+                console.error("Texto del error de Ollama:", errorText); 
                 throw new Error(`Error de API Ollama: ${response.status} ${response.statusText}. Respuesta: ${errorText}`);
             }
             const result = await response.json();
-            console.log("Resultado JSON de Ollama:", result); // DEBUG
+            console.log("Resultado JSON de Ollama:", result); 
 
             if (result.response) {
                 analysisModalContent.textContent = result.response;
                 analysisModalStatus.textContent = 'Análisis (Ollama) completado.';
             } else {
-                console.error("Respuesta de Ollama no contiene el campo 'response':", result); // DEBUG
+                console.error("Respuesta de Ollama no contiene el campo 'response':", result); 
                 throw new Error('Respuesta inesperada de API Ollama (campo "response" ausente).');
             }
         } catch (error) {
-            console.error('Error llamando a Ollama API:', error.message); // DEBUG
-            console.error("Detalles completos del error de Ollama:", error); // DETAILED DEBUG
+            console.error('Error llamando a Ollama API:', error.message); 
+            console.error("Detalles completos del error de Ollama:", error); 
             analysisModalContent.textContent = `No se pudo generar el análisis (Ollama):\n${error.message}\n\nAsegúrate de que Ollama esté en ejecución en ${ollamaApiUrl} y el modelo "${ollamaModelName}" esté disponible. Verifica la consola del navegador (F12) para más detalles y errores de red/CORS.`;
             analysisModalStatus.textContent = 'Error de conexión o procesamiento (Ollama).';
             analysisModalStatus.classList.add('text-red-500');
         }
     }
     
-    // --- Test Ollama Connectivity (call from browser console) ---
     async function testOllamaConnectivity() {
-        const testUrl = ollamaApiUrl.replace('/api/generate', '/api/tags'); // Use a GET endpoint
+        const testUrl = ollamaApiUrl.replace('/api/generate', '/api/tags'); 
         console.log("Probando conectividad con Ollama en:", testUrl);
         try {
             const response = await fetch(testUrl, { method: 'GET' });
