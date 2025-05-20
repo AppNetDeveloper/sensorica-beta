@@ -162,7 +162,10 @@
                 📊 Cajas/Puesto (Circular)
             </button>
             <button id="analizarTodosBtn" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-150 ease-in-out hidden">
-                ✨ Analizar Todos con IA
+                ✨ Analizar Todos (Gemini)
+            </button>
+            <button id="analizarTodosOllamaBtn" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-150 ease-in-out hidden">
+                 स्थानीय Analizar Todos (Ollama)
             </button>
             <button id="exportExcelBtn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed">
                 Exportar a Excel
@@ -235,21 +238,21 @@
     </div>
 </div>
 
-<div id="geminiAnalysisModal" class="modal hidden no-print">
+<div id="analysisModal" class="modal hidden no-print"> 
     <div class="modal-content">
         <div class="flex justify-between items-center mb-4">
-            <h3 id="geminiModalTitle" class="text-lg font-medium leading-6 text-gray-900">✨ Análisis de Rendimiento</h3>
-            <button type="button" id="closeGeminiAnalysisBtn" class="text-gray-400 hover:text-gray-600">
+            <h3 id="analysisModalTitle" class="text-lg font-medium leading-6 text-gray-900">Análisis de Rendimiento</h3>
+            <button type="button" id="closeAnalysisModalBtn" class="text-gray-400 hover:text-gray-600">
                 <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
             </button>
         </div>
-        <div id="geminiAnalysisContent" class="text-sm text-gray-700 whitespace-pre-wrap overflow-y-auto" style="max-height: 60vh;">
+        <div id="analysisModalContent" class="text-sm text-gray-700 whitespace-pre-wrap overflow-y-auto" style="max-height: 60vh;">
             </div>
-        <div id="geminiAnalysisStatus" class="mt-3 text-sm text-gray-500"></div>
+        <div id="analysisModalStatus" class="mt-3 text-sm text-gray-500"></div>
         <div class="mt-4 flex justify-end">
-            <button type="button" id="okGeminiAnalysisBtn" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 border border-transparent rounded-md shadow-sm">OK</button>
+            <button type="button" id="okAnalysisModalBtn" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 border border-transparent rounded-md shadow-sm">OK</button>
         </div>
     </div>
 </div>
@@ -277,6 +280,9 @@
 <script>
     const apiBaseUrl = '/api/workers/all-list/completed'; 
     const apiEditPostUrl = '/api/operator-post/update-count'; 
+    const ollamaApiUrl = 'http://185.26.5.37:11434//api/generate'; 
+    const ollamaModelName = 'llama3.2'; 
+
     const tableBody = document.getElementById('workersTableBody');
     const loadingRow = document.getElementById('loadingRow');
     const errorRow = document.getElementById('errorRow');
@@ -287,9 +293,10 @@
     const dateRangeSelect = document.getElementById('dateRangeSelect');
     const filterPostsCheckbox = document.getElementById('filterPostsCheckbox');
     const analizarTodosBtn = document.getElementById('analizarTodosBtn'); 
+    const analizarTodosOllamaBtn = document.getElementById('analizarTodosOllamaBtn'); 
     const viewWorkerChartBtn = document.getElementById('viewWorkerChartBtn'); 
     const viewPostChartBtn = document.getElementById('viewPostChartBtn');
-    const viewPostPieChartBtn = document.getElementById('viewPostPieChartBtn'); // New Pie Chart Button
+    const viewPostPieChartBtn = document.getElementById('viewPostPieChartBtn'); 
     const totalUnidadesTurnoHeader = document.getElementById('totalUnidadesTurnoHeader'); 
 
     const lockButton = document.getElementById('lockButton');
@@ -308,12 +315,12 @@
     const cancelEditBtn = document.getElementById('cancelEditBtn');
     const saveEditBtn = document.getElementById('saveEditBtn');
 
-    const geminiAnalysisModal = document.getElementById('geminiAnalysisModal');
-    const geminiModalTitle = document.getElementById('geminiModalTitle'); 
-    const geminiAnalysisContent = document.getElementById('geminiAnalysisContent');
-    const geminiAnalysisStatus = document.getElementById('geminiAnalysisStatus');
-    const closeGeminiAnalysisBtn = document.getElementById('closeGeminiAnalysisBtn');
-    const okGeminiAnalysisBtn = document.getElementById('okGeminiAnalysisBtn');
+    const analysisModal = document.getElementById('analysisModal');
+    const analysisModalTitle = document.getElementById('analysisModalTitle'); 
+    const analysisModalContent = document.getElementById('analysisModalContent');
+    const analysisModalStatus = document.getElementById('analysisModalStatus');
+    const closeAnalysisModalBtn = document.getElementById('closeAnalysisModalBtn');
+    const okAnalysisModalBtn = document.getElementById('okAnalysisModalBtn');
 
     const chartModal = document.getElementById('chartModal');
     const chartModalTitle = document.getElementById('chartModalTitle');
@@ -356,19 +363,22 @@
             lockIcon.classList.remove('hidden');
             unlockIcon.classList.add('hidden');
             analizarTodosBtn.classList.add('hidden'); 
+            analizarTodosOllamaBtn.classList.add('hidden');
             viewWorkerChartBtn.classList.add('hidden'); 
             viewPostChartBtn.classList.add('hidden');
-            viewPostPieChartBtn.classList.add('hidden'); // Hide new pie chart button
+            viewPostPieChartBtn.classList.add('hidden'); 
         } else {
             lockIcon.classList.add('hidden');
             unlockIcon.classList.remove('hidden');
             if (hasData) {
                 analizarTodosBtn.classList.remove('hidden'); 
+                analizarTodosOllamaBtn.classList.remove('hidden');
                 viewWorkerChartBtn.classList.remove('hidden'); 
                 viewPostChartBtn.classList.remove('hidden');
-                viewPostPieChartBtn.classList.remove('hidden'); // Show new pie chart button
+                viewPostPieChartBtn.classList.remove('hidden'); 
             } else {
                 analizarTodosBtn.classList.add('hidden');
+                analizarTodosOllamaBtn.classList.add('hidden');
                 viewWorkerChartBtn.classList.add('hidden');
                 viewPostChartBtn.classList.add('hidden');
                 viewPostPieChartBtn.classList.add('hidden');
@@ -376,9 +386,10 @@
         }
         
         analizarTodosBtn.disabled = isLocked || !hasData;
+        analizarTodosOllamaBtn.disabled = isLocked || !hasData;
         viewWorkerChartBtn.disabled = isLocked || !hasData;
         viewPostChartBtn.disabled = isLocked || !hasData;
-        viewPostPieChartBtn.disabled = isLocked || !hasData; // Manage disabled state
+        viewPostPieChartBtn.disabled = isLocked || !hasData; 
 
         populateTable(originalWorkersData); 
     }
@@ -394,7 +405,7 @@
     cancelPasswordBtn.addEventListener('click', hidePasswordModal);
 
     submitPasswordBtn.addEventListener('click', () => {
-        if (passwordInput.value === 'boisolo') {
+        if (passwordInput.value === '1122') {
             hidePasswordModal();
             toggleLockState(false); 
         } else {
@@ -538,24 +549,25 @@
         }
     });
 
-    function showGeminiAnalysisModal(title = "✨ Análisis de Rendimiento") {
-        geminiModalTitle.textContent = title;
-        geminiAnalysisContent.innerHTML = '<div class="spinner"></div>'; 
-        geminiAnalysisStatus.textContent = 'Generando análisis...';
-        geminiAnalysisStatus.classList.remove('text-red-500');
-        geminiAnalysisModal.classList.remove('hidden');
+    // --- Generic Analysis Modal Functions ---
+    function showAnalysisModal(title = "Análisis de Rendimiento", provider = "Gemini") {
+        analysisModalTitle.textContent = title;
+        analysisModalContent.innerHTML = '<div class="spinner"></div>'; 
+        analysisModalStatus.textContent = `Generando análisis con ${provider}...`;
+        analysisModalStatus.classList.remove('text-red-500');
+        analysisModal.classList.remove('hidden');
     }
 
-    function hideGeminiAnalysisModal() {
-        geminiAnalysisModal.classList.add('hidden');
+    function hideAnalysisModal() {
+        analysisModal.classList.add('hidden');
     }
 
-    closeGeminiAnalysisBtn.addEventListener('click', hideGeminiAnalysisModal);
-    okGeminiAnalysisBtn.addEventListener('click', hideGeminiAnalysisModal);
+    closeAnalysisModalBtn.addEventListener('click', hideAnalysisModal);
+    okAnalysisModalBtn.addEventListener('click', hideAnalysisModal);
 
-    async function fetchWorkerAnalysis(worker) {
-        showGeminiAnalysisModal(`✨ Análisis de Rendimiento: ${worker.name || 'Desconocido'}`);
-
+    // --- Gemini Analysis Functions ---
+    async function fetchWorkerAnalysis(worker) { 
+        showAnalysisModal(`✨ Análisis (Gemini): ${worker.name || 'Desconocido'}`, "Gemini");
         const workerName = worker.name || 'Desconocido';
         let postsDetails = "Este trabajador no tiene puestos registrados en este periodo o ninguno con cantidad > 0.";
 
@@ -570,40 +582,23 @@
                 }).join('\n\n');
             }
         }
-        
-        const prompt = `
-Por favor, analiza el rendimiento del siguiente trabajador y proporciona un resumen conciso en español.
-Destaca sus puntos fuertes, posibles áreas de mejora si los datos lo sugieren, y cualquier patrón notable en su productividad o eficiencia.
-El análisis debe ser profesional y constructivo.
-
-Nombre del Trabajador: ${workerName}
-
-Detalles de sus puestos asignados en el periodo seleccionado (solo puestos con cantidad > 0):
-${postsDetails}
-
-Basándote en estos datos, genera el análisis. Si no hay suficientes datos para un análisis detallado, indícalo.
-Formatea la respuesta para que sea fácil de leer, usando párrafos y quizás listas si es apropiado.
-No incluyas frases como "Basándome en estos datos" o "Aquí está el análisis". Simplemente proporciona el análisis.
-`;
-
+        const prompt = `Analiza el rendimiento del trabajador: ${workerName}. Datos:\n${postsDetails}\nProporciona un resumen conciso en español, destacando puntos fuertes, áreas de mejora y patrones. Sé profesional y constructivo. No incluyas frases como "Basándome en estos datos".`;
         await callGeminiAPI(prompt);
     }
 
-    async function fetchOverallAnalysis() {
-        showGeminiAnalysisModal("✨ Análisis Global de Trabajadores");
+    async function fetchOverallAnalysis() { 
+        showAnalysisModal("✨ Análisis Global (Gemini)", "Gemini");
         const workersToAnalyze = filterDataByCheckbox(JSON.parse(JSON.stringify(originalWorkersData)));
-
         if (workersToAnalyze.length === 0) {
-            geminiAnalysisContent.textContent = 'No hay trabajadores que cumplan los criterios actuales para generar un análisis global.';
-            geminiAnalysisStatus.textContent = 'Análisis no disponible.';
+            analysisModalContent.textContent = 'No hay trabajadores para análisis global.';
+            analysisModalStatus.textContent = 'Análisis no disponible.';
             return;
         }
-
-        let overallSummary = `Análisis global para ${workersToAnalyze.length} trabajador(es) en el periodo seleccionado:\n\n`;
+        
+        let overallSummary = `Análisis global para ${workersToAnalyze.length} trabajador(es):\n\n`;
         let totalCajasGlobal = 0;
         let totalHorasTrabajadas = 0;
         let puestosConteo = {};
-
         workersToAnalyze.forEach(worker => {
             let workerCajas = 0;
             overallSummary += `Trabajador: ${worker.name || 'Desconocido'} (ID: ${worker.client_id || 'N/A'})\n`;
@@ -620,58 +615,24 @@ No incluyas frases como "Basándome en estos datos" o "Aquí está el análisis"
                         if (post.created_at && post.finish_at) {
                             const start = new Date(post.created_at);
                             const end = new Date(post.finish_at);
-                            if (end > start) {
-                                totalHorasTrabajadas += (end - start) / (1000 * 60 * 60);
-                            }
+                            if (end > start) { totalHorasTrabajadas += (end - start) / (1000 * 60 * 60); }
                         } else if (post.created_at && !post.finish_at) { 
-                             const start = new Date(post.created_at);
-                             const now = new Date();
-                             if (now > start) {
-                                 totalHorasTrabajadas += (now - start) / (1000 * 60 * 60);
-                             }
+                             const start = new Date(post.created_at); const now = new Date();
+                             if (now > start) { totalHorasTrabajadas += (now - start) / (1000 * 60 * 60); }
                         }
                     });
                     overallSummary += `  - Cajas totales del trabajador: ${workerCajas}\n`;
-                } else {
-                    overallSummary += `  - Sin puestos con producción en este periodo.\n`;
-                }
-            } else {
-                overallSummary += `  - Sin puestos asignados en este periodo.\n`;
-            }
+                } else { overallSummary += `  - Sin puestos con producción.\n`; }
+            } else { overallSummary += `  - Sin puestos asignados.\n`; }
             overallSummary += "\n";
         });
-
-        overallSummary += `Resumen General:\n`;
-        overallSummary += `- Total de Cajas Producidas (todos los trabajadores seleccionados): ${totalCajasGlobal}\n`;
-        if (totalHorasTrabajadas > 0) {
-            overallSummary += `- Cajas por Hora Promedio Global: ${(totalCajasGlobal / totalHorasTrabajadas).toFixed(2)}\n`;
-        }
+        overallSummary += `Resumen General:\n- Total Cajas: ${totalCajasGlobal}\n`;
+        if (totalHorasTrabajadas > 0) { overallSummary += `- Cajas/Hora Global: ${(totalCajasGlobal / totalHorasTrabajadas).toFixed(2)}\n`; }
         if(Object.keys(puestosConteo).length > 0) {
-            overallSummary += `- Distribución de Cajas por Puesto:\n`;
-            for(const puesto in puestosConteo) {
-                overallSummary += `  - ${puesto}: ${puestosConteo[puesto]} cajas\n`;
-            }
+            overallSummary += `- Cajas por Puesto:\n`;
+            for(const puesto in puestosConteo) { overallSummary += `  - ${puesto}: ${puestosConteo[puesto]} cajas\n`; }
         }
-
-
-        const prompt = `
-Por favor, realiza un análisis GLOBAL del rendimiento para el conjunto de trabajadores basado en los siguientes datos resumidos.
-El objetivo es obtener una visión general de la productividad del equipo, identificar tendencias, eficiencias, y posibles cuellos de botella o áreas de mejora a nivel de grupo.
-
-Datos Resumidos del Periodo:
-${overallSummary}
-
-Consideraciones para tu análisis:
-- Productividad general del equipo.
-- Eficiencia promedio (Cajas/Hora Global si está disponible).
-- Puestos más productivos o con mayor volumen.
-- Posibles disparidades entre trabajadores (si el resumen lo sugiere, aunque no tienes datos individuales detallados aquí).
-- Cualquier tendencia o patrón general que puedas inferir de los totales y promedios.
-- Sugerencias generales para optimizar el rendimiento del equipo.
-
-Proporciona el análisis en español, de forma profesional y constructiva.
-Formatea la respuesta para que sea fácil de leer. No incluyas frases como "Basándome en estos datos".
-`;
+        const prompt = `Análisis GLOBAL del rendimiento del equipo basado en:\n${overallSummary}\nConsidera productividad, eficiencia, puestos clave, disparidades y sugerencias. Sé profesional, constructivo y usa español. No incluyas frases como "Basándome en estos datos".`;
         await callGeminiAPI(prompt);
     }
     
@@ -680,49 +641,178 @@ Formatea la respuesta para que sea fácil de leer. No incluyas frases como "Bas�
         const payload = { contents: chatHistory };
         const apiKey = "AIzaSyCqoVbApNZ3niVEltmC3dcPR5_VkBTnlwM"; 
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-
         try {
             const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-
             if (!response.ok) {
                 const errorBody = await response.text();
-                throw new Error(`Api AppNetDebeloper no disponible : ${response.status} ${response.statusText}. Respuesta: ${errorBody}`);
+                throw new Error(`Error de API Gemini: ${response.status} ${response.statusText}. Respuesta: ${errorBody}`);
             }
-
             const result = await response.json();
-
             if (result.candidates && result.candidates.length > 0 &&
                 result.candidates[0].content && result.candidates[0].content.parts &&
                 result.candidates[0].content.parts.length > 0) {
-                const text = result.candidates[0].content.parts[0].text;
-                geminiAnalysisContent.textContent = text;
-                geminiAnalysisStatus.textContent = 'Análisis completado.';
+                analysisModalContent.textContent = result.candidates[0].content.parts[0].text;
+                analysisModalStatus.textContent = 'Análisis (Gemini) completado.';
             } else {
-                geminiAnalysisContent.textContent = 'No se pudo obtener un análisis. La respuesta de la API no tuvo el formato esperado.';
-                geminiAnalysisStatus.textContent = 'Error en la respuesta.';
-                geminiAnalysisStatus.classList.add('text-red-500');
+                throw new Error('Respuesta inesperada de API Gemini.');
             }
         } catch (error) {
             console.error('Error llamando a Gemini API:', error);
-            geminiAnalysisContent.textContent = `No se pudo generar el análisis debido a un error:\n${error.message}`;
-            geminiAnalysisStatus.textContent = 'Error de conexión o procesamiento.';
-            geminiAnalysisStatus.classList.add('text-red-500');
+            analysisModalContent.textContent = `No se pudo generar el análisis (Gemini):\n${error.message}`;
+            analysisModalStatus.textContent = 'Error de conexión o procesamiento (Gemini).';
+            analysisModalStatus.classList.add('text-red-500');
         }
     }
 
+    // --- Ollama Analysis Functions ---
+    async function fetchOllamaWorkerAnalysis(worker) {
+        showAnalysisModal(` स्थानीय Análisis (Ollama): ${worker.name || 'Desconocido'}`, "Ollama");
+        const workerName = worker.name || 'Desconocido';
+        let postsDetails = "Este trabajador no tiene puestos registrados en este periodo o ninguno con cantidad > 0.";
+        if (worker.operator_posts && worker.operator_posts.length > 0) {
+            const activePosts = worker.operator_posts.filter(post => (post.count ?? 0) > 0);
+            if (activePosts.length > 0) {
+                postsDetails = activePosts.map(post => {
+                    const startDate = post.created_at ? dateFormatter.format(new Date(post.created_at)) : 'N/A';
+                    const endDate = post.finish_at ? dateFormatter.format(new Date(post.finish_at)) : 'Activo';
+                    const cajasHora = calculateCajasHora(post.count, post.created_at, post.finish_at);
+                    return `- Puesto: ${post.rfid_reading?.name || 'N/A'}, Cantidad: ${post.count || 0}, Cajas/Hora: ${cajasHora}`;
+                }).join('\n');
+            }
+        }
+        const prompt = `Analiza el rendimiento del trabajador: ${workerName}. Datos:\n${postsDetails}\nProporciona un resumen conciso en español, destacando puntos fuertes, áreas de mejora y patrones. Sé profesional y constructivo. No incluyas frases como "Basándome en estos datos".`;
+        await callOllamaAPI(prompt, ` स्थानीय Análisis (Ollama): ${workerName}`);
+    }
+
+    async function fetchOllamaOverallAnalysis() {
+        showAnalysisModal(" स्थानीय Análisis Global (Ollama)", "Ollama");
+        const workersToAnalyze = filterDataByCheckbox(JSON.parse(JSON.stringify(originalWorkersData)));
+        if (workersToAnalyze.length === 0) {
+            analysisModalContent.textContent = 'No hay trabajadores para análisis global con Ollama.';
+            analysisModalStatus.textContent = 'Análisis no disponible.';
+            return;
+        }
+        
+        let overallSummary = `Análisis global para ${workersToAnalyze.length} trabajador(es):\n\n`;
+        let totalCajasGlobal = 0;
+        let totalHorasTrabajadas = 0;
+        let puestosConteo = {};
+        workersToAnalyze.forEach(worker => {
+            let workerCajas = 0;
+            overallSummary += `Trabajador: ${worker.name || 'Desconocido'} (ID: ${worker.client_id || 'N/A'})\n`;
+            if (worker.operator_posts && worker.operator_posts.length > 0) {
+                const activePosts = worker.operator_posts.filter(p => (p.count ?? 0) > 0);
+                if (activePosts.length > 0) {
+                    activePosts.forEach(post => {
+                        const cantidad = post.count || 0;
+                        workerCajas += cantidad;
+                        totalCajasGlobal += cantidad;
+                        if(post.rfid_reading?.name) {
+                            puestosConteo[post.rfid_reading.name] = (puestosConteo[post.rfid_reading.name] || 0) + cantidad;
+                        }
+                        if (post.created_at && post.finish_at) {
+                            const start = new Date(post.created_at); const end = new Date(post.finish_at);
+                            if (end > start) { totalHorasTrabajadas += (end - start) / (1000 * 60 * 60); }
+                        } else if (post.created_at && !post.finish_at) { 
+                             const start = new Date(post.created_at); const now = new Date();
+                             if (now > start) { totalHorasTrabajadas += (now - start) / (1000 * 60 * 60); }
+                        }
+                    });
+                    overallSummary += `  - Cajas totales del trabajador: ${workerCajas}\n`;
+                } else { overallSummary += `  - Sin puestos con producción.\n`; }
+            } else { overallSummary += `  - Sin puestos asignados.\n`; }
+            overallSummary += "\n";
+        });
+        overallSummary += `Resumen General:\n- Total Cajas: ${totalCajasGlobal}\n`;
+        if (totalHorasTrabajadas > 0) { overallSummary += `- Cajas/Hora Global: ${(totalCajasGlobal / totalHorasTrabajadas).toFixed(2)}\n`; }
+        if(Object.keys(puestosConteo).length > 0) {
+            overallSummary += `- Cajas por Puesto:\n`;
+            for(const puesto in puestosConteo) { overallSummary += `  - ${puesto}: ${puestosConteo[puesto]} cajas\n`; }
+        }
+        const prompt = `Análisis GLOBAL del rendimiento del equipo basado en:\n${overallSummary}\nConsidera productividad, eficiencia, puestos clave, disparidades y sugerencias. Sé profesional, constructivo y usa español. No incluyas frases como "Basándome en estos datos".`;
+        await callOllamaAPI(prompt, "Análisis Global (Ollama)");
+    }
+
+    async function callOllamaAPI(prompt, modalTitleText = "Análisis (Ollama)") {
+        showAnalysisModal(modalTitleText, "Ollama"); 
+        console.log("Intentando conectar a Ollama en URL:", ollamaApiUrl); // DEBUG
+        const payload = {
+            model: ollamaModelName,
+            prompt: prompt,
+            stream: false 
+        };
+        console.log("Payload para Ollama:", JSON.stringify(payload)); // DEBUG
+
+        try {
+            const response = await fetch(ollamaApiUrl, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json'
+                    // No 'Authorization' header needed for Ollama by default
+                },
+                body: JSON.stringify(payload)
+            });
+            console.log("Respuesta cruda de Ollama (status):", response.status); // DEBUG
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error("Texto del error de Ollama:", errorText); // DEBUG
+                throw new Error(`Error de API Ollama: ${response.status} ${response.statusText}. Respuesta: ${errorText}`);
+            }
+            const result = await response.json();
+            console.log("Resultado JSON de Ollama:", result); // DEBUG
+
+            if (result.response) {
+                analysisModalContent.textContent = result.response;
+                analysisModalStatus.textContent = 'Análisis (Ollama) completado.';
+            } else {
+                console.error("Respuesta de Ollama no contiene el campo 'response':", result); // DEBUG
+                throw new Error('Respuesta inesperada de API Ollama (campo "response" ausente).');
+            }
+        } catch (error) {
+            console.error('Error llamando a Ollama API:', error.message); // DEBUG
+            console.error("Detalles completos del error de Ollama:", error); // DETAILED DEBUG
+            analysisModalContent.textContent = `No se pudo generar el análisis (Ollama):\n${error.message}\n\nAsegúrate de que Ollama esté en ejecución en ${ollamaApiUrl} y el modelo "${ollamaModelName}" esté disponible. Verifica la consola del navegador (F12) para más detalles y errores de red/CORS.`;
+            analysisModalStatus.textContent = 'Error de conexión o procesamiento (Ollama).';
+            analysisModalStatus.classList.add('text-red-500');
+        }
+    }
+    
+    // --- Test Ollama Connectivity (call from browser console) ---
+    async function testOllamaConnectivity() {
+        const testUrl = ollamaApiUrl.replace('/api/generate', '/api/tags'); // Use a GET endpoint
+        console.log("Probando conectividad con Ollama en:", testUrl);
+        try {
+            const response = await fetch(testUrl, { method: 'GET' });
+            console.log("Respuesta de prueba de Ollama (status):", response.status);
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Error en prueba de Ollama: ${response.status}. Respuesta: ${errorText}`);
+            }
+            const data = await response.json();
+            console.log("Respuesta de prueba de Ollama (/api/tags):", data);
+            alert("Conexión de prueba a Ollama (/api/tags) exitosa. Revisa la consola para ver los modelos listados.");
+        } catch (error) {
+            console.error("Error en prueba de conectividad con Ollama:", error);
+            alert(`Fallo la prueba de conectividad con Ollama: ${error.message}. Revisa la consola.`);
+        }
+    }
+
+
+    // --- Chart Functions ---
     function showChartModal(chartType) {
         chartModal.classList.remove('hidden');
         if (chartType === 'workers') {
             chartModalTitle.textContent = '📊 Producción Total por Trabajador';
             renderProductionByWorkerChart();
-        } else if (chartType === 'postsBar') { // Renamed for clarity
+        } else if (chartType === 'postsBar') { 
             chartModalTitle.textContent = '📊 Producción Total por Puesto (Barras)';
             renderProductionByPostBarChart();
-        } else if (chartType === 'postsPie') { // New type for Pie Chart
+        } else if (chartType === 'postsPie') { 
             chartModalTitle.textContent = '📊 Distribución de Cajas por Puesto (Circular)';
             renderPostDistributionPieChart();
         }
@@ -752,7 +842,7 @@ Formatea la respuesta para que sea fácil de leer. No incluyas frases como "Bas�
         drawBarChart(dataForChart, "Total de Cajas Producidas por Trabajador", "Trabajadores", "Total de Cajas");
     }
 
-    function renderProductionByPostBarChart() { // Renamed
+    function renderProductionByPostBarChart() { 
         d3.select("#chartContainer svg").remove();
         const postCounts = {};
         const dataToProcess = filterDataByCheckbox(JSON.parse(JSON.stringify(originalWorkersData)));
@@ -900,7 +990,7 @@ Formatea la respuesta para que sea fácil de leer. No incluyas frases como "Bas�
 
         const pie = d3.pie()
             .value(d => d.value)
-            .sort(null); // Do not sort, use the order from dataForChart (already sorted by value)
+            .sort(null); 
 
         const data_ready = pie(dataForChart);
 
@@ -934,19 +1024,18 @@ Formatea la respuesta para que sea fácil de leer. No incluyas frases como "Bas�
                 tooltip.transition().duration(500).style("opacity", 0);
             });
 
-        // Add labels (optional, can get cluttered)
         svg.selectAll('allLabels')
             .data(data_ready)
             .join('text')
             .attr('class', 'pie-slice')
             .text(d => { 
                 const percent = (d.data.value / d3.sum(dataForChart, item => item.value) * 100);
-                return percent > 5 ? `${d.data.name.substring(0,10)}... (${percent.toFixed(1)}%)` : ''; // Show label if > 5%
+                return percent > 5 ? `${d.data.name.substring(0,10)}... (${percent.toFixed(1)}%)` : ''; 
             }) 
             .attr('transform', d => {
                 const pos = outerArc.centroid(d);
                 const midangle = d.startAngle + (d.endAngle - d.startAngle) / 2;
-                pos[0] = radius * 0.95 * (midangle < Math.PI ? 1 : -1); // Position labels left/right
+                pos[0] = radius * 0.95 * (midangle < Math.PI ? 1 : -1); 
                 return `translate(${pos})`;
             })
             .style('text-anchor', d => {
@@ -1054,6 +1143,7 @@ Formatea la respuesta para que sea fácil de leer. No incluyas frases como "Bas�
             noDataRow.classList.remove('hidden');
             exportExcelBtn.disabled = true;
             analizarTodosBtn.disabled = true; 
+            analizarTodosOllamaBtn.disabled = true;
             viewWorkerChartBtn.disabled = true; 
             viewPostChartBtn.disabled = true;
             viewPostPieChartBtn.disabled = true;
@@ -1065,6 +1155,7 @@ Formatea la respuesta para que sea fácil de leer. No incluyas frases como "Bas�
         exportExcelBtn.disabled = false;
         
         analizarTodosBtn.disabled = isLocked; 
+        analizarTodosOllamaBtn.disabled = isLocked;
         viewWorkerChartBtn.disabled = isLocked;
         viewPostChartBtn.disabled = isLocked;
         viewPostPieChartBtn.disabled = isLocked;
@@ -1089,15 +1180,27 @@ Formatea la respuesta para que sea fácil de leer. No incluyas frases como "Bas�
             nameCell.textContent = worker.name ?? 'Sin Nombre';
             
             if (!isLocked) { 
+                // Gemini Individual Analysis Button
                 const analyzeBtn = document.createElement('button');
                 analyzeBtn.classList.add('analyze-icon', 'ml-2', 'text-purple-600', 'hover:text-purple-800');
-                analyzeBtn.title = "✨ Analizar Rendimiento con IA";
-                analyzeBtn.innerHTML = `<svg class="icon" style="width:18px; height:18px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v2h-2v-2zm0 4h2v6h-2v-6z"></path><path d="M12.5 8.5h-1V7h1v1.5zm0 2.5h-1V10h1v1zm0 2.5h-1V12.5h1v1zm0 2.5h-1V15h1v1zM10 17.5c.83 0 1.5-.67 1.5-1.5h-3c0 .83.67 1.5 1.5 1.5zM18 12.5c0 .83-.67 1.5-1.5 1.5S15 13.33 15 12.5s.67-1.5 1.5-1.5.5.17.5.42l.5-.84c-.3-.47-.82-.88-1.5-.88-1.38 0-2.5 1.12-2.5 2.5s1.12 2.5 2.5 2.5 2.5-1.12 2.5-2.5h-1zM6 12.5c0 .83.67 1.5 1.5 1.5S9 13.33 9 12.5s-.67-1.5-1.5-1.5c-.68 0-1.2.41-1.5.88l.5.84c0-.25.5-.42.5-.42s1.5-.67 1.5-1.5-1.12-2.5-2.5-2.5-2.5 1.12-2.5 2.5h1z"></path></svg> <span class="ml-1 text-xs">Analizar ✨</span>`; 
+                analyzeBtn.title = "✨ Analizar Rendimiento (Gemini)";
+                analyzeBtn.innerHTML = `<svg class="icon" style="width:16px; height:16px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v2h-2v-2zm0 4h2v6h-2v-6z"></path><path d="M12.5 8.5h-1V7h1v1.5zm0 2.5h-1V10h1v1zm0 2.5h-1V12.5h1v1zm0 2.5h-1V15h1v1zM10 17.5c.83 0 1.5-.67 1.5-1.5h-3c0 .83.67 1.5 1.5 1.5zM18 12.5c0 .83-.67 1.5-1.5 1.5S15 13.33 15 12.5s.67-1.5 1.5-1.5.5.17.5.42l.5-.84c-.3-.47-.82-.88-1.5-.88-1.38 0-2.5 1.12-2.5 2.5s1.12 2.5 2.5 2.5 2.5-1.12 2.5-2.5h-1zM6 12.5c0 .83.67 1.5 1.5 1.5S9 13.33 9 12.5s-.67-1.5-1.5-1.5c-.68 0-1.2.41-1.5.88l.5.84c0-.25.5-.42.5-.42s1.5-.67 1.5-1.5-1.12-2.5-2.5-2.5-2.5 1.12-2.5 2.5h1z"></path></svg>`; 
                 analyzeBtn.addEventListener('click', (e) => {
                     e.stopPropagation(); 
-                    fetchWorkerAnalysis(worker);
+                    fetchWorkerAnalysis(worker); // Gemini individual
                 });
                 nameCell.appendChild(analyzeBtn);
+
+                // Ollama Individual Analysis Button
+                const analyzeOllamaBtn = document.createElement('button');
+                analyzeOllamaBtn.classList.add('analyze-icon', 'ml-1', 'text-indigo-600', 'hover:text-indigo-800'); // Different color
+                analyzeOllamaBtn.title = " स्थानीय Analizar Rendimiento (Ollama)";
+                analyzeOllamaBtn.innerHTML = `<svg class="icon" style="width:16px; height:16px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H4c-.55 0-1 .45-1 1s.45 1 1 1h16c.55 0 1-.45 1-1s-.45-1-1-1zm0-5H4c-.55 0-1 .45-1 1s.45 1 1 1h16c.55 0 1-.45 1-1s-.45-1-1-1zm0 10H4c-.55 0-1 .45-1 1s.45 1 1 1h16c.55 0 1-.45 1-1s-.45-1-1-1z"></path></svg>`; // Simple list icon for Ollama
+                analyzeOllamaBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    fetchOllamaWorkerAnalysis(worker);
+                });
+                nameCell.appendChild(analyzeOllamaBtn);
             }
 
 
@@ -1154,6 +1257,7 @@ Formatea la respuesta para que sea fácil de leer. No incluyas frases como "Bas�
              noDataRow.classList.remove('hidden');
              exportExcelBtn.disabled = true;
              analizarTodosBtn.disabled = true;
+             analizarTodosOllamaBtn.disabled = true;
              viewWorkerChartBtn.disabled = true;
              viewPostChartBtn.disabled = true;
              viewPostPieChartBtn.disabled = true;
@@ -1161,6 +1265,7 @@ Formatea la respuesta para que sea fácil de leer. No incluyas frases como "Bas�
         } else {
              exportExcelBtn.disabled = false;
              analizarTodosBtn.disabled = isLocked; 
+             analizarTodosOllamaBtn.disabled = isLocked;
              viewWorkerChartBtn.disabled = isLocked;
              viewPostChartBtn.disabled = isLocked;
              viewPostPieChartBtn.disabled = isLocked;
@@ -1221,6 +1326,7 @@ Formatea la respuesta para que sea fácil de leer. No incluyas frases como "Bas�
         tableBody.querySelectorAll('tr:not(#loadingRow):not(#errorRow):not(#noDataRow)').forEach(row => row.remove());
         exportExcelBtn.disabled = true;
         analizarTodosBtn.disabled = true; 
+        analizarTodosOllamaBtn.disabled = true;
         viewWorkerChartBtn.disabled = true; 
         viewPostChartBtn.disabled = true;
         viewPostPieChartBtn.disabled = true;
@@ -1265,9 +1371,10 @@ Formatea la respuesta para que sea fácil de leer. No incluyas frases como "Bas�
     exportExcelBtn.addEventListener('click', exportToExcel);
     printBtn.addEventListener('click', printTable);
     analizarTodosBtn.addEventListener('click', fetchOverallAnalysis); 
+    analizarTodosOllamaBtn.addEventListener('click', fetchOllamaOverallAnalysis);
     viewWorkerChartBtn.addEventListener('click', () => showChartModal('workers')); 
     viewPostChartBtn.addEventListener('click', () => showChartModal('postsBar'));
-    viewPostPieChartBtn.addEventListener('click', () => showChartModal('postsPie')); // Listener for new pie chart
+    viewPostPieChartBtn.addEventListener('click', () => showChartModal('postsPie')); 
     dateRangeSelect.addEventListener('change', (e) => { const {from, to} = getDateRange(e.target.value); fetchData(from, to); });
     filterPostsCheckbox.addEventListener('change', () => populateTable(originalWorkersData));
     
