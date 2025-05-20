@@ -7,6 +7,8 @@ use App\Models\OperatorPost; // Modelo actualizado
 use App\Models\Operator;
 use App\Models\RfidReading;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;   // 👈 Asegúrate de que esta línea existe
+use Illuminate\Support\Facades\DB;          // ← transacciones
 
 /**
  * @OA\Info(
@@ -189,5 +191,86 @@ class OperatorPostController extends Controller
         $relation->delete();
 
         return response()->json(['message' => 'Relation deleted successfully'], 200);
+    }
+        /**  🔐 Token fijo para todos los clientes */
+    private const API_TOKEN = '915afe8b7fabc2ca8d759761b0fe159f88bf0f064be7e4cd6a1f99021eff4e3b';
+
+
+    /**
+     * PUT/POST: /api/operator-post/update-count
+     *
+     * 1. Comprueba el token Bearer.
+     * 2. Valida id y count entrante.
+     * 3. Calcula la diferencia con el valor actual.
+     * 4. Actualiza:
+     *      - operator_post.count      (nuevo valor)
+     *      - operators.count_shift    (±diferencia)
+     *      - operators.count_order    (±diferencia)
+     * 5. Respuesta JSON con los nuevos valores.
+     */
+    public function updateCount(Request $request): JsonResponse
+    {
+        /* ─── 1) Autenticación por token ───────────────────────── */
+        if ($request->bearerToken() !== self::API_TOKEN) {
+            return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
+        }
+
+        /* ─── 2) Validación ────────────────────────────────────── */
+        $validated = $request->validate([
+            'id'    => 'required|integer|exists:operator_post,id',
+            'count' => 'required|integer|min:0',
+        ]);
+
+        /* ─── 3-4) Operaciones atómicas en transacción ─────────── */
+        $result = DB::transaction(function () use ($validated) {
+
+            /* 3.a) Registro operator_post */
+            $operatorPost = OperatorPost::lockForUpdate()->findOrFail($validated['id']); // lock evita race-condition
+            $oldCount     = $operatorPost->count;
+            $newCount     = $validated['count'];
+            $difference   = $newCount - $oldCount;   // puede ser negativo, positivo o 0
+
+            /* 3.b) Actualizar operator_post si hay cambio */
+            if ($difference !== 0) {
+                $operatorPost->count = $newCount;
+                $operatorPost->save();
+            }
+
+            /* 3.c) Actualizar tabla operators (solo si existe el registro) */
+            $operator = Operator::lockForUpdate()->find($operatorPost->operator_id);
+
+            if ($operator && $difference !== 0) {
+                $operator->count_shift += $difference;
+                $operator->count_order += $difference;
+                $operator->save();
+            }
+
+            return [
+                'operatorPost' => $operatorPost,
+                'operator'     => $operator,
+                'difference'   => $difference,
+                'oldCount'     => $oldCount,
+                'newCount'     => $newCount,
+            ];
+        });
+
+        /* ─── 5) Respuesta ─────────────────────────────────────── */
+        return response()->json([
+            'status'     => 'success',
+            'message'    => 'Count actualizado correctamente.',
+            'difference' => $result['difference'],                    // positivo = incremento
+            'data'       => [
+                'operator_post' => [
+                    'id'           => $result['operatorPost']->id,
+                    'count_old'    => $result['oldCount'],
+                    'count_new'    => $result['newCount'],
+                ],
+                'operator' => $result['operator'] ? [
+                    'id'            => $result['operator']->id,
+                    'count_shift'   => $result['operator']->count_shift,
+                    'count_order'   => $result['operator']->count_order,
+                ] : null,
+            ],
+        ], 200);
     }
 }

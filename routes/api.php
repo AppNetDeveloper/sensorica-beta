@@ -302,7 +302,7 @@ Route::post('operator-post', [OperatorPostController::class, 'store']);
 Route::get('operator-post/{id}', [OperatorPostController::class, 'show']);
 Route::put('operator-post/{id}', [OperatorPostController::class, 'update']);
 Route::delete('operator-post/{id}', [OperatorPostController::class, 'destroy']);
-
+Route::post('/operator-post/update-count', [OperatorPostController::class, 'updateCount'])->name('operator-post.update-count');
 
 //publicar tcp mesaje
 

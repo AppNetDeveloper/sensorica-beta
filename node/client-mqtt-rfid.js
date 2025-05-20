@@ -31,6 +31,7 @@ let dbConnection;                 // Conexión a la base de datos MySQL
 let subscribedTopics = [];        // Lista de tópicos a los que se está suscrito
 let blockedEPCs = new Set();      // Conjunto de EPCs bloqueados (evitar procesamiento)
 let ignoredTIDs = new Map();      // Mapa para ignorar TIDs que ya han sido procesados recientemente
+let ignoredTempTIDs = new Map();      // Mapa para ignorar temp TIDs que ya han sido procesados recientemente
 let antennaData = {};             // Objeto que almacena datos de antenas asociadas a cada tópico
 // 🔄 Cache en memoria para almacenar production_line_id por mqtt_topic
 let productionLineCache = {};
@@ -222,6 +223,15 @@ function cleanupIgnoredTIDs() {
         if (now - timestamp > 300000) ignoredTIDs.delete(tid);
     });
 }
+
+// 🔄 Función para limpiar el mapa de ignoredTIDs, eliminando entradas que hayan estado más de 5 minutos (300000 ms)
+function cleanupIgnoredTempTIDs() {
+    const now = Date.now();
+    // Recorre cada TID y elimina los que excedan el tiempo límite
+    ignoredTempTIDs.forEach((timestamp, tid) => {
+        if (now - timestamp > 10000) ignoredTempTIDs.delete(tid);
+    });
+}
 // 🔄 Función para limpiar el cache de EPCs leídos recientemente por antena
 function cleanupEpcReadCache() {
     const now = Date.now();
@@ -278,6 +288,12 @@ async function processCallApi(topic, data) {
                 return;
             }
             
+            //ponemos un if si el epc es  00000000C2411003E0001234 return directamente
+            if (epc === '00000000C2411003E0001234') {
+                //console.log(`[${getCurrentTimestamp()}] ${environment}.${info}: ⚠️ EPC bloqueado: ${epc}. Se omite la llamada a la API.`);
+                return;
+            }
+
             // Validación: Si el EPC está bloqueado, se omite la llamada
             if (blockedEPCs.has(epc)) {
                 console.warn(`[${getCurrentTimestamp()}] ${environment}.${info}: ⚠️ EPC bloqueado: ${epc}. Se omite la llamada a la API.`);
@@ -295,6 +311,17 @@ async function processCallApi(topic, data) {
             if (ignoredTIDs.has(tid)) {
                 console.log(`[${getCurrentTimestamp()}] ${environment}.${info}: ⚠️ TID ya registrado recientemente: tid: ${tid}. Se omite la llamada a la API.`);
                 return;
+            }
+
+            // Validación: Si el TID ya fue registrado recientemente, se omite la llamada
+            if (ignoredTempTIDs.has(tid)) {
+                console.log(`[${getCurrentTimestamp()}] ${environment}.${info}: ⚠️ TID : ${tid}. en proceso de bloqueo temporal por duplicación.`);
+                return;
+            }else{
+                const ignoreTimeTemp = 10000;
+                ignoredTempTIDs.set(tid, Date.now());
+                setTimeout(() => ignoredTempTIDs.delete(tid), ignoreTimeTemp);
+                console.log(`[${getCurrentTimestamp()}] ${environment}.${info}: ⚠️ TID : ${tid}. Bloqueado Temporal para no duplicar.`);
             }
 
             // Obtener el intervalo configurado para esta antena (asumimos que está en segundos)
@@ -392,6 +419,7 @@ async function start() {
 
     // Programa la limpieza de TIDs ignorados cada 5 segundos, antes 60 segundos
     setInterval(cleanupIgnoredTIDs, 5000);
+    setInterval(cleanupIgnoredTempTIDs, 5000);
 
     // ---- NUEVO: Intervalo para limpiar el caché de EPCs por intervalo de antena ----
     setInterval(cleanupEpcReadCache, 1000); // Limpia cada 1 segundos (ajusta si es necesario)
