@@ -681,7 +681,7 @@ Formatea la respuesta para que sea f√°cil de leer. No incluyas frases como "Bas√
 
             if (!response.ok) {
                 const errorBody = await response.text();
-                throw new Error(`Error de API Gemini: ${response.status} ${response.statusText}. Respuesta: ${errorBody}`);
+                throw new Error(`Error de API AppNet Developer www.appnet.dev: ${response.status} ${response.statusText}. Respuesta: ${errorBody}`);
             }
 
             const result = await response.json();
