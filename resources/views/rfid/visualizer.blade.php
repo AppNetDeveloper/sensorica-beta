@@ -18,7 +18,7 @@
             --success-text: #155724;
             --error-bg: #f8d7da;
             --error-text: #721c24;
-            --warning-bg: #fff3cd;
+            --warning-bg: #fff3cd; /* Amarillo claro para el resaltado */
             --warning-text: #856404;
             --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             --border-radius: 8px;
@@ -92,7 +92,7 @@
             background-color: #a0aec0;
             cursor: not-allowed;
         }
-        #topic-list { /* Cambiado de #topic-list-info */
+        #topic-list {
             list-style: none; 
             padding: 0; 
             margin: 0; 
@@ -157,11 +157,21 @@
         #messages li { 
             padding: 15px; 
             border-bottom: 1px solid var(--border-color); 
-            word-wrap: break-word; 
+            word-wrap: break-word;
+            background-color: var(--surface-color); /* Fondo por defecto */
         }
         #messages li:last-child { 
             border-bottom: none; 
         }
+        /* Estilo para mensajes nuevos */
+        .message-new {
+            animation: highlight-new-message 1s ease-out;
+        }
+        @keyframes highlight-new-message {
+            0% { background-color: var(--warning-bg); }
+            100% { background-color: var(--surface-color); } /* Vuelve al color de fondo normal del item */
+        }
+
         .message-header { 
             font-weight: 500; 
             color: var(--primary-color); 
@@ -235,19 +245,16 @@
             const deselectAllTopicsBtn = document.getElementById('deselectAllTopicsBtn');
             const connectionStatusDiv = document.getElementById('connectionStatus');
             
-            // Define la URL de tu API de Laravel que llama al Node.js
-            // Asegúrate que esta ruta exista en routes/web.php y apunte al método correcto en RfidController
             const gatewayDataUrl = "/rfid-mqtt/api/gateway-data"; 
-            // Si pasas la URL desde el controlador Laravel (descomentar si es el caso):
-            // const gatewayDataUrl = "{{-- isset($gatewayDataUrl) ? $gatewayDataUrl : '/rfid-mqtt/api/gateway-data' --}}";
-
+            
             let autoRefreshIntervalId = null;
             let isAutoRefreshing = false;
-            const autoRefreshTime = 1000; 
+            const autoRefreshTime = 500; // Refresco cada segundo
 
             let allMessages = []; 
             let availableTopics = []; 
             let selectedTopics = new Set(); 
+            let lastKnownMaxTimestamp = 0; // Para rastrear el timestamp del mensaje más nuevo de la carga anterior
 
             function populateTopicList() {
                 topicListUl.innerHTML = '';
@@ -287,7 +294,6 @@
                 const previouslyScrolledToBottom = messagesUl.scrollHeight - messagesUl.scrollTop <= messagesUl.clientHeight + 20;
                 messagesUl.innerHTML = '';
                 
-                // Asegurarse que allMessages es un array antes de filtrar
                 if (!Array.isArray(allMessages)) {
                     console.error("renderMessages: allMessages no es un array. Forzando a array vacío.", allMessages);
                     allMessages = [];
@@ -298,6 +304,7 @@
                 );
 
                 if (filteredMessages.length === 0) {
+                    // ... (lógica de mensajes no encontrados sin cambios) ...
                     if (allMessages.length > 0 && selectedTopics.size > 0) {
                         messagesUl.innerHTML = '<div class="no-messages">No hay mensajes para los tópicos seleccionados.</div>';
                     } else if (allMessages.length === 0) {
@@ -307,27 +314,47 @@
                     }
                     return;
                 }
+                
+                let currentBatchMaxTimestamp = 0;
 
-                filteredMessages.slice().reverse().forEach(msg => { // .slice() se usa en filteredMessages, que es un array
+                filteredMessages.slice().reverse().forEach(msg => {
                     const listItem = document.createElement('li');
                     let payloadDisplay = msg.payload;
                     if (typeof msg.payload === 'object') {
                         payloadDisplay = JSON.stringify(msg.payload, null, 2);
                     } else {
                         const tempDiv = document.createElement('div');
-                        tempDiv.textContent = String(payloadDisplay); // Asegurar que es string
+                        tempDiv.textContent = String(payloadDisplay);
                         payloadDisplay = tempDiv.innerHTML;
                     }
                     const antennaName = msg.antenna_name || 'N/A'; 
-                    const receivedAt = msg.received_at ? new Date(msg.received_at).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'medium' }) : 'Fecha desconocida';
+                    const receivedAt = msg.received_at ? new Date(msg.received_at) : null;
+                    const receivedAtTimestamp = receivedAt ? receivedAt.getTime() : 0;
+                    
+                    // Actualizar el timestamp máximo de este lote
+                    if (receivedAtTimestamp > currentBatchMaxTimestamp) {
+                        currentBatchMaxTimestamp = receivedAtTimestamp;
+                    }
+
+                    // Aplicar clase si es un mensaje nuevo
+                    if (receivedAtTimestamp > lastKnownMaxTimestamp) {
+                        listItem.classList.add('message-new');
+                    }
 
                     listItem.innerHTML = `
                         <div class="message-header">Tópico: ${msg.topic || 'Desconocido'} (Antena: ${antennaName})</div>
                         <pre class="message-payload">${payloadDisplay}</pre>
-                        <div class="message-meta">Recibido: ${receivedAt}</div>
+                        <div class="message-meta">Recibido: ${receivedAt ? receivedAt.toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'medium' }) : 'Fecha desconocida'}</div>
                     `;
                     messagesUl.appendChild(listItem);
                 });
+                
+                // Actualizar lastKnownMaxTimestamp para la próxima carga, solo si se procesaron mensajes.
+                // Se usa el máximo del lote actual para asegurar que solo los mensajes realmente nuevos en la *próxima* carga se resalten.
+                if (currentBatchMaxTimestamp > lastKnownMaxTimestamp) {
+                     lastKnownMaxTimestamp = currentBatchMaxTimestamp;
+                }
+
 
                 if (previouslyScrolledToBottom) { 
                     messagesUl.scrollTop = messagesUl.scrollHeight;
@@ -335,6 +362,10 @@
             }
 
             async function fetchData() {
+                // Guardar el timestamp máximo conocido ANTES de la nueva petición
+                // Esto se hará ahora dentro de renderMessages para mayor precisión con los mensajes filtrados
+                // const previousMaxTimestamp = lastKnownMaxTimestamp; // No es necesario aquí si se maneja en renderMessages
+
                 connectionStatusDiv.textContent = 'Cargando datos...';
                 connectionStatusDiv.className = 'status-bar loading';
                 fetchMessagesBtn.disabled = true;
@@ -353,7 +384,7 @@
                         throw new Error(`Error del servidor: ${response.status} - ${errorDetails}`);
                     }
                     const data = await response.json();
-                    console.log("Datos recibidos:", data); // Para depuración
+                    console.log("Datos recibidos:", data); 
 
                     if (data.error_messages) { 
                         connectionStatusDiv.textContent = `${data.error_messages}. Tópicos pueden estar cargados desde BD.`;
@@ -379,7 +410,7 @@
                      }
 
                     populateTopicList();
-                    renderMessages();
+                    renderMessages(); // Aquí se identificarán y resaltarán los nuevos
                     
                     if (!data.error_messages) {
                         connectionStatusDiv.textContent = `Datos cargados. ${allMessages.length} mensajes, ${availableTopics.length} tópicos. Actualizado: ${new Date().toLocaleTimeString('es-ES')}`;

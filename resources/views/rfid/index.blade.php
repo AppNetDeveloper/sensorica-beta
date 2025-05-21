@@ -65,6 +65,9 @@
                                                 <a href="{{ route('rfid.edit', $rfidAnt->id) }}" class="btn btn-sm btn-primary">
                                                     {{ __('Editar') }}
                                                 </a>
+                                                <a href="{{ route('rfid.visualizer') }}" class="btn btn-sm btn-success">
+                                                    {{ __('Visualizar') }}
+                                                </a>
                                                 <form action="{{ route('rfid.destroy', $rfidAnt->id) }}"
                                                       method="POST" style="display:inline;">
                                                     @csrf
