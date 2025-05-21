@@ -3,15 +3,54 @@
 require('dotenv').config({ path: '../.env' }); // Ajusta la ruta si es necesario
 
 const express = require('express');
-const http = require('http');
+const https = require('https'); // MODIFICADO: Usar https en lugar de http
+const fs = require('fs'); // AÑADIDO: Para leer archivos de certificado
+const path = require('path'); // AÑADIDO: Para construir rutas a los certificados
 const mqtt = require('mqtt');
 const WebSocket = require('ws');
 const mysql = require('mysql2/promise');
 
 const app = express();
-const server = http.createServer(app);
 
-// --- ⚙️ Configuración ---
+// --- ⚙️ Configuración SSL ---
+// Asegúrate de que estos archivos existan en la ruta especificada.
+// Puedes generarlos con OpenSSL. Ejemplo:
+// openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365 -nodes -subj "/CN=localhost"
+// Coloca key.pem y cert.pem en la misma carpeta que server.js o ajusta la ruta.
+const useHttps = process.env.USE_HTTPS === 'true'; // Variable de entorno para activar/desactivar HTTPS
+let httpsOptions = {};
+let serverModule = require('http'); // Por defecto http
+
+if (useHttps) {
+    try {
+        const privateKeyPath = path.join(__dirname, process.env.SSL_KEY_PATH || 'key.pem');
+        const certificatePath = path.join(__dirname, process.env.SSL_CERT_PATH || 'cert.pem');
+
+        if (fs.existsSync(privateKeyPath) && fs.existsSync(certificatePath)) {
+            httpsOptions = {
+                key: fs.readFileSync(privateKeyPath),
+                cert: fs.readFileSync(certificatePath)
+            };
+            serverModule = https; // Cambiar a https si los archivos existen
+            console.log(`[${getCurrentTimestamp()}] INFO: Certificados SSL cargados. Usando HTTPS/WSS.`);
+        } else {
+            console.warn(`[${getCurrentTimestamp()}] WARNING: Archivos de certificado SSL no encontrados en las rutas esperadas. Revise SSL_KEY_PATH y SSL_CERT_PATH en .env o los nombres por defecto (key.pem, cert.pem). Usando HTTP/WS.`);
+            useHttps = false; // Volver a HTTP si los certificados no se encuentran
+        }
+    } catch (err) {
+        console.error(`[${getCurrentTimestamp()}] ERROR: Error al cargar los archivos SSL: ${err.message}. Usando HTTP/WS.`);
+        useHttps = false; // Volver a HTTP en caso de error
+    }
+} else {
+    console.log(`[${getCurrentTimestamp()}] INFO: USE_HTTPS no está configurado a 'true' en .env. Usando HTTP/WS.`);
+}
+
+
+// MODIFICADO: Crear servidor http o https según la configuración
+const server = serverModule.createServer(useHttps ? httpsOptions : {}, app);
+
+
+// --- ⚙️ Configuración General ---
 const MQTT_BROKER_URL_FROM_ENV = `mqtt://${process.env.MQTT_SENSORICA_SERVER}:${process.env.MQTT_SENSORICA_PORT}`;
 const DB_CONFIG_FROM_ENV = {
     host: process.env.DB_HOST,
@@ -79,7 +118,9 @@ async function connectToDatabase() {
 }
 
 // --- 🌐 Servidor WebSocket ---
+// MODIFICADO: El servidor WebSocket se adjunta al servidor http o https
 const wss = new WebSocket.Server({ server });
+
 
 wss.on('connection', (ws) => {
     console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: Cliente WebSocket conectado a la pasarela`);
@@ -241,6 +282,8 @@ app.get('/api/gateway-messages', (req, res) => {
 });
 
 app.get('/gateway-test', (req, res) => {
+    // MODIFICADO: Determinar el protocolo WebSocket (ws o wss) dinámicamente
+    const wsProtocol = useHttps ? 'wss' : 'ws';
     res.send(`
         <!DOCTYPE html>
         <html lang="es">
@@ -251,13 +294,13 @@ app.get('/gateway-test', (req, res) => {
             <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
             <style>
                 :root {
-                    --primary-color: #2c3e50; /* Azul oscuro principal */
-                    --secondary-color: #3498db; /* Azul más claro para acentos */
-                    --background-color: #ecf0f1; /* Gris claro para el fondo */
-                    --surface-color: #ffffff; /* Blanco para superficies como paneles */
-                    --text-color: #34495e; /* Gris oscuro para texto */
-                    --text-light-color: #7f8c8d; /* Gris más claro para metadatos */
-                    --border-color: #bdc3c7; /* Gris para bordes sutiles */
+                    --primary-color: #2c3e50; 
+                    --secondary-color: #3498db; 
+                    --background-color: #ecf0f1; 
+                    --surface-color: #ffffff; 
+                    --text-color: #34495e; 
+                    --text-light-color: #7f8c8d; 
+                    --border-color: #bdc3c7; 
                     --success-bg: #d4edda;
                     --success-text: #155724;
                     --error-bg: #f8d7da;
@@ -294,7 +337,7 @@ app.get('/gateway-test', (req, res) => {
                     gap: 15px;
                 }
                 #sidebar { 
-                    width: 300px; /* Un poco más ancho */
+                    width: 300px; 
                     background-color: var(--surface-color); 
                     padding: 20px; 
                     border-radius: var(--border-radius); 
@@ -328,7 +371,7 @@ app.get('/gateway-test', (req, res) => {
                     font-weight: 500;
                 }
                 #topic-controls button:hover { 
-                    background-color: #2980b9; /* Azul un poco más oscuro al pasar el ratón */
+                    background-color: #2980b9; 
                 }
                 #topic-list { 
                     list-style: none; 
@@ -346,11 +389,11 @@ app.get('/gateway-test', (req, res) => {
                     transition: background-color 0.2s ease;
                 }
                 #topic-list li:hover {
-                    background-color: #f8f9fa; /* Un fondo sutil al pasar el ratón */
+                    background-color: #f8f9fa; 
                 }
                 #topic-list input[type="checkbox"] { 
                     margin-right: 10px; 
-                    transform: scale(1.1); /* Checkbox un poco más grande */
+                    transform: scale(1.1); 
                     cursor: pointer;
                 }
                 #topic-list label { 
@@ -399,21 +442,21 @@ app.get('/gateway-test', (req, res) => {
                     border-bottom: none; 
                 }
                 .message-header { 
-                    font-weight: 500; /* Un poco más de peso */
+                    font-weight: 500; 
                     color: var(--primary-color); 
                     font-size: 1em; 
                     margin-bottom: 5px;
                 }
                 .message-payload { 
-                    margin-left: 0; /* Sin indentación extra para el payload */
+                    margin-left: 0; 
                     white-space: pre-wrap; 
                     font-size: 0.9em; 
-                    background-color: #f9f9f9; /* Fondo ligeramente distinto para el payload */
+                    background-color: #f9f9f9; 
                     padding: 10px; 
                     border-radius: 4px; 
                     margin-top: 8px;
                     border: 1px solid #e9e9e9;
-                    font-family: 'Courier New', Courier, monospace; /* Fuente monoespaciada para JSON */
+                    font-family: 'Courier New', Courier, monospace; 
                 }
                 .message-meta { 
                     font-size: 0.8em; 
@@ -421,7 +464,6 @@ app.get('/gateway-test', (req, res) => {
                     margin-top: 8px; 
                     text-align: right;
                 }
-                /* Scrollbar styling */
                 ::-webkit-scrollbar { width: 8px; }
                 ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
                 ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 10px; }
@@ -452,7 +494,8 @@ app.get('/gateway-test', (req, res) => {
                 const selectAllButton = document.getElementById('selectAllTopics');
                 const deselectAllButton = document.getElementById('deselectAllTopics');
 
-                const wsUrl = 'ws://' + window.location.host;
+                // MODIFICADO: Usar la variable wsProtocol para construir la URL
+                const wsUrl = \`\${'${wsProtocol}'}://\` + window.location.host;
                 const ws = new WebSocket(wsUrl); 
 
                 let clientAllMessages = []; 
@@ -461,7 +504,7 @@ app.get('/gateway-test', (req, res) => {
                 const CLIENT_MAX_MESSAGES_DISPLAY = ${MAX_STORED_GATEWAY_MESSAGES}; 
 
                 function updateMessagesDisplay() {
-                    const previouslyScrolledToBottom = messagesUl.scrollHeight - messagesUl.scrollTop <= messagesUl.clientHeight + 10; // Umbral pequeño
+                    const previouslyScrolledToBottom = messagesUl.scrollHeight - messagesUl.scrollTop <= messagesUl.clientHeight + 10; 
                     
                     messagesUl.innerHTML = ''; 
                     const filteredMessages = clientAllMessages.filter(msg => 
@@ -479,8 +522,8 @@ app.get('/gateway-test', (req, res) => {
                     const item = document.createElement('li');
                     let payloadDisplay = messageData.payload;
                     if (typeof messageData.payload === 'object') {
-                        payloadDisplay = JSON.stringify(messageData.payload, null, 2); // Formatear JSON
-                    } else { // Asegurar que el texto plano también se escape para evitar XSS
+                        payloadDisplay = JSON.stringify(messageData.payload, null, 2); 
+                    } else { 
                         const tempDiv = document.createElement('div');
                         tempDiv.textContent = payloadDisplay;
                         payloadDisplay = tempDiv.innerHTML;
@@ -508,7 +551,7 @@ app.get('/gateway-test', (req, res) => {
                         const listItem = document.createElement('li');
                         const checkbox = document.createElement('input');
                         checkbox.type = 'checkbox';
-                        checkbox.id = 'topic-' + topic.replace(/[^a-zA-Z0-9_\\-\\/]/g, "_"); // ID más robusto
+                        checkbox.id = 'topic-' + topic.replace(/[^a-zA-Z0-9_\\-\\/]/g, "_"); 
                         checkbox.value = topic;
                         checkbox.checked = clientSelectedTopics.has(topic); 
                         
@@ -619,9 +662,11 @@ async function startGateway() {
         intervalIds.push(topicSubscriptionInterval); 
     }
 
+    // MODIFICADO: Usar el servidor (http o https) para escuchar
     server.listen(WEB_SERVER_PORT, '0.0.0.0', () => {
-        console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: ✅ Pasarela HTTP y WebSocket escuchando en http://0.0.0.0:${WEB_SERVER_PORT}`);
-        console.log(`   Accesible en tu red local vía http://<IP_DE_TU_MAQUINA>:${WEB_SERVER_PORT}/gateway-test`);
+        const protocol = useHttps ? 'https' : 'http';
+        console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: ✅ Pasarela ${protocol.toUpperCase()} y WebSocket (${useHttps ? 'WSS' : 'WS'}) escuchando en ${protocol}://0.0.0.0:${WEB_SERVER_PORT}`);
+        console.log(`   Accesible en tu red local vía ${protocol}://<IP_DE_TU_MAQUINA>:${WEB_SERVER_PORT}/gateway-test`);
     });
 }
 
@@ -642,14 +687,14 @@ process.on('SIGINT', async () => {
     const closePromises = [];
 
     if (server && server.listening) {
-        console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: Cerrando servidor HTTP...`);
+        console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: Cerrando servidor ${useHttps ? 'HTTPS' : 'HTTP'}...`);
         closePromises.push(new Promise((resolve, reject) => {
             server.close((err) => {
                 if (err) {
-                    console.error(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_ERROR}: Error cerrando servidor HTTP: ${err.message}`);
-                    reject(err);
+                    console.error(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_ERROR}: Error cerrando servidor ${useHttps ? 'HTTPS' : 'HTTP'}: ${err.message}`);
+                    reject(err); // Mantener reject para que Promise.all lo capture
                 } else {
-                    console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: Servidor HTTP cerrado.`);
+                    console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: Servidor ${useHttps ? 'HTTPS' : 'HTTP'} cerrado.`);
                     resolve();
                 }
             });
@@ -663,8 +708,11 @@ process.on('SIGINT', async () => {
                 client.terminate(); 
             }
         });
+        // El cierre del servidor WebSocket está ligado al servidor HTTP/HTTPS,
+        // pero podemos añadir una promesa para su callback si es necesario, aunque wss.close() es síncrono en su llamada.
+        // Para mayor robustez, se puede envolver en una promesa si se quiere asegurar el log.
         closePromises.push(new Promise((resolve) => {
-             wss.close(() => { 
+            wss.close(() => { 
                 console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: Servidor WebSocket cerrado.`);
                 resolve();
             });
@@ -673,7 +721,7 @@ process.on('SIGINT', async () => {
 
     if (mqttClientInstance) {
         console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: Desconectando cliente MQTT...`);
-        closePromises.push(new Promise((resolve, reject) => {
+        closePromises.push(new Promise((resolve) => { // No usar reject aquí para no detener Promise.all
             const mqttTimeout = setTimeout(() => {
                 console.warn(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_WARNING}: Timeout al cerrar cliente MQTT.`);
                 resolve(); 
@@ -693,7 +741,7 @@ process.on('SIGINT', async () => {
 
     if (dbConnectionInstance) {
         console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: Cerrando conexión a la base de datos...`);
-        closePromises.push(new Promise((resolve, reject) => {
+        closePromises.push(new Promise((resolve) => { // No usar reject aquí
             dbConnectionInstance.end(err => {
                 if (err) {
                     console.error(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_ERROR}: Error al cerrar conexión DB: ${err.message}`);
@@ -706,11 +754,16 @@ process.on('SIGINT', async () => {
     }
 
     try {
-        await Promise.all(closePromises.map(p => p.catch(e => e))); 
-        console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: Todas las conexiones cerradas. Saliendo.`);
+        // Esperar a que todas las promesas de cierre se completen (o fallen y se maneje el error)
+        await Promise.all(closePromises.map(p => p.catch(e => {
+            // Loguear el error individual de la promesa pero no dejar que detenga el Promise.all
+            console.error(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_ERROR}: Error durante una operación de cierre:`, e.message || e);
+            return e; // Devolver el error para que Promise.all no lo trate como no resuelto
+        })));
+        console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: Todas las operaciones de cierre intentadas. Saliendo.`);
         process.exit(0);
-    } catch (error) {
-        console.error(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_ERROR}: Error durante el proceso de apagado: ${error.message}`);
+    } catch (error) { // Este catch es por si Promise.all mismo lanza un error (poco probable con .map(p => p.catch))
+        console.error(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_ERROR}: Error crítico durante el proceso de apagado: ${error.message}`);
         process.exit(1); 
     }
 });
