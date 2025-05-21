@@ -3,9 +3,9 @@
 require('dotenv').config({ path: '../.env' }); // Ajusta la ruta si es necesario
 
 const express = require('express');
-const https = require('https'); // MODIFICADO: Usar https en lugar de http
-const fs = require('fs'); // AÑADIDO: Para leer archivos de certificado
-const path = require('path'); // AÑADIDO: Para construir rutas a los certificados
+const https = require('https');
+const fs = require('fs');
+const path = require('path');
 const mqtt = require('mqtt');
 const WebSocket = require('ws');
 const mysql = require('mysql2/promise');
@@ -13,13 +13,9 @@ const mysql = require('mysql2/promise');
 const app = express();
 
 // --- ⚙️ Configuración SSL ---
-// Asegúrate de que estos archivos existan en la ruta especificada.
-// Puedes generarlos con OpenSSL. Ejemplo:
-// openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365 -nodes -subj "/CN=localhost"
-// Coloca key.pem y cert.pem en la misma carpeta que server.js o ajusta la ruta.
-const useHttps = process.env.USE_HTTPS === 'true'; // Variable de entorno para activar/desactivar HTTPS
+const useHttps = process.env.USE_HTTPS === 'true';
 let httpsOptions = {};
-let serverModule = require('http'); // Por defecto http
+let serverModule = require('http');
 
 if (useHttps) {
     try {
@@ -31,24 +27,21 @@ if (useHttps) {
                 key: fs.readFileSync(privateKeyPath),
                 cert: fs.readFileSync(certificatePath)
             };
-            serverModule = https; // Cambiar a https si los archivos existen
+            serverModule = https;
             console.log(`[${getCurrentTimestamp()}] INFO: Certificados SSL cargados. Usando HTTPS/WSS.`);
         } else {
-            console.warn(`[${getCurrentTimestamp()}] WARNING: Archivos de certificado SSL no encontrados en las rutas esperadas. Revise SSL_KEY_PATH y SSL_CERT_PATH en .env o los nombres por defecto (key.pem, cert.pem). Usando HTTP/WS.`);
-            useHttps = false; // Volver a HTTP si los certificados no se encuentran
+            console.warn(`[${getCurrentTimestamp()}] WARNING: Archivos de certificado SSL no encontrados. Usando HTTP/WS.`);
+            useHttps = false;
         }
     } catch (err) {
         console.error(`[${getCurrentTimestamp()}] ERROR: Error al cargar los archivos SSL: ${err.message}. Usando HTTP/WS.`);
-        useHttps = false; // Volver a HTTP en caso de error
+        useHttps = false;
     }
 } else {
-    console.log(`[${getCurrentTimestamp()}] INFO: USE_HTTPS no está configurado a 'true' en .env. Usando HTTP/WS.`);
+    console.log(`[${getCurrentTimestamp()}] INFO: USE_HTTPS no está 'true' en .env. Usando HTTP/WS.`);
 }
 
-
-// MODIFICADO: Crear servidor http o https según la configuración
 const server = serverModule.createServer(useHttps ? httpsOptions : {}, app);
-
 
 // --- ⚙️ Configuración General ---
 const MQTT_BROKER_URL_FROM_ENV = `mqtt://${process.env.MQTT_SENSORICA_SERVER}:${process.env.MQTT_SENSORICA_PORT}`;
@@ -60,39 +53,31 @@ const DB_CONFIG_FROM_ENV = {
     database: process.env.DB_DATABASE
 };
 const WEB_SERVER_PORT = process.env.MQTT_GATEWAY_PORT || 4003;
-
 const ENVIRONMENT = process.env.APP_ENV || 'production';
 const LOG_LEVEL_INFO = 'INFO';
 const LOG_LEVEL_ERROR = 'ERROR';
 const LOG_LEVEL_WARNING = 'WARNING';
-
 const MAX_STORED_GATEWAY_MESSAGES = 100;
 let storedGatewayMessages = [];
 
-// --- 🔄 Variables Globales Simplificadas ---
+// --- 🔄 Variables Globales ---
 let mqttClientInstance;
 let isMqttClientConnected = false;
 let dbConnectionInstance;
-let subscribedMqttTopics = [];
-let antennaDataMap = {};
-let intervalIds = []; 
+let subscribedMqttTopics = []; // Lista de strings de tópicos a los que el servidor MQTT está suscrito
+let antennaDataMap = {}; // Mapeo de topic a { antenna_name: 'Nombre Antena' }
+let intervalIds = [];
 
 // --- ⏰ Funciones de Utilidad ---
 function getCurrentTimestamp() {
     const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    const seconds = String(now.getSeconds()).padStart(2, '0');
-    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    return now.toISOString().replace('T', ' ').substring(0, 19);
 }
 
 // --- 💾 Conexión a Base de Datos ---
 async function connectToDatabase() {
     if (!DB_CONFIG_FROM_ENV.host) {
-        console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_WARNING}: No se ha configurado DB_HOST. La suscripción dinámica a tópicos desde la BD no funcionará.`);
+        console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_WARNING}: No DB_HOST. Suscripción dinámica desde BD no funcionará.`);
         return;
     }
     while (true) {
@@ -100,45 +85,48 @@ async function connectToDatabase() {
             dbConnectionInstance = await mysql.createConnection(DB_CONFIG_FROM_ENV);
             console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: ✅ Conectado a la base de datos`);
             dbConnectionInstance.on('error', async (err) => {
-                console.error(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_ERROR}: ❌ Error en la conexión a la BD después de establecida: ${err.message}`);
+                console.error(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_ERROR}: ❌ Error en BD: ${err.message}`);
                 if (err.code === 'PROTOCOL_CONNECTION_LOST' || err.code === 'ECONNRESET' || err.code === 'ETIMEDOUT') {
-                    console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: 🔄 Intentando reconectar a la base de datos...`);
-                    await connectToDatabase();
+                    console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: 🔄 Reconectando a BD...`);
+                    await connectToDatabase(); // Intenta reconectar
                 } else {
-                    console.error(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_ERROR}: Error no recuperable en BD: ${err.message}`);
+                    // Errores no recuperables, podría ser necesario reiniciar o investigar
                 }
             });
-            return;
+            return; // Salir del bucle si la conexión es exitosa
         } catch (error) {
-            console.error(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_ERROR}: ❌ Error conectando a la base de datos: ${error.message}`);
-            console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: 🔄 Reintentando conexión a BD en 10s...`);
+            console.error(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_ERROR}: ❌ Error conectando a BD: ${error.message}`);
+            console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: 🔄 Reintentando conexión BD en 10s...`);
             await new Promise(resolve => setTimeout(resolve, 10000));
         }
     }
 }
 
 // --- 🌐 Servidor WebSocket ---
-// MODIFICADO: El servidor WebSocket se adjunta al servidor http o https
 const wss = new WebSocket.Server({ server });
 
-
 wss.on('connection', (ws) => {
-    console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: Cliente WebSocket conectado a la pasarela`);
-    ws.send(JSON.stringify({ 
-        type: 'initial_data', 
-        topics: subscribedMqttTopics, 
-        antennas: antennaDataMap,
-        history: storedGatewayMessages 
+    console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: Cliente WebSocket conectado.`);
+    // Enviar datos iniciales: historial de mensajes y la lista actual de tópicos/antenas
+    // antennaDataMap ya tiene la forma { 'topic1': { antenna_name: 'AntenaX' }, ... }
+    // Necesitamos transformarlo a un array de objetos para topics_info si es necesario,
+    // o simplemente enviar los tópicos suscritos y el mapa de antenas.
+    // La vista original de Node usaba `subscribedMqttTopics` y `antennaDataMap`.
+    ws.send(JSON.stringify({
+        type: 'initial_data',
+        topics: subscribedMqttTopics, // Array de strings de tópicos
+        antennas: antennaDataMap,     // Objeto { topic: { antenna_name: '...' } }
+        history: storedGatewayMessages
     }));
 
     ws.on('message', (message) => {
-        console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: Mensaje recibido del cliente WebSocket: ${message.toString()}`);
+        console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: Mensaje WS: ${message.toString()}`);
     });
     ws.on('close', () => {
-        console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: Cliente WebSocket desconectado de la pasarela`);
+        console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: Cliente WebSocket desconectado.`);
     });
     ws.on('error', (error) => {
-        console.error(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_ERROR}: Error en el cliente WebSocket de la pasarela: ${error}`);
+        console.error(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_ERROR}: Error WS: ${error}`);
     });
 });
 
@@ -149,38 +137,36 @@ function broadcastToWebSockets(messagePayload) {
                 try {
                     client.send(JSON.stringify(messagePayload));
                 } catch (e) {
-                    console.error(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_ERROR}: Error al enviar mensaje por WebSocket: ${e}`);
+                    console.error(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_ERROR}: Error broadcast WS: ${e}`);
                 }
             }
         });
     }
 }
 
-// --- 📞 Cliente y Lógica MQTT Simplificada ---
+// --- 📞 Cliente y Lógica MQTT ---
 function connectMQTT() {
     if (!process.env.MQTT_SENSORICA_SERVER || !process.env.MQTT_SENSORICA_PORT) {
-        console.error(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_ERROR}: ❌ Faltan variables de entorno MQTT_SENSORICA_SERVER o MQTT_SENSORICA_PORT. No se puede conectar a MQTT.`);
+        console.error(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_ERROR}: ❌ Faltan variables MQTT. No se puede conectar.`);
         return;
     }
-    console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: Intentando conectar al broker MQTT en ${MQTT_BROKER_URL_FROM_ENV}`);
+    console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: Conectando a MQTT: ${MQTT_BROKER_URL_FROM_ENV}`);
     mqttClientInstance = mqtt.connect(MQTT_BROKER_URL_FROM_ENV, {
-        clientId: `mqtt_visualizer_client_${Math.random().toString(16).substr(2, 8)}`,
+        clientId: `mqtt_gateway_client_${Math.random().toString(16).substr(2, 8)}`,
         reconnectPeriod: 5000,
         clean: true
     });
 
     mqttClientInstance.on('connect', async () => {
-        console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: ✅ Conectado a MQTT Server: ${MQTT_BROKER_URL_FROM_ENV}`);
+        console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: ✅ Conectado a MQTT Server.`);
         isMqttClientConnected = true;
         if (dbConnectionInstance) {
-            await subscribeToTopicsFromDB();
-        } else if (subscribedMqttTopics.length > 0) {
+            await subscribeToTopicsFromDB(); // Esto actualiza subscribedMqttTopics y antennaDataMap
+        } else if (subscribedMqttTopics.length > 0) { // Fallback si no hay BD pero hay tópicos hardcodeados (no es el caso actual)
             mqttClientInstance.subscribe(subscribedMqttTopics, (err) => {
-                if (err) console.error(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_ERROR}: Error al suscribirse a tópicos por defecto: ${subscribedMqttTopics}`, err);
-                else console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: Suscrito a tópicos por defecto: ${subscribedMqttTopics}`);
+                if (err) console.error(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_ERROR}: Error suscribiendo tópicos:`, err);
+                else console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: Suscrito a tópicos: ${subscribedMqttTopics}`);
             });
-        } else {
-            console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: No hay tópicos configurados para suscribir (ni BD ni por defecto).`);
         }
     });
 
@@ -191,15 +177,16 @@ function connectMQTT() {
         try {
             payloadObject = JSON.parse(messageString);
         } catch (e) {
-            payloadObject = messageString;
+            payloadObject = messageString; // Guardar como string si no es JSON válido
         }
 
+        // Usar antennaDataMap para obtener el nombre de la antena
         const antennaName = antennaDataMap[topic]?.antenna_name || "Desconocida";
         const gatewayMessageData = {
-            type: 'mqtt_message', 
+            type: 'mqtt_message',
             topic: topic,
             payload: payloadObject,
-            antenna_name: antennaName,
+            antenna_name: antennaName, // Añadido el nombre de la antena
             received_at: receivedAt
         };
 
@@ -211,8 +198,8 @@ function connectMQTT() {
     });
 
     mqttClientInstance.on('disconnect', () => console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: 🔴 Desconectado de MQTT`));
-    mqttClientInstance.on('error', error => console.error(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_ERROR}: ❌ Error en MQTT: ${error.message}`));
-    mqttClientInstance.on('reconnect', () => console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: ⚠️ Intentando reconectar a MQTT...`));
+    mqttClientInstance.on('error', error => console.error(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_ERROR}: ❌ Error MQTT: ${error.message}`));
+    mqttClientInstance.on('reconnect', () => console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: ⚠️ Reconectando a MQTT...`));
     mqttClientInstance.on('close', () => {
         console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: Conexión MQTT cerrada.`);
         isMqttClientConnected = false;
@@ -221,7 +208,7 @@ function connectMQTT() {
 
 async function subscribeToTopicsFromDB() {
     if (!isMqttClientConnected || !dbConnectionInstance) {
-        console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: No se puede suscribir a tópicos desde BD (MQTT o BD no conectado).`);
+        console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: No se puede suscribir desde BD (MQTT o BD no conectado).`);
         return;
     }
     try {
@@ -229,61 +216,100 @@ async function subscribeToTopicsFromDB() {
             'SELECT mqtt_topic, name FROM rfid_ants WHERE mqtt_topic IS NOT NULL AND mqtt_topic != ""'
         );
         
-        const newTopics = rows.map(row => row.mqtt_topic);
-        const newAntennaDataMap = {};
+        const newTopicsFromDB = rows.map(row => row.mqtt_topic); // Array de strings de tópicos
+        const newAntennaDataMap = {}; // Objeto { topic: { antenna_name: 'Name' } }
         rows.forEach(row => {
             newAntennaDataMap[row.mqtt_topic] = { antenna_name: row.name };
         });
         
-        const currentTopicsSet = new Set(subscribedMqttTopics);
-        const newTopicsSet = new Set(newTopics);
+        const currentSubscribedSet = new Set(subscribedMqttTopics);
+        const newTopicsSet = new Set(newTopicsFromDB);
 
         const topicsToUnsubscribe = subscribedMqttTopics.filter(t => !newTopicsSet.has(t));
-        const topicsToSubscribe = newTopics.filter(t => !currentTopicsSet.has(t));
+        const topicsToSubscribe = newTopicsFromDB.filter(t => !currentSubscribedSet.has(t));
 
         if (topicsToUnsubscribe.length > 0) {
             mqttClientInstance.unsubscribe(topicsToUnsubscribe, (err) => {
-                if (err) console.error(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_ERROR}: Error al desuscribirse: ${topicsToUnsubscribe}`, err);
+                if (err) console.error(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_ERROR}: Error desuscribiendo: ${topicsToUnsubscribe}`, err);
                 else console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: Desuscrito de: ${topicsToUnsubscribe}`);
             });
         }
 
         if (topicsToSubscribe.length > 0) {
             mqttClientInstance.subscribe(topicsToSubscribe, (err) => {
-                if (err) console.error(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_ERROR}: Error al suscribirse: ${topicsToSubscribe}`, err);
+                if (err) console.error(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_ERROR}: Error suscribiendo: ${topicsToSubscribe}`, err);
                 else console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: Suscrito a: ${topicsToSubscribe}`);
             });
         }
         
         const oldSubscribedTopicsCount = subscribedMqttTopics.length;
-        subscribedMqttTopics = newTopics;
-        antennaDataMap = newAntennaDataMap; 
+        subscribedMqttTopics = newTopicsFromDB; // Actualizar la lista global de tópicos suscritos
+        antennaDataMap = newAntennaDataMap; // Actualizar el mapa global de datos de antena
 
         if (topicsToSubscribe.length > 0 || topicsToUnsubscribe.length > 0 || oldSubscribedTopicsCount !== subscribedMqttTopics.length) {
             console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: ✅ Gestión de tópicos completada. Suscritos: (${subscribedMqttTopics.length})`);
+            // Enviar actualización a los clientes WebSocket
             broadcastToWebSockets({
                 type: 'topics_update',
-                topics: subscribedMqttTopics,
-                antennas: antennaDataMap
+                topics: subscribedMqttTopics, // Array de strings de tópicos
+                antennas: antennaDataMap     // Objeto { topic: { antenna_name: '...' } }
             });
         }
 
     } catch (error) {
-        console.error(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_ERROR}: ❌ Error al actualizar tópicos desde BD: ${error.message}`);
-        if (error.code === 'PROTOCOL_CONNECTION_LOST' || error.fatal) {
-            await connectToDatabase();
+        console.error(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_ERROR}: ❌ Error actualizando tópicos desde BD: ${error.message}`);
+        if (error.code === 'PROTOCOL_CONNECTION_LOST' || error.fatal) { // Si el error es por pérdida de conexión
+            await connectToDatabase(); // Intenta reconectar
         }
     }
 }
 
 // --- 🌐 API HTTP de la Pasarela ---
-app.get('/api/gateway-messages', (req, res) => {
-    res.json(storedGatewayMessages);
+// MODIFICADO: Ahora este endpoint también devolverá la información de los tópicos
+app.get('/api/gateway-messages', async (req, res) => {
+    let topicsInfo = []; // Formato: [{ topic: "topic_string", antenna_name: "Antenna Name" }, ...]
+
+    if (dbConnectionInstance) {
+        try {
+            // Usar antennaDataMap que ya se actualiza periódicamente y al inicio
+            // Esto evita una consulta a la BD en cada request a esta API,
+            // asumiendo que subscribeToTopicsFromDB() mantiene antennaDataMap actualizado.
+            // Transformar antennaDataMap al formato deseado para topics_info
+            for (const topic in antennaDataMap) {
+                topicsInfo.push({
+                    topic: topic,
+                    antenna_name: antennaDataMap[topic].antenna_name
+                });
+            }
+            // Opcionalmente, si se prefiere consultar la BD en cada llamada a esta API (más costoso):
+            /*
+            const [rows] = await dbConnectionInstance.execute(
+                'SELECT mqtt_topic, name FROM rfid_ants WHERE mqtt_topic IS NOT NULL AND mqtt_topic != "" ORDER BY name'
+            );
+            topicsInfo = rows.map(row => ({
+                topic: row.mqtt_topic,
+                antenna_name: row.name
+            }));
+            */
+        } catch (dbError) {
+            console.error(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_ERROR}: Error consultando tópicos para API: ${dbError.message}`);
+            // topicsInfo permanecerá vacío, el endpoint devolverá mensajes sin info de tópicos o un error.
+            // Considerar devolver un error 500 si la info de tópicos es crítica para este endpoint.
+        }
+    } else {
+        console.warn(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_WARNING}: No hay conexión a BD para obtener tópicos en /api/gateway-messages.`);
+    }
+
+    res.json({
+        messages: storedGatewayMessages,
+        topics_info: topicsInfo 
+    });
 });
 
 app.get('/gateway-test', (req, res) => {
-    // MODIFICADO: Determinar el protocolo WebSocket (ws o wss) dinámicamente
     const wsProtocol = useHttps ? 'wss' : 'ws';
+    // El HTML de /gateway-test se mantiene igual, ya que su JS se conecta por WebSocket
+    // y recibe los tópicos a través del mensaje 'initial_data' y 'topics_update'.
     res.send(`
         <!DOCTYPE html>
         <html lang="es">
@@ -494,13 +520,14 @@ app.get('/gateway-test', (req, res) => {
                 const selectAllButton = document.getElementById('selectAllTopics');
                 const deselectAllButton = document.getElementById('deselectAllTopics');
 
-                // MODIFICADO: Usar la variable wsProtocol para construir la URL
                 const wsUrl = \`\${'${wsProtocol}'}://\` + window.location.host;
                 const ws = new WebSocket(wsUrl); 
 
                 let clientAllMessages = []; 
                 let clientSelectedTopics = new Set();
-                let serverAntennaData = {};
+                // serverAntennaData almacenará el mapeo de topic a nombre de antena
+                // recibido del servidor (formato: { 'topic1': { antenna_name: 'AntenaX' }, ... })
+                let serverAntennaData = {}; 
                 const CLIENT_MAX_MESSAGES_DISPLAY = ${MAX_STORED_GATEWAY_MESSAGES}; 
 
                 function updateMessagesDisplay() {
@@ -528,7 +555,7 @@ app.get('/gateway-test', (req, res) => {
                         tempDiv.textContent = payloadDisplay;
                         payloadDisplay = tempDiv.innerHTML;
                     }
-
+                    // El nombre de la antena ya viene en messageData.antenna_name
                     item.innerHTML = \`
                         <div class="message-header">Tópico: \${messageData.topic} (Antena: \${messageData.antenna_name || 'N/A'})</div>
                         <div class="message-payload">\${payloadDisplay}</div>
@@ -542,9 +569,10 @@ app.get('/gateway-test', (req, res) => {
                     messagesUl.appendChild(listItem);
                 }
                 
+                // topics es un array de strings, antennas es un objeto { topic: { antenna_name: '...' } }
                 function populateTopicSelector(topics, antennas) {
                     topicListUl.innerHTML = ''; 
-                    serverAntennaData = antennas || {};
+                    serverAntennaData = antennas || {}; // Guardar el mapa de antenas
                     const sortedTopics = [...topics].sort(); 
                     
                     sortedTopics.forEach(topic => { 
@@ -566,6 +594,7 @@ app.get('/gateway-test', (req, res) => {
 
                         const label = document.createElement('label');
                         label.htmlFor = checkbox.id;
+                        // Obtener el nombre de la antena del mapa serverAntennaData
                         const antennaName = serverAntennaData[topic]?.antenna_name || 'N/A';
                         label.textContent = \`\${topic} (\${antennaName})\`;
                         
@@ -602,12 +631,15 @@ app.get('/gateway-test', (req, res) => {
                         const message = JSON.parse(event.data);
                         if (message.type === 'initial_data') {
                             clientAllMessages = message.history || [];
+                            // message.topics es un array de strings
+                            // message.antennas es un objeto { topic: { antenna_name: '...' } }
                             if (message.topics && message.topics.length > 0) {
                                 message.topics.forEach(t => clientSelectedTopics.add(t)); 
                             }
                             populateTopicSelector(message.topics || [], message.antennas || {});
                             updateMessagesDisplay();
-                            connectionStatusDiv.textContent = \`Conectado. Mostrando \${clientAllMessages.filter(msg => clientSelectedTopics.size === 0 || clientSelectedTopics.has(msg.topic)).length} de \${clientAllMessages.length} mensajes históricos. \${message.topics ? message.topics.length : 0} tópicos.\`;
+                            let topicsCount = message.topics ? message.topics.length : 0;
+                            connectionStatusDiv.textContent = \`Conectado. Mostrando \${clientAllMessages.filter(msg => clientSelectedTopics.size === 0 || clientSelectedTopics.has(msg.topic)).length} de \${clientAllMessages.length} mensajes. \${topicsCount} tópicos.\`;
                         } else if (message.type === 'mqtt_message') {
                             clientAllMessages.push(message);
                             if (clientAllMessages.length > CLIENT_MAX_MESSAGES_DISPLAY * 2) { 
@@ -615,6 +647,8 @@ app.get('/gateway-test', (req, res) => {
                             }
                             updateMessagesDisplay(); 
                         } else if (message.type === 'topics_update') {
+                            // message.topics es un array de strings
+                            // message.antennas es un objeto { topic: { antenna_name: '...' } }
                             populateTopicSelector(message.topics || [], message.antennas || {});
                             const newTopicSet = new Set(message.topics || []);
                             clientSelectedTopics.forEach(selectedTopic => {
@@ -622,6 +656,7 @@ app.get('/gateway-test', (req, res) => {
                                     clientSelectedTopics.delete(selectedTopic); 
                                 }
                             });
+                            // Asegurar que los checkboxes reflejen la selección actual
                             topicListUl.querySelectorAll('input[type="checkbox"]').forEach(cb => {
                                 cb.checked = clientSelectedTopics.has(cb.value);
                             });
@@ -651,123 +686,101 @@ app.get('/gateway-test', (req, res) => {
 
 // --- 🚀 Función Principal de Arranque ---
 async function startGateway() {
-    console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: Iniciando Pasarela MQTT-WebSocket (Visualizador)...`);
-    await connectToDatabase();
-    connectMQTT();
+    console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: Iniciando Pasarela...`);
+    await connectToDatabase(); // Asegura que la BD esté conectada antes de continuar
+    connectMQTT(); // Inicia la conexión MQTT (que a su vez llamará a subscribeToTopicsFromDB)
     
-    if (dbConnectionInstance) {
+    // Intervalo para actualizar suscripciones de tópicos desde la BD
+    if (dbConnectionInstance) { // Solo si la conexión a BD fue exitosa inicialmente
         const topicSubscriptionInterval = setInterval(async () => { 
-            if (isMqttClientConnected && dbConnectionInstance) await subscribeToTopicsFromDB();
-        }, 60000);
+            if (isMqttClientConnected && dbConnectionInstance) { // Doble chequeo
+                 await subscribeToTopicsFromDB();
+            }
+        }, 60000); // Cada 60 segundos
         intervalIds.push(topicSubscriptionInterval); 
     }
 
-    // MODIFICADO: Usar el servidor (http o https) para escuchar
     server.listen(WEB_SERVER_PORT, '0.0.0.0', () => {
         const protocol = useHttps ? 'https' : 'http';
-        console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: ✅ Pasarela ${protocol.toUpperCase()} y WebSocket (${useHttps ? 'WSS' : 'WS'}) escuchando en ${protocol}://0.0.0.0:${WEB_SERVER_PORT}`);
-        console.log(`   Accesible en tu red local vía ${protocol}://<IP_DE_TU_MAQUINA>:${WEB_SERVER_PORT}/gateway-test`);
+        console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: ✅ Pasarela ${protocol.toUpperCase()} y WebSocket (${useHttps ? 'WSS' : 'WS'}) en ${protocol}://0.0.0.0:${WEB_SERVER_PORT}`);
+        console.log(`   Test en: ${protocol}://<IP_DE_TU_MAQUINA>:${WEB_SERVER_PORT}/gateway-test`);
     });
 }
 
 // --- Manejo de Cierre Elegante ---
 let shuttingDown = false;
-process.on('SIGINT', async () => {
+async function gracefulShutdown() {
     if (shuttingDown) {
-        console.warn(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_WARNING}: Apagado ya en progreso. Forzando salida si es necesario...`);
+        console.warn(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_WARNING}: Apagado ya en progreso.`);
         return; 
     }
     shuttingDown = true;
-    console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: Recibido SIGINT. Cerrando conexiones de la pasarela elegantemente...`);
+    console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: Recibido SIGINT/SIGTERM. Cerrando conexiones...`);
 
-    console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: Limpiando ${intervalIds.length} intervalos programados...`);
     intervalIds.forEach(clearInterval);
     intervalIds = []; 
+    console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: Intervalos limpiados.`);
 
     const closePromises = [];
 
+    if (wss) {
+        console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: Cerrando clientes WebSocket (${wss.clients.size})...`);
+        wss.clients.forEach(client => client.terminate());
+        closePromises.push(new Promise((resolve) => wss.close(() => {
+            console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: Servidor WebSocket cerrado.`);
+            resolve();
+        })));
+    }
+    
+    // El servidor HTTP/HTTPS debe cerrarse después del WebSocket server que depende de él.
     if (server && server.listening) {
         console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: Cerrando servidor ${useHttps ? 'HTTPS' : 'HTTP'}...`);
         closePromises.push(new Promise((resolve, reject) => {
             server.close((err) => {
                 if (err) {
-                    console.error(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_ERROR}: Error cerrando servidor ${useHttps ? 'HTTPS' : 'HTTP'}: ${err.message}`);
-                    reject(err); // Mantener reject para que Promise.all lo capture
-                } else {
-                    console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: Servidor ${useHttps ? 'HTTPS' : 'HTTP'} cerrado.`);
-                    resolve();
+                    console.error(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_ERROR}: Error cerrando servidor: ${err.message}`);
+                    return reject(err);
                 }
-            });
-        }));
-    }
-    
-    if (wss) {
-        console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: Cerrando clientes WebSocket (${wss.clients.size})...`);
-        wss.clients.forEach(client => {
-            if (client.readyState === WebSocket.OPEN) {
-                client.terminate(); 
-            }
-        });
-        // El cierre del servidor WebSocket está ligado al servidor HTTP/HTTPS,
-        // pero podemos añadir una promesa para su callback si es necesario, aunque wss.close() es síncrono en su llamada.
-        // Para mayor robustez, se puede envolver en una promesa si se quiere asegurar el log.
-        closePromises.push(new Promise((resolve) => {
-            wss.close(() => { 
-                console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: Servidor WebSocket cerrado.`);
+                console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: Servidor ${useHttps ? 'HTTPS' : 'HTTP'} cerrado.`);
                 resolve();
             });
         }));
     }
 
-    if (mqttClientInstance) {
+
+    if (mqttClientInstance && mqttClientInstance.connected) {
         console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: Desconectando cliente MQTT...`);
-        closePromises.push(new Promise((resolve) => { // No usar reject aquí para no detener Promise.all
-            const mqttTimeout = setTimeout(() => {
-                console.warn(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_WARNING}: Timeout al cerrar cliente MQTT.`);
-                resolve(); 
-            }, 3000); 
-
-            mqttClientInstance.end(true, (error) => {
-                clearTimeout(mqttTimeout);
-                if (error) {
-                    console.error(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_ERROR}: Error al desconectar cliente MQTT: ${error.message}`);
-                } else {
-                    console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: Cliente MQTT desconectado.`);
-                }
+        closePromises.push(new Promise((resolve) => {
+            mqttClientInstance.end(false, () => { // false para no forzar, permitir que envíe mensajes pendientes
+                console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: Cliente MQTT desconectado.`);
                 resolve();
             });
         }));
+    } else if (mqttClientInstance) {
+         console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: Cliente MQTT ya desconectado o no conectado.`);
     }
+
 
     if (dbConnectionInstance) {
-        console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: Cerrando conexión a la base de datos...`);
-        closePromises.push(new Promise((resolve) => { // No usar reject aquí
-            dbConnectionInstance.end(err => {
-                if (err) {
-                    console.error(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_ERROR}: Error al cerrar conexión DB: ${err.message}`);
-                } else {
-                    console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: Conexión a base de datos cerrada.`);
-                }
-                resolve();
-            });
+        console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: Cerrando conexión BD...`);
+        closePromises.push(dbConnectionInstance.end().then(() => {
+            console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: Conexión BD cerrada.`);
+        }).catch(err => {
+            console.error(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_ERROR}: Error cerrando BD: ${err.message}`);
         }));
     }
 
     try {
-        // Esperar a que todas las promesas de cierre se completen (o fallen y se maneje el error)
-        await Promise.all(closePromises.map(p => p.catch(e => {
-            // Loguear el error individual de la promesa pero no dejar que detenga el Promise.all
-            console.error(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_ERROR}: Error durante una operación de cierre:`, e.message || e);
-            return e; // Devolver el error para que Promise.all no lo trate como no resuelto
-        })));
-        console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: Todas las operaciones de cierre intentadas. Saliendo.`);
+        await Promise.all(closePromises.map(p => p.catch(e => console.error(`Error en cierre: ${e.message || e}`))));
+        console.log(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_INFO}: Todas las operaciones de cierre completadas. Saliendo.`);
         process.exit(0);
-    } catch (error) { // Este catch es por si Promise.all mismo lanza un error (poco probable con .map(p => p.catch))
-        console.error(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_ERROR}: Error crítico durante el proceso de apagado: ${error.message}`);
+    } catch (error) {
+        console.error(`[${getCurrentTimestamp()}] ${ENVIRONMENT}.${LOG_LEVEL_ERROR}: Error crítico durante apagado: ${error.message}`);
         process.exit(1); 
     }
-});
+}
 
+process.on('SIGINT', gracefulShutdown);
+process.on('SIGTERM', gracefulShutdown);
 
 startGateway();
-

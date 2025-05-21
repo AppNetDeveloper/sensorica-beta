@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Visor de Mensajes del Gateway (AJAX) - Estilo Node</title>
+    <title>Visor de Mensajes del Gateway (AJAX) - Con Filtros</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -18,8 +18,8 @@
             --success-text: #155724;
             --error-bg: #f8d7da;
             --error-text: #721c24;
-            --warning-bg: #fff3cd; /* Usado para loading en este caso */
-            --warning-text: #856404; /* Usado para loading en este caso */
+            --warning-bg: #fff3cd;
+            --warning-text: #856404;
             --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             --border-radius: 8px;
         }
@@ -33,7 +33,7 @@
             color: var(--text-color);
             line-height: 1.6;
         }
-        header.main-header { /* Renombrado para evitar conflicto con header de HTML5 */
+        header.main-header {
             background-color: var(--primary-color); 
             color: white; 
             padding: 18px 25px; 
@@ -68,37 +68,59 @@
             font-weight: 500;
         }
         #topic-controls { 
-            margin-bottom: 20px; 
+            margin-bottom: 15px; 
             display: flex; 
-            gap: 12px; 
+            flex-wrap: wrap;
+            gap: 10px; 
         }
         #topic-controls button { 
-            padding: 10px 15px; 
+            padding: 8px 12px; 
             border: none; 
             border-radius: var(--border-radius); 
             cursor: pointer; 
             background-color: var(--secondary-color); 
             color: white; 
-            font-size: 0.95em;
+            font-size: 0.9em;
             transition: background-color 0.2s ease;
             font-weight: 500;
+            flex-grow: 1;
         }
         #topic-controls button:hover { 
             background-color: #2980b9; 
         }
          #topic-controls button:disabled {
-            background-color: #a0aec0; /* Gris */
+            background-color: #a0aec0;
             cursor: not-allowed;
         }
-        #topic-list-info { /* Cambiado de #topic-list */
+        #topic-list { /* Cambiado de #topic-list-info */
             list-style: none; 
             padding: 0; 
             margin: 0; 
             flex-grow: 1; 
-            overflow-y: auto;
-            text-align: center;
-            padding-top: 20px;
-            color: var(--text-light-color);
+            overflow-y: auto; 
+        }
+        #topic-list li { 
+            margin-bottom: 8px; 
+            display: flex; 
+            align-items: center;
+            padding: 6px;
+            border-radius: 4px;
+            transition: background-color 0.2s ease;
+        }
+        #topic-list li:hover {
+            background-color: #f8f9fa; 
+        }
+        #topic-list input[type="checkbox"] { 
+            margin-right: 10px; 
+            transform: scale(1.1); 
+            cursor: pointer;
+            accent-color: var(--secondary-color);
+        }
+        #topic-list label { 
+            font-size: 0.95em; 
+            color: var(--text-color); 
+            cursor: pointer; 
+            word-break: break-all; 
         }
         
         #main-content { 
@@ -111,7 +133,7 @@
             flex-direction: column; 
             overflow: hidden;
         }
-        .status-bar { /* Nombre genérico */
+        .status-bar {
             text-align: center; 
             padding: 12px; 
             border-radius: var(--border-radius); 
@@ -124,7 +146,7 @@
         .status-bar.success { background-color: var(--success-bg); color: var(--success-text); border-color: var(--success-text); }
         .status-bar.error { background-color: var(--error-bg); color: var(--error-text); border-color: var(--error-text); }
 
-        #messages { /* ID para la lista de mensajes */
+        #messages { 
             flex-grow: 1; 
             overflow-y: auto; 
             list-style: none; 
@@ -156,7 +178,7 @@
             margin-top: 8px;
             border: 1px solid #e9e9e9;
             font-family: 'Courier New', Courier, monospace; 
-            max-height: 200px; /* Para evitar payloads muy largos */
+            max-height: 200px;
             overflow-y: auto;
         }
         .message-meta { 
@@ -165,7 +187,7 @@
             margin-top: 8px; 
             text-align: right;
         }
-        .no-messages {
+        .no-messages, .no-topics {
             text-align: center;
             padding: 20px;
             color: var(--text-light-color);
@@ -181,23 +203,22 @@
     </style>
 </head>
 <body>
-    <header class="main-header">Visor de Mensajes del Gateway (AJAX)</header>
+    <header class="main-header">Visor de Mensajes del Gateway (Filtrado)</header>
     <div class="container">
         <aside id="sidebar">
-            <h2>Tópicos</h2>
+            <h2>Tópicos Suscritos</h2>
             <div id="topic-controls">
-                <!-- Los botones de control de tópicos se dejan como visuales,
-                     ya que la funcionalidad de filtrado no está implementada
-                     con el endpoint AJAX actual. -->
-                <button id="fetchMessagesBtn" title="Actualizar mensajes manualmente">Actualizar</button>
-                <button id="autoRefreshBtn" title="Iniciar/detener auto-actualización de mensajes">Auto-Refrescar</button>
+                <button id="fetchMessagesBtn" title="Actualizar mensajes y tópicos">Actualizar</button>
+                <button id="autoRefreshBtn" title="Iniciar/detener auto-actualización">Auto-Refrescar</button>
+                <button id="selectAllTopicsBtn" title="Seleccionar todos los tópicos">Todos</button>
+                <button id="deselectAllTopicsBtn" title="Deseleccionar todos los tópicos">Ninguno</button>
             </div>
-            <div id="topic-list-info">
-                <p>La lista de tópicos y el filtrado no están disponibles en esta vista (se obtienen todos los mensajes).</p>
-            </div>
+            <ul id="topic-list">
+                <div class="no-topics">Cargando tópicos...</div>
+            </ul>
         </aside>
         <main id="main-content">
-            <div class="status-bar" id="connectionStatus">Presiona "Actualizar" para cargar mensajes.</div>
+            <div class="status-bar" id="connectionStatus">Presiona "Actualizar" para cargar datos.</div>
             <ul id="messages">
                  <div class="no-messages">No hay mensajes para mostrar.</div>
             </ul>
@@ -206,45 +227,104 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            const messagesUl = document.getElementById('messages'); // Cambiado de messagesContainer
+            const messagesUl = document.getElementById('messages');
+            const topicListUl = document.getElementById('topic-list');
             const fetchMessagesBtn = document.getElementById('fetchMessagesBtn');
             const autoRefreshBtn = document.getElementById('autoRefreshBtn');
-            const connectionStatusDiv = document.getElementById('connectionStatus'); // Cambiado de statusBar
-            const gatewayDataUrl = "{{ $gatewayDataUrl }}"; 
+            const selectAllTopicsBtn = document.getElementById('selectAllTopicsBtn');
+            const deselectAllTopicsBtn = document.getElementById('deselectAllTopicsBtn');
+            const connectionStatusDiv = document.getElementById('connectionStatus');
             
+            // Define la URL de tu API de Laravel que llama al Node.js
+            // Asegúrate que esta ruta exista en routes/web.php y apunte al método correcto en RfidController
+            const gatewayDataUrl = "/rfid-mqtt/api/gateway-data"; 
+            // Si pasas la URL desde el controlador Laravel (descomentar si es el caso):
+            // const gatewayDataUrl = "{{-- isset($gatewayDataUrl) ? $gatewayDataUrl : '/rfid-mqtt/api/gateway-data' --}}";
+
             let autoRefreshIntervalId = null;
             let isAutoRefreshing = false;
-            const autoRefreshTime = 1000; // Actualizar cada 1 segundos
+            const autoRefreshTime = 1000; 
 
-            function displayMessages(messages) {
-                // Guardar si estaba al final del scroll antes de limpiar
-                const previouslyScrolledToBottom = messagesUl.scrollHeight - messagesUl.scrollTop <= messagesUl.clientHeight + 20; // +20 de margen
+            let allMessages = []; 
+            let availableTopics = []; 
+            let selectedTopics = new Set(); 
 
-                messagesUl.innerHTML = ''; // Limpiar mensajes anteriores
-                if (!messages || messages.length === 0) {
-                    messagesUl.innerHTML = '<div class="no-messages">No hay mensajes para mostrar.</div>';
+            function populateTopicList() {
+                topicListUl.innerHTML = '';
+                if (!Array.isArray(availableTopics) || availableTopics.length === 0) {
+                    topicListUl.innerHTML = '<div class="no-topics">No hay tópicos disponibles.</div>';
                     return;
                 }
 
-                // Mostrar los mensajes en orden inverso (más nuevo primero)
-                messages.slice().reverse().forEach(msg => {
-                    const listItem = document.createElement('li'); // Crear li en lugar de div
+                availableTopics.forEach(topicInfo => {
+                    const listItem = document.createElement('li');
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.id = 'topic-' + topicInfo.topic.replace(/[^a-zA-Z0-9_\\-\\/]/g, "_");
+                    checkbox.value = topicInfo.topic;
+                    checkbox.checked = selectedTopics.has(topicInfo.topic);
+                    
+                    checkbox.addEventListener('change', (event) => {
+                        if (event.target.checked) {
+                            selectedTopics.add(topicInfo.topic);
+                        } else {
+                            selectedTopics.delete(topicInfo.topic);
+                        }
+                        renderMessages(); 
+                    });
 
+                    const label = document.createElement('label');
+                    label.htmlFor = checkbox.id;
+                    label.textContent = `${topicInfo.topic} (${topicInfo.antenna_name || 'N/A'})`;
+                    
+                    listItem.appendChild(checkbox);
+                    listItem.appendChild(label);
+                    topicListUl.appendChild(listItem);
+                });
+            }
+
+            function renderMessages() {
+                const previouslyScrolledToBottom = messagesUl.scrollHeight - messagesUl.scrollTop <= messagesUl.clientHeight + 20;
+                messagesUl.innerHTML = '';
+                
+                // Asegurarse que allMessages es un array antes de filtrar
+                if (!Array.isArray(allMessages)) {
+                    console.error("renderMessages: allMessages no es un array. Forzando a array vacío.", allMessages);
+                    allMessages = [];
+                }
+
+                const filteredMessages = allMessages.filter(msg => 
+                    selectedTopics.size === 0 || (msg && typeof msg.topic === 'string' && selectedTopics.has(msg.topic))
+                );
+
+                if (filteredMessages.length === 0) {
+                    if (allMessages.length > 0 && selectedTopics.size > 0) {
+                        messagesUl.innerHTML = '<div class="no-messages">No hay mensajes para los tópicos seleccionados.</div>';
+                    } else if (allMessages.length === 0) {
+                         messagesUl.innerHTML = '<div class="no-messages">No hay mensajes para mostrar.</div>';
+                    } else { 
+                        messagesUl.innerHTML = '<div class="no-messages">Selecciona un tópico para ver mensajes.</div>';
+                    }
+                    return;
+                }
+
+                filteredMessages.slice().reverse().forEach(msg => { // .slice() se usa en filteredMessages, que es un array
+                    const listItem = document.createElement('li');
                     let payloadDisplay = msg.payload;
                     if (typeof msg.payload === 'object') {
                         payloadDisplay = JSON.stringify(msg.payload, null, 2);
                     } else {
                         const tempDiv = document.createElement('div');
-                        tempDiv.textContent = payloadDisplay;
-                        payloadDisplay = tempDiv.innerHTML; // Para escapar HTML
+                        tempDiv.textContent = String(payloadDisplay); // Asegurar que es string
+                        payloadDisplay = tempDiv.innerHTML;
                     }
-                    
-                    const antennaName = msg.antenna_name || 'N/A';
+                    const antennaName = msg.antenna_name || 'N/A'; 
                     const receivedAt = msg.received_at ? new Date(msg.received_at).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'medium' }) : 'Fecha desconocida';
 
                     listItem.innerHTML = `
-                        <div class="message-header">Tópico: ${msg.topic} (Antena: ${antennaName})</div>
-                        <pre class="message-payload">${payloadDisplay}</pre> <div class="message-meta">Recibido: ${receivedAt}</div>
+                        <div class="message-header">Tópico: ${msg.topic || 'Desconocido'} (Antena: ${antennaName})</div>
+                        <pre class="message-payload">${payloadDisplay}</pre>
+                        <div class="message-meta">Recibido: ${receivedAt}</div>
                     `;
                     messagesUl.appendChild(listItem);
                 });
@@ -254,31 +334,69 @@
                 }
             }
 
-            async function fetchGatewayMessages() {
-                connectionStatusDiv.textContent = 'Cargando mensajes...';
+            async function fetchData() {
+                connectionStatusDiv.textContent = 'Cargando datos...';
                 connectionStatusDiv.className = 'status-bar loading';
                 fetchMessagesBtn.disabled = true;
                 if (!isAutoRefreshing) autoRefreshBtn.disabled = true;
-
+                selectAllTopicsBtn.disabled = true;
+                deselectAllTopicsBtn.disabled = true;
 
                 try {
                     const response = await fetch(gatewayDataUrl);
                     if (!response.ok) {
-                        const errorData = await response.json().catch(() => ({ error: "Error desconocido al procesar la respuesta del servidor."}));
-                        throw new Error(`Error del servidor: ${response.status} - ${errorData.error || response.statusText}`);
+                        let errorDetails = response.statusText;
+                        try {
+                            const errorData = await response.json();
+                            errorDetails = errorData.error || errorData.message || response.statusText;
+                        } catch (e) { /* No es JSON, usar statusText */ }
+                        throw new Error(`Error del servidor: ${response.status} - ${errorDetails}`);
                     }
                     const data = await response.json();
-                    displayMessages(data);
-                    connectionStatusDiv.textContent = `Mensajes cargados. Total: ${data.length}. Actualizado: ${new Date().toLocaleTimeString('es-ES')}`;
-                    connectionStatusDiv.className = 'status-bar success';
+                    console.log("Datos recibidos:", data); // Para depuración
+
+                    if (data.error_messages) { 
+                        connectionStatusDiv.textContent = `${data.error_messages}. Tópicos pueden estar cargados desde BD.`;
+                        connectionStatusDiv.className = 'status-bar warning'; 
+                        allMessages = []; 
+                    } else {
+                        allMessages = Array.isArray(data.messages) ? data.messages : [];
+                    }
+                    
+                    availableTopics = Array.isArray(data.topics_info) ? data.topics_info : [];
+
+                    const currentAvailableTopicValues = new Set(availableTopics.map(t => t.topic));
+                    const newSelectedTopics = new Set();
+                    selectedTopics.forEach(selected => {
+                        if (currentAvailableTopicValues.has(selected)) {
+                            newSelectedTopics.add(selected);
+                        }
+                    });
+                    selectedTopics = newSelectedTopics;
+                    
+                     if (selectedTopics.size === 0 && availableTopics.length > 0) {
+                         availableTopics.forEach(t => selectedTopics.add(t.topic));
+                     }
+
+                    populateTopicList();
+                    renderMessages();
+                    
+                    if (!data.error_messages) {
+                        connectionStatusDiv.textContent = `Datos cargados. ${allMessages.length} mensajes, ${availableTopics.length} tópicos. Actualizado: ${new Date().toLocaleTimeString('es-ES')}`;
+                        connectionStatusDiv.className = 'status-bar success';
+                    }
+
                 } catch (error) {
-                    console.error('Error al obtener mensajes del gateway:', error);
+                    console.error('Error al obtener datos:', error);
                     connectionStatusDiv.textContent = `Error al cargar: ${error.message}`;
                     connectionStatusDiv.className = 'status-bar error';
                     messagesUl.innerHTML = '<div class="no-messages">Error al cargar los mensajes. Revisa la consola.</div>';
+                    topicListUl.innerHTML = '<div class="no-topics">Error al cargar tópicos.</div>';
                 } finally {
                     fetchMessagesBtn.disabled = false;
-                     if (!isAutoRefreshing) autoRefreshBtn.disabled = false;
+                    if (!isAutoRefreshing) autoRefreshBtn.disabled = false;
+                    selectAllTopicsBtn.disabled = availableTopics.length === 0;
+                    deselectAllTopicsBtn.disabled = availableTopics.length === 0;
                 }
             }
 
@@ -288,25 +406,38 @@
                     autoRefreshIntervalId = null;
                     isAutoRefreshing = false;
                     autoRefreshBtn.textContent = 'Auto-Refrescar';
-                    autoRefreshBtn.title = 'Iniciar auto-actualización de mensajes';
-                    connectionStatusDiv.textContent = 'Auto-actualización detenida. ' + connectionStatusDiv.textContent;
+                    autoRefreshBtn.title = 'Iniciar auto-actualización';
                     fetchMessagesBtn.disabled = false;
                 } else {
-                    fetchGatewayMessages(); // Carga inicial
-                    autoRefreshIntervalId = setInterval(fetchGatewayMessages, autoRefreshTime);
+                    fetchData(); 
+                    autoRefreshIntervalId = setInterval(fetchData, autoRefreshTime);
                     isAutoRefreshing = true;
                     autoRefreshBtn.textContent = 'Detener Auto-R.';
-                    autoRefreshBtn.title = 'Detener auto-actualización de mensajes';
-                    // connectionStatusDiv.textContent = `Auto-actualización iniciada (cada ${autoRefreshTime/1000}s).`;
+                    autoRefreshBtn.title = 'Detener auto-actualización';
                     fetchMessagesBtn.disabled = true; 
                 }
             }
 
-            fetchMessagesBtn.addEventListener('click', fetchGatewayMessages);
+            selectAllTopicsBtn.addEventListener('click', () => {
+                topicListUl.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                    cb.checked = true;
+                    if (cb.value) selectedTopics.add(cb.value);
+                });
+                renderMessages();
+            });
+
+            deselectAllTopicsBtn.addEventListener('click', () => {
+                topicListUl.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                    cb.checked = false;
+                });
+                selectedTopics.clear();
+                renderMessages();
+            });
+
+            fetchMessagesBtn.addEventListener('click', fetchData);
             autoRefreshBtn.addEventListener('click', toggleAutoRefresh);
 
-            // Opcional: Cargar mensajes al inicio si se desea
-            // fetchGatewayMessages(); 
+            fetchData(); 
         });
     </script>
 </body>
