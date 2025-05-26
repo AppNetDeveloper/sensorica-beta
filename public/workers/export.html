@@ -289,7 +289,7 @@
     const analizarTodosBtn = document.getElementById('analizarTodosBtn'); 
     const viewWorkerChartBtn = document.getElementById('viewWorkerChartBtn'); 
     const viewPostChartBtn = document.getElementById('viewPostChartBtn');
-    const viewPostPieChartBtn = document.getElementById('viewPostPieChartBtn'); // New Pie Chart Button
+    const viewPostPieChartBtn = document.getElementById('viewPostPieChartBtn'); 
     const totalUnidadesTurnoHeader = document.getElementById('totalUnidadesTurnoHeader'); 
 
     const lockButton = document.getElementById('lockButton');
@@ -358,7 +358,7 @@
             analizarTodosBtn.classList.add('hidden'); 
             viewWorkerChartBtn.classList.add('hidden'); 
             viewPostChartBtn.classList.add('hidden');
-            viewPostPieChartBtn.classList.add('hidden'); // Hide new pie chart button
+            viewPostPieChartBtn.classList.add('hidden'); 
         } else {
             lockIcon.classList.add('hidden');
             unlockIcon.classList.remove('hidden');
@@ -366,7 +366,7 @@
                 analizarTodosBtn.classList.remove('hidden'); 
                 viewWorkerChartBtn.classList.remove('hidden'); 
                 viewPostChartBtn.classList.remove('hidden');
-                viewPostPieChartBtn.classList.remove('hidden'); // Show new pie chart button
+                viewPostPieChartBtn.classList.remove('hidden'); 
             } else {
                 analizarTodosBtn.classList.add('hidden');
                 viewWorkerChartBtn.classList.add('hidden');
@@ -378,7 +378,7 @@
         analizarTodosBtn.disabled = isLocked || !hasData;
         viewWorkerChartBtn.disabled = isLocked || !hasData;
         viewPostChartBtn.disabled = isLocked || !hasData;
-        viewPostPieChartBtn.disabled = isLocked || !hasData; // Manage disabled state
+        viewPostPieChartBtn.disabled = isLocked || !hasData; 
 
         populateTable(originalWorkersData); 
     }
@@ -394,7 +394,7 @@
     cancelPasswordBtn.addEventListener('click', hidePasswordModal);
 
     submitPasswordBtn.addEventListener('click', () => {
-        if (passwordInput.value === 'boisolo') {
+        if (passwordInput.value === 'boisolo') { // Ensure this password is secure or managed appropriately
             hidePasswordModal();
             toggleLockState(false); 
         } else {
@@ -473,7 +473,7 @@
                     method: 'POST',
                     headers: {
                         'Accept': 'application/json',
-                        'Authorization': 'Bearer 915afe8b7fabc2ca8d759761b0fe159f88bf0f064be7e4cd6a1f99021eff4e3b',
+                        'Authorization': 'Bearer 915afe8b7fabc2ca8d759761b0fe159f88bf0f064be7e4cd6a1f99021eff4e3b', // Replace with your actual token or secure method
                     },
                     body: formData 
                 });
@@ -678,7 +678,7 @@ Formatea la respuesta para que sea f√°cil de leer. No incluyas frases como "Bas√
     async function callGeminiAPI(prompt) {
         let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
         const payload = { contents: chatHistory };
-        const apiKey = "AIzaSyCqoVbApNZ3niVEltmC3dcPR5_VkBTnlwM"; 
+        const apiKey = "AIzaSyCqoVbApNZ3niVEltmC3dcPR5_VkBTnlwM"; // IMPORTANT: Replace with your actual API key or use a secure method to provide it.
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
         try {
@@ -719,10 +719,10 @@ Formatea la respuesta para que sea f√°cil de leer. No incluyas frases como "Bas√
         if (chartType === 'workers') {
             chartModalTitle.textContent = 'üìä Producci√≥n Total por Trabajador';
             renderProductionByWorkerChart();
-        } else if (chartType === 'postsBar') { // Renamed for clarity
+        } else if (chartType === 'postsBar') { 
             chartModalTitle.textContent = 'üìä Producci√≥n Total por Puesto (Barras)';
             renderProductionByPostBarChart();
-        } else if (chartType === 'postsPie') { // New type for Pie Chart
+        } else if (chartType === 'postsPie') { 
             chartModalTitle.textContent = 'üìä Distribuci√≥n de Cajas por Puesto (Circular)';
             renderPostDistributionPieChart();
         }
@@ -752,7 +752,7 @@ Formatea la respuesta para que sea f√°cil de leer. No incluyas frases como "Bas√
         drawBarChart(dataForChart, "Total de Cajas Producidas por Trabajador", "Trabajadores", "Total de Cajas");
     }
 
-    function renderProductionByPostBarChart() { // Renamed
+    function renderProductionByPostBarChart() { 
         d3.select("#chartContainer svg").remove();
         const postCounts = {};
         const dataToProcess = filterDataByCheckbox(JSON.parse(JSON.stringify(originalWorkersData)));
@@ -900,7 +900,7 @@ Formatea la respuesta para que sea f√°cil de leer. No incluyas frases como "Bas√
 
         const pie = d3.pie()
             .value(d => d.value)
-            .sort(null); // Do not sort, use the order from dataForChart (already sorted by value)
+            .sort(null); 
 
         const data_ready = pie(dataForChart);
 
@@ -934,19 +934,18 @@ Formatea la respuesta para que sea f√°cil de leer. No incluyas frases como "Bas√
                 tooltip.transition().duration(500).style("opacity", 0);
             });
 
-        // Add labels (optional, can get cluttered)
         svg.selectAll('allLabels')
             .data(data_ready)
             .join('text')
             .attr('class', 'pie-slice')
             .text(d => { 
                 const percent = (d.data.value / d3.sum(dataForChart, item => item.value) * 100);
-                return percent > 5 ? `${d.data.name.substring(0,10)}... (${percent.toFixed(1)}%)` : ''; // Show label if > 5%
+                return percent > 5 ? `${d.data.name.substring(0,10)}... (${percent.toFixed(1)}%)` : ''; 
             }) 
             .attr('transform', d => {
                 const pos = outerArc.centroid(d);
                 const midangle = d.startAngle + (d.endAngle - d.startAngle) / 2;
-                pos[0] = radius * 0.95 * (midangle < Math.PI ? 1 : -1); // Position labels left/right
+                pos[0] = radius * 0.95 * (midangle < Math.PI ? 1 : -1); 
                 return `translate(${pos})`;
             })
             .style('text-anchor', d => {
@@ -1142,7 +1141,7 @@ Formatea la respuesta para que sea f√°cil de leer. No incluyas frases como "Bas√
                     }
                     postRow.insertCell().textContent = post.product_list?.name ?? 'N/A';
                     Array.from(postRow.cells).forEach(cell => cell.classList.add('px-4', 'py-3', 'text-sm', 'text-gray-600', 'whitespace-nowrap'));
-                    postRow.cells[3].classList.add('pl-8');
+                    postRow.cells[3].classList.add('pl-8'); // Indent post details
                 });
             }
         });
@@ -1213,6 +1212,35 @@ Formatea la respuesta para que sea f√°cil de leer. No incluyas frases como "Bas√
 
     function printTable() { window.print(); }
 
+    // Helper function to get details of the first post (earliest created_at)
+    function getFirstPostDetails(worker) {
+        if (!worker.operator_posts || worker.operator_posts.length === 0) {
+            return { time: Infinity, name: null };
+        }
+
+        let earliestPost = null;
+        let minTime = Infinity;
+
+        for (const post of worker.operator_posts) {
+            if (post.created_at) {
+                const postTime = new Date(post.created_at).getTime();
+                if (!isNaN(postTime) && postTime < minTime) {
+                    minTime = postTime;
+                    earliestPost = post;
+                }
+            }
+        }
+
+        if (earliestPost) {
+            return {
+                time: minTime,
+                name: earliestPost.rfid_reading?.name ?? null
+            };
+        }
+        return { time: Infinity, name: null };
+    }
+
+
     function fetchData(fromDate, toDate) {
         const apiUrl = `${apiBaseUrl}?from_date=${fromDate}&to_date=${toDate}`;
         loadingRow.classList.remove('hidden');
@@ -1234,11 +1262,37 @@ Formatea la respuesta para que sea f√°cil de leer. No incluyas frases como "Bas√
                 loadingRow.classList.add('hidden');
                 if (apiResponse.success && Array.isArray(apiResponse.data)) { 
                     originalWorkersData = apiResponse.data.sort((a, b) => {
-                        const getMinTime = w => Math.min(...(w.operator_posts || []).filter(p=>(p.count??0)>0 && p.created_at).map(p=>new Date(p.created_at).getTime()).filter(t=>!isNaN(t)));
-                        const timeA = getMinTime(a), timeB = getMinTime(b);
-                        if (timeA !== Infinity && timeB === Infinity) return -1;
-                        if (timeA === Infinity && timeB !== Infinity) return 1;
-                        if (timeA !== Infinity && timeB !== Infinity && timeA !== timeB) return timeA - timeB;
+                        const detailsA = getFirstPostDetails(a);
+                        const detailsB = getFirstPostDetails(b);
+
+                        // Primary criterion: Post Name
+                        const nameA = detailsA.name;
+                        const nameB = detailsB.name;
+
+                        if (nameA && nameB) { // Both workers have a first post with a name
+                            const nameComparison = nameA.localeCompare(nameB);
+                            if (nameComparison !== 0) return nameComparison;
+                            // If post names are the same, then sort by their start times
+                            if (detailsA.time !== Infinity && detailsB.time !== Infinity) {
+                                 if (detailsA.time < detailsB.time) return -1;
+                                 if (detailsA.time > detailsB.time) return 1;
+                            }
+                        } else if (nameA && !nameB) { // Worker A has a post name, B doesn't
+                            return -1; 
+                        } else if (!nameA && nameB) { // Worker B has a post name, A doesn't
+                            return 1;  
+                        }
+                        // If names are the same (or both null), or one is null (handled above)
+                        // then proceed to sort by time if names didn't resolve it.
+
+                        // Secondary criterion: Post Start Time (if names were equal or both null)
+                        if (detailsA.time < detailsB.time) return -1;
+                        if (detailsA.time > detailsB.time) return 1;
+                        // This handles Infinity correctly: Infinity is not less than a finite number.
+                        // If detailsA.time is Infinity and detailsB.time is finite, A will be > B.
+                        // If detailsA.time is finite and detailsB.time is Infinity, A will be < B.
+
+                        // Tertiary criterion: Worker Name (if post names and times are identical or both lack posts)
                         return (a.name ?? '').localeCompare(b.name ?? '');
                     });
                     populateTable(originalWorkersData);
@@ -1267,7 +1321,7 @@ Formatea la respuesta para que sea f√°cil de leer. No incluyas frases como "Bas√
     analizarTodosBtn.addEventListener('click', fetchOverallAnalysis); 
     viewWorkerChartBtn.addEventListener('click', () => showChartModal('workers')); 
     viewPostChartBtn.addEventListener('click', () => showChartModal('postsBar'));
-    viewPostPieChartBtn.addEventListener('click', () => showChartModal('postsPie')); // Listener for new pie chart
+    viewPostPieChartBtn.addEventListener('click', () => showChartModal('postsPie')); 
     dateRangeSelect.addEventListener('change', (e) => { const {from, to} = getDateRange(e.target.value); fetchData(from, to); });
     filterPostsCheckbox.addEventListener('change', () => populateTable(originalWorkersData));
     

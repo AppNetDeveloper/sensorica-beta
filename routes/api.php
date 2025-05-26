@@ -70,6 +70,7 @@ Route::match(['get', 'post'], '/queue-print', [StoreQueueController::class, 'sto
 Route::match(['get', 'post'], '/queue-print-list', [StoreQueueController::class, 'getQueuePrints']);
 
 Route::get('/modbuses', [ModbusController::class, 'getModbuses']);
+Route::post('/tolvas/{id}/dosificacion/recalcular-automatico', [ModbusController::class, 'recalculateDosingProcess']);
 
 Route::get('/control-weights/{token}/all', [ControlWeightController::class, 'getAllDataByToken']);
 
