@@ -14,6 +14,7 @@
             body { padding: 0; }
             .container { box-shadow: none; margin: 0; max-width: 100%; }
             .modal { display: none !important; }
+            .kpi-card-container { display: none !important; }
         }
         .live-cajas-hora {
             /* font-style: italic; */
@@ -114,6 +115,24 @@
         .btn-ia-local:hover {
             background-color: #4338ca; /* indigo-700 */
         }
+        .kpi-card {
+            background-color: #f9fafb; /* gray-50 */
+            border: 1px solid #e5e7eb; /* gray-200 */
+            border-radius: 0.5rem;
+            padding: 1rem;
+            text-align: center;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        }
+        .kpi-title {
+            font-size: 0.875rem; /* text-sm */
+            color: #6b7280; /* gray-500 */
+            margin-bottom: 0.25rem;
+        }
+        .kpi-value {
+            font-size: 1.5rem; /* text-2xl */
+            font-weight: bold;
+            color: #1f2937; /* gray-800 */
+        }
     </style>
 </head>
 <body class="bg-gray-100 p-4 md:p-8">
@@ -177,6 +196,25 @@
             <button id="printBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-150 ease-in-out">
                 Imprimir
             </button>
+        </div>
+    </div>
+
+    <div id="kpiCardContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 md:p-6 no-print">
+        <div class="kpi-card">
+            <div class="kpi-title">Total Cajas Producidas</div>
+            <div id="kpiTotalCajas" class="kpi-value">-</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-title">Trabajadores Activos</div>
+            <div id="kpiTrabajadoresActivos" class="kpi-value">-</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-title">Promedio Cajas/Hora Global</div>
+            <div id="kpiAvgCajasHora" class="kpi-value">-</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-title">Puesto Más Productivo</div>
+            <div id="kpiPuestoMasProductivo" class="kpi-value">-</div>
         </div>
     </div>
 
@@ -300,7 +338,8 @@
         analysisModal, analysisModalTitle, analysisModalContent, analysisModalStatus, 
         closeAnalysisModalBtn, okAnalysisModalBtn, 
         chartModal, chartModalTitleEl, chartContainerEl, 
-        tooltip;
+        tooltip,
+        kpiCardContainer, kpiTotalCajas, kpiTrabajadoresActivos, kpiAvgCajasHora, kpiPuestoMasProductivo;
 
     let originalWorkersData = [];
     let displayedPostRowsCount = 0;
@@ -330,7 +369,7 @@
     }
     
     function updateHeaderButtonsState() {
-        const hasData = displayedPostRowsCount > 0; // Use displayedPostRowsCount for more accuracy
+        const hasData = displayedPostRowsCount > 0; 
         const actionButtons = [analizarTodosLocalAIBtn, viewWorkerChartBtn, viewPostChartBtn, viewPostPieChartBtn];
 
         actionButtons.forEach(btn => {
@@ -346,6 +385,13 @@
         });
         if (exportExcelBtn) {
             exportExcelBtn.disabled = !hasData;
+        }
+        if (kpiCardContainer) { 
+             if (isLocked || !hasData) {
+                kpiCardContainer.classList.add('hidden');
+            } else {
+                kpiCardContainer.classList.remove('hidden');
+            }
         }
     }
 
@@ -467,6 +513,7 @@
                     setTimeout(hideEditQuantityModal, 1500); 
                     
                     updateGrandTotalUnidades();
+                    updateKPICards(); 
 
                 } else {
                     throw new Error(result.message || 'La API indicó un fallo pero no proporcionó un mensaje de estado "success".');
@@ -765,7 +812,7 @@ Evita frases como "Basándome en estos datos". Ve directo al análisis.`;
                     currentLocalAITaskId = null;
                 }
             } else if (result.task?.status && (result.task.status.toLowerCase() === 'processing' || result.task.status.toLowerCase() === 'queued' || result.task.status.toLowerCase() === 'pending')) {
-                analysisModalStatus.textContent = `Tarea ${taskId} (IA ) sigue en proceso (${result.task.status})... Próxima consulta en 10s.`;
+                analysisModalStatus.textContent = `Tarea ${taskId} (IA Local) sigue en proceso (${result.task.status})... Próxima consulta en 10s.`;
                 analysisModalStatus.classList.remove('text-red-500');
             } else if (result.task?.status && result.task.status.toLowerCase() === 'failed') {
                 analysisModalContent.textContent = `La tarea de análisis ${taskId} (IA Local) falló.` + (result.task.error ? `\nError: ${result.task.error}` : '');
@@ -777,7 +824,7 @@ Evita frases como "Basándome en estos datos". Ve directo al análisis.`;
                     currentLocalAITaskId = null;
                 }
             } else {
-                analysisModalStatus.textContent = `Esperando resultado de tarea ${taskId} (IA )... `;
+                analysisModalStatus.textContent = `Esperando resultado de tarea ${taskId} (IA Local)... (Estado: ${result.task?.status || 'desconocido'}). Próxima consulta en 10s.`;
                 analysisModalStatus.classList.remove('text-red-500');
             }
 
@@ -1151,21 +1198,76 @@ Evita frases como "Basándome en estos datos". Ve directo al análisis.`;
         if (totalUnidadesTurnoHeader) totalUnidadesTurnoHeader.textContent = `(${grandTotal})`;
     }
 
+    function updateKPICards() {
+        const dataToDisplay = filterDataByCheckbox(originalWorkersData);
+        if (!kpiTotalCajas || dataToDisplay.length === 0) { // Check if elements exist
+            if(kpiTotalCajas) kpiTotalCajas.textContent = '-';
+            if(kpiTrabajadoresActivos) kpiTrabajadoresActivos.textContent = '0';
+            if(kpiAvgCajasHora) kpiAvgCajasHora.textContent = '-';
+            if(kpiPuestoMasProductivo) kpiPuestoMasProductivo.textContent = '-';
+            return;
+        }
+
+        let totalCajasGlobal = 0;
+        let totalHorasTrabajadasGlobal = 0;
+        let puestosConteo = {};
+        let trabajadoresActivosSet = new Set();
+
+        dataToDisplay.forEach(worker => {
+            let workerHasProduction = false;
+            if (worker.operator_posts && worker.operator_posts.length > 0) {
+                worker.operator_posts.forEach(post => {
+                    const cantidad = post.count || 0;
+                    if (cantidad > 0) {
+                        workerHasProduction = true;
+                        totalCajasGlobal += cantidad;
+                        if(post.rfid_reading?.name) {
+                            puestosConteo[post.rfid_reading.name] = (puestosConteo[post.rfid_reading.name] || 0) + cantidad;
+                        }
+                        if (post.created_at) {
+                            const start = new Date(post.created_at); 
+                            const end = post.finish_at ? new Date(post.finish_at) : new Date();
+                            if (end > start) { 
+                                totalHorasTrabajadasGlobal += (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+                            }
+                        }
+                    }
+                });
+            }
+            if (workerHasProduction) {
+                trabajadoresActivosSet.add(worker.client_id);
+            }
+        });
+
+        kpiTotalCajas.textContent = totalCajasGlobal;
+        kpiTrabajadoresActivos.textContent = trabajadoresActivosSet.size;
+        kpiAvgCajasHora.textContent = totalHorasTrabajadasGlobal > 0 ? (totalCajasGlobal / totalHorasTrabajadasGlobal).toFixed(2) : 'N/A';
+
+        let puestoMasProductivoNombre = '-';
+        let maxCajasPuesto = 0;
+        for (const puesto in puestosConteo) {
+            if (puestosConteo[puesto] > maxCajasPuesto) {
+                maxCajasPuesto = puestosConteo[puesto];
+                puestoMasProductivoNombre = `${puesto} (${maxCajasPuesto})`;
+            }
+        }
+        kpiPuestoMasProductivo.textContent = maxCajasPuesto > 0 ? puestoMasProductivoNombre : '-';
+    }
+
 
     function populateTable(data) {
         if (liveUpdateIntervalId) clearInterval(liveUpdateIntervalId);
         liveUpdateIntervalId = null;
 
         tableBody.querySelectorAll('tr:not(#loadingRow):not(#errorRow):not(#noDataRow)').forEach(row => row.remove());
-        displayedPostRowsCount = 0; // Reset this before populating
+        displayedPostRowsCount = 0; 
         const dataToDisplay = filterDataByCheckbox(data);
         
-        let workersWithVisiblePosts = 0; // Count workers that will actually be displayed
+        let workersWithVisiblePosts = 0; 
         dataToDisplay.forEach((worker) => {
             const hasVisiblePosts = worker.operator_posts && worker.operator_posts.some(post => (post.count ?? 0) > 0);
             if (filterPostsCheckbox.checked && !hasVisiblePosts) return;
             workersWithVisiblePosts++;
-            // Count detailed rows
             if (worker.operator_posts) {
                 worker.operator_posts.forEach(post => {
                     if ((post.count ?? 0) > 0 || !filterPostsCheckbox.checked) {
@@ -1177,7 +1279,8 @@ Evita frases como "Basándome en estos datos". Ve directo al análisis.`;
         });
         
         updateGrandTotalUnidades(); 
-        updateHeaderButtonsState(); // Update buttons based on whether data will be displayed
+        updateKPICards(); // Update KPI cards after data processing
+        updateHeaderButtonsState(); 
 
 
         if (displayedPostRowsCount === 0 && filterPostsCheckbox.checked && workersWithVisiblePosts > 0) {
@@ -1194,7 +1297,7 @@ Evita frases como "Basándome en estos datos". Ve directo al análisis.`;
 
 
         let hasLiveCells = false;
-        workersWithVisiblePosts = 0; // Reset for actual row rendering count
+        workersWithVisiblePosts = 0; 
 
         dataToDisplay.forEach((worker) => {
             const totalQuantitySum = (worker.operator_posts || []).reduce((sum, post) => sum + ((post.count ?? 0) > 0 ? (post.count ?? 0) : 0), 0);
@@ -1235,9 +1338,8 @@ Evita frases como "Basándome en estos datos". Ve directo al análisis.`;
                     const postCount = post.count ?? 0;
                     if (postCount === 0 && filterPostsCheckbox.checked) return;
                     
-                    // displayedPostRowsCount++; // This was already counted above, remove to avoid double counting
                     const postRow = tableBody.insertRow();
-                    postRow.classList.add( (tableBody.rows.length - 3) % 2 === 0 ? 'bg-white' : 'bg-gray-50', 'hover:bg-gray-100'); // -3 for header, loading, error, noData
+                    postRow.classList.add( (tableBody.rows.length - 3) % 2 === 0 ? 'bg-white' : 'bg-gray-50', 'hover:bg-gray-100');
 
                     postRow.insertCell(); postRow.insertCell(); postRow.insertCell(); 
                     postRow.insertCell().textContent = post.rfid_reading?.name ?? 'N/A';
@@ -1334,7 +1436,7 @@ Evita frases como "Basándome en estos datos". Ve directo al análisis.`;
             .then(apiResponse => {
                 loadingRow.classList.add('hidden');
                 if (apiResponse.success && Array.isArray(apiResponse.data)) { 
-                    originalWorkersData = apiResponse.data.sort((a, b) => { // Corrected: workerA -> a, workerB -> b
+                    originalWorkersData = apiResponse.data.sort((a, b) => { 
                         const findFirstActivePost = (worker) => {
                             if (!worker.operator_posts || worker.operator_posts.length === 0) return null;
                             const activePosts = worker.operator_posts
@@ -1346,8 +1448,8 @@ Evita frases como "Basándome en estos datos". Ve directo al análisis.`;
                             return activePosts[0];
                         };
 
-                        const firstPostA = findFirstActivePost(a); // Corrected
-                        const firstPostB = findFirstActivePost(b); // Corrected
+                        const firstPostA = findFirstActivePost(a); 
+                        const firstPostB = findFirstActivePost(b); 
                         const puestoNameA = firstPostA?.rfid_reading?.name ?? null;
                         const puestoNameB = firstPostB?.rfid_reading?.name ?? null;
 
@@ -1431,6 +1533,12 @@ Evita frases como "Basándome en estos datos". Ve directo al análisis.`;
         const localCloseChartModalBtn = document.getElementById('closeChartModalBtn');
         const localOkChartModalBtn = document.getElementById('okChartModalBtn');
 
+        kpiCardContainer = document.getElementById('kpiCardContainer');
+        kpiTotalCajas = document.getElementById('kpiTotalCajas');
+        kpiTrabajadoresActivos = document.getElementById('kpiTrabajadoresActivos');
+        kpiAvgCajasHora = document.getElementById('kpiAvgCajasHora');
+        kpiPuestoMasProductivo = document.getElementById('kpiPuestoMasProductivo');
+
 
         if (exportExcelBtn) exportExcelBtn.addEventListener('click', exportToExcel);
         if (printBtn) printBtn.addEventListener('click', printTable);
@@ -1443,7 +1551,7 @@ Evita frases como "Basándome en estos datos". Ve directo al análisis.`;
         
         if (cancelPasswordBtn) cancelPasswordBtn.addEventListener('click', hidePasswordModal);
         if (submitPasswordBtn) submitPasswordBtn.addEventListener('click', () => {
-            if (passwordInput.value === 'boisolo') {
+            if (passwordInput.value === '1122') {
                 hidePasswordModal();
                 toggleLockState(false); 
             } else {
