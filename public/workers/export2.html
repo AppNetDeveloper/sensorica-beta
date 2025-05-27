@@ -108,6 +108,12 @@
             font-size: 10px;
             fill: white;
         }
+        .btn-ia-local {
+            background-color: #4f46e5; /* indigo-600 */
+        }
+        .btn-ia-local:hover {
+            background-color: #4338ca; /* indigo-700 */
+        }
     </style>
 </head>
 <body class="bg-gray-100 p-4 md:p-8">
@@ -161,8 +167,8 @@
             <button id="viewPostPieChartBtn" class="bg-sky-500 hover:bg-sky-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-150 ease-in-out hidden">
                 📊 Cajas/Puesto (Circular)
             </button>
-            <button id="analizarTodosOllamaBtn" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-150 ease-in-out hidden">
-                <svg class="icon mr-2 inline-block" style="width:20px; height:20px;" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 15c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm0-10c-2.06 0-3.82 1.22-4.58 3h9.16c-.76-1.78-2.52-3-4.58-3z"/></svg>
+            <button id="analizarTodosLocalAIBtn" class="btn-ia-local text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-150 ease-in-out hidden"> 
+                <svg class="icon mr-2 inline-block" style="width:18px; height:18px;" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 15c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm0-10c-2.06 0-3.82 1.22-4.58 3h9.16c-.76-1.78-2.52-3-4.58-3z"/></svg>
                 Analizar Todos (IA Local)
             </button>
             <button id="exportExcelBtn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed">
@@ -285,7 +291,6 @@
     const localAIApiToken = 'Bearer 5b3ce3597851110001cf6248ff7d660a725f48be464b74';
     const localAICallbackUrl = 'https://tudominio.com/webhook/ollama-callback'; 
 
-    // Declare all DOM element variables globally with let
     let tableBody, loadingRow, errorRow, errorCell, noDataRow, exportExcelBtn, printBtn, 
         dateRangeSelect, filterPostsCheckbox, analizarTodosLocalAIBtn, 
         viewWorkerChartBtn, viewPostChartBtn, viewPostPieChartBtn, totalUnidadesTurnoHeader, 
@@ -294,8 +299,8 @@
         editQuantityError, editApiStatus, cancelEditBtn, saveEditBtn, 
         analysisModal, analysisModalTitle, analysisModalContent, analysisModalStatus, 
         closeAnalysisModalBtn, okAnalysisModalBtn, 
-        chartModal, chartModalTitleEl, chartContainerEl, // Renamed for clarity
-        closeChartModalBtnEl, okChartModalBtnEl, tooltip; // Renamed for clarity
+        chartModal, chartModalTitleEl, chartContainerEl, 
+        tooltip;
 
     let originalWorkersData = [];
     let displayedPostRowsCount = 0;
@@ -323,39 +328,38 @@
     function hidePasswordModal() {
         passwordModal.classList.add('hidden');
     }
+    
+    function updateHeaderButtonsState() {
+        const hasData = displayedPostRowsCount > 0; // Use displayedPostRowsCount for more accuracy
+        const actionButtons = [analizarTodosLocalAIBtn, viewWorkerChartBtn, viewPostChartBtn, viewPostPieChartBtn];
+
+        actionButtons.forEach(btn => {
+            if (btn) {
+                if (isLocked || !hasData) {
+                    btn.classList.add('hidden');
+                    btn.disabled = true;
+                } else { 
+                    btn.classList.remove('hidden');
+                    btn.disabled = false;
+                }
+            }
+        });
+        if (exportExcelBtn) {
+            exportExcelBtn.disabled = !hasData;
+        }
+    }
+
 
     function toggleLockState(locked) {
         isLocked = locked;
-        const hasData = originalWorkersData && originalWorkersData.length > 0 && displayedPostRowsCount > 0;
-
         if (isLocked) {
             lockIcon.classList.remove('hidden');
             unlockIcon.classList.add('hidden');
-            if (analizarTodosLocalAIBtn) analizarTodosLocalAIBtn.classList.add('hidden');
-            if (viewWorkerChartBtn) viewWorkerChartBtn.classList.add('hidden'); 
-            if (viewPostChartBtn) viewPostChartBtn.classList.add('hidden');
-            if (viewPostPieChartBtn) viewPostPieChartBtn.classList.add('hidden'); 
         } else {
             lockIcon.classList.add('hidden');
             unlockIcon.classList.remove('hidden');
-            if (hasData) {
-                if (analizarTodosLocalAIBtn) analizarTodosLocalAIBtn.classList.remove('hidden');
-                if (viewWorkerChartBtn) viewWorkerChartBtn.classList.remove('hidden'); 
-                if (viewPostChartBtn) viewPostChartBtn.classList.remove('hidden');
-                if (viewPostPieChartBtn) viewPostPieChartBtn.classList.remove('hidden'); 
-            } else {
-                if (analizarTodosLocalAIBtn) analizarTodosLocalAIBtn.classList.add('hidden');
-                if (viewWorkerChartBtn) viewWorkerChartBtn.classList.add('hidden');
-                if (viewPostChartBtn) viewPostChartBtn.classList.add('hidden');
-                if (viewPostPieChartBtn) viewPostPieChartBtn.classList.add('hidden');
-            }
         }
-        
-        if (analizarTodosLocalAIBtn) analizarTodosLocalAIBtn.disabled = isLocked || !hasData;
-        if (viewWorkerChartBtn) viewWorkerChartBtn.disabled = isLocked || !hasData;
-        if (viewPostChartBtn) viewPostChartBtn.disabled = isLocked || !hasData;
-        if (viewPostPieChartBtn) viewPostPieChartBtn.disabled = isLocked || !hasData; 
-
+        updateHeaderButtonsState(); 
         populateTable(originalWorkersData); 
     }
     
@@ -502,19 +506,62 @@
     async function fetchLocalAIWorkerAnalysis(worker) {
         const analysisTitle = `Análisis de ${worker.name || 'Desconocido'} (IA Local)`;
         const workerName = worker.name || 'Desconocido';
+        let workerTotalCajas = 0;
+        let workerTotalDurationHours = 0;
+        let activePostsCount = 0;
+
         let postsDetails = "Este trabajador no tiene puestos registrados en este periodo o ninguno con cantidad > 0.";
         if (worker.operator_posts && worker.operator_posts.length > 0) {
             const activePosts = worker.operator_posts.filter(post => (post.count ?? 0) > 0);
+            activePostsCount = activePosts.length;
             if (activePosts.length > 0) {
                 postsDetails = activePosts.map(post => {
-                    const startDate = post.created_at ? dateFormatter.format(new Date(post.created_at)) : 'N/A';
-                    const endDate = post.finish_at ? dateFormatter.format(new Date(post.finish_at)) : 'Activo';
-                    const cajasHora = calculateCajasHora(post.count, post.created_at, post.finish_at);
-                    return `- Puesto: ${post.rfid_reading?.name || 'N/A'}, Cantidad: ${post.count || 0}, Cajas/Hora: ${cajasHora}`;
-                }).join('\n');
+                    const cantidad = post.count || 0;
+                    workerTotalCajas += cantidad;
+                    const startDate = post.created_at ? new Date(post.created_at) : null;
+                    let endDate = post.finish_at ? new Date(post.finish_at) : null; 
+                    
+                    if (startDate && !endDate) { 
+                        endDate = new Date();
+                    }
+
+                    if (startDate && endDate && endDate > startDate) {
+                         workerTotalDurationHours += (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60);
+                    }
+                    const cajasHora = calculateCajasHora(cantidad, post.created_at, post.finish_at); 
+                    return `- Puesto: ${post.rfid_reading?.name || 'N/A'}, Confección: ${post.product_list?.name || 'N/A'}, Inicio: ${startDate ? dateFormatter.format(startDate) : 'N/A'}, Fin: ${post.finish_at ? dateFormatter.format(new Date(post.finish_at)) : 'Activo'}, Cantidad: ${cantidad}, Cajas/Hora: ${cajasHora}`;
+                }).join('\n\n');
             }
         }
-        const prompt = `Analiza el rendimiento del trabajador: ${workerName}. Datos:\n${postsDetails}\nProporciona un resumen conciso en español, destacando puntos fuertes, áreas de mejora y patrones. Sé profesional y constructivo. No incluyas frases como "Basándome en estos datos".`;
+        const workerAvgCajasHora = workerTotalDurationHours > 0 ? (workerTotalCajas / workerTotalDurationHours).toFixed(2) : 'N/A';
+
+        const prompt = `Por favor, realiza un análisis DETALLADO y PROFUNDO del rendimiento del siguiente trabajador. Tu respuesta debe estar en español.
+
+Nombre del Trabajador: ${workerName}
+ID Cliente: ${worker.client_id || 'N/A'}
+
+Resumen de Actividad en el Periodo Seleccionado:
+- Número total de puestos trabajados con producción: ${activePostsCount}
+- Cajas totales producidas por este trabajador: ${workerTotalCajas}
+- Eficiencia promedio (Cajas/Hora) de este trabajador (calculada sobre duración de puestos): ${workerAvgCajasHora}
+
+Detalles de sus puestos con producción (cantidad > 0):
+${postsDetails}
+
+Instrucciones para tu análisis:
+1.  **Resumen General:** Comienza con un párrafo breve resumiendo el desempeño general del trabajador.
+2.  **Puntos Fuertes:** Identifica y describe claramente las fortalezas del trabajador (ej. alta productividad en ciertos puestos, consistencia, versatilidad si trabajó en muchos puestos, buena eficiencia promedio).
+3.  **Áreas de Mejora:** Basado en los datos (ej. baja productividad en algunos puestos, inactividad, baja eficiencia), sugiere áreas específicas donde el trabajador podría mejorar. Sé constructivo.
+4.  **Patrones Notables:**
+    * ¿Hay puestos donde es particularmente eficiente o ineficiente?
+    * ¿Muestra consistencia en su producción o hay mucha variabilidad?
+    * Si trabajó en múltiples puestos, ¿cómo se compara su rendimiento entre ellos?
+    * ¿Hay alguna relación entre el tipo de confección y su rendimiento?
+5.  **Sugerencias (opcional, si aplica):** Si los datos lo permiten, ofrece alguna sugerencia breve y accionable.
+
+Formato: Usa párrafos para el resumen y listas con viñetas para los puntos fuertes, áreas de mejora y patrones.
+Evita frases como "Basándome en estos datos" o "Aquí está el análisis". Ve directo al grano.
+Si los datos son insuficientes para un análisis profundo en algún área, indícalo brevemente.`;
         await submitLocalAITask(prompt, analysisTitle);
     }
 
@@ -528,13 +575,18 @@
             return;
         }
         
-        let overallSummary = `Análisis global para ${workersToAnalyze.length} trabajador(es):\n\n`;
+        let overallSummary = "";
         let totalCajasGlobal = 0;
-        let totalHorasTrabajadas = 0;
+        let totalHorasTrabajadasGlobal = 0;
         let puestosConteo = {};
+        let individualWorkerSummaries = [];
+        let topPerformers = []; 
+        let lowPerformers = [];  
+
+
         workersToAnalyze.forEach(worker => {
             let workerCajas = 0;
-            overallSummary += `Trabajador: ${worker.name || 'Desconocido'} (ID: ${worker.client_id || 'N/A'})\n`;
+            let workerHoras = 0;
             if (worker.operator_posts && worker.operator_posts.length > 0) {
                 const activePosts = worker.operator_posts.filter(p => (p.count ?? 0) > 0);
                 if (activePosts.length > 0) {
@@ -545,26 +597,75 @@
                         if(post.rfid_reading?.name) {
                             puestosConteo[post.rfid_reading.name] = (puestosConteo[post.rfid_reading.name] || 0) + cantidad;
                         }
-                        if (post.created_at && post.finish_at) {
-                            const start = new Date(post.created_at); const end = new Date(post.finish_at);
-                            if (end > start) { totalHorasTrabajadas += (end - start) / (1000 * 60 * 60); }
-                        } else if (post.created_at && !post.finish_at) { 
-                             const start = new Date(post.created_at); const now = new Date();
-                             if (now > start) { totalHorasTrabajadas += (now - start) / (1000 * 60 * 60); }
+                        if (post.created_at) {
+                            const start = new Date(post.created_at); 
+                            const end = post.finish_at ? new Date(post.finish_at) : new Date();
+                            if (end > start) { 
+                                const durationHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+                                workerHoras += durationHours;
+                                totalHorasTrabajadasGlobal += durationHours;
+                            }
                         }
                     });
-                    overallSummary += `  - Cajas totales del trabajador: ${workerCajas}\n`;
-                } else { overallSummary += `  - Sin puestos con producción.\n`; }
-            } else { overallSummary += `  - Sin puestos asignados.\n`; }
-            overallSummary += "\n";
+                }
+            }
+            const eficienciaTrabajador = workerHoras > 0 ? (workerCajas / workerHoras).toFixed(2) : 'N/A';
+            individualWorkerSummaries.push({name: worker.name || `ID ${worker.client_id}`, cajas: workerCajas, eficiencia: eficienciaTrabajador});
         });
-        overallSummary += `Resumen General:\n- Total Cajas: ${totalCajasGlobal}\n`;
-        if (totalHorasTrabajadas > 0) { overallSummary += `- Cajas/Hora Global: ${(totalCajasGlobal / totalHorasTrabajadas).toFixed(2)}\n`; }
-        if(Object.keys(puestosConteo).length > 0) {
-            overallSummary += `- Cajas por Puesto:\n`;
-            for(const puesto in puestosConteo) { overallSummary += `  - ${puesto}: ${puestosConteo[puesto]} cajas\n`; }
-        }
-        const prompt = `Análisis GLOBAL del rendimiento del equipo basado en:\n${overallSummary}\nConsidera productividad, eficiencia, puestos clave, disparidades y sugerencias. Sé profesional, constructivo y usa español. No incluyas frases como "Basándome en estos datos".`;
+        
+        individualWorkerSummaries.sort((a, b) => b.cajas - a.cajas); 
+        topPerformers = individualWorkerSummaries.slice(0, Math.min(3, individualWorkerSummaries.length));
+        lowPerformers = individualWorkerSummaries.slice(Math.max(0, individualWorkerSummaries.length - 3)).reverse();
+
+
+        const avgCajasHoraGlobal = totalHorasTrabajadasGlobal > 0 ? (totalCajasGlobal / totalHorasTrabajadasGlobal).toFixed(2) : 'N/A';
+        
+        let puestosConteoSummary = Object.entries(puestosConteo)
+            .sort(([,a],[,b]) => b-a) 
+            .map(([name, count]) => `  - ${name}: ${count} cajas`)
+            .join('\n');
+        if (!puestosConteoSummary) puestosConteoSummary = "  - No hay datos de producción por puesto.";
+
+        let topPerformersSummary = topPerformers.map(w => `  - ${w.name}: ${w.cajas} cajas (Eficiencia: ${w.eficiencia} cajas/h)`).join('\n');
+        if (!topPerformersSummary) topPerformersSummary = "  - N/A";
+        let lowPerformersSummary = lowPerformers.map(w => `  - ${w.name}: ${w.cajas} cajas (Eficiencia: ${w.eficiencia} cajas/h)`).join('\n');
+         if (!lowPerformersSummary) lowPerformersSummary = "  - N/A";
+
+
+        overallSummary = `
+Datos Globales del Periodo Seleccionado:
+- Número total de trabajadores activos (con producción): ${workersToAnalyze.length}
+- Total de Cajas Producidas por el equipo: ${totalCajasGlobal}
+- Promedio de Cajas por Hora Global del equipo: ${avgCajasHoraGlobal}
+- Número total de puestos de trabajo distintos con actividad: ${Object.keys(puestosConteo).length}
+- Distribución de Cajas Totales por Puesto:
+${puestosConteoSummary}
+- Trabajadores con mayor producción (Top 3 por cajas):
+${topPerformersSummary}
+- Trabajadores con menor producción (Bottom 3 por cajas, si aplica y son diferentes de los top):
+${lowPerformersSummary}
+`;
+
+        const prompt = `Por favor, realiza un ANÁLISIS GLOBAL DETALLADO del rendimiento para el conjunto de trabajadores, basado en los siguientes datos resumidos del periodo. Tu respuesta debe estar en español.
+
+${overallSummary}
+
+Instrucciones para tu análisis:
+1.  **Resumen Ejecutivo:** Comienza con un párrafo que resuma la productividad y eficiencia general del equipo.
+2.  **Observaciones Clave de Productividad:**
+    * Comenta sobre el volumen total de producción y la eficiencia promedio (Cajas/Hora Global). ¿Es buena, regular, necesita mejorar?
+3.  **Análisis de Puestos de Trabajo:**
+    * ¿Qué puestos son los más productivos en términos de volumen? ¿A qué podría deberse?
+    * ¿Hay puestos con notablemente baja producción? ¿Posibles causas?
+    * ¿La carga de trabajo parece estar bien distribuida entre los puestos o hay concentraciones?
+4.  **Distribución del Rendimiento entre Trabajadores (basado en el resumen de top/low performers):**
+    * ¿Se observa una gran disparidad en la producción individual o el rendimiento es relativamente homogéneo?
+    * ¿Hay indicios claros de un grupo de alto rendimiento y otro de bajo rendimiento? ¿Qué implicaciones podría tener esto?
+5.  **Posibles Cuellos de Botella o Ineficiencias:** Basado en los datos agregados (puestos, promedios), ¿puedes inferir posibles cuellos de botella o áreas generales de ineficiencia en el proceso?
+6.  **Sugerencias Estratégicas Generales:** Ofrece 2-3 sugerencias generales y accionables para optimizar el rendimiento del equipo, mejorar la distribución del trabajo, o potenciar a los trabajadores.
+
+Formato: Usa párrafos para el resumen y listas con viñetas para las observaciones y sugerencias.
+Evita frases como "Basándome en estos datos". Ve directo al análisis.`;
         await submitLocalAITask(prompt, analysisTitle);
     }
 
@@ -664,7 +765,7 @@
                     currentLocalAITaskId = null;
                 }
             } else if (result.task?.status && (result.task.status.toLowerCase() === 'processing' || result.task.status.toLowerCase() === 'queued' || result.task.status.toLowerCase() === 'pending')) {
-                analysisModalStatus.textContent = `Tarea ${taskId} (IA Local) sigue en proceso (${result.task.status})... Próxima consulta en 10s.`;
+                analysisModalStatus.textContent = `Tarea ${taskId} (IA ) sigue en proceso (${result.task.status})... Próxima consulta en 10s.`;
                 analysisModalStatus.classList.remove('text-red-500');
             } else if (result.task?.status && result.task.status.toLowerCase() === 'failed') {
                 analysisModalContent.textContent = `La tarea de análisis ${taskId} (IA Local) falló.` + (result.task.error ? `\nError: ${result.task.error}` : '');
@@ -676,7 +777,7 @@
                     currentLocalAITaskId = null;
                 }
             } else {
-                analysisModalStatus.textContent = `Esperando resultado de tarea ${taskId} (IA Local)... (Estado: ${result.task?.status || 'desconocido'}). Próxima consulta en 10s.`;
+                analysisModalStatus.textContent = `Esperando resultado de tarea ${taskId} (IA )... `;
                 analysisModalStatus.classList.remove('text-red-500');
             }
 
@@ -1056,39 +1157,44 @@
         liveUpdateIntervalId = null;
 
         tableBody.querySelectorAll('tr:not(#loadingRow):not(#errorRow):not(#noDataRow)').forEach(row => row.remove());
-        displayedPostRowsCount = 0;
+        displayedPostRowsCount = 0; // Reset this before populating
         const dataToDisplay = filterDataByCheckbox(data);
         
+        let workersWithVisiblePosts = 0; // Count workers that will actually be displayed
+        dataToDisplay.forEach((worker) => {
+            const hasVisiblePosts = worker.operator_posts && worker.operator_posts.some(post => (post.count ?? 0) > 0);
+            if (filterPostsCheckbox.checked && !hasVisiblePosts) return;
+            workersWithVisiblePosts++;
+            // Count detailed rows
+            if (worker.operator_posts) {
+                worker.operator_posts.forEach(post => {
+                    if ((post.count ?? 0) > 0 || !filterPostsCheckbox.checked) {
+                         if (filterPostsCheckbox.checked && (post.count ?? 0) === 0) { /* skip */ }
+                         else { displayedPostRowsCount++; }
+                    }
+                });
+            }
+        });
+        
         updateGrandTotalUnidades(); 
+        updateHeaderButtonsState(); // Update buttons based on whether data will be displayed
 
-        const hasDataForActions = dataToDisplay.length > 0;
 
-
-        if (!hasDataForActions) {
-            noDataRow.querySelector('td').textContent = (filterPostsCheckbox.checked && data.length > 0) ?
+        if (displayedPostRowsCount === 0 && filterPostsCheckbox.checked && workersWithVisiblePosts > 0) {
+             noDataRow.querySelector('td').textContent = 'Ningún trabajador cumple los criterios de filtro (con puestos y cantidad > 0).';
+             noDataRow.classList.remove('hidden');
+        } else if (dataToDisplay.length === 0 || workersWithVisiblePosts === 0) {
+             noDataRow.querySelector('td').textContent = (filterPostsCheckbox.checked && data.length > 0) ?
                 'Ningún trabajador con puestos asignados (con cantidad > 0) en este periodo.' :
                 'No se encontraron datos para el periodo seleccionado.';
             noDataRow.classList.remove('hidden');
-            if(exportExcelBtn) exportExcelBtn.disabled = true;
-            if(analizarTodosLocalAIBtn) analizarTodosLocalAIBtn.disabled = true;
-            if(viewWorkerChartBtn) viewWorkerChartBtn.disabled = true; 
-            if(viewPostChartBtn) viewPostChartBtn.disabled = true;
-            if(viewPostPieChartBtn) viewPostPieChartBtn.disabled = true;
-            if(totalUnidadesTurnoHeader) totalUnidadesTurnoHeader.textContent = '(0)'; 
-            return;
+        } else {
+            noDataRow.classList.add('hidden');
         }
 
-        noDataRow.classList.add('hidden');
-        if(exportExcelBtn) exportExcelBtn.disabled = false;
-        
-        if(analizarTodosLocalAIBtn) analizarTodosLocalAIBtn.disabled = isLocked;
-        if(viewWorkerChartBtn) viewWorkerChartBtn.disabled = isLocked;
-        if(viewPostChartBtn) viewPostChartBtn.disabled = isLocked;
-        if(viewPostPieChartBtn) viewPostPieChartBtn.disabled = isLocked;
 
-
-        let workersWithVisiblePosts = 0;
         let hasLiveCells = false;
+        workersWithVisiblePosts = 0; // Reset for actual row rendering count
 
         dataToDisplay.forEach((worker) => {
             const totalQuantitySum = (worker.operator_posts || []).reduce((sum, post) => sum + ((post.count ?? 0) > 0 ? (post.count ?? 0) : 0), 0);
@@ -1129,9 +1235,9 @@
                     const postCount = post.count ?? 0;
                     if (postCount === 0 && filterPostsCheckbox.checked) return;
                     
-                    displayedPostRowsCount++;
+                    // displayedPostRowsCount++; // This was already counted above, remove to avoid double counting
                     const postRow = tableBody.insertRow();
-                    postRow.classList.add(displayedPostRowsCount % 2 === 0 ? 'bg-white' : 'bg-gray-50', 'hover:bg-gray-100');
+                    postRow.classList.add( (tableBody.rows.length - 3) % 2 === 0 ? 'bg-white' : 'bg-gray-50', 'hover:bg-gray-100'); // -3 for header, loading, error, noData
 
                     postRow.insertCell(); postRow.insertCell(); postRow.insertCell(); 
                     postRow.insertCell().textContent = post.rfid_reading?.name ?? 'N/A';
@@ -1163,27 +1269,7 @@
                 });
             }
         });
-        const actuallyDisplayedSomething = workersWithVisiblePosts > 0 || (displayedPostRowsCount > 0 && !filterPostsCheckbox.checked);
-        if (!actuallyDisplayedSomething) {
-             noDataRow.querySelector('td').textContent = filterPostsCheckbox.checked ? 
-                'Ningún trabajador cumple los criterios de filtro (con puestos y cantidad > 0).' : 
-                'No se encontraron datos para el periodo seleccionado.';
-             noDataRow.classList.remove('hidden');
-             if(exportExcelBtn) exportExcelBtn.disabled = true;
-             if(analizarTodosLocalAIBtn) analizarTodosLocalAIBtn.disabled = true;
-             if(viewWorkerChartBtn) viewWorkerChartBtn.disabled = true;
-             if(viewPostChartBtn) viewPostChartBtn.disabled = true;
-             if(viewPostPieChartBtn) viewPostPieChartBtn.disabled = true;
-             if(totalUnidadesTurnoHeader) totalUnidadesTurnoHeader.textContent = '(0)';
-        } else {
-             if(exportExcelBtn) exportExcelBtn.disabled = false;
-             if(analizarTodosLocalAIBtn) analizarTodosLocalAIBtn.disabled = isLocked;
-             if(viewWorkerChartBtn) viewWorkerChartBtn.disabled = isLocked;
-             if(viewPostChartBtn) viewPostChartBtn.disabled = isLocked;
-             if(viewPostPieChartBtn) viewPostPieChartBtn.disabled = isLocked;
-        }
-
-
+        
         if (hasLiveCells) liveUpdateIntervalId = setInterval(updateLiveCajasHoraCells, 5000);
     }
 
@@ -1236,12 +1322,10 @@
         errorRow.classList.add('hidden');
         noDataRow.classList.add('hidden');
         tableBody.querySelectorAll('tr:not(#loadingRow):not(#errorRow):not(#noDataRow)').forEach(row => row.remove());
+        
         if(exportExcelBtn) exportExcelBtn.disabled = true;
-        if(analizarTodosLocalAIBtn) analizarTodosLocalAIBtn.disabled = true;
-        if(viewWorkerChartBtn) viewWorkerChartBtn.disabled = true; 
-        if(viewPostChartBtn) viewPostChartBtn.disabled = true;
-        if(viewPostPieChartBtn) viewPostPieChartBtn.disabled = true;
-        if(totalUnidadesTurnoHeader) totalUnidadesTurnoHeader.textContent = ''; 
+        updateHeaderButtonsState(); 
+
         if (liveUpdateIntervalId) clearInterval(liveUpdateIntervalId);
         liveUpdateIntervalId = null;
 
@@ -1250,13 +1334,34 @@
             .then(apiResponse => {
                 loadingRow.classList.add('hidden');
                 if (apiResponse.success && Array.isArray(apiResponse.data)) { 
-                    originalWorkersData = apiResponse.data.sort((a, b) => {
-                        const getMinTime = w => Math.min(...(w.operator_posts || []).filter(p=>(p.count??0)>0 && p.created_at).map(p=>new Date(p.created_at).getTime()).filter(t=>!isNaN(t)));
-                        const timeA = getMinTime(a), timeB = getMinTime(b);
-                        if (timeA !== Infinity && timeB === Infinity) return -1;
-                        if (timeA === Infinity && timeB !== Infinity) return 1;
-                        if (timeA !== Infinity && timeB !== Infinity && timeA !== timeB) return timeA - timeB;
-                        return (a.name ?? '').localeCompare(b.name ?? '');
+                    originalWorkersData = apiResponse.data.sort((a, b) => { // Corrected: workerA -> a, workerB -> b
+                        const findFirstActivePost = (worker) => {
+                            if (!worker.operator_posts || worker.operator_posts.length === 0) return null;
+                            const activePosts = worker.operator_posts
+                                .filter(p => (p.count ?? 0) > 0 && p.created_at)
+                                .map(p => ({ ...p, createdAtDate: new Date(p.created_at) }))
+                                .filter(p => !isNaN(p.createdAtDate.getTime())); 
+                            if (activePosts.length === 0) return null;
+                            activePosts.sort((p1, p2) => p1.createdAtDate - p2.createdAtDate);
+                            return activePosts[0];
+                        };
+
+                        const firstPostA = findFirstActivePost(a); // Corrected
+                        const firstPostB = findFirstActivePost(b); // Corrected
+                        const puestoNameA = firstPostA?.rfid_reading?.name ?? null;
+                        const puestoNameB = firstPostB?.rfid_reading?.name ?? null;
+
+                        if (puestoNameA && puestoNameB) {
+                            const nameComparison = puestoNameA.localeCompare(puestoNameB, undefined, {numeric: true, sensitivity: 'base'});
+                            if (nameComparison !== 0) return nameComparison;
+                            return (a.name ?? '').localeCompare(b.name ?? '');
+                        } else if (puestoNameA) { 
+                            return -1; 
+                        } else if (puestoNameB) { 
+                            return 1;  
+                        } else {
+                            return (a.name ?? '').localeCompare(b.name ?? '');
+                        }
                     });
                     populateTable(originalWorkersData);
                 } else if (apiResponse.success && (!Array.isArray(apiResponse.data) || apiResponse.data.length === 0)) {
@@ -1275,6 +1380,7 @@
                 errorCell.textContent = `Error al cargar: ${error.message}`;
                 errorRow.classList.remove('hidden');
                 if(totalUnidadesTurnoHeader) totalUnidadesTurnoHeader.textContent = '(Error)';
+                updateHeaderButtonsState(); 
             });
     }
 
@@ -1289,7 +1395,7 @@
         printBtn = document.getElementById('printBtn');
         dateRangeSelect = document.getElementById('dateRangeSelect');
         filterPostsCheckbox = document.getElementById('filterPostsCheckbox');
-        analizarTodosLocalAIBtn = document.getElementById('analizarTodosOllamaBtn'); 
+        analizarTodosLocalAIBtn = document.getElementById('analizarTodosLocalAIBtn'); 
         viewWorkerChartBtn = document.getElementById('viewWorkerChartBtn'); 
         viewPostChartBtn = document.getElementById('viewPostChartBtn');
         viewPostPieChartBtn = document.getElementById('viewPostPieChartBtn'); 
@@ -1319,11 +1425,11 @@
         okAnalysisModalBtn = document.getElementById('okAnalysisModalBtn');
 
         chartModal = document.getElementById('chartModal');
-        chartModalTitleEl = document.getElementById('chartModalTitle'); // Corrected variable name
-        chartContainerEl = document.getElementById('chartContainer'); // Corrected variable name
-        closeChartModalBtnEl = document.getElementById('closeChartModalBtn'); // Corrected variable name
-        okChartModalBtnEl = document.getElementById('okChartModalBtn'); // Corrected variable name
-        tooltip = d3.select("#tooltip");
+        chartModalTitleEl = document.getElementById('chartModalTitle'); 
+        chartContainerEl = document.getElementById('chartContainer'); 
+        
+        const localCloseChartModalBtn = document.getElementById('closeChartModalBtn');
+        const localOkChartModalBtn = document.getElementById('okChartModalBtn');
 
 
         if (exportExcelBtn) exportExcelBtn.addEventListener('click', exportToExcel);
@@ -1333,11 +1439,11 @@
         if (viewPostChartBtn) viewPostChartBtn.addEventListener('click', () => showChartModal('postsBar'));
         if (viewPostPieChartBtn) viewPostPieChartBtn.addEventListener('click', () => showChartModal('postsPie')); 
         if (dateRangeSelect) dateRangeSelect.addEventListener('change', (e) => { const {from, to} = getDateRange(e.target.value); fetchData(from, to); });
-        if (filterPostsCheckbox) filterPostsCheckbox.addEventListener('change', () => populateTable(originalWorkersData));
+        if (filterPostsCheckbox) filterPostsCheckbox.addEventListener('change', () => { populateTable(originalWorkersData); updateHeaderButtonsState(); });
         
         if (cancelPasswordBtn) cancelPasswordBtn.addEventListener('click', hidePasswordModal);
         if (submitPasswordBtn) submitPasswordBtn.addEventListener('click', () => {
-            if (passwordInput.value === '1122') {
+            if (passwordInput.value === 'boisolo') {
                 hidePasswordModal();
                 toggleLockState(false); 
             } else {
@@ -1358,8 +1464,8 @@
         if (closeAnalysisModalBtn) closeAnalysisModalBtn.addEventListener('click', hideAnalysisModal);
         if (okAnalysisModalBtn) okAnalysisModalBtn.addEventListener('click', hideAnalysisModal);
         
-        if(closeChartModalBtnEl) closeChartModalBtnEl.addEventListener('click', hideChartModal);
-        if(okChartModalBtnEl) okChartModalBtnEl.addEventListener('click', hideChartModal);
+        if(localCloseChartModalBtn) localCloseChartModalBtn.addEventListener('click', hideChartModal);
+        if(localOkChartModalBtn) localOkChartModalBtn.addEventListener('click', hideChartModal);
 
         if (lockButton) lockButton.addEventListener('click', () => {
             if (isLocked) {
@@ -1371,7 +1477,7 @@
 
 
         const {from, to} = getDateRange(dateRangeSelect.value); 
-        fetchData(from, to);
+        fetchData(from, to); 
         toggleLockState(isLocked); 
     });
 </script>
