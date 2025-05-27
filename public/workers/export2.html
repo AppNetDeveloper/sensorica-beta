@@ -14,7 +14,7 @@
             body { padding: 0; }
             .container { box-shadow: none; margin: 0; max-width: 100%; }
             .modal { display: none !important; }
-            .kpi-card-container { display: none !important; }
+            .kpi-card-container, #searchInputContainer { display: none !important; }
         }
         .live-cajas-hora {
             /* font-style: italic; */
@@ -42,7 +42,7 @@
             max-width: 600px; 
         }
         #chartModal .modal-content {
-            max-width: 800px; 
+            max-width: 850px; /* Increased width for chart modal */
         }
         .edit-icon, .analyze-icon {
             cursor: pointer;
@@ -133,6 +133,18 @@
             font-weight: bold;
             color: #1f2937; /* gray-800 */
         }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-right: 15px;
+            font-size: 0.8rem;
+        }
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            margin-right: 5px;
+            border: 1px solid #ccc;
+        }
     </style>
 </head>
 <body class="bg-gray-100 p-4 md:p-8">
@@ -176,7 +188,7 @@
                 </div>
              </div>
         </div>
-         <div class="flex justify-end space-x-2 no-print">
+         <div class="flex justify-end space-x-2 no-print mb-4">
             <button id="viewWorkerChartBtn" class="bg-teal-500 hover:bg-teal-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-150 ease-in-out hidden">
                 📊 Cajas/Trabajador
             </button>
@@ -185,6 +197,9 @@
             </button>
             <button id="viewPostPieChartBtn" class="bg-sky-500 hover:bg-sky-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-150 ease-in-out hidden">
                 📊 Cajas/Puesto (Circular)
+            </button>
+             <button id="viewStackedBarChartBtn" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-150 ease-in-out hidden">
+                📊 Confección/Puesto
             </button>
             <button id="analizarTodosLocalAIBtn" class="btn-ia-local text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-150 ease-in-out hidden"> 
                 <svg class="icon mr-2 inline-block" style="width:18px; height:18px;" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 15c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm0-10c-2.06 0-3.82 1.22-4.58 3h9.16c-.76-1.78-2.52-3-4.58-3z"/></svg>
@@ -217,6 +232,11 @@
             <div id="kpiPuestoMasProductivo" class="kpi-value">-</div>
         </div>
     </div>
+
+    <div id="searchInputContainer" class="p-4 md:px-6 no-print">
+        <input type="text" id="searchInput" placeholder="Buscar en tabla (Nombre, Código, Puesto, Confección)..." class="block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+    </div>
+
 
     <div class="overflow-x-auto p-4 md:p-6">
         <table id="workersTable" class="min-w-full divide-y divide-gray-200">
@@ -331,7 +351,8 @@
 
     let tableBody, loadingRow, errorRow, errorCell, noDataRow, exportExcelBtn, printBtn, 
         dateRangeSelect, filterPostsCheckbox, analizarTodosLocalAIBtn, 
-        viewWorkerChartBtn, viewPostChartBtn, viewPostPieChartBtn, totalUnidadesTurnoHeader, 
+        viewWorkerChartBtn, viewPostChartBtn, viewPostPieChartBtn, viewStackedBarChartBtn, /* New chart button */
+        totalUnidadesTurnoHeader, 
         lockButton, lockIcon, unlockIcon, passwordModal, passwordInput, passwordError, 
         cancelPasswordBtn, submitPasswordBtn, editQuantityModal, editQuantityInput, 
         editQuantityError, editApiStatus, cancelEditBtn, saveEditBtn, 
@@ -339,7 +360,8 @@
         closeAnalysisModalBtn, okAnalysisModalBtn, 
         chartModal, chartModalTitleEl, chartContainerEl, 
         tooltip,
-        kpiCardContainer, kpiTotalCajas, kpiTrabajadoresActivos, kpiAvgCajasHora, kpiPuestoMasProductivo;
+        kpiCardContainer, kpiTotalCajas, kpiTrabajadoresActivos, kpiAvgCajasHora, kpiPuestoMasProductivo,
+        searchInput; // Search input element
 
     let originalWorkersData = [];
     let displayedPostRowsCount = 0;
@@ -370,7 +392,7 @@
     
     function updateHeaderButtonsState() {
         const hasData = displayedPostRowsCount > 0; 
-        const actionButtons = [analizarTodosLocalAIBtn, viewWorkerChartBtn, viewPostChartBtn, viewPostPieChartBtn];
+        const actionButtons = [analizarTodosLocalAIBtn, viewWorkerChartBtn, viewPostChartBtn, viewPostPieChartBtn, viewStackedBarChartBtn];
 
         actionButtons.forEach(btn => {
             if (btn) {
@@ -894,6 +916,9 @@ Evita frases como "Basándome en estos datos". Ve directo al análisis.`;
         } else if (chartType === 'postsPie') { 
             chartModalTitleEl.textContent = '📊 Distribución de Cajas por Puesto (Circular)';
             renderPostDistributionPieChart();
+        } else if (chartType === 'confeccionPorPuesto') { // New chart type
+            chartModalTitleEl.textContent = '📊 Confección por Puesto (Apilado)';
+            renderConfeccionPorPuestoChart();
         }
     }
 
@@ -1122,6 +1147,152 @@ Evita frases como "Basándome en estos datos". Ve directo al análisis.`;
             .style('fill', '#333');
     }
 
+    function renderConfeccionPorPuestoChart() {
+        d3.select("#chartContainer svg").remove();
+        const dataToProcess = filterDataByCheckbox(JSON.parse(JSON.stringify(originalWorkersData)));
+
+        if (dataToProcess.length === 0) {
+            chartContainerEl.innerHTML = '<p class="text-center text-gray-500 p-4">No hay datos para mostrar el gráfico de confección por puesto.</p>';
+            return;
+        }
+        chartContainerEl.innerHTML = '';
+
+        // 1. Aggregate data: { puesto: { confeccion1: sum, confeccion2: sum }, ... }
+        const aggregatedData = {};
+        const allConfecciones = new Set();
+
+        dataToProcess.forEach(worker => {
+            (worker.operator_posts || []).forEach(post => {
+                if ((post.count || 0) > 0 && post.rfid_reading?.name && post.product_list?.name) {
+                    const puestoName = post.rfid_reading.name;
+                    const confeccionName = post.product_list.name;
+                    allConfecciones.add(confeccionName);
+
+                    if (!aggregatedData[puestoName]) {
+                        aggregatedData[puestoName] = {};
+                    }
+                    aggregatedData[puestoName][confeccionName] = (aggregatedData[puestoName][confeccionName] || 0) + post.count;
+                }
+            });
+        });
+
+        const confeccionKeys = Array.from(allConfecciones).sort(); // Consistent order for stacking
+
+        // 2. Transform for D3 stack: [{puesto: "Puesto A", confeccionX: 10, confeccionY: 20, ...}, ...]
+        const chartData = Object.entries(aggregatedData).map(([puesto, confecciones]) => {
+            const row = { puesto: puesto };
+            confeccionKeys.forEach(conKey => {
+                row[conKey] = confecciones[conKey] || 0;
+            });
+            return row;
+        }).sort((a,b) => { // Sort by total for the puesto
+            const totalA = d3.sum(confeccionKeys, key => a[key]);
+            const totalB = d3.sum(confeccionKeys, key => b[key]);
+            return totalB - totalA;
+        });
+
+
+        if (chartData.length === 0) {
+            chartContainerEl.innerHTML = '<p class="text-center text-gray-500 p-4">No hay datos de producción con confección y puesto para mostrar.</p>';
+            return;
+        }
+
+        const stack = d3.stack().keys(confeccionKeys);
+        const series = stack(chartData);
+
+        const containerWidth = chartContainerEl.clientWidth;
+        const containerHeight = 400;
+        const margin = {top: 40, right: 30, bottom: 120, left: 70};
+        const width = Math.max(containerWidth - margin.left - margin.right, chartData.length * 50); // Min width per bar
+        const height = containerHeight - margin.top - margin.bottom;
+
+        const svg = d3.select("#chartContainer")
+            .append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", `translate(${margin.left},${margin.top})`);
+
+        const x = d3.scaleBand()
+            .domain(chartData.map(d => d.puesto))
+            .range([0, width])
+            .padding(0.2);
+
+        const y = d3.scaleLinear()
+            .domain([0, d3.max(series, d => d3.max(d, d => d[1])) || 10]).nice()
+            .range([height, 0]);
+
+        const color = d3.scaleOrdinal(d3.schemeCategory10).domain(confeccionKeys);
+
+        svg.append("g")
+            .selectAll("g")
+            .data(series)
+            .join("g")
+                .attr("fill", d => color(d.key))
+            .selectAll("rect")
+            .data(d => d)
+            .join("rect")
+                .attr("x", d => x(d.data.puesto))
+                .attr("y", d => y(d[1]))
+                .attr("height", d => Math.max(0, y(d[0]) - y(d[1]))) // Ensure height is not negative
+                .attr("width", x.bandwidth())
+            .on("mouseover", function(event, d) {
+                const parentData = d3.select(this.parentNode).datum();
+                const confeccionName = parentData.key;
+                const value = d.data[confeccionName];
+                tooltip.transition().duration(200).style("opacity", .9);
+                tooltip.html(`<strong>Puesto:</strong> ${d.data.puesto}<br/><strong>Confección:</strong> ${confeccionName}<br/><strong>Cajas:</strong> ${value}`)
+                    .style("left", (event.pageX + 10) + "px")
+                    .style("top", (event.pageY - 15) + "px");
+                d3.select(this).style("stroke", "black").style("stroke-width", 1.5);
+            })
+            .on("mouseout", function(d) {
+                tooltip.transition().duration(500).style("opacity", 0);
+                d3.select(this).style("stroke", "none");
+            });
+
+        svg.append("g")
+            .attr("transform", `translate(0,${height})`)
+            .call(d3.axisBottom(x))
+            .selectAll("text")
+                .attr("transform", "translate(-10,5)rotate(-45)")
+                .style("text-anchor", "end");
+
+        svg.append("g")
+            .call(d3.axisLeft(y).ticks(Math.min(10, d3.max(series, d => d3.max(d, d => d[1])) || 10)));
+
+        // Legend
+        const legend = svg.append("g")
+            .attr("font-family", "sans-serif")
+            .attr("font-size", 10)
+            .attr("text-anchor", "start") // Changed from end to start
+            .attr("transform", `translate(${width - margin.right - 100}, ${-margin.top + 10})`) // Position top-right or adjust
+            .selectAll("g")
+            .data(confeccionKeys.slice()) // Use a copy
+            .join("g")
+                .attr("transform", (d, i) => `translate(0,${i * 20})`);
+
+        legend.append("rect")
+            .attr("x", 0) // Start rect at x=0
+            .attr("width", 19)
+            .attr("height", 19)
+            .attr("fill", color);
+
+        legend.append("text")
+            .attr("x", 24) // Position text next to rect
+            .attr("y", 9.5)
+            .attr("dy", "0.35em")
+            .text(d => d);
+        
+        svg.append("text")
+            .attr("x", width / 2)
+            .attr("y", 0 - (margin.top / 2) - 5) 
+            .attr("text-anchor", "middle")
+            .style("font-size", "16px")
+            .style("font-weight", "bold")
+            .text("Producción de Confecciones por Puesto");
+    }
+
 
     function formatDateForAPI(date) {
         const year = date.getFullYear();
@@ -1185,13 +1356,34 @@ Evita frases como "Basándome en estos datos". Ve directo al análisis.`;
         return data;
     }
     
+    function filterDataBySearch(data, searchTerm) {
+        if (!searchTerm) return data;
+        const lowerSearchTerm = searchTerm.toLowerCase();
+        return data.filter(worker => {
+            if ((worker.name || '').toLowerCase().includes(lowerSearchTerm)) return true;
+            if ((worker.client_id || '').toString().toLowerCase().includes(lowerSearchTerm)) return true;
+            if (worker.operator_posts) {
+                return worker.operator_posts.some(post => 
+                    ((post.rfid_reading?.name || '').toLowerCase().includes(lowerSearchTerm)) ||
+                    ((post.product_list?.name || '').toLowerCase().includes(lowerSearchTerm))
+                );
+            }
+            return false;
+        });
+    }
+
+
     function updateGrandTotalUnidades() {
-        const dataToDisplay = filterDataByCheckbox(originalWorkersData);
+        const searchTerm = searchInput ? searchInput.value : '';
+        const dataFilteredBySearchAndCheckbox = filterDataBySearch(filterDataByCheckbox(originalWorkersData), searchTerm);
+        
         let grandTotal = 0;
-        dataToDisplay.forEach(worker => {
+        dataFilteredBySearchAndCheckbox.forEach(worker => {
             const totalQuantitySum = (worker.operator_posts || []).reduce((sum, post) => {
                 const count = post.count ?? 0;
-                return sum + (count > 0 ? count : 0);
+                // Consider search term for post-level details if needed, but grand total is based on filtered workers
+                if (filterPostsCheckbox.checked && count === 0) return sum; // If checkbox is checked, only sum posts with count > 0
+                return sum + count;
             }, 0);
             grandTotal += totalQuantitySum;
         });
@@ -1199,14 +1391,19 @@ Evita frases como "Basándome en estos datos". Ve directo al análisis.`;
     }
 
     function updateKPICards() {
-        const dataToDisplay = filterDataByCheckbox(originalWorkersData);
-        if (!kpiTotalCajas || dataToDisplay.length === 0) { // Check if elements exist
+        const searchTerm = searchInput ? searchInput.value : '';
+        const dataToDisplay = filterDataBySearch(filterDataByCheckbox(originalWorkersData), searchTerm);
+
+        if (!kpiTotalCajas || dataToDisplay.length === 0 && !searchTerm) { // Keep showing if there's a search term active
             if(kpiTotalCajas) kpiTotalCajas.textContent = '-';
             if(kpiTrabajadoresActivos) kpiTrabajadoresActivos.textContent = '0';
             if(kpiAvgCajasHora) kpiAvgCajasHora.textContent = '-';
             if(kpiPuestoMasProductivo) kpiPuestoMasProductivo.textContent = '-';
+             if (kpiCardContainer && !isLocked) kpiCardContainer.classList.add('hidden'); // Hide if no data and not locked
             return;
         }
+        if (kpiCardContainer && !isLocked) kpiCardContainer.classList.remove('hidden');
+
 
         let totalCajasGlobal = 0;
         let totalHorasTrabajadasGlobal = 0;
@@ -1214,12 +1411,12 @@ Evita frases como "Basándome en estos datos". Ve directo al análisis.`;
         let trabajadoresActivosSet = new Set();
 
         dataToDisplay.forEach(worker => {
-            let workerHasProduction = false;
+            let workerHasProductionInView = false;
             if (worker.operator_posts && worker.operator_posts.length > 0) {
                 worker.operator_posts.forEach(post => {
                     const cantidad = post.count || 0;
                     if (cantidad > 0) {
-                        workerHasProduction = true;
+                        workerHasProductionInView = true;
                         totalCajasGlobal += cantidad;
                         if(post.rfid_reading?.name) {
                             puestosConteo[post.rfid_reading.name] = (puestosConteo[post.rfid_reading.name] || 0) + cantidad;
@@ -1234,7 +1431,7 @@ Evita frases como "Basándome en estos datos". Ve directo al análisis.`;
                     }
                 });
             }
-            if (workerHasProduction) {
+            if (workerHasProductionInView) { // Only count workers active in the current filtered view
                 trabajadoresActivosSet.add(worker.client_id);
             }
         });
@@ -1260,36 +1457,82 @@ Evita frases como "Basándome en estos datos". Ve directo al análisis.`;
         liveUpdateIntervalId = null;
 
         tableBody.querySelectorAll('tr:not(#loadingRow):not(#errorRow):not(#noDataRow)').forEach(row => row.remove());
-        displayedPostRowsCount = 0; 
-        const dataToDisplay = filterDataByCheckbox(data);
         
+        const searchTerm = searchInput ? searchInput.value : '';
+        const dataFilteredByCheckbox = filterDataByCheckbox(data);
+        const dataToDisplay = filterDataBySearch(dataFilteredByCheckbox, searchTerm);
+        
+        displayedPostRowsCount = 0; // Reset before counting visible rows
         let workersWithVisiblePosts = 0; 
+
         dataToDisplay.forEach((worker) => {
             const hasVisiblePosts = worker.operator_posts && worker.operator_posts.some(post => (post.count ?? 0) > 0);
-            if (filterPostsCheckbox.checked && !hasVisiblePosts) return;
+            if (filterPostsCheckbox.checked && !hasVisiblePosts && searchTerm === '') return; // If checkbox is on and no posts, skip unless there's a search term
+            
+            let workerMatchesSearchDirectly = false;
+            if (searchTerm) {
+                 const lowerSearch = searchTerm.toLowerCase();
+                 if ((worker.name || '').toLowerCase().includes(lowerSearch) || (worker.client_id || '').toString().toLowerCase().includes(lowerSearch)) {
+                     workerMatchesSearchDirectly = true;
+                 }
+            }
+            
+            let hasAnyDisplayablePost = false;
+             if (worker.operator_posts) {
+                worker.operator_posts.forEach(post => {
+                     if ((post.count ?? 0) > 0 || !filterPostsCheckbox.checked) {
+                         if (filterPostsCheckbox.checked && (post.count ?? 0) === 0) { /* skip */ }
+                         else { 
+                            if (searchTerm) {
+                                const lowerSearch = searchTerm.toLowerCase();
+                                if ((post.rfid_reading?.name || '').toLowerCase().includes(lowerSearch) || (post.product_list?.name || '').toLowerCase().includes(lowerSearch)) {
+                                    hasAnyDisplayablePost = true;
+                                }
+                            } else {
+                                hasAnyDisplayablePost = true;
+                            }
+                         }
+                    }
+                });
+            }
+
+            if (!workerMatchesSearchDirectly && !hasAnyDisplayablePost && searchTerm !== '') return;
+
+
             workersWithVisiblePosts++;
             if (worker.operator_posts) {
                 worker.operator_posts.forEach(post => {
-                    if ((post.count ?? 0) > 0 || !filterPostsCheckbox.checked) {
-                         if (filterPostsCheckbox.checked && (post.count ?? 0) === 0) { /* skip */ }
-                         else { displayedPostRowsCount++; }
+                    const postCount = post.count ?? 0;
+                    let displayThisPost = false;
+                    if (postCount > 0 || !filterPostsCheckbox.checked) {
+                         if (filterPostsCheckbox.checked && postCount === 0) { /* skip */ }
+                         else { 
+                            if (searchTerm) {
+                                const lowerSearch = searchTerm.toLowerCase();
+                                if (workerMatchesSearchDirectly || (post.rfid_reading?.name || '').toLowerCase().includes(lowerSearch) || (post.product_list?.name || '').toLowerCase().includes(lowerSearch)) {
+                                    displayThisPost = true;
+                                }
+                            } else {
+                                displayThisPost = true;
+                            }
+                         }
                     }
+                    if (displayThisPost) displayedPostRowsCount++;
                 });
             }
         });
         
         updateGrandTotalUnidades(); 
-        updateKPICards(); // Update KPI cards after data processing
+        updateKPICards(); 
         updateHeaderButtonsState(); 
 
 
-        if (displayedPostRowsCount === 0 && filterPostsCheckbox.checked && workersWithVisiblePosts > 0) {
-             noDataRow.querySelector('td').textContent = 'Ningún trabajador cumple los criterios de filtro (con puestos y cantidad > 0).';
-             noDataRow.classList.remove('hidden');
-        } else if (dataToDisplay.length === 0 || workersWithVisiblePosts === 0) {
-             noDataRow.querySelector('td').textContent = (filterPostsCheckbox.checked && data.length > 0) ?
-                'Ningún trabajador con puestos asignados (con cantidad > 0) en este periodo.' :
-                'No se encontraron datos para el periodo seleccionado.';
+        if (displayedPostRowsCount === 0) { // Simplified condition
+             noDataRow.querySelector('td').textContent = searchTerm ?
+                `No se encontraron resultados para "${searchTerm}".` :
+                (filterPostsCheckbox.checked && data.length > 0 ?
+                'Ningún trabajador cumple los criterios de filtro (con puestos y cantidad > 0).' :
+                'No se encontraron datos para el periodo seleccionado.');
             noDataRow.classList.remove('hidden');
         } else {
             noDataRow.classList.add('hidden');
@@ -1299,11 +1542,26 @@ Evita frases como "Basándome en estos datos". Ve directo al análisis.`;
         let hasLiveCells = false;
         workersWithVisiblePosts = 0; 
 
-        dataToDisplay.forEach((worker) => {
+        dataToDisplay.forEach((worker) => { // Iterate again for rendering based on filtered dataToDisplay
             const totalQuantitySum = (worker.operator_posts || []).reduce((sum, post) => sum + ((post.count ?? 0) > 0 ? (post.count ?? 0) : 0), 0);
-            const hasVisiblePosts = worker.operator_posts && worker.operator_posts.some(post => (post.count ?? 0) > 0);
+            
+            let workerShouldBeRendered = false;
+            const lowerSearchTerm = searchTerm.toLowerCase();
+            if (!searchTerm) { // No search term, default visibility rules apply
+                workerShouldBeRendered = !(filterPostsCheckbox.checked && !((worker.operator_posts || []).some(p => (p.count ?? 0) > 0)));
+            } else { // There is a search term
+                if ((worker.name || '').toLowerCase().includes(lowerSearchTerm) || (worker.client_id || '').toString().toLowerCase().includes(lowerSearchTerm)) {
+                    workerShouldBeRendered = true;
+                } else if (worker.operator_posts) {
+                    workerShouldBeRendered = worker.operator_posts.some(post => 
+                        ((post.rfid_reading?.name || '').toLowerCase().includes(lowerSearchTerm)) ||
+                        ((post.product_list?.name || '').toLowerCase().includes(lowerSearchTerm))
+                    );
+                }
+            }
+            if (!workerShouldBeRendered) return;
 
-            if (filterPostsCheckbox.checked && !hasVisiblePosts) return;
+
             workersWithVisiblePosts++;
 
             const workerRow = tableBody.insertRow();
@@ -1336,7 +1594,25 @@ Evita frases como "Basándome en estos datos". Ve directo al análisis.`;
                  const sortedPosts = [...worker.operator_posts].sort((a, b) => (new Date(a.created_at) || 0) - (new Date(b.created_at) || 0));
                 sortedPosts.forEach((post, postIndex) => {
                     const postCount = post.count ?? 0;
-                    if (postCount === 0 && filterPostsCheckbox.checked) return;
+                    
+                    let displayThisPostRow = false;
+                    if (!searchTerm) { // No search term, apply checkbox filter
+                        if (postCount > 0 || !filterPostsCheckbox.checked) {
+                            displayThisPostRow = true;
+                        }
+                    } else { // Search term exists
+                        const lowerSearch = searchTerm.toLowerCase();
+                        if ((worker.name || '').toLowerCase().includes(lowerSearch) || 
+                            (worker.client_id || '').toString().toLowerCase().includes(lowerSearch) ||
+                            (post.rfid_reading?.name || '').toLowerCase().includes(lowerSearch) ||
+                            (post.product_list?.name || '').toLowerCase().includes(lowerSearch)
+                           ) {
+                            if (postCount > 0 || !filterPostsCheckbox.checked) { // Also apply checkbox filter
+                                displayThisPostRow = true;
+                            }
+                        }
+                    }
+                    if (!displayThisPostRow) return;
                     
                     const postRow = tableBody.insertRow();
                     postRow.classList.add( (tableBody.rows.length - 3) % 2 === 0 ? 'bg-white' : 'bg-gray-50', 'hover:bg-gray-100');
@@ -1376,20 +1652,49 @@ Evita frases como "Basándome en estos datos". Ve directo al análisis.`;
     }
 
     function exportToExcel() {
-        const dataFilteredByCheckbox = filterDataByCheckbox(JSON.parse(JSON.stringify(originalWorkersData)));
-        if (!dataFilteredByCheckbox || dataFilteredByCheckbox.length === 0) {
+        const searchTerm = searchInput ? searchInput.value : '';
+        const dataFilteredBySearchAndCheckbox = filterDataBySearch(filterDataByCheckbox(JSON.parse(JSON.stringify(originalWorkersData))), searchTerm);
+
+        if (!dataFilteredBySearchAndCheckbox || dataFilteredBySearchAndCheckbox.length === 0) {
             const noDataModal = document.createElement('div'); 
-            noDataModal.innerHTML = `<div class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-[2000]"><div class="bg-white rounded-lg shadow-xl p-6"><h3 class="text-lg font-medium">Sin Datos</h3><p class="mt-2">No hay datos para exportar.</p><button onclick="this.closest('.fixed').remove()" class="mt-4 px-3 py-1 bg-blue-500 text-white rounded">OK</button></div></div>`;
+            noDataModal.innerHTML = `<div class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-[2000]"><div class="bg-white rounded-lg shadow-xl p-6"><h3 class="text-lg font-medium">Sin Datos</h3><p class="mt-2">No hay datos para exportar con los filtros actuales.</p><button onclick="this.closest('.fixed').remove()" class="mt-4 px-3 py-1 bg-blue-500 text-white rounded">OK</button></div></div>`;
             document.body.appendChild(noDataModal);
             return;
         }
 
         const flattenedData = [];
-        dataFilteredByCheckbox.forEach(worker => {
+        dataFilteredBySearchAndCheckbox.forEach(worker => {
             const totalQuantitySum = (worker.operator_posts || []).reduce((sum, post) => sum + ((post.count ?? 0) > 0 ? (post.count ?? 0) : 0), 0);
-            if (filterPostsCheckbox.checked && !((worker.operator_posts || []).some(post => (post.count ?? 0) > 0))) return;
+            
+            let workerShouldBeIncluded = false;
+            if (!searchTerm) {
+                 workerShouldBeIncluded = !(filterPostsCheckbox.checked && !((worker.operator_posts || []).some(p => (p.count ?? 0) > 0)));
+            } else {
+                 const lowerSearch = searchTerm.toLowerCase();
+                 if ((worker.name || '').toLowerCase().includes(lowerSearch) || (worker.client_id || '').toString().toLowerCase().includes(lowerSearch)) {
+                     workerShouldBeIncluded = true;
+                 } else if (worker.operator_posts) {
+                     workerShouldBeIncluded = worker.operator_posts.some(post => 
+                        ((post.rfid_reading?.name || '').toLowerCase().includes(lowerSearch)) ||
+                        ((post.product_list?.name || '').toLowerCase().includes(lowerSearch))
+                    );
+                 }
+            }
+            if (!workerShouldBeIncluded) return;
 
-            (worker.operator_posts || []).filter(post => (post.count ?? 0) > 0).forEach(post => {
+
+            (worker.operator_posts || []).filter(post => {
+                 let postMatchesSearch = true;
+                 if(searchTerm){
+                     const lowerSearch = searchTerm.toLowerCase();
+                     postMatchesSearch = (post.rfid_reading?.name || '').toLowerCase().includes(lowerSearch) ||
+                                          (post.product_list?.name || '').toLowerCase().includes(lowerSearch) ||
+                                          (worker.name || '').toLowerCase().includes(lowerSearch) ||
+                                          (worker.client_id || '').toString().toLowerCase().includes(lowerSearch);
+                 }
+                 return ((post.count ?? 0) > 0 || !filterPostsCheckbox.checked) && postMatchesSearch;
+
+            }).forEach(post => {
                 flattenedData.push({
                     'Codigo': worker.client_id ?? '-', 'Nombre Trabajador': worker.name ?? 'Sin Nombre',
                     'Unidades Turno': totalQuantitySum, 'Puesto': post.rfid_reading?.name ?? 'N/A',
@@ -1403,7 +1708,7 @@ Evita frases como "Basándome en estos datos". Ve directo al análisis.`;
 
         if (flattenedData.length === 0) {
             const noDetailsModal = document.createElement('div'); 
-            noDetailsModal.innerHTML = `<div class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-[2000]"><div class="bg-white rounded-lg shadow-xl p-6"><h3 class="text-lg font-medium">Sin Detalles</h3><p class="mt-2">No hay detalles de puestos con cantidad > 0 para exportar.</p><button onclick="this.closest('.fixed').remove()" class="mt-4 px-3 py-1 bg-blue-500 text-white rounded">OK</button></div></div>`;
+            noDetailsModal.innerHTML = `<div class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-[2000]"><div class="bg-white rounded-lg shadow-xl p-6"><h3 class="text-lg font-medium">Sin Detalles</h3><p class="mt-2">No hay detalles de puestos con cantidad > 0 para exportar (según filtros).</p><button onclick="this.closest('.fixed').remove()" class="mt-4 px-3 py-1 bg-blue-500 text-white rounded">OK</button></div></div>`;
             document.body.appendChild(noDetailsModal);
             return;
         }
@@ -1501,7 +1806,9 @@ Evita frases como "Basándome en estos datos". Ve directo al análisis.`;
         viewWorkerChartBtn = document.getElementById('viewWorkerChartBtn'); 
         viewPostChartBtn = document.getElementById('viewPostChartBtn');
         viewPostPieChartBtn = document.getElementById('viewPostPieChartBtn'); 
+        viewStackedBarChartBtn = document.getElementById('viewStackedBarChartBtn');
         totalUnidadesTurnoHeader = document.getElementById('totalUnidadesTurnoHeader'); 
+        searchInput = document.getElementById('searchInput');
 
         lockButton = document.getElementById('lockButton');
         lockIcon = document.getElementById('lockIcon');
@@ -1546,8 +1853,10 @@ Evita frases como "Basándome en estos datos". Ve directo al análisis.`;
         if (viewWorkerChartBtn) viewWorkerChartBtn.addEventListener('click', () => showChartModal('workers')); 
         if (viewPostChartBtn) viewPostChartBtn.addEventListener('click', () => showChartModal('postsBar'));
         if (viewPostPieChartBtn) viewPostPieChartBtn.addEventListener('click', () => showChartModal('postsPie')); 
+        if (viewStackedBarChartBtn) viewStackedBarChartBtn.addEventListener('click', () => showChartModal('confeccionPorPuesto'));
         if (dateRangeSelect) dateRangeSelect.addEventListener('change', (e) => { const {from, to} = getDateRange(e.target.value); fetchData(from, to); });
-        if (filterPostsCheckbox) filterPostsCheckbox.addEventListener('change', () => { populateTable(originalWorkersData); updateHeaderButtonsState(); });
+        if (filterPostsCheckbox) filterPostsCheckbox.addEventListener('change', () => { populateTable(originalWorkersData); updateHeaderButtonsState(); updateKPICards(); });
+        if (searchInput) searchInput.addEventListener('input', () => { populateTable(originalWorkersData); updateKPICards(); });
         
         if (cancelPasswordBtn) cancelPasswordBtn.addEventListener('click', hidePasswordModal);
         if (submitPasswordBtn) submitPasswordBtn.addEventListener('click', () => {
