@@ -42,7 +42,7 @@
             max-width: 600px; 
         }
         #chartModal .modal-content {
-            max-width: 850px; /* Increased width for chart modal */
+            max-width: 850px; 
         }
         .edit-icon, .analyze-icon {
             cursor: pointer;
@@ -234,7 +234,7 @@
     </div>
 
     <div id="searchInputContainer" class="p-4 md:px-6 no-print">
-        <input type="text" id="searchInput" placeholder="Buscar en tabla (Nombre, Código, Puesto, Confección)..." class="block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+        <input type="text" id="searchInput" placeholder="Buscar en tabla (Nombre, Código, Puesto, Confección)..." class="block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" autocomplete="off">
     </div>
 
 
@@ -274,7 +274,7 @@
     <div class="modal-content">
         <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4">Introducir Contraseña</h3>
         <div>
-            <input type="password" id="passwordInput" class="block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2 mb-2" placeholder="Contraseña">
+            <input type="password" id="passwordInput" class="block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2 mb-2" placeholder="Contraseña" autocomplete="new-password">
             <p id="passwordError" class="text-red-500 text-sm mb-4 hidden">Contraseña incorrecta.</p>
         </div>
         <div class="mt-4 flex justify-end space-x-2">
@@ -289,7 +289,7 @@
         <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4">Editar Cantidad</h3>
         <div>
             <label for="editQuantityInput" class="block text-sm font-medium text-gray-700">Nueva cantidad:</label>
-            <input type="number" id="editQuantityInput" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2 mb-2" placeholder="Cantidad">
+            <input type="number" id="editQuantityInput" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2 mb-2" placeholder="Cantidad" autocomplete="off">
             <p id="editQuantityError" class="text-red-500 text-sm mb-4 hidden">Valor inválido.</p>
             <p id="editApiStatus" class="text-sm mt-2"></p> 
         </div>
@@ -351,7 +351,7 @@
 
     let tableBody, loadingRow, errorRow, errorCell, noDataRow, exportExcelBtn, printBtn, 
         dateRangeSelect, filterPostsCheckbox, analizarTodosLocalAIBtn, 
-        viewWorkerChartBtn, viewPostChartBtn, viewPostPieChartBtn, viewStackedBarChartBtn, /* New chart button */
+        viewWorkerChartBtn, viewPostChartBtn, viewPostPieChartBtn, viewStackedBarChartBtn, 
         totalUnidadesTurnoHeader, 
         lockButton, lockIcon, unlockIcon, passwordModal, passwordInput, passwordError, 
         cancelPasswordBtn, submitPasswordBtn, editQuantityModal, editQuantityInput, 
@@ -361,7 +361,7 @@
         chartModal, chartModalTitleEl, chartContainerEl, 
         tooltip,
         kpiCardContainer, kpiTotalCajas, kpiTrabajadoresActivos, kpiAvgCajasHora, kpiPuestoMasProductivo,
-        searchInput; // Search input element
+        searchInput; 
 
     let originalWorkersData = [];
     let displayedPostRowsCount = 0;
@@ -916,7 +916,7 @@ Evita frases como "Basándome en estos datos". Ve directo al análisis.`;
         } else if (chartType === 'postsPie') { 
             chartModalTitleEl.textContent = '📊 Distribución de Cajas por Puesto (Circular)';
             renderPostDistributionPieChart();
-        } else if (chartType === 'confeccionPorPuesto') { // New chart type
+        } else if (chartType === 'confeccionPorPuesto') { 
             chartModalTitleEl.textContent = '📊 Confección por Puesto (Apilado)';
             renderConfeccionPorPuestoChart();
         }
@@ -1157,7 +1157,6 @@ Evita frases como "Basándome en estos datos". Ve directo al análisis.`;
         }
         chartContainerEl.innerHTML = '';
 
-        // 1. Aggregate data: { puesto: { confeccion1: sum, confeccion2: sum }, ... }
         const aggregatedData = {};
         const allConfecciones = new Set();
 
@@ -1176,16 +1175,15 @@ Evita frases como "Basándome en estos datos". Ve directo al análisis.`;
             });
         });
 
-        const confeccionKeys = Array.from(allConfecciones).sort(); // Consistent order for stacking
+        const confeccionKeys = Array.from(allConfecciones).sort(); 
 
-        // 2. Transform for D3 stack: [{puesto: "Puesto A", confeccionX: 10, confeccionY: 20, ...}, ...]
         const chartData = Object.entries(aggregatedData).map(([puesto, confecciones]) => {
             const row = { puesto: puesto };
             confeccionKeys.forEach(conKey => {
                 row[conKey] = confecciones[conKey] || 0;
             });
             return row;
-        }).sort((a,b) => { // Sort by total for the puesto
+        }).sort((a,b) => { 
             const totalA = d3.sum(confeccionKeys, key => a[key]);
             const totalB = d3.sum(confeccionKeys, key => b[key]);
             return totalB - totalA;
@@ -1203,7 +1201,7 @@ Evita frases como "Basándome en estos datos". Ve directo al análisis.`;
         const containerWidth = chartContainerEl.clientWidth;
         const containerHeight = 400;
         const margin = {top: 40, right: 30, bottom: 120, left: 70};
-        const width = Math.max(containerWidth - margin.left - margin.right, chartData.length * 50); // Min width per bar
+        const width = Math.max(containerWidth - margin.left - margin.right, chartData.length * 50); 
         const height = containerHeight - margin.top - margin.bottom;
 
         const svg = d3.select("#chartContainer")
@@ -1234,7 +1232,7 @@ Evita frases como "Basándome en estos datos". Ve directo al análisis.`;
             .join("rect")
                 .attr("x", d => x(d.data.puesto))
                 .attr("y", d => y(d[1]))
-                .attr("height", d => Math.max(0, y(d[0]) - y(d[1]))) // Ensure height is not negative
+                .attr("height", d => Math.max(0, y(d[0]) - y(d[1]))) 
                 .attr("width", x.bandwidth())
             .on("mouseover", function(event, d) {
                 const parentData = d3.select(this.parentNode).datum();
@@ -1261,25 +1259,24 @@ Evita frases como "Basándome en estos datos". Ve directo al análisis.`;
         svg.append("g")
             .call(d3.axisLeft(y).ticks(Math.min(10, d3.max(series, d => d3.max(d, d => d[1])) || 10)));
 
-        // Legend
         const legend = svg.append("g")
             .attr("font-family", "sans-serif")
             .attr("font-size", 10)
-            .attr("text-anchor", "start") // Changed from end to start
-            .attr("transform", `translate(${width - margin.right - 100}, ${-margin.top + 10})`) // Position top-right or adjust
+            .attr("text-anchor", "start") 
+            .attr("transform", `translate(${width - margin.right - 100}, ${-margin.top + 10})`) 
             .selectAll("g")
-            .data(confeccionKeys.slice()) // Use a copy
+            .data(confeccionKeys.slice()) 
             .join("g")
                 .attr("transform", (d, i) => `translate(0,${i * 20})`);
 
         legend.append("rect")
-            .attr("x", 0) // Start rect at x=0
+            .attr("x", 0) 
             .attr("width", 19)
             .attr("height", 19)
             .attr("fill", color);
 
         legend.append("text")
-            .attr("x", 24) // Position text next to rect
+            .attr("x", 24) 
             .attr("y", 9.5)
             .attr("dy", "0.35em")
             .text(d => d);
@@ -1381,8 +1378,7 @@ Evita frases como "Basándome en estos datos". Ve directo al análisis.`;
         dataFilteredBySearchAndCheckbox.forEach(worker => {
             const totalQuantitySum = (worker.operator_posts || []).reduce((sum, post) => {
                 const count = post.count ?? 0;
-                // Consider search term for post-level details if needed, but grand total is based on filtered workers
-                if (filterPostsCheckbox.checked && count === 0) return sum; // If checkbox is checked, only sum posts with count > 0
+                if (filterPostsCheckbox.checked && count === 0) return sum; 
                 return sum + count;
             }, 0);
             grandTotal += totalQuantitySum;
@@ -1394,12 +1390,12 @@ Evita frases como "Basándome en estos datos". Ve directo al análisis.`;
         const searchTerm = searchInput ? searchInput.value : '';
         const dataToDisplay = filterDataBySearch(filterDataByCheckbox(originalWorkersData), searchTerm);
 
-        if (!kpiTotalCajas || dataToDisplay.length === 0 && !searchTerm) { // Keep showing if there's a search term active
+        if (!kpiTotalCajas || (dataToDisplay.length === 0 && !searchTerm)) { 
             if(kpiTotalCajas) kpiTotalCajas.textContent = '-';
             if(kpiTrabajadoresActivos) kpiTrabajadoresActivos.textContent = '0';
             if(kpiAvgCajasHora) kpiAvgCajasHora.textContent = '-';
             if(kpiPuestoMasProductivo) kpiPuestoMasProductivo.textContent = '-';
-             if (kpiCardContainer && !isLocked) kpiCardContainer.classList.add('hidden'); // Hide if no data and not locked
+             if (kpiCardContainer && !isLocked) kpiCardContainer.classList.add('hidden'); 
             return;
         }
         if (kpiCardContainer && !isLocked) kpiCardContainer.classList.remove('hidden');
@@ -1431,7 +1427,7 @@ Evita frases como "Basándome en estos datos". Ve directo al análisis.`;
                     }
                 });
             }
-            if (workerHasProductionInView) { // Only count workers active in the current filtered view
+            if (workerHasProductionInView) { 
                 trabajadoresActivosSet.add(worker.client_id);
             }
         });
@@ -1462,12 +1458,12 @@ Evita frases como "Basándome en estos datos". Ve directo al análisis.`;
         const dataFilteredByCheckbox = filterDataByCheckbox(data);
         const dataToDisplay = filterDataBySearch(dataFilteredByCheckbox, searchTerm);
         
-        displayedPostRowsCount = 0; // Reset before counting visible rows
+        displayedPostRowsCount = 0; 
         let workersWithVisiblePosts = 0; 
 
         dataToDisplay.forEach((worker) => {
             const hasVisiblePosts = worker.operator_posts && worker.operator_posts.some(post => (post.count ?? 0) > 0);
-            if (filterPostsCheckbox.checked && !hasVisiblePosts && searchTerm === '') return; // If checkbox is on and no posts, skip unless there's a search term
+            if (filterPostsCheckbox.checked && !hasVisiblePosts && searchTerm === '') return; 
             
             let workerMatchesSearchDirectly = false;
             if (searchTerm) {
@@ -1527,7 +1523,7 @@ Evita frases como "Basándome en estos datos". Ve directo al análisis.`;
         updateHeaderButtonsState(); 
 
 
-        if (displayedPostRowsCount === 0) { // Simplified condition
+        if (displayedPostRowsCount === 0) { 
              noDataRow.querySelector('td').textContent = searchTerm ?
                 `No se encontraron resultados para "${searchTerm}".` :
                 (filterPostsCheckbox.checked && data.length > 0 ?
@@ -1542,14 +1538,14 @@ Evita frases como "Basándome en estos datos". Ve directo al análisis.`;
         let hasLiveCells = false;
         workersWithVisiblePosts = 0; 
 
-        dataToDisplay.forEach((worker) => { // Iterate again for rendering based on filtered dataToDisplay
+        dataToDisplay.forEach((worker) => { 
             const totalQuantitySum = (worker.operator_posts || []).reduce((sum, post) => sum + ((post.count ?? 0) > 0 ? (post.count ?? 0) : 0), 0);
             
             let workerShouldBeRendered = false;
             const lowerSearchTerm = searchTerm.toLowerCase();
-            if (!searchTerm) { // No search term, default visibility rules apply
+            if (!searchTerm) { 
                 workerShouldBeRendered = !(filterPostsCheckbox.checked && !((worker.operator_posts || []).some(p => (p.count ?? 0) > 0)));
-            } else { // There is a search term
+            } else { 
                 if ((worker.name || '').toLowerCase().includes(lowerSearchTerm) || (worker.client_id || '').toString().toLowerCase().includes(lowerSearchTerm)) {
                     workerShouldBeRendered = true;
                 } else if (worker.operator_posts) {
@@ -1596,18 +1592,18 @@ Evita frases como "Basándome en estos datos". Ve directo al análisis.`;
                     const postCount = post.count ?? 0;
                     
                     let displayThisPostRow = false;
-                    if (!searchTerm) { // No search term, apply checkbox filter
+                    if (!searchTerm) { 
                         if (postCount > 0 || !filterPostsCheckbox.checked) {
                             displayThisPostRow = true;
                         }
-                    } else { // Search term exists
+                    } else { 
                         const lowerSearch = searchTerm.toLowerCase();
                         if ((worker.name || '').toLowerCase().includes(lowerSearch) || 
                             (worker.client_id || '').toString().toLowerCase().includes(lowerSearch) ||
                             (post.rfid_reading?.name || '').toLowerCase().includes(lowerSearch) ||
                             (post.product_list?.name || '').toLowerCase().includes(lowerSearch)
                            ) {
-                            if (postCount > 0 || !filterPostsCheckbox.checked) { // Also apply checkbox filter
+                            if (postCount > 0 || !filterPostsCheckbox.checked) { 
                                 displayThisPostRow = true;
                             }
                         }
@@ -1855,8 +1851,8 @@ Evita frases como "Basándome en estos datos". Ve directo al análisis.`;
         if (viewPostPieChartBtn) viewPostPieChartBtn.addEventListener('click', () => showChartModal('postsPie')); 
         if (viewStackedBarChartBtn) viewStackedBarChartBtn.addEventListener('click', () => showChartModal('confeccionPorPuesto'));
         if (dateRangeSelect) dateRangeSelect.addEventListener('change', (e) => { const {from, to} = getDateRange(e.target.value); fetchData(from, to); });
-        if (filterPostsCheckbox) filterPostsCheckbox.addEventListener('change', () => { populateTable(originalWorkersData); updateHeaderButtonsState(); updateKPICards(); });
-        if (searchInput) searchInput.addEventListener('input', () => { populateTable(originalWorkersData); updateKPICards(); });
+        if (filterPostsCheckbox) filterPostsCheckbox.addEventListener('change', () => { populateTable(originalWorkersData); updateKPICards(); updateHeaderButtonsState(); });
+        if (searchInput) searchInput.addEventListener('input', () => { populateTable(originalWorkersData); updateKPICards(); updateHeaderButtonsState(); });
         
         if (cancelPasswordBtn) cancelPasswordBtn.addEventListener('click', hidePasswordModal);
         if (submitPasswordBtn) submitPasswordBtn.addEventListener('click', () => {
