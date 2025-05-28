@@ -53,6 +53,14 @@ $settings = Utility::settings();
                         </a>
                     </li>
                 @endrole
+                @role('admin')
+                    <li class="dash-item dash-hasmenu {{ request()->is('ia_prompts*') ? 'active' : '' }}">
+                        <a class="dash-link" href="{{ route('ia_prompts.index') }}">
+                            <span class="dash-micon"><i class="fa-solid fa-vial-virus"></i></span>
+                            <span class="dash-mtext custom-weight">{{ __('IA') }}</span>
+                        </a>
+                    </li>
+                @endrole
                 
                 @can('manage-langauge')
                     <li class="dash-item dash-hasmenu {{ request()->is('index') ? 'active' : '' }}">

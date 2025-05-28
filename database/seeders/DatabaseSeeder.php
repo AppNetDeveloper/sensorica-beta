@@ -84,5 +84,9 @@ class DatabaseSeeder extends Seeder
         foreach ($modules as $module) {
             Modual::firstOrCreate(['name' => $module]);
         }
+        $this->call([
+            IaPromptsTableSeeder::class,
+            // Otros seeders que puedas tener...
+        ]);
     }
 }

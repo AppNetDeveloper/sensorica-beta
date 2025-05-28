@@ -41,6 +41,7 @@ use App\Http\Controllers\Api\ShiftListController;
 use App\Http\Controllers\Api\WorkerController; 
 use App\Http\Controllers\Api\ShiftProcessEventController;
 use App\Http\Controllers\Api\RfidErrorPointController;
+use App\Http\Controllers\Api\IaPromptController; // Importa tu controlador
 
 
 
@@ -357,3 +358,9 @@ Route::get('/workers-export/complete-list', [WorkerController::class, 'completeL
 Route::post('/shift-process-events', [ShiftProcessEventController::class, 'store'])->name('shift-events.store');
 
 Route::get('rfid-error-points', [RfidErrorPointController::class, 'byDate']);
+
+// Rutas para los Prompts de IA
+Route::get('/ia-prompts/{key}', [IaPromptController::class, 'showByKey'])->name('api.ia_prompts.showByKey');
+
+// Ruta opcional para listar todos los prompts activos
+Route::get('/ia-prompts', [IaPromptController::class, 'index'])->name('api.ia_prompts.index');

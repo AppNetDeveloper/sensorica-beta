@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuración y Control RFID (Node.js)</title>
+    <style>
+        :root {
+            --primary-color: #3b82f6; /* Azul principal */
+            --primary-hover-color: #2563eb;
+            --success-color: #10b981; /* Verde para éxito/set */
+            --success-hover-color: #059669;
+            --start-color: #22c55e; /* Verde más brillante para Start */
+            --start-hover-color: #16a34a;
+            --stop-color: #ef4444; /* Rojo para Stop/Error */
+            --stop-hover-color: #dc2626;
+            --status-color: #64748b; /* Gris para Status/Info */
+            --status-hover-color: #475569;
+            --warning-bg-color: #fef3c7;
+            --warning-text-color: #92400e;
+            --warning-border-color: #fcd34d;
+
+            --text-primary: #1f2937;
+            --text-secondary: #374151;
+            --text-muted: #6b7280;
+            --bg-color: #f0f2f5;
+            --surface-color: #ffffff;
+            --border-color: #d1d5db;
+            --border-light-color: #e5e7eb;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --border-radius-md: 8px;
+            --border-radius-lg: 12px;
+        }
+
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+            margin: 0; 
+            padding: 10px; 
+            background-color: var(--bg-color); 
+            color: var(--text-primary); 
+            line-height: 1.6; 
+        }
+        .container { 
+            width: 100%; 
+            max-width: 1200px; 
+            margin: 20px auto; 
+            background-color: var(--surface-color); 
+            padding: 20px 25px; 
+            border-radius: var(--border-radius-lg); 
+            box-shadow: var(--shadow-md);
+            box-sizing: border-box;
+        }
+        h1 { 
+            color: var(--text-primary); 
+            text-align: center; 
+            margin-top: 0;
+            margin-bottom: 30px;
+            font-size: 1.8em; 
+            font-weight: 600;
+        }
+        h2 { 
+            color: var(--text-primary); 
+            text-align: left; 
+            margin-top: 35px; 
+            margin-bottom: 20px;
+            font-size: 1.4em; 
+            font-weight: 600;
+            border-bottom: 2px solid var(--primary-color); 
+            padding-bottom: 10px;
+        }
+        h3 { 
+            font-size: 1.15em; 
+            margin-top: 20px; 
+            margin-bottom: 15px; 
+            text-align: left;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        label { 
+            display: block; 
+            margin-top: 15px; 
+            margin-bottom: 6px; 
+            font-weight: 500; /* Ligeramente menos pesado */
+            color: var(--text-secondary);  
+            font-size: 0.9em;
+        }
+        .inline-label { 
+             display: inline-block; margin-right: 8px; white-space: nowrap; margin-top:0; font-weight: normal;
+        }
+        input[type="number"], input[type="text"], input[type="password"] { 
+            width: 100%; /* Ocupar todo el ancho del contenedor padre */
+            padding: 9px 12px; 
+            margin-bottom: 12px; 
+            border: 1px solid var(--border-color); 
+            border-radius: var(--border-radius-md); 
+            box-sizing: border-box; 
+            font-size: 0.95em;
+            background-color: #f9fafb;
+            transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        input[type="number"]:focus, input[type="text"]:focus, input[type="password"]:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+            outline: none;
+            background-color: var(--surface-color);
+        }
+        .input-group { display: flex; align-items: center; margin-bottom: 12px;}
+        .input-group label { margin-bottom: 0; margin-right: 10px; font-weight: normal; margin-top:0;}
+        .input-group input[type="number"] { width: 100px; margin-bottom:0;}
+
+
+        input[type="checkbox"] { 
+            margin-right: 6px; 
+            vertical-align: middle; 
+            width: 18px; 
+            height: 18px; 
+            accent-color: var(--primary-color);
+        }
+        .checkbox-container { 
+            display: flex;
+            align-items: center;
+            margin-top: 12px; 
+            margin-bottom: 12px;
+            padding: 5px 0;
+        }
+        .checkbox-container label.inline-label { margin-top:0; margin-bottom: 0; font-weight: 500;} 
+
+
+        button { 
+            padding: 9px 16px; 
+            margin-top: 8px; 
+            margin-bottom: 8px; 
+            margin-left: 4px;
+            margin-right: 4px; 
+            border: none; 
+            border-radius: var(--border-radius-md); 
+            cursor: pointer; 
+            font-size: 0.9em; 
+            font-weight: 500;
+            transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease; 
+            box-shadow: var(--shadow-sm);
+        }
+        button:hover {
+            box-shadow: var(--shadow-md);
+        }
+        button:active {
+            transform: translateY(1px);
+            box-shadow: none;
+        }
+        .btn-get { background-color: var(--primary-color); color: white; }
+        .btn-get:hover { background-color: var(--primary-hover-color); }
+        .btn-set-all, .btn-action { background-color: var(--success-color); color: white; } 
+        .btn-set-all:hover, .btn-action:hover { background-color: var(--success-hover-color); }
+        .btn-start { background-color: var(--start-color); color: white; } 
+        .btn-start:hover { background-color: var(--start-hover-color); }
+        .btn-stop { background-color: var(--stop-color); color: white; } 
+        .btn-stop:hover { background-color: var(--stop-hover-color); }
+        .btn-status { background-color: var(--status-color); color: white; } 
+        .btn-status:hover { background-color: var(--status-hover-color); }
+
+        #statusMessages { 
+            margin-top: 15px; 
+            margin-bottom: 25px; 
+            padding: 12px 15px; 
+            border-radius: var(--border-radius-md); 
+            text-align: center; 
+            font-weight: 500;
+            border: 1px solid transparent;
+            font-size: 0.95em;
+        }
+        .status-success { background-color: #d1fae5; color: #065f46; border-color: #6ee7b7;}
+        .status-error { background-color: #fee2e2; color: #991b1b; border-color: #fca5a5;}
+        .status-info { background-color: #dbeafe; color: #1e40af; border-color: #93c5fd;}
+        .status-warning { background-color: var(--warning-bg-color); color: var(--warning-text-color); border-color: var(--warning-border-color);}
+        
+        .section-group {
+            margin-bottom: 35px; 
+            padding: 20px;
+            border-radius: var(--border-radius-lg);
+            background-color: var(--surface-color); /* Fondo blanco para cada sección */
+            box-shadow: var(--shadow-md); 
+        }
+        .section-group:last-child {
+            margin-bottom: 10px; /* Menos margen para el último grupo */
+        }
+
+        #antennaDataContainer { 
+            margin-top: 15px; 
+            padding-top: 0; 
+            display: flex; 
+            flex-wrap: wrap; 
+            gap: 18px; 
+        }
+        .antenna-block { 
+            border: 1px solid var(--border-light-color); 
+            padding: 18px; 
+            border-radius: var(--border-radius-md); 
+            background-color: #f9fafb; 
+            display: flex; 
+            flex-direction: column; 
+            box-shadow: var(--shadow-sm);
+            flex-basis: calc(50% - 18px); /* Dos columnas, ajustado por el gap */
+            box-sizing: border-box;
+            min-width: 270px; /* Ancho mínimo antes de envolver */
+        }
+        .antenna-block h3 { 
+            margin-top: 0; 
+            margin-bottom: 15px; 
+            color: var(--text-primary); 
+            font-size: 1.1em; 
+            text-align: left; /* Alineado a la izquierda para consistencia */
+            border-bottom: 1px solid var(--border-light-color);
+            padding-bottom: 8px;
+        }
+        .antenna-controls-row { 
+            display: flex;
+            align-items: center; 
+            flex-wrap: wrap; 
+            gap: 10px; 
+        }
+        .antenna-controls-row label.inline-label { margin-top: 0; font-size: 0.9em; } 
+        .antenna-controls-row input[type="number"] { width: 70px; } /* Más pequeño para potencia */
+
+        #readerStatusDisplay { 
+            font-weight: 600; /* Más destacado */
+            padding: 10px 15px;
+            border-radius: var(--border-radius-md);
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 1em;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        /* Clases específicas para estado del lector */
+        #readerStatusDisplay.status-reading { background-color: var(--success-color); color: white; }
+        #readerStatusDisplay.status-not-reading { background-color: var(--status-color); color: white; }
+
+
+        #rawResponseContainer { 
+            margin-top: 25px; 
+            padding: 12px; 
+            background-color: #2d3748; /* Un poco más claro */
+            color: #e2e8f0; 
+            border-radius: var(--border-radius-md); 
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace; 
+            font-size: 0.85em; 
+            white-space: pre-wrap; 
+            word-break: break-all; 
+            max-height: 180px; 
+            overflow-y: auto; 
+            border: 1px solid #4a5568;
+        }
+        .hidden { display: none; }
+        .button-group { 
+            padding-top: 15px; /* Más espacio arriba */
+            padding-bottom: 5px; /* Menos espacio abajo si los botones tienen su propio margen */
+            margin-bottom: 15px; 
+            text-align: center;
+            display: flex; 
+            flex-wrap: wrap; 
+            justify-content: center; 
+            gap: 12px; 
+        }
+        .button-group button { margin-top: 0; margin-bottom: 0;} 
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* Ajustado para más espacio */
+            gap: 18px 20px; /* row-gap column-gap */
+            margin-bottom: 20px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        .form-group .input-group input[type="number"] { width: 80px; } /* Ajuste para inputs en grupo dentro del form-grid */
+
+
+        @media (max-width: 992px) { /* Ajuste para tablets */
+            .antenna-block {
+                flex-basis: calc(50% - 10px); /* Mantener dos columnas si es posible */
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container { padding: 15px; margin: 15px auto; }
+            h1 { font-size: 1.5em; }
+            h2 { font-size: 1.25em; }
+            .antenna-block { width: 100%; flex-basis: 100%; min-width: unset;}
+            .input-group input[type="number"] { width: 70px; } 
+            .form-grid { grid-template-columns: 1fr; } /* Una columna para el formulario MQTT */
+        }
+        @media (max-width: 520px) { 
+            .button-group { flex-direction: column; } /* Botones en columna */
+            .button-group button {
+                width: 100%;
+                margin-left: 0; margin-right: 0;
+                margin-bottom: 8px; /* Espacio entre botones en columna */
+            }
+             .antenna-controls-row { flex-direction: column; align-items: flex-start;}
+             .antenna-controls-row label.inline-label, .antenna-controls-row .checkbox-container {
+                width: 100%; margin-bottom: 8px;
+            }
+            .antenna-controls-row input[type="number"] {
+                width: calc(100% - 24px); 
+            }
+        }
+        @media (max-width: 480px) {
+            body { padding: 8px; }
+            .container { padding: 12px; margin: 10px auto; }
+            h1 { font-size: 1.3em; }
+            h2 { font-size: 1.15em; }
+            h3 { font-size: 1em; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Configuración y Control RFID</h1>
+        <div id="statusMessages" class="status-info">Conectando al servidor...</div>
+
+        <div class="section-group">
+            <h2>Estado y Control de Lectura RFID</h2>
+            <div id="readerStatusDisplay">Consultando estado del lector...</div>
+            <div class="button-group">
+                <button id="rfidStartBtn" class="btn-start">Iniciar Lectura</button>
+                <button id="rfidStopBtn" class="btn-stop">Detener Lectura</button>
+                <button id="rfidStatusBtn" class="btn-status">Actualizar Estado Lector</button>
+            </div>
+        </div>
+
+        <div class="section-group">
+            <h2>Configuración de Potencia de Antenas</h2>
+            <div class="button-group">
+                <button id="getPowerBtn" class="btn-get">Obtener Configuración Actual</button>
+                <button id="setAllPowerBtn" class="btn-set-all">Establecer Todas las Configuraciones</button>
+            </div>
+            <div id="antennaDataContainer">
+                </div>
+        </div>
+
+        <div class="section-group">
+            <h2>Configuración Tarea MQTT del Lector</h2>
+            <div class="button-group">
+                <button id="getReaderMqttSettingsBtn" class="btn-get">Obtener Config. Tarea MQTT</button>
+            </div>
+            <form id="readerMqttConfigForm" class="hidden">
+                <div class="form-group checkbox-container">
+                    <input type="checkbox" id="readerMqttEnable">
+                    <label for="readerMqttEnable" class="inline-label">Habilitar Tarea MQTT del Lector</label>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="readerMqttHost">Host MQTT Lector:</label>
+                        <input type="text" id="readerMqttHost" placeholder="Ej: 192.168.123.1">
+                    </div>
+                    <div class="form-group">
+                        <label for="readerMqttPort">Puerto MQTT Lector:</label>
+                        <input type="number" id="readerMqttPort" placeholder="Ej: 1883">
+                    </div>
+                    <div class="form-group">
+                        <label for="readerMqttTopic">Topic Principal Lector:</label>
+                        <input type="text" id="readerMqttTopic" placeholder="Ej: rfid1">
+                    </div>
+                    <div class="form-group">
+                        <label for="readerMqttTopicCmd">Topic Comandos Lector:</label>
+                        <input type="text" id="readerMqttTopicCmd" placeholder="Ej: rfid_comm">
+                    </div>
+                     <div class="form-group input-group">
+                        <label for="readerMqttQos" class="inline-label">QoS (0,1,2):</label>
+                        <input type="number" id="readerMqttQos" min="0" max="2" value="1">
+                    </div>
+                    <div class="form-group input-group">
+                        <label for="readerMqttSsl" class="inline-label">Usar SSL (0=No, 1=Sí):</label>
+                        <input type="number" id="readerMqttSsl" min="0" max="1" value="0">
+                    </div>
+                     <div class="form-group">
+                        <label for="readerMqttUser">Usuario Lector (UID):</label>
+                        <input type="text" id="readerMqttUser" placeholder="Opcional">
+                    </div>
+                    <div class="form-group">
+                        <label for="readerMqttPass">Password Lector:</label>
+                        <input type="password" id="readerMqttPass" placeholder="Opcional">
+                    </div>
+                    <div class="form-group">
+                        <label for="readerMqttCaCrt">CA Cert (nombre archivo):</label>
+                        <input type="text" id="readerMqttCaCrt" placeholder="Ej: ca.crt">
+                    </div>
+                    <div class="form-group">
+                        <label for="readerMqttClientCrt">Client Cert (nombre archivo):</label>
+                        <input type="text" id="readerMqttClientCrt" placeholder="Ej: client.crt">
+                    </div>
+                     <div class="form-group">
+                        <label for="readerMqttClientKey">Client Key (nombre archivo):</label>
+                        <input type="text" id="readerMqttClientKey" placeholder="Ej: client.key">
+                    </div>
+                     <div class="form-group">
+                        <label for="readerMqttClientPwd">Client Cert Password:</label>
+                        <input type="password" id="readerMqttClientPwd" placeholder="Opcional">
+                    </div>
+                    <div class="form-group input-group">
+                        <label for="readerMqttInterval" class="inline-label">Intervalo (ms):</label>
+                        <input type="number" id="readerMqttInterval" placeholder="Ej: 10">
+                    </div>
+                    <div class="form-group input-group">
+                        <label for="readerMqttMask" class="inline-label">Mask (decimal):</label>
+                        <input type="number" id="readerMqttMask" placeholder="Ej: 3303">
+                    </div>
+                     <div class="form-group input-group">
+                        <label for="readerMqttMaxTags" class="inline-label">Max Tags:</label>
+                        <input type="number" id="readerMqttMaxTags" placeholder="Ej: 999">
+                    </div>
+                     <div class="form-group checkbox-container">
+                        <input type="checkbox" id="readerMqttCacheTags">
+                        <label for="readerMqttCacheTags" class="inline-label">Cache Tags</label>
+                    </div>
+                    <div class="form-group checkbox-container">
+                        <input type="checkbox" id="readerMqttMergeTags">
+                        <label for="readerMqttMergeTags" class="inline-label">Merge Tags</label>
+                    </div>
+                     <div class="form-group">
+                        <label for="readerMqttPath">Path (SSL):</label>
+                        <input type="text" id="readerMqttPath" placeholder="Ej: SmartReader">
+                    </div>
+                </div>
+                <div style="text-align: center;"> 
+                    <button type="button" id="setReaderMqttSettingsBtn" class="btn-action">Establecer Config. Tarea MQTT</button>
+                </div>
+            </form>
+        </div>
+        
+        <h3>Respuesta Cruda del Servidor (para depuración):</h3>
+        <div id="rawResponseContainer" class="hidden"></div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io({
+            reconnectionAttempts: 5,
+            reconnectionDelay: 3000,
+        });
+        
+        // --- Referencias a elementos del DOM (Control RFID) ---
+        const getPowerBtn = document.getElementById('getPowerBtn');
+        const setAllPowerBtn = document.getElementById('setAllPowerBtn');
+        const rfidStartBtn = document.getElementById('rfidStartBtn'); 
+        const rfidStopBtn = document.getElementById('rfidStopBtn');   
+        const rfidStatusBtn = document.getElementById('rfidStatusBtn'); 
+        const statusMessagesDiv = document.getElementById('statusMessages');
+        const antennaDataContainer = document.getElementById('antennaDataContainer');
+        const rawResponseContainer = document.getElementById('rawResponseContainer');
+        const readerStatusDisplay = document.getElementById('readerStatusDisplay');
+
+        // --- Referencias a elementos del DOM (Config. Tarea MQTT Lector) ---
+        const getReaderMqttSettingsBtn = document.getElementById('getReaderMqttSettingsBtn');
+        const setReaderMqttSettingsBtn = document.getElementById('setReaderMqttSettingsBtn');
+        const readerMqttConfigForm = document.getElementById('readerMqttConfigForm');
+        
+        const readerMqttEnableCheckbox = document.getElementById('readerMqttEnable');
+        const readerMqttHostInput = document.getElementById('readerMqttHost');
+        const readerMqttPortInput = document.getElementById('readerMqttPort');
+        const readerMqttTopicInput = document.getElementById('readerMqttTopic');
+        const readerMqttTopicCmdInput = document.getElementById('readerMqttTopicCmd');
+        const readerMqttQosInput = document.getElementById('readerMqttQos');
+        const readerMqttSslInput = document.getElementById('readerMqttSsl');
+        const readerMqttUserInput = document.getElementById('readerMqttUser'); 
+        const readerMqttPassInput = document.getElementById('readerMqttPass'); 
+        const readerMqttCaCrtInput = document.getElementById('readerMqttCaCrt');
+        const readerMqttClientCrtInput = document.getElementById('readerMqttClientCrt');
+        const readerMqttClientKeyInput = document.getElementById('readerMqttClientKey');
+        const readerMqttClientPwdInput = document.getElementById('readerMqttClientPwd'); 
+        const readerMqttIntervalInput = document.getElementById('readerMqttInterval');
+        const readerMqttMaskInput = document.getElementById('readerMqttMask');
+        const readerMqttMaxTagsInput = document.getElementById('readerMqttMaxTags');
+        const readerMqttCacheTagsCheckbox = document.getElementById('readerMqttCacheTags');
+        const readerMqttMergeTagsCheckbox = document.getElementById('readerMqttMergeTags');
+        const readerMqttPathInput = document.getElementById('readerMqttPath');
+
+        let originalReaderMqttParams = {}; 
+        let originalReaderMqttName = "task.name.const.mqtt"; 
+
+        function displayStatus(message, type = 'info') {
+            statusMessagesDiv.textContent = message;
+            statusMessagesDiv.className = `status-${type}`;
+        }
+
+        function displayRawResponse(data) {
+            rawResponseContainer.textContent = JSON.stringify(data, null, 2);
+            rawResponseContainer.classList.remove('hidden');
+        }
+
+        getPowerBtn.addEventListener('click', () => {
+            displayStatus('Solicitando configuración de antenas...', 'info');
+            rawResponseContainer.classList.add('hidden');
+            if (socket.connected) socket.emit('getAntennaPower');
+            else displayStatus('No conectado al servidor.', 'error');
+        });
+
+        setAllPowerBtn.addEventListener('click', () => {
+            const antennaBlocks = antennaDataContainer.querySelectorAll('.antenna-block');
+            if (antennaBlocks.length === 0) {
+                displayStatus('No hay antenas cargadas para configurar.', 'warning');
+                return;
+            }
+            const allAntennaConfigs = [];
+            let isValid = true;
+            antennaBlocks.forEach(block => {
+                const index = parseInt(block.getAttribute('data-antenna-index'));
+                const powerInput = block.querySelector(`#power_${index}`);
+                const enableCheckbox = block.querySelector(`#enable_${index}`);
+                if (!powerInput || !enableCheckbox) { isValid = false; return; }
+                const power = parseInt(powerInput.value);
+                const enable = enableCheckbox.checked;
+                if (isNaN(power) || power < 0 || power > 35) {
+                    displayStatus(`Potencia para Antena ${index} inválida (0-35).`, 'error');
+                    powerInput.focus(); isValid = false; return; 
+                }
+                allAntennaConfigs.push({ index, power, enable });
+            });
+            if (!isValid || allAntennaConfigs.length === 0) return;
+            if (socket.connected) {
+                displayStatus(`Enviando config. para ${allAntennaConfigs.length} antena(s)...`, 'info');
+                rawResponseContainer.classList.add('hidden');
+                socket.emit('setAntennaPower', allAntennaConfigs); 
+            } else displayStatus('No conectado al servidor.', 'error');
+        });
+
+        rfidStartBtn.addEventListener('click', () => {
+            displayStatus('Enviando Iniciar Lectura...', 'info');
+            rawResponseContainer.classList.add('hidden');
+            const antennaBlocks = antennaDataContainer.querySelectorAll('.antenna-block');
+            let antsToUse = [];
+            if (antennaBlocks.length > 0) {
+                antennaBlocks.forEach(block => {
+                    const index = parseInt(block.getAttribute('data-antenna-index'));
+                    const enableCheckbox = block.querySelector(`#enable_${index}`);
+                    if (enableCheckbox && enableCheckbox.checked) antsToUse.push(index);
+                });
+            }
+            if (antsToUse.length === 0) {
+                displayStatus('Advertencia: No hay antenas habilitadas. Iniciando con antena 1 por defecto.', 'warning');
+                antsToUse = [1]; 
+            }
+            const payload = {"command": "RFID/start", "data": {"area": 3, "ants": antsToUse, "userOffset": 0, "userLength": 4, "once": false}};
+            if (socket.connected) socket.emit('rfidStart', payload);
+            else displayStatus('No conectado al servidor.', 'error');
+        });
+
+        rfidStopBtn.addEventListener('click', () => {
+            displayStatus('Enviando Detener Lectura...', 'info');
+            rawResponseContainer.classList.add('hidden');
+            if (socket.connected) socket.emit('rfidStop', { "command": "RFID/stop" });
+            else displayStatus('No conectado al servidor.', 'error');
+        });
+
+        rfidStatusBtn.addEventListener('click', () => {
+            displayStatus('Consultando estado del lector...', 'info');
+            rawResponseContainer.classList.add('hidden');
+            if (socket.connected) socket.emit('rfidStatus', { "command": "RFID/status" });
+            else displayStatus('No conectado al servidor.', 'error');
+        });
+        
+        function createAntennaControlBlock(antenna) {
+            const block = document.createElement('div');
+            block.className = 'antenna-block';
+            block.setAttribute('data-antenna-index', antenna.index); 
+            block.innerHTML = `
+                <h3>Antena ${antenna.index}</h3>
+                <div class="antenna-controls-row">
+                    <label for="power_${antenna.index}" class="inline-label">Potencia:</label>
+                    <input type="number" id="power_${antenna.index}" value="${antenna.power}" min="0" max="35" title="Potencia (0-35 dBm)">
+                    <div class="checkbox-container">
+                        <input type="checkbox" id="enable_${antenna.index}" ${antenna.enable ? 'checked' : ''}>
+                        <label for="enable_${antenna.index}" class="inline-label">Habilitada</label>
+                    </div>
+                </div>`;
+            return block;
+        }
+
+        getReaderMqttSettingsBtn.addEventListener('click', () => {
+            displayStatus('Obteniendo config. MQTT del lector...', 'info');
+            rawResponseContainer.classList.add('hidden');
+            if (socket.connected) socket.emit('getReaderMqttSettings');
+            else displayStatus('No conectado al servidor Node.js.', 'error');
+        });
+
+        setReaderMqttSettingsBtn.addEventListener('click', () => {
+            displayStatus('Enviando config. MQTT al lector...', 'info');
+            rawResponseContainer.classList.add('hidden');
+
+            const updatedParams = { ...originalReaderMqttParams }; 
+
+            updatedParams.host = readerMqttHostInput.value;
+            updatedParams.port = parseInt(readerMqttPortInput.value) || 1883; 
+            updatedParams.topic = readerMqttTopicInput.value;
+            updatedParams.topic_cmd = readerMqttTopicCmdInput.value;
+            updatedParams.qos = parseInt(readerMqttQosInput.value);
+            updatedParams.ssl = parseInt(readerMqttSslInput.value);
+            updatedParams.uid = readerMqttUserInput.value; 
+            updatedParams.pwd = readerMqttPassInput.value;
+            updatedParams.ca_crt = readerMqttCaCrtInput.value;
+            updatedParams.client_crt = readerMqttClientCrtInput.value;
+            updatedParams.client_key = readerMqttClientKeyInput.value;
+            updatedParams.client_pwd = readerMqttClientPwdInput.value;
+            updatedParams.interval = parseInt(readerMqttIntervalInput.value);
+            updatedParams.mask = parseInt(readerMqttMaskInput.value);
+            updatedParams.maxtags = parseInt(readerMqttMaxTagsInput.value);
+            updatedParams.cachetags = readerMqttCacheTagsCheckbox.checked;
+            updatedParams.mergetags = readerMqttMergeTagsCheckbox.checked;
+            updatedParams.path = readerMqttPathInput.value;
+            
+            const settingsPayload = {
+                enable: readerMqttEnableCheckbox.checked,
+                name: originalReaderMqttName, 
+                param: updatedParams
+            };
+
+            if (socket.connected) socket.emit('setReaderMqttSettings', settingsPayload);
+            else displayStatus('No conectado al servidor Node.js.', 'error');
+        });
+
+        socket.on('connect', () => {
+            displayStatus('Conectado al servidor de control RFID.', 'success');
+            console.log("Conectado al servidor Node.js vía Socket.IO. ID:", socket.id);
+            socket.emit('rfidStatus');
+            socket.emit('getAntennaPower');
+            socket.emit('getReaderMqttSettings');
+        });
+
+        socket.on('connect_error', (err) => {
+            displayStatus(`Error de conexión: ${err.message}. Verifica Node.js.`, 'error');
+            console.error(`Error de conexión Socket.IO:`, err);
+        });
+
+        socket.on('disconnect', (reason) => {
+            displayStatus(`Desconectado: ${reason}. Reintentando...`, 'warning');
+            console.warn(`Socket.IO desconectado: ${reason}`);
+        });
+        
+        socket.on('appStatus', (data) => {
+            console.info('AppStatus:', data.message);
+            if (data.message.includes("Comando") || data.message.includes("conectado") || data.message.includes("Broker") || data.message.includes("Enviando")) {
+                 displayStatus(data.message, 'info');
+            }
+        });
+
+        socket.on('antennaPowerData', (response) => {
+            console.log('antennaPowerData:', response);
+            displayRawResponse(response);
+            antennaDataContainer.innerHTML = ''; 
+            if (response.resultCode === 0 && Array.isArray(response.resultData)) {
+                displayStatus('Configuración de antenas recibida.', 'success');
+                if (response.resultData.length === 0) {
+                    antennaDataContainer.innerHTML = '<p>No se devolvieron datos para ninguna antena.</p>';
+                } else {
+                    response.resultData.forEach((antenna) => {
+                        antennaDataContainer.appendChild(createAntennaControlBlock(antenna));
+                    });
+                }
+            } else {
+                displayStatus(`Error obteniendo config. antenas: ${response.resultMsg || 'Respuesta inválida.'}`, 'error');
+            }
+        });
+
+        socket.on('antennaSetPowerStatus', (response) => { 
+            console.log('antennaSetPowerStatus:', response);
+            displayRawResponse(response.data || response);
+            if (response.success && response.data && response.data.resultCode === 0) {
+                displayStatus(response.data.resultMsg || 'Configuración de antenas establecida.', 'success');
+                setTimeout(() => socket.emit('getAntennaPower'), 1200); 
+            } else {
+                const errorMsg = (response.data && response.data.resultMsg) ? response.data.resultMsg : (response.message || 'Error desconocido.');
+                displayStatus(`Error al configurar antenas: ${errorMsg}`, 'error');
+            }
+        });
+
+        socket.on('rfidInfo', (response) => { 
+            console.log('rfidInfo:', response);
+            displayRawResponse(response);
+            if (response.resultCode === 0 && response.resultMsg) {
+                if (response.resultMsg.includes("RFID/start:start success")) {
+                    displayStatus('Lectura iniciada exitosamente.', 'success');
+                    readerStatusDisplay.textContent = 'ESTADO LECTOR: LEYENDO';
+                    readerStatusDisplay.className = 'status-success status-reading'; // Clase específica para LEYENDO
+                } else if (response.resultMsg.includes("RFID/stop:stop success")) {
+                    displayStatus('Lectura detenida exitosamente.', 'success');
+                    readerStatusDisplay.textContent = 'ESTADO LECTOR: DETENIDO';
+                    readerStatusDisplay.className = 'status-info status-not-reading'; // Clase específica para NO LEYENDO
+                } else if (response.resultMsg.includes("RFID/status:get rfid status success")) {
+                    const isReading = response.resultData === true;
+                    const statusText = isReading ? "ESTADO LECTOR: LEYENDO" : "ESTADO LECTOR: DETENIDO";
+                    readerStatusDisplay.textContent = statusText;
+                    readerStatusDisplay.className = isReading ? 'status-success status-reading' : 'status-info status-not-reading'; 
+                    displayStatus("Estado del lector actualizado.", "info");
+                } else {
+                    displayStatus(`Operación RFID exitosa: ${response.resultMsg}`, 'success');
+                }
+            } else {
+                 displayStatus(`Respuesta RFID inesperada: ${response.resultMsg || JSON.stringify(response)}`, 'warning');
+            }
+        });
+
+        socket.on('readerMqttSettingsData', (response) => {
+            console.log('ReaderMqttSettingsData:', response);
+            displayRawResponse(response);
+            if (response.resultCode === 0 && response.resultData && response.resultData.param) {
+                displayStatus('Configuración MQTT del lector recibida.', 'success');
+                const data = response.resultData;
+                const params = data.param;
+
+                originalReaderMqttParams = { ...params }; 
+                originalReaderMqttName = data.name || "task.name.const.mqtt";
+
+                readerMqttEnableCheckbox.checked = data.enable;
+                readerMqttHostInput.value = params.host || '';
+                readerMqttPortInput.value = params.port || '';
+                readerMqttTopicInput.value = params.topic || '';
+                readerMqttTopicCmdInput.value = params.topic_cmd || '';
+                readerMqttQosInput.value = typeof params.qos !== 'undefined' ? params.qos : 1;
+                readerMqttSslInput.value = typeof params.ssl !== 'undefined' ? params.ssl : 0;
+                readerMqttUserInput.value = params.uid || ''; 
+                readerMqttPassInput.value = params.pwd || '';
+                readerMqttCaCrtInput.value = params.ca_crt || '';
+                readerMqttClientCrtInput.value = params.client_crt || '';
+                readerMqttClientKeyInput.value = params.client_key || '';
+                readerMqttClientPwdInput.value = params.client_pwd || '';
+                readerMqttIntervalInput.value = typeof params.interval !== 'undefined' ? params.interval : 10;
+                readerMqttMaskInput.value = typeof params.mask !== 'undefined' ? params.mask : 0;
+                readerMqttMaxTagsInput.value = typeof params.maxtags !== 'undefined' ? params.maxtags : 999;
+                readerMqttCacheTagsCheckbox.checked = typeof params.cachetags === 'boolean' ? params.cachetags : false;
+                readerMqttMergeTagsCheckbox.checked = typeof params.mergetags === 'boolean' ? params.mergetags : false;
+                readerMqttPathInput.value = params.path || '';
+
+                readerMqttConfigForm.classList.remove('hidden');
+            } else {
+                displayStatus(`Error obteniendo config. MQTT del lector: ${response.resultMsg || 'Respuesta inválida.'}`, 'error');
+                readerMqttConfigForm.classList.add('hidden');
+            }
+        });
+
+        socket.on('readerMqttSettingsStatus', (response) => {
+            console.log('ReaderMqttSettingsStatus:', response);
+            displayRawResponse(response);
+            if (response.resultCode === 0) {
+                displayStatus('Configuración MQTT del lector establecida exitosamente.', 'success');
+            } else {
+                displayStatus(`Error al establecer config. MQTT del lector: ${response.resultMsg || 'Fallo desconocido.'}`, 'error');
+            }
+        });
+
+        socket.on('rfidError', (response) => {
+            console.error('rfidError:', response);
+            displayRawResponse(response);
+            displayStatus(`Error del dispositivo RFID: ${response.resultMsg || JSON.stringify(response)}`, 'error');
+        });
+
+        socket.on('appError', (error) => {
+            console.error('appError:', error);
+            displayRawResponse(error);
+            displayStatus(`Error en la aplicación: ${error.message}`, 'error');
+        });
+        
+        socket.on('appWarning', (warning) => {
+            console.warn('appWarning:', warning);
+            displayRawResponse(warning);
+        });
+
+        // Quitar los setTimeout para la carga inicial, ya que se hace en socket.on('connect')
+         setTimeout(() => {
+              displayStatus('Consultando estado del lector...', 'info');
+             rawResponseContainer.classList.add('hidden');
+             if (socket.connected) socket.emit('rfidStatus', { "command": "RFID/status" });
+             else displayStatus('No conectado al servidor.', 'error');
+         }, 1000);
+
+         setTimeout(() => {
+             displayStatus('Obteniendo config. MQTT del lector...', 'info');
+             rawResponseContainer.classList.add('hidden');
+             if (socket.connected) socket.emit('getReaderMqttSettings');
+             else displayStatus('No conectado al servidor Node.js.', 'error');
+         }, 2000);
+    </script>
+</body>
+</html>

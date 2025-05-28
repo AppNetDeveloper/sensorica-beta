@@ -16,135 +16,52 @@
             .modal { display: none !important; }
             .kpi-card-container, #searchInputContainer { display: none !important; }
         }
-        .live-cajas-hora {
-            /* font-style: italic; */
-            /* color: #2563eb; */
-        }
+        .live-cajas-hora {}
         .modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.5);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            padding: 1rem;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.5); display: flex;
+            justify-content: center; align-items: center; z-index: 1000; padding: 1rem;
         }
         .modal-content {
-            background-color: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            width: 100%;
-            max-width: 600px; 
+            background-color: white; padding: 20px; border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 600px;
         }
-        #chartModal .modal-content {
-            max-width: 850px; 
-        }
+        #chartModal .modal-content { max-width: 850px; }
         .edit-icon, .analyze-icon {
-            cursor: pointer;
-            margin-left: 8px;
-            color: #3b82f6; 
-            display: inline-flex; 
-            align-items: center;
+            cursor: pointer; margin-left: 8px; color: #3b82f6;
+            display: inline-flex; align-items: center;
         }
-        .edit-icon:hover, .analyze-icon:hover {
-            color: #2563eb; 
-        }
-        .hidden {
-            display: none;
-        }
-        .icon {
-            width: 24px;
-            height: 24px;
-            fill: currentColor;
-        }
+        .edit-icon:hover, .analyze-icon:hover { color: #2563eb; }
+        .hidden { display: none; }
+        .icon { width: 24px; height: 24px; fill: currentColor; }
         .spinner {
-            border: 4px solid rgba(0, 0, 0, 0.1);
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            border-left-color: #09f;
-            animation: spin 1s ease infinite;
-            margin: 20px auto;
+            border: 4px solid rgba(0, 0, 0, 0.1); width: 36px; height: 36px;
+            border-radius: 50%; border-left-color: #09f;
+            animation: spin 1s ease infinite; margin: 20px auto;
         }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .chart-container {
-            width: 100%;
-            height: 450px; 
-            overflow-x: auto; 
-        }
-        .chart-container svg {
-            display: block;
-            margin: auto;
-        }
-        .bar {
-            fill: steelblue;
-        }
-        .bar:hover {
-            fill: #2563eb;
-        }
-        .axis-label {
-            font-size: 0.8rem;
-        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .chart-container { width: 100%; height: 450px; overflow-x: auto; }
+        .chart-container svg { display: block; margin: auto; }
+        .bar { fill: steelblue; }
+        .bar:hover { fill: #2563eb; }
+        .axis-label { font-size: 0.8rem; }
         .tooltip {
-            position: absolute;
-            text-align: center;
-            padding: 6px;
-            font: 12px sans-serif;
-            background: lightsteelblue;
-            border: 0px;
-            border-radius: 8px;
-            pointer-events: none;
-            opacity: 0;
-            z-index: 1010; 
+            position: absolute; text-align: center; padding: 6px; font: 12px sans-serif;
+            background: lightsteelblue; border: 0px; border-radius: 8px;
+            pointer-events: none; opacity: 0; z-index: 1010;
         }
-        .pie-slice text {
-            font-size: 10px;
-            fill: white;
-        }
-        .btn-ia-local {
-            background-color: #4f46e5; /* indigo-600 */
-        }
-        .btn-ia-local:hover {
-            background-color: #4338ca; /* indigo-700 */
-        }
+        .pie-slice text { font-size: 10px; fill: white; }
+        .btn-ia-local { background-color: #4f46e5; }
+        .btn-ia-local:hover { background-color: #4338ca; }
         .kpi-card {
-            background-color: #f9fafb; /* gray-50 */
-            border: 1px solid #e5e7eb; /* gray-200 */
-            border-radius: 0.5rem;
-            padding: 1rem;
-            text-align: center;
-            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 0.5rem;
+            padding: 1rem; text-align: center;
+            box-shadow: 0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px 0 rgba(0,0,0,0.06);
         }
-        .kpi-title {
-            font-size: 0.875rem; /* text-sm */
-            color: #6b7280; /* gray-500 */
-            margin-bottom: 0.25rem;
-        }
-        .kpi-value {
-            font-size: 1.5rem; /* text-2xl */
-            font-weight: bold;
-            color: #1f2937; /* gray-800 */
-        }
-        .legend-item {
-            display: flex;
-            align-items: center;
-            margin-right: 15px;
-            font-size: 0.8rem;
-        }
-        .legend-color {
-            width: 12px;
-            height: 12px;
-            margin-right: 5px;
-            border: 1px solid #ccc;
-        }
+        .kpi-title { font-size: 0.875rem; color: #6b7280; margin-bottom: 0.25rem; }
+        .kpi-value { font-size: 1.5rem; font-weight: bold; color: #1f2937; }
+        .legend-item { display: flex; align-items: center; margin-right: 15px; font-size: 0.8rem; }
+        .legend-color { width: 12px; height: 12px; margin-right: 5px; border: 1px solid #ccc; }
     </style>
 </head>
 <body class="bg-gray-100 p-4 md:p-8">
@@ -153,16 +70,11 @@
     <div class="p-4 md:p-6 border-b border-gray-200">
         <div class="flex flex-col sm:flex-row justify-between sm:items-center mb-4 gap-4">
              <div class="flex items-center gap-3">
-                <h1 class="text-2xl font-bold text-gray-700">Listado de Trabajadores</h1>
-                <div id="lockButton" class="no-print cursor-pointer text-gray-600 hover:text-blue-600 transition-colors">
-                    <svg id="lockIcon" class="icon" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6zm-1.5-1a.5.5 0 00-.5-.5h-2a.5.5 0 00-.5.5v1a.5.5 0 00.5.5h2a.5.5 0 00.5-.5v-1z" clip-rule="evenodd" />
-                    </svg>
-                    <svg id="unlockIcon" class="icon hidden" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h1.5a.5.5 0 00.5-.5V8a.5.5 0 00-.5-.5h-2a.5.5 0 00-.5.5v.5a.5.5 0 00.5.5H9v1h4z" clip-rule="evenodd" />
-                         <path d="M9 5.5a3 3 0 00-3 3V9h1.5a.5.5 0 01.5.5v1a.5.5 0 01-.5.5H5v.5a3 3 0 003 3h.5a.5.5 0 00.5-.5V12a.5.5 0 00-.5-.5H8a.5.5 0 00-.5.5v.5a.5.5 0 00.5.5h.5a1.5 1.5 0 001.5-1.5v-.5a.5.5 0 00-.5-.5H9V9h1V5.5z"/>
-                    </svg>
-                </div>
+                 <h1 class="text-2xl font-bold text-gray-700">Listado de Trabajadores</h1>
+                 <div id="lockButton" class="no-print cursor-pointer text-gray-600 hover:text-blue-600 transition-colors">
+                     <svg id="lockIcon" class="icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6zm-1.5-1a.5.5 0 00-.5-.5h-2a.5.5 0 00-.5.5v1a.5.5 0 00.5.5h2a.5.5 0 00.5-.5v-1z" clip-rule="evenodd" /></svg>
+                     <svg id="unlockIcon" class="icon hidden" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h1.5a.5.5 0 00.5-.5V8a.5.5 0 00-.5-.5h-2a.5.5 0 00-.5.5v.5a.5.5 0 00.5.5H9v1h4z" clip-rule="evenodd" /><path d="M9 5.5a3 3 0 00-3 3V9h1.5a.5.5 0 01.5.5v1a.5.5 0 01-.5.5H5v.5a3 3 0 003 3h.5a.5.5 0 00.5-.5V12a.5.5 0 00-.5-.5H8a.5.5 0 00-.5.5v.5a.5.5 0 00.5.5h.5a1.5 1.5 0 001.5-1.5v-.5a.5.5 0 00-.5-.5H9V9h1V5.5z"/></svg>
+                 </div>
             </div>
              <div class="flex flex-col sm:flex-row sm:items-center gap-4 no-print">
                  <div class="flex items-center space-x-2">
@@ -181,62 +93,35 @@
                      </select>
                  </div>
                   <div class="flex items-center">
-                    <input id="filterPostsCheckbox" type="checkbox" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" checked>
-                    <label for="filterPostsCheckbox" class="ml-2 block text-sm text-gray-900">
-                        Solo operarios con asignaciones
-                    </label>
-                </div>
+                     <input id="filterPostsCheckbox" type="checkbox" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" checked>
+                     <label for="filterPostsCheckbox" class="ml-2 block text-sm text-gray-900">Solo operarios con asignaciones</label>
+                   </div>
              </div>
         </div>
-         <div class="flex justify-end space-x-2 no-print mb-4">
-            <button id="viewWorkerChartBtn" class="bg-teal-500 hover:bg-teal-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-150 ease-in-out hidden">
-                📊 Cajas/Trabajador
-            </button>
-            <button id="viewPostChartBtn" class="bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-150 ease-in-out hidden">
-                📊 Cajas/Puesto (Barras)
-            </button>
-            <button id="viewPostPieChartBtn" class="bg-sky-500 hover:bg-sky-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-150 ease-in-out hidden">
-                📊 Cajas/Puesto (Circular)
-            </button>
-             <button id="viewStackedBarChartBtn" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-150 ease-in-out hidden">
-                📊 Confección/Puesto
-            </button>
-            <button id="analizarTodosLocalAIBtn" class="btn-ia-local text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-150 ease-in-out hidden"> 
+         <div class="flex flex-wrap justify-end space-x-2 no-print mb-4">
+            <button id="viewWorkerChartBtn" class="bg-teal-500 hover:bg-teal-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-150 ease-in-out hidden">📊 Cajas/Trabajador</button>
+            <button id="viewPostChartBtn" class="bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-150 ease-in-out hidden">📊 Cajas/Puesto (Barras)</button>
+            <button id="viewPostPieChartBtn" class="bg-sky-500 hover:bg-sky-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-150 ease-in-out hidden">📊 Cajas/Puesto (Circular)</button>
+            <button id="viewStackedBarChartBtn" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-150 ease-in-out hidden">📊 Confección/Puesto</button>
+            <button id="analizarTodosLocalAIBtn" class="btn-ia-local text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-150 ease-in-out hidden">
                 <svg class="icon mr-2 inline-block" style="width:18px; height:18px;" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 15c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm0-10c-2.06 0-3.82 1.22-4.58 3h9.16c-.76-1.78-2.52-3-4.58-3z"/></svg>
-                Analizar Todos (IA Local)
+                Analizar Todos (IA)
             </button>
-            <button id="exportExcelBtn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed">
-                Exportar a Excel
-            </button>
-            <button id="printBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-150 ease-in-out">
-                Imprimir
-            </button>
+            <button id="exportExcelBtn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed">Exportar a Excel</button>
+            <button id="printBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-150 ease-in-out">Imprimir</button>
         </div>
     </div>
 
     <div id="kpiCardContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 md:p-6 no-print">
-        <div class="kpi-card">
-            <div class="kpi-title">Total Cajas Producidas</div>
-            <div id="kpiTotalCajas" class="kpi-value">-</div>
-        </div>
-        <div class="kpi-card">
-            <div class="kpi-title">Trabajadores Activos</div>
-            <div id="kpiTrabajadoresActivos" class="kpi-value">-</div>
-        </div>
-        <div class="kpi-card">
-            <div class="kpi-title">Promedio Cajas/Hora Global</div>
-            <div id="kpiAvgCajasHora" class="kpi-value">-</div>
-        </div>
-        <div class="kpi-card">
-            <div class="kpi-title">Puesto Más Productivo</div>
-            <div id="kpiPuestoMasProductivo" class="kpi-value">-</div>
-        </div>
+        <div class="kpi-card"><div class="kpi-title">Total Cajas Producidas</div><div id="kpiTotalCajas" class="kpi-value">-</div></div>
+        <div class="kpi-card"><div class="kpi-title">Trabajadores Activos</div><div id="kpiTrabajadoresActivos" class="kpi-value">-</div></div>
+        <div class="kpi-card"><div class="kpi-title">Promedio Cajas/Hora Global</div><div id="kpiAvgCajasHora" class="kpi-value">-</div></div>
+        <div class="kpi-card"><div class="kpi-title">Puesto Más Productivo</div><div id="kpiPuestoMasProductivo" class="kpi-value">-</div></div>
     </div>
 
     <div id="searchInputContainer" class="p-4 md:px-6 no-print">
         <input type="text" id="searchInput" placeholder="Buscar en tabla (Nombre, Código, Puesto, Confección)..." class="block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" autocomplete="off">
     </div>
-
 
     <div class="overflow-x-auto p-4 md:p-6">
         <table id="workersTable" class="min-w-full divide-y divide-gray-200">
@@ -244,9 +129,7 @@
                 <tr>
                     <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Codigo</th>
                     <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
-                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Unidades (Turno) <span id="totalUnidadesTurnoHeader" class="font-bold"></span>
-                    </th>
+                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unidades (Turno) <span id="totalUnidadesTurnoHeader" class="font-bold"></span></th>
                     <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Puesto</th>
                     <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Inicio Puesto</th>
                     <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fin Puesto</th>
@@ -256,15 +139,9 @@
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200" id="workersTableBody">
-                <tr id="loadingRow">
-                    <td colspan="9" class="px-4 py-4 text-center text-gray-500">Cargando datos...</td>
-                </tr>
-                <tr id="errorRow" class="hidden">
-                     <td colspan="9" class="px-4 py-4 text-center text-red-500"></td>
-                </tr>
-                 <tr id="noDataRow" class="hidden">
-                     <td colspan="9" class="px-4 py-4 text-center text-gray-500">No se encontraron datos para el periodo seleccionado.</td>
-                </tr>
+                <tr id="loadingRow"><td colspan="9" class="px-4 py-4 text-center text-gray-500">Cargando datos...</td></tr>
+                <tr id="errorRow" class="hidden"><td colspan="9" class="px-4 py-4 text-center text-red-500"></td></tr>
+                <tr id="noDataRow" class="hidden"><td colspan="9" class="px-4 py-4 text-center text-gray-500">No se encontraron datos.</td></tr>
             </tbody>
         </table>
     </div>
@@ -291,7 +168,7 @@
             <label for="editQuantityInput" class="block text-sm font-medium text-gray-700">Nueva cantidad:</label>
             <input type="number" id="editQuantityInput" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2 mb-2" placeholder="Cantidad" autocomplete="off">
             <p id="editQuantityError" class="text-red-500 text-sm mb-4 hidden">Valor inválido.</p>
-            <p id="editApiStatus" class="text-sm mt-2"></p> 
+            <p id="editApiStatus" class="text-sm mt-2"></p>
         </div>
         <div class="mt-4 flex justify-end space-x-2">
             <button type="button" id="cancelEditBtn" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 border border-gray-300 rounded-md shadow-sm">Cancelar</button>
@@ -300,18 +177,15 @@
     </div>
 </div>
 
-<div id="analysisModal" class="modal hidden no-print"> 
+<div id="analysisModal" class="modal hidden no-print">
     <div class="modal-content">
         <div class="flex justify-between items-center mb-4">
             <h3 id="analysisModalTitle" class="text-lg font-medium leading-6 text-gray-900">Análisis de Rendimiento</h3>
             <button type="button" id="closeAnalysisModalBtn" class="text-gray-400 hover:text-gray-600">
-                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
         </div>
-        <div id="analysisModalContent" class="text-sm text-gray-700 whitespace-pre-wrap overflow-y-auto" style="max-height: 60vh;">
-            </div>
+        <div id="analysisModalContent" class="text-sm text-gray-700 whitespace-pre-wrap overflow-y-auto" style="max-height: 60vh;"></div>
         <div id="analysisModalStatus" class="mt-3 text-sm text-gray-500"></div>
         <div class="mt-4 flex justify-end">
             <button type="button" id="okAnalysisModalBtn" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 border border-transparent rounded-md shadow-sm">OK</button>
@@ -320,17 +194,14 @@
 </div>
 
 <div id="chartModal" class="modal hidden no-print">
-    <div class="modal-content"> 
+    <div class="modal-content">
         <div class="flex justify-between items-center mb-4">
             <h3 id="chartModalTitle" class="text-lg font-medium leading-6 text-gray-900">📊 Gráfico de Producción</h3>
             <button type="button" id="closeChartModalBtn" class="text-gray-400 hover:text-gray-600">
-                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
         </div>
-        <div id="chartContainer" class="chart-container">
-        </div>
+        <div id="chartContainer" class="chart-container"></div>
         <div class="mt-4 flex justify-end">
             <button type="button" id="okChartModalBtn" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 border border-transparent rounded-md shadow-sm">OK</button>
         </div>
@@ -338,1358 +209,458 @@
 </div>
 <div id="tooltip" class="tooltip"></div>
 
-
 <script>
-    const apiBaseUrl = '/api/workers/all-list/completed'; 
-    const apiEditPostUrl = '/api/operator-post/update-count'; 
-    
+    // URLs de API para datos de trabajadores y edición
+    const apiBaseUrl = '/api/workers/all-list/completed';
+    const apiEditPostUrl = '/api/operator-post/update-count';
+
+    // URLs y configuración para la IA Local
     const localAISubmitTaskUrl = 'https://app.appnet.dev/api/ollama-tasks';
     const localAITaskStatusUrlBase = 'https://app.appnet.dev/api/ollama-tasks/';
-    const localAIModelName = 'gemma3:4b-it-qat'; 
+    const defaultLocalAIModelName = 'gemma3:4b-it-qat';
     const localAIApiToken = 'Bearer 5b3ce3597851110001cf6248ff7d660a725f48be464b74';
-    const localAICallbackUrl = 'https://tudominio.com/webhook/ollama-callback'; 
+    const localAICallbackUrl = 'https://tudominio.com/webhook/ollama-callback';
 
-    let tableBody, loadingRow, errorRow, errorCell, noDataRow, exportExcelBtn, printBtn, 
-        dateRangeSelect, filterPostsCheckbox, analizarTodosLocalAIBtn, 
-        viewWorkerChartBtn, viewPostChartBtn, viewPostPieChartBtn, viewStackedBarChartBtn, 
-        totalUnidadesTurnoHeader, 
-        lockButton, lockIcon, unlockIcon, passwordModal, passwordInput, passwordError, 
-        cancelPasswordBtn, submitPasswordBtn, editQuantityModal, editQuantityInput, 
-        editQuantityError, editApiStatus, cancelEditBtn, saveEditBtn, 
-        analysisModal, analysisModalTitle, analysisModalContent, analysisModalStatus, 
-        closeAnalysisModalBtn, okAnalysisModalBtn, 
-        chartModal, chartModalTitleEl, chartContainerEl, 
+    // Configuración para obtener prompts desde la API de Laravel
+    const apiPromptBaseUrl = '/api/ia-prompts/';
+    const promptApiKeys = {
+        individual: 'individual_worker_analysis_v3',
+        global: 'overall_team_analysis_v3'
+    };
+
+    const fallbackIndividualPrompt = "Analiza al trabajador: {{workerName}} con datos: {{postsDetails}}. Compara con: {{overallSummary}}";
+    const fallbackGlobalPrompt = "Analiza el rendimiento global con estos datos: {{overallSummary}}";
+
+    // Variables globales (declaraciones)
+    let tableBody, loadingRow, errorRow, errorCell, noDataRow, exportExcelBtn, printBtn,
+        dateRangeSelect, filterPostsCheckbox, analizarTodosLocalAIBtn,
+        viewWorkerChartBtn, viewPostChartBtn, viewPostPieChartBtn, viewStackedBarChartBtn,
+        totalUnidadesTurnoHeader,
+        lockButton, lockIcon, unlockIcon, passwordModal, passwordInput, passwordError,
+        cancelPasswordBtn, submitPasswordBtn, editQuantityModal, editQuantityInput,
+        editQuantityError, editApiStatus, cancelEditBtn, saveEditBtn,
+        analysisModal, analysisModalTitle, analysisModalContent, analysisModalStatus,
+        closeAnalysisModalBtn, okAnalysisModalBtn,
+        chartModal, chartModalTitleEl, chartContainerEl,
         tooltip,
         kpiCardContainer, kpiTotalCajas, kpiTrabajadoresActivos, kpiAvgCajasHora, kpiPuestoMasProductivo,
-        searchInput; 
+        searchInput;
 
     let originalWorkersData = [];
     let displayedPostRowsCount = 0;
-    let liveUpdateIntervalId = null; 
+    let liveUpdateIntervalId = null;
     let isLocked = true;
-    let currentEditContext = null; 
+    let currentEditContext = null;
     let currentLocalAITaskId = null;
     let localAIPollingIntervalId = null;
 
-
-    const dateTimeFormatOptions = {
-        year: 'numeric', month: 'numeric', day: 'numeric',
-        hour: 'numeric', minute: 'numeric', second: 'numeric',
-        hour12: false
-    };
+    const dateTimeFormatOptions = { year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: false };
     const dateFormatter = new Intl.DateTimeFormat(navigator.language || 'es-ES', dateTimeFormatOptions);
 
+    // --- Definiciones de Funciones ---
+
+    async function getPromptFromServer(promptApiKey) {
+        try {
+            const response = await fetch(`${apiPromptBaseUrl}${promptApiKey}`);
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error(`Error al obtener prompt ${promptApiKey} desde API: ${response.status} - ${errorText}. Usando prompt de fallback.`);
+                return {
+                    content: promptApiKey === promptApiKeys.individual ? fallbackIndividualPrompt : fallbackGlobalPrompt,
+                    modelName: defaultLocalAIModelName,
+                    error: true,
+                    errorMessage: `Error API ${response.status}: No se pudo cargar el prompt '${promptApiKey}'.`
+                };
+            }
+            const promptData = await response.json();
+            if (!promptData.content) {
+                console.error(`Prompt ${promptApiKey} obtenido de API pero sin contenido. Usando fallback.`);
+                return { content: promptApiKey === promptApiKeys.individual ? fallbackIndividualPrompt : fallbackGlobalPrompt, modelName: promptData.model_name || defaultLocalAIModelName, error: true, errorMessage: `Prompt '${promptApiKey}' sin contenido.` };
+            }
+            return { content: promptData.content, modelName: promptData.model_name || defaultLocalAIModelName, error: false };
+        } catch (error) {
+            console.error(`Error de red al obtener prompt ${promptApiKey}:`, error, ". Usando prompt de fallback.");
+            return { content: promptApiKey === promptApiKeys.individual ? fallbackIndividualPrompt : fallbackGlobalPrompt, modelName: defaultLocalAIModelName, error: true, errorMessage: `Error de red al cargar prompt '${promptApiKey}'.` };
+        }
+    }
+
     function showPasswordModal() {
-        passwordInput.value = '';
-        passwordError.classList.add('hidden');
-        passwordModal.classList.remove('hidden');
-        passwordInput.focus();
+        if(passwordModal && passwordInput && passwordError) {
+            passwordInput.value = '';
+            passwordError.classList.add('hidden');
+            passwordModal.classList.remove('hidden');
+            passwordInput.focus();
+        }
     }
 
     function hidePasswordModal() {
-        passwordModal.classList.add('hidden');
+        if(passwordModal) passwordModal.classList.add('hidden');
     }
-    
-    function updateHeaderButtonsState() {
-        const hasData = displayedPostRowsCount > 0; 
-        const actionButtons = [analizarTodosLocalAIBtn, viewWorkerChartBtn, viewPostChartBtn, viewPostPieChartBtn, viewStackedBarChartBtn];
 
+    function updateHeaderButtonsState() {
+        const hasData = displayedPostRowsCount > 0;
+        const actionButtons = [analizarTodosLocalAIBtn, viewWorkerChartBtn, viewPostChartBtn, viewPostPieChartBtn, viewStackedBarChartBtn];
         actionButtons.forEach(btn => {
             if (btn) {
-                if (isLocked || !hasData) {
-                    btn.classList.add('hidden');
-                    btn.disabled = true;
-                } else { 
-                    btn.classList.remove('hidden');
-                    btn.disabled = false;
-                }
+                if (isLocked || !hasData) { btn.classList.add('hidden'); btn.disabled = true; }
+                else { btn.classList.remove('hidden'); btn.disabled = false; }
             }
         });
-        if (exportExcelBtn) {
-            exportExcelBtn.disabled = !hasData;
-        }
-        if (kpiCardContainer) { 
-             if (isLocked || !hasData) {
-                kpiCardContainer.classList.add('hidden');
-            } else {
-                kpiCardContainer.classList.remove('hidden');
-            }
+        if (exportExcelBtn) exportExcelBtn.disabled = !hasData;
+        if (kpiCardContainer) {
+            if (isLocked || !hasData) kpiCardContainer.classList.add('hidden');
+            else kpiCardContainer.classList.remove('hidden');
         }
     }
-
 
     function toggleLockState(locked) {
         isLocked = locked;
         if (isLocked) {
-            lockIcon.classList.remove('hidden');
-            unlockIcon.classList.add('hidden');
+            if(lockIcon) lockIcon.classList.remove('hidden');
+            if(unlockIcon) unlockIcon.classList.add('hidden');
         } else {
-            lockIcon.classList.add('hidden');
-            unlockIcon.classList.remove('hidden');
+            if(lockIcon) lockIcon.classList.add('hidden');
+            if(unlockIcon) unlockIcon.classList.remove('hidden');
         }
-        updateHeaderButtonsState(); 
-        populateTable(originalWorkersData); 
+        updateHeaderButtonsState();
+        populateTable(originalWorkersData);
     }
     
     function showEditQuantityModal(workerClientId, postIndex, currentQuantity, quantityCell, cajasHoraCell, workerUnitsCell) {
-        currentEditContext = { workerClientId, postIndex, currentQuantity, quantityCell, cajasHoraCell, workerUnitsCell }; 
-        editQuantityInput.value = currentQuantity;
-        editQuantityError.classList.add('hidden');
-        editApiStatus.textContent = ''; 
-        editApiStatus.classList.remove('text-red-500', 'text-green-500');
-        editQuantityModal.classList.remove('hidden');
-        editQuantityInput.focus();
-        editQuantityInput.select();
-        saveEditBtn.disabled = false; 
-        saveEditBtn.textContent = 'Guardar';
+        currentEditContext = { workerClientId, postIndex, currentQuantity, quantityCell, cajasHoraCell, workerUnitsCell };
+        if(editQuantityInput) editQuantityInput.value = currentQuantity;
+        if(editQuantityError) editQuantityError.classList.add('hidden');
+        if(editApiStatus) { editApiStatus.textContent = ''; editApiStatus.classList.remove('text-red-500', 'text-green-500');}
+        if(editQuantityModal) editQuantityModal.classList.remove('hidden');
+        if(editQuantityInput) {editQuantityInput.focus(); editQuantityInput.select(); }
+        if(saveEditBtn) { saveEditBtn.disabled = false; saveEditBtn.textContent = 'Guardar'; }
     }
 
     function hideEditQuantityModal() {
-        editQuantityModal.classList.add('hidden');
+        if(editQuantityModal) editQuantityModal.classList.add('hidden');
         currentEditContext = null;
     }
 
-    async function handleSaveEdit() { 
+    async function handleSaveEdit() {
         const newQuantity = parseFloat(editQuantityInput.value);
         if (isNaN(newQuantity) || newQuantity < 0) {
-            editQuantityError.textContent = 'Por favor, introduce un número válido (0 o mayor).';
-            editQuantityError.classList.remove('hidden');
-            editApiStatus.textContent = '';
-            return;
+            if(editQuantityError) { editQuantityError.textContent = 'Número inválido.'; editQuantityError.classList.remove('hidden'); }
+            if(editApiStatus) editApiStatus.textContent = ''; return;
         }
-        editQuantityError.classList.add('hidden'); 
-
+        if(editQuantityError) editQuantityError.classList.add('hidden');
         if (currentEditContext) {
-            const { workerClientId, postIndex, quantityCell, cajasHoraCell, workerUnitsCell, currentQuantity } = currentEditContext;
-            
+            const { workerClientId, postIndex, quantityCell, cajasHoraCell, workerUnitsCell } = currentEditContext;
             const worker = originalWorkersData.find(w => w.client_id === workerClientId);
             if (!worker || !worker.operator_posts || !worker.operator_posts[postIndex]) {
-                editApiStatus.textContent = 'Error: No se encontró el trabajador o el puesto.';
-                editApiStatus.classList.add('text-red-500');
-                return;
+                if(editApiStatus) {editApiStatus.textContent = 'Error: Datos no encontrados.'; editApiStatus.classList.add('text-red-500');} return;
             }
-            
-            const post = worker.operator_posts[postIndex];
-            const postId = post.id; 
-
+            const post = worker.operator_posts[postIndex]; const postId = post.id;
             if (typeof postId === 'undefined') {
-                editApiStatus.textContent = 'Error: Falta el ID del puesto para la actualización.';
-                editApiStatus.classList.add('text-red-500');
-                console.error("Post ID is undefined for post:", post);
-                return;
+                if(editApiStatus) {editApiStatus.textContent = 'Error: Falta ID de puesto.'; editApiStatus.classList.add('text-red-500');} console.error("Post ID undefined:", post); return;
             }
-
-            saveEditBtn.disabled = true;
-            saveEditBtn.textContent = 'Guardando...';
-            editApiStatus.textContent = 'Actualizando cantidad en el servidor...';
-            editApiStatus.classList.remove('text-red-500', 'text-green-500');
-
-            const formData = new URLSearchParams();
-            formData.append('id', postId);
-            formData.append('count', newQuantity);
-
+            if(saveEditBtn) {saveEditBtn.disabled = true; saveEditBtn.textContent = 'Guardando...';}
+            if(editApiStatus) {editApiStatus.textContent = 'Actualizando...'; editApiStatus.classList.remove('text-red-500', 'text-green-500');}
+            const formData = new URLSearchParams(); formData.append('id', postId); formData.append('count', newQuantity);
             try {
-                const response = await fetch(apiEditPostUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Authorization': 'Bearer 915afe8b7fabc2ca8d759761b0fe159f88bf0f064be7e4cd6a1f99021eff4e3b',
-                    },
-                    body: formData 
-                });
-
-                if (!response.ok) {
-                    let errorMessage = `Error del servidor: ${response.status} ${response.statusText}`;
-                    try {
-                        const errorData = await response.json();
-                        errorMessage = errorData.message || errorMessage;
-                    } catch (e) {
-                        const textError = await response.text();
-                        if (textError) errorMessage = textError;
-                    }
-                    throw new Error(errorMessage);
-                }
-
+                const response = await fetch(apiEditPostUrl, { method: 'POST', headers: { 'Accept': 'application/json', 'Authorization': 'Bearer 915afe8b7fabc2ca8d759761b0fe159f88bf0f064be7e4cd6a1f99021eff4e3b' }, body: formData });
+                if (!response.ok) { let err = `Error Servidor: ${response.status}`; try { const eD = await response.json(); err = eD.message || err; } catch (e) { const tE = await response.text(); if(tE) err = tE; } throw new Error(err); }
                 const result = await response.json();
-
-                if (result.status === 'success') { 
-                    post.count = newQuantity; 
-
-                    quantityCell.childNodes[0].nodeValue = newQuantity + ' '; 
-                    const newCajasHora = calculateCajasHora(post.count, post.created_at, post.finish_at);
-                    cajasHoraCell.textContent = newCajasHora;
-
-                    if (cajasHoraCell.classList.contains('live-cajas-hora')) {
-                        cajasHoraCell.dataset.count = newQuantity;
-                    }
-
-                    const totalQuantitySum = worker.operator_posts.reduce((sum, p) => {
-                        const count = p.count ?? 0;
-                        return sum + (count > 0 ? count : 0);
-                    }, 0);
-                    workerUnitsCell.textContent = totalQuantitySum;
-                    
-                    editApiStatus.textContent = result.message || 'Cantidad actualizada correctamente.'; 
-                    editApiStatus.classList.remove('text-red-500'); 
-                    editApiStatus.classList.add('text-green-500');
-                    setTimeout(hideEditQuantityModal, 1500); 
-                    
-                    updateGrandTotalUnidades();
-                    updateKPICards(); 
-
-                } else {
-                    throw new Error(result.message || 'La API indicó un fallo pero no proporcionó un mensaje de estado "success".');
-                }
-
+                if (result.status === 'success') {
+                    post.count = newQuantity; if(quantityCell) quantityCell.childNodes[0].nodeValue = newQuantity + ' ';
+                    if(cajasHoraCell) cajasHoraCell.textContent = calculateCajasHora(post.count, post.created_at, post.finish_at);
+                    if (cajasHoraCell && cajasHoraCell.classList.contains('live-cajas-hora')) cajasHoraCell.dataset.count = newQuantity;
+                    const totalQtySum = worker.operator_posts.reduce((s, p) => s + ((p.count??0)>0?(p.count??0):0), 0); if(workerUnitsCell) workerUnitsCell.textContent = totalQtySum;
+                    if(editApiStatus) {editApiStatus.textContent = result.message || 'Actualizado.'; editApiStatus.classList.add('text-green-500');} setTimeout(hideEditQuantityModal, 1500);
+                    updateGrandTotalUnidades(); updateKPICards();
+                } else { throw new Error(result.message || 'API indicó fallo.'); }
             } catch (error) {
-                console.error('Error al actualizar el puesto del operador:', error);
-                editApiStatus.textContent = `Error al guardar: ${error.message}`;
-                editApiStatus.classList.remove('text-green-500'); 
-                editApiStatus.classList.add('text-red-500');
-            } finally {
-                saveEditBtn.disabled = false;
-                saveEditBtn.textContent = 'Guardar';
-            }
+                console.error('Error al guardar:', error); if(editApiStatus){editApiStatus.textContent = `Error: ${error.message}`; editApiStatus.classList.add('text-red-500');}
+            } finally { if(saveEditBtn){saveEditBtn.disabled = false; saveEditBtn.textContent = 'Guardar';} }
         }
     }
-
-    // --- Generic Analysis Modal Functions ---
-    function showAnalysisModal(title = "Análisis de Rendimiento (IA Local)") {
-        analysisModalTitle.textContent = title;
-        analysisModalContent.innerHTML = '<div class="spinner"></div>'; 
-        analysisModalStatus.textContent = `Generando análisis con IA Local...`; 
-        analysisModalStatus.classList.remove('text-red-500');
-        analysisModal.classList.remove('hidden');
+    
+    function showAnalysisModal(title = "Análisis de Rendimiento") {
+        if(analysisModalTitle) analysisModalTitle.textContent = title;
+        if(analysisModalContent) analysisModalContent.innerHTML = '<div class="spinner"></div>';
+        if(analysisModalStatus) { analysisModalStatus.textContent = `Generando análisis...`; analysisModalStatus.classList.remove('text-red-500');}
+        if(analysisModal) analysisModal.classList.remove('hidden');
     }
 
     function hideAnalysisModal() {
-        analysisModal.classList.add('hidden');
-        if (localAIPollingIntervalId) { 
-            clearInterval(localAIPollingIntervalId);
-            localAIPollingIntervalId = null;
-            currentLocalAITaskId = null;
-        }
+        if(analysisModal) analysisModal.classList.add('hidden');
+        if (localAIPollingIntervalId) { clearInterval(localAIPollingIntervalId); localAIPollingIntervalId = null; currentLocalAITaskId = null; }
     }
 
-    // --- IA Local (Task-based) Analysis Functions ---
+    function generateOverallSummaryTextForContext() {
+        const workersToAnalyze = filterDataByCheckbox(JSON.parse(JSON.stringify(originalWorkersData)));
+        if (workersToAnalyze.length === 0) return "No hay datos globales de trabajadores disponibles para comparación.";
+        let totalCajasGlobal = 0, totalHorasTrabajadasGlobal = 0, puestosConteo = {}, individualWorkerSummaries = [];
+        workersToAnalyze.forEach(worker => {
+            let workerCajas = 0, workerHoras = 0;
+            (worker.operator_posts || []).filter(p => (p.count ?? 0) > 0).forEach(post => {
+                const cantidad = post.count || 0; workerCajas += cantidad; totalCajasGlobal += cantidad;
+                if(post.rfid_reading?.name) puestosConteo[post.rfid_reading.name] = (puestosConteo[post.rfid_reading.name] || 0) + cantidad;
+                if (post.created_at) { const start = new Date(post.created_at), end = post.finish_at ? new Date(post.finish_at) : new Date(); if (end > start) { const dH = (end.getTime() - start.getTime()) / 3600000; workerHoras += dH; totalHorasTrabajadasGlobal += dH; }}
+            });
+            individualWorkerSummaries.push({name: worker.name || `ID ${worker.client_id}`, cajas: workerCajas, eficiencia: workerHoras > 0 ? (workerCajas / workerHoras).toFixed(2) : 'N/A'});
+        });
+        individualWorkerSummaries.sort((a, b) => b.cajas - a.cajas);
+        const topPerformers = individualWorkerSummaries.slice(0, Math.min(3, individualWorkerSummaries.length));
+        const lowPerformers = individualWorkerSummaries.slice(Math.max(0, individualWorkerSummaries.length - 3)).reverse();
+        const avgCajasHoraGlobal = totalHorasTrabajadasGlobal > 0 ? (totalCajasGlobal / totalHorasTrabajadasGlobal).toFixed(2) : 'N/A';
+        let puestosSummary = Object.entries(puestosConteo).sort(([,a],[,b])=>b-a).map(([n,c])=>`  - ${n}: ${c} cajas`).join('\n')||"  - Sin datos por puesto.";
+        let topSummary = topPerformers.map(w=>`  - ${w.name}: ${w.cajas} cajas (Ef: ${w.eficiencia} c/h)`).join('\n')||"  - N/A";
+        let lowSummary = lowPerformers.map(w=>`  - ${w.name}: ${w.cajas} cajas (Ef: ${w.eficiencia} c/h)`).join('\n')||"  - N/A";
+        return `- Trabajadores activos (con producción): ${workersToAnalyze.length}\n- Total Cajas Equipo: ${totalCajasGlobal}\n- Promedio Cajas/Hora Global: ${avgCajasHoraGlobal} c/h\n- Puestos con actividad: ${Object.keys(puestosConteo).length}\n- Distribución Cajas/Puesto:\n${puestosSummary}\n- Top Productores:\n${topSummary}\n- Menor Producción:\n${lowSummary}`.trim();
+    }
+
     async function fetchLocalAIWorkerAnalysis(worker) {
         const analysisTitle = `Análisis de ${worker.name || 'Desconocido'} (IA Local)`;
+        showAnalysisModal(analysisTitle);
+        const promptInfo = await getPromptFromServer(promptApiKeys.individual);
+        if (promptInfo.error) {
+            if(analysisModalContent) analysisModalContent.textContent = promptInfo.errorMessage || "Error al cargar prompt individual.";
+            if(analysisModalStatus) analysisModalStatus.textContent = "Fallo al cargar prompt."; return;
+        }
+        let promptTemplate = promptInfo.content; const modelToUse = promptInfo.modelName;
         const workerName = worker.name || 'Desconocido';
-        let workerTotalCajas = 0;
-        let workerTotalDurationHours = 0;
-        let activePostsCount = 0;
-
-        let postsDetails = "Este trabajador no tiene puestos registrados en este periodo o ninguno con cantidad > 0.";
-        if (worker.operator_posts && worker.operator_posts.length > 0) {
-            const activePosts = worker.operator_posts.filter(post => (post.count ?? 0) > 0);
-            activePostsCount = activePosts.length;
-            if (activePosts.length > 0) {
-                postsDetails = activePosts.map(post => {
-                    const cantidad = post.count || 0;
-                    workerTotalCajas += cantidad;
-                    const startDate = post.created_at ? new Date(post.created_at) : null;
-                    let endDate = post.finish_at ? new Date(post.finish_at) : null; 
-                    
-                    if (startDate && !endDate) { 
-                        endDate = new Date();
-                    }
-
-                    if (startDate && endDate && endDate > startDate) {
-                         workerTotalDurationHours += (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60);
-                    }
-                    const cajasHora = calculateCajasHora(cantidad, post.created_at, post.finish_at); 
-                    return `- Puesto: ${post.rfid_reading?.name || 'N/A'}, Confección: ${post.product_list?.name || 'N/A'}, Inicio: ${startDate ? dateFormatter.format(startDate) : 'N/A'}, Fin: ${post.finish_at ? dateFormatter.format(new Date(post.finish_at)) : 'Activo'}, Cantidad: ${cantidad}, Cajas/Hora: ${cajasHora}`;
+        let workerTotalCajas = 0, workerTotalDurationHours = 0, activePostsCount = 0;
+        let postsDetails = "Trabajador sin puestos con producción.";
+        if (worker.operator_posts) {
+            const activeP = worker.operator_posts.filter(p => (p.count ?? 0) > 0); activePostsCount = activeP.length;
+            if (activePostsCount > 0) {
+                postsDetails = activeP.map(p => {
+                    const cant = p.count || 0; workerTotalCajas += cant;
+                    const sD = p.created_at ? new Date(p.created_at) : null; let eD = p.finish_at ? new Date(p.finish_at) : (sD ? new Date() : null);
+                    if (sD && eD && eD > sD) workerTotalDurationHours += (eD.getTime() - sD.getTime()) / 3600000;
+                    return `- P: ${p.rfid_reading?.name||'N/A'}, Conf: ${p.product_list?.name||'N/A'}, I: ${sD?dateFormatter.format(sD):'N/A'}, F: ${p.finish_at?dateFormatter.format(new Date(p.finish_at)):'Activo'}, Q: ${cant}, C/h: ${calculateCajasHora(cant,p.created_at,p.finish_at)}`;
                 }).join('\n\n');
             }
         }
         const workerAvgCajasHora = workerTotalDurationHours > 0 ? (workerTotalCajas / workerTotalDurationHours).toFixed(2) : 'N/A';
-
-        const prompt = `Por favor, realiza un análisis DETALLADO y PROFUNDO del rendimiento del siguiente trabajador. Tu respuesta debe estar en español.
-
-Nombre del Trabajador: ${workerName}
-ID Cliente: ${worker.client_id || 'N/A'}
-
-Resumen de Actividad en el Periodo Seleccionado:
-- Número total de puestos trabajados con producción: ${activePostsCount}
-- Cajas totales producidas por este trabajador: ${workerTotalCajas}
-- Eficiencia promedio (Cajas/Hora) de este trabajador (calculada sobre duración de puestos): ${workerAvgCajasHora}
-
-Detalles de sus puestos con producción (cantidad > 0):
-${postsDetails}
-
-Instrucciones para tu análisis:
-1.  **Resumen General:** Comienza con un párrafo breve resumiendo el desempeño general del trabajador.
-2.  **Puntos Fuertes:** Identifica y describe claramente las fortalezas del trabajador (ej. alta productividad en ciertos puestos, consistencia, versatilidad si trabajó en muchos puestos, buena eficiencia promedio).
-3.  **Áreas de Mejora:** Basado en los datos (ej. baja productividad en algunos puestos, inactividad, baja eficiencia), sugiere áreas específicas donde el trabajador podría mejorar. Sé constructivo.
-4.  **Patrones Notables:**
-    * ¿Hay puestos donde es particularmente eficiente o ineficiente?
-    * ¿Muestra consistencia en su producción o hay mucha variabilidad?
-    * Si trabajó en múltiples puestos, ¿cómo se compara su rendimiento entre ellos?
-    * ¿Hay alguna relación entre el tipo de confección y su rendimiento?
-5.  **Sugerencias (opcional, si aplica):** Si los datos lo permiten, ofrece alguna sugerencia breve y accionable.
-
-Formato: Usa párrafos para el resumen y listas con viñetas para los puntos fuertes, áreas de mejora y patrones.
-Evita frases como "Basándome en estos datos" o "Aquí está el análisis". Ve directo al grano.
-Si los datos son insuficientes para un análisis profundo en algún área, indícalo brevemente.`;
-        await submitLocalAITask(prompt, analysisTitle);
+        const overallSummaryCtx = generateOverallSummaryTextForContext();
+        promptTemplate = promptTemplate.replace(/{{workerName}}/g, workerName).replace(/{{workerClientId}}/g, worker.client_id||'N/A').replace(/{{activePostsCount}}/g, activePostsCount).replace(/{{workerTotalCajas}}/g, workerTotalCajas).replace(/{{workerAvgCajasHora}}/g, workerAvgCajasHora).replace(/{{postsDetails}}/g, postsDetails).replace(/{{overallSummary}}/g, overallSummaryCtx);
+        await submitLocalAITask(promptTemplate, analysisTitle, modelToUse);
     }
 
     async function fetchLocalAIOverallAnalysis() {
         const analysisTitle = "Análisis Global de Trabajadores (IA Local)";
-        const workersToAnalyze = filterDataByCheckbox(JSON.parse(JSON.stringify(originalWorkersData)));
-        if (workersToAnalyze.length === 0) {
-            showAnalysisModal(analysisTitle); 
-            analysisModalContent.textContent = 'No hay trabajadores para análisis global con IA Local.';
-            analysisModalStatus.textContent = 'Análisis no disponible.';
-            return;
+        showAnalysisModal(analysisTitle);
+        const promptInfo = await getPromptFromServer(promptApiKeys.global);
+        if (promptInfo.error) {
+            if(analysisModalContent) analysisModalContent.textContent = promptInfo.errorMessage || "Error al cargar prompt global.";
+            if(analysisModalStatus) analysisModalStatus.textContent = "Fallo al cargar prompt."; return;
         }
-        
-        let overallSummary = "";
-        let totalCajasGlobal = 0;
-        let totalHorasTrabajadasGlobal = 0;
-        let puestosConteo = {};
-        let individualWorkerSummaries = [];
-        let topPerformers = []; 
-        let lowPerformers = [];  
-
-
-        workersToAnalyze.forEach(worker => {
-            let workerCajas = 0;
-            let workerHoras = 0;
-            if (worker.operator_posts && worker.operator_posts.length > 0) {
-                const activePosts = worker.operator_posts.filter(p => (p.count ?? 0) > 0);
-                if (activePosts.length > 0) {
-                    activePosts.forEach(post => {
-                        const cantidad = post.count || 0;
-                        workerCajas += cantidad;
-                        totalCajasGlobal += cantidad;
-                        if(post.rfid_reading?.name) {
-                            puestosConteo[post.rfid_reading.name] = (puestosConteo[post.rfid_reading.name] || 0) + cantidad;
-                        }
-                        if (post.created_at) {
-                            const start = new Date(post.created_at); 
-                            const end = post.finish_at ? new Date(post.finish_at) : new Date();
-                            if (end > start) { 
-                                const durationHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-                                workerHoras += durationHours;
-                                totalHorasTrabajadasGlobal += durationHours;
-                            }
-                        }
-                    });
-                }
-            }
-            const eficienciaTrabajador = workerHoras > 0 ? (workerCajas / workerHoras).toFixed(2) : 'N/A';
-            individualWorkerSummaries.push({name: worker.name || `ID ${worker.client_id}`, cajas: workerCajas, eficiencia: eficienciaTrabajador});
-        });
-        
-        individualWorkerSummaries.sort((a, b) => b.cajas - a.cajas); 
-        topPerformers = individualWorkerSummaries.slice(0, Math.min(3, individualWorkerSummaries.length));
-        lowPerformers = individualWorkerSummaries.slice(Math.max(0, individualWorkerSummaries.length - 3)).reverse();
-
-
-        const avgCajasHoraGlobal = totalHorasTrabajadasGlobal > 0 ? (totalCajasGlobal / totalHorasTrabajadasGlobal).toFixed(2) : 'N/A';
-        
-        let puestosConteoSummary = Object.entries(puestosConteo)
-            .sort(([,a],[,b]) => b-a) 
-            .map(([name, count]) => `  - ${name}: ${count} cajas`)
-            .join('\n');
-        if (!puestosConteoSummary) puestosConteoSummary = "  - No hay datos de producción por puesto.";
-
-        let topPerformersSummary = topPerformers.map(w => `  - ${w.name}: ${w.cajas} cajas (Eficiencia: ${w.eficiencia} cajas/h)`).join('\n');
-        if (!topPerformersSummary) topPerformersSummary = "  - N/A";
-        let lowPerformersSummary = lowPerformers.map(w => `  - ${w.name}: ${w.cajas} cajas (Eficiencia: ${w.eficiencia} cajas/h)`).join('\n');
-         if (!lowPerformersSummary) lowPerformersSummary = "  - N/A";
-
-
-        overallSummary = `
-Datos Globales del Periodo Seleccionado:
-- Número total de trabajadores activos (con producción): ${workersToAnalyze.length}
-- Total de Cajas Producidas por el equipo: ${totalCajasGlobal}
-- Promedio de Cajas por Hora Global del equipo: ${avgCajasHoraGlobal}
-- Número total de puestos de trabajo distintos con actividad: ${Object.keys(puestosConteo).length}
-- Distribución de Cajas Totales por Puesto:
-${puestosConteoSummary}
-- Trabajadores con mayor producción (Top 3 por cajas):
-${topPerformersSummary}
-- Trabajadores con menor producción (Bottom 3 por cajas, si aplica y son diferentes de los top):
-${lowPerformersSummary}
-`;
-
-        const prompt = `Por favor, realiza un ANÁLISIS GLOBAL DETALLADO del rendimiento para el conjunto de trabajadores, basado en los siguientes datos resumidos del periodo. Tu respuesta debe estar en español.
-
-${overallSummary}
-
-Instrucciones para tu análisis:
-1.  **Resumen Ejecutivo:** Comienza con un párrafo que resuma la productividad y eficiencia general del equipo.
-2.  **Observaciones Clave de Productividad:**
-    * Comenta sobre el volumen total de producción y la eficiencia promedio (Cajas/Hora Global). ¿Es buena, regular, necesita mejorar?
-3.  **Análisis de Puestos de Trabajo:**
-    * ¿Qué puestos son los más productivos en términos de volumen? ¿A qué podría deberse?
-    * ¿Hay puestos con notablemente baja producción? ¿Posibles causas?
-    * ¿La carga de trabajo parece estar bien distribuida entre los puestos o hay concentraciones?
-4.  **Distribución del Rendimiento entre Trabajadores (basado en el resumen de top/low performers):**
-    * ¿Se observa una gran disparidad en la producción individual o el rendimiento es relativamente homogéneo?
-    * ¿Hay indicios claros de un grupo de alto rendimiento y otro de bajo rendimiento? ¿Qué implicaciones podría tener esto?
-5.  **Posibles Cuellos de Botella o Ineficiencias:** Basado en los datos agregados (puestos, promedios), ¿puedes inferir posibles cuellos de botella o áreas generales de ineficiencia en el proceso?
-6.  **Sugerencias Estratégicas Generales:** Ofrece 2-3 sugerencias generales y accionables para optimizar el rendimiento del equipo, mejorar la distribución del trabajo, o potenciar a los trabajadores.
-
-Formato: Usa párrafos para el resumen y listas con viñetas para las observaciones y sugerencias.
-Evita frases como "Basándome en estos datos". Ve directo al análisis.`;
-        await submitLocalAITask(prompt, analysisTitle);
+        let promptTemplate = promptInfo.content; const modelToUse = promptInfo.modelName;
+        const overallSummaryText = generateOverallSummaryTextForContext();
+        if (overallSummaryText.startsWith("No hay datos globales")) {
+            if(analysisModalContent) analysisModalContent.textContent = 'No hay datos para análisis global.';
+            if(analysisModalStatus) analysisModalStatus.textContent = 'No disponible.'; return;
+        }
+        promptTemplate = promptTemplate.replace(/{{overallSummary}}/g, overallSummaryText);
+        await submitLocalAITask(promptTemplate, analysisTitle, modelToUse);
     }
 
-    async function submitLocalAITask(prompt, modalTitleText) {
-        showAnalysisModal(modalTitleText); 
-        analysisModalStatus.textContent = 'Enviando tarea a IA Local...';
-        console.log("Enviando tarea a IA Local en URL:", localAISubmitTaskUrl); 
-        
-        const payload = {
-            prompt: prompt,
-            model: localAIModelName,
-            callback_url: localAICallbackUrl 
-        };
-        console.log("Payload para IA Local (POST):", JSON.stringify(payload));
-
+    async function submitLocalAITask(prompt, modalTitleText, modelName) {
+        if(analysisModalStatus) analysisModalStatus.textContent = 'Enviando tarea a IA...';
+        const effectiveModelName = modelName || defaultLocalAIModelName;
+        const payload = { prompt, model: effectiveModelName, callback_url: localAICallbackUrl };
+        console.log("Payload IA:", JSON.stringify(payload));
         try {
-            const response = await fetch(localAISubmitTaskUrl, {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'Authorization': localAIApiToken
-                },
-                body: JSON.stringify(payload)
-            });
-            console.log("Respuesta cruda de envío de tarea (status):", response.status); 
-            
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error("Texto del error al enviar tarea:", errorText); 
-                throw new Error(`Error al enviar tarea a IA Local: ${response.status} ${response.statusText}. Respuesta: ${errorText}`);
-            }
+            const response = await fetch(localAISubmitTaskUrl, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'Authorization': localAIApiToken }, body: JSON.stringify(payload) });
+            if (!response.ok) { const eTxt = await response.text(); throw new Error(`Error envío IA: ${response.status}. ${eTxt}`); }
             const result = await response.json();
-            console.log("Resultado JSON de envío de tarea:", result); 
-
-            if (result.success && result.task_id) {
-                currentLocalAITaskId = result.task_id;
-                analysisModalStatus.textContent = `Tarea enviada (ID: ${currentLocalAITaskId}). Esperando resultado...`;
-                startLocalAIPolling(currentLocalAITaskId, modalTitleText);
-            } else {
-                throw new Error(result.message || 'Respuesta inesperada al enviar tarea a IA Local (faltan success o task_id).');
-            }
-        } catch (error) {
-            console.error('Error al enviar tarea a IA Local:', error.message); 
-            console.error("Detalles completos del error:", error); 
-            analysisModalContent.textContent = `No se pudo enviar la tarea de análisis a IA Local:\n${error.message}`;
-            analysisModalStatus.textContent = 'Error al enviar tarea.';
-            analysisModalStatus.classList.add('text-red-500');
-        }
+            if (result.success && result.task_id) { currentLocalAITaskId = result.task_id; if(analysisModalStatus) analysisModalStatus.textContent = `Tarea enviada (ID: ${currentLocalAITaskId}). Esperando...`; startLocalAIPolling(currentLocalAITaskId); }
+            else { throw new Error(result.message || 'Respuesta IA inesperada.'); }
+        } catch (error) { console.error('Error submitLocalAITask:', error); if(analysisModalContent) analysisModalContent.textContent = `Error envío IA:\n${error.message}`; if(analysisModalStatus){analysisModalStatus.textContent = 'Error envío.'; analysisModalStatus.classList.add('text-red-500');} }
     }
 
-    function startLocalAIPolling(taskId, modalTitleText) {
-        if (localAIPollingIntervalId) {
-            clearInterval(localAIPollingIntervalId);
-        }
-        pollLocalAITaskStatus(taskId, modalTitleText); 
-        localAIPollingIntervalId = setInterval(() => {
-            pollLocalAITaskStatus(taskId, modalTitleText);
-        }, 10000); 
+    function startLocalAIPolling(taskId) {
+        if (localAIPollingIntervalId) clearInterval(localAIPollingIntervalId);
+        pollLocalAITaskStatus(taskId); localAIPollingIntervalId = setInterval(() => pollLocalAITaskStatus(taskId), 10000);
     }
 
-    async function pollLocalAITaskStatus(taskId, modalTitleText) {
-        if (!taskId) return; 
-
-        console.log(`Consultando estado de tarea ${taskId} en IA Local...`);
-        analysisModalStatus.textContent = `Consultando estado de tarea ${taskId} (IA Local)...`;
+    async function pollLocalAITaskStatus(taskId) {
+        if (!taskId) return;
+        if(analysisModalStatus) analysisModalStatus.textContent = `Consultando tarea ${taskId} (IA)...`;
         const statusUrl = `${localAITaskStatusUrlBase}${taskId}`;
-        
         try {
-            const response = await fetch(statusUrl, {
-                method: 'GET',
-                headers: {
-                    'Accept': 'application/json',
-                    'Authorization': localAIApiToken
-                }
-            });
-            console.log(`Respuesta cruda de consulta de estado para tarea ${taskId} (status):`, response.status);
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error(`Texto del error al consultar estado de tarea ${taskId}:`, errorText);
-                analysisModalStatus.textContent = `Error al consultar estado de tarea ${taskId}. Reintentando...`;
-                analysisModalStatus.classList.add('text-red-500');
-                return; 
-            }
-
+            const response = await fetch(statusUrl, { headers: { 'Accept': 'application/json', 'Authorization': localAIApiToken } });
+            if (!response.ok) { if(analysisModalStatus){analysisModalStatus.textContent = `Error consulta tarea ${taskId}. Reintentando...`; analysisModalStatus.classList.add('text-red-500');} return; }
             const result = await response.json();
-            console.log(`Resultado JSON de consulta de estado para tarea ${taskId}:`, result);
-
-            if (result.task?.response) { 
-                analysisModalContent.textContent = result.task.response;
-                analysisModalStatus.textContent = 'Análisis (IA Local) completado.';
-                analysisModalStatus.classList.remove('text-red-500');
-                if (localAIPollingIntervalId) {
-                    clearInterval(localAIPollingIntervalId);
-                    localAIPollingIntervalId = null;
-                    currentLocalAITaskId = null;
-                }
-            } else if (result.task?.status && (result.task.status.toLowerCase() === 'processing' || result.task.status.toLowerCase() === 'queued' || result.task.status.toLowerCase() === 'pending')) {
-                analysisModalStatus.textContent = `Tarea ${taskId} (IA Local) sigue en proceso (${result.task.status})... Próxima consulta en 10s.`;
-                analysisModalStatus.classList.remove('text-red-500');
+            if (result.task?.response) {
+                if(analysisModalContent) analysisModalContent.textContent = result.task.response; if(analysisModalStatus){analysisModalStatus.textContent = 'Análisis (IA) completado.'; analysisModalStatus.classList.remove('text-red-500');}
+                if (localAIPollingIntervalId) { clearInterval(localAIPollingIntervalId); localAIPollingIntervalId = null; currentLocalAITaskId = null; }
+            } else if (result.task?.status && ['processing', 'queued', 'pending'].includes(result.task.status.toLowerCase())) {
+                if(analysisModalStatus){analysisModalStatus.textContent = `Tarea ${taskId} (IA) en proceso (${result.task.status})...`; analysisModalStatus.classList.remove('text-red-500');}
             } else if (result.task?.status && result.task.status.toLowerCase() === 'failed') {
-                analysisModalContent.textContent = `La tarea de análisis ${taskId} (IA Local) falló.` + (result.task.error ? `\nError: ${result.task.error}` : '');
-                analysisModalStatus.textContent = `Fallo en tarea ${taskId} (IA Local).`;
-                analysisModalStatus.classList.add('text-red-500');
-                if (localAIPollingIntervalId) {
-                    clearInterval(localAIPollingIntervalId);
-                    localAIPollingIntervalId = null;
-                    currentLocalAITaskId = null;
-                }
-            } else {
-                analysisModalStatus.textContent = `Esperando resultado de tarea ${taskId} (IA Local)... (Estado: ${result.task?.status || 'desconocido'}). Próxima consulta en 10s.`;
-                analysisModalStatus.classList.remove('text-red-500');
-            }
-
-        } catch (error) {
-            console.error(`Error al consultar estado de tarea ${taskId} (IA Local):`, error.message);
-            console.error("Detalles completos del error de polling:", error);
-            analysisModalStatus.textContent = `Error de red al consultar estado de tarea ${taskId}. Reintentando...`;
-            analysisModalStatus.classList.add('text-red-500');
-        }
+                if(analysisModalContent) analysisModalContent.textContent = `Tarea ${taskId} (IA) falló.` + (result.task.error ? `\nError: ${result.task.error}` : ''); if(analysisModalStatus){analysisModalStatus.textContent = `Fallo tarea ${taskId} (IA).`; analysisModalStatus.classList.add('text-red-500');}
+                if (localAIPollingIntervalId) { clearInterval(localAIPollingIntervalId); localAIPollingIntervalId = null; currentLocalAITaskId = null; }
+            } else { if(analysisModalStatus){analysisModalStatus.textContent = `Esperando tarea ${taskId} (IA)... (Estado: ${result.task?.status||'?'})...`; analysisModalStatus.classList.remove('text-red-500');}}
+        } catch (error) { console.error(`Error pollLocalAITaskStatus ${taskId}:`, error); if(analysisModalStatus){analysisModalStatus.textContent = `Error red consulta tarea ${taskId}. Reintentando...`; analysisModalStatus.classList.add('text-red-500');} }
     }
     
-    async function testOllamaConnectivity() { 
-        const testSubmitUrl = localAISubmitTaskUrl;
-        console.log("Probando envío de tarea de prueba a IA Local en:", testSubmitUrl);
-        analysisModalTitle.textContent = "Prueba de Conexión IA Local";
-        analysisModalContent.innerHTML = '<div class="spinner"></div>';
-        analysisModalStatus.textContent = "Enviando tarea de prueba...";
-        analysisModal.classList.remove('hidden');
-
-        const testPayload = {
-            prompt: "Dime un chiste corto.",
-            model: localAIModelName, 
-            callback_url: localAICallbackUrl 
-        };
-
-        try {
-            const response = await fetch(testSubmitUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'Authorization': localAIApiToken
-                },
-                body: JSON.stringify(testPayload)
-            });
-            analysisModalStatus.textContent = `Respuesta de envío de tarea: ${response.status}`;
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`Error al enviar tarea de prueba: ${response.status}. Respuesta: ${errorText}`);
-            }
-            const result = await response.json();
-            console.log("Respuesta de envío de tarea de prueba:", result);
-            if (result.success && result.task_id) {
-                analysisModalStatus.textContent = `Tarea de prueba enviada (ID: ${result.task_id}). Iniciando sondeo...`;
-                startLocalAIPolling(result.task_id, "Prueba de Conexión IA Local");
-            } else {
-                throw new Error(result.message || "Fallo al enviar tarea de prueba, task_id no recibido.");
-            }
-        } catch (error) {
-            console.error("Error en prueba de conectividad con IA Local:", error);
-            analysisModalContent.textContent = `Fallo la prueba de conectividad con IA Local: ${error.message}`;
-            analysisModalStatus.textContent = "Error en prueba.";
-            analysisModalStatus.classList.add('text-red-500');
-        }
-    }
-
-
-    // --- Chart Functions ---
     function showChartModal(chartType) {
+        if(!chartModal || !chartModalTitleEl || !chartContainerEl) return;
         chartModal.classList.remove('hidden');
-        if (chartType === 'workers') {
-            chartModalTitleEl.textContent = '📊 Producción Total por Trabajador';
-            renderProductionByWorkerChart();
-        } else if (chartType === 'postsBar') { 
-            chartModalTitleEl.textContent = '📊 Producción Total por Puesto (Barras)';
-            renderProductionByPostBarChart();
-        } else if (chartType === 'postsPie') { 
-            chartModalTitleEl.textContent = '📊 Distribución de Cajas por Puesto (Circular)';
-            renderPostDistributionPieChart();
-        } else if (chartType === 'confeccionPorPuesto') { 
-            chartModalTitleEl.textContent = '📊 Confección por Puesto (Apilado)';
-            renderConfeccionPorPuestoChart();
-        }
+        if (chartType === 'workers') { chartModalTitleEl.textContent = '📊 Producción Total por Trabajador'; renderProductionByWorkerChart(); }
+        else if (chartType === 'postsBar') { chartModalTitleEl.textContent = '📊 Producción Total por Puesto (Barras)'; renderProductionByPostBarChart(); }
+        else if (chartType === 'postsPie') { chartModalTitleEl.textContent = '📊 Distribución de Cajas por Puesto (Circular)'; renderPostDistributionPieChart(); }
+        else if (chartType === 'confeccionPorPuesto') { chartModalTitleEl.textContent = '📊 Confección por Puesto (Apilado)'; renderConfeccionPorPuestoChart(); }
     }
-
-    function hideChartModal() {
-        chartModal.classList.add('hidden');
-        d3.select("#chartContainer svg").remove(); 
-    }
-
+    function hideChartModal() { if(chartModal) chartModal.classList.add('hidden'); d3.select("#chartContainer svg").remove(); }
     function renderProductionByWorkerChart() {
-        d3.select("#chartContainer svg").remove(); 
-
+        d3.select("#chartContainer svg").remove();
         const dataForChart = filterDataByCheckbox(JSON.parse(JSON.stringify(originalWorkersData)))
-            .map(worker => {
-                const totalCajas = (worker.operator_posts || []).reduce((sum, post) => {
-                    return sum + (post.count || 0);
-                }, 0);
-                return { name: worker.name || `ID: ${worker.client_id || 'N/A'}`, value: totalCajas };
-            })
-            .filter(d => d.value > 0) 
-            .sort((a, b) => b.value - a.value); 
-
+            .map(worker => ({ name: worker.name || `ID: ${worker.client_id || 'N/A'}`, value: (worker.operator_posts || []).reduce((sum, post) => sum + (post.count || 0), 0) }))
+            .filter(d => d.value > 0).sort((a, b) => b.value - a.value);
         drawBarChart(dataForChart, "Total de Cajas Producidas por Trabajador", "Trabajadores", "Total de Cajas");
     }
-
-    function renderProductionByPostBarChart() { 
+    function renderProductionByPostBarChart() {
         d3.select("#chartContainer svg").remove();
         const postCounts = {};
-        const dataToProcess = filterDataByCheckbox(JSON.parse(JSON.stringify(originalWorkersData)));
-
-        dataToProcess.forEach(worker => {
-            (worker.operator_posts || []).forEach(post => {
-                if ((post.count || 0) > 0 && post.rfid_reading?.name) {
-                    const postName = post.rfid_reading.name;
-                    postCounts[postName] = (postCounts[postName] || 0) + post.count;
-                }
-            });
+        filterDataByCheckbox(JSON.parse(JSON.stringify(originalWorkersData))).forEach(worker => {
+            (worker.operator_posts || []).forEach(post => { if ((post.count || 0) > 0 && post.rfid_reading?.name) postCounts[post.rfid_reading.name] = (postCounts[post.rfid_reading.name] || 0) + post.count; });
         });
-
-        const dataForChart = Object.entries(postCounts)
-            .map(([name, value]) => ({ name, value }))
-            .filter(d => d.value > 0)
-            .sort((a,b) => b.value - a.value);
-
+        const dataForChart = Object.entries(postCounts).map(([name, value]) => ({ name, value })).filter(d => d.value > 0).sort((a,b) => b.value - a.value);
         drawBarChart(dataForChart, "Total de Cajas Producidas por Puesto", "Puestos de Trabajo", "Total de Cajas");
     }
-    
     function drawBarChart(chartData, titleText, xAxisLabelText, yAxisLabelText) {
-        if (chartData.length === 0) {
-            chartContainerEl.innerHTML = '<p class="text-center text-gray-500 p-4">No hay datos de producción para mostrar en el gráfico.</p>';
-            return;
-        }
-        chartContainerEl.innerHTML = ''; 
-
-
-        const containerWidth = chartContainerEl.clientWidth;
-        const containerHeight = 400; 
-        const margin = {top: 40, right: 30, bottom: 120, left: 70}; 
-        const width = Math.max(containerWidth - margin.left - margin.right, chartData.length * 40); 
-        const height = containerHeight - margin.top - margin.bottom;
-
-        const svg = d3.select("#chartContainer")
-            .append("svg")
-              .attr("width", width + margin.left + margin.right)
-              .attr("height", height + margin.top + margin.bottom)
-            .append("g")
-              .attr("transform", `translate(${margin.left},${margin.top})`);
-
-        const x = d3.scaleBand()
-          .range([ 0, width ])
-          .domain(chartData.map(d => d.name))
-          .padding(0.3); 
-        
-        svg.append("g")
-          .attr("transform", `translate(0,${height})`)
-          .call(d3.axisBottom(x))
-          .selectAll("text")
-            .attr("transform", "translate(-10,5)rotate(-45)")
-            .style("text-anchor", "end")
-            .style("font-size", "10px"); 
-
-        const y = d3.scaleLinear()
-          .domain([0, d3.max(chartData, d => d.value) || 10]) 
-          .nice() 
-          .range([ height, 0]);
-        svg.append("g")
-          .call(d3.axisLeft(y).ticks(Math.min(10, d3.max(chartData, d => d.value) || 10))); 
-
-        svg.selectAll(".bar") 
-          .data(chartData)
-          .join("rect")
-            .attr("class", "bar")
-            .attr("x", d => x(d.name))
-            .attr("y", d => y(d.value))
-            .attr("width", x.bandwidth())
-            .attr("height", d => height - y(d.value))
-            .on("mouseover", function(event, d) {
-                tooltip.transition().duration(200).style("opacity", .9);
-                tooltip.html(`<strong>${d.name}</strong><br/>Cajas: ${d.value}`)
-                    .style("left", (event.pageX + 10) + "px") 
-                    .style("top", (event.pageY - 15) + "px");
-                d3.select(this).style("fill", "#1d4ed8"); 
-            })
-            .on("mouseout", function(d) {
-                tooltip.transition().duration(500).style("opacity", 0);
-                d3.select(this).style("fill", "steelblue"); 
-            });
-        
-        svg.append("text")
-            .attr("x", width / 2)
-            .attr("y", 0 - (margin.top / 2) - 5) 
-            .attr("text-anchor", "middle")
-            .style("font-size", "16px")
-            .style("font-weight", "bold")
-            .text(titleText);
-
-        svg.append("text")
-            .attr("transform", "rotate(-90)")
-            .attr("y", 0 - margin.left + 15) 
-            .attr("x",0 - (height / 2))
-            .attr("dy", "1em")
-            .style("text-anchor", "middle")
-            .attr("class", "axis-label")
-            .text(yAxisLabelText);
-
-        svg.append("text")             
-            .attr("transform", `translate(${width/2}, ${height + margin.bottom - 10})`) 
-            .style("text-anchor", "middle")
-            .attr("class", "axis-label")
-            .text(xAxisLabelText);
+        if (!chartContainerEl) return;
+        if (chartData.length === 0) { chartContainerEl.innerHTML = '<p class="text-center text-gray-500 p-4">No hay datos para mostrar.</p>'; return; }
+        chartContainerEl.innerHTML = '';
+        const containerWidth = chartContainerEl.clientWidth, containerHeight = 400;
+        const margin = {top: 40, right: 30, bottom: 120, left: 70};
+        const width = Math.max(containerWidth - margin.left - margin.right, chartData.length * 40), height = containerHeight - margin.top - margin.bottom;
+        const svg = d3.select("#chartContainer").append("svg").attr("width", width + margin.left + margin.right).attr("height", height + margin.top + margin.bottom).append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+        const x = d3.scaleBand().range([0, width]).domain(chartData.map(d => d.name)).padding(0.3);
+        svg.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(x)).selectAll("text").attr("transform", "translate(-10,5)rotate(-45)").style("text-anchor", "end").style("font-size", "10px");
+        const y = d3.scaleLinear().domain([0, d3.max(chartData, d => d.value) || 10]).nice().range([height, 0]);
+        svg.append("g").call(d3.axisLeft(y).ticks(Math.min(10, d3.max(chartData, d => d.value) || 10)));
+        svg.selectAll(".bar").data(chartData).join("rect").attr("class", "bar").attr("x", d => x(d.name)).attr("y", d => y(d.value)).attr("width", x.bandwidth()).attr("height", d => height - y(d.value))
+            .on("mouseover", function(event, d) { if(tooltip){tooltip.transition().duration(200).style("opacity", .9); tooltip.html(`<strong>${d.name}</strong><br/>Cajas: ${d.value}`).style("left", (event.pageX + 10) + "px").style("top", (event.pageY - 15) + "px");} d3.select(this).style("fill", "#1d4ed8"); })
+            .on("mouseout", function() { if(tooltip)tooltip.transition().duration(500).style("opacity", 0); d3.select(this).style("fill", "steelblue"); });
+        svg.append("text").attr("x", width / 2).attr("y", 0 - (margin.top / 2) - 5).attr("text-anchor", "middle").style("font-size", "16px").style("font-weight", "bold").text(titleText);
+        svg.append("text").attr("transform", "rotate(-90)").attr("y", 0 - margin.left + 15).attr("x",0 - (height / 2)).attr("dy", "1em").style("text-anchor", "middle").attr("class", "axis-label").text(yAxisLabelText);
+        svg.append("text").attr("transform", `translate(${width/2}, ${height + margin.bottom - 10})`).style("text-anchor", "middle").attr("class", "axis-label").text(xAxisLabelText);
     }
-
     function renderPostDistributionPieChart() {
+        if (!chartContainerEl) return;
         d3.select("#chartContainer svg").remove();
         const postCounts = {};
-        const dataToProcess = filterDataByCheckbox(JSON.parse(JSON.stringify(originalWorkersData)));
-
-        dataToProcess.forEach(worker => {
-            (worker.operator_posts || []).forEach(post => {
-                if ((post.count || 0) > 0 && post.rfid_reading?.name) {
-                    const postName = post.rfid_reading.name;
-                    postCounts[postName] = (postCounts[postName] || 0) + post.count;
-                }
-            });
-        });
-
-        const dataForChart = Object.entries(postCounts)
-            .map(([name, value]) => ({ name, value }))
-            .filter(d => d.value > 0)
-            .sort((a,b) => b.value - a.value);
-
-        if (dataForChart.length === 0) {
-            chartContainerEl.innerHTML = '<p class="text-center text-gray-500 p-4">No hay datos de producción por puesto para mostrar.</p>';
-            return;
-        }
-        chartContainerEl.innerHTML = ''; 
-
-        const containerWidth = chartContainerEl.clientWidth;
-        const containerHeight = 400;
-        const margin = 40;
-        const radius = Math.min(containerWidth, containerHeight) / 2 - margin;
-
-        const svg = d3.select("#chartContainer")
-            .append("svg")
-                .attr("width", containerWidth)
-                .attr("height", containerHeight)
-            .append("g")
-                .attr("transform", `translate(${containerWidth / 2}, ${containerHeight / 2})`);
-
-        const color = d3.scaleOrdinal(d3.schemeCategory10);
-
-        const pie = d3.pie()
-            .value(d => d.value)
-            .sort(null); 
-
-        const data_ready = pie(dataForChart);
-
-        const arc = d3.arc()
-            .innerRadius(0)
-            .outerRadius(radius);
-        
-        const outerArc = d3.arc()
-            .innerRadius(radius * 0.9)
-            .outerRadius(radius * 0.9);
-
-
-        svg.selectAll('allSlices')
-            .data(data_ready)
-            .join('path')
-            .attr('d', arc)
-            .attr('fill', d => color(d.data.name))
-            .attr("stroke", "white")
-            .style("stroke-width", "2px")
-            .style("opacity", 0.7)
-            .on("mouseover", function(event, d) {
-                d3.select(this).style("opacity", 1);
-                tooltip.transition().duration(200).style("opacity", .9);
-                const percent = (d.data.value / d3.sum(dataForChart, item => item.value) * 100).toFixed(1);
-                tooltip.html(`<strong>${d.data.name}</strong><br/>Cajas: ${d.data.value}<br/>(${percent}%)`)
-                    .style("left", (event.pageX + 10) + "px")
-                    .style("top", (event.pageY - 15) + "px");
-            })
-            .on("mouseout", function(d) {
-                d3.select(this).style("opacity", 0.7);
-                tooltip.transition().duration(500).style("opacity", 0);
-            });
-
-        svg.selectAll('allLabels')
-            .data(data_ready)
-            .join('text')
-            .attr('class', 'pie-slice')
-            .text(d => { 
-                const percent = (d.data.value / d3.sum(dataForChart, item => item.value) * 100);
-                return percent > 5 ? `${d.data.name.substring(0,10)}... (${percent.toFixed(1)}%)` : ''; 
-            }) 
-            .attr('transform', d => {
-                const pos = outerArc.centroid(d);
-                const midangle = d.startAngle + (d.endAngle - d.startAngle) / 2;
-                pos[0] = radius * 0.95 * (midangle < Math.PI ? 1 : -1); 
-                return `translate(${pos})`;
-            })
-            .style('text-anchor', d => {
-                const midangle = d.startAngle + (d.endAngle - d.startAngle) / 2;
-                return (midangle < Math.PI ? 'start' : 'end');
-            })
-            .style('font-size', '9px')
-            .style('fill', '#333');
-    }
-
-    function renderConfeccionPorPuestoChart() {
-        d3.select("#chartContainer svg").remove();
-        const dataToProcess = filterDataByCheckbox(JSON.parse(JSON.stringify(originalWorkersData)));
-
-        if (dataToProcess.length === 0) {
-            chartContainerEl.innerHTML = '<p class="text-center text-gray-500 p-4">No hay datos para mostrar el gráfico de confección por puesto.</p>';
-            return;
-        }
+        filterDataByCheckbox(JSON.parse(JSON.stringify(originalWorkersData))).forEach(worker => { (worker.operator_posts || []).forEach(post => { if ((post.count || 0) > 0 && post.rfid_reading?.name) postCounts[post.rfid_reading.name] = (postCounts[post.rfid_reading.name] || 0) + post.count; }); });
+        const dataForChart = Object.entries(postCounts).map(([name, value]) => ({ name, value })).filter(d => d.value > 0).sort((a,b) => b.value - a.value);
+        if (dataForChart.length === 0) { chartContainerEl.innerHTML = '<p class="text-center text-gray-500 p-4">No hay datos para mostrar.</p>'; return; }
         chartContainerEl.innerHTML = '';
-
-        const aggregatedData = {};
-        const allConfecciones = new Set();
-
-        dataToProcess.forEach(worker => {
-            (worker.operator_posts || []).forEach(post => {
-                if ((post.count || 0) > 0 && post.rfid_reading?.name && post.product_list?.name) {
-                    const puestoName = post.rfid_reading.name;
-                    const confeccionName = post.product_list.name;
-                    allConfecciones.add(confeccionName);
-
-                    if (!aggregatedData[puestoName]) {
-                        aggregatedData[puestoName] = {};
-                    }
-                    aggregatedData[puestoName][confeccionName] = (aggregatedData[puestoName][confeccionName] || 0) + post.count;
-                }
-            });
-        });
-
-        const confeccionKeys = Array.from(allConfecciones).sort(); 
-
-        const chartData = Object.entries(aggregatedData).map(([puesto, confecciones]) => {
-            const row = { puesto: puesto };
-            confeccionKeys.forEach(conKey => {
-                row[conKey] = confecciones[conKey] || 0;
-            });
-            return row;
-        }).sort((a,b) => { 
-            const totalA = d3.sum(confeccionKeys, key => a[key]);
-            const totalB = d3.sum(confeccionKeys, key => b[key]);
-            return totalB - totalA;
-        });
-
-
-        if (chartData.length === 0) {
-            chartContainerEl.innerHTML = '<p class="text-center text-gray-500 p-4">No hay datos de producción con confección y puesto para mostrar.</p>';
-            return;
-        }
-
-        const stack = d3.stack().keys(confeccionKeys);
-        const series = stack(chartData);
-
-        const containerWidth = chartContainerEl.clientWidth;
-        const containerHeight = 400;
-        const margin = {top: 40, right: 30, bottom: 120, left: 70};
-        const width = Math.max(containerWidth - margin.left - margin.right, chartData.length * 50); 
-        const height = containerHeight - margin.top - margin.bottom;
-
-        const svg = d3.select("#chartContainer")
-            .append("svg")
-            .attr("width", width + margin.left + margin.right)
-            .attr("height", height + margin.top + margin.bottom)
-            .append("g")
-            .attr("transform", `translate(${margin.left},${margin.top})`);
-
-        const x = d3.scaleBand()
-            .domain(chartData.map(d => d.puesto))
-            .range([0, width])
-            .padding(0.2);
-
-        const y = d3.scaleLinear()
-            .domain([0, d3.max(series, d => d3.max(d, d => d[1])) || 10]).nice()
-            .range([height, 0]);
-
-        const color = d3.scaleOrdinal(d3.schemeCategory10).domain(confeccionKeys);
-
-        svg.append("g")
-            .selectAll("g")
-            .data(series)
-            .join("g")
-                .attr("fill", d => color(d.key))
-            .selectAll("rect")
-            .data(d => d)
-            .join("rect")
-                .attr("x", d => x(d.data.puesto))
-                .attr("y", d => y(d[1]))
-                .attr("height", d => Math.max(0, y(d[0]) - y(d[1]))) 
-                .attr("width", x.bandwidth())
-            .on("mouseover", function(event, d) {
-                const parentData = d3.select(this.parentNode).datum();
-                const confeccionName = parentData.key;
-                const value = d.data[confeccionName];
-                tooltip.transition().duration(200).style("opacity", .9);
-                tooltip.html(`<strong>Puesto:</strong> ${d.data.puesto}<br/><strong>Confección:</strong> ${confeccionName}<br/><strong>Cajas:</strong> ${value}`)
-                    .style("left", (event.pageX + 10) + "px")
-                    .style("top", (event.pageY - 15) + "px");
-                d3.select(this).style("stroke", "black").style("stroke-width", 1.5);
-            })
-            .on("mouseout", function(d) {
-                tooltip.transition().duration(500).style("opacity", 0);
-                d3.select(this).style("stroke", "none");
-            });
-
-        svg.append("g")
-            .attr("transform", `translate(0,${height})`)
-            .call(d3.axisBottom(x))
-            .selectAll("text")
-                .attr("transform", "translate(-10,5)rotate(-45)")
-                .style("text-anchor", "end");
-
-        svg.append("g")
-            .call(d3.axisLeft(y).ticks(Math.min(10, d3.max(series, d => d3.max(d, d => d[1])) || 10)));
-
-        const legend = svg.append("g")
-            .attr("font-family", "sans-serif")
-            .attr("font-size", 10)
-            .attr("text-anchor", "start") 
-            .attr("transform", `translate(${width - margin.right - 100}, ${-margin.top + 10})`) 
-            .selectAll("g")
-            .data(confeccionKeys.slice()) 
-            .join("g")
-                .attr("transform", (d, i) => `translate(0,${i * 20})`);
-
-        legend.append("rect")
-            .attr("x", 0) 
-            .attr("width", 19)
-            .attr("height", 19)
-            .attr("fill", color);
-
-        legend.append("text")
-            .attr("x", 24) 
-            .attr("y", 9.5)
-            .attr("dy", "0.35em")
-            .text(d => d);
-        
-        svg.append("text")
-            .attr("x", width / 2)
-            .attr("y", 0 - (margin.top / 2) - 5) 
-            .attr("text-anchor", "middle")
-            .style("font-size", "16px")
-            .style("font-weight", "bold")
-            .text("Producción de Confecciones por Puesto");
+        const cW = chartContainerEl.clientWidth, cH = 400, mP = 40, r = Math.min(cW,cH)/2-mP;
+        const svg = d3.select("#chartContainer").append("svg").attr("width",cW).attr("height",cH).append("g").attr("transform",`translate(${cW/2},${cH/2})`);
+        const color = d3.scaleOrdinal(d3.schemeCategory10); const pie=d3.pie().value(d=>d.value).sort(null); const dataR=pie(dataForChart);
+        const arc=d3.arc().innerRadius(0).outerRadius(r); const oA=d3.arc().innerRadius(r*0.9).outerRadius(r*0.9);
+        svg.selectAll('allSlices').data(dataR).join('path').attr('d',arc).attr('fill',d=>color(d.data.name)).attr("stroke","white").style("stroke-width","2px").style("opacity",0.7)
+            .on("mouseover",function(e,d){d3.select(this).style("opacity",1); if(tooltip){tooltip.transition().duration(200).style("opacity",.9);const p=(d.data.value/d3.sum(dataForChart,i=>i.value)*100).toFixed(1);tooltip.html(`<strong>${d.data.name}</strong><br/>Cajas: ${d.data.value}<br/>(${p}%)`).style("left",(e.pageX+10)+"px").style("top",(e.pageY-15)+"px");}})
+            .on("mouseout",function(){d3.select(this).style("opacity",0.7); if(tooltip)tooltip.transition().duration(500).style("opacity",0);});
+        svg.selectAll('allLabels').data(dataR).join('text').attr('class','pie-slice').text(d=>{const p=(d.data.value/d3.sum(dataForChart,i=>i.value)*100);return p>5?`${d.data.name.substring(0,10)}... (${p.toFixed(1)}%)`:'';}).attr('transform',d=>{const pos=oA.centroid(d);const mid=d.startAngle+(d.endAngle-d.startAngle)/2;pos[0]=r*0.95*(mid<Math.PI?1:-1);return `translate(${pos})`;}).style('text-anchor',d=>(d.startAngle+(d.endAngle-d.startAngle)/2<Math.PI?'start':'end')).style('font-size','9px').style('fill','#333');
+    }
+    function renderConfeccionPorPuestoChart() {
+        if (!chartContainerEl) return;
+        d3.select("#chartContainer svg").remove();
+        const dataP = filterDataByCheckbox(JSON.parse(JSON.stringify(originalWorkersData))); if(dataP.length===0){chartContainerEl.innerHTML='<p class="tc g5 p4">No data.</p>';return;} chartContainerEl.innerHTML='';
+        const aggD={},allC=new Set(); dataP.forEach(w=>(w.operator_posts||[]).forEach(p=>{if((p.count||0)>0&&p.rfid_reading?.name&&p.product_list?.name){const pst=p.rfid_reading.name,cnf=p.product_list.name;allC.add(cnf);if(!aggD[pst])aggD[pst]={};aggD[pst][cnf]=(aggD[pst][cnf]||0)+p.count;}}));
+        const cK=Array.from(allC).sort(); constcD=Object.entries(aggD).map(([p,c])=>{const r={puesto:p};cK.forEach(k=>r[k]=c[k]||0);return r;}).sort((a,b)=>d3.sum(cK,k=>b[k])-d3.sum(cK,k=>a[k]));
+        if(cD.length===0){chartContainerEl.innerHTML='<p class="tc g5 p4">No data for confeccion/puesto.</p>';return;}
+        const stack=d3.stack().keys(cK),series=stack(cD); const cW=chartContainerEl.clientWidth,cH=400,m={top:40,right:30,bottom:120,left:70},wd=Math.max(cW-m.left-m.right,cD.length*50),ht=cH-m.top-m.bottom;
+        const svg=d3.select("#chartContainer").append("svg").attr("width",wd+m.left+m.right).attr("height",ht+m.top+m.bottom).append("g").attr("transform",`translate(${m.left},${m.top})`);
+        const x=d3.scaleBand().domain(cD.map(d=>d.puesto)).range([0,wd]).padding(0.2); const y=d3.scaleLinear().domain([0,d3.max(series,d=>d3.max(d,d=>d[1]))||10]).nice().range([ht,0]);
+        const clr=d3.scaleOrdinal(d3.schemeCategory10).domain(cK);
+        svg.append("g").selectAll("g").data(series).join("g").attr("fill",d=>clr(d.key)).selectAll("rect").data(d=>d).join("rect").attr("x",d=>x(d.data.puesto)).attr("y",d=>y(d[1])).attr("height",d=>Math.max(0,y(d[0])-y(d[1]))).attr("width",x.bandwidth())
+        .on("mouseover",function(e,d){const pD=d3.select(this.parentNode).datum(),cN=pD.key,v=d.data[cN];if(tooltip){tooltip.transition().duration(200).style("opacity",.9);tooltip.html(`<strong>P:</strong> ${d.data.puesto}<br/><strong>C:</strong> ${cN}<br/><strong>Q:</strong> ${v}`).style("left",(e.pageX+10)+"px").style("top",(e.pageY-15)+"px");}d3.select(this).style("stroke","black").style("stroke-width",1.5);})
+        .on("mouseout",function(){if(tooltip)tooltip.transition().duration(500).style("opacity",0);d3.select(this).style("stroke","none");});
+        svg.append("g").attr("transform",`translate(0,${ht})`).call(d3.axisBottom(x)).selectAll("text").attr("transform","translate(-10,5)rotate(-45)").style("text-anchor","end");
+        svg.append("g").call(d3.axisLeft(y).ticks(Math.min(10,d3.max(series,d=>d3.max(d,d=>d[1]))||10)));
+        const lgd=svg.append("g").attr("font-family","sans-serif").attr("font-size",10).attr("text-anchor","start").attr("transform",`translate(${wd-m.right-(cK.length>5?120:100)},${-m.top+10})`).selectAll("g").data(cK.slice()).join("g").attr("transform",(d,i)=>`translate(0,${i*20})`);
+        lgd.append("rect").attr("x",0).attr("width",19).attr("height",19).attr("fill",clr); lgd.append("text").attr("x",24).attr("y",9.5).attr("dy","0.35em").text(d=>d);
+        svg.append("text").attr("x",wd/2).attr("y",0-(m.top/2)-5).attr("text-anchor","middle").style("font-size","16px").style("font-weight","bold").text("Producción Confecciones/Puesto");
     }
 
-
-    function formatDateForAPI(date) {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    }
-
+    function formatDateForAPI(date) { const y = date.getFullYear(), m = String(date.getMonth() + 1).padStart(2, '0'), d = String(date.getDate()).padStart(2, '0'); return `${y}-${m}-${d}`; }
     function getDateRange(selectedValue) {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        let fromDate = new Date(today);
-        let endDate = new Date(today);
-
-        switch (selectedValue) {
-            case 'today': break;
-            case 'yesterday': fromDate.setDate(today.getDate() - 1); endDate.setDate(today.getDate() - 1); break;
-            case 'day_minus_2': fromDate.setDate(today.getDate() - 2); endDate.setDate(today.getDate() - 2); break;
-            case 'day_minus_3': fromDate.setDate(today.getDate() - 3); endDate.setDate(today.getDate() - 3); break;
-            case 'day_minus_4': fromDate.setDate(today.getDate() - 4); endDate.setDate(today.getDate() - 4); break;
-            case 'day_minus_5': fromDate.setDate(today.getDate() - 5); endDate.setDate(today.getDate() - 5); break;
-            case 'day_minus_6': fromDate.setDate(today.getDate() - 6); endDate.setDate(today.getDate() - 6); break;
-            case 'day_minus_7': fromDate.setDate(today.getDate() - 7); endDate.setDate(today.getDate() - 7); break;
-            case 'last7days': fromDate.setDate(today.getDate() - 6); break;
-            case 'last30days': fromDate.setDate(today.getDate() - 29); break;
-            default: break;
-        }
-        let apiToDate = new Date(endDate);
-        apiToDate.setDate(endDate.getDate() + 1);
-        return { from: formatDateForAPI(fromDate), to: formatDateForAPI(apiToDate) };
+        const today = new Date(); today.setHours(0,0,0,0); let from = new Date(today), to = new Date(today);
+        switch(selectedValue){ case 'yesterday':from.setDate(today.getDate()-1);to.setDate(today.getDate()-1);break; case 'day_minus_2':from.setDate(today.getDate()-2);to.setDate(today.getDate()-2);break; case 'day_minus_3':from.setDate(today.getDate()-3);to.setDate(today.getDate()-3);break; case 'day_minus_4':from.setDate(today.getDate()-4);to.setDate(today.getDate()-4);break; case 'day_minus_5':from.setDate(today.getDate()-5);to.setDate(today.getDate()-5);break; case 'day_minus_6':from.setDate(today.getDate()-6);to.setDate(today.getDate()-6);break; case 'day_minus_7':from.setDate(today.getDate()-7);to.setDate(today.getDate()-7);break; case 'last7days':from.setDate(today.getDate()-6);break; case 'last30days':from.setDate(today.getDate()-29);break; }
+        let apiTo = new Date(to); apiTo.setDate(to.getDate()+1); return {from:formatDateForAPI(from), to:formatDateForAPI(apiTo)};
     }
-
     function calculateCajasHora(count, startTimeStr, endTimeStr) {
-        const quantity = parseFloat(count) || 0;
-        if (!startTimeStr) return 'N/A';
-        const startTime = new Date(startTimeStr);
-        if (isNaN(startTime.getTime())) return 'N/A';
-        const endTime = endTimeStr ? new Date(endTimeStr) : new Date();
-        if (isNaN(endTime.getTime())) return 'N/A';
-        if (endTime <= startTime) return quantity > 0 ? 'N/A' : '0.00';
-        const diffMs = endTime.getTime() - startTime.getTime();
-        const diffHours = diffMs / (1000 * 60 * 60);
-        if (diffHours <= 0) return quantity > 0 ? 'N/A' : '0.00';
-        if (quantity === 0) return '0.00';
-        const rate = quantity / diffHours;
-        return rate.toFixed(2);
+        const q = parseFloat(count)||0; if(!startTimeStr)return 'N/A'; const sT = new Date(startTimeStr); if(isNaN(sT.getTime()))return 'N/A';
+        const eT = endTimeStr ? new Date(endTimeStr) : new Date(); if(isNaN(eT.getTime()))return 'N/A';
+        if(eT <= sT)return q > 0 ? 'N/A' : '0.00'; const dMs = eT.getTime()-sT.getTime(), dH = dMs/3600000;
+        if(dH <= 0)return q > 0 ? 'N/A' : '0.00'; if(q === 0)return '0.00'; return (q/dH).toFixed(2);
     }
-
-    function updateLiveCajasHoraCells() {
-        document.querySelectorAll('.live-cajas-hora').forEach(cell => {
-            cell.textContent = calculateCajasHora(cell.dataset.count, cell.dataset.startTime, null);
-        });
+    function updateLiveCajasHoraCells() { document.querySelectorAll('.live-cajas-hora').forEach(c => { c.textContent = calculateCajasHora(c.dataset.count, c.dataset.startTime, null); }); }
+    function filterDataByCheckbox(data) { if(filterPostsCheckbox && filterPostsCheckbox.checked) return data.filter(w => w.operator_posts && w.operator_posts.some(p=>(p.count??0)>0)); return data; }
+    function filterDataBySearch(data, searchTerm) {
+        if(!searchTerm)return data; const lST = searchTerm.toLowerCase();
+        return data.filter(w => (w.name||'').toLowerCase().includes(lST) || (w.client_id||'').toString().toLowerCase().includes(lST) || (w.operator_posts && w.operator_posts.some(p => ((p.rfid_reading?.name||'').toLowerCase().includes(lST)) || ((p.product_list?.name||'').toLowerCase().includes(lST)))));
     }
-
-    function filterDataByCheckbox(data) {
-        if (filterPostsCheckbox.checked) {
-            return data.filter(worker =>
-                worker.operator_posts && worker.operator_posts.some(post => (post.count ?? 0) > 0)
-            );
+    function updateGrandTotalUnidades() {
+        const sT = searchInput ? searchInput.value : ''; const dF = filterDataBySearch(filterDataByCheckbox(originalWorkersData), sT);
+        let gT = 0; dF.forEach(w => { gT += (w.operator_posts||[]).reduce((s,p)=>{const c=p.count??0; if(filterPostsCheckbox && filterPostsCheckbox.checked&&c===0)return s; return s+c;},0); });
+        if(totalUnidadesTurnoHeader) totalUnidadesTurnoHeader.textContent = `(${gT})`;
+    }
+    function updateKPICards() {
+        const sT = searchInput ? searchInput.value : ''; const dTD = filterDataBySearch(filterDataByCheckbox(originalWorkersData), sT);
+        if (!kpiTotalCajas || (dTD.length === 0 && !sT && (!filterPostsCheckbox || !filterPostsCheckbox.checked) && originalWorkersData.length === 0) || (dTD.length === 0 && filterPostsCheckbox && filterPostsCheckbox.checked)) {
+            if(kpiTotalCajas)kpiTotalCajas.textContent='-'; if(kpiTrabajadoresActivos)kpiTrabajadoresActivos.textContent='0'; if(kpiAvgCajasHora)kpiAvgCajasHora.textContent='-'; if(kpiPuestoMasProductivo)kpiPuestoMasProductivo.textContent='-';
+            if(kpiCardContainer && !isLocked)kpiCardContainer.classList.add('hidden'); return;
         }
-        return data;
+        if(kpiCardContainer && !isLocked)kpiCardContainer.classList.remove('hidden');
+        let tCG=0,tHTG=0,pC={},tAS=new Set();
+        dTD.forEach(w=>{let wHPV=false; if(w.operator_posts){w.operator_posts.forEach(p=>{const cant=p.count||0;if(cant>0){wHPV=true;tCG+=cant;if(p.rfid_reading?.name)pC[p.rfid_reading.name]=(pC[p.rfid_reading.name]||0)+cant;if(p.created_at){const s=new Date(p.created_at),e=p.finish_at?new Date(p.finish_at):new Date();if(e>s)tHTG+=(e.getTime()-s.getTime())/3600000;}}});} if(wHPV)tAS.add(w.client_id);});
+        if(kpiTotalCajas) kpiTotalCajas.textContent=tCG; if(kpiTrabajadoresActivos) kpiTrabajadoresActivos.textContent=tAS.size; if(kpiAvgCajasHora) kpiAvgCajasHora.textContent=tHTG>0?(tCG/tHTG).toFixed(2):'N/A';
+        let pMPN='-',mCP=0; for(const p in pC){if(pC[p]>mCP){mCP=pC[p];pMPN=`${p} (${mCP})`;}} if(kpiPuestoMasProductivo) kpiPuestoMasProductivo.textContent=mCP>0?pMPN:'-';
+    }
+    function populateTable(data) {
+        if(liveUpdateIntervalId)clearInterval(liveUpdateIntervalId);liveUpdateIntervalId=null;
+        if(!tableBody) return;
+        tableBody.querySelectorAll('tr:not(#loadingRow):not(#errorRow):not(#noDataRow)').forEach(r=>r.remove());
+        const sT=searchInput?searchInput.value:'',dFC=filterDataByCheckbox(data),dTD=filterDataBySearch(dFC,sT);
+        displayedPostRowsCount=0;let wVPC=0;
+        dTD.forEach(w=>{const hVP=w.operator_posts&&w.operator_posts.some(p=>(p.count??0)>0);if(filterPostsCheckbox && filterPostsCheckbox.checked&&!hVP&&sT==='')return;let wMSD=false;if(sT){const lS=sT.toLowerCase();if((w.name||'').toLowerCase().includes(lS)||(w.client_id||'').toString().toLowerCase().includes(lS))wMSD=true;}let hADP=false;if(w.operator_posts){w.operator_posts.forEach(p=>{if((p.count??0)>0||(filterPostsCheckbox && !filterPostsCheckbox.checked)){if(filterPostsCheckbox && filterPostsCheckbox.checked&&(p.count??0)===0){}else{if(sT){const lS=sT.toLowerCase();if((p.rfid_reading?.name||'').toLowerCase().includes(lS)||(p.product_list?.name||'').toLowerCase().includes(lS))hADP=true;}else hADP=true;}}});}if(!wMSD&&!hADP&&sT!=='')return;wVPC++;if(w.operator_posts){w.operator_posts.forEach(p=>{const pC=p.count??0;let dTP=false;if(pC>0||(filterPostsCheckbox && !filterPostsCheckbox.checked)){if(filterPostsCheckbox && filterPostsCheckbox.checked&&pC===0){}else{if(sT){const lS=sT.toLowerCase();if(wMSD||(p.rfid_reading?.name||'').toLowerCase().includes(lS)||(p.product_list?.name||'').toLowerCase().includes(lS))dTP=true;}else dTP=true;}}if(dTP)displayedPostRowsCount++;});}});
+        updateGrandTotalUnidades();updateKPICards();updateHeaderButtonsState();
+        if(noDataRow){ if(displayedPostRowsCount===0){noDataRow.querySelector('td').textContent=sT?`No se encontraron resultados para "${sT}".`:(filterPostsCheckbox && filterPostsCheckbox.checked&&data.length>0?'Ningún trabajador cumple los criterios.':'No se encontraron datos.');noDataRow.classList.remove('hidden');}else{noDataRow.classList.add('hidden');}}
+        let hLC=false;wVPC=0;
+        dTD.forEach(w=>{const tQS=(w.operator_posts||[]).reduce((s,p)=>s+((p.count??0)>0?(p.count??0):0),0);let wSBR=false;const lST=sT.toLowerCase();if(!sT){wSBR=!(filterPostsCheckbox && filterPostsCheckbox.checked&&!((w.operator_posts||[]).some(p=>(p.count??0)>0)));}else{if((w.name||'').toLowerCase().includes(lST)||(w.client_id||'').toString().toLowerCase().includes(lST))wSBR=true;else if(w.operator_posts)wSBR=w.operator_posts.some(p=>((p.rfid_reading?.name||'').toLowerCase().includes(lST))||((p.product_list?.name||'').toLowerCase().includes(lST)));}if(!wSBR)return;wVPC++;
+        const wR=tableBody.insertRow();wR.classList.add('bg-blue-50','hover:bg-blue-100','transition-colors');wR.insertCell().textContent=w.client_id??'-';const nC=wR.insertCell();nC.textContent=w.name??'Sin Nombre';
+        if(!isLocked){const aLIA=document.createElement('button');aLIA.classList.add('analyze-icon','ml-1','text-indigo-600','hover:text-indigo-800');aLIA.title="Analizar (IA)";aLIA.innerHTML=`<svg class="icon" style="width:18px;height:18px;" viewBox="0 0 24 24" fill="currentColor"><path d="M7 14c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3zm13.71-9.37c-.39-.39-1.02-.39-1.41 0L18 5.92 14.08 2 12 2c-1.1 0-2 .9-2 2v2H8c-1.1 0-2 .9-2 2v2H4c-1.1 0-2 .9-2 2v10h20V4c0-1.1-.9-2-2-2h-2.29L19.3 2.63c-.39-.39-1.02-.39-1.41 0zM16 14c0-2.21-1.79-4-4-4s-4 1.79-4 4 1.79 4 4 4 4-1.79 4-4zm-4-2c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2z"/></svg>`;aLIA.addEventListener('click',(e)=>{e.stopPropagation();fetchLocalAIWorkerAnalysis(w);});nC.appendChild(aLIA);}
+        const wUC=wR.insertCell();wUC.textContent=tQS;wR.insertCell();wR.insertCell();wR.insertCell();wR.insertCell();wR.insertCell();wR.insertCell();Array.from(wR.cells).forEach(c=>c.classList.add('px-4','py-3','text-sm','font-medium','text-gray-900','whitespace-nowrap'));
+        if(w.operator_posts&&w.operator_posts.length>0){const sP=[...w.operator_posts].sort((a,b)=>(new Date(a.created_at)||0)-(new Date(b.created_at)||0));sP.forEach((p,pI)=>{const pC=p.count??0;let dTPR=false;if(!sT){if(pC>0||(filterPostsCheckbox && !filterPostsCheckbox.checked))dTPR=true;}else{const lS=sT.toLowerCase();if((w.name||'').toLowerCase().includes(lS)||(w.client_id||'').toString().toLowerCase().includes(lS)||(p.rfid_reading?.name||'').toLowerCase().includes(lS)||(p.product_list?.name||'').toLowerCase().includes(lS)){if(pC>0||(filterPostsCheckbox && !filterPostsCheckbox.checked))dTPR=true;}}if(!dTPR && !(filterPostsCheckbox && !filterPostsCheckbox.checked && pC === 0 && !sT)) return; if(filterPostsCheckbox && filterPostsCheckbox.checked && pC === 0 && dTPR && !sT) return;
+        const pR=tableBody.insertRow();pR.classList.add((tableBody.rows.length-3)%2===0?'bg-white':'bg-gray-50','hover:bg-gray-100');pR.insertCell();pR.insertCell();pR.insertCell();pR.insertCell().textContent=p.rfid_reading?.name??'N/A';pR.insertCell().textContent=p.created_at?dateFormatter.format(new Date(p.created_at)):'-';pR.insertCell().textContent=p.finish_at?dateFormatter.format(new Date(p.finish_at)):'-';
+        const qC=pR.insertCell();qC.textContent=pC+' ';const cHC=pR.insertCell();cHC.textContent=calculateCajasHora(pC,p.created_at,p.finish_at);
+        if(!isLocked){const eIS=document.createElement('span');eIS.classList.add('edit-icon');eIS.innerHTML=`<svg class="icon" style="width:16px;height:16px;" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828zM16 5l-1.5-1.5L13 5l1.5 1.5L16 5zM5 14H3v2h12v-2H5z"/></svg>`;eIS.addEventListener('click',()=>showEditQuantityModal(w.client_id,pI,pC,qC,cHC,wUC));qC.appendChild(eIS);}
+        if(!p.finish_at&&p.created_at){cHC.classList.add('live-cajas-hora');cHC.dataset.startTime=p.created_at;cHC.dataset.count=pC;hLC=true;}
+        pR.insertCell().textContent=p.product_list?.name??'N/A';Array.from(pR.cells).forEach(c=>c.classList.add('px-4','py-3','text-sm','text-gray-600','whitespace-nowrap'));pR.cells[3].classList.add('pl-8');});}});
+        if(hLC)liveUpdateIntervalId=setInterval(updateLiveCajasHoraCells,5000);
     }
     
-    function filterDataBySearch(data, searchTerm) {
-        if (!searchTerm) return data;
-        const lowerSearchTerm = searchTerm.toLowerCase();
-        return data.filter(worker => {
-            if ((worker.name || '').toLowerCase().includes(lowerSearchTerm)) return true;
-            if ((worker.client_id || '').toString().toLowerCase().includes(lowerSearchTerm)) return true;
-            if (worker.operator_posts) {
-                return worker.operator_posts.some(post => 
-                    ((post.rfid_reading?.name || '').toLowerCase().includes(lowerSearchTerm)) ||
-                    ((post.product_list?.name || '').toLowerCase().includes(lowerSearchTerm))
-                );
-            }
-            return false;
-        });
-    }
-
-
-    function updateGrandTotalUnidades() {
-        const searchTerm = searchInput ? searchInput.value : '';
-        const dataFilteredBySearchAndCheckbox = filterDataBySearch(filterDataByCheckbox(originalWorkersData), searchTerm);
-        
-        let grandTotal = 0;
-        dataFilteredBySearchAndCheckbox.forEach(worker => {
-            const totalQuantitySum = (worker.operator_posts || []).reduce((sum, post) => {
-                const count = post.count ?? 0;
-                if (filterPostsCheckbox.checked && count === 0) return sum; 
-                return sum + count;
-            }, 0);
-            grandTotal += totalQuantitySum;
-        });
-        if (totalUnidadesTurnoHeader) totalUnidadesTurnoHeader.textContent = `(${grandTotal})`;
-    }
-
-    function updateKPICards() {
-        const searchTerm = searchInput ? searchInput.value : '';
-        const dataToDisplay = filterDataBySearch(filterDataByCheckbox(originalWorkersData), searchTerm);
-
-        if (!kpiTotalCajas || (dataToDisplay.length === 0 && !searchTerm)) { 
-            if(kpiTotalCajas) kpiTotalCajas.textContent = '-';
-            if(kpiTrabajadoresActivos) kpiTrabajadoresActivos.textContent = '0';
-            if(kpiAvgCajasHora) kpiAvgCajasHora.textContent = '-';
-            if(kpiPuestoMasProductivo) kpiPuestoMasProductivo.textContent = '-';
-             if (kpiCardContainer && !isLocked) kpiCardContainer.classList.add('hidden'); 
-            return;
-        }
-        if (kpiCardContainer && !isLocked) kpiCardContainer.classList.remove('hidden');
-
-
-        let totalCajasGlobal = 0;
-        let totalHorasTrabajadasGlobal = 0;
-        let puestosConteo = {};
-        let trabajadoresActivosSet = new Set();
-
-        dataToDisplay.forEach(worker => {
-            let workerHasProductionInView = false;
-            if (worker.operator_posts && worker.operator_posts.length > 0) {
-                worker.operator_posts.forEach(post => {
-                    const cantidad = post.count || 0;
-                    if (cantidad > 0) {
-                        workerHasProductionInView = true;
-                        totalCajasGlobal += cantidad;
-                        if(post.rfid_reading?.name) {
-                            puestosConteo[post.rfid_reading.name] = (puestosConteo[post.rfid_reading.name] || 0) + cantidad;
-                        }
-                        if (post.created_at) {
-                            const start = new Date(post.created_at); 
-                            const end = post.finish_at ? new Date(post.finish_at) : new Date();
-                            if (end > start) { 
-                                totalHorasTrabajadasGlobal += (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-                            }
-                        }
-                    }
-                });
-            }
-            if (workerHasProductionInView) { 
-                trabajadoresActivosSet.add(worker.client_id);
-            }
-        });
-
-        kpiTotalCajas.textContent = totalCajasGlobal;
-        kpiTrabajadoresActivos.textContent = trabajadoresActivosSet.size;
-        kpiAvgCajasHora.textContent = totalHorasTrabajadasGlobal > 0 ? (totalCajasGlobal / totalHorasTrabajadasGlobal).toFixed(2) : 'N/A';
-
-        let puestoMasProductivoNombre = '-';
-        let maxCajasPuesto = 0;
-        for (const puesto in puestosConteo) {
-            if (puestosConteo[puesto] > maxCajasPuesto) {
-                maxCajasPuesto = puestosConteo[puesto];
-                puestoMasProductivoNombre = `${puesto} (${maxCajasPuesto})`;
-            }
-        }
-        kpiPuestoMasProductivo.textContent = maxCajasPuesto > 0 ? puestoMasProductivoNombre : '-';
-    }
-
-
-    function populateTable(data) {
-        if (liveUpdateIntervalId) clearInterval(liveUpdateIntervalId);
-        liveUpdateIntervalId = null;
-
-        tableBody.querySelectorAll('tr:not(#loadingRow):not(#errorRow):not(#noDataRow)').forEach(row => row.remove());
-        
-        const searchTerm = searchInput ? searchInput.value : '';
-        const dataFilteredByCheckbox = filterDataByCheckbox(data);
-        const dataToDisplay = filterDataBySearch(dataFilteredByCheckbox, searchTerm);
-        
-        displayedPostRowsCount = 0; 
-        let workersWithVisiblePosts = 0; 
-
-        dataToDisplay.forEach((worker) => {
-            const hasVisiblePosts = worker.operator_posts && worker.operator_posts.some(post => (post.count ?? 0) > 0);
-            if (filterPostsCheckbox.checked && !hasVisiblePosts && searchTerm === '') return; 
-            
-            let workerMatchesSearchDirectly = false;
-            if (searchTerm) {
-                 const lowerSearch = searchTerm.toLowerCase();
-                 if ((worker.name || '').toLowerCase().includes(lowerSearch) || (worker.client_id || '').toString().toLowerCase().includes(lowerSearch)) {
-                     workerMatchesSearchDirectly = true;
-                 }
-            }
-            
-            let hasAnyDisplayablePost = false;
-             if (worker.operator_posts) {
-                worker.operator_posts.forEach(post => {
-                     if ((post.count ?? 0) > 0 || !filterPostsCheckbox.checked) {
-                         if (filterPostsCheckbox.checked && (post.count ?? 0) === 0) { /* skip */ }
-                         else { 
-                            if (searchTerm) {
-                                const lowerSearch = searchTerm.toLowerCase();
-                                if ((post.rfid_reading?.name || '').toLowerCase().includes(lowerSearch) || (post.product_list?.name || '').toLowerCase().includes(lowerSearch)) {
-                                    hasAnyDisplayablePost = true;
-                                }
-                            } else {
-                                hasAnyDisplayablePost = true;
-                            }
-                         }
-                    }
-                });
-            }
-
-            if (!workerMatchesSearchDirectly && !hasAnyDisplayablePost && searchTerm !== '') return;
-
-
-            workersWithVisiblePosts++;
-            if (worker.operator_posts) {
-                worker.operator_posts.forEach(post => {
-                    const postCount = post.count ?? 0;
-                    let displayThisPost = false;
-                    if (postCount > 0 || !filterPostsCheckbox.checked) {
-                         if (filterPostsCheckbox.checked && postCount === 0) { /* skip */ }
-                         else { 
-                            if (searchTerm) {
-                                const lowerSearch = searchTerm.toLowerCase();
-                                if (workerMatchesSearchDirectly || (post.rfid_reading?.name || '').toLowerCase().includes(lowerSearch) || (post.product_list?.name || '').toLowerCase().includes(lowerSearch)) {
-                                    displayThisPost = true;
-                                }
-                            } else {
-                                displayThisPost = true;
-                            }
-                         }
-                    }
-                    if (displayThisPost) displayedPostRowsCount++;
-                });
-            }
-        });
-        
-        updateGrandTotalUnidades(); 
-        updateKPICards(); 
-        updateHeaderButtonsState(); 
-
-
-        if (displayedPostRowsCount === 0) { 
-             noDataRow.querySelector('td').textContent = searchTerm ?
-                `No se encontraron resultados para "${searchTerm}".` :
-                (filterPostsCheckbox.checked && data.length > 0 ?
-                'Ningún trabajador cumple los criterios de filtro (con puestos y cantidad > 0).' :
-                'No se encontraron datos para el periodo seleccionado.');
-            noDataRow.classList.remove('hidden');
-        } else {
-            noDataRow.classList.add('hidden');
-        }
-
-
-        let hasLiveCells = false;
-        workersWithVisiblePosts = 0; 
-
-        dataToDisplay.forEach((worker) => { 
-            const totalQuantitySum = (worker.operator_posts || []).reduce((sum, post) => sum + ((post.count ?? 0) > 0 ? (post.count ?? 0) : 0), 0);
-            
-            let workerShouldBeRendered = false;
-            const lowerSearchTerm = searchTerm.toLowerCase();
-            if (!searchTerm) { 
-                workerShouldBeRendered = !(filterPostsCheckbox.checked && !((worker.operator_posts || []).some(p => (p.count ?? 0) > 0)));
-            } else { 
-                if ((worker.name || '').toLowerCase().includes(lowerSearchTerm) || (worker.client_id || '').toString().toLowerCase().includes(lowerSearchTerm)) {
-                    workerShouldBeRendered = true;
-                } else if (worker.operator_posts) {
-                    workerShouldBeRendered = worker.operator_posts.some(post => 
-                        ((post.rfid_reading?.name || '').toLowerCase().includes(lowerSearchTerm)) ||
-                        ((post.product_list?.name || '').toLowerCase().includes(lowerSearchTerm))
-                    );
-                }
-            }
-            if (!workerShouldBeRendered) return;
-
-
-            workersWithVisiblePosts++;
-
-            const workerRow = tableBody.insertRow();
-            workerRow.classList.add('bg-blue-50', 'hover:bg-blue-100', 'transition-colors', 'duration-150', 'ease-in-out');
-            
-            workerRow.insertCell().textContent = worker.client_id ?? '-';
-            
-            const nameCell = workerRow.insertCell();
-            nameCell.textContent = worker.name ?? 'Sin Nombre';
-            
-            if (!isLocked) { 
-                const analyzeLocalIABtn = document.createElement('button');
-                analyzeLocalIABtn.classList.add('analyze-icon', 'ml-1', 'text-indigo-600', 'hover:text-indigo-800'); 
-                analyzeLocalIABtn.title = "Analizar Rendimiento (IA Local)";
-                analyzeLocalIABtn.innerHTML = `<svg class="icon" style="width:18px; height:18px;" viewBox="0 0 24 24" fill="currentColor"><path d="M7 14c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3zm13.71-9.37c-.39-.39-1.02-.39-1.41 0L18 5.92 14.08 2 12 2c-1.1 0-2 .9-2 2v2H8c-1.1 0-2 .9-2 2v2H4c-1.1 0-2 .9-2 2v10h20V4c0-1.1-.9-2-2-2h-2.29L19.3 2.63c-.39-.39-1.02-.39-1.41 0zM16 14c0-2.21-1.79-4-4-4s-4 1.79-4 4 1.79 4 4 4 4-1.79 4-4zm-4-2c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2z"/></svg>`; 
-                analyzeLocalIABtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    fetchLocalAIWorkerAnalysis(worker);
-                });
-                nameCell.appendChild(analyzeLocalIABtn);
-            }
-
-
-            const workerUnitsCell = workerRow.insertCell(); 
-            workerUnitsCell.textContent = totalQuantitySum;
-            workerRow.insertCell(); workerRow.insertCell(); workerRow.insertCell(); workerRow.insertCell(); workerRow.insertCell(); workerRow.insertCell();
-            Array.from(workerRow.cells).forEach(cell => cell.classList.add('px-4', 'py-3', 'text-sm', 'font-medium', 'text-gray-900', 'whitespace-nowrap'));
-
-             if (worker.operator_posts && worker.operator_posts.length > 0) {
-                 const sortedPosts = [...worker.operator_posts].sort((a, b) => (new Date(a.created_at) || 0) - (new Date(b.created_at) || 0));
-                sortedPosts.forEach((post, postIndex) => {
-                    const postCount = post.count ?? 0;
-                    
-                    let displayThisPostRow = false;
-                    if (!searchTerm) { 
-                        if (postCount > 0 || !filterPostsCheckbox.checked) {
-                            displayThisPostRow = true;
-                        }
-                    } else { 
-                        const lowerSearch = searchTerm.toLowerCase();
-                        if ((worker.name || '').toLowerCase().includes(lowerSearch) || 
-                            (worker.client_id || '').toString().toLowerCase().includes(lowerSearch) ||
-                            (post.rfid_reading?.name || '').toLowerCase().includes(lowerSearch) ||
-                            (post.product_list?.name || '').toLowerCase().includes(lowerSearch)
-                           ) {
-                            if (postCount > 0 || !filterPostsCheckbox.checked) { 
-                                displayThisPostRow = true;
-                            }
-                        }
-                    }
-                    if (!displayThisPostRow) return;
-                    
-                    const postRow = tableBody.insertRow();
-                    postRow.classList.add( (tableBody.rows.length - 3) % 2 === 0 ? 'bg-white' : 'bg-gray-50', 'hover:bg-gray-100');
-
-                    postRow.insertCell(); postRow.insertCell(); postRow.insertCell(); 
-                    postRow.insertCell().textContent = post.rfid_reading?.name ?? 'N/A';
-                    postRow.insertCell().textContent = post.created_at ? dateFormatter.format(new Date(post.created_at)) : '-';
-                    postRow.insertCell().textContent = post.finish_at ? dateFormatter.format(new Date(post.finish_at)) : '-';
-                    
-                    const quantityCell = postRow.insertCell();
-                    quantityCell.textContent = postCount + ' '; 
-                    const cajasHoraCell = postRow.insertCell();
-                    cajasHoraCell.textContent = calculateCajasHora(postCount, post.created_at, post.finish_at);
-
-                    if (!isLocked) {
-                        const editIconSpan = document.createElement('span');
-                        editIconSpan.classList.add('edit-icon');
-                        editIconSpan.innerHTML = `<svg class="icon" style="width:16px; height:16px;" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828zM16 5l-1.5-1.5L13 5l1.5 1.5L16 5zM5 14H3v2h12v-2H5z"/></svg>`;
-                        editIconSpan.addEventListener('click', () => showEditQuantityModal(worker.client_id, postIndex, postCount, quantityCell, cajasHoraCell, workerUnitsCell));
-                        quantityCell.appendChild(editIconSpan);
-                    }
-
-                    if (!post.finish_at && post.created_at) {
-                        cajasHoraCell.classList.add('live-cajas-hora');
-                        cajasHoraCell.dataset.startTime = post.created_at;
-                        cajasHoraCell.dataset.count = postCount;
-                        hasLiveCells = true;
-                    }
-                    postRow.insertCell().textContent = post.product_list?.name ?? 'N/A';
-                    Array.from(postRow.cells).forEach(cell => cell.classList.add('px-4', 'py-3', 'text-sm', 'text-gray-600', 'whitespace-nowrap'));
-                    postRow.cells[3].classList.add('pl-8');
-                });
-            }
-        });
-        
-        if (hasLiveCells) liveUpdateIntervalId = setInterval(updateLiveCajasHoraCells, 5000);
-    }
-
     function exportToExcel() {
         const searchTerm = searchInput ? searchInput.value : '';
-        const dataFilteredBySearchAndCheckbox = filterDataBySearch(filterDataByCheckbox(JSON.parse(JSON.stringify(originalWorkersData))), searchTerm);
-
-        if (!dataFilteredBySearchAndCheckbox || dataFilteredBySearchAndCheckbox.length === 0) {
-            const noDataModal = document.createElement('div'); 
-            noDataModal.innerHTML = `<div class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-[2000]"><div class="bg-white rounded-lg shadow-xl p-6"><h3 class="text-lg font-medium">Sin Datos</h3><p class="mt-2">No hay datos para exportar con los filtros actuales.</p><button onclick="this.closest('.fixed').remove()" class="mt-4 px-3 py-1 bg-blue-500 text-white rounded">OK</button></div></div>`;
-            document.body.appendChild(noDataModal);
-            return;
+        const dataFiltered = filterDataBySearch(filterDataByCheckbox(JSON.parse(JSON.stringify(originalWorkersData))), searchTerm);
+        if (!dataFiltered || dataFiltered.length === 0) {
+            const noDataModal = document.createElement('div');
+            noDataModal.innerHTML = `<div class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-[2000]"><div class="bg-white rounded-lg shadow-xl p-6"><h3 class="text-lg font-medium">Sin Datos</h3><p class="mt-2">No hay datos para exportar.</p><button onclick="this.closest('.fixed').remove()" class="mt-4 px-3 py-1 bg-blue-500 text-white rounded">OK</button></div></div>`;
+            document.body.appendChild(noDataModal); return;
         }
-
         const flattenedData = [];
-        dataFilteredBySearchAndCheckbox.forEach(worker => {
+        dataFiltered.forEach(worker => {
             const totalQuantitySum = (worker.operator_posts || []).reduce((sum, post) => sum + ((post.count ?? 0) > 0 ? (post.count ?? 0) : 0), 0);
-            
-            let workerShouldBeIncluded = false;
-            if (!searchTerm) {
-                 workerShouldBeIncluded = !(filterPostsCheckbox.checked && !((worker.operator_posts || []).some(p => (p.count ?? 0) > 0)));
-            } else {
-                 const lowerSearch = searchTerm.toLowerCase();
-                 if ((worker.name || '').toLowerCase().includes(lowerSearch) || (worker.client_id || '').toString().toLowerCase().includes(lowerSearch)) {
-                     workerShouldBeIncluded = true;
-                 } else if (worker.operator_posts) {
-                     workerShouldBeIncluded = worker.operator_posts.some(post => 
-                        ((post.rfid_reading?.name || '').toLowerCase().includes(lowerSearch)) ||
-                        ((post.product_list?.name || '').toLowerCase().includes(lowerSearch))
-                    );
-                 }
+            let workerShouldBeIncluded = !searchTerm || (worker.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || (worker.client_id || '').toString().toLowerCase().includes(searchTerm.toLowerCase());
+            if (!workerShouldBeIncluded && worker.operator_posts) {
+                workerShouldBeIncluded = worker.operator_posts.some(post => ((post.rfid_reading?.name || '').toLowerCase().includes(searchTerm.toLowerCase())) || ((post.product_list?.name || '').toLowerCase().includes(searchTerm.toLowerCase())));
             }
-            if (!workerShouldBeIncluded) return;
-
-
+            if (filterPostsCheckbox && filterPostsCheckbox.checked && !((worker.operator_posts || []).some(p => (p.count ?? 0) > 0)) && !workerShouldBeIncluded) return;
+            
             (worker.operator_posts || []).filter(post => {
-                 let postMatchesSearch = true;
-                 if(searchTerm){
-                     const lowerSearch = searchTerm.toLowerCase();
-                     postMatchesSearch = (post.rfid_reading?.name || '').toLowerCase().includes(lowerSearch) ||
-                                          (post.product_list?.name || '').toLowerCase().includes(lowerSearch) ||
-                                          (worker.name || '').toLowerCase().includes(lowerSearch) ||
-                                          (worker.client_id || '').toString().toLowerCase().includes(lowerSearch);
-                 }
-                 return ((post.count ?? 0) > 0 || !filterPostsCheckbox.checked) && postMatchesSearch;
-
+                let postMatchesSearch = true;
+                if(searchTerm){ const lS = searchTerm.toLowerCase(); postMatchesSearch = (post.rfid_reading?.name || '').toLowerCase().includes(lS) || (post.product_list?.name || '').toLowerCase().includes(lS) || workerShouldBeIncluded; }
+                return ((post.count ?? 0) > 0 || (filterPostsCheckbox && !filterPostsCheckbox.checked)) && postMatchesSearch;
             }).forEach(post => {
                 flattenedData.push({
                     'Codigo': worker.client_id ?? '-', 'Nombre Trabajador': worker.name ?? 'Sin Nombre',
@@ -1703,92 +674,43 @@ Evita frases como "Basándome en estos datos". Ve directo al análisis.`;
         });
 
         if (flattenedData.length === 0) {
-            const noDetailsModal = document.createElement('div'); 
-            noDetailsModal.innerHTML = `<div class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-[2000]"><div class="bg-white rounded-lg shadow-xl p-6"><h3 class="text-lg font-medium">Sin Detalles</h3><p class="mt-2">No hay detalles de puestos con cantidad > 0 para exportar (según filtros).</p><button onclick="this.closest('.fixed').remove()" class="mt-4 px-3 py-1 bg-blue-500 text-white rounded">OK</button></div></div>`;
-            document.body.appendChild(noDetailsModal);
-            return;
+            const noDetailsModal = document.createElement('div');
+            noDetailsModal.innerHTML = `<div class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-[2000]"><div class="bg-white rounded-lg shadow-xl p-6"><h3 class="text-lg font-medium">Sin Detalles</h3><p class="mt-2">No hay detalles para exportar.</p><button onclick="this.closest('.fixed').remove()" class="mt-4 px-3 py-1 bg-blue-500 text-white rounded">OK</button></div></div>`;
+            document.body.appendChild(noDetailsModal); return;
         }
-
         const columnOrder = ['Codigo', 'Nombre Trabajador', 'Unidades Turno', 'Puesto', 'Inicio Puesto', 'Fin Puesto', 'Cantidad Puesto', 'Cajas/Hora', 'Confeccion'];
         const worksheet = XLSX.utils.json_to_sheet(flattenedData.map(row => Object.fromEntries(columnOrder.map(col => [col, row[col] ?? '']))), { header: columnOrder });
         worksheet["!cols"] = columnOrder.map(key => ({ wch: flattenedData.reduce((w, r) => Math.max(w, (r[key]?.toString() ?? '').length), key.length) + 2 }));
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "TrabajadoresDetalle");
-        XLSX.writeFile(workbook, `Informe_Trabajadores_${dateRangeSelect.options[dateRangeSelect.selectedIndex].text.replace(/ /g, '_')}${filterPostsCheckbox.checked ? '_ConPuestos' : ''}.xlsx`);
+        const workbook = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(workbook, worksheet, "TrabajadoresDetalle");
+        if(dateRangeSelect && filterPostsCheckbox) {
+            XLSX.writeFile(workbook, `Informe_Trabajadores_${dateRangeSelect.options[dateRangeSelect.selectedIndex].text.replace(/ /g, '_')}${filterPostsCheckbox.checked ? '_ConPuestos' : ''}.xlsx`);
+        } else {
+            XLSX.writeFile(workbook, `Informe_Trabajadores.xlsx`); // Fallback name
+        }
     }
 
-    function printTable() { window.print(); }
+    function printTable() { // Definición global
+        window.print();
+    }
 
     function fetchData(fromDate, toDate) {
         const apiUrl = `${apiBaseUrl}?from_date=${fromDate}&to_date=${toDate}`;
-        loadingRow.classList.remove('hidden');
-        errorRow.classList.add('hidden');
-        noDataRow.classList.add('hidden');
-        tableBody.querySelectorAll('tr:not(#loadingRow):not(#errorRow):not(#noDataRow)').forEach(row => row.remove());
-        
-        if(exportExcelBtn) exportExcelBtn.disabled = true;
-        updateHeaderButtonsState(); 
-
-        if (liveUpdateIntervalId) clearInterval(liveUpdateIntervalId);
-        liveUpdateIntervalId = null;
-
+        if(loadingRow) loadingRow.classList.remove('hidden'); if(errorRow) errorRow.classList.add('hidden'); if(noDataRow) noDataRow.classList.add('hidden');
+        if(tableBody) tableBody.querySelectorAll('tr:not(#loadingRow):not(#errorRow):not(#noDataRow)').forEach(r=>r.remove());
+        if(exportExcelBtn)exportExcelBtn.disabled=true; updateHeaderButtonsState();
+        if(liveUpdateIntervalId)clearInterval(liveUpdateIntervalId);liveUpdateIntervalId=null;
         fetch(apiUrl)
-            .then(response => response.ok ? response.json() : response.text().then(text => { throw new Error(`Error HTTP ${response.status}: ${text}`); }))
-            .then(apiResponse => {
-                loadingRow.classList.add('hidden');
-                if (apiResponse.success && Array.isArray(apiResponse.data)) { 
-                    originalWorkersData = apiResponse.data.sort((a, b) => { 
-                        const findFirstActivePost = (worker) => {
-                            if (!worker.operator_posts || worker.operator_posts.length === 0) return null;
-                            const activePosts = worker.operator_posts
-                                .filter(p => (p.count ?? 0) > 0 && p.created_at)
-                                .map(p => ({ ...p, createdAtDate: new Date(p.created_at) }))
-                                .filter(p => !isNaN(p.createdAtDate.getTime())); 
-                            if (activePosts.length === 0) return null;
-                            activePosts.sort((p1, p2) => p1.createdAtDate - p2.createdAtDate);
-                            return activePosts[0];
-                        };
-
-                        const firstPostA = findFirstActivePost(a); 
-                        const firstPostB = findFirstActivePost(b); 
-                        const puestoNameA = firstPostA?.rfid_reading?.name ?? null;
-                        const puestoNameB = firstPostB?.rfid_reading?.name ?? null;
-
-                        if (puestoNameA && puestoNameB) {
-                            const nameComparison = puestoNameA.localeCompare(puestoNameB, undefined, {numeric: true, sensitivity: 'base'});
-                            if (nameComparison !== 0) return nameComparison;
-                            return (a.name ?? '').localeCompare(b.name ?? '');
-                        } else if (puestoNameA) { 
-                            return -1; 
-                        } else if (puestoNameB) { 
-                            return 1;  
-                        } else {
-                            return (a.name ?? '').localeCompare(b.name ?? '');
-                        }
-                    });
-                    populateTable(originalWorkersData);
-                } else if (apiResponse.success && (!Array.isArray(apiResponse.data) || apiResponse.data.length === 0)) {
-                    originalWorkersData = [];
-                    populateTable(originalWorkersData);
-                }
-                else { 
-                    originalWorkersData = [];
-                    populateTable([]); 
-                    throw new Error(apiResponse.message || "Error en la respuesta de la API al obtener datos iniciales.");
-                }
+            .then(r=>r.ok?r.json():r.text().then(t=>{throw new Error(`Error HTTP ${r.status}: ${t}`);}))
+            .then(apiR=>{if(loadingRow)loadingRow.classList.add('hidden');
+                if(apiR.success&&Array.isArray(apiR.data)){originalWorkersData=apiR.data.sort((a,b)=>{const fFP=(w)=>{if(!w.operator_posts||w.operator_posts.length===0)return null;const aP=w.operator_posts.filter(p=>(p.count??0)>0&&p.created_at).map(p=>({...p,cAD:new Date(p.created_at)})).filter(p=>!isNaN(p.cAD.getTime()));if(aP.length===0)return null;aP.sort((p1,p2)=>p1.cAD-p2.cAD);return aP[0];};const fPA=fFP(a),fPB=fFP(b);const pNA=fPA?.rfid_reading?.name??null,pNB=fPB?.rfid_reading?.name??null;if(pNA&&pNB){const nC=pNA.localeCompare(pNB,undefined,{numeric:true,sensitivity:'base'});if(nC!==0)return nC;return(a.name??'').localeCompare(b.name??'');}else if(pNA)return -1;else if(pNB)return 1;else return(a.name??'').localeCompare(b.name??'');});populateTable(originalWorkersData);}
+                else if(apiR.success&&(!Array.isArray(apiR.data)||apiR.data.length===0)){originalWorkersData=[];populateTable(originalWorkersData);}
+                else{originalWorkersData=[];populateTable([]);throw new Error(apiR.message||"Error en API.");}
             })
-            .catch(error => {
-                console.error("Error en fetch:", error);
-                loadingRow.classList.add('hidden');
-                errorCell.textContent = `Error al cargar: ${error.message}`;
-                errorRow.classList.remove('hidden');
-                if(totalUnidadesTurnoHeader) totalUnidadesTurnoHeader.textContent = '(Error)';
-                updateHeaderButtonsState(); 
-            });
+            .catch(e=>{console.error("Error en fetch:",e);if(loadingRow)loadingRow.classList.add('hidden');if(errorCell)errorCell.textContent=`Error: ${e.message}`;if(errorRow)errorRow.classList.remove('hidden');if(totalUnidadesTurnoHeader)totalUnidadesTurnoHeader.textContent='(Error)';updateHeaderButtonsState();});
     }
+    
 
-    // --- Event Listeners ---
-    document.addEventListener('DOMContentLoaded', () => { 
+    document.addEventListener('DOMContentLoaded', () => {
         tableBody = document.getElementById('workersTableBody');
         loadingRow = document.getElementById('loadingRow');
         errorRow = document.getElementById('errorRow');
@@ -1798,14 +720,13 @@ Evita frases como "Basándome en estos datos". Ve directo al análisis.`;
         printBtn = document.getElementById('printBtn');
         dateRangeSelect = document.getElementById('dateRangeSelect');
         filterPostsCheckbox = document.getElementById('filterPostsCheckbox');
-        analizarTodosLocalAIBtn = document.getElementById('analizarTodosLocalAIBtn'); 
-        viewWorkerChartBtn = document.getElementById('viewWorkerChartBtn'); 
+        analizarTodosLocalAIBtn = document.getElementById('analizarTodosLocalAIBtn');
+        viewWorkerChartBtn = document.getElementById('viewWorkerChartBtn');
         viewPostChartBtn = document.getElementById('viewPostChartBtn');
-        viewPostPieChartBtn = document.getElementById('viewPostPieChartBtn'); 
+        viewPostPieChartBtn = document.getElementById('viewPostPieChartBtn');
         viewStackedBarChartBtn = document.getElementById('viewStackedBarChartBtn');
-        totalUnidadesTurnoHeader = document.getElementById('totalUnidadesTurnoHeader'); 
+        totalUnidadesTurnoHeader = document.getElementById('totalUnidadesTurnoHeader');
         searchInput = document.getElementById('searchInput');
-
         lockButton = document.getElementById('lockButton');
         lockIcon = document.getElementById('lockIcon');
         unlockIcon = document.getElementById('unlockIcon');
@@ -1814,83 +735,61 @@ Evita frases como "Basándome en estos datos". Ve directo al análisis.`;
         passwordError = document.getElementById('passwordError');
         cancelPasswordBtn = document.getElementById('cancelPasswordBtn');
         submitPasswordBtn = document.getElementById('submitPasswordBtn');
-
         editQuantityModal = document.getElementById('editQuantityModal');
         editQuantityInput = document.getElementById('editQuantityInput');
         editQuantityError = document.getElementById('editQuantityError');
-        editApiStatus = document.getElementById('editApiStatus'); 
+        editApiStatus = document.getElementById('editApiStatus');
         cancelEditBtn = document.getElementById('cancelEditBtn');
         saveEditBtn = document.getElementById('saveEditBtn');
-
         analysisModal = document.getElementById('analysisModal');
-        analysisModalTitle = document.getElementById('analysisModalTitle'); 
+        analysisModalTitle = document.getElementById('analysisModalTitle');
         analysisModalContent = document.getElementById('analysisModalContent');
         analysisModalStatus = document.getElementById('analysisModalStatus');
         closeAnalysisModalBtn = document.getElementById('closeAnalysisModalBtn');
         okAnalysisModalBtn = document.getElementById('okAnalysisModalBtn');
-
         chartModal = document.getElementById('chartModal');
-        chartModalTitleEl = document.getElementById('chartModalTitle'); 
-        chartContainerEl = document.getElementById('chartContainer'); 
-        
-        const localCloseChartModalBtn = document.getElementById('closeChartModalBtn');
-        const localOkChartModalBtn = document.getElementById('okChartModalBtn');
-
+        chartModalTitleEl = document.getElementById('chartModalTitle');
+        chartContainerEl = document.getElementById('chartContainer');
+        tooltip = document.getElementById('tooltip');
         kpiCardContainer = document.getElementById('kpiCardContainer');
         kpiTotalCajas = document.getElementById('kpiTotalCajas');
         kpiTrabajadoresActivos = document.getElementById('kpiTrabajadoresActivos');
         kpiAvgCajasHora = document.getElementById('kpiAvgCajasHora');
         kpiPuestoMasProductivo = document.getElementById('kpiPuestoMasProductivo');
 
-
-        if (exportExcelBtn) exportExcelBtn.addEventListener('click', exportToExcel);
-        if (printBtn) printBtn.addEventListener('click', printTable);
+        if (exportExcelBtn) {
+            if (typeof exportToExcel === 'function') { exportExcelBtn.addEventListener('click', exportToExcel); }
+            else { console.error('ERROR: exportToExcel no es una función al adjuntar listener.'); }
+        }
+        if (printBtn) {
+            console.log('Dentro de DOMContentLoaded, typeof printTable:', typeof printTable); // Diagnóstico
+            if (typeof printTable === 'function') { printBtn.addEventListener('click', printTable); }
+            else { console.error('ERROR: printTable no es una función al adjuntar listener.'); }
+        }
         if (analizarTodosLocalAIBtn) analizarTodosLocalAIBtn.addEventListener('click', fetchLocalAIOverallAnalysis);
-        if (viewWorkerChartBtn) viewWorkerChartBtn.addEventListener('click', () => showChartModal('workers')); 
+        if (viewWorkerChartBtn) viewWorkerChartBtn.addEventListener('click', () => showChartModal('workers'));
         if (viewPostChartBtn) viewPostChartBtn.addEventListener('click', () => showChartModal('postsBar'));
-        if (viewPostPieChartBtn) viewPostPieChartBtn.addEventListener('click', () => showChartModal('postsPie')); 
+        if (viewPostPieChartBtn) viewPostPieChartBtn.addEventListener('click', () => showChartModal('postsPie'));
         if (viewStackedBarChartBtn) viewStackedBarChartBtn.addEventListener('click', () => showChartModal('confeccionPorPuesto'));
         if (dateRangeSelect) dateRangeSelect.addEventListener('change', (e) => { const {from, to} = getDateRange(e.target.value); fetchData(from, to); });
         if (filterPostsCheckbox) filterPostsCheckbox.addEventListener('change', () => { populateTable(originalWorkersData); updateKPICards(); updateHeaderButtonsState(); });
         if (searchInput) searchInput.addEventListener('input', () => { populateTable(originalWorkersData); updateKPICards(); updateHeaderButtonsState(); });
-        
         if (cancelPasswordBtn) cancelPasswordBtn.addEventListener('click', hidePasswordModal);
-        if (submitPasswordBtn) submitPasswordBtn.addEventListener('click', () => {
-            if (passwordInput.value === 'boisolo') {
-                hidePasswordModal();
-                toggleLockState(false); 
-            } else {
-                passwordError.classList.remove('hidden');
-                passwordInput.select();
-            }
-        });
-        if (passwordInput) passwordInput.addEventListener('keypress', (event) => {
-            if (event.key === 'Enter' && submitPasswordBtn) submitPasswordBtn.click();
-        });
-
+        if (submitPasswordBtn) submitPasswordBtn.addEventListener('click', () => { if (passwordInput.value === 'boisolo') { hidePasswordModal(); toggleLockState(false); } else { if(passwordError)passwordError.classList.remove('hidden'); if(passwordInput)passwordInput.select(); } });
+        if (passwordInput) passwordInput.addEventListener('keypress', (e) => { if (e.key === 'Enter' && submitPasswordBtn) submitPasswordBtn.click(); });
         if (cancelEditBtn) cancelEditBtn.addEventListener('click', hideEditQuantityModal);
-        if (saveEditBtn) saveEditBtn.addEventListener('click', handleSaveEdit); 
-        if (editQuantityInput) editQuantityInput.addEventListener('keypress', (event) => {
-            if (event.key === 'Enter' && saveEditBtn) saveEditBtn.click();
-        });
-        
+        if (saveEditBtn) saveEditBtn.addEventListener('click', handleSaveEdit);
+        if (editQuantityInput) editQuantityInput.addEventListener('keypress', (e) => { if (e.key === 'Enter' && saveEditBtn) saveEditBtn.click(); });
         if (closeAnalysisModalBtn) closeAnalysisModalBtn.addEventListener('click', hideAnalysisModal);
         if (okAnalysisModalBtn) okAnalysisModalBtn.addEventListener('click', hideAnalysisModal);
-        
-        if(localCloseChartModalBtn) localCloseChartModalBtn.addEventListener('click', hideChartModal);
-        if(localOkChartModalBtn) localOkChartModalBtn.addEventListener('click', hideChartModal);
+        const localCloseChartModalBtn = document.getElementById('closeChartModalBtn'); // Este ID es usado por dos modales, puede ser conflictivo si ambos están abiertos.
+        const localOkChartModalBtn = document.getElementById('okChartModalBtn');     // Igual aquí.
+        if(chartModal && localCloseChartModalBtn) localCloseChartModalBtn.addEventListener('click', hideChartModal);
+        if(chartModal && localOkChartModalBtn) localOkChartModalBtn.addEventListener('click', hideChartModal);
+        if (lockButton) lockButton.addEventListener('click', () => { if (isLocked) showPasswordModal(); else toggleLockState(true); });
 
-        if (lockButton) lockButton.addEventListener('click', () => {
-            if (isLocked) {
-                showPasswordModal();
-            } else {
-                toggleLockState(true); 
-            }
-        });
-
-
-        const {from, to} = getDateRange(dateRangeSelect.value); 
-        fetchData(from, to); 
+        const {from, to} = getDateRange(dateRangeSelect.value);
+        fetchData(from, to);
         toggleLockState(isLocked); 
     });
 </script>

@@ -40,7 +40,7 @@ use App\Http\Controllers\ScanPostController;
 use App\Http\Controllers\ServerMonitorController;
 use App\Http\Controllers\TelegramController;
 use App\Http\Controllers\RfidBlockedController;
-
+use App\Http\Controllers\IaPromptAdminController; // Asegúrate de importar tu controlador
 
 
 
@@ -339,6 +339,12 @@ Route::get('workers-admin', [WorkerController::class, 'index'])->name('workers-a
 
 
 
+// rutas para editar prompts
+Route::prefix('ia-prompts')->name('ia_prompts.')->group(function () {
+    Route::get('/', [IaPromptAdminController::class, 'index'])->name('index');
+    Route::get('/{iaPrompt}/edit', [IaPromptAdminController::class, 'edit'])->name('edit');
+    Route::put('/{iaPrompt}', [IaPromptAdminController::class, 'update'])->name('update');
+});
 
 // Vista principal de usuarios (Blade con DataTables manual)
 Route::get('users', [UserController::class, 'index'])->name('users.index');
