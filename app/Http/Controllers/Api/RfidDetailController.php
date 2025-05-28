@@ -16,6 +16,8 @@ use App\Models\OperatorPost;  // Asegúrate de tener este modelo
 use App\Models\Operator;      // Asegúrate de tener este modelo
 use App\Models\RfidBlocked;   // Importamos el modelo para la tabla rfid_blocked
 use App\Models\ShiftHistory;
+use App\Models\ProductListSelecteds;
+use App\Models\RfidErrorPoint;
 
 class RfidDetailController extends Controller
 {
@@ -162,8 +164,6 @@ class RfidDetailController extends Controller
                     // Caso: La tarjeta leída NO es la maestra
                     if ($lastMasterRecord) {
 
-
-
                     //buscamos que el created_at del shift _history sea mayor o igual al created_at de la última tarjeta maestra si no es asi hacemos return
                     if ($shiftHistory->created_at->lt($lastMasterRecord->created_at)) {
                         Log::info("El registro de shift_history es anterior que el último registro de la tarjeta maestra. Tarjeta permitida en este filtro");
@@ -174,6 +174,11 @@ class RfidDetailController extends Controller
                         Log::info("La tarjeta no es permitida todavia por no pasar el punto en este turno.");
                         Log::info("Fecha del ultimo registro de shift_history: " . $shiftHistory->created_at);
                         Log::info("Fecha del ultimo registro de la tarjeta maestra: " . $lastMasterRecord->created_at);
+
+                        //aqui  ponemos para registrar las que posiblemente estan bien 
+
+                        $this->createRfidErrorPointSimple($rfidDetail, $rfidReading, $request, $rfidAnt, "No es permitida, por no pasar el punto en este turno.");
+
                         return response()->json([
                             'success' => false,
                             'message' => 'La tarjeta no es permitida todavia por no pasar el punto en este turno.'
@@ -185,6 +190,11 @@ class RfidDetailController extends Controller
                             ->exists();
 
                         if ($registroExistente) {
+                            
+                            //aqui  ponemos para registrar las que posiblemente estan bien 
+
+                            $this->createRfidErrorPointSimple($rfidDetail, $rfidReading, $request, $rfidAnt, "La tarjeta ya fue registrada en este ciclo.");
+                            
                             Log::info("La tarjeta con TID {$currentTid} ya fue registrada después del último reset.");
                             return response()->json([
                                 'success' => false,
@@ -207,13 +217,37 @@ class RfidDetailController extends Controller
                             $otroRegistroExiste = true;
                             Log::info("La última tarjeta maestra es de {$fechaMaster->toDateString()}, fuera de hoy: forzando otroRegistroExiste = true.");
                         } else {
-                            // Si la master fue hoy, evaluamos normalmente
-                            $otroRegistroExiste = RfidList::where('rfid_reading_id', $rfidReading->id)
-                                ->where('tid', '<>', $masterReset->tid)
-                                ->where('created_at', '>', $fechaMaster)
-                                ->where('created_at', '>=', $inicioTurno)
-                                ->exists();
-                            Log::info("Chequeo normal de otros registros hoy: " . ($otroRegistroExiste ? 'sí' : 'no'));
+                            //sacamos de rfid_readings el id con where epc = $masterReset->epc 
+                            try{
+                                $rfidReadingId = RfidReading::where('epc', $masterReset->epc)->latest()->first();
+                              //  log::info("El último registro RFID con epc {$masterReset->epc} es: " . json_encode($rfidReadingId));
+                                $lastProductListSelected = ProductListSelecteds::where('rfid_reading_id', $rfidReadingId->id)->orderBy('created_at', 'desc')->latest()->first();
+                                if (! $rfidReading || ! $lastProductListSelected) {
+                                    $otroRegistroExiste = true;
+                                }else{
+                                    // log::info("ultima rfid_reading_id {$rfidReadingId->id} es: " . json_encode($lastProductListSelected));
+                                if ($fechaMaster->lt($lastProductListSelected->created_at)) {
+                                    // Si la última master es antes del cambio de confeccion, consideramos
+                                    // que ya hubo otro registro “válido”
+                                    $otroRegistroExiste = true;
+                                    Log::info("Maestra es primera activacion despues de cambio confeccion pongo :  forzando otroRegistroExiste = true.");
+                                } else {
+                                    // Si la master fue hoy y despues del cambio de confeccion , evaluamos normalmente
+                                    $otroRegistroExiste = RfidList::where('rfid_reading_id', $rfidReading->id)
+                                        ->where('tid', '<>', $masterReset->tid)
+                                        ->where('created_at', '>', $fechaMaster)
+                                        ->where('created_at', '>=', $inicioTurno)
+                                        ->exists();
+                                    Log::info("Chequeo normal de otros registros hoy: " . ($otroRegistroExiste ? 'sí' : 'no'));
+                                }
+                                }
+                                
+    
+                            }catch (\Exception $e) {
+                                    Log::error("Error al obtener el último registro RFID: " . $e->getMessage());
+                            }
+
+
                         }
 
                         // Calcular la diferencia en minutos desde la última inserción de la tarjeta maestra
@@ -467,4 +501,69 @@ class RfidDetailController extends Controller
             'tids_master_reset'     => $tidspoints
         ]);
     }
+
+    
+    /**
+     * Inserta un registro en RfidErrorPoint a partir de parámetros individuales, robusto a fallos.
+     *
+     * @param string $tid
+     * @param string $epc
+     * @param string|null $note
+     * @param string $antena
+     * @param int $rssi
+     * @param string $serialno
+     * @return \App\Models\RfidErrorPoint|null
+     */
+    public function createRfidErrorPointSimple($rfidDetail, $rfidReading, $request, $rfidAnt, $note)
+    {
+        try {
+            // Si los modelos pueden ser null, usar null-safe
+            $rfid_color_id = $rfidReading->rfid_color_id ?? null;
+
+
+            $productListSelected = OperatorPost::where('rfid_reading_id', $rfidReading->id)
+                ->whereNull('finish_at')
+                ->latest()
+                ->first();
+
+                $product_lists_id = $productListSelected->product_list_id ?? null;
+                $operator_id = $productListSelected->operator_id ?? null;
+                $operator_post_id = $productListSelected->id ?? null;
+    
+            $rfidErrorPoint = RfidErrorPoint::create([
+                'name'                 => $rfidDetail->name ?? null,
+                'value'                => '1',
+                'rfid_ant_name'        => $request->input('antenna_name', null),
+                'model_product'        => '1',
+                'order_id'             => $rfidDetail->orderId,
+                'count_total'          => $rfidDetail->count_total ?? 0,
+                'count_total_1'        => $rfidDetail->count_total_1 ?? 0,
+                'count_shift_1'        => $rfidDetail->count_shift_1 ?? 0,
+                'count_order_1'        => $rfidDetail->count_order_1 ?? 0,
+                'time_11'              => $rfidDetail->time_11 ?? 0,
+                'epc'                  => $request->input('epc', null),
+                'tid'                  => $request->input('tid', null),
+                'note'                 => $note,
+                'rssi'                 => $request->input('rssi', null),
+                'serialno'             => $request->input('serialno', null),
+                'ant'                  => $request->input('ant', 2),
+                'unic_code_order'      => 0,
+                'production_line_id'   => $rfidAnt->production_line_id,
+                'rfid_color_id'        => $rfid_color_id,
+                'product_lists_id'     => $product_lists_id,
+                'operator_id'          => $operator_id,
+                'operator_post_id'     => $operator_post_id,
+                'rfid_detail_id'       => $rfidDetail->id ?? null,
+                'rfid_reading_id'      => $rfidReading->id ?? null,
+            ]);
+    
+            return $rfidErrorPoint;
+        } catch (\Throwable $e) {
+            \Log::error("[createRfidErrorPointSimple] Error al crear registro RFID Error Point: " . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return null;
+        }
+    }
+
 }

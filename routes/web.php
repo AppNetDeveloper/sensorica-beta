@@ -324,6 +324,17 @@ Route::get('rfid/{id}/edit', [RfidController::class, 'edit'])->name('rfid.edit')
 Route::put('rfid/{id}', [RfidController::class, 'update'])->name('rfid.update');
 Route::delete('rfid/{id}', [RfidController::class, 'destroy'])->name('rfid.destroy');
 
+// Ruta para el visualizador MQTT original (basado en WebSocket)
+Route::get('/rfid-mqtt/visualizador-mqtt', [RfidController::class, 'showMqttVisualizer'])->name('rfid.visualizer');
+
+// --- NUEVAS RUTAS ---
+// Ruta para mostrar la nueva vista Blade que usará AJAX
+Route::get('/rfid/visualizador-ajax', [RfidController::class, 'showAjaxVisualizer'])->name('rfid.ajaxVisualizer');
+
+// Ruta que será llamada por AJAX para obtener los datos del gateway Node.js
+// Esta ruta llama al método getGatewayMessages en RfidController
+Route::get('/rfid-mqtt/api/gateway-data', [RfidController::class, 'getGatewayMessages'])->name('rfid.gatewayData');
+
 Route::get('workers-admin', [WorkerController::class, 'index'])->name('workers-admin.index');
 
 

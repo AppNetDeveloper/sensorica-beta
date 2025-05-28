@@ -31,11 +31,12 @@ let dbConnection;                 // Conexión a la base de datos MySQL
 let subscribedTopics = [];        // Lista de tópicos a los que se está suscrito
 let blockedEPCs = new Set();      // Conjunto de EPCs bloqueados (evitar procesamiento)
 let ignoredTIDs = new Map();      // Mapa para ignorar TIDs que ya han sido procesados recientemente
+let ignoredTempTIDs = new Map();      // Mapa para ignorar temp TIDs que ya han sido procesados recientemente
 let antennaData = {};             // Objeto que almacena datos de antenas asociadas a cada tópico
 // 🔄 Cache en memoria para almacenar production_line_id por mqtt_topic
 let productionLineCache = {};
 let epcReadCache = new Map();     // NUEVO: Cache para ignorar EPCs leídos recientemente por antena: Map<topic, Map<epc, expiryTimestamp>>
-
+let currentlySubscribedTopics = []; // Lista de tópicos a los que se está suscrito actualmente
 
 // ⏰ Función para obtener la fecha y hora actual en formato 'en-GB' y en la zona horaria UTC, sin la coma
 function getCurrentTimestamp() {
@@ -98,8 +99,11 @@ function connectMQTT() {
     // asigna un clientId aleatorio, establece el periodo de reconexión y evita limpiar las sesiones anteriores
     mqttClient = mqtt.connect(`mqtt://${mqttServer}:${mqttPort}`, {
         clientId: `mqtt_client_${Math.random().toString(16).substr(2, 8)}`,
+        //clientId: `rfid-consumer-1`,   // fijo por instancia el client id que se usa en el broker
+        keepalive: 45,                    // 45 s -> latencia razonable
         reconnectPeriod: 5000,
-        clean: false
+        //reconnectPeriod: 2000,            // 2 s si quieres recobro ágil
+        clean: false  
     });
 
     // Evento 'connect': Se ejecuta cuando la conexión MQTT es exitosa
@@ -180,37 +184,82 @@ async function updateBlockedEPCs() {
 }
 
 // 🔄 Función para actualizar la lista de tópicos (y datos de antena) a los que se debe suscribir el cliente MQTT
+// 🔄 Función para actualizar la lista de tópicos a los que se debe suscribir el cliente MQTT
 async function subscribeToTopics() {
-    // Si no está conectado a MQTT, no hace nada
-    if (!isMqttConnected) return;
+    if (!isMqttConnected || !dbConnection) {
+        if (!isMqttConnected) console.warn(`[${getCurrentTimestamp()}] ${environment}.${warning}: No conectado a MQTT, no se pueden actualizar tópicos.`);
+        if (!dbConnection) console.warn(`[${getCurrentTimestamp()}] ${environment}.${warning}: No conectado a la BD, no se pueden obtener tópicos.`);
+        return;
+    }
 
     try {
-        // Consulta la base de datos para obtener los tópicos configurados en la tabla 'rfid_ants', ahora incluyendo el production_line_id
         const [rows] = await dbConnection.execute('SELECT mqtt_topic, rssi_min, name, production_line_id, min_read_interval_ms FROM rfid_ants WHERE mqtt_topic IS NOT NULL AND mqtt_topic != ""');
+        const newTopicsFromDB = rows.map(row => row.mqtt_topic);
 
-        // Crea un array con los nuevos tópicos obtenidos
-        const newTopics = rows.map(row => row.mqtt_topic);
-
-        // Actualiza la información de antena asociada a cada tópico
         rows.forEach(row => {
             antennaData[row.mqtt_topic] = { rssi_min: row.rssi_min, antenna_name: row.name, min_read_interval_ms: row.min_read_interval_ms };
         });
 
-        // Comprueba si la lista de tópicos ha cambiado comparando el array actual con el anterior
-        if (JSON.stringify(subscribedTopics) !== JSON.stringify(newTopics)) {
-            // Actualiza la lista de tópicos suscritos
-            subscribedTopics = newTopics;
+        // Comprobar si la lista de tópicos ha cambiado (comparando listas ordenadas)
+        if (JSON.stringify(currentlySubscribedTopics.sort()) !== JSON.stringify(newTopicsFromDB.sort())) {
+            console.log(`[${getCurrentTimestamp()}] ${environment}.${info}: Detectado cambio en tópicos. Actuales: ${currentlySubscribedTopics.join(', ')}. Nuevos de BD: ${newTopicsFromDB.join(', ')}`);
 
-            // Primero, cancela la suscripción a los tópicos antiguos y luego se suscribe a los nuevos
-            mqttClient.unsubscribe(subscribedTopics, () => {
-                mqttClient.subscribe(newTopics, err => {
-                    if (!err) console.log(`[${getCurrentTimestamp()}] ${environment}.${info}: ✅ Tópicos actualizados (${newTopics.length})`);
+            // Tópicos a los que hay que desuscribirse (estaban antes, ya no están)
+            const topicsToUnsubscribe = currentlySubscribedTopics.filter(topic => !newTopicsFromDB.includes(topic));
+
+            if (topicsToUnsubscribe.length > 0) {
+                mqttClient.unsubscribe(topicsToUnsubscribe, (errUnsubscribe) => {
+                    if (errUnsubscribe) {
+                        console.error(`[${getCurrentTimestamp()}] ${environment}.${error}: ❌ Error al desuscribirse de tópicos [${topicsToUnsubscribe.join(', ')}]: ${errUnsubscribe.message}`);
+                    } else {
+                        console.log(`[${getCurrentTimestamp()}] ${environment}.${info}: ℹ️ Desuscrito de tópicos: [${topicsToUnsubscribe.join(', ')}]`);
+                    }
+                    // Continuar con la suscripción a la lista completa de la BD (newTopicsFromDB)
+                    // para asegurar que todos los necesarios estén con QoS 1
+                    subscribeNewAndReSubscribe(newTopicsFromDB);
                 });
-            });
+            } else {
+                 // Si no hay nada que desuscribir, simplemente suscribir/re-suscribir a la lista de la BD
+                subscribeNewAndReSubscribe(newTopicsFromDB);
+            }
+            // Actualizar la lista de tópicos actualmente suscritos
+            currentlySubscribedTopics = [...newTopicsFromDB];
+        } else {
+            // Si no hay cambios en la lista de tópicos, igualmente nos aseguramos
+            // de que las suscripciones existentes tengan QoS 1.
+            if (newTopicsFromDB.length > 0) {
+                // Esta llamada a subscribe actuará como una "re-suscripción" o "actualización de QoS"
+                // para los tópicos que ya estaban suscritos.
+                mqttClient.subscribe(newTopicsFromDB, { qos: 1 }, (errSubscribe) => {
+                    if (errSubscribe) {
+                        console.error(`[${getCurrentTimestamp()}] ${environment}.${error}: ❌ Error al re-suscribirse (verificación QoS) a tópicos [${newTopicsFromDB.join(', ')}]: ${errSubscribe.message}`);
+                    } else {
+                        // console.log(`[${getCurrentTimestamp()}] ${environment}.${info}: ✅ Verificación de QoS para tópicos [${newTopicsFromDB.join(', ')}] completada.`);
+                    }
+                });
+            }
         }
-    } catch (error) {
-        console.error(`[${getCurrentTimestamp()}] ${environment}.${error}: ❌ Error al actualizar tópicos: ${error.message}`);
-        await connectToDatabase();
+    } catch (err) { // Cambiado 'error' a 'err' para consistencia
+        console.error(`[${getCurrentTimestamp()}] ${environment}.${error}: ❌ Error al actualizar tópicos: ${err.message}`);
+        if (err.code === 'PROTOCOL_CONNECTION_LOST' || err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND') {
+            console.log(`[${getCurrentTimestamp()}] ${environment}.${info}: Intentando reconectar a la base de datos debido a error en actualización de tópicos.`);
+            await connectToDatabase();
+        }
+    }
+}
+
+// Y necesitarías también la función auxiliar:
+function subscribeNewAndReSubscribe(topicsToEnsureSubscription) {
+    if (topicsToEnsureSubscription.length > 0) {
+        mqttClient.subscribe(topicsToEnsureSubscription, { qos: 1 }, (errSubscribe) => {
+            if (!errSubscribe) {
+                console.log(`[${getCurrentTimestamp()}] ${environment}.${info}: ✅ Suscrito/Actualizado tópicos [${topicsToEnsureSubscription.join(', ')}] con QoS 1.`);
+            } else {
+                console.error(`[${getCurrentTimestamp()}] ${environment}.${error}: ❌ Error al suscribirse/actualizar tópicos [${topicsToEnsureSubscription.join(', ')}]: ${errSubscribe.message}`);
+            }
+        });
+    } else {
+        console.log(`[${getCurrentTimestamp()}] ${environment}.${info}: No hay tópicos para suscribir/actualizar.`);
     }
 }
 
@@ -220,6 +269,15 @@ function cleanupIgnoredTIDs() {
     // Recorre cada TID y elimina los que excedan el tiempo límite
     ignoredTIDs.forEach((timestamp, tid) => {
         if (now - timestamp > 300000) ignoredTIDs.delete(tid);
+    });
+}
+
+// 🔄 Función para limpiar el mapa de ignoredTIDs, eliminando entradas que hayan estado más de 5 minutos (300000 ms)
+function cleanupIgnoredTempTIDs() {
+    const now = Date.now();
+    // Recorre cada TID y elimina los que excedan el tiempo límite
+    ignoredTempTIDs.forEach((timestamp, tid) => {
+        if (now - timestamp > 10000) ignoredTempTIDs.delete(tid);
     });
 }
 // 🔄 Función para limpiar el cache de EPCs leídos recientemente por antena
@@ -236,28 +294,6 @@ function cleanupEpcReadCache() {
             epcReadCache.delete(topic);
         }
     });
-}
-
-// 🔄 Función auxiliar para realizar la llamada a la API con reintentos y backoff exponencial
-async function callApiWithRetries(dataToSend, maxRetries = 5, initialDelay = 1000) {
-    let attempt = 0;
-    let delay = initialDelay;
-
-    while (attempt < maxRetries) {
-        try {
-            // Intenta realizar la llamada a la API
-            const response = await axios.post(`${apiBaseUrl}/api/rfid-insert`, dataToSend);
-            return response;
-        } catch (error) {
-            attempt++;
-            if (attempt >= maxRetries) {
-                throw error;
-            }
-            console.warn(`[${getCurrentTimestamp()}] ${environment}.${info}: ⚠️ Error en llamada a API, reintentando en ${delay}ms (Intento ${attempt} de ${maxRetries})`);
-            await new Promise(resolve => setTimeout(resolve, delay));
-            delay *= 2; // Backoff exponencial
-        }
-    }
 }
 
 // 🔄 Función para procesar los datos recibidos de MQTT y llamar a la API correspondiente en paralelo
@@ -277,10 +313,10 @@ async function processCallApi(topic, data) {
                 console.warn(`[${getCurrentTimestamp()}] ${environment}.${info}: ⚠️ Datos incompletos o inválidos: epc: ${epc}, tid: ${tid}, rssi: ${rssi}. Se omite la llamada a la API.`);
                 return;
             }
-            
+
             // Validación: Si el EPC está bloqueado, se omite la llamada
             if (blockedEPCs.has(epc)) {
-                console.warn(`[${getCurrentTimestamp()}] ${environment}.${info}: ⚠️ EPC bloqueado: ${epc}. Se omite la llamada a la API.`);
+               // console.warn(`[${getCurrentTimestamp()}] ${environment}.${info}: ⚠️ EPC bloqueado: ${epc}. Se omite la llamada a la API.`);
                 return;
             }
 
@@ -293,8 +329,19 @@ async function processCallApi(topic, data) {
 
             // Validación: Si el TID ya fue registrado recientemente, se omite la llamada
             if (ignoredTIDs.has(tid)) {
-                console.log(`[${getCurrentTimestamp()}] ${environment}.${info}: ⚠️ TID ya registrado recientemente: tid: ${tid}. Se omite la llamada a la API.`);
+                //console.log(`[${getCurrentTimestamp()}] ${environment}.${info}: ⚠️ TID ya registrado recientemente: tid: ${tid}. Se omite la llamada a la API.`);
                 return;
+            }
+
+            // Validación: Si el TID ya fue registrado recientemente, se omite la llamada
+            if (ignoredTempTIDs.has(tid)) {
+                console.log(`[${getCurrentTimestamp()}] ${environment}.${info}: ⚠️ TID : ${tid}. en proceso de bloqueo temporal por duplicación.`);
+                return;
+            }else{
+                const ignoreTimeTemp = 10000;
+                ignoredTempTIDs.set(tid, Date.now());
+                setTimeout(() => ignoredTempTIDs.delete(tid), ignoreTimeTemp);
+                console.log(`[${getCurrentTimestamp()}] ${environment}.${info}: ⚠️ TID : ${tid}. Bloqueado Temporal para no duplicar.`);
             }
 
             // Obtener el intervalo configurado para esta antena (asumimos que está en segundos)
@@ -347,15 +394,12 @@ async function processCallApi(topic, data) {
             const dataToSend = { epc, rssi, serialno, tid, ant, antenna_name: antennaInfo?.antenna_name || "Unknown" };
 
             try {
-                // Realiza la llamada a la API con reintentos en caso de error
-                //const response = await callApiWithRetries(dataToSend);
 
-                //llamada por directo
                 const response = await axios.post(`${apiBaseUrl}/api/rfid-insert`, dataToSend);
                 console.log(`[${getCurrentTimestamp()}] ${environment}.${info}: ✅ API Respuesta EPC ${epc} TID ${tid} y RSSI ${rssi}: ${JSON.stringify(response.data, null, 2)}`);
 
                 // Define el tiempo durante el cual se ignorará el TID según el éxito de la operación (300000 ms o 180000 ms) OJO ANTEAS EL 1000 era 180000
-                const ignoreTime = response.data.success ? 300000 : 5000;
+                const ignoreTime = response.data.success ? 800000 : 5000;
                 ignoredTIDs.set(tid, Date.now());
                 setTimeout(() => ignoredTIDs.delete(tid), ignoreTime);
                 console.log(`[${getCurrentTimestamp()}] ${environment}.${info}: ⏳ TID ${tid} ignorado por ${ignoreTime / 60000} min.`);
@@ -392,6 +436,7 @@ async function start() {
 
     // Programa la limpieza de TIDs ignorados cada 5 segundos, antes 60 segundos
     setInterval(cleanupIgnoredTIDs, 5000);
+    setInterval(cleanupIgnoredTempTIDs, 5000);
 
     // ---- NUEVO: Intervalo para limpiar el caché de EPCs por intervalo de antena ----
     setInterval(cleanupEpcReadCache, 1000); // Limpia cada 1 segundos (ajusta si es necesario)
