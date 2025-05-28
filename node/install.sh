@@ -50,7 +50,7 @@ npm install axios telegraf
 npm install express telegram qrcode axios dotenv
 npm install cors
 npm install mqtt mysql2 axios
-
+npm install express socket.io mqtt dotenv
 
 npm update
 npm install
