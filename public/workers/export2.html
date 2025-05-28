@@ -21,17 +21,72 @@
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-color: rgba(0,0,0,0.5); display: flex;
             justify-content: center; align-items: center; z-index: 1000; padding: 1rem;
+            transition: all 0.3s ease-in-out;
         }
         .modal-content {
             background-color: white; padding: 20px; border-radius: 8px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 600px;
+            display: flex; flex-direction: column;
+            transition: all 0.3s ease-in-out;
         }
-        #chartModal .modal-content { max-width: 850px; }
-        .edit-icon, .analyze-icon {
+        #chartModal .modal-content {
+            max-width: 850px; /* Ancho normal */
+            height: auto;
+            max-height: 90vh; /* Alto normal */
+        }
+
+        /* Estilos para modal maximizado */
+        .modal.modal-fullscreen { padding: 0; }
+        .modal.modal-fullscreen .modal-content {
+            width: 100vw !important;
+            height: 100vh !important;
+            max-width: 100vw !important;
+            max-height: 100vh !important;
+            margin: 0;
+            border-radius: 0;
+            padding: 0; 
+            display: flex;
+            flex-direction: column;
+        }
+        .modal.modal-fullscreen .modal-header {
+            padding: 1rem; 
+            flex-shrink: 0; 
+        }
+        .modal.modal-fullscreen .chart-container {
+            width: 100% !important; 
+            flex-grow: 1; 
+            padding: 1rem; 
+            box-sizing: border-box; 
+            display: block; /* Cambiado de flex a block para permitir que el SVG interno determine el scroll */
+            overflow-x: auto !important; /* Forzar scroll horizontal si es necesario */
+            overflow-y: hidden; /* Evitar scroll vertical innecesario en el contenedor del gráfico */
+        }
+         .modal.modal-fullscreen .chart-container svg { /* Asegurar que el SVG no esté centrado si es más grande */
+            margin-left: 0;
+            margin-right: 0;
+        }
+        .modal.modal-fullscreen .modal-footer {
+            padding: 1rem; 
+            flex-shrink: 0; 
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .modal-header h3 { margin: 0; }
+        .modal-footer { margin-top: auto; padding-top: 1rem; border-top: 1px solid #e5e7eb; text-align: right;}
+
+
+        .edit-icon, .analyze-icon, .fullscreen-icon {
             cursor: pointer; margin-left: 8px; color: #3b82f6;
             display: inline-flex; align-items: center;
         }
-        .edit-icon:hover, .analyze-icon:hover { color: #2563eb; }
+        .edit-icon:hover, .analyze-icon:hover, .fullscreen-icon:hover { color: #2563eb; }
         .hidden { display: none; }
         .icon { width: 24px; height: 24px; fill: currentColor; }
         .spinner {
@@ -40,7 +95,7 @@
             animation: spin 1s ease infinite; margin: 20px auto;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .chart-container { width: 100%; height: 450px; overflow-x: auto; }
+        .chart-container { width: 100%; height: 450px; overflow-x: auto; flex-shrink: 0; } /* overflow-x: auto por defecto */
         .chart-container svg { display: block; margin: auto; }
         .bar { fill: steelblue; }
         .bar:hover { fill: #2563eb; }
@@ -98,11 +153,11 @@
                    </div>
              </div>
         </div>
-         <div class="flex flex-wrap justify-end space-x-2 no-print mb-4">
+         <div class="flex flex-wrap justify-end items-center space-x-2 no-print mb-4">
             <button id="viewWorkerChartBtn" class="bg-teal-500 hover:bg-teal-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-150 ease-in-out hidden">📊 Cajas/Trabajador</button>
             <button id="viewPostChartBtn" class="bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-150 ease-in-out hidden">📊 Cajas/Puesto (Barras)</button>
             <button id="viewPostPieChartBtn" class="bg-sky-500 hover:bg-sky-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-150 ease-in-out hidden">📊 Cajas/Puesto (Circular)</button>
-            <button id="viewStackedBarChartBtn" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-150 ease-in-out hidden">📊 Confección/Puesto</button>
+            <button id="viewConfeccionPorTrabajadorChartBtn" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-150 ease-in-out hidden">📊 Confección/Trabajador</button>
             <button id="analizarTodosLocalAIBtn" class="btn-ia-local text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-150 ease-in-out hidden">
                 <svg class="icon mr-2 inline-block" style="width:18px; height:18px;" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 15c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm0-10c-2.06 0-3.82 1.22-4.58 3h9.16c-.76-1.78-2.52-3-4.58-3z"/></svg>
                 Analizar Todos (IA)
@@ -116,7 +171,9 @@
         <div class="kpi-card"><div class="kpi-title">Total Cajas Producidas</div><div id="kpiTotalCajas" class="kpi-value">-</div></div>
         <div class="kpi-card"><div class="kpi-title">Trabajadores Activos</div><div id="kpiTrabajadoresActivos" class="kpi-value">-</div></div>
         <div class="kpi-card"><div class="kpi-title">Promedio Cajas/Hora Global</div><div id="kpiAvgCajasHora" class="kpi-value">-</div></div>
-        <div class="kpi-card"><div class="kpi-title">Puesto Más Productivo</div><div id="kpiPuestoMasProductivo" class="kpi-value">-</div></div>
+        <div class="kpi-card">
+            <div class="kpi-title">Operario Más Productivo</div>
+            <div id="kpiPuestoMasProductivo" class="kpi-value">-</div> </div>
     </div>
 
     <div id="searchInputContainer" class="p-4 md:px-6 no-print">
@@ -179,15 +236,15 @@
 
 <div id="analysisModal" class="modal hidden no-print">
     <div class="modal-content">
-        <div class="flex justify-between items-center mb-4">
+        <div class="modal-header">
             <h3 id="analysisModalTitle" class="text-lg font-medium leading-6 text-gray-900">Análisis de Rendimiento</h3>
             <button type="button" id="closeAnalysisModalBtn" class="text-gray-400 hover:text-gray-600">
                 <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
         </div>
-        <div id="analysisModalContent" class="text-sm text-gray-700 whitespace-pre-wrap overflow-y-auto" style="max-height: 60vh;"></div>
+        <div id="analysisModalContent" class="text-sm text-gray-700 whitespace-pre-wrap overflow-y-auto" style="max-height: calc(90vh - 100px); margin-top:1rem; margin-bottom:1rem;"></div>
         <div id="analysisModalStatus" class="mt-3 text-sm text-gray-500"></div>
-        <div class="mt-4 flex justify-end">
+        <div class="modal-footer">
             <button type="button" id="okAnalysisModalBtn" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 border border-transparent rounded-md shadow-sm">OK</button>
         </div>
     </div>
@@ -195,14 +252,20 @@
 
 <div id="chartModal" class="modal hidden no-print">
     <div class="modal-content">
-        <div class="flex justify-between items-center mb-4">
+        <div class="modal-header">
             <h3 id="chartModalTitle" class="text-lg font-medium leading-6 text-gray-900">📊 Gráfico de Producción</h3>
-            <button type="button" id="closeChartModalBtn" class="text-gray-400 hover:text-gray-600">
-                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
+            <div class="flex items-center">
+                 <button type="button" id="toggleFullscreenChartBtn" class="text-gray-500 hover:text-gray-700 mr-2 fullscreen-icon" title="Pantalla Completa">
+                    <svg id="expandIcon" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 1v4m0 0h-4m4 0l-5-5" /></svg>
+                    <svg id="contractIcon" class="h-5 w-5 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19v-4m0 0h4M15 19l-5-5M5 9V5m0 0h4M5 5l5 5m0 0M9 5h4M5 9v4m0 0M19 9v4" /></svg>
+                </button>
+                <button type="button" id="closeChartModalBtn" class="text-gray-400 hover:text-gray-600">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
         </div>
         <div id="chartContainer" class="chart-container"></div>
-        <div class="mt-4 flex justify-end">
+        <div class="modal-footer">
             <button type="button" id="okChartModalBtn" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 border border-transparent rounded-md shadow-sm">OK</button>
         </div>
     </div>
@@ -234,14 +297,14 @@
     // Variables globales (declaraciones)
     let tableBody, loadingRow, errorRow, errorCell, noDataRow, exportExcelBtn, printBtn,
         dateRangeSelect, filterPostsCheckbox, analizarTodosLocalAIBtn,
-        viewWorkerChartBtn, viewPostChartBtn, viewPostPieChartBtn, viewStackedBarChartBtn,
+        viewWorkerChartBtn, viewPostChartBtn, viewPostPieChartBtn, viewConfeccionPorTrabajadorChartBtn,
         totalUnidadesTurnoHeader,
         lockButton, lockIcon, unlockIcon, passwordModal, passwordInput, passwordError,
         cancelPasswordBtn, submitPasswordBtn, editQuantityModal, editQuantityInput,
         editQuantityError, editApiStatus, cancelEditBtn, saveEditBtn,
         analysisModal, analysisModalTitle, analysisModalContent, analysisModalStatus,
         closeAnalysisModalBtn, okAnalysisModalBtn,
-        chartModal, chartModalTitleEl, chartContainerEl,
+        chartModal, chartModalTitleEl, chartContainerEl, toggleFullscreenChartBtn, expandIcon, contractIcon,
         tooltip,
         kpiCardContainer, kpiTotalCajas, kpiTrabajadoresActivos, kpiAvgCajasHora, kpiPuestoMasProductivo,
         searchInput;
@@ -253,6 +316,7 @@
     let currentEditContext = null;
     let currentLocalAITaskId = null;
     let localAIPollingIntervalId = null;
+    let currentChartType = null; 
 
     const dateTimeFormatOptions = { year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: false };
     const dateFormatter = new Intl.DateTimeFormat(navigator.language || 'es-ES', dateTimeFormatOptions);
@@ -265,12 +329,7 @@
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error(`Error al obtener prompt ${promptApiKey} desde API: ${response.status} - ${errorText}. Usando prompt de fallback.`);
-                return {
-                    content: promptApiKey === promptApiKeys.individual ? fallbackIndividualPrompt : fallbackGlobalPrompt,
-                    modelName: defaultLocalAIModelName,
-                    error: true,
-                    errorMessage: `Error API ${response.status}: No se pudo cargar el prompt '${promptApiKey}'.`
-                };
+                return { content: promptApiKey === promptApiKeys.individual ? fallbackIndividualPrompt : fallbackGlobalPrompt, modelName: defaultLocalAIModelName, error: true, errorMessage: `Error API ${response.status}: No se pudo cargar el prompt '${promptApiKey}'.` };
             }
             const promptData = await response.json();
             if (!promptData.content) {
@@ -286,20 +345,15 @@
 
     function showPasswordModal() {
         if(passwordModal && passwordInput && passwordError) {
-            passwordInput.value = '';
-            passwordError.classList.add('hidden');
-            passwordModal.classList.remove('hidden');
-            passwordInput.focus();
+            passwordInput.value = ''; passwordError.classList.add('hidden');
+            passwordModal.classList.remove('hidden'); passwordInput.focus();
         }
     }
-
-    function hidePasswordModal() {
-        if(passwordModal) passwordModal.classList.add('hidden');
-    }
+    function hidePasswordModal() { if(passwordModal) passwordModal.classList.add('hidden'); }
 
     function updateHeaderButtonsState() {
         const hasData = displayedPostRowsCount > 0;
-        const actionButtons = [analizarTodosLocalAIBtn, viewWorkerChartBtn, viewPostChartBtn, viewPostPieChartBtn, viewStackedBarChartBtn];
+        const actionButtons = [analizarTodosLocalAIBtn, viewWorkerChartBtn, viewPostChartBtn, viewPostPieChartBtn, viewConfeccionPorTrabajadorChartBtn];
         actionButtons.forEach(btn => {
             if (btn) {
                 if (isLocked || !hasData) { btn.classList.add('hidden'); btn.disabled = true; }
@@ -315,15 +369,9 @@
 
     function toggleLockState(locked) {
         isLocked = locked;
-        if (isLocked) {
-            if(lockIcon) lockIcon.classList.remove('hidden');
-            if(unlockIcon) unlockIcon.classList.add('hidden');
-        } else {
-            if(lockIcon) lockIcon.classList.add('hidden');
-            if(unlockIcon) unlockIcon.classList.remove('hidden');
-        }
-        updateHeaderButtonsState();
-        populateTable(originalWorkersData);
+        if (isLocked) { if(lockIcon) lockIcon.classList.remove('hidden'); if(unlockIcon) unlockIcon.classList.add('hidden'); }
+        else { if(lockIcon) lockIcon.classList.add('hidden'); if(unlockIcon) unlockIcon.classList.remove('hidden'); }
+        updateHeaderButtonsState(); populateTable(originalWorkersData);
     }
     
     function showEditQuantityModal(workerClientId, postIndex, currentQuantity, quantityCell, cajasHoraCell, workerUnitsCell) {
@@ -335,11 +383,7 @@
         if(editQuantityInput) {editQuantityInput.focus(); editQuantityInput.select(); }
         if(saveEditBtn) { saveEditBtn.disabled = false; saveEditBtn.textContent = 'Guardar'; }
     }
-
-    function hideEditQuantityModal() {
-        if(editQuantityModal) editQuantityModal.classList.add('hidden');
-        currentEditContext = null;
-    }
+    function hideEditQuantityModal() { if(editQuantityModal) editQuantityModal.classList.add('hidden'); currentEditContext = null; }
 
     async function handleSaveEdit() {
         const newQuantity = parseFloat(editQuantityInput.value);
@@ -351,13 +395,9 @@
         if (currentEditContext) {
             const { workerClientId, postIndex, quantityCell, cajasHoraCell, workerUnitsCell } = currentEditContext;
             const worker = originalWorkersData.find(w => w.client_id === workerClientId);
-            if (!worker || !worker.operator_posts || !worker.operator_posts[postIndex]) {
-                if(editApiStatus) {editApiStatus.textContent = 'Error: Datos no encontrados.'; editApiStatus.classList.add('text-red-500');} return;
-            }
+            if (!worker || !worker.operator_posts || !worker.operator_posts[postIndex]) { if(editApiStatus) {editApiStatus.textContent = 'Error: Datos no encontrados.'; editApiStatus.classList.add('text-red-500');} return; }
             const post = worker.operator_posts[postIndex]; const postId = post.id;
-            if (typeof postId === 'undefined') {
-                if(editApiStatus) {editApiStatus.textContent = 'Error: Falta ID de puesto.'; editApiStatus.classList.add('text-red-500');} console.error("Post ID undefined:", post); return;
-            }
+            if (typeof postId === 'undefined') { if(editApiStatus) {editApiStatus.textContent = 'Error: Falta ID de puesto.'; editApiStatus.classList.add('text-red-500');} console.error("Post ID undefined:", post); return; }
             if(saveEditBtn) {saveEditBtn.disabled = true; saveEditBtn.textContent = 'Guardando...';}
             if(editApiStatus) {editApiStatus.textContent = 'Actualizando...'; editApiStatus.classList.remove('text-red-500', 'text-green-500');}
             const formData = new URLSearchParams(); formData.append('id', postId); formData.append('count', newQuantity);
@@ -373,8 +413,7 @@
                     if(editApiStatus) {editApiStatus.textContent = result.message || 'Actualizado.'; editApiStatus.classList.add('text-green-500');} setTimeout(hideEditQuantityModal, 1500);
                     updateGrandTotalUnidades(); updateKPICards();
                 } else { throw new Error(result.message || 'API indicó fallo.'); }
-            } catch (error) {
-                console.error('Error al guardar:', error); if(editApiStatus){editApiStatus.textContent = `Error: ${error.message}`; editApiStatus.classList.add('text-red-500');}
+            } catch (error) { console.error('Error al guardar:', error); if(editApiStatus){editApiStatus.textContent = `Error: ${error.message}`; editApiStatus.classList.add('text-red-500');}
             } finally { if(saveEditBtn){saveEditBtn.disabled = false; saveEditBtn.textContent = 'Guardar';} }
         }
     }
@@ -385,7 +424,6 @@
         if(analysisModalStatus) { analysisModalStatus.textContent = `Generando análisis...`; analysisModalStatus.classList.remove('text-red-500');}
         if(analysisModal) analysisModal.classList.remove('hidden');
     }
-
     function hideAnalysisModal() {
         if(analysisModal) analysisModal.classList.add('hidden');
         if (localAIPollingIntervalId) { clearInterval(localAIPollingIntervalId); localAIPollingIntervalId = null; currentLocalAITaskId = null; }
@@ -502,17 +540,46 @@
     
     function showChartModal(chartType) {
         if(!chartModal || !chartModalTitleEl || !chartContainerEl) return;
+        currentChartType = chartType; 
         chartModal.classList.remove('hidden');
-        if (chartType === 'workers') { chartModalTitleEl.textContent = '📊 Producción Total por Trabajador'; renderProductionByWorkerChart(); }
-        else if (chartType === 'postsBar') { chartModalTitleEl.textContent = '📊 Producción Total por Puesto (Barras)'; renderProductionByPostBarChart(); }
-        else if (chartType === 'postsPie') { chartModalTitleEl.textContent = '📊 Distribución de Cajas por Puesto (Circular)'; renderPostDistributionPieChart(); }
-        else if (chartType === 'confeccionPorPuesto') { chartModalTitleEl.textContent = '📊 Confección por Puesto (Apilado)'; renderConfeccionPorPuestoChart(); }
+        chartModal.classList.remove('modal-fullscreen'); 
+        if(expandIcon) expandIcon.classList.remove('hidden');
+        if(contractIcon) contractIcon.classList.add('hidden');
+        renderCurrentChart();
     }
-    function hideChartModal() { if(chartModal) chartModal.classList.add('hidden'); d3.select("#chartContainer svg").remove(); }
+
+    function renderCurrentChart() { 
+        if (!currentChartType || !chartModalTitleEl) return;
+        if (currentChartType === 'workers') { chartModalTitleEl.textContent = '📊 Producción Total por Trabajador'; renderProductionByWorkerChart(); }
+        else if (currentChartType === 'postsBar') { chartModalTitleEl.textContent = '📊 Producción Total por Puesto (Barras)'; renderProductionByPostBarChart(); }
+        else if (currentChartType === 'postsPie') { chartModalTitleEl.textContent = '📊 Distribución de Cajas por Puesto (Circular)'; renderPostDistributionPieChart(); }
+        else if (currentChartType === 'confeccionPorTrabajador') { chartModalTitleEl.textContent = '📊 Confección por Trabajador (Apilado)'; renderConfeccionPorTrabajadorChart(); }
+    }
+
+    function hideChartModal() {
+        if(chartModal) {
+            chartModal.classList.add('hidden');
+            chartModal.classList.remove('modal-fullscreen'); 
+            if(expandIcon) expandIcon.classList.remove('hidden');
+            if(contractIcon) contractIcon.classList.add('hidden');
+        }
+        d3.select("#chartContainer svg").remove();
+        currentChartType = null;
+    }
+
+    function toggleChartFullscreen() {
+        if (!chartModal || !expandIcon || !contractIcon) return;
+        chartModal.classList.toggle('modal-fullscreen');
+        const isFullscreen = chartModal.classList.contains('modal-fullscreen');
+        expandIcon.classList.toggle('hidden', isFullscreen);
+        contractIcon.classList.toggle('hidden', !isFullscreen);
+        setTimeout(() => { renderCurrentChart(); }, 50); 
+    }
+
     function renderProductionByWorkerChart() {
         d3.select("#chartContainer svg").remove();
         const dataForChart = filterDataByCheckbox(JSON.parse(JSON.stringify(originalWorkersData)))
-            .map(worker => ({ name: worker.name || `ID: ${worker.client_id || 'N/A'}`, value: (worker.operator_posts || []).reduce((sum, post) => sum + (post.count || 0), 0) }))
+            .map(worker => ({ name: worker.name || `ID: ${worker.client_id || 'N/A'}`, value: (worker.operator_posts || []).reduce((sum, post) => sum + (Number(post.count) || 0), 0) }))
             .filter(d => d.value > 0).sort((a, b) => b.value - a.value);
         drawBarChart(dataForChart, "Total de Cajas Producidas por Trabajador", "Trabajadores", "Total de Cajas");
     }
@@ -520,7 +587,7 @@
         d3.select("#chartContainer svg").remove();
         const postCounts = {};
         filterDataByCheckbox(JSON.parse(JSON.stringify(originalWorkersData))).forEach(worker => {
-            (worker.operator_posts || []).forEach(post => { if ((post.count || 0) > 0 && post.rfid_reading?.name) postCounts[post.rfid_reading.name] = (postCounts[post.rfid_reading.name] || 0) + post.count; });
+            (worker.operator_posts || []).forEach(post => { if ((Number(post.count) || 0) > 0 && post.rfid_reading?.name) postCounts[post.rfid_reading.name] = (postCounts[post.rfid_reading.name] || 0) + (Number(post.count) || 0); });
         });
         const dataForChart = Object.entries(postCounts).map(([name, value]) => ({ name, value })).filter(d => d.value > 0).sort((a,b) => b.value - a.value);
         drawBarChart(dataForChart, "Total de Cajas Producidas por Puesto", "Puestos de Trabajo", "Total de Cajas");
@@ -529,15 +596,22 @@
         if (!chartContainerEl) return;
         if (chartData.length === 0) { chartContainerEl.innerHTML = '<p class="text-center text-gray-500 p-4">No hay datos para mostrar.</p>'; return; }
         chartContainerEl.innerHTML = '';
-        const containerWidth = chartContainerEl.clientWidth, containerHeight = 400;
+        
+        const rect = chartContainerEl.getBoundingClientRect();
+        const containerWidth = rect.width;
+        const dynamicContainerHeight = rect.height > 0 ? rect.height : 450;
+
         const margin = {top: 40, right: 30, bottom: 120, left: 70};
-        const width = Math.max(containerWidth - margin.left - margin.right, chartData.length * 40), height = containerHeight - margin.top - margin.bottom;
+        const width = Math.max(containerWidth - margin.left - margin.right, chartData.length * 40);
+        const height = dynamicContainerHeight - margin.top - margin.bottom;
+
+        if (height <= 0 || width <=0) { console.error("Dimensiones de gráfico inválidas:", width, height); chartContainerEl.innerHTML = '<p class="text-center text-red-500 p-4">Error al calcular dimensiones del gráfico.</p>'; return;}
         const svg = d3.select("#chartContainer").append("svg").attr("width", width + margin.left + margin.right).attr("height", height + margin.top + margin.bottom).append("g").attr("transform", `translate(${margin.left},${margin.top})`);
         const x = d3.scaleBand().range([0, width]).domain(chartData.map(d => d.name)).padding(0.3);
         svg.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(x)).selectAll("text").attr("transform", "translate(-10,5)rotate(-45)").style("text-anchor", "end").style("font-size", "10px");
         const y = d3.scaleLinear().domain([0, d3.max(chartData, d => d.value) || 10]).nice().range([height, 0]);
         svg.append("g").call(d3.axisLeft(y).ticks(Math.min(10, d3.max(chartData, d => d.value) || 10)));
-        svg.selectAll(".bar").data(chartData).join("rect").attr("class", "bar").attr("x", d => x(d.name)).attr("y", d => y(d.value)).attr("width", x.bandwidth()).attr("height", d => height - y(d.value))
+        svg.selectAll(".bar").data(chartData).join("rect").attr("class", "bar").attr("x", d => x(d.name)).attr("y", d => y(d.value)).attr("width", x.bandwidth()).attr("height", d => Math.max(0, height - y(d.value)))
             .on("mouseover", function(event, d) { if(tooltip){tooltip.transition().duration(200).style("opacity", .9); tooltip.html(`<strong>${d.name}</strong><br/>Cajas: ${d.value}`).style("left", (event.pageX + 10) + "px").style("top", (event.pageY - 15) + "px");} d3.select(this).style("fill", "#1d4ed8"); })
             .on("mouseout", function() { if(tooltip)tooltip.transition().duration(500).style("opacity", 0); d3.select(this).style("fill", "steelblue"); });
         svg.append("text").attr("x", width / 2).attr("y", 0 - (margin.top / 2) - 5).attr("text-anchor", "middle").style("font-size", "16px").style("font-weight", "bold").text(titleText);
@@ -548,38 +622,108 @@
         if (!chartContainerEl) return;
         d3.select("#chartContainer svg").remove();
         const postCounts = {};
-        filterDataByCheckbox(JSON.parse(JSON.stringify(originalWorkersData))).forEach(worker => { (worker.operator_posts || []).forEach(post => { if ((post.count || 0) > 0 && post.rfid_reading?.name) postCounts[post.rfid_reading.name] = (postCounts[post.rfid_reading.name] || 0) + post.count; }); });
+        filterDataByCheckbox(JSON.parse(JSON.stringify(originalWorkersData))).forEach(worker => { (worker.operator_posts || []).forEach(post => { if ((Number(post.count) || 0) > 0 && post.rfid_reading?.name) postCounts[post.rfid_reading.name] = (postCounts[post.rfid_reading.name] || 0) + (Number(post.count) || 0); }); });
         const dataForChart = Object.entries(postCounts).map(([name, value]) => ({ name, value })).filter(d => d.value > 0).sort((a,b) => b.value - a.value);
         if (dataForChart.length === 0) { chartContainerEl.innerHTML = '<p class="text-center text-gray-500 p-4">No hay datos para mostrar.</p>'; return; }
         chartContainerEl.innerHTML = '';
-        const cW = chartContainerEl.clientWidth, cH = 400, mP = 40, r = Math.min(cW,cH)/2-mP;
-        const svg = d3.select("#chartContainer").append("svg").attr("width",cW).attr("height",cH).append("g").attr("transform",`translate(${cW/2},${cH/2})`);
+        
+        const rect = chartContainerEl.getBoundingClientRect();
+        const availableWidth = rect.width;
+        const availableHeight = rect.height > 0 ? rect.height : 450;
+
+        const marginPie = 40; const radius = Math.min(availableWidth - (2*marginPie), availableHeight - (2*marginPie)) / 2;
+        if (radius <=0) { console.error("Pie chart radius is invalid."); chartContainerEl.innerHTML = '<p class="text-center text-red-500 p-4">Error al calcular dimensiones del gráfico.</p>'; return; }
+        const svg = d3.select("#chartContainer").append("svg").attr("width",availableWidth).attr("height",availableHeight).append("g").attr("transform",`translate(${availableWidth/2},${availableHeight/2})`);
         const color = d3.scaleOrdinal(d3.schemeCategory10); const pie=d3.pie().value(d=>d.value).sort(null); const dataR=pie(dataForChart);
-        const arc=d3.arc().innerRadius(0).outerRadius(r); const oA=d3.arc().innerRadius(r*0.9).outerRadius(r*0.9);
+        const arc=d3.arc().innerRadius(0).outerRadius(radius); const oA=d3.arc().innerRadius(radius*0.9).outerRadius(radius*0.9);
         svg.selectAll('allSlices').data(dataR).join('path').attr('d',arc).attr('fill',d=>color(d.data.name)).attr("stroke","white").style("stroke-width","2px").style("opacity",0.7)
             .on("mouseover",function(e,d){d3.select(this).style("opacity",1); if(tooltip){tooltip.transition().duration(200).style("opacity",.9);const p=(d.data.value/d3.sum(dataForChart,i=>i.value)*100).toFixed(1);tooltip.html(`<strong>${d.data.name}</strong><br/>Cajas: ${d.data.value}<br/>(${p}%)`).style("left",(e.pageX+10)+"px").style("top",(e.pageY-15)+"px");}})
             .on("mouseout",function(){d3.select(this).style("opacity",0.7); if(tooltip)tooltip.transition().duration(500).style("opacity",0);});
-        svg.selectAll('allLabels').data(dataR).join('text').attr('class','pie-slice').text(d=>{const p=(d.data.value/d3.sum(dataForChart,i=>i.value)*100);return p>5?`${d.data.name.substring(0,10)}... (${p.toFixed(1)}%)`:'';}).attr('transform',d=>{const pos=oA.centroid(d);const mid=d.startAngle+(d.endAngle-d.startAngle)/2;pos[0]=r*0.95*(mid<Math.PI?1:-1);return `translate(${pos})`;}).style('text-anchor',d=>(d.startAngle+(d.endAngle-d.startAngle)/2<Math.PI?'start':'end')).style('font-size','9px').style('fill','#333');
+        svg.selectAll('allLabels').data(dataR).join('text').attr('class','pie-slice').text(d=>{const p=(d.data.value/d3.sum(dataForChart,i=>i.value)*100);return p>5?`${d.data.name.substring(0,10)}... (${p.toFixed(1)}%)`:'';}).attr('transform',d=>{const pos=oA.centroid(d);const mid=d.startAngle+(d.endAngle-d.startAngle)/2;pos[0]=radius*0.95*(mid<Math.PI?1:-1);return `translate(${pos})`;}).style('text-anchor',d=>(d.startAngle+(d.endAngle-d.startAngle)/2<Math.PI?'start':'end')).style('font-size','9px').style('fill','#333');
     }
-    function renderConfeccionPorPuestoChart() {
-        if (!chartContainerEl) return;
+    
+    function renderConfeccionPorTrabajadorChart() {
+        if (!chartContainerEl) { console.error("chartContainerEl no encontrado en renderConfeccionPorTrabajadorChart"); return; }
         d3.select("#chartContainer svg").remove();
-        const dataP = filterDataByCheckbox(JSON.parse(JSON.stringify(originalWorkersData))); if(dataP.length===0){chartContainerEl.innerHTML='<p class="tc g5 p4">No data.</p>';return;} chartContainerEl.innerHTML='';
-        const aggD={},allC=new Set(); dataP.forEach(w=>(w.operator_posts||[]).forEach(p=>{if((p.count||0)>0&&p.rfid_reading?.name&&p.product_list?.name){const pst=p.rfid_reading.name,cnf=p.product_list.name;allC.add(cnf);if(!aggD[pst])aggD[pst]={};aggD[pst][cnf]=(aggD[pst][cnf]||0)+p.count;}}));
-        const cK=Array.from(allC).sort(); constcD=Object.entries(aggD).map(([p,c])=>{const r={puesto:p};cK.forEach(k=>r[k]=c[k]||0);return r;}).sort((a,b)=>d3.sum(cK,k=>b[k])-d3.sum(cK,k=>a[k]));
-        if(cD.length===0){chartContainerEl.innerHTML='<p class="tc g5 p4">No data for confeccion/puesto.</p>';return;}
-        const stack=d3.stack().keys(cK),series=stack(cD); const cW=chartContainerEl.clientWidth,cH=400,m={top:40,right:30,bottom:120,left:70},wd=Math.max(cW-m.left-m.right,cD.length*50),ht=cH-m.top-m.bottom;
-        const svg=d3.select("#chartContainer").append("svg").attr("width",wd+m.left+m.right).attr("height",ht+m.top+m.bottom).append("g").attr("transform",`translate(${m.left},${m.top})`);
-        const x=d3.scaleBand().domain(cD.map(d=>d.puesto)).range([0,wd]).padding(0.2); const y=d3.scaleLinear().domain([0,d3.max(series,d=>d3.max(d,d=>d[1]))||10]).nice().range([ht,0]);
-        const clr=d3.scaleOrdinal(d3.schemeCategory10).domain(cK);
-        svg.append("g").selectAll("g").data(series).join("g").attr("fill",d=>clr(d.key)).selectAll("rect").data(d=>d).join("rect").attr("x",d=>x(d.data.puesto)).attr("y",d=>y(d[1])).attr("height",d=>Math.max(0,y(d[0])-y(d[1]))).attr("width",x.bandwidth())
-        .on("mouseover",function(e,d){const pD=d3.select(this.parentNode).datum(),cN=pD.key,v=d.data[cN];if(tooltip){tooltip.transition().duration(200).style("opacity",.9);tooltip.html(`<strong>P:</strong> ${d.data.puesto}<br/><strong>C:</strong> ${cN}<br/><strong>Q:</strong> ${v}`).style("left",(e.pageX+10)+"px").style("top",(e.pageY-15)+"px");}d3.select(this).style("stroke","black").style("stroke-width",1.5);})
-        .on("mouseout",function(){if(tooltip)tooltip.transition().duration(500).style("opacity",0);d3.select(this).style("stroke","none");});
-        svg.append("g").attr("transform",`translate(0,${ht})`).call(d3.axisBottom(x)).selectAll("text").attr("transform","translate(-10,5)rotate(-45)").style("text-anchor","end");
+        console.log("Render Confeccion/Trabajador: Iniciando");
+        const dataToProcess = filterDataByCheckbox(JSON.parse(JSON.stringify(originalWorkersData)));
+        if (dataToProcess.length === 0) { chartContainerEl.innerHTML = '<p class="text-center text-gray-500 p-4">No hay datos para el gráfico de confección por trabajador.</p>'; console.log("Render Confeccion/Trabajador: Sin datos para procesar."); return; }
+        chartContainerEl.innerHTML = '';
+
+        const aggregatedData = {};
+        const allConfecciones = new Set();
+        dataToProcess.forEach(worker => {
+            const workerIdentifier = worker.name || `ID: ${worker.client_id}`;
+            if (!aggregatedData[workerIdentifier]) aggregatedData[workerIdentifier] = {};
+            (worker.operator_posts || []).forEach(post => {
+                const count = Number(post.count) || 0;
+                if (count > 0 && post.product_list?.name) {
+                    const confeccionName = post.product_list.name;
+                    allConfecciones.add(confeccionName);
+                    aggregatedData[workerIdentifier][confeccionName] = (aggregatedData[workerIdentifier][confeccionName] || 0) + count;
+                }
+            });
+        });
+        console.log("Render Confeccion/Trabajador: Datos Agregados:", JSON.parse(JSON.stringify(aggregatedData)));
+        console.log("Render Confeccion/Trabajador: Todas las Confecciones:", Array.from(allConfecciones));
+
+        const confeccionKeys = Array.from(allConfecciones).sort();
+        const chartData = Object.entries(aggregatedData).map(([trabajador, confecciones]) => {
+            const row = { trabajador: trabajador };
+            confeccionKeys.forEach(conKey => { row[conKey] = confecciones[conKey] || 0; });
+            return row;
+        }).sort((a,b) => d3.sum(confeccionKeys, key => b[key]) - d3.sum(confeccionKeys, key => a[key]));
+        console.log("Render Confeccion/Trabajador: Datos para el Gráfico (chartData):", JSON.parse(JSON.stringify(chartData)));
+        console.log("Render Confeccion/Trabajador: Claves de Confección (confeccionKeys):", confeccionKeys);
+
+        if (chartData.length === 0 || confeccionKeys.length === 0) {
+            chartContainerEl.innerHTML = '<p class="text-center text-gray-500 p-4">No hay datos de producción con confección por trabajador para mostrar.</p>';
+            console.log("Render Confeccion/Trabajador: No hay chartData o confeccionKeys."); return;
+        }
+
+        const stack = d3.stack().keys(confeccionKeys);
+        const series = stack(chartData);
+        console.log("Render Confeccion/Trabajador: Series apiladas (D3):", JSON.parse(JSON.stringify(series)));
+        
+        const rect = chartContainerEl.getBoundingClientRect();
+        const containerWidth = rect.width;
+        const dynamicContainerHeight = rect.height > 0 ? rect.height : 450;
+        
+        const margin = {top: 60, right: 30, bottom: 120, left: 70};
+        const width = Math.max(containerWidth - margin.left - margin.right, chartData.length * 50);
+        const height = dynamicContainerHeight - margin.top - margin.bottom;
+
+        if (height <= 0 || width <=0) { console.error("Dimensiones de gráfico apilado inválidas:", width, height); chartContainerEl.innerHTML = '<p class="text-center text-red-500 p-4">Error al calcular dimensiones del gráfico.</p>'; return;}
+
+        const svg = d3.select("#chartContainer").append("svg").attr("width",width + margin.left + margin.right).attr("height",height + margin.top + margin.bottom).append("g").attr("transform",`translate(${margin.left},${margin.top})`);
+        const x = d3.scaleBand().domain(chartData.map(d=>d.trabajador)).range([0,width]).padding(0.2);
+        const y = d3.scaleLinear().domain([0,d3.max(series,d=>d3.max(d,d=>d[1]))||10]).nice().range([height,0]);
+        const color = d3.scaleOrdinal(d3.schemeCategory10).domain(confeccionKeys);
+
+        svg.append("g").selectAll("g").data(series).join("g").attr("fill",d=>color(d.key))
+            .selectAll("rect").data(d=>d).join("rect")
+            .attr("x",d=>x(d.data.trabajador))
+            .attr("y",d=>y(d[1]))
+            .attr("height",d=>Math.max(0,y(d[0])-y(d[1])))
+            .attr("width",x.bandwidth())
+            .on("mouseover",function(e,d){
+                const parentData=d3.select(this.parentNode).datum(); const confeccionName=parentData.key; const value=d.data[confeccionName];
+                if(tooltip){tooltip.transition().duration(200).style("opacity",.9);tooltip.html(`<strong>Trabajador:</strong> ${d.data.trabajador}<br/><strong>Confección:</strong> ${confeccionName}<br/><strong>Cajas:</strong> ${value}`).style("left",(e.pageX+10)+"px").style("top",(e.pageY-15)+"px");}
+                d3.select(this).style("stroke","black").style("stroke-width",0.5).style("opacity", 0.7);
+            })
+            .on("mouseout",function(){if(tooltip)tooltip.transition().duration(500).style("opacity",0);d3.select(this).style("stroke","none").style("opacity", 1);});
+        svg.append("g").attr("transform",`translate(0,${height})`).call(d3.axisBottom(x)).selectAll("text").attr("transform","translate(-10,5)rotate(-45)").style("text-anchor","end");
         svg.append("g").call(d3.axisLeft(y).ticks(Math.min(10,d3.max(series,d=>d3.max(d,d=>d[1]))||10)));
-        const lgd=svg.append("g").attr("font-family","sans-serif").attr("font-size",10).attr("text-anchor","start").attr("transform",`translate(${wd-m.right-(cK.length>5?120:100)},${-m.top+10})`).selectAll("g").data(cK.slice()).join("g").attr("transform",(d,i)=>`translate(0,${i*20})`);
-        lgd.append("rect").attr("x",0).attr("width",19).attr("height",19).attr("fill",clr); lgd.append("text").attr("x",24).attr("y",9.5).attr("dy","0.35em").text(d=>d);
-        svg.append("text").attr("x",wd/2).attr("y",0-(m.top/2)-5).attr("text-anchor","middle").style("font-size","16px").style("font-weight","bold").text("Producción Confecciones/Puesto");
+        
+        const legend = svg.append("g").attr("font-family","sans-serif").attr("font-size",10).attr("text-anchor","start")
+            .attr("transform", `translate(0, ${-margin.top + 20})`)
+            .selectAll("g").data(confeccionKeys.slice()).join("g")
+            .attr("transform",(d,i)=>`translate(${i * ( (width / Math.min(confeccionKeys.length, 6)) * 0.8 ) },0)`);
+
+        legend.append("rect").attr("x",0).attr("y", -7).attr("width",12).attr("height",12).attr("fill",color);
+        legend.append("text").attr("x",15).attr("y",0).attr("dy","0.32em").text(d=>d.length > 12 ? d.substring(0,10)+"..." : d);
+        
+        svg.append("text").attr("x",width/2).attr("y",0-(margin.top/2)-5).attr("text-anchor","middle").style("font-size","16px").style("font-weight","bold").text("Producción de Confecciones por Trabajador");
     }
 
     function formatDateForAPI(date) { const y = date.getFullYear(), m = String(date.getMonth() + 1).padStart(2, '0'), d = String(date.getDate()).padStart(2, '0'); return `${y}-${m}-${d}`; }
@@ -606,16 +750,57 @@
         if(totalUnidadesTurnoHeader) totalUnidadesTurnoHeader.textContent = `(${gT})`;
     }
     function updateKPICards() {
-        const sT = searchInput ? searchInput.value : ''; const dTD = filterDataBySearch(filterDataByCheckbox(originalWorkersData), sT);
-        if (!kpiTotalCajas || (dTD.length === 0 && !sT && (!filterPostsCheckbox || !filterPostsCheckbox.checked) && originalWorkersData.length === 0) || (dTD.length === 0 && filterPostsCheckbox && filterPostsCheckbox.checked)) {
-            if(kpiTotalCajas)kpiTotalCajas.textContent='-'; if(kpiTrabajadoresActivos)kpiTrabajadoresActivos.textContent='0'; if(kpiAvgCajasHora)kpiAvgCajasHora.textContent='-'; if(kpiPuestoMasProductivo)kpiPuestoMasProductivo.textContent='-';
-            if(kpiCardContainer && !isLocked)kpiCardContainer.classList.add('hidden'); return;
+        const searchTerm = searchInput ? searchInput.value : '';
+        const dataToDisplay = filterDataBySearch(filterDataByCheckbox(originalWorkersData), searchTerm);
+
+        if (!kpiTotalCajas || (dataToDisplay.length === 0 && !searchTerm && (!filterPostsCheckbox || !filterPostsCheckbox.checked) && originalWorkersData.length === 0) || (dataToDisplay.length === 0 && filterPostsCheckbox && filterPostsCheckbox.checked)) {
+            if(kpiTotalCajas)kpiTotalCajas.textContent='-';
+            if(kpiTrabajadoresActivos)kpiTrabajadoresActivos.textContent='0';
+            if(kpiAvgCajasHora)kpiAvgCajasHora.textContent='-';
+            if(kpiPuestoMasProductivo)kpiPuestoMasProductivo.textContent='-';
+            if(kpiCardContainer && !isLocked)kpiCardContainer.classList.add('hidden');
+            return;
         }
         if(kpiCardContainer && !isLocked)kpiCardContainer.classList.remove('hidden');
-        let tCG=0,tHTG=0,pC={},tAS=new Set();
-        dTD.forEach(w=>{let wHPV=false; if(w.operator_posts){w.operator_posts.forEach(p=>{const cant=p.count||0;if(cant>0){wHPV=true;tCG+=cant;if(p.rfid_reading?.name)pC[p.rfid_reading.name]=(pC[p.rfid_reading.name]||0)+cant;if(p.created_at){const s=new Date(p.created_at),e=p.finish_at?new Date(p.finish_at):new Date();if(e>s)tHTG+=(e.getTime()-s.getTime())/3600000;}}});} if(wHPV)tAS.add(w.client_id);});
-        if(kpiTotalCajas) kpiTotalCajas.textContent=tCG; if(kpiTrabajadoresActivos) kpiTrabajadoresActivos.textContent=tAS.size; if(kpiAvgCajasHora) kpiAvgCajasHora.textContent=tHTG>0?(tCG/tHTG).toFixed(2):'N/A';
-        let pMPN='-',mCP=0; for(const p in pC){if(pC[p]>mCP){mCP=pC[p];pMPN=`${p} (${mCP})`;}} if(kpiPuestoMasProductivo) kpiPuestoMasProductivo.textContent=mCP>0?pMPN:'-';
+
+        let totalCajasGlobal = 0;
+        let totalHorasTrabajadasGlobal = 0;
+        let trabajadoresActivosSet = new Set();
+        let operarioMasProductivo = { nombre: '-', cajas: 0 };
+
+        dataToDisplay.forEach(worker => {
+            let workerHasProductionInView = false;
+            let cajasDelTrabajadorActual = 0;
+
+            if (worker.operator_posts && worker.operator_posts.length > 0) {
+                worker.operator_posts.forEach(post => {
+                    const cantidad = Number(post.count) || 0;
+                    if (cantidad > 0) {
+                        workerHasProductionInView = true;
+                        totalCajasGlobal += cantidad;
+                        cajasDelTrabajadorActual += cantidad;
+                        if (post.created_at) {
+                            const start = new Date(post.created_at), end = post.finish_at ? new Date(post.finish_at) : new Date();
+                            if (end > start) totalHorasTrabajadasGlobal += (end.getTime() - start.getTime()) / 3600000;
+                        }
+                    }
+                });
+            }
+            if (workerHasProductionInView) {
+                trabajadoresActivosSet.add(worker.client_id);
+                if (cajasDelTrabajadorActual > operarioMasProductivo.cajas) {
+                    operarioMasProductivo = { nombre: worker.name || `ID ${worker.client_id}`, cajas: cajasDelTrabajadorActual };
+                }
+            }
+        });
+
+        if(kpiTotalCajas) kpiTotalCajas.textContent=totalCajasGlobal;
+        if(kpiTrabajadoresActivos) kpiTrabajadoresActivos.textContent=trabajadoresActivosSet.size;
+        if(kpiAvgCajasHora) kpiAvgCajasHora.textContent=totalHorasTrabajadasGlobal > 0 ? (totalCajasGlobal / totalHorasTrabajadasGlobal).toFixed(2) : 'N/A';
+        
+        if(kpiPuestoMasProductivo) {
+            kpiPuestoMasProductivo.textContent = operarioMasProductivo.cajas > 0 ? `${operarioMasProductivo.nombre} (${operarioMasProductivo.cajas})` : '-';
+        }
     }
     function populateTable(data) {
         if(liveUpdateIntervalId)clearInterval(liveUpdateIntervalId);liveUpdateIntervalId=null;
@@ -643,55 +828,26 @@
     function exportToExcel() {
         const searchTerm = searchInput ? searchInput.value : '';
         const dataFiltered = filterDataBySearch(filterDataByCheckbox(JSON.parse(JSON.stringify(originalWorkersData))), searchTerm);
-        if (!dataFiltered || dataFiltered.length === 0) {
-            const noDataModal = document.createElement('div');
-            noDataModal.innerHTML = `<div class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-[2000]"><div class="bg-white rounded-lg shadow-xl p-6"><h3 class="text-lg font-medium">Sin Datos</h3><p class="mt-2">No hay datos para exportar.</p><button onclick="this.closest('.fixed').remove()" class="mt-4 px-3 py-1 bg-blue-500 text-white rounded">OK</button></div></div>`;
-            document.body.appendChild(noDataModal); return;
-        }
+        if (!dataFiltered || dataFiltered.length === 0) { const noDataModal = document.createElement('div'); noDataModal.innerHTML = `<div class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-[2000]"><div class="bg-white rounded-lg shadow-xl p-6"><h3 class="text-lg font-medium">Sin Datos</h3><p class="mt-2">No hay datos para exportar.</p><button onclick="this.closest('.fixed').remove()" class="mt-4 px-3 py-1 bg-blue-500 text-white rounded">OK</button></div></div>`; document.body.appendChild(noDataModal); return; }
         const flattenedData = [];
         dataFiltered.forEach(worker => {
-            const totalQuantitySum = (worker.operator_posts || []).reduce((sum, post) => sum + ((post.count ?? 0) > 0 ? (post.count ?? 0) : 0), 0);
+            const totalQuantitySum = (worker.operator_posts || []).reduce((sum, post) => sum + ((Number(post.count) ?? 0) > 0 ? (Number(post.count) ?? 0) : 0), 0);
             let workerShouldBeIncluded = !searchTerm || (worker.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || (worker.client_id || '').toString().toLowerCase().includes(searchTerm.toLowerCase());
-            if (!workerShouldBeIncluded && worker.operator_posts) {
-                workerShouldBeIncluded = worker.operator_posts.some(post => ((post.rfid_reading?.name || '').toLowerCase().includes(searchTerm.toLowerCase())) || ((post.product_list?.name || '').toLowerCase().includes(searchTerm.toLowerCase())));
-            }
-            if (filterPostsCheckbox && filterPostsCheckbox.checked && !((worker.operator_posts || []).some(p => (p.count ?? 0) > 0)) && !workerShouldBeIncluded) return;
-            
-            (worker.operator_posts || []).filter(post => {
-                let postMatchesSearch = true;
-                if(searchTerm){ const lS = searchTerm.toLowerCase(); postMatchesSearch = (post.rfid_reading?.name || '').toLowerCase().includes(lS) || (post.product_list?.name || '').toLowerCase().includes(lS) || workerShouldBeIncluded; }
-                return ((post.count ?? 0) > 0 || (filterPostsCheckbox && !filterPostsCheckbox.checked)) && postMatchesSearch;
-            }).forEach(post => {
-                flattenedData.push({
-                    'Codigo': worker.client_id ?? '-', 'Nombre Trabajador': worker.name ?? 'Sin Nombre',
-                    'Unidades Turno': totalQuantitySum, 'Puesto': post.rfid_reading?.name ?? 'N/A',
-                    'Inicio Puesto': post.created_at ? dateFormatter.format(new Date(post.created_at)) : '-',
-                    'Fin Puesto': post.finish_at ? dateFormatter.format(new Date(post.finish_at)) : '-',
-                    'Cantidad Puesto': post.count ?? 0, 'Cajas/Hora': calculateCajasHora(post.count, post.created_at, post.finish_at),
-                    'Confeccion': post.product_list?.name ?? 'N/A'
-                });
-            });
+            if (!workerShouldBeIncluded && worker.operator_posts) { workerShouldBeIncluded = worker.operator_posts.some(post => ((post.rfid_reading?.name || '').toLowerCase().includes(searchTerm.toLowerCase())) || ((post.product_list?.name || '').toLowerCase().includes(searchTerm.toLowerCase())));}
+            if (filterPostsCheckbox && filterPostsCheckbox.checked && !((worker.operator_posts || []).some(p => (Number(p.count) ?? 0) > 0)) && !workerShouldBeIncluded) return;
+            (worker.operator_posts || []).filter(post => { let pMS = true; if(searchTerm){ const lS = searchTerm.toLowerCase(); pMS = (post.rfid_reading?.name || '').toLowerCase().includes(lS) || (post.product_list?.name || '').toLowerCase().includes(lS) || workerShouldBeIncluded; } return ((Number(post.count) ?? 0) > 0 || (filterPostsCheckbox && !filterPostsCheckbox.checked)) && pMS;
+            }).forEach(post => { flattenedData.push({ 'Codigo': worker.client_id ?? '-', 'Nombre Trabajador': worker.name ?? 'Sin Nombre', 'Unidades Turno': totalQuantitySum, 'Puesto': post.rfid_reading?.name ?? 'N/A', 'Inicio Puesto': post.created_at ? dateFormatter.format(new Date(post.created_at)) : '-', 'Fin Puesto': post.finish_at ? dateFormatter.format(new Date(post.finish_at)) : '-', 'Cantidad Puesto': (Number(post.count) ?? 0), 'Cajas/Hora': calculateCajasHora(post.count, post.created_at, post.finish_at), 'Confeccion': post.product_list?.name ?? 'N/A' }); });
         });
-
-        if (flattenedData.length === 0) {
-            const noDetailsModal = document.createElement('div');
-            noDetailsModal.innerHTML = `<div class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-[2000]"><div class="bg-white rounded-lg shadow-xl p-6"><h3 class="text-lg font-medium">Sin Detalles</h3><p class="mt-2">No hay detalles para exportar.</p><button onclick="this.closest('.fixed').remove()" class="mt-4 px-3 py-1 bg-blue-500 text-white rounded">OK</button></div></div>`;
-            document.body.appendChild(noDetailsModal); return;
-        }
-        const columnOrder = ['Codigo', 'Nombre Trabajador', 'Unidades Turno', 'Puesto', 'Inicio Puesto', 'Fin Puesto', 'Cantidad Puesto', 'Cajas/Hora', 'Confeccion'];
-        const worksheet = XLSX.utils.json_to_sheet(flattenedData.map(row => Object.fromEntries(columnOrder.map(col => [col, row[col] ?? '']))), { header: columnOrder });
-        worksheet["!cols"] = columnOrder.map(key => ({ wch: flattenedData.reduce((w, r) => Math.max(w, (r[key]?.toString() ?? '').length), key.length) + 2 }));
-        const workbook = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(workbook, worksheet, "TrabajadoresDetalle");
-        if(dateRangeSelect && filterPostsCheckbox) {
-            XLSX.writeFile(workbook, `Informe_Trabajadores_${dateRangeSelect.options[dateRangeSelect.selectedIndex].text.replace(/ /g, '_')}${filterPostsCheckbox.checked ? '_ConPuestos' : ''}.xlsx`);
-        } else {
-            XLSX.writeFile(workbook, `Informe_Trabajadores.xlsx`); // Fallback name
-        }
+        if (flattenedData.length === 0) { const noDetModal = document.createElement('div'); noDetModal.innerHTML = `<div class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-[2000]"><div class="bg-white rounded-lg shadow-xl p-6"><h3 class="text-lg font-medium">Sin Detalles</h3><p class="mt-2">No hay detalles para exportar.</p><button onclick="this.closest('.fixed').remove()" class="mt-4 px-3 py-1 bg-blue-500 text-white rounded">OK</button></div></div>`; document.body.appendChild(noDetModal); return; }
+        const colOrd = ['Codigo', 'Nombre Trabajador', 'Unidades Turno', 'Puesto', 'Inicio Puesto', 'Fin Puesto', 'Cantidad Puesto', 'Cajas/Hora', 'Confeccion'];
+        const ws = XLSX.utils.json_to_sheet(flattenedData.map(r => Object.fromEntries(colOrd.map(c => [c, r[c] ?? '']))), { header: colOrd });
+        ws["!cols"] = colOrd.map(k => ({ wch: flattenedData.reduce((w, r) => Math.max(w, (r[k]?.toString() ?? '').length), k.length) + 2 }));
+        const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "TrabajadoresDetalle");
+        if(dateRangeSelect && filterPostsCheckbox) { XLSX.writeFile(wb, `Informe_Trabajadores_${dateRangeSelect.options[dateRangeSelect.selectedIndex].text.replace(/ /g, '_')}${filterPostsCheckbox.checked ? '_ConPuestos' : ''}.xlsx`);}
+        else { XLSX.writeFile(wb, `Informe_Trabajadores.xlsx`); }
     }
 
-    function printTable() { // Definición global
-        window.print();
-    }
+    function printTable() { window.print(); }
 
     function fetchData(fromDate, toDate) {
         const apiUrl = `${apiBaseUrl}?from_date=${fromDate}&to_date=${toDate}`;
@@ -709,7 +865,6 @@
             .catch(e=>{console.error("Error en fetch:",e);if(loadingRow)loadingRow.classList.add('hidden');if(errorCell)errorCell.textContent=`Error: ${e.message}`;if(errorRow)errorRow.classList.remove('hidden');if(totalUnidadesTurnoHeader)totalUnidadesTurnoHeader.textContent='(Error)';updateHeaderButtonsState();});
     }
     
-
     document.addEventListener('DOMContentLoaded', () => {
         tableBody = document.getElementById('workersTableBody');
         loadingRow = document.getElementById('loadingRow');
@@ -724,7 +879,7 @@
         viewWorkerChartBtn = document.getElementById('viewWorkerChartBtn');
         viewPostChartBtn = document.getElementById('viewPostChartBtn');
         viewPostPieChartBtn = document.getElementById('viewPostPieChartBtn');
-        viewStackedBarChartBtn = document.getElementById('viewStackedBarChartBtn');
+        viewConfeccionPorTrabajadorChartBtn = document.getElementById('viewConfeccionPorTrabajadorChartBtn');
         totalUnidadesTurnoHeader = document.getElementById('totalUnidadesTurnoHeader');
         searchInput = document.getElementById('searchInput');
         lockButton = document.getElementById('lockButton');
@@ -756,13 +911,15 @@
         kpiTrabajadoresActivos = document.getElementById('kpiTrabajadoresActivos');
         kpiAvgCajasHora = document.getElementById('kpiAvgCajasHora');
         kpiPuestoMasProductivo = document.getElementById('kpiPuestoMasProductivo');
+        toggleFullscreenChartBtn = document.getElementById('toggleFullscreenChartBtn');
+        expandIcon = document.getElementById('expandIcon');
+        contractIcon = document.getElementById('contractIcon');
 
         if (exportExcelBtn) {
             if (typeof exportToExcel === 'function') { exportExcelBtn.addEventListener('click', exportToExcel); }
             else { console.error('ERROR: exportToExcel no es una función al adjuntar listener.'); }
         }
         if (printBtn) {
-            console.log('Dentro de DOMContentLoaded, typeof printTable:', typeof printTable); // Diagnóstico
             if (typeof printTable === 'function') { printBtn.addEventListener('click', printTable); }
             else { console.error('ERROR: printTable no es una función al adjuntar listener.'); }
         }
@@ -770,7 +927,8 @@
         if (viewWorkerChartBtn) viewWorkerChartBtn.addEventListener('click', () => showChartModal('workers'));
         if (viewPostChartBtn) viewPostChartBtn.addEventListener('click', () => showChartModal('postsBar'));
         if (viewPostPieChartBtn) viewPostPieChartBtn.addEventListener('click', () => showChartModal('postsPie'));
-        if (viewStackedBarChartBtn) viewStackedBarChartBtn.addEventListener('click', () => showChartModal('confeccionPorPuesto'));
+        if (viewConfeccionPorTrabajadorChartBtn) viewConfeccionPorTrabajadorChartBtn.addEventListener('click', () => showChartModal('confeccionPorTrabajador'));
+        
         if (dateRangeSelect) dateRangeSelect.addEventListener('change', (e) => { const {from, to} = getDateRange(e.target.value); fetchData(from, to); });
         if (filterPostsCheckbox) filterPostsCheckbox.addEventListener('change', () => { populateTable(originalWorkersData); updateKPICards(); updateHeaderButtonsState(); });
         if (searchInput) searchInput.addEventListener('input', () => { populateTable(originalWorkersData); updateKPICards(); updateHeaderButtonsState(); });
@@ -782,10 +940,13 @@
         if (editQuantityInput) editQuantityInput.addEventListener('keypress', (e) => { if (e.key === 'Enter' && saveEditBtn) saveEditBtn.click(); });
         if (closeAnalysisModalBtn) closeAnalysisModalBtn.addEventListener('click', hideAnalysisModal);
         if (okAnalysisModalBtn) okAnalysisModalBtn.addEventListener('click', hideAnalysisModal);
-        const localCloseChartModalBtn = document.getElementById('closeChartModalBtn'); // Este ID es usado por dos modales, puede ser conflictivo si ambos están abiertos.
-        const localOkChartModalBtn = document.getElementById('okChartModalBtn');     // Igual aquí.
+        
+        const localCloseChartModalBtn = document.getElementById('closeChartModalBtn');
+        const localOkChartModalBtn = document.getElementById('okChartModalBtn');
         if(chartModal && localCloseChartModalBtn) localCloseChartModalBtn.addEventListener('click', hideChartModal);
         if(chartModal && localOkChartModalBtn) localOkChartModalBtn.addEventListener('click', hideChartModal);
+        if(toggleFullscreenChartBtn) toggleFullscreenChartBtn.addEventListener('click', toggleChartFullscreen);
+
         if (lockButton) lockButton.addEventListener('click', () => { if (isLocked) showPasswordModal(); else toggleLockState(true); });
 
         const {from, to} = getDateRange(dateRangeSelect.value);
@@ -796,3 +957,4 @@
 
 </body>
 </html>
+
