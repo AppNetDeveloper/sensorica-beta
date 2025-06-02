@@ -199,7 +199,7 @@ else
   "host": "$HOST_IP",
   "name": "Servidor $HOST_NAME",
   "emails": "admin@boisolo.dev",
-  "phones": "619929205",
+  "phones": "6199929205",
   "telegrams": "303129205",
   "token": "$API_TOKEN"
 }
