@@ -364,3 +364,10 @@ Route::get('/ia-prompts/{key}', [IaPromptController::class, 'showByKey'])->name(
 
 // Ruta opcional para listar todos los prompts activos
 Route::get('/ia-prompts', [IaPromptController::class, 'index'])->name('api.ia_prompts.index');
+
+// Rutas para el historial de turnos
+Route::get('/shift-history', [\App\Http\Controllers\Api\ShiftHistoryController::class, 'index']);
+Route::get('/shift-history/production-line/{id}', [\App\Http\Controllers\Api\ShiftHistoryController::class, 'getByProductionLine']);
+
+// Ruta para obtener los estados actuales de los turnos
+Route::get('/shift/statuses', [\App\Http\Controllers\Api\ShiftStatusController::class, 'getStatuses'])->name('api.shift.statuses');

@@ -27,9 +27,14 @@
                     @foreach($productionLines as $line)
                         <div class="col-md-4 col-lg-3 mb-4">
                             <div class="card shadow-sm">
-                                <div class="card-header d-flex justify-content-between align-items-center">
-                                    <h5 class="mb-0">{{ $line->name }}</h5>
-                                    <span class="badge bg-primary">ID #{{ $line->id }}</span>
+                                <div class="card-header">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h5 class="mb-0">{{ $line->name }}</h5>
+                                        <span class="badge bg-primary">ID #{{ $line->id }}</span>
+                                    </div>
+                                    <div id="status-badge-{{ $line->id }}" class="mt-1 text-center">
+                                        <!-- Estado se actualizará aquí dinámicamente -->
+                                    </div>
                                 </div>
                                 <div class="card-body text-center">
                                     @php
@@ -135,6 +140,60 @@
                                 <th>{{ __('Start') }}</th>
                                 <th>{{ __('End') }}</th>
                                 <th>{{ __('Actions') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tabla de Historial de Turnos -->
+            <div class="card border-0 shadow mt-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">{{ __('Historial de Turnos') }}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3 row">
+                        <div class="col-md-3">
+                            <label for="historyProductionLineFilter" class="form-label">{{ __('Filtrar por Línea') }}</label>
+                            <select id="historyProductionLineFilter" class="form-select">
+                                <option value="">{{ __('Todas las líneas') }}</option>
+                                @foreach ($productionLines as $line)
+                                    <option value="{{ $line->id }}">{{ $line->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="historyTypeFilter" class="form-label">{{ __('Tipo') }}</label>
+                            <select id="historyTypeFilter" class="form-select">
+                                <option value="">{{ __('Todos') }}</option>
+                                <option value="shift">{{ __('Turno') }}</option>
+                                <option value="stop">{{ __('Pausa') }}</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="historyActionFilter" class="form-label">{{ __('Acción') }}</label>
+                            <select id="historyActionFilter" class="form-select">
+                                <option value="">{{ __('Todas') }}</option>
+                                <option value="start">{{ __('Inicio') }}</option>
+                                <option value="end">{{ __('Fin') }}</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button id="resetHistoryFilters" class="btn btn-outline-secondary w-100">
+                                <i class="fas fa-undo me-1"></i> {{ __('Restablecer') }}
+                            </button>
+                        </div>
+                    </div>
+                    <table id="shiftHistoryTable" class="table table-striped table-bordered dt-responsive nowrap w-100">
+                        <thead>
+                            <tr>
+                                <th>{{ __('ID') }}</th>
+                                <th>{{ __('Línea de Producción') }}</th>
+                                <th>{{ __('Tipo') }}</th>
+                                <th>{{ __('Acción') }}</th>
+                                <th>{{ __('Usuario') }}</th>
+                                <th>{{ __('Fecha/Hora') }}</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -470,6 +529,394 @@
                 });
             });
 
+        });
+
+        // Función para actualizar los botones según el estado
+        function updateShiftButtons(statuses) {
+            statuses.forEach(status => {
+                const lineId = status.line_id;
+                const lastShift = status.last_shift;
+                const buttonGroup = $(`button[data-line-id="${lineId}"]`).closest('.btn-group');
+                
+                if (!buttonGroup.length) return; // Si no existe el grupo de botones, salir
+                
+                // Guardar el estado actual para comparar
+                const currentState = buttonGroup.html();
+                let newState = '';
+                
+                if (!lastShift) {
+                    // Sin historial: mostrar solo Iniciar Turno
+                    newState = `
+                        <button type="button" class="btn btn-outline-success" style="padding: 1rem 2rem; font-size: 1.25rem;"
+                                data-action="inicio_trabajo"
+                                data-line-id="${lineId}"
+                                title="{{ __('Start Shift') }}">
+                            <i class="fa fa-play" style="font-size: 2rem;"></i>
+                        </button>
+                    `;
+                } else if (lastShift.type === 'shift' && lastShift.action === 'start') {
+                    // Turno iniciado: mostrar Pausar y Finalizar Turno
+                    newState = `
+                        <button type="button" class="btn btn-outline-warning" style="padding: 1rem 2rem; font-size: 1.25rem;"
+                                data-action="inicio_pausa"
+                                data-line-id="${lineId}"
+                                title="{{ __('Pause') }}">
+                            <i class="fa fa-pause" style="font-size: 2rem;"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-danger" style="padding: 1rem 2rem; font-size: 1.25rem;"
+                                data-action="final_trabajo"
+                                data-line-id="${lineId}"
+                                title="{{ __('End Shift') }}">
+                            <i class="fa fa-stop" style="font-size: 2rem;"></i>
+                        </button>
+                    `;
+                } else if (lastShift.type === 'stop' && lastShift.action === 'start') {
+                    // Pausa iniciada: mostrar solo Reanudar
+                    newState = `
+                        <button type="button" class="btn btn-outline-warning" style="padding: 1rem 2rem; font-size: 1.25rem;"
+                                data-action="final_pausa"
+                                data-line-id="${lineId}"
+                                title="{{ __('Resume') }}">
+                            <i class="fa fa-play" style="font-size: 2rem;"></i>
+                        </button>
+                    `;
+                } else if (lastShift.type === 'stop' && lastShift.action === 'end') {
+                    // Pausa finalizada: mostrar Inicio pausa y Finalizar Turno
+                    newState = `
+                        <button type="button" class="btn btn-outline-warning" style="padding: 1rem 2rem; font-size: 1.25rem;"
+                                data-action="inicio_pausa"
+                                data-line-id="${lineId}"
+                                title="{{ __('Pause') }}">
+                            <i class="fa fa-pause" style="font-size: 2rem;"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-danger" style="padding: 1rem 2rem; font-size: 1.25rem;"
+                                data-action="final_trabajo"
+                                data-line-id="${lineId}"
+                                title="{{ __('End Shift') }}">
+                            <i class="fa fa-stop" style="font-size: 2rem;"></i>
+                        </button>
+                    `;
+                } else if (lastShift.type === 'shift' && lastShift.action === 'end') {
+                    // Turno finalizado: mostrar solo Iniciar Turno
+                    newState = `
+                        <button type="button" class="btn btn-outline-success" style="padding: 1rem 2rem; font-size: 1.25rem;"
+                                data-action="inicio_trabajo"
+                                data-line-id="${lineId}"
+                                title="{{ __('Start Shift') }}">
+                            <i class="fa fa-play" style="font-size: 2rem;"></i>
+                        </button>
+                    `;
+                } else {
+                    // Estado desconocido: mostrar solo Iniciar Turno
+                    newState = `
+                        <button type="button" class="btn btn-outline-success" style="padding: 1rem 2rem; font-size: 1.25rem;"
+                                data-action="inicio_trabajo"
+                                data-line-id="${lineId}"
+                                title="{{ __('Start Shift') }}">
+                            <i class="fa fa-play" style="font-size: 2rem;"></i>
+                        </button>
+                    `;
+                }
+                
+                // Actualizar el estado en el encabezado de la tarjeta
+                const statusBadge = $(`#status-badge-${lineId}`);
+                if (statusBadge.length) {
+                    if (!lastShift) {
+                        statusBadge.html('<span class="badge bg-secondary"><i class="fas fa-power-off me-1"></i> {{ __("shift.shift_stopped") }}</span>');
+                    } else if (lastShift.type === 'shift' && lastShift.action === 'start') {
+                        statusBadge.html('<span class="badge bg-success"><i class="fas fa-play-circle me-1"></i> {{ __("shift.shift_in_progress") }}</span>');
+                    } else if (lastShift.type === 'stop' && lastShift.action === 'start') {
+                        statusBadge.html('<span class="badge bg-warning text-dark"><i class="fas fa-pause-circle me-1"></i> {{ __("shift.shift_paused") }}</span>');
+                    } else if (lastShift.type === 'stop' && lastShift.action === 'end') {
+                        statusBadge.html('<span class="badge bg-info text-white"><i class="fas fa-redo me-1"></i> {{ __("shift.shift_resumed") }}</span>');
+                    } else if (lastShift.type === 'shift' && lastShift.action === 'end') {
+                        statusBadge.html('<span class="badge bg-danger"><i class="fas fa-stop-circle me-1"></i> {{ __("shift.shift_ended") }}</span>');
+                    } else {
+                        statusBadge.html('<span class="badge bg-secondary"><i class="fas fa-question-circle me-1"></i> {{ __("shift.status_unknown") }}</span>');
+                    }
+                }
+                
+                // Solo actualizar los botones si ha cambiado el estado
+                if (currentState !== newState) {
+                    buttonGroup.html(newState);
+                }
+            });
+        }
+
+
+        // Función para actualizar los estados
+        function updateShiftStatuses() {
+            $.get(`${baseUrl}/api/shift/statuses`)
+                .done(function(response) {
+                    updateShiftButtons(response);
+                })
+                .fail(function(error) {
+                    console.error('Error al actualizar estados:', error);
+                });
+        }
+
+        // Función para mostrar mensajes de error
+        function showErrorMessage(message) {
+            const table = $('#shiftHistoryTable');
+            table.find('tbody').html(`
+                <tr>
+                    <td colspan="6" class="text-center">
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            ${message}
+                        </div>
+                    </td>
+                </tr>
+            `);
+        }
+        
+        // Función para inicializar la tabla de historial
+        function initializeHistoryTable() {
+            console.log('Inicializando DataTable...');
+            
+            // Primero, verifiquemos que la tabla existe
+            if ($.fn.DataTable.isDataTable('#shiftHistoryTable')) {
+                $('#shiftHistoryTable').DataTable().destroy();
+            }
+            
+            // Inicializar DataTable
+            const table = $('#shiftHistoryTable').DataTable({
+                processing: true,
+                serverSide: true,
+                responsive: true,
+                
+                // Configuración de AJAX
+                ajax: {
+                    url: `${baseUrl}/api/shift-history`,
+                    type: 'GET',
+                    data: function(d) {
+                        // Agregar los parámetros de búsqueda
+                        d.production_line_id = $('#historyProductionLineFilter').val() || '';
+                        d.type = $('#historyTypeFilter').val() || '';
+                        d.action = $('#historyActionFilter').val() || '';
+                        
+                        // Log the request data for debugging
+                        console.log('Enviando parámetros al servidor:', JSON.stringify({
+                            draw: d.draw,
+                            start: d.start,
+                            length: d.length,
+                            search: d.search,
+                            order: d.order,
+                            production_line_id: d.production_line_id,
+                            type: d.type,
+                            action: d.action
+                        }, null, 2));
+                        
+                        return d;
+                    },
+                    dataSrc: function(json) {
+                        console.log('Datos recibidos del servidor:', JSON.stringify({
+                            draw: json.draw,
+                            recordsTotal: json.recordsTotal,
+                            recordsFiltered: json.recordsFiltered,
+                            data: json.data ? json.data.length : 0
+                        }, null, 2));
+                        
+                        if (!json.data || json.data.length === 0) {
+                            console.log('No se encontraron registros en la respuesta');
+                            return [];
+                        }
+                        
+                        // Mapear los datos para asegurar que tengan el formato correcto
+                        return json.data.map(item => ({
+                            id: item.id,
+                            production_line: item.production_line || null,
+                            type: item.type,
+                            action: item.action,
+                            operator: item.operator || null,
+                            created_at: item.created_at
+                        }));
+                    },
+                    error: function(xhr, error, thrown) {
+                        console.error('Error en la petición AJAX:', {
+                            status: xhr.status,
+                            statusText: xhr.statusText,
+                            response: xhr.responseText,
+                            error: error,
+                            thrown: thrown
+                        });
+                        
+                        showErrorMessage('Error al cargar el historial. Por favor, inténtalo de nuevo.');
+                        return [];
+                    }
+                },
+                
+                // Configuración de columnas
+                columns: [
+                    { 
+                        data: 'id',
+                        name: 'id',
+                        className: 'text-center',
+                        width: '5%'
+                    },
+                    { 
+                        data: 'production_line',
+                        name: 'production_line.name',
+                        className: 'text-center',
+                        render: function(data, type, row) {
+                            return data ? data.name : 'N/A';
+                        }
+                    },
+                    { 
+                        data: 'type',
+                        name: 'type',
+                        className: 'text-center',
+                        render: function(data) {
+                            const types = {
+                                'shift': '{{ __("Turno") }}',
+                                'stop': '{{ __("Pausa") }}'
+                            };
+                            return `<span class="badge bg-info">${types[data] || data}</span>`;
+                        }
+                    },
+                    { 
+                        data: 'action',
+                        name: 'action',
+                        className: 'text-center',
+                        render: function(data) {
+                            const actions = {
+                                'start': '{{ __("Inicio") }}',
+                                'end': '{{ __("Fin") }}'
+                            };
+                            const badgeClass = data === 'start' ? 'bg-success' : 'bg-danger';
+                            return `<span class="badge ${badgeClass}">${actions[data] || data}</span>`;
+                        }
+                    },
+                    { 
+                        data: 'operator',
+                        name: 'operator.name',
+                        className: 'text-center',
+                        render: function(data) {
+                            return data ? data.name : 'Sistema';
+                        }
+                    },
+                    { 
+                        data: 'created_at',
+                        name: 'created_at',
+                        className: 'text-center',
+                        render: function(data) {
+                            if (!data) return '';
+                            const date = new Date(data);
+                            return date.toLocaleString('es-ES', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                second: '2-digit'
+                            });
+                        }
+                    }
+                ],
+                
+                // Configuración de paginación
+                paging: true,
+                pageLength: 10,
+                lengthMenu: [10, 25, 50, 100],
+                displayStart: 0,
+                autoWidth: false,
+                
+                // Configuración de búsqueda
+                searching: true,
+                
+                // Configuración de ordenación
+                order: [[0, 'desc']],
+                
+                // Configuración de idioma
+                language: {
+                    url: '//cdn.datatables.net/plug-ins/1.10.24/i18n/Spanish.json',
+                    emptyTable: 'No hay datos disponibles en la tabla',
+                    zeroRecords: 'No se encontraron registros que coincidan con la búsqueda',
+                    info: 'Mostrando _START_ a _END_ de _TOTAL_ registros',
+                    infoEmpty: 'No hay registros disponibles',
+                    infoFiltered: '(filtrado de _MAX_ registros en total)'
+                },
+                
+                // Botones de exportación
+                dom: 'Bfrtip',
+                buttons: [
+                    'copy', 'csv', 'excel', 'pdf', 'print'
+                ],
+                
+                // Callbacks
+                drawCallback: function() {
+                    const api = this.api();
+                    const recordsDisplay = api.page.info().recordsDisplay;
+                    console.log('Tabla dibujada. Mostrando ' + recordsDisplay + ' registros');
+                    
+                    if (recordsDisplay === 0) {
+                        // Mostrar mensaje personalizado cuando no hay datos
+                        const emptyMsg = 'No se encontraron registros';
+                        $('.dataTables_empty').html(emptyMsg);
+                    }
+                    
+                    // Forzar el redibujado de los botones de DataTables
+                    api.columns.adjust().responsive.recalc();
+                },
+                error: function(xhr, error, thrown) {
+                    console.error('Error en DataTable:', { xhr, error, thrown });
+                    showErrorMessage('Error al cargar los datos. Por favor, recarga la página.');
+                },
+                initComplete: function() {
+                    console.log('DataTable inicializada correctamente');
+                }
+            });
+        }
+        
+        // Variable global para la tabla
+        let historyTable;
+        
+        // Inicializar todo cuando el documento esté listo
+        $(document).ready(function() {
+            try {
+                // Inicializar la tabla de historial
+                historyTable = initializeHistoryTable();
+                
+                // Configurar eventos de filtrado
+                $('#historyProductionLineFilter, #historyTypeFilter, #historyActionFilter').on('change', function() {
+                    console.log('Filtro cambiado, recargando tabla...');
+                    if (historyTable) {
+                        historyTable.ajax.reload();
+                    }
+                });
+                
+                // Restablecer filtros
+                $('#resetHistoryFilters').on('click', function() {
+                    $('#historyProductionLineFilter, #historyTypeFilter, #historyActionFilter').val('');
+                    if (historyTable) {
+                        historyTable.ajax.reload();
+                    }
+                });
+                
+                // Actualizar automáticamente la tabla cada 30 segundos
+                setInterval(function() {
+                    try {
+                        const table = $('#shiftHistoryTable').DataTable();
+                        if (table) {
+                            console.log('Actualizando tabla automáticamente...');
+                            table.ajax.reload(null, false);
+                        } else {
+                            console.log('No se pudo obtener la instancia de DataTable');
+                        }
+                    } catch (e) {
+                        console.log('Error al actualizar la tabla:', e.message);
+                    }
+                }, 30000);
+                
+                // Actualizar estados de los turnos
+                updateShiftStatuses();
+                
+                // Actualizar estados cada 5 segundos
+                setInterval(updateShiftStatuses, 5000);
+                
+            } catch (e) {
+                console.error('Error al inicializar la tabla:', e);
+            }
         });
     </script>
 @endpush

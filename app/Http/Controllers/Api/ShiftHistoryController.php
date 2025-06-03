@@ -12,6 +12,176 @@ class ShiftHistoryController extends Controller
 {
     /**
      * @OA\Get(
+     * path="/api/shift-history",
+     * summary="Obtiene el historial de turnos paginado",
+     * tags={"Shift History"},
+     * @OA\Response(
+     *     response=200,
+     *     description="Historial de turnos paginado",
+     *     @OA\JsonContent(
+     *         @OA\Property(property="data", type="array", @OA\Items(type="object")),
+     *         @OA\Property(property="links", type="object"),
+     *         @OA\Property(property="meta", type="object")
+     *     )
+     * )
+     * )
+     *
+     * Obtiene el historial de turnos paginado con relaciones cargadas
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function index(Request $request)
+    {
+        try {
+            \Log::info('ShiftHistoryController@index - Iniciando consulta', $request->all());
+            
+            // Obtener parámetros de DataTables
+            $draw = $request->get('draw');
+            $start = (int)$request->get("start", 0);
+            $rowperpage = (int)$request->get("length", 10); // Rows display per page
+            
+            // Asegurar que rowperpage sea al menos 1
+            $rowperpage = max(1, $rowperpage);
+            
+            // Calcular la página actual
+            $currentPage = $start > 0 ? floor($start / $rowperpage) + 1 : 1;
+            
+            $query = \App\Models\ShiftHistory::with(['productionLine', 'operator']);
+
+            // Debug: Log all request parameters
+            \Log::debug('Request parameters:', $request->all());
+            
+            // Aplicar filtros solo si tienen valor
+            if ($request->filled('production_line_id')) {
+                $query->where('production_line_id', $request->production_line_id);
+                \Log::debug('Applied production_line_id filter:', ['value' => $request->production_line_id]);
+            }
+
+            if ($request->filled('type')) {
+                $query->where('type', $request->type);
+                \Log::debug('Applied type filter:', ['value' => $request->type]);
+            }
+
+            if ($request->filled('action')) {
+                $query->where('action', $request->action);
+                \Log::debug('Applied action filter:', ['value' => $request->action]);
+            }
+
+            // Obtener el total de registros sin paginación
+            $totalRecords = $query->count();
+            
+            // Aplicar ordenación
+            $orderColumn = $request->get('order')[0]['column'] ?? 0;
+            $orderDirection = $request->get('order')[0]['dir'] ?? 'desc';
+            $orderColumnName = $request->get('columns')[$orderColumn]['data'] ?? 'created_at';
+            
+            // Mapear nombres de columnas a nombres de base de datos si es necesario
+            if ($orderColumnName === 'production_line') {
+                $query->join('production_lines', 'shift_histories.production_line_id', '=', 'production_lines.id')
+                    ->orderBy('production_lines.name', $orderDirection);
+            } else if ($orderColumnName === 'operator') {
+                $query->join('operators', 'shift_histories.operator_id', '=', 'operators.id')
+                    ->orderBy('operators.name', $orderDirection);
+            } else {
+                $query->orderBy($orderColumnName, $orderDirection);
+            }
+            
+            // Aplicar paginación
+            $history = $query->forPage($currentPage, $rowperpage)->get();
+            
+            // Debug: Log the raw SQL query
+            \Log::debug('SQL Query: ' . $query->toSql());
+            \Log::debug('Query Bindings: ' . json_encode($query->getBindings()));
+            
+            \Log::info('ShiftHistoryController@index - Resultados encontrados', [
+                'total' => $totalRecords,
+                'filtered' => $totalRecords,
+                'per_page' => $rowperpage,
+                'current_page' => $currentPage,
+                'items_count' => $history->count()
+            ]);
+            
+            // Debug: Log first item if exists
+            if ($history->isNotEmpty()) {
+                \Log::debug('First item:', $history->first()->toArray());
+            }
+
+            // Formatear la respuesta para DataTables
+            $response = [
+                "draw" => intval($draw),
+                "recordsTotal" => $totalRecords,
+                "recordsFiltered" => $totalRecords,
+                "data" => $history->map(function($item) {
+                    return [
+                        'id' => $item->id,
+                        'production_line' => $item->productionLine ? [
+                            'id' => $item->productionLine->id,
+                            'name' => $item->productionLine->name
+                        ] : null,
+                        'type' => $item->type,
+                        'action' => $item->action,
+                        'operator' => $item->operator ? [
+                            'id' => $item->operator->id,
+                            'name' => $item->operator->name
+                        ] : null,
+                        'created_at' => $item->created_at->toDateTimeString(),
+                        'updated_at' => $item->updated_at->toDateTimeString()
+                    ];
+                })
+            ];
+
+            return response()->json($response);
+            
+        } catch (\Exception $e) {
+            \Log::error('Error en ShiftHistoryController@index: ' . $e->getMessage());
+            return response()->json([
+                'error' => 'Error al obtener el historial',
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ], 500);
+        }
+    }
+
+    /**
+     * @OA\Get(
+     * path="/api/shift-history/production-line/{id}",
+     * summary="Obtiene el historial de turnos para una línea de producción específica",
+     * tags={"Shift History"},
+     * @OA\Parameter(
+     *     name="id",
+     *     in="path",
+     *     description="ID de la línea de producción",
+     *     required=true,
+     *     @OA\Schema(type="integer")
+     * ),
+     * @OA\Response(
+     *     response=200,
+     *     description="Historial de turnos de la línea de producción",
+     *     @OA\JsonContent(
+     *         @OA\Property(property="data", type="array", @OA\Items(type="object")),
+     *         @OA\Property(property="links", type="object"),
+     *         @OA\Property(property="meta", type="object")
+     *     )
+     * )
+     * )
+     *
+     * Obtiene el historial de turnos para una línea de producción específica
+     *
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getByProductionLine($id)
+    {
+        $history = \App\Models\ShiftHistory::with(['productionLine', 'user'])
+            ->where('production_line_id', $id)
+            ->orderBy('created_at', 'desc')
+            ->paginate(10);
+
+        return response()->json($history);
+    }
+    /**
+     * @OA\Get(
      * path="/api/shift-history/production-line/{token}/last",
      * summary="Obtiene la última entrada de shift_history para una línea de producción por token, incluyendo datos del operario y posible cálculo de pausa.",
      * tags={"Shift History"},
