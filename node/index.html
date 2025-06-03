@@ -174,6 +174,42 @@
         .status-error { background-color: #fee2e2; color: #991b1b; border-color: #fca5a5;}
         .status-info { background-color: #dbeafe; color: #1e40af; border-color: #93c5fd;}
         .status-warning { background-color: var(--warning-bg-color); color: var(--warning-text-color); border-color: var(--warning-border-color);}
+
+        /* Reader Status Styles */
+        #readerStatusDisplay {
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            font-weight: bold;
+            text-align: center;
+            font-size: 1.2em;
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+        }
+        
+        .status-reading {
+            background-color: #d4edda;
+            color: #155724;
+            border-color: #c3e6cb;
+        }
+        
+        .status-stopped {
+            background-color: #f8d7da;
+            color: #721c24;
+            border-color: #f5c6cb;
+        }
+        
+        .status-error {
+            background-color: #fff3cd;
+            color: #856404;
+            border-color: #ffeeba;
+        }
+        
+        .status-connecting {
+            background-color: #e2e3e5;
+            color: #383d41;
+            border-color: #d6d8db;
+        }
         
         .section-group {
             margin-bottom: 35px; 
@@ -735,7 +771,7 @@
 
         <div class="section-group">
             <h2>Estado y Control de Lectura RFID</h2>
-            <div id="readerStatusDisplay">Consultando estado del lector...</div>
+            <div id="readerStatusDisplay" class="status-info">Consultando estado del lector...</div>
             <div class="button-group">
                 <button id="rfidStartBtn" class="btn-start">Iniciar Lectura</button>
                 <button id="rfidStopBtn" class="btn-stop">Detener Lectura</button>
@@ -925,6 +961,52 @@
                 });
             }
 
+            // Manejador para el botón Establecer Config. Antena
+            const setPowerBtn = document.getElementById('setPowerBtn');
+            if (setPowerBtn) {
+                setPowerBtn.addEventListener('click', () => {
+                    const antennaBlocks = document.querySelectorAll('.antenna-block');
+                    const allAntennaConfigs = [];
+                    let isValid = true;
+
+                    antennaBlocks.forEach(block => {
+                        const index = parseInt(block.dataset.antennaIndex);
+                        const powerInput = document.getElementById(`power_${index}`);
+                        const enableCheckbox = document.getElementById(`enable_${index}`);
+                        
+                        if (!powerInput || !enableCheckbox) {
+                            displayStatus(`Error: No se pudo encontrar la configuración de la antena ${index}`, 'error');
+                            isValid = false;
+                            return;
+                        }
+                        
+                        const power = parseInt(powerInput.value);
+                        const enable = enableCheckbox.checked;
+                        
+                        if (isNaN(power) || power < 0 || power > 35) {
+                            displayStatus(`Potencia para Antena ${index} inválida (0-35).`, 'error');
+                            powerInput.focus();
+                            isValid = false;
+                            return;
+                        }
+                        allAntennaConfigs.push({ index, power, enable });
+                    });
+
+                    if (!isValid || allAntennaConfigs.length === 0) {
+                        displayStatus('Configuración de antenas inválida.', 'error');
+                        return;
+                    }
+
+                    if (socket.connected) {
+                        displayStatus(`Enviando configuración para ${allAntennaConfigs.length} antena(s)...`, 'info');
+                        rawResponseContainer.classList.add('hidden');
+                        socket.emit('setAntennaPower', allAntennaConfigs);
+                    } else {
+                        displayStatus('No conectado al servidor.', 'error');
+                    }
+                });
+            }
+
             if (setAllPowerBtn) {
                 setAllPowerBtn.addEventListener('click', () => {
                     const antennaBlocks = antennaDataContainer?.querySelectorAll('.antenna-block');
@@ -1110,26 +1192,78 @@
             socket.on('rfidInfo', (response) => { 
                 console.log('rfidInfo:', response);
                 displayRawResponse(response);
-                if (response.resultCode === 0 && response.resultMsg) {
-                    if (response.resultMsg.includes("RFID/start:start success")) {
-                        displayStatus('Lectura iniciada exitosamente.', 'success');
-                        readerStatusDisplay.textContent = 'ESTADO LECTOR: LEYENDO';
-                        readerStatusDisplay.className = 'status-success status-reading'; // Clase específica para LEYENDO
-                    } else if (response.resultMsg.includes("RFID/stop:stop success")) {
-                        displayStatus('Lectura detenida exitosamente.', 'success');
-                        readerStatusDisplay.textContent = 'ESTADO LECTOR: DETENIDO';
-                        readerStatusDisplay.className = 'status-info status-not-reading'; // Clase específica para NO LEYENDO
-                    } else if (response.resultMsg.includes("RFID/status:get rfid status success")) {
-                        const isReading = response.resultData === true;
-                        const statusText = isReading ? "ESTADO LECTOR: LEYENDO" : "ESTADO LECTOR: DETENIDO";
-                        readerStatusDisplay.textContent = statusText;
-                        readerStatusDisplay.className = isReading ? 'status-success status-reading' : 'status-info status-not-reading'; 
-                        displayStatus("Estado del lector actualizado.", "info");
-                    } else {
-                        displayStatus(`Operación RFID exitosa: ${response.resultMsg}`, 'success');
+                
+                const readerStatusDisplay = document.getElementById('readerStatusDisplay');
+                
+                if (response.status === 'error') {
+                    const errorMsg = response.details || response.message || 'Error desconocido';
+                    displayStatus(`Error: ${errorMsg}`, 'error');
+                    if (readerStatusDisplay) {
+                        readerStatusDisplay.textContent = `ERROR: ${errorMsg}`;
+                        readerStatusDisplay.className = 'status-error';
                     }
                 } else {
                      displayStatus(`Respuesta RFID inesperada: ${response.resultMsg || JSON.stringify(response)}`, 'warning');
+                }
+            });
+
+            socket.on('rfidStatus', (response) => {
+                console.log('rfidStatus:', response);
+                displayRawResponse(response);
+                
+                const readerStatusDisplay = document.getElementById('readerStatusDisplay');
+                const startBtn = document.getElementById('rfidStartBtn');
+                const stopBtn = document.getElementById('rfidStopBtn');
+                
+                if (response.status === 'error' || response.success === false) {
+                    const errorMsg = response.details || response.message || 'Error desconocido';
+                    displayStatus(`Error: ${errorMsg}`, 'error');
+                    if (readerStatusDisplay) {
+                        readerStatusDisplay.textContent = 'ERROR';
+                        readerStatusDisplay.className = 'status-error';
+                    }
+                    if (startBtn) startBtn.disabled = false;
+                    if (stopBtn) stopBtn.disabled = false;
+                    
+                    // Si el estado es de error, intentar actualizar el estado del lector automáticamente
+                    if (socket.connected) {
+                        console.log('Estado de error detectado, actualizando estado del lector...');
+                        socket.emit('rfidStatus', { command: 'RFID/status' });
+                    }
+                    return;
+                }
+                
+                // Determine reading state - check multiple possible properties for backward compatibility
+                const isReading = response.isReading === true || response.status === 'reading' || response.readerStatus === 'LEYENDO';
+                const readerStatus = response.readerStatus || (isReading ? 'LEYENDO' : 'DETENIDO');
+                const statusMessage = response.message || (isReading ? 'Leyendo etiquetas' : 'Lector detenido');
+                
+                // Update status display
+                if (readerStatusDisplay) {
+                    // Use the status directly from the response or fallback to isReading
+                    const displayStatusText = response.readerStatus || (isReading ? 'LEYENDO' : 'DETENIDO');
+                    readerStatusDisplay.textContent = displayStatusText;
+                    readerStatusDisplay.className = isReading ? 'status-reading' : 'status-stopped';
+                    
+                    // Update status message if available
+                    if (statusMessage) {
+                        displayStatus(statusMessage, isReading ? 'success' : 'info');
+                    }
+                    
+                    console.log('Updated reader status:', {
+                        displayStatus: displayStatusText,
+                        isReading: isReading,
+                        response: response
+                    });
+                }
+                
+                // Update button states
+                if (startBtn) startBtn.disabled = isReading;
+                if (stopBtn) stopBtn.disabled = !isReading;
+                
+                // Only show status message if it's not from auto-refresh
+                if (response.autoRefresh !== true) {
+                    displayStatus(`Estado del lector: ${readerStatus}`, 'success');
                 }
             });
 

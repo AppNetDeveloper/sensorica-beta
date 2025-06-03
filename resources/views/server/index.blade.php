@@ -18,16 +18,41 @@
                     <h4 class="card-title">{{ __('Server Action') }}</h4>
                 </div>
                 <div class="card-body">
-                    <button id="reboot" class="btn btn-danger mb-2">{{ __('Restart Server') }}</button>
-                    <button id="poweroff" class="btn btn-warning mb-2">{{ __('Power Off') }}</button>
-                    <button id="restart-supervisor" class="btn btn-info mb-2">{{ __('Restart Supervisor') }}</button>
-                    <button id="start-supervisor" class="btn btn-success mb-2">{{ __('Start Supervisor') }}</button>
-                    <button id="stop-supervisor" class="btn btn-secondary mb-2">{{ __('Stop Supervisor') }}</button>
-                    <button id="restart-485" class="btn btn-primary mb-2">{{ __('Reiniciar 485') }}</button>
-                    <button id="update-app" class="btn btn-dark mb-2">{{ __('Actualizar Software') }}</button>
-                    <button id="verne-app" class="btn btn-danger mb-2">{{ __('Instalar Verne') }}</button>
-                    <button id="phpmyadmin" class="btn btn-warning mb-2">{{ __('Acceder a PHPMyAdmin') }}</button>
-                    <button id="logs" class="btn btn-info mb-2">{{ __('Ver Log') }}</button>
+                    <button id="reboot" class="btn btn-danger mb-2">
+                        <i class="fas fa-sync-alt"></i> {{ __('Restart Server') }}
+                    </button>
+                    <button id="poweroff" class="btn btn-warning mb-2">
+                        <i class="fas fa-power-off"></i> {{ __('Power Off') }}
+                    </button>
+                    <button id="restart-supervisor" class="btn btn-info mb-2">
+                        <i class="fas fa-redo"></i> {{ __('Restart Supervisor') }}
+                    </button>
+                    <button id="start-supervisor" class="btn btn-success mb-2">
+                        <i class="fas fa-play"></i> {{ __('Start Supervisor') }}
+                    </button>
+                    <button id="stop-supervisor" class="btn btn-secondary mb-2">
+                        <i class="fas fa-stop"></i> {{ __('Stop Supervisor') }}
+                    </button>
+                    <button id="restart-485" class="btn btn-primary mb-2">
+                        <i class="fas fa-sync"></i> {{ __('Reiniciar 485') }}
+                    </button>
+                    <button id="update-app" class="btn btn-dark mb-2">
+                        <i class="fas fa-cloud-download-alt"></i> {{ __('Actualizar Software') }}
+                    </button>
+                    <button id="verne-app" class="btn btn-danger mb-2">
+                        <i class="fas fa-download"></i> {{ __('Instalar Verne') }}
+                    </button>
+                    <button id="phpmyadmin" class="btn btn-warning mb-2">
+                        <i class="fas fa-database"></i> {{ __('Acceder a PHPMyAdmin') }}
+                    </button>
+                    <button id="logs" class="btn btn-info mb-2">
+                        <i class="fas fa-file-alt"></i> {{ __('Ver Log') }}
+                    </button>
+                    @if(env('RFID_MONITOR_URL'))
+                        <a href="{{ env('RFID_MONITOR_URL') }}" target="_blank" class="btn btn-primary mb-2">
+                            <i class="fas fa-rss"></i> {{ __('Monitor Antena RFID') }}
+                        </a>
+                    @endif
                 </div>
             </div>
 
@@ -61,7 +86,9 @@
                 </div>
                 <div class="card-body">
                     <p id="service-485-status">{{__('Cargando...')}}</p>
-                    <button id="install-485-service" class="btn btn-primary" style="display: none;">{{__('Instalar y arrancar servicio')}}</button>
+                    <button id="install-485-service" class="btn btn-primary" style="display: none;">
+                        <i class="fas fa-download"></i> {{__('Instalar y arrancar servicio')}}
+                    </button>
                 </div>
             </div>
 
@@ -74,7 +101,9 @@
                     <ul id="server-ips">
                         <li>{{__('Cargando...')}}<</li>
                     </ul>
-                    <button id="get-ips" class="btn btn-info mt-2">{{__('Actualizar IPs')}}</button>
+                    <button id="get-ips" class="btn btn-info mt-2">
+                        <i class="fas fa-sync-alt"></i> {{__('Actualizar IPs')}}
+                    </button>
                 </div>
             </div>
         </div>

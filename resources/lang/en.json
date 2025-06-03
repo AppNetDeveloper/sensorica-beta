@@ -594,5 +594,6 @@
     "Finish Shift Emails List Workers and Confeccionsigned": "List of Finish Shift Emails for Workers and Confirmed Orders",
     "Finish Shift Emails List Workers and Confeccionsigned All": "List of Finish Shift Emails for Workers and Confirmed Orders (All)",
     "MIN TIME FROM READ SOME EPC": "Minimum Time from Reading Some EPC",
-    "Visualizar": "View MQTT"
+    "Visualizar": "View MQTT",
+    "Monitor Antena RFID": "RFID Antenna Monitor"
   }

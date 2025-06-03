@@ -149,6 +149,11 @@ declare -A ENV_VARS=(
     ["REPLICA_DB_DATABASE"]=""
     ["REPLICA_DB_USERNAME"]=""
     ["REPLICA_DB_PASSWORD"]=""
+    
+    ["RFID_READER_IP"]=""
+    ["RFID_READER_PORT"]="1080"
+    ["RFID_MONITOR_URL"]=""
+
 
 )
 

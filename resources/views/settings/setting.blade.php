@@ -48,6 +48,9 @@
                             <a href="settings#useradd-2" class="list-group-item list-group-item-action useradd-2">
                                 {{ __('General') }} <div class="float-end"></div>
                             </a>
+                            <a href="settings#useradd-3-5" class="list-group-item list-group-item-action useradd-3-5">
+                                {{ __('Lector RFID') }} <div class="float-end"></div>
+                            </a>
                             <a href="settings#useradd-3" class="list-group-item list-group-item-action useradd-3">
                                 {{ __('Email') }} <div class="float-end"></div>
                             </a>
@@ -212,6 +215,54 @@
                             <span class="float-end">
                                 <button class="btn btn-primary" type="submit" id="save-btn">{{ __('Save Changes') }}</button>
                                 <a href="{{ route('settings.index') }}" class="btn btn-secondary me-1">{{ __('Cancel') }}</a>
+                            </span>
+                        </div>
+                        {{ Form::close() }}
+                    </div>
+                    {{-- Sección: Configuración Lector RFID --}}
+                    <div id="useradd-3-5" class="card mb-4">
+                        {{ Form::open(['route' => 'settings.rfid', 'method' => 'post']) }}
+                        <div class="card-header">
+                            <h5>{{ __('Configuración Lector RFID') }}</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group row">
+                                <div class="col-md-8">
+                                    <div class="form-group">
+                                        {{ Form::label('rfid_reader_ip', __('IP del Lector RFID'), ['class' => 'form-label']) }}
+                                        {{ Form::text('rfid_reader_ip', $rfid_config['rfid_reader_ip'] ?? '', ['class' => 'form-control', 'placeholder' => __('Ej: 192.168.1.100')]) }}
+                                        <small class="form-text text-muted">
+                                            {{ __('Dirección IP del lector RFID en la red local') }}
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group row mt-3">
+                                <div class="col-md-8">
+                                    <div class="form-group">
+                                        {{ Form::label('rfid_reader_port', __('Puerto del Lector RFID'), ['class' => 'form-label']) }}
+                                        {{ Form::number('rfid_reader_port', $rfid_config['rfid_reader_port'] ?? '1080', ['class' => 'form-control', 'placeholder' => __('Ej: 1080'), 'min' => '1', 'max' => '65535']) }}
+                                        <small class="form-text text-muted">
+                                            {{ __('Puerto TCP del servicio del lector RFID (por defecto: 1080)') }}
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group row mt-3">
+                                <div class="col-md-8">
+                                    <div class="form-group">
+                                        {{ Form::label('rfid_monitor_url', __('URL del Monitor de Antena RFID'), ['class' => 'form-label']) }}
+                                        {{ Form::url('rfid_monitor_url', $rfid_config['rfid_monitor_url'] ?? '', ['class' => 'form-control', 'placeholder' => __('Ej: http://192.168.1.100:3000/')]) }}
+                                        <small class="form-text text-muted">
+                                            {{ __('URL completa del monitor de antena RFID (opcional)') }}
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-whitesmoke">
+                            <span class="float-end">
+                                <button class="btn btn-primary" type="submit" id="save-rfid-btn">{{ __('Guardar Configuración RFID') }}</button>
                             </span>
                         </div>
                         {{ Form::close() }}
@@ -382,15 +433,19 @@
     });
     $(document).on("click", ".useradd-2", function(){
         $(".useradd-2").addClass("active");
-        $(".useradd-1, .useradd-3, .useradd-4").removeClass("active");
+        $(".useradd-1, .useradd-3, .useradd-3-5, .useradd-4").removeClass("active");
+    });
+    $(document).on("click", ".useradd-3-5", function(){
+        $(".useradd-3-5").addClass("active");
+        $(".useradd-1, .useradd-2, .useradd-3, .useradd-4").removeClass("active");
     });
     $(document).on("click", ".useradd-3", function(){
         $(".useradd-3").addClass("active");
-        $(".useradd-1, .useradd-2, .useradd-4").removeClass("active");
+        $(".useradd-1, .useradd-2, .useradd-3-5, .useradd-4").removeClass("active");
     });
     $(document).on("click", ".useradd-4", function(){
         $(".useradd-4").addClass("active");
-        $(".useradd-1, .useradd-2, .useradd-3").removeClass("active");
+        $(".useradd-1, .useradd-2, .useradd-3, .useradd-3-5").removeClass("active");
     });
 </script>
 @endpush

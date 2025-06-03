@@ -279,6 +279,9 @@ Route::group(['middleware' => ['auth', 'XSS']], function () {
 
     Route::post('settings/finish-shift-emails',[SettingController::class, 'saveFinishShiftEmailsSettings'])->name('settings.finishshiftemails');
     Route::get('settings/action/test-finish-shift-emails', [SettingController::class, 'testFinishShiftEmails'])->name('settings.testFinishShifts');
+    
+    // Configuración del lector RFID
+    Route::post('settings/rfid', [SettingController::class, 'saveRfidSettings'])->name('settings.rfid');
 });
 
 Route::get('profile', [UserController::class, 'profile'])->name('profile')->middleware(['auth', 'XSS']);

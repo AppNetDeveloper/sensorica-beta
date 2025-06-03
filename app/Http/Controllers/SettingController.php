@@ -18,7 +18,97 @@ class SettingController extends Controller
 {
     public function index()
     {
-        return view('settings.setting');
+        // Valores por defecto
+        $rfid_config = [
+            'rfid_reader_ip' => '192.168.1.100',
+            'rfid_reader_port' => '1080',
+            'rfid_monitor_url' => 'http://172.25.25.173:3000/'
+        ];
+        
+        // Registrar los valores por defecto
+        \Log::info('Valores por defecto para RFID:', $rfid_config);
+        
+        // Leer el archivo .env directamente
+        $envPath = base_path('.env');
+        
+        // Verificar si el archivo existe y es legible
+        if (!file_exists($envPath)) {
+            \Log::error("El archivo .env no existe en: " . $envPath);
+        } elseif (!is_readable($envPath)) {
+            \Log::error("No se puede leer el archivo .env. Permisos: " . substr(sprintf('%o', fileperms($envPath)), -4));
+        } else {
+            // Leer el archivo .env si existe
+            $envContent = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            
+            // Buscar las variables en el archivo .env
+            foreach ($envContent as $line) {
+                $line = trim($line);
+                
+                // Ignorar comentarios y líneas vacías
+                if (empty($line) || strpos($line, '#') === 0) {
+                    continue;
+                }
+                
+                // Buscar RFID_READER_IP
+                if (strpos($line, 'RFID_READER_IP=') === 0) {
+                    $value = substr($line, strpos($line, '=') + 1);
+                    $value = trim($value, " \t\n\r\0\x0B\"'");
+                    if (!empty($value)) {
+                        $rfid_config['rfid_reader_ip'] = $value;
+                    }
+                }
+                
+                // Buscar RFID_READER_PORT
+                if (strpos($line, 'RFID_READER_PORT=') === 0) {
+                    $value = substr($line, strpos($line, '=') + 1);
+                    $value = trim($value, " \t\n\r\0\x0B\"'");
+                    if (is_numeric($value)) {
+                        $rfid_config['rfid_reader_port'] = $value;
+                    }
+                }
+            }
+        }
+        
+        // Registrar los valores que se están enviando a la vista
+        \Log::info('Valores finales para la vista:', $rfid_config);
+        
+        // Buscar las variables en el archivo .env
+        foreach ($envContent as $line) {
+            $line = trim($line);
+            
+            // Ignorar comentarios y líneas vacías
+            if (empty($line) || strpos($line, '#') === 0) {
+                continue;
+            }
+            
+            // Buscar RFID_READER_IP
+            if (strpos($line, 'RFID_READER_IP=') === 0) {
+                $value = substr($line, strpos($line, '=') + 1);
+                $value = trim($value, " \t\n\r\0\x0B\"'");
+                if (!empty($value)) {
+                    $rfid_config['rfid_reader_ip'] = $value;
+                }
+            }
+            
+            // Buscar RFID_READER_PORT
+            if (strpos($line, 'RFID_READER_PORT=') === 0) {
+                $value = substr($line, strpos($line, '=') + 1);
+                $value = trim($value, " \t\n\r\0\x0B\"'");
+                if (is_numeric($value)) {
+                    $rfid_config['rfid_reader_port'] = $value;
+                }
+            }
+        }
+        
+        // Registrar los valores que se están enviando a la vista
+        \Log::info('RFID Config:', [
+            'ip' => $rfid_config['rfid_reader_ip'],
+            'port' => $rfid_config['rfid_reader_port'],
+            'env_path' => $envPath,
+            'file_exists' => file_exists($envPath)
+        ]);
+
+        return view('settings.setting', compact('rfid_config'));
     }
 
     public function getmail()
@@ -274,5 +364,71 @@ class SettingController extends Controller
                 $promise->wait(false);
             }
         }
+    }
+
+    /**
+     * Guarda la configuración del lector RFID.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function saveRfidSettings(Request $request)
+    {
+        $request->validate([
+            'rfid_reader_ip' => 'required|ip',
+            'rfid_reader_port' => 'required|integer|min:1|max:65535',
+            'rfid_monitor_url' => 'nullable|url',
+        ]);
+
+        // Actualizar el archivo .env con las nuevas configuraciones
+        $envFile = base_path('.env');
+        $envContent = file_get_contents($envFile);
+
+        // Actualizar o agregar RFID_READER_IP
+        if (str_contains($envContent, 'RFID_READER_IP=')) {
+            $envContent = preg_replace(
+                '/^RFID_READER_IP=.*/m',
+                'RFID_READER_IP=' . $request->rfid_reader_ip,
+                $envContent
+            );
+        } else {
+            $envContent .= "\nRFID_READER_IP=" . $request->rfid_reader_ip;
+        }
+
+        // Actualizar o agregar RFID_READER_PORT
+        if (str_contains($envContent, 'RFID_READER_PORT=')) {
+            $envContent = preg_replace(
+                '/^RFID_READER_PORT=.*/m',
+                'RFID_READER_PORT=' . $request->rfid_reader_port,
+                $envContent
+            );
+        } else {
+            $envContent .= "\nRFID_READER_PORT=" . $request->rfid_reader_port;
+        }
+
+        // Actualizar o agregar RFID_MONITOR_URL
+        if (str_contains($envContent, 'RFID_MONITOR_URL=')) {
+            if (!empty($request->rfid_monitor_url)) {
+                $envContent = preg_replace(
+                    '/^RFID_MONITOR_URL=.*/m',
+                    'RFID_MONITOR_URL=' . $request->rfid_monitor_url,
+                    $envContent
+                );
+            } else {
+                // Si el campo está vacío, eliminamos la línea
+                $envContent = preg_replace('/^RFID_MONITOR_URL=.*\n?/m', '', $envContent);
+            }
+        } elseif (!empty($request->rfid_monitor_url)) {
+            $envContent .= "\nRFID_MONITOR_URL=" . $request->rfid_monitor_url;
+        }
+
+        // Guardar los cambios en el archivo .env
+        file_put_contents($envFile, $envContent);
+
+        // Limpiar la caché de configuración
+        \Artisan::call('config:clear');
+        \Artisan::call('config:cache');
+
+        return redirect()->back()->with('success', __('Configuración del lector RFID guardada correctamente.'));
     }
 }

@@ -52,7 +52,6 @@
   "Current Password" : "Contraseña actual ",
   "Custom Table Name" : "Nombre de tabla personalizada ",
   "Dark Logo" : "Logotipo oscuro ",
-  "Dashboard" : "Dashboard ",
   "Datatables" : "Datatables ",
   "Date Format" : "Formato de fecha ",
   "DB Type" : "Tipo DB ",
@@ -638,5 +637,6 @@
     "Finish Shift Emails List Workers and Confeccionsigned": "Correcciones de Turno Final para Trabajadores y Confecciones Firmadas",
     "Finish Shift Emails List Workers and Confeccionsigned All": "Correcciones de Turno Final para Trabajadores y Confecciones Firmadas (Todos)",
     "MIN TIME FROM READ SOME EPC": "Tiempo Mínimo desde la Lectura del mismo EPC",
-    "Visualizar": "Ver Mqtt"
+    "Visualizar": "Ver Mqtt",
+    "Monitor Antena RFID": "Monitor Antena RFID"
   }
