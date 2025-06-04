@@ -282,6 +282,12 @@ Route::group(['middleware' => ['auth', 'XSS']], function () {
     
     // Configuración del lector RFID
     Route::post('settings/rfid', [SettingController::class, 'saveRfidSettings'])->name('settings.rfid');
+    Route::post('settings/redis', [SettingController::class, 'saveRedisSettings'])->name('settings.redis');
+    
+    // Configuración de la base de datos de réplica
+    Route::post('settings/replica-db', [SettingController::class, 'saveReplicaDbSettings'])->name('settings.replica-db');
+    Route::post('settings/test-replica-db-connection', [SettingController::class, 'testReplicaDbConnection'])->name('settings.test-replica-db-connection');
+    Route::post('settings/create-replica-database', [SettingController::class, 'createReplicaDatabase'])->name('settings.create-replica-database');
 });
 
 Route::get('profile', [UserController::class, 'profile'])->name('profile')->middleware(['auth', 'XSS']);

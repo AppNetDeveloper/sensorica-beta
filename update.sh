@@ -153,6 +153,7 @@ declare -A ENV_VARS=(
     ["RFID_READER_IP"]=""
     ["RFID_READER_PORT"]="1080"
     ["RFID_MONITOR_URL"]=""
+    ["REDIS_PREFIX"]=""
 
 
 )

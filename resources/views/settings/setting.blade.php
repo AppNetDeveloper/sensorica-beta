@@ -51,6 +51,12 @@
                             <a href="settings#useradd-3-5" class="list-group-item list-group-item-action useradd-3-5">
                                 {{ __('Lector RFID') }} <div class="float-end"></div>
                             </a>
+                            <a href="settings#useradd-3-6" class="list-group-item list-group-item-action useradd-3-6">
+                                {{ __('Redis') }} <div class="float-end"></div>
+                            </a>
+                            <a href="settings#useradd-3-7" class="list-group-item list-group-item-action useradd-3-7">
+                                {{ __('Base de Datos Réplica') }} <div class="float-end"></div>
+                            </a>
                             <a href="settings#useradd-3" class="list-group-item list-group-item-action useradd-3">
                                 {{ __('Email') }} <div class="float-end"></div>
                             </a>
@@ -181,13 +187,23 @@
                                 </div>
                             </div>
                             <div class="form-group mt-3">
+                                {{ Form::label('app_url', __('APP URL'), ['class' => 'form-label text-dark']) }}
+                                {{ Form::text('app_url', env('APP_URL'), ['class' => 'form-control', 'placeholder' => 'https://example.com']) }}
+                                <small class="form-text text-muted">{{ __('The base URL of your application') }}</small>
+                            </div>
+
+                            <div class="form-group mt-3">
+                                {{ Form::label('asset_url', __('Asset URL'), ['class' => 'form-label text-dark']) }}
+                                {{ Form::text('asset_url', env('ASSET_URL', ''), ['class' => 'form-control', 'placeholder' => 'https://example.com']) }}
+                                <small class="form-text text-muted">{{ __('The base URL for assets (leave empty to use APP_URL)') }}</small>
+                            </div>
+
+                            <div class="form-group mt-3">
                                 {{ Form::label('timezone', __('Timezone'), ['class' => 'form-label text-dark']) }}
                                 <select name="timezone" class="form-control" data-trigger id="choices-single-default">
                                     <option value="">{{ __('Select Timezone') }}</option>
                                     @foreach ($timezones as $k => $timezone)
-                                        <option value="{{ $k }}" {{ env('TIMEZONE') == $k ? 'selected' : '' }}>
-                                            {{ $timezone }}
-                                        </option>
+                                        <option value="{{ $k }}" {{ env('APP_TIMEZONE') == $k ? 'selected' : '' }}>{{ $timezone }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -266,6 +282,138 @@
                             </span>
                         </div>
                         {{ Form::close() }}
+                    </div>
+                    {{-- Sección: Configuración Redis --}}
+                    <div id="useradd-3-6" class="card mb-4">
+                        {{ Form::open(['route' => 'settings.redis', 'method' => 'post']) }}
+                        <div class="card-header">
+                            <h5>{{ __('Configuración de Redis') }}</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group row">
+                                <div class="col-md-8">
+                                    <div class="form-group">
+                                        {{ Form::label('redis_host', __('Redis Host'), ['class' => 'form-label']) }}
+                                        {{ Form::text('redis_host', env('REDIS_HOST', '127.0.0.1'), ['class' => 'form-control', 'placeholder' => __('Ej: 127.0.0.1')]) }}
+                                        <small class="form-text text-muted">
+                                            {{ __('Dirección del servidor Redis') }}
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group row mt-3">
+                                <div class="col-md-8">
+                                    <div class="form-group">
+                                        {{ Form::label('redis_port', __('Redis Port'), ['class' => 'form-label']) }}
+                                        {{ Form::number('redis_port', env('REDIS_PORT', '6379'), ['class' => 'form-control', 'placeholder' => __('Ej: 6379'), 'min' => '1', 'max' => '65535']) }}
+                                        <small class="form-text text-muted">
+                                            {{ __('Puerto del servidor Redis (por defecto: 6379)') }}
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group row mt-3">
+                                <div class="col-md-8">
+                                    <div class="form-group">
+                                        {{ Form::label('redis_password', __('Contraseña de Redis'), ['class' => 'form-label']) }}
+                                        {{ Form::password('redis_password', ['class' => 'form-control', 'placeholder' => __('Dejar en blanco si no hay contraseña')]) }}
+                                        <small class="form-text text-muted">
+                                            {{ __('Contraseña de autenticación de Redis (opcional)') }}
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group row mt-3">
+                                <div class="col-md-8">
+                                    <div class="form-group">
+                                        {{ Form::label('redis_prefix', __('Prefijo de Redis'), ['class' => 'form-label']) }}
+                                        {{ Form::text('redis_prefix', env('REDIS_PREFIX', Str::slug(env('APP_NAME', 'laravel'), '_').'_database_'), ['class' => 'form-control', 'placeholder' => __('Ej: mi_app_')]) }}
+                                        <small class="form-text text-muted">
+                                            {{ __('Prefijo para las claves de Redis (por defecto: nombre de la aplicación)') }}
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-whitesmoke">
+                            <span class="float-end">
+                                <button class="btn btn-primary" type="submit" id="save-redis-btn">{{ __('Guardar Configuración Redis') }}</button>
+                            </span>
+                        </div>
+                        {{ Form::close() }}
+                    </div>
+                    {{-- Sección: Configuración Base de Datos Réplica --}}
+                    <div id="useradd-3-7" class="card mb-4">
+                        <form id="replicaDbForm">
+                            @csrf
+                            <div class="card-header">
+                                <h5>{{ __('Configuración de Base de Datos Réplica') }}</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-group row">
+                                    <div class="col-md-8">
+                                        <div class="form-group">
+                                            <label for="replica_db_host" class="form-label">{{ __('Host') }}</label>
+                                            <input type="text" class="form-control" id="replica_db_host" name="replica_db_host" value="{{ env('REPLICA_DB_HOST', '') }}" placeholder="Ej: localhost">
+                                            <small class="form-text text-muted">
+                                                {{ __('Dirección del servidor de la base de datos de réplica') }}
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group row mt-3">
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label for="replica_db_port" class="form-label">{{ __('Puerto') }}</label>
+                                            <input type="number" class="form-control" id="replica_db_port" name="replica_db_port" value="{{ env('REPLICA_DB_PORT', '3306') }}" min="1" max="65535" placeholder="3306">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-8">
+                                        <div class="form-group">
+                                            <label for="replica_db_database" class="form-label">{{ __('Base de Datos') }}</label>
+                                            <div class="input-group">
+                                                <input type="text" class="form-control" id="replica_db_database" name="replica_db_database" value="{{ env('REPLICA_DB_DATABASE', '') }}" placeholder="Ej: mi_base_de_datos">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group row mt-3">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="replica_db_username" class="form-label">{{ __('Usuario') }}</label>
+                                            <input type="text" class="form-control" id="replica_db_username" name="replica_db_username" value="{{ env('REPLICA_DB_USERNAME', '') }}" placeholder="Usuario de la base de datos">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="replica_db_password" class="form-label">{{ __('Contraseña') }}</label>
+                                            <div class="input-group">
+                                                <input type="password" class="form-control" id="replica_db_password" name="replica_db_password" value="{{ env('REPLICA_DB_PASSWORD', '') }}" placeholder="Contraseña">
+                                                <button class="btn btn-outline-secondary toggle-password" type="button">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-footer bg-whitesmoke">
+                                <div class="float-start">
+                                    <button type="button" class="btn btn-info" id="test-connection-btn">
+                                        <i class="fas fa-plug"></i> {{ __('Probar Conexión') }}
+                                    </button>
+                                    <button type="button" class="btn btn-success d-none" id="create-db-btn">
+                                        <i class="fas fa-database"></i> {{ __('Crear Base de Datos' ) }}
+                                    </button>
+                                </div>
+                                <div class="float-end">
+                                    <button type="submit" class="btn btn-primary" id="save-replica-db-btn">
+                                        <i class="fas fa-save"></i> {{ __('Guardar Configuración') }}
+                                    </button>
+                                </div>
+                                <div class="clearfix"></div>
+                            </div>
+                        </form>
                     </div>
                     {{-- Sección: Email Settings --}}
                     <div id="useradd-3" class="card">
@@ -392,6 +540,153 @@
 
 @push('scripts')
 <script>
+    // Toggle para mostrar/ocultar contraseña
+    $(document).on('click', '.toggle-password', function() {
+        const input = $(this).siblings('input');
+        const icon = $(this).find('i');
+        
+        if (input.attr('type') === 'password') {
+            input.attr('type', 'text');
+            icon.removeClass('fa-eye').addClass('fa-eye-slash');
+        } else {
+            input.attr('type', 'password');
+            icon.removeClass('fa-eye-slash').addClass('fa-eye');
+        }
+    });
+
+    // Probar conexión a la base de datos
+    $('#test-connection-btn').on('click', function() {
+        const $btn = $(this);
+        const $form = $('#replicaDbForm');
+        const $createDbBtn = $('#create-db-btn');
+        
+        $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Probando...');
+        
+        // Get form data and map to expected field names
+        const formData = {
+            _token: $('meta[name="csrf-token"]').attr('content'),
+            host: $('#replica_db_host').val(),
+            port: $('#replica_db_port').val(),
+            database: $('#replica_db_database').val(),
+            username: $('#replica_db_username').val(),
+            password: $('#replica_db_password').val()
+        };
+        
+        $.ajax({
+            url: '/settings/test-replica-db-connection',
+            type: 'POST',
+            data: formData,
+            success: function(response) {
+                if (response.success) {
+                    toastr.success(response.message);
+                    
+                    // Mostrar/ocultar botón de crear base de datos
+                    if (response.database_exists) {
+                        $createDbBtn.addClass('d-none');
+                    } else {
+                        $createDbBtn.removeClass('d-none');
+                    }
+                } else {
+                    toastr.error(response.message);
+                    $createDbBtn.addClass('d-none');
+                }
+            },
+            error: function(xhr) {
+                const response = xhr.responseJSON || {};
+                toastr.error(response.message || 'Error al probar la conexión');
+                $createDbBtn.addClass('d-none');
+            },
+            complete: function() {
+                $btn.prop('disabled', false).html('<i class="fas fa-plug"></i> {{ __("Probar Conexión") }}');
+            }
+        });
+    });
+
+    // Crear base de datos
+    $('#create-db-btn').on('click', function() {
+        if (!confirm('¿Está seguro de que desea crear la base de datos? Esta operación no se puede deshacer.')) {
+            return;
+        }
+        
+        const $btn = $(this);
+        const $form = $('#replicaDbForm');
+        
+        $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Creando...');
+        
+        // Get form data and map to expected field names
+        const formData = {
+            _token: $('meta[name="csrf-token"]').attr('content'),
+            host: $('#replica_db_host').val(),
+            port: $('#replica_db_port').val(),
+            database: $('#replica_db_database').val(),
+            username: $('#replica_db_username').val(),
+            password: $('#replica_db_password').val()
+        };
+        
+        $.ajax({
+            url: '/settings/create-replica-database',
+            type: 'POST',
+            data: formData,
+            success: function(response) {
+                if (response.success) {
+                    toastr.success(response.message);
+                    $btn.addClass('d-none');
+                } else {
+                    toastr.error(response.message);
+                }
+            },
+            error: function(xhr) {
+                const response = xhr.responseJSON || {};
+                toastr.error(response.message || 'Error al crear la base de datos');
+            },
+            complete: function() {
+                $btn.prop('disabled', false).html('<i class="fas fa-database"></i> {{ __("Crear Base de Datos") }}');
+            }
+        });
+    });
+
+    // Guardar configuración
+    $('#replicaDbForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        const $form = $(this);
+        const $btn = $('#save-replica-db-btn');
+        
+        $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Guardando...');
+        
+        // Get form data with correct field names for validation
+        const formData = {
+            _token: $('meta[name="csrf-token"]').attr('content'),
+            replica_db_host: $('#replica_db_host').val(),
+            replica_db_port: $('#replica_db_port').val(),
+            replica_db_database: $('#replica_db_database').val(),
+            replica_db_username: $('#replica_db_username').val(),
+            replica_db_password: $('#replica_db_password').val()
+        };
+        
+        $.ajax({
+            url: '/settings/replica-db',
+            type: 'POST',
+            data: formData,
+            success: function(response) {
+                if (response.success) {
+                    toastr.success(response.message);
+                    // Ocultar el botón de crear base de datos hasta que se vuelva a probar la conexión
+                    $('#create-db-btn').addClass('d-none');
+                } else {
+                    toastr.error(response.message || 'Error al guardar la configuración');
+                }
+            },
+            error: function(xhr) {
+                const response = xhr.responseJSON || {};
+                toastr.error(response.message || 'Error al guardar la configuración');
+            },
+            complete: function() {
+                $btn.prop('disabled', false).html('<i class="fas fa-save"></i> {{ __("Guardar Configuración") }}');
+            }
+        });
+    });
+
     function check_theme(color_val) {
         $('.theme-color').prop('checked', false);
         $('input[value="' + color_val + '"]').prop('checked', true);

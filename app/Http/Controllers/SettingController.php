@@ -18,15 +18,20 @@ class SettingController extends Controller
 {
     public function index()
     {
-        // Valores por defecto
+        // Valores por defecto para RFID
         $rfid_config = [
-            'rfid_reader_ip' => '192.168.1.100',
-            'rfid_reader_port' => '1080',
-            'rfid_monitor_url' => 'http://172.25.25.173:3000/'
+            'rfid_reader_ip' => env('RFID_READER_IP', '192.168.1.100'),
+            'rfid_reader_port' => env('RFID_READER_PORT', '1080'),
+            'rfid_monitor_url' => env('RFID_MONITOR_URL', 'http://172.25.25.173:3000/')
         ];
         
-        // Registrar los valores por defecto
-        \Log::info('Valores por defecto para RFID:', $rfid_config);
+        // Valores por defecto para Redis
+        $redis_config = [
+            'redis_host' => env('REDIS_HOST', '127.0.0.1'),
+            'redis_port' => env('REDIS_PORT', '6379'),
+            'redis_password' => env('REDIS_PASSWORD', ''),
+            'redis_prefix' => env('REDIS_PREFIX', Str::slug(env('APP_NAME', 'laravel'), '_').'_database_')
+        ];
         
         // Leer el archivo .env directamente
         $envPath = base_path('.env');
@@ -177,20 +182,28 @@ class SettingController extends Controller
 
     public function saveSystemSettings(Request $request)
     {
-        // Actualiza variables de entorno
+        // Update environment variables
         $arrEnv = [
+            'APP_URL' => rtrim($request->app_url, '/'),
+            'ASSET_URL' => $request->filled('asset_url') ? rtrim($request->asset_url, '/') : '',
+            'APP_TIMEZONE' => $request->timezone,
             'TIMEZONE' => $request->timezone,
             'SITE_RTL' => !isset($request->SITE_RTL) ? 'off' : 'on',
         ];
+        
+        // Save to .env file
         UtilityFacades::setEnvironmentValue($arrEnv);
 
+        // Save to database
         $post = [
             'authentication'   => isset($request->authentication) ? 'activate' : 'deactivate',
-            'timezone'         => isset($request->timezone) ? $request->timezone : '',
-            'site_date_format' => isset($request->site_date_format) ? $request->site_date_format : '',
-            'default_language' => isset($request->default_language) ? $request->default_language : '',
-            'dark_mode'        => isset($request->dark_mode) ? $request->dark_mode : '',
-            'color'            => isset($request->color) ? $request->color : '',
+            'timezone'         => $request->timezone ?? '',
+            'site_date_format' => $request->site_date_format ?? '',
+            'default_language' => $request->default_language ?? '',
+            'dark_mode'        => $request->dark_mode ?? '',
+            'color'            => $request->color ?? '',
+            'app_url'          => $request->app_url ?? '',
+            'asset_url'        => $request->asset_url ?? '',
         ];
 
         foreach ($post as $key => $data) {
@@ -429,6 +442,250 @@ class SettingController extends Controller
         \Artisan::call('config:clear');
         \Artisan::call('config:cache');
 
-        return redirect()->back()->with('success', __('Configuración del lector RFID guardada correctamente.'));
+        return redirect()->back()->with('success', __('Configuración RFID guardada correctamente.'));
+    }
+
+    /**
+     * Guarda la configuración de Redis.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function saveRedisSettings(Request $request)
+    {
+        $request->validate([
+            'redis_host' => 'required|string|max:255',
+            'redis_port' => 'required|integer|min:1|max:65535',
+            'redis_password' => 'nullable|string|max:255',
+            'redis_prefix' => 'required|string|max:255',
+        ]);
+
+        // Actualizar el archivo .env con las nuevas configuraciones
+        $envFile = base_path('.env');
+        $envContent = file_get_contents($envFile);
+
+        // Función auxiliar para actualizar o agregar una variable de entorno
+        $updateEnvVar = function($key, $value) use (&$envContent) {
+            if (str_contains($envContent, $key . '=')) {
+                $envContent = preg_replace(
+                    '/^' . preg_quote($key, '/') . '=.*/m',
+                    $key . '=' . $value,
+                    $envContent
+                );
+            } else {
+                $envContent .= "\n" . $key . '=' . $value;
+            }
+        };
+
+        // Actualizar o agregar cada variable de Redis
+        $updateEnvVar('REDIS_HOST', $request->redis_host);
+        $updateEnvVar('REDIS_PORT', $request->redis_port);
+        $updateEnvVar('REDIS_PASSWORD', $request->filled('redis_password') ? $request->redis_password : '');
+        $updateEnvVar('REDIS_PREFIX', $request->redis_prefix);
+
+        // Guardar los cambios en el archivo .env
+        file_put_contents($envFile, $envContent);
+
+        // Limpiar la caché de configuración
+        \Artisan::call('config:clear');
+        \Artisan::call('config:cache');
+
+        return redirect()->back()->with('success', __('Configuración de Redis guardada correctamente.'));
+    }
+
+    /**
+     * Guarda la configuración de la base de datos de réplica.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function saveReplicaDbSettings(Request $request)
+    {
+        $request->validate([
+            'replica_db_host' => 'required|string|max:255',
+            'replica_db_port' => 'required|integer|min:1|max:65535',
+            'replica_db_database' => 'required|string|max:255',
+            'replica_db_username' => 'required|string|max:255',
+            'replica_db_password' => 'required|string|max:255',
+        ]);
+
+        // Actualizar el archivo .env con las nuevas configuraciones
+        $envFile = base_path('.env');
+        $envContent = file_get_contents($envFile);
+
+        // Función auxiliar para actualizar o agregar una variable de entorno
+        $updateEnvVar = function($key, $value) use (&$envContent) {
+            if (str_contains($envContent, $key . '=')) {
+                $envContent = preg_replace(
+                    '/^' . preg_quote($key, '/') . '=.*/m',
+                    $key . '=' . $value,
+                    $envContent
+                );
+            } else {
+                $envContent .= "\n" . $key . '=' . $value;
+            }
+        };
+
+        // Actualizar o agregar cada variable de la base de datos de réplica
+        $updateEnvVar('REPLICA_DB_HOST', $request->replica_db_host);
+        $updateEnvVar('REPLICA_DB_PORT', $request->replica_db_port);
+        $updateEnvVar('REPLICA_DB_DATABASE', $request->replica_db_database);
+        $updateEnvVar('REPLICA_DB_USERNAME', $request->replica_db_username);
+        $updateEnvVar('REPLICA_DB_PASSWORD', $request->replica_db_password);
+
+        // Guardar los cambios en el archivo .env
+        file_put_contents($envFile, $envContent);
+
+        // Limpiar la caché de configuración
+        \Artisan::call('config:clear');
+        \Artisan::call('config:cache');
+
+        return response()->json([
+            'success' => true,
+            'message' => __('Configuración de la base de datos de réplica guardada correctamente.')
+        ]);
+    }
+
+    /**
+     * Prueba la conexión a la base de datos de réplica.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function testReplicaDbConnection(Request $request)
+    {
+        // Determine which field name format to use
+        $host = $request->input('host', $request->input('replica_db_host'));
+        $port = $request->input('port', $request->input('replica_db_port'));
+        $database = $request->input('database', $request->input('replica_db_database'));
+        $username = $request->input('username', $request->input('replica_db_username'));
+        $password = $request->input('password', $request->input('replica_db_password'));
+
+        // Validate the input
+        $request->validate([
+            'replica_db_host' => 'sometimes|required|string|max:255',
+            'replica_db_port' => 'sometimes|required|integer|min:1|max:65535',
+            'replica_db_database' => 'sometimes|required|string|max:255',
+            'replica_db_username' => 'sometimes|required|string|max:255',
+            'replica_db_password' => 'sometimes|required|string|max:255',
+            // Legacy field names
+            'host' => 'sometimes|required|string|max:255',
+            'port' => 'sometimes|required|integer|min:1|max:65535',
+            'database' => 'sometimes|required|string|max:255',
+            'username' => 'sometimes|required|string|max:255',
+            'password' => 'sometimes|required|string|max:255',
+        ]);
+
+        $connection = 'replica_test';
+        
+        // Configure the temporary connection
+        config([
+            'database.connections.' . $connection => [
+                'driver' => 'mysql',
+                'host' => $host,
+                'port' => $port,
+                'database' => $database,
+                'username' => $username,
+                'password' => $password,
+                'charset' => 'utf8mb4',
+                'collation' => 'utf8mb4_unicode_ci',
+                'prefix' => '',
+                'strict' => true,
+                'engine' => null,
+            ]
+        ]);
+
+        try {
+            // Try to connect to the database
+            DB::connection($connection)->getPdo();
+            
+            // Check if the database exists
+            $databaseExists = DB::connection($connection)->select(
+                "SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ?", 
+                [$database]
+            );
+            
+            return response()->json([
+                'success' => true,
+                'database_exists' => !empty($databaseExists),
+                'message' => __('Conexión exitosa a la base de datos.')
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => __('Error de conexión: ') . $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    /**
+     * Creates the database on the remote server.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function createReplicaDatabase(Request $request)
+    {
+        // Determine which field name format to use
+        $host = $request->input('host', $request->input('replica_db_host'));
+        $port = $request->input('port', $request->input('replica_db_port'));
+        $database = $request->input('database', $request->input('replica_db_database'));
+        $username = $request->input('username', $request->input('replica_db_username'));
+        $password = $request->input('password', $request->input('replica_db_password'));
+
+        // Validate the input
+        $request->validate([
+            'replica_db_host' => 'sometimes|required|string|max:255',
+            'replica_db_port' => 'sometimes|required|integer|min:1|max:65535',
+            'replica_db_database' => 'sometimes|required|string|max:255',
+            'replica_db_username' => 'sometimes|required|string|max:255',
+            'replica_db_password' => 'sometimes|required|string|max:255',
+            // Legacy field names
+            'host' => 'sometimes|required|string|max:255',
+            'port' => 'sometimes|required|integer|min:1|max:65535',
+            'database' => 'sometimes|required|string|max:255',
+            'username' => 'sometimes|required|string|max:255',
+            'password' => 'sometimes|required|string|max:255',
+        ]);
+
+        $connection = 'replica_creation';
+        
+        // Configure the temporary connection without specifying the database
+        config([
+            'database.connections.' . $connection => [
+                'driver' => 'mysql',
+                'host' => $host,
+                'port' => $port,
+                'username' => $username,
+                'password' => $password,
+                'charset' => 'utf8mb4',
+                'collation' => 'utf8mb4_unicode_ci',
+                'prefix' => '',
+                'strict' => true,
+                'engine' => null,
+            ]
+        ]);
+
+        try {
+            // Connect without specifying the database
+            DB::purge($connection);
+            
+            // Create the database
+            DB::connection($connection)->statement(
+                "CREATE DATABASE IF NOT EXISTS `{$database}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+            );
+            
+            return response()->json([
+                'success' => true,
+                'message' => __('Base de datos creada exitosamente.')
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => __('Error al crear la base de datos: ') . $e->getMessage()
+            ], 500);
+        }
     }
 }
