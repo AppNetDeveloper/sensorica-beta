@@ -84,6 +84,36 @@ else{
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     @stack('style')
     @laravelPWA
+    
+    <!-- Estilos para el botón de instalación PWA -->
+    <style>
+        #installPWA {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            padding: 12px 24px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            display: none;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        #installPWA:hover {
+            background-color: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+        }
+        #installPWA i {
+            font-size: 1.2em;
+        }
+    </style>
 </head>
 
 <body class="{{ $color }}">
@@ -121,6 +151,91 @@ else{
     {{--  @include('include.header')  --}}
     @include('partial.header')
 
+    <!-- Botón flotante de instalación PWA -->
+    <button id="installPWA" aria-label="Instalar aplicación">
+        <i class="ti ti-download"></i>
+        <span>Instalar App</span>
+    </button>
+
+    <!-- Script para el manejo de la instalación PWA -->
+    <script>
+        // Variable para almacenar el evento beforeinstallprompt
+        let deferredPrompt;
+        const installButton = document.getElementById('installPWA');
+        
+        // Solo mostrar el botón si el navegador soporta PWA
+        if (window.matchMedia('(display-mode: browser)').matches) {
+            // Mostrar el botón solo si no está ya instalado
+            window.addEventListener('beforeinstallprompt', (e) => {
+                // Prevenir que Chrome 67 y anteriores muestren automáticamente el prompt
+                e.preventDefault();
+                // Guardar el evento para que se pueda activar más tarde
+                deferredPrompt = e;
+                // Mostrar el botón
+                if (installButton) {
+                    installButton.style.display = 'flex';
+                }
+                
+                // Ocultar el botón después de 10 segundos
+                setTimeout(() => {
+                    if (installButton) {
+                        installButton.style.display = 'none';
+                    }
+                }, 10000);
+            });
+            
+            // Evento de clic en el botón de instalación
+            if (installButton) {
+                installButton.addEventListener('click', async () => {
+                    if (!deferredPrompt) return;
+                    
+                    // Mostrar el prompt de instalación
+                    deferredPrompt.prompt();
+                    
+                    // Esperar a que el usuario responda al prompt
+                    const { outcome } = await deferredPrompt.userChoice;
+                    
+                    // Limpiar el evento guardado ya que no se puede volver a usar
+                    deferredPrompt = null;
+                    
+                    // Ocultar el botón independientemente del resultado
+                    if (installButton) {
+                        installButton.style.display = 'none';
+                    }
+                    
+                    // Opcional: rastrear el resultado de la instalación
+                    console.log(`User response to the install prompt: ${outcome}`);
+                });
+            }
+            
+            // Ocultar el botón cuando la aplicación se instala correctamente
+            window.addEventListener('appinstalled', () => {
+                console.log('PWA fue instalado');
+                if (installButton) {
+                    installButton.style.display = 'none';
+                }
+                deferredPrompt = null;
+            });
+            
+            // Verificar si la aplicación ya está instalada
+            window.matchMedia('(display-mode: standalone)').addEventListener('change', (e) => {
+                if (e.matches) {
+                    // La aplicación está instalada
+                    if (installButton) {
+                        installButton.style.display = 'none';
+                    }
+                }
+            });
+            
+            // Verificar el modo de visualización actual
+            if (window.matchMedia('(display-mode: standalone)').matches) {
+                // La aplicación ya está instalada
+                if (installButton) {
+                    installButton.style.display = 'none';
+                }
+            }
+        }
+    </script>
 </body>
 
 <!-- [ Main Content ] start -->

@@ -389,7 +389,7 @@
     <script src="https://cdn.datatables.net/responsive/2.4.1/js/dataTables.responsive.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 
 
     <script>
@@ -402,7 +402,7 @@
         let selectedRfidColor = null;
         // Variable para el intervalo de actualización
         let refreshIntervalId = null;
-        const REFRESH_INTERVAL = 6000; // 6 segundos en milisegundos
+        const REFRESH_INTERVAL = 30000; // 30 segundos en milisegundos
 
         // Función para iniciar el intervalo de refresco
         function startRefreshInterval() {

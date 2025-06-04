@@ -4,10 +4,51 @@
 @endsection
 @section('content')
     <!-- [ breadcrumb ] start -->
-
     <!-- [ breadcrumb ] end -->
+    
     <!-- [ Main Content ] start -->
-    <div class="row">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="page-title-box">
+                <h4 class="page-title">{{ __('Bienvenido a tu panel de control') }}</h4>
+                <p class="text-muted mb-0">
+                    {{ __('Gestiona y supervisa tus actividades desde aquí') }}
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Verificar si el usuario tiene al menos un permiso para ver los widgets -->
+    @php
+        $hasAnyPermission = auth()->user()->can('manage-user') || 
+                           auth()->user()->can('manage-role') || 
+                           auth()->user()->can('manage-module') || 
+                           auth()->user()->can('manage-langauge');
+    @endphp
+    
+    @if(!$hasAnyPermission)
+        <!-- Mostrar tarjeta de bienvenida si no tiene permisos para ver los widgets -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body text-center p-5">
+                        <div class="avatar-lg mx-auto mb-4">
+                            <i class="ti ti-user-check display-4 text-primary"></i>
+                        </div>
+                        <h4 class="mb-3">{{ __('¡Bienvenido a tu panel de control!') }}</h4>
+                        <p class="text-muted mb-4">
+                            {{ __('Actualmente no tienes asignados permisos específicos para ver los widgets del dashboard.') }}
+                        </p>
+                        <p class="text-muted">
+                            {{ __('Por favor, contacta con el administrador del sistema si necesitas acceso a funcionalidades adicionales.') }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @else
+        <!-- Widgets normales para usuarios con permisos -->
+        <div class="row">
         <!-- [ sample-page ] start -->
         <!-- analytic card start -->
         @can('manage-user')
@@ -123,9 +164,9 @@
 
     </div>
     <!-- [ Main Content ] end -->
-    </div>
-    </div>
-
+        </div> <!-- Cierre del row de widgets -->
+    @endif
+    <!-- [ Main Content ] end -->
 @endsection
 @push('style')
     {{--  @include('layouts.includes.datatable_css')  --}}
