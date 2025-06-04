@@ -719,29 +719,29 @@
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         {{ Form::label('mysql_server', __('MySQL Server'), ['class' => 'form-label']) }}
-                                        {{ Form::text('mysql_server', env('MYSQL_SERVER'), ['class' => 'form-control', 'placeholder' => 'localhost']) }}
+                                        {{ Form::text('mysql_server', $upload_stats_config['mysql_server'] ?? '', ['class' => 'form-control', 'placeholder' => 'localhost']) }}
                                     </div>
                                     <div class="form-group mt-3">
                                         {{ Form::label('mysql_port', __('MySQL Port'), ['class' => 'form-label']) }}
-                                        {{ Form::text('mysql_port', env('MYSQL_PORT', '3306'), ['class' => 'form-control']) }}
+                                        {{ Form::text('mysql_port', $upload_stats_config['mysql_port'] ?? '3306', ['class' => 'form-control']) }}
                                     </div>
                                     <div class="form-group mt-3">
                                         {{ Form::label('mysql_db', __('Database Name'), ['class' => 'form-label']) }}
-                                        {{ Form::text('mysql_db', env('MYSQL_DB'), ['class' => 'form-control']) }}
+                                        {{ Form::text('mysql_db', $upload_stats_config['mysql_db'] ?? '', ['class' => 'form-control']) }}
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         {{ Form::label('mysql_table_line', __('Lines Table'), ['class' => 'form-label']) }}
-                                        {{ Form::text('mysql_table_line', env('MYSQL_TABLE_LINE'), ['class' => 'form-control']) }}
+                                        {{ Form::text('mysql_table_line', $upload_stats_config['mysql_table_line'] ?? '', ['class' => 'form-control']) }}
                                     </div>
                                     <div class="form-group mt-3">
                                         {{ Form::label('mysql_table_sensor', __('Sensors Table'), ['class' => 'form-label']) }}
-                                        {{ Form::text('mysql_table_sensor', env('MYSQL_TABLE_SENSOR'), ['class' => 'form-control']) }}
+                                        {{ Form::text('mysql_table_sensor', $upload_stats_config['mysql_table_sensor'] ?? '', ['class' => 'form-control']) }}
                                     </div>
                                     <div class="form-group mt-3">
                                         {{ Form::label('mysql_user', __('Database User'), ['class' => 'form-label']) }}
-                                        {{ Form::text('mysql_user', env('MYSQL_USER'), ['class' => 'form-control']) }}
+                                        {{ Form::text('mysql_user', $upload_stats_config['mysql_user'] ?? '', ['class' => 'form-control']) }}
                                     </div>
                                     <div class="form-group mt-3">
                                         {{ Form::label('mysql_password', __('Database Password'), ['class' => 'form-label']) }}
@@ -753,7 +753,7 @@
                                                 value="" 
                                                 placeholder="••••••••" 
                                                 autocomplete="new-password"
-                                                data-original-value="{{ env('MYSQL_PASSWORD') }}"
+                                                data-original-value="{{ $upload_stats_config['mysql_password'] ?? '' }}"
                                             >
                                             <button class="btn btn-outline-secondary toggle-password" type="button" data-target="mysql_password">
                                                 <i class="fas fa-eye"></i>

@@ -106,15 +106,27 @@ class SettingController extends Controller
             }
         }
         
+        // Configuración de Upload Stats
+        $upload_stats_config = [
+            'mysql_server' => env('MYSQL_SERVER', 'localhost'),
+            'mysql_port' => env('MYSQL_PORT', '3306'),
+            'mysql_db' => env('MYSQL_DB', ''),
+            'mysql_user' => env('MYSQL_USER', ''),
+            'mysql_password' => env('MYSQL_PASSWORD', ''),
+            'mysql_table_line' => env('MYSQL_TABLE_LINE', ''),
+            'mysql_table_sensor' => env('MYSQL_TABLE_SENSOR', '')
+        ];
+
         // Registrar los valores que se están enviando a la vista
-        \Log::info('RFID Config:', [
-            'ip' => $rfid_config['rfid_reader_ip'],
-            'port' => $rfid_config['rfid_reader_port'],
+        \Log::info('Configuración cargada:', [
+            'rfid_ip' => $rfid_config['rfid_reader_ip'],
+            'rfid_port' => $rfid_config['rfid_reader_port'],
+            'upload_stats_db' => $upload_stats_config['mysql_db'],
             'env_path' => $envPath,
             'file_exists' => file_exists($envPath)
         ]);
 
-        return view('settings.setting', compact('rfid_config'));
+        return view('settings.setting', compact('rfid_config', 'upload_stats_config'));
     }
 
     public function getmail()
