@@ -97,7 +97,7 @@ else{
     <!-- [ Mobile header ] start -->
     <div class="dash-mob-header dash-header">
         <div class="pcm-logo">
-            <img src="{{ asset('assets/images/logo.svg') }}" alt="" class="logo logo-lg" />
+            <img src="{{ $logo . (!empty($company_logo) ? $company_logo : 'dark_logo.png') }}" alt="" class="logo logo-lg" style="max-height: 40px;" />
         </div>
         <div class="pcm-toolbar">
             <a href="#!" class="dash-head-link" id="mobile-collapse">
@@ -106,13 +106,7 @@ else{
                         <div class="hamburger-inner"></div>
                     </div>
                 </div>
-                <!-- <i data-feather="menu"></i> -->
-            </a>
-            <a href="#!" class="dash-head-link" id="headerdrp-collapse">
-                <i data-feather="align-right"></i>
-            </a>
-            <a href="#!" class="dash-head-link" id="header-collapse">
-                <i data-feather="more-vertical"></i>
+                <span class="sr-only">Toggle menu</span>
             </a>
         </div>
     </div>
