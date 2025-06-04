@@ -184,27 +184,126 @@ class SettingController extends Controller
     {
         // Update environment variables
         $arrEnv = [
+            // App URLs
             'APP_URL' => rtrim($request->app_url, '/'),
             'ASSET_URL' => $request->filled('asset_url') ? rtrim($request->asset_url, '/') : '',
+            
+            // Timezone
             'APP_TIMEZONE' => $request->timezone,
             'TIMEZONE' => $request->timezone,
+            
+            // Database configuration
+            'DB_CONNECTION' => $request->db_connection ?? 'mysql',
+            'DB_HOST' => $request->db_host ?? '127.0.0.1',
+            'DB_PORT' => $request->db_port ?? '3306',
+            'DB_DATABASE' => $request->db_database ?? '',
+            'DB_USERNAME' => $request->db_username ?? '',
+            'DB_PASSWORD' => $request->db_password ?? '',
+            
+            // MQTT Configuration
+            'MQTT_SERVER' => $request->mqtt_server ?? '',
+            'MQTT_PORT' => $request->mqtt_port ?? '1883',
+            'MQTT_SENSORICA_SERVER' => $request->mqtt_sensorica_server ?? '127.0.0.1',
+            'MQTT_SENSORICA_PORT' => $request->mqtt_sensorica_port ?? '1883',
+            'MQTT_SENSORICA_SERVER_BACKUP' => $request->mqtt_sensorica_server_backup ?? '',
+            'MQTT_SENSORICA_PORT_BACKUP' => $request->mqtt_sensorica_port_backup ?? '1883',
+            
+            // Backup Configuration
+            'BACKUP_ARCHIVE_PASSWORD' => $request->backup_archive_password ?? null,
+            'BACKUP_ARCHIVE_ENCRYPTION' => $request->backup_archive_encryption ?? null,
+            
+            // SFTP Configuration
+            'SFTP_HOST' => $request->sftp_host ?? 'localhost',
+            'SFTP_USERNAME' => $request->sftp_username ?? '',
+            'SFTP_PASSWORD' => $request->sftp_password ?? '',
+            'SFTP_PORT' => $request->sftp_port ?? '22',
+            'SFTP_ROOT' => $request->sftp_root ?? '/var/www/ftp/',
+            
+            // System Settings
+            'SHIFT_TIME' => $request->shift_time ?? '08:00:00',
+            'CLEAR_DB_DAY' => $request->clear_db_day ?? '40',
+            'PRODUCTION_MIN_TIME' => $request->production_min_time ?? '3',
+            'PRODUCTION_MAX_TIME' => $request->production_max_time ?? '5',
+            'PRODUCTION_MIN_TIME_WEIGHT' => $request->production_min_time_weight ?? '30',
+            'USE_CURL' => $request->has('use_curl') ? 'true' : 'false',
+            'RFID_AUTO_ADD' => $request->has('rfid_auto_add') ? 'true' : 'false',
+            
+            // External API Settings
+            'USE_CURL' => $request->has('use_curl') ? 'true' : 'false',
+            'EXTERNAL_API_QUEUE_TYPE' => strtolower($request->external_api_queue_type ?? 'put'),
+            'EXTERNAL_API_QUEUE_MODEL' => $request->external_api_queue_model ?? 'dataToSend3',
+            
+            // RFID Settings
+            'RFID_AUTO_ADD' => $request->has('rfid_auto_add') ? 'true' : 'false',
+            
+            // Local Server Settings
+            'LOCAL_SERVER' => rtrim($request->local_server ?? 'http://127.0.0.1', '/') . '/',
+            'TOKEN_SYSTEM' => $request->token_system ?? '',
+            'TCP_SERVER' => $request->tcp_server ?? 'localhost',
+            'TCP_PORT' => $request->tcp_port ?? '8000',
+            
+            // Production Settings
+            'SHIFT_TIME' => $request->shift_time ?? '08:00:00',
+            'PRODUCTION_MIN_TIME' => $request->production_min_time ?? '3',
+            'PRODUCTION_MAX_TIME' => $request->production_max_time ?? '5',
+            'CLEAR_DB_DAY' => $request->clear_db_day ?? '40',
+            'PRODUCTION_MIN_TIME_WEIGHT' => $request->production_min_time_weight ?? '30',
+            
+            // WhatsApp Configuration
+            'WHATSAPP_LINK' => $request->whatsapp_link ?? 'http://127.0.0.1:3005',
+            'WHATSAPP_PHONE_NOT' => $request->whatsapp_phone_not ?? '',
+            
+            // Other settings
             'SITE_RTL' => !isset($request->SITE_RTL) ? 'off' : 'on',
         ];
         
         // Save to .env file
         UtilityFacades::setEnvironmentValue($arrEnv);
 
-        // Save to database
+        // Save to database (only non-sensitive or necessary fields)
         $post = [
-            'authentication'   => isset($request->authentication) ? 'activate' : 'deactivate',
+            // Authentication
+            'authentication'   => $request->has('authentication') ? 'activate' : 'deactivate',
+            
+            // General settings
             'timezone'         => $request->timezone ?? '',
             'site_date_format' => $request->site_date_format ?? '',
             'default_language' => $request->default_language ?? '',
             'dark_mode'        => $request->dark_mode ?? '',
             'color'            => $request->color ?? '',
+            
+            // URLs
             'app_url'          => $request->app_url ?? '',
             'asset_url'        => $request->asset_url ?? '',
+            
+            // Database (for reference in admin panel)
+            'db_connection'    => $request->db_connection ?? 'mysql',
+            'db_host'          => $request->db_host ?? '127.0.0.1',
+            'db_port'          => $request->db_port ?? '3306',
+            'db_database'      => $request->db_database ?? '',
+            'db_username'      => $request->db_username ?? '',
+            
+            // System Settings
+            'shift_time'       => $request->shift_time ?? '08:00:00',
+            'clear_db_day'     => $request->clear_db_day ?? '40',
+            'production_min_time' => $request->production_min_time ?? '3',
+            'production_max_time' => $request->production_max_time ?? '5',
+            'production_min_time_weight' => $request->production_min_time_weight ?? '30',
+            'use_curl'         => $request->has('use_curl') ? 'true' : 'false',
+            'rfid_auto_add'    => $request->has('rfid_auto_add') ? 'true' : 'false',
+            
+            // External API Settings
+            'external_api_queue_type' => strtolower($request->external_api_queue_type ?? 'put'),
+            'external_api_queue_model' => $request->external_api_queue_model ?? 'dataToSend3',
+            'local_server'     => rtrim($request->local_server ?? 'http://127.0.0.1', '/') . '/',
+            
+            // WhatsApp Configuration
+            'whatsapp_link'    => $request->whatsapp_link ?? 'http://127.0.0.1:3005',
+            'whatsapp_phone_not' => $request->whatsapp_phone_not ?? '',
         ];
+        
+        // Don't save sensitive data in the database
+        unset($post['db_password']);
 
         foreach ($post as $key => $data) {
             DB::insert(

@@ -198,6 +198,61 @@
                                 <small class="form-text text-muted">{{ __('The base URL for assets (leave empty to use APP_URL)') }}</small>
                             </div>
 
+                            <div class="card mt-4">
+                                <div class="card-header">
+                                    <h6 class="mb-0">{{ __('Database Configuration') }}</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                {{ Form::label('db_connection', __('Connection'), ['class' => 'form-label']) }}
+                                                {{ Form::select('db_connection', ['mysql' => 'MySQL', 'pgsql' => 'PostgreSQL', 'sqlsrv' => 'SQL Server'], env('DB_CONNECTION', 'mysql'), ['class' => 'form-control']) }}
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                {{ Form::label('db_host', __('Host'), ['class' => 'form-label']) }}
+                                                {{ Form::text('db_host', env('DB_HOST', '127.0.0.1'), ['class' => 'form-control', 'placeholder' => '127.0.0.1']) }}
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                {{ Form::label('db_port', __('Port'), ['class' => 'form-label']) }}
+                                                {{ Form::number('db_port', env('DB_PORT', '3306'), ['class' => 'form-control', 'placeholder' => '3306']) }}
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                {{ Form::label('db_database', __('Database Name'), ['class' => 'form-label']) }}
+                                                {{ Form::text('db_database', env('DB_DATABASE', ''), ['class' => 'form-control', 'placeholder' => 'database_name']) }}
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                {{ Form::label('db_username', __('Username'), ['class' => 'form-label']) }}
+                                                {{ Form::text('db_username', env('DB_USERNAME', ''), ['class' => 'form-control', 'placeholder' => 'db_user']) }}
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                {{ Form::label('db_password', __('Password'), ['class' => 'form-label']) }}
+                                                <div class="input-group">
+                                                    {{ Form::password('db_password', ['class' => 'form-control', 'placeholder' => '••••••••', 'value' => env('DB_PASSWORD', '')]) }}
+                                                    <button class="btn btn-outline-secondary toggle-password" type="button">
+                                                        <i class="fas fa-eye"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="alert alert-warning mt-3 mb-0">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                        {{ __('Warning: Changing these settings may break your application if not configured correctly.') }}
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="form-group mt-3">
                                 {{ Form::label('timezone', __('Timezone'), ['class' => 'form-label text-dark']) }}
                                 <select name="timezone" class="form-control" data-trigger id="choices-single-default">
@@ -206,6 +261,316 @@
                                         <option value="{{ $k }}" {{ env('APP_TIMEZONE') == $k ? 'selected' : '' }}>{{ $timezone }}</option>
                                     @endforeach
                                 </select>
+                            </div>
+
+                            <!-- MQTT Configuration -->
+                            <div class="card mt-4">
+                                <div class="card-header">
+                                    <h6 class="mb-0">{{ __('MQTT Configuration') }}</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                {{ Form::label('mqtt_server', __('MQTT Server'), ['class' => 'form-label']) }}
+                                                {{ Form::text('mqtt_server', env('MQTT_SERVER'), ['class' => 'form-control', 'placeholder' => 'mqtt.example.com']) }}
+                                            </div>
+                                            <div class="form-group mt-3">
+                                                {{ Form::label('mqtt_port', __('MQTT Port'), ['class' => 'form-label']) }}
+                                                {{ Form::number('mqtt_port', env('MQTT_PORT', '1883'), ['class' => 'form-control', 'placeholder' => '1883']) }}
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                {{ Form::label('mqtt_sensorica_server', __('Sensorica Server'), ['class' => 'form-label']) }}
+                                                {{ Form::text('mqtt_sensorica_server', env('MQTT_SENSORICA_SERVER'), ['class' => 'form-control', 'placeholder' => '127.0.0.1']) }}
+                                            </div>
+                                            <div class="form-group mt-3">
+                                                {{ Form::label('mqtt_sensorica_port', __('Sensorica Port'), ['class' => 'form-label']) }}
+                                                {{ Form::number('mqtt_sensorica_port', env('MQTT_SENSORICA_PORT', '1883'), ['class' => 'form-control', 'placeholder' => '1883']) }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row mt-3">
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                {{ Form::label('mqtt_sensorica_server_backup', __('Sensorica Backup Server'), ['class' => 'form-label']) }}
+                                                {{ Form::text('mqtt_sensorica_server_backup', env('MQTT_SENSORICA_SERVER_BACKUP'), ['class' => 'form-control', 'placeholder' => 'backup.example.com']) }}
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                {{ Form::label('mqtt_sensorica_port_backup', __('Sensorica Backup Port'), ['class' => 'form-label']) }}
+                                                {{ Form::number('mqtt_sensorica_port_backup', env('MQTT_SENSORICA_PORT_BACKUP', '1883'), ['class' => 'form-control', 'placeholder' => '1883']) }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Backup Configuration -->
+                            <div class="card mt-4">
+                                <div class="card-header">
+                                    <h6 class="mb-0">{{ __('Backup Configuration') }}</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                {{ Form::label('backup_archive_password', __('Backup Password'), ['class' => 'form-label']) }}
+                                                {{ Form::password('backup_archive_password', ['class' => 'form-control', 'value' => env('BACKUP_ARCHIVE_PASSWORD', '')]) }}
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                {{ Form::label('backup_archive_encryption', __('Backup Encryption'), ['class' => 'form-label']) }}
+                                                {{ Form::select('backup_archive_encryption', ['' => 'None', 'aes-256-cbc' => 'AES-256-CBC'], env('BACKUP_ARCHIVE_ENCRYPTION', ''), ['class' => 'form-control']) }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- SFTP Configuration -->
+                            <div class="card mt-4">
+                                <div class="card-header">
+                                    <h6 class="mb-0">{{ __('SFTP Configuration') }}</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                {{ Form::label('sftp_host', __('SFTP Host'), ['class' => 'form-label']) }}
+                                                {{ Form::text('sftp_host', env('SFTP_HOST'), ['class' => 'form-control', 'placeholder' => 'sftp.example.com']) }}
+                                            </div>
+                                            <div class="form-group mt-3">
+                                                {{ Form::label('sftp_username', __('SFTP Username'), ['class' => 'form-label']) }}
+                                                {{ Form::text('sftp_username', env('SFTP_USERNAME'), ['class' => 'form-control']) }}
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                {{ Form::label('sftp_port', __('SFTP Port'), ['class' => 'form-label']) }}
+                                                {{ Form::number('sftp_port', env('SFTP_PORT', '22'), ['class' => 'form-control', 'placeholder' => '22']) }}
+                                            </div>
+                                            <div class="form-group mt-3">
+                                                {{ Form::label('sftp_password', __('SFTP Password'), ['class' => 'form-label']) }}
+                                                <div class="input-group">
+                                                    {{ Form::password('sftp_password', ['class' => 'form-control', 'value' => env('SFTP_PASSWORD', '')]) }}
+                                                    <button class="btn btn-outline-secondary toggle-password" type="button">
+                                                        <i class="fas fa-eye"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-group mt-3">
+                                        {{ Form::label('sftp_root', __('SFTP Root Path'), ['class' => 'form-label']) }}
+                                        {{ Form::text('sftp_root', env('SFTP_ROOT', '/var/www/ftp/'), ['class' => 'form-control', 'placeholder' => '/path/to/root']) }}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- System Settings -->
+                            <div class="card mt-4">
+                                <div class="card-header">
+                                    <h6 class="mb-0">{{ __('System Settings') }}</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                {{ Form::label('shift_time', __('Shift Time'), ['class' => 'form-label']) }}
+                                                {{ Form::time('shift_time', env('SHIFT_TIME', '08:00:00'), ['class' => 'form-control']) }}
+                                            </div>
+                                            <div class="form-group mt-3">
+                                                {{ Form::label('production_min_time', __('Min Production Time (sec)'), ['class' => 'form-label']) }}
+                                                {{ Form::number('production_min_time', env('PRODUCTION_MIN_TIME', '3'), ['class' => 'form-control', 'min' => '1']) }}
+                                            </div>
+                                            <div class="form-group mt-3">
+                                                {{ Form::label('production_max_time', __('Max Production Time (sec)'), ['class' => 'form-label']) }}
+                                                {{ Form::number('production_max_time', env('PRODUCTION_MAX_TIME', '5'), ['class' => 'form-control', 'min' => '1']) }}
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                {{ Form::label('clear_db_day', __('Clear DB After (days)'), ['class' => 'form-label']) }}
+                                                {{ Form::number('clear_db_day', env('CLEAR_DB_DAY', '40'), ['class' => 'form-control', 'min' => '1']) }}
+                                            </div>
+                                            <div class="form-group mt-3">
+                                                {{ Form::label('production_min_time_weight', __('Min Production Weight (kg)'), ['class' => 'form-label']) }}
+                                                {{ Form::number('production_min_time_weight', env('PRODUCTION_MIN_TIME_WEIGHT', '30'), ['class' => 'form-control', 'step' => '0.01', 'min' => '0']) }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- External API Settings -->
+                            <div id="external-api-settings" class="card mt-4">
+                                <div class="card-header">
+                                    <h6 class="mb-0">{{ __('External API Settings') }}</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <div class="form-check form-switch">
+                                                    @php
+                                                        $useCurl = env('USE_CURL', 'true');
+                                                        $isChecked = ($useCurl === 'true' || $useCurl === true);
+                                                    @endphp
+                                                    {{ Form::checkbox('use_curl', '1', $isChecked, ['class' => 'form-check-input', 'id' => 'use_curl']) }}
+                                                    {{ Form::label('use_curl', __('Use cURL for External Requests'), ['class' => 'form-check-label']) }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                {{ Form::label('external_api_queue_type', __('Request Type'), ['class' => 'form-label']) }}
+                                                {{ Form::select('external_api_queue_type', ['get' => 'GET', 'post' => 'POST', 'put' => 'PUT', 'delete' => 'DELETE'], env('EXTERNAL_API_QUEUE_TYPE', 'put'), ['class' => 'form-control']) }}
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                {{ Form::label('external_api_queue_model', __('Data Model'), ['class' => 'form-label']) }}
+                                                {{ Form::text('external_api_queue_model', env('EXTERNAL_API_QUEUE_MODEL', 'dataToSend3'), ['class' => 'form-control']) }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- RFID Settings -->
+                            <div id="rfid-settings" class="card mt-4">
+                                <div class="card-header">
+                                    <h6 class="mb-0">{{ __('RFID Settings') }}</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="form-check form-switch">
+                                        @php
+                                            $rfidAutoAdd = env('RFID_AUTO_ADD', 'true');
+                                            $isRfidChecked = ($rfidAutoAdd === 'true' || $rfidAutoAdd === true);
+                                        @endphp
+                                        {{ Form::checkbox('rfid_auto_add', '1', $isRfidChecked, ['class' => 'form-check-input', 'id' => 'rfid_auto_add']) }}
+                                        {{ Form::label('rfid_auto_add', __('Auto Add RFID Tags'), ['class' => 'form-check-label']) }}
+                                    </div>
+                                    <small class="text-muted">{{ __('Automatically add new RFID tags to the system when scanned') }}</small>
+                                </div>
+                            </div>
+
+                            <!-- Local Server Settings -->
+                            <div class="card mt-4">
+                                <div class="card-header">
+                                    <h6 class="mb-0">{{ __('Local Server Settings') }}</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                {{ Form::label('local_server', __('Local Server URL'), ['class' => 'form-label']) }}
+                                                {{ Form::url('local_server', env('LOCAL_SERVER', 'http://127.0.0.1/'), ['class' => 'form-control']) }}
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                {{ Form::label('token_system', __('System Token'), ['class' => 'form-label']) }}
+                                                <div class="input-group">
+                                                    {{ Form::text('token_system', env('TOKEN_SYSTEM'), ['class' => 'form-control', 'id' => 'token_system']) }}
+                                                    <button class="btn btn-outline-secondary" type="button" id="copyTokenBtn">
+                                                        <i class="fas fa-copy"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row mt-3">
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                {{ Form::label('tcp_server', __('TCP Server'), ['class' => 'form-label']) }}
+                                                {{ Form::text('tcp_server', env('TCP_SERVER', 'localhost'), ['class' => 'form-control']) }}
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                {{ Form::label('tcp_port', __('TCP Port'), ['class' => 'form-label']) }}
+                                                {{ Form::number('tcp_port', env('TCP_PORT', '8000'), ['class' => 'form-control']) }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Production Settings -->
+                            <div class="card mt-4">
+                                <div class="card-header">
+                                    <h6 class="mb-0">{{ __('Production Settings') }}</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                {{ Form::label('shift_time', __('Shift Start Time'), ['class' => 'form-label']) }}
+                                                {{ Form::time('shift_time', env('SHIFT_TIME', '08:00:00'), ['class' => 'form-control']) }}
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                {{ Form::label('production_min_time', __('Min Production Time (min)'), ['class' => 'form-label']) }}
+                                                {{ Form::number('production_min_time', env('PRODUCTION_MIN_TIME', '3'), ['class' => 'form-control', 'min' => '1']) }}
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                {{ Form::label('production_max_time', __('Max Production Time (min)'), ['class' => 'form-label']) }}
+                                                {{ Form::number('production_max_time', env('PRODUCTION_MAX_TIME', '5'), ['class' => 'form-control', 'min' => '1']) }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row mt-3">
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                {{ Form::label('clear_db_day', __('Clear Old Data (days)'), ['class' => 'form-label']) }}
+                                                <div class="input-group">
+                                                    {{ Form::number('clear_db_day', env('CLEAR_DB_DAY', '40'), ['class' => 'form-control', 'min' => '1']) }}
+                                                    <span class="input-group-text">{{ __('days') }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                {{ Form::label('production_min_time_weight', __('Min Production Weight (kg)'), ['class' => 'form-label']) }}
+                                                <div class="input-group">
+                                                    {{ Form::number('production_min_time_weight', env('PRODUCTION_MIN_TIME_WEIGHT', '30'), ['class' => 'form-control', 'step' => '0.01', 'min' => '0']) }}
+                                                    <span class="input-group-text">kg</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- WhatsApp Configuration -->
+                            <div class="card mt-4">
+                                <div class="card-header">
+                                    <h6 class="mb-0">{{ __('WhatsApp Configuration') }}</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                            <div class="form-group">
+                                                {{ Form::label('whatsapp_link', __('WhatsApp Server URL'), ['class' => 'form-label']) }}
+                                                {{ Form::url('whatsapp_link', env('WHATSAPP_LINK'), ['class' => 'form-control', 'placeholder' => 'http://127.0.0.1:3005']) }}
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                {{ Form::label('whatsapp_phone_not', __('Notification Phone'), ['class' => 'form-label']) }}
+                                                {{ Form::text('whatsapp_phone_not', env('WHATSAPP_PHONE_NOT'), ['class' => 'form-control', 'placeholder' => '34619929305']) }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                             <div class="form-group mt-3">
                                 {{ Form::label('site_date_format', __('Date Format'), ['class' => 'form-label text-dark']) }}
