@@ -4,7 +4,8 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
-use App\Models\IaPrompt; // Asegúrate de crear este modelo o usa DB::table()
+use App\Models\IaPrompt; // Asegúrate de que este modelo exista si decides usar la versión con Eloquent
+use Illuminate\Support\Carbon; // Para now()
 
 class IaPromptsTableSeeder extends Seeder
 {
@@ -13,7 +14,7 @@ class IaPromptsTableSeeder extends Seeder
      */
     public function run(): void
     {
-        // Contenido del prompt individual (ajustado de tu JavaScript)
+        // Contenido del prompt individual
         $individualPromptContent = <<<PROMPT
 Por favor, realiza un análisis DETALLADO y PROFUNDO del rendimiento del siguiente trabajador. Tu respuesta debe estar en español.
 
@@ -50,7 +51,7 @@ Evita frases como "Basándome en estos datos" o "Aquí está el análisis". Ve d
 Si los datos son insuficientes para un análisis profundo en algún área, indícalo brevemente.
 PROMPT;
 
-        // Contenido del prompt global (ajustado de tu JavaScript)
+        // Contenido del prompt global
         $globalPromptContent = <<<PROMPT
 Por favor, realiza un ANÁLISIS GLOBAL DETALLADO del rendimiento para el conjunto de trabajadores, basado en los siguientes datos resumidos del periodo. Tu respuesta debe estar en español.
 
@@ -74,45 +75,67 @@ Formato: Usa párrafos para el resumen y listas con viñetas para las observacio
 Evita frases como "Basándome en estos datos". Ve directo al análisis.
 PROMPT;
 
-        // Usando el Query Builder (DB Facade)
-        DB::table('ia_prompts')->insert([
+        // Definimos los prompts que queremos asegurar en la base de datos
+        $promptsData = [
             [
-                'key' => 'individual_worker_analysis_v3', // Nueva clave para evitar colisiones si ya existe la v2
+                'key' => 'individual_worker_analysis_v3',
                 'name' => 'Análisis Individual de Trabajador con Contexto Global',
                 'content' => $individualPromptContent,
-                'model_name' => 'gemma3:4b-it-qat', // El modelo que tenías en JS
+                'model_name' => 'gemma3:4b-it-qat',
                 'is_active' => true,
-                'created_at' => now(),
-                'updated_at' => now(),
             ],
             [
-                'key' => 'overall_team_analysis_v3', // Nueva clave
+                'key' => 'overall_team_analysis_v3',
                 'name' => 'Análisis Global de Equipo',
                 'content' => $globalPromptContent,
-                'model_name' => 'gemma3:4b-it-qat', // El modelo que tenías en JS
+                'model_name' => 'gemma3:4b-it-qat',
                 'is_active' => true,
-                'created_at' => now(),
-                'updated_at' => now(),
             ],
-        ]);
+        ];
 
-        // Alternativamente, si has creado el modelo App\Models\IaPrompt:
+        // Iteramos sobre cada prompt para verificar e insertar si no existe
+        foreach ($promptsData as $promptData) {
+            // Verificamos si ya existe un prompt con esa 'key' usando el Query Builder
+            $exists = DB::table('ia_prompts')->where('key', $promptData['key'])->exists();
+
+            if (!$exists) {
+                // Si no existe, lo insertamos
+                DB::table('ia_prompts')->insert([
+                    'key' => $promptData['key'],
+                    'name' => $promptData['name'],
+                    'content' => $promptData['content'],
+                    'model_name' => $promptData['model_name'],
+                    'is_active' => $promptData['is_active'],
+                    'created_at' => Carbon::now(),
+                    'updated_at' => Carbon::now(),
+                ]);
+                $this->command->info("Prompt '{$promptData['key']}' creado.");
+            } else {
+                $this->command->info("Prompt '{$promptData['key']}' ya existe. No se ha realizado ninguna acción.");
+            }
+        }
+
+        // Alternativa usando el modelo Eloquent IaPrompt (si está configurado y prefieres este enfoque)
         /*
-        IaPrompt::create([
-            'key' => 'individual_worker_analysis_v3',
-            'name' => 'Análisis Individual de Trabajador con Contexto Global',
-            'content' => $individualPromptContent,
-            'model_name' => 'gemma3:4b-it-qat',
-            'is_active' => true,
-        ]);
-
-        IaPrompt::create([
-            'key' => 'overall_team_analysis_v3',
-            'name' => 'Análisis Global de Equipo',
-            'content' => $globalPromptContent,
-            'model_name' => 'gemma3:4b-it-qat',
-            'is_active' => true,
-        ]);
+        foreach ($promptsData as $promptData) {
+            IaPrompt::firstOrCreate(
+                ['key' => $promptData['key']], // Atributos para buscar
+                [ // Atributos para crear si no se encuentra (excluyendo 'key' ya que está en el primer array)
+                    'name' => $promptData['name'],
+                    'content' => $promptData['content'],
+                    'model_name' => $promptData['model_name'],
+                    'is_active' => $promptData['is_active'],
+                    // 'created_at' y 'updated_at' serán manejados automáticamente por Eloquent si los timestamps están habilitados en el modelo
+                ]
+            );
+            // Para mostrar un mensaje similar al de arriba, necesitarías comprobar si el modelo fue creado recientemente:
+            // $prompt = IaPrompt::firstOrCreate([...]);
+            // if ($prompt->wasRecentlyCreated) {
+            //     $this->command->info("Prompt '{$promptData['key']}' creado con Eloquent.");
+            // } else {
+            //     $this->command->info("Prompt '{$promptData['key']}' ya existía (Eloquent). No se ha realizado ninguna acción.");
+            // }
+        }
         */
     }
 }
