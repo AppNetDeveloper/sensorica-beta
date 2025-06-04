@@ -746,17 +746,22 @@
                                     <div class="form-group mt-3">
                                         {{ Form::label('mysql_password', __('Database Password'), ['class' => 'form-label']) }}
                                         <div class="input-group">
-                                            {{ Form::password('mysql_password', [
-                                                'class' => 'form-control', 
-                                                'value' => env('MYSQL_PASSWORD'), 
-                                                'id' => 'mysql_password',
-                                                'autocomplete' => 'off',
-                                                'data-original-value' => env('MYSQL_PASSWORD')
-                                            ]) }}
+                                            <input type="password" 
+                                                name="mysql_password" 
+                                                class="form-control" 
+                                                id="mysql_password"
+                                                value="" 
+                                                placeholder="••••••••" 
+                                                autocomplete="new-password"
+                                                data-original-value="{{ env('MYSQL_PASSWORD') }}"
+                                            >
                                             <button class="btn btn-outline-secondary toggle-password" type="button" data-target="mysql_password">
                                                 <i class="fas fa-eye"></i>
                                             </button>
                                         </div>
+                                        <small class="form-text text-muted">
+                                            {{ __('Deja en blanco para mantener la contraseña actual') }}
+                                        </small>
                                     </div>
                                 </div>
                             </div>
