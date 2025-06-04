@@ -10,13 +10,4 @@ class ServerController extends Controller
     {
         return view('server.index');
     }
-        /**
-     * Muestra la vista de configuración de Upload Stats.
-     *
-     * @return \Illuminate\View\View
-     */
-    public function showUploadStatsConfig()
-    {
-        return view('server.uploadstats');
-    }
 }

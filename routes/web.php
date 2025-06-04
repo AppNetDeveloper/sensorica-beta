@@ -171,7 +171,6 @@ Route::get('/production-order-kanban', [ProductionOrderController::class, 'index
 
 //server controller
 Route::get('/server', [ServerController::class, 'index'])->name('server.index');
-Route::get('/server/edit/upload/stats', [ServerController::class, 'showUploadStatsConfig'])->name('server.uploadstats');
 
 // Rutas para las líneas de producción
 Route::get('customers/{customer_id}/productionlines', [ProductionLineController::class, 'index'])->name('productionlines.index');

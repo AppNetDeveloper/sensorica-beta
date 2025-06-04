@@ -108,14 +108,7 @@ $settings = Utility::settings();
                     </li>
                 @endif
 
-                @if (auth()->user()->hasRole('admin') || auth()->user()->can('db-upload-show'))
-                    <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
-                        <a class="dash-link" href="{{ route('server.uploadstats') }}">
-                            <span class="dash-micon"><i class="fa-regular fa-circle-up"></i></span>
-                            <span class="dash-mtext custom-weight">{{ __('Settings Stats Upload') }}</span>
-                        </a>
-                    </li>
-                @endif
+
                 
                 <!-- Gestión de usuarios, roles y permisos según permisos del usuario -->
                 @can('manage-user')
