@@ -750,10 +750,9 @@
                                                 name="mysql_password" 
                                                 class="form-control" 
                                                 id="mysql_password"
-                                                value="" 
+                                                value="{{ $upload_stats_config['mysql_password'] ?? '' }}" 
                                                 placeholder="••••••••" 
                                                 autocomplete="new-password"
-                                                data-original-value="{{ $upload_stats_config['mysql_password'] ?? '' }}"
                                             >
                                             <button class="btn btn-outline-secondary toggle-password" type="button" data-target="mysql_password">
                                                 <i class="fas fa-eye"></i>
