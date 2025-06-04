@@ -389,8 +389,7 @@
     <script src="https://cdn.datatables.net/responsive/2.4.1/js/dataTables.responsive.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js" integrity="sha512-r6rDA7W6ZeQhvl8S7yRVQUKVHdexq+GAlNkNNqVC7YyIV+NwqCTJe2hDWCiffTyRNOeGEzRRJ9ifvRm/HCzGYg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
     <script>
         // --- Definir permisos en JavaScript (Método seguro) ---
@@ -406,27 +405,35 @@
 
         // Función para iniciar el intervalo de refresco
         function startRefreshInterval() {
-            if (refreshIntervalId) { clearInterval(refreshIntervalId); }
+            // Detener cualquier intervalo existente
+            stopRefreshInterval();
+            
+            // Iniciar nuevo intervalo
             refreshIntervalId = setInterval(function() {
-                if (table && $.fn.DataTable.isDataTable('#relationsTable')) { // Comprobar si la tabla existe
+                // Solo ejecutar si la tabla está inicializada y no hay una petición pendiente
+                if (table && !window.tableReloadInProgress && $.fn.DataTable.isDataTable('#relationsTable')) {
                     console.log('Actualizando tabla automáticamente...');
-                    let pageInfo = table.page.info();
-                    let searchVal = table.search();
-                    // Guardar estado de los switches antes de recargar
+                    window.tableReloadInProgress = true;
+                    
+                    // Guardar el estado actual
+                    const currentPage = table.page();
+                    const searchVal = table.search();
                     const historyChecked = $('#showHistorySwitch').is(':checked');
                     const unassignedChecked = $('#showUnassignedSwitch').is(':checked');
+                    
+                    // Realizar la recarga
                     table.ajax.reload(function() {
-                         if ($.fn.DataTable.isDataTable('#relationsTable')) { // Volver a comprobar por si se destruyó mientras tanto
-                            // Restaurar estado de los switches visualmente (aunque el filtro se aplica por JS)
+                        if ($.fn.DataTable.isDataTable('#relationsTable')) {
+                            // Restaurar estado
                             $('#showHistorySwitch').prop('checked', historyChecked);
                             $('#showUnassignedSwitch').prop('checked', unassignedChecked);
-                            // Aplicar búsqueda y paginación
-                            table.search(searchVal).page(pageInfo.page).draw('page');
-                         }
-                    }, false); // false para no resetear paginación
+                            table.search(searchVal).page(currentPage).draw(false);
+                        }
+                        window.tableReloadInProgress = false;
+                    }, false); // false para mantener la paginación
                 }
             }, REFRESH_INTERVAL);
-            console.log('Intervalo de refresco iniciado.');
+            console.log('Intervalo de refresco iniciado cada', REFRESH_INTERVAL + 'ms');
         }
 
         // Función para detener el intervalo de refresco
@@ -870,20 +877,42 @@
                     initComplete: function(settings, json) {
                         console.log("DataTable inicializado.");
                         const api = this.api();
-                        // Mover botones y switches a sus placeholders
-                        // Añadir un pequeño retraso antes de mover los botones y switches
-                        setTimeout(function() {
-                            // Volver a comprobar si la tabla todavía existe (por si se destruyó)
-                            if ($.fn.DataTable.isDataTable('#relationsTable')) {
-                                console.log("Moviendo botones y switches tras el retraso...");
-                                // Mover los botones de DataTables al placeholder
-                                api.buttons().container().appendTo('.dt-buttons-placeholder');
-                                // Mover los switches al placeholder y mostrarlos
-                                $('.switches-container').appendTo('.switch-placeholder').show();
-                            } else {
-                                console.warn("La tabla ya no existe al intentar mover botones/switches.");
+                        
+                        // Función para mover controles
+                        const moveControls = function() {
+                            try {
+                                // Mover botones
+                                const buttonsContainer = api.buttons().container();
+                                if (buttonsContainer.length) {
+                                    buttonsContainer.appendTo('.dt-buttons-placeholder');
+                                    console.log("Botones movidos al placeholder");
+                                }
+                                
+                                // Mover switches
+                                const $switches = $('.switches-container');
+                                if ($switches.length) {
+                                    $switches.appendTo('.switch-placeholder').show();
+                                    console.log("Switches movidos al placeholder");
+                                }
+                                
+                                // Asegurar que los botones sean visibles
+                                $('.dt-buttons').show();
+                                return true;
+                            } catch (e) {
+                                console.error("Error moviendo controles:", e);
+                                return false;
                             }
-                        }, 100); // 100 milisegundos de retraso (ajustable si es necesario)
+                        };
+
+                        // Intentar mover controles inmediatamente
+                        if (!moveControls()) {
+                            // Si falla, reintentar después de un breve retraso
+                            console.log("Reintentando mover controles...");
+                            setTimeout(moveControls, 500);
+                        }
+                        
+                        // Iniciar el refresco después de asegurar que todo está listo
+                        setTimeout(startRefreshInterval, 1000);
 
                         // Añadir clases de Bootstrap a los controles de DataTable
                         $('.dataTables_filter input').addClass('form-control');
@@ -1071,12 +1100,41 @@
             }); // Fin de .always() de loadSelectOptions
 
             // --- Manejo del intervalo de refresco con visibilidad de la página ---
-            // Detener al salir/ocultar
-            $(window).on('unload pagehide', function() { stopRefreshInterval(); });
-            $(window).on('blur', function() { if (refreshIntervalId) { console.log('Ventana perdió foco, pausando refresco.'); stopRefreshInterval(); } });
-            // Reanudar al volver/mostrar
-            $(window).on('pageshow', function(event) { if (event.originalEvent.persisted === false && !refreshIntervalId) { startRefreshInterval(); } }); // Al volver a la página
-            $(window).on('focus', function() { if (!refreshIntervalId) { console.log('Ventana recuperó foco, reanudando refresco.'); startRefreshInterval(); } }); // Al cambiar de pestaña
+            // Manejo de visibilidad de la página
+            let isPageVisible = true;
+            
+            // Usar Page Visibility API si está disponible
+            if (typeof document.hidden !== 'undefined') {
+                document.addEventListener('visibilitychange', function() {
+                    isPageVisible = !document.hidden;
+                    if (isPageVisible) {
+                        console.log('Página visible, reanudando actualizaciones...');
+                        startRefreshInterval();
+                    } else {
+                        console.log('Página oculta, pausando actualizaciones...');
+                        stopRefreshInterval();
+                    }
+                });
+            }
+            
+            // Manejo de eventos tradicionales para compatibilidad
+            $(window).on({
+                'unload pagehide': function() {
+                    stopRefreshInterval();
+                },
+                'blur': function() {
+                    if (refreshIntervalId) {
+                        console.log('Ventana perdió foco, pausando refresco.');
+                        stopRefreshInterval();
+                    }
+                },
+                'focus': function() {
+                    if (!refreshIntervalId) {
+                        console.log('Ventana recuperó foco, reanudando refresco.');
+                        startRefreshInterval();
+                    }
+                }
+            });
 
         }); // Fin de $(document).ready()
 
