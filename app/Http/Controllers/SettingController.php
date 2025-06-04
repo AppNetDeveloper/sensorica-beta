@@ -861,12 +861,23 @@ class SettingController extends Controller
             }
         };
         
+        // Obtener el valor actual de la contraseña del entorno
+        $currentPassword = env('MYSQL_PASSWORD', '');
+        
         // Actualizar o agregar cada variable de Upload Stats
         $updateEnvVar('MYSQL_SERVER', $request->mysql_server);
         $updateEnvVar('MYSQL_PORT', $request->mysql_port);
         $updateEnvVar('MYSQL_DB', $request->mysql_db);
         $updateEnvVar('MYSQL_USER', $request->mysql_user);
-        $updateEnvVar('MYSQL_PASSWORD', $request->filled('mysql_password') ? $request->mysql_password : '');
+        
+        // Solo actualizar la contraseña si se proporciona un nuevo valor
+        if ($request->filled('mysql_password') && $request->mysql_password !== '') {
+            $updateEnvVar('MYSQL_PASSWORD', $request->mysql_password);
+        } else {
+            // Mantener el valor actual de la contraseña si no se proporciona uno nuevo
+            $updateEnvVar('MYSQL_PASSWORD', $currentPassword);
+        }
+        
         $updateEnvVar('MYSQL_TABLE_LINE', $request->mysql_table_line);
         $updateEnvVar('MYSQL_TABLE_SENSOR', $request->mysql_table_sensor);
 
