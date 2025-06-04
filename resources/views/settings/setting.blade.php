@@ -57,6 +57,9 @@
                             <a href="settings#useradd-3-7" class="list-group-item list-group-item-action useradd-3-7">
                                 {{ __('Base de Datos Réplica') }} <div class="float-end"></div>
                             </a>
+                            <a href="settings#upload-stats-settings" class="list-group-item list-group-item-action">
+                                {{ __('Upload Stats Settings') }} <div class="float-end"></div>
+                            </a>
                             <a href="settings#useradd-3" class="list-group-item list-group-item-action useradd-3">
                                 {{ __('Email') }} <div class="float-end"></div>
                             </a>
@@ -356,7 +359,7 @@
                                             <div class="form-group mt-3">
                                                 {{ Form::label('sftp_password', __('SFTP Password'), ['class' => 'form-label']) }}
                                                 <div class="input-group">
-                                                    {{ Form::password('sftp_password', ['class' => 'form-control', 'value' => env('SFTP_PASSWORD', '')]) }}
+                                                    <input type="password" name="sftp_password" class="form-control" value="{{ env('SFTP_PASSWORD', '') }}" autocomplete="off">
                                                     <button class="btn btn-outline-secondary toggle-password" type="button">
                                                         <i class="fas fa-eye"></i>
                                                     </button>
@@ -456,6 +459,65 @@
                                         {{ Form::label('rfid_auto_add', __('Auto Add RFID Tags'), ['class' => 'form-check-label']) }}
                                     </div>
                                     <small class="text-muted">{{ __('Automatically add new RFID tags to the system when scanned') }}</small>
+                                </div>
+                            </div>
+
+                            <!-- Upload Stats Settings -->
+                            <div id="upload-stats-settings" class="card mt-4">
+                                <div class="card-header">
+                                    <h6 class="mb-0">{{ __('Upload Stats Settings') }}</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                {{ Form::label('mysql_server', __('MySQL Server'), ['class' => 'form-label']) }}
+                                                {{ Form::text('mysql_server', env('MYSQL_SERVER'), ['class' => 'form-control', 'placeholder' => 'localhost']) }}
+                                            </div>
+                                            <div class="form-group mt-3">
+                                                {{ Form::label('mysql_port', __('MySQL Port'), ['class' => 'form-label']) }}
+                                                {{ Form::text('mysql_port', env('MYSQL_PORT', '3306'), ['class' => 'form-control']) }}
+                                            </div>
+                                            <div class="form-group mt-3">
+                                                {{ Form::label('mysql_db', __('Database Name'), ['class' => 'form-label']) }}
+                                                {{ Form::text('mysql_db', env('MYSQL_DB'), ['class' => 'form-control']) }}
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                {{ Form::label('mysql_table_line', __('Lines Table'), ['class' => 'form-label']) }}
+                                                {{ Form::text('mysql_table_line', env('MYSQL_TABLE_LINE'), ['class' => 'form-control']) }}
+                                            </div>
+                                            <div class="form-group mt-3">
+                                                {{ Form::label('mysql_table_sensor', __('Sensors Table'), ['class' => 'form-label']) }}
+                                                {{ Form::text('mysql_table_sensor', env('MYSQL_TABLE_SENSOR'), ['class' => 'form-control']) }}
+                                            </div>
+                                            <div class="form-group mt-3">
+                                                {{ Form::label('mysql_user', __('Database User'), ['class' => 'form-label']) }}
+                                                {{ Form::text('mysql_user', env('MYSQL_USER'), ['class' => 'form-control']) }}
+                                            </div>
+                                            <div class="form-group mt-3">
+                                                {{ Form::label('mysql_password', __('Database Password'), ['class' => 'form-label']) }}
+                                                <div class="input-group">
+                                                    {{ Form::password('mysql_password', ['class' => 'form-control', 'value' => env('MYSQL_PASSWORD'), 'id' => 'mysql_password']) }}
+                                                    <button class="btn btn-outline-secondary toggle-password" type="button">
+                                                        <i class="fas fa-eye"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row mt-3">
+                                        <div class="col-12 d-flex justify-content-between">
+                                            <button type="button" id="check-connection" class="btn btn-info">
+                                                <i class="fas fa-plug"></i> {{ __('Check Connection') }}
+                                            </button>
+                                            <button type="button" id="verify-sync-db" class="btn btn-warning">
+                                                <i class="fas fa-sync"></i> {{ __('Verify & Sync Database') }}
+                                            </button>
+                                        </div>
+                                        <div id="connection-status" class="col-12 mt-3 text-center"></div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -780,6 +842,9 @@
                             </div>
                         </form>
                     </div>
+                    
+
+                    
                     {{-- Sección: Email Settings --}}
                     <div id="useradd-3" class="card">
                         <div class="card-header">
@@ -1106,6 +1171,95 @@
     $(document).on("click", ".useradd-4", function(){
         $(".useradd-4").addClass("active");
         $(".useradd-1, .useradd-2, .useradd-3, .useradd-3-5").removeClass("active");
+    });
+    // Upload Stats - Check Database Connection
+    $('#check-connection').on('click', function() {
+        const $btn = $(this);
+        const $status = $('#connection-status');
+        
+        $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> {{ __("Checking...") }}');
+        $status.removeClass('text-success text-danger').html('');
+        
+        const formData = {
+            _token: $('meta[name="csrf-token"]').attr('content'),
+            mysql_server: $('input[name="mysql_server"]').val(),
+            mysql_port: $('input[name="mysql_port"]').val(),
+            mysql_db: $('input[name="mysql_db"]').val(),
+            mysql_user: $('input[name="mysql_user"]').val(),
+            mysql_password: $('input[name="mysql_password"]').val(),
+            mysql_table_line: $('input[name="mysql_table_line"]').val(),
+            mysql_table_sensor: $('input[name="mysql_table_sensor"]').val()
+        };
+        
+        $.ajax({
+            url: '/api/check-db-connection',
+            type: 'POST',
+            data: formData,
+            success: function(response) {
+                if (response.status === 'success') {
+                    $status.html('<i class="fas fa-check-circle"></i> ' + response.message).addClass('text-success');
+                } else {
+                    $status.html('<i class="fas fa-times-circle"></i> ' + (response.message || 'Connection failed')).addClass('text-danger');
+                }
+            },
+            error: function(xhr) {
+                const response = xhr.responseJSON || {};
+                $status.html('<i class="fas fa-times-circle"></i> ' + (response.message || 'Error checking connection')).addClass('text-danger');
+            },
+            complete: function() {
+                $btn.prop('disabled', false).html('<i class="fas fa-plug"></i> {{ __("Check Connection") }}');
+            }
+        });
+    });
+    
+    // Upload Stats - Verify & Sync Database
+    $('#verify-sync-db').on('click', function() {
+        if (!confirm('{{ __("Are you sure you want to verify and sync the database? This may take some time.") }}')) {
+            return;
+        }
+        
+        const $btn = $(this);
+        const $status = $('#connection-status');
+        
+        $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> {{ __("Processing...") }}');
+        $status.removeClass('text-success text-danger').html('');
+        
+        const formData = {
+            _token: $('meta[name="csrf-token"]').attr('content'),
+            mysql_server: $('input[name="mysql_server"]').val(),
+            mysql_port: $('input[name="mysql_port"]').val(),
+            mysql_db: $('input[name="mysql_db"]').val(),
+            mysql_user: $('input[name="mysql_user"]').val(),
+            mysql_password: $('input[name="mysql_password"]').val(),
+            mysql_table_line: $('input[name="mysql_table_line"]').val(),
+            mysql_table_sensor: $('input[name="mysql_table_sensor"]').val()
+        };
+        
+        $.ajax({
+            url: '/api/verify-and-sync-database',
+            type: 'POST',
+            data: formData,
+            success: function(response) {
+                if (response.status === 'success') {
+                    $status.html('<i class="fas fa-check-circle"></i> ' + response.message).addClass('text-success');
+                } else {
+                    $status.html('<i class="fas fa-times-circle"></i> ' + (response.message || 'Verification failed')).addClass('text-danger');
+                }
+            },
+            error: function(xhr) {
+                const response = xhr.responseJSON || {};
+                $status.html('<i class="fas fa-times-circle"></i> ' + (response.message || 'Error during verification')).addClass('text-danger');
+            },
+            complete: function() {
+                $btn.prop('disabled', false).html('<i class="fas fa-sync"></i> {{ __("Verify & Sync Database") }}');
+            }
+        });
+    });
+    
+    // Save Upload Stats Settings
+    $('form').on('submit', function(e) {
+        // This will be handled by the main form submission
+        // The settings will be saved to the .env file by the controller
     });
 </script>
 @endpush
