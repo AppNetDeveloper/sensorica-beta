@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Facades\UtilityFacades;
 use App\Mail\TestMail;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
@@ -610,18 +611,22 @@ class SettingController extends Controller
 
         // Actualizar el archivo .env con las nuevas configuraciones
         $envFile = base_path('.env');
-        $envContent = file_get_contents($envFile);
-
+        
+        // Leer el archivo .env actual
+        $envContent = file_exists($envFile) ? file_get_contents($envFile) : '';
+        
         // Función auxiliar para actualizar o agregar una variable de entorno
         $updateEnvVar = function($key, $value) use (&$envContent) {
-            if (str_contains($envContent, $key . '=')) {
+            $escapedValue = str_replace(['\\', '\$'], ['\\\\', '\\$'], $value);
+            
+            if (preg_match("/^{$key}=/m", $envContent)) {
                 $envContent = preg_replace(
-                    '/^' . preg_quote($key, '/') . '=.*/m',
-                    $key . '=' . $value,
+                    "/^{$key}=.*/m",
+                    "{$key}={$escapedValue}",
                     $envContent
                 );
             } else {
-                $envContent .= "\n" . $key . '=' . $value;
+                $envContent .= PHP_EOL . "{$key}={$escapedValue}";
             }
         };
 
@@ -634,23 +639,52 @@ class SettingController extends Controller
 
         // Guardar los cambios en el archivo .env
         file_put_contents($envFile, $envContent);
-
-        // Limpiar la caché de configuración
-        \Artisan::call('config:clear');
-        \Artisan::call('config:cache');
+        
+        // Actualizar la configuración en tiempo de ejecución
+        $config = [
+            'database.connections.replica' => [
+                'driver' => 'mysql',
+                'host' => $request->replica_db_host,
+                'port' => $request->replica_db_port,
+                'database' => $request->replica_db_database,
+                'username' => $request->replica_db_username,
+                'password' => $request->replica_db_password,
+                'charset' => 'utf8mb4',
+                'collation' => 'utf8mb4_unicode_ci',
+                'prefix' => '',
+                'strict' => true,
+                'engine' => null,
+            ]
+        ];
+        
+        // Actualizar la configuración en tiempo de ejecución
+        config($config);
+        
+        // Actualizar las variables de entorno en tiempo de ejecución
+        putenv("REPLICA_DB_HOST={$request->replica_db_host}");
+        putenv("REPLICA_DB_PORT={$request->replica_db_port}");
+        putenv("REPLICA_DB_DATABASE={$request->replica_db_database}");
+        putenv("REPLICA_DB_USERNAME={$request->replica_db_username}");
+        putenv("REPLICA_DB_PASSWORD={$request->replica_db_password}");
+        
+        // Actualizar $_ENV y $_SERVER
+        $_ENV['REPLICA_DB_HOST'] = $request->replica_db_host;
+        $_ENV['REPLICA_DB_PORT'] = $request->replica_db_port;
+        $_ENV['REPLICA_DB_DATABASE'] = $request->replica_db_database;
+        $_ENV['REPLICA_DB_USERNAME'] = $request->replica_db_username;
+        $_ENV['REPLICA_DB_PASSWORD'] = $request->replica_db_password;
+        
+        $_SERVER['REPLICA_DB_HOST'] = $request->replica_db_host;
+        $_SERVER['REPLICA_DB_PORT'] = $request->replica_db_port;
+        $_SERVER['REPLICA_DB_DATABASE'] = $request->replica_db_database;
+        $_SERVER['REPLICA_DB_USERNAME'] = $request->replica_db_username;
+        $_SERVER['REPLICA_DB_PASSWORD'] = $request->replica_db_password;
 
         return response()->json([
             'success' => true,
             'message' => __('Configuración de la base de datos de réplica guardada correctamente.')
         ]);
     }
-
-    /**
-     * Prueba la conexión a la base de datos de réplica.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
-     */
     public function testReplicaDbConnection(Request $request)
     {
         // Determine which field name format to use
@@ -806,30 +840,28 @@ class SettingController extends Controller
             'mysql_table_sensor' => 'required|string|max:255',
         ]);
 
-        // Ruta al archivo .env
+        // Actualizar el archivo .env con las nuevas configuraciones
         $envFile = base_path('.env');
         
-        // Leer el contenido actual del archivo .env
-        $envContent = file_get_contents($envFile);
+        // Leer el archivo .env actual
+        $envContent = file_exists($envFile) ? file_get_contents($envFile) : '';
         
         // Función auxiliar para actualizar o agregar una variable de entorno
         $updateEnvVar = function($key, $value) use (&$envContent) {
-            // Escapar los caracteres especiales en el valor
             $escapedValue = str_replace(['\\', '\$'], ['\\\\', '\\$'], $value);
             
-            // Patrón para buscar la variable de entorno
-            $pattern = "/^{$key}=.*/m";
-            $replacement = "{$key}={$escapedValue}";
-            
-            // Si la variable ya existe, actualizarla, de lo contrario agregarla
-            if (preg_match($pattern, $envContent)) {
-                $envContent = preg_replace($pattern, $replacement, $envContent);
+            if (preg_match("/^{$key}=/m", $envContent)) {
+                $envContent = preg_replace(
+                    "/^{$key}=.*/m",
+                    "{$key}={$escapedValue}",
+                    $envContent
+                );
             } else {
-                $envContent .= PHP_EOL . $replacement;
+                $envContent .= PHP_EOL . "{$key}={$escapedValue}";
             }
         };
         
-        // Actualizar las variables de entorno para Upload Stats
+        // Actualizar o agregar cada variable de Upload Stats
         $updateEnvVar('MYSQL_SERVER', $request->mysql_server);
         $updateEnvVar('MYSQL_PORT', $request->mysql_port);
         $updateEnvVar('MYSQL_DB', $request->mysql_db);
@@ -840,10 +872,52 @@ class SettingController extends Controller
 
         // Guardar los cambios en el archivo .env
         file_put_contents($envFile, $envContent);
-
-        // Limpiar la caché de configuración
-        \Artisan::call('config:clear');
-        \Artisan::call('config:cache');
+        
+        // Actualizar la configuración en tiempo de ejecución
+        $config = [
+            'database.connections.mysql_upload_stats' => [
+                'driver' => 'mysql',
+                'host' => $request->mysql_server,
+                'port' => $request->mysql_port,
+                'database' => $request->mysql_db,
+                'username' => $request->mysql_user,
+                'password' => $request->mysql_password,
+                'charset' => 'utf8mb4',
+                'collation' => 'utf8mb4_unicode_ci',
+                'prefix' => '',
+                'strict' => true,
+                'engine' => null,
+            ]
+        ];
+        
+        // Actualizar la configuración en tiempo de ejecución
+        config($config);
+        
+        // Actualizar las variables de entorno en tiempo de ejecución
+        putenv("MYSQL_SERVER={$request->mysql_server}");
+        putenv("MYSQL_PORT={$request->mysql_port}");
+        putenv("MYSQL_DB={$request->mysql_db}");
+        putenv("MYSQL_USER={$request->mysql_user}");
+        putenv("MYSQL_PASSWORD=" . ($request->filled('mysql_password') ? $request->mysql_password : ''));
+        putenv("MYSQL_TABLE_LINE={$request->mysql_table_line}");
+        putenv("MYSQL_TABLE_SENSOR={$request->mysql_table_sensor}");
+        
+        // Actualizar $_ENV y $_SERVER
+        $_ENV['MYSQL_SERVER'] = $request->mysql_server;
+        $_ENV['MYSQL_PORT'] = $request->mysql_port;
+        $_ENV['MYSQL_DB'] = $request->mysql_db;
+        $_ENV['MYSQL_USER'] = $request->mysql_user;
+        $_ENV['MYSQL_PASSWORD'] = $request->filled('mysql_password') ? $request->mysql_password : '';
+        $_ENV['MYSQL_TABLE_LINE'] = $request->mysql_table_line;
+        $_ENV['MYSQL_TABLE_SENSOR'] = $request->mysql_table_sensor;
+        
+        $_SERVER['MYSQL_SERVER'] = $request->mysql_server;
+        $_SERVER['MYSQL_PORT'] = $request->mysql_port;
+        $_SERVER['MYSQL_DB'] = $request->mysql_db;
+        $_SERVER['MYSQL_USER'] = $request->mysql_user;
+        $_SERVER['MYSQL_PASSWORD'] = $request->filled('mysql_password') ? $request->mysql_password : '';
+        $_SERVER['MYSQL_TABLE_LINE'] = $request->mysql_table_line;
+        $_SERVER['MYSQL_TABLE_SENSOR'] = $request->mysql_table_sensor;
 
         return redirect()->back()->with('success', __('Configuración de Upload Stats guardada correctamente.'));
     }

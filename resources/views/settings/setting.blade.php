@@ -985,26 +985,19 @@
 <script>
     // Toggle para mostrar/ocultar contraseña
     $(document).on('click', '.toggle-password', function() {
-        const targetId = $(this).data('target');
-        const input = $(`#${targetId}`);
-        const icon = $(this).find('i');
+        const button = $(this);
+        const input = button.closest('.input-group').find('input');
+        const icon = button.find('i');
         
-        // If the input is a password field, store the original value before changing the type
         if (input.attr('type') === 'password') {
+            // Save current value and change to text
             input.attr('data-original-value', input.val());
             input.attr('type', 'text');
             icon.removeClass('fa-eye').addClass('fa-eye-slash');
         } else {
+            // Change back to password and restore value
             input.attr('type', 'password');
             input.val(input.attr('data-original-value') || '');
-            icon.removeClass('fa-eye-slash').addClass('fa-eye');
-        }
-        
-        if (input.attr('type') === 'password') {
-            input.attr('type', 'text');
-            icon.removeClass('fa-eye').addClass('fa-eye-slash');
-        } else {
-            input.attr('type', 'password');
             icon.removeClass('fa-eye-slash').addClass('fa-eye');
         }
     });
@@ -1301,6 +1294,54 @@
         if ($passwordInput.length && $passwordInput.data('original-value')) {
             $passwordInput.attr('data-original-value', $passwordInput.data('original-value'));
         }
+
+        // Handle menu highlighting on page load
+        const hash = window.location.hash;
+        if (hash) {
+            $('.list-group-item').removeClass('active');
+            $(`a[href="${hash}"]`).addClass('active');
+        }
+
+        // Handle menu highlighting on click
+        $('.list-group-item').on('click', function(e) {
+            e.preventDefault(); // Prevent default anchor behavior
+            const target = $(this).attr('href');
+            
+            // Update active state
+            $('.list-group-item').removeClass('active');
+            $(this).addClass('active');
+            
+            // Smooth scroll to target
+            if (target !== '#') {
+                $('html, body').animate({
+                    scrollTop: $(target).offset().top - 20
+                }, 500);
+                
+                // Update URL without page reload
+                if (history.pushState) {
+                    history.pushState(null, null, target);
+                } else {
+                    window.location.hash = target;
+                }
+            }
+        });
+
+        // Highlight menu item based on scroll position
+        $(window).on('scroll', function() {
+            const scrollPosition = $(this).scrollTop();
+            
+            $('.card').each(function() {
+                const currentSection = $(this);
+                const sectionTop = currentSection.offset().top - 100;
+                const sectionHeight = currentSection.outerHeight();
+                const sectionId = '#' + currentSection.attr('id');
+                
+                if (scrollPosition >= sectionTop && scrollPosition < sectionTop + sectionHeight) {
+                    $('.list-group-item').removeClass('active');
+                    $(`a[href="${sectionId}"]`).addClass('active');
+                }
+            });
+        }).scroll(); // Trigger scroll event on page load
     });
 </script>
 @endpush

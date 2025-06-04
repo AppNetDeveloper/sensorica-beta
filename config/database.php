@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Str;
+use PDO;
 
 return [
 
@@ -54,6 +55,23 @@ return [
             'prefix' => '',
             'strict' => true,
             'engine' => null,
+        ],
+
+        'replica' => [
+            'driver' => 'mysql',
+            'host' => env('REPLICA_DB_HOST', '127.0.0.1'),
+            'port' => env('REPLICA_DB_PORT', '3306'),
+            'database' => env('REPLICA_DB_DATABASE', 'forge'),
+            'username' => env('REPLICA_DB_USERNAME', 'forge'),
+            'password' => env('REPLICA_DB_PASSWORD', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'strict' => true,
+            'engine' => null,
+            'options' => extension_loaded('pdo_mysql') ? array_filter([
+                PDO::ATTR_EMULATE_PREPARES => true,
+            ]) : [],
         ],
 
         'mysql' => [
