@@ -283,6 +283,7 @@ Route::group(['middleware' => ['auth', 'XSS']], function () {
     // Configuración del lector RFID
     Route::post('settings/rfid', [SettingController::class, 'saveRfidSettings'])->name('settings.rfid');
     Route::post('settings/redis', [SettingController::class, 'saveRedisSettings'])->name('settings.redis');
+    Route::post('settings/upload-stats', [SettingController::class, 'saveUploadStatsSettings'])->name('settings.upload-stats');
     
     // Configuración de la base de datos de réplica
     Route::post('settings/replica-db', [SettingController::class, 'saveReplicaDbSettings'])->name('settings.replica-db');

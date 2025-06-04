@@ -787,4 +787,64 @@ class SettingController extends Controller
             ], 500);
         }
     }
+    
+    /**
+     * Guarda la configuración de Upload Stats.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function saveUploadStatsSettings(Request $request)
+    {
+        $request->validate([
+            'mysql_server' => 'required|string|max:255',
+            'mysql_port' => 'required|integer|min:1|max:65535',
+            'mysql_db' => 'required|string|max:255',
+            'mysql_user' => 'required|string|max:255',
+            'mysql_password' => 'nullable|string|max:255',
+            'mysql_table_line' => 'required|string|max:255',
+            'mysql_table_sensor' => 'required|string|max:255',
+        ]);
+
+        // Ruta al archivo .env
+        $envFile = base_path('.env');
+        
+        // Leer el contenido actual del archivo .env
+        $envContent = file_get_contents($envFile);
+        
+        // Función auxiliar para actualizar o agregar una variable de entorno
+        $updateEnvVar = function($key, $value) use (&$envContent) {
+            // Escapar los caracteres especiales en el valor
+            $escapedValue = str_replace(['\\', '\$'], ['\\\\', '\\$'], $value);
+            
+            // Patrón para buscar la variable de entorno
+            $pattern = "/^{$key}=.*/m";
+            $replacement = "{$key}={$escapedValue}";
+            
+            // Si la variable ya existe, actualizarla, de lo contrario agregarla
+            if (preg_match($pattern, $envContent)) {
+                $envContent = preg_replace($pattern, $replacement, $envContent);
+            } else {
+                $envContent .= PHP_EOL . $replacement;
+            }
+        };
+        
+        // Actualizar las variables de entorno para Upload Stats
+        $updateEnvVar('MYSQL_SERVER', $request->mysql_server);
+        $updateEnvVar('MYSQL_PORT', $request->mysql_port);
+        $updateEnvVar('MYSQL_DB', $request->mysql_db);
+        $updateEnvVar('MYSQL_USER', $request->mysql_user);
+        $updateEnvVar('MYSQL_PASSWORD', $request->filled('mysql_password') ? $request->mysql_password : '');
+        $updateEnvVar('MYSQL_TABLE_LINE', $request->mysql_table_line);
+        $updateEnvVar('MYSQL_TABLE_SENSOR', $request->mysql_table_sensor);
+
+        // Guardar los cambios en el archivo .env
+        file_put_contents($envFile, $envContent);
+
+        // Limpiar la caché de configuración
+        \Artisan::call('config:clear');
+        \Artisan::call('config:cache');
+
+        return redirect()->back()->with('success', __('Configuración de Upload Stats guardada correctamente.'));
+    }
 }

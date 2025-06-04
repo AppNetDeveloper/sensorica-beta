@@ -54,10 +54,10 @@
                             <a href="settings#useradd-3-6" class="list-group-item list-group-item-action useradd-3-6">
                                 {{ __('Redis') }} <div class="float-end"></div>
                             </a>
-                            <a href="settings#useradd-3-7" class="list-group-item list-group-item-action useradd-3-7">
+                            <a href="#useradd-3-8" class="list-group-item list-group-item-action useradd-3-8">
                                 {{ __('Base de Datos Réplica') }} <div class="float-end"></div>
                             </a>
-                            <a href="settings#upload-stats-settings" class="list-group-item list-group-item-action">
+                            <a href="#useradd-3-7" class="list-group-item list-group-item-action useradd-3-7">
                                 {{ __('Upload Stats Settings') }} <div class="float-end"></div>
                             </a>
                             <a href="settings#useradd-3" class="list-group-item list-group-item-action useradd-3">
@@ -459,68 +459,6 @@
                                         {{ Form::label('rfid_auto_add', __('Auto Add RFID Tags'), ['class' => 'form-check-label']) }}
                                     </div>
                                     <small class="text-muted">{{ __('Automatically add new RFID tags to the system when scanned') }}</small>
-                                </div>
-                            </div>
-
-                            <!-- Upload Stats Settings -->
-                            <div id="upload-stats-settings" class="card mt-4">
-                                <div class="card-header">
-                                    <h6 class="mb-0">{{ __('Upload Stats Settings') }}</h6>
-                                </div>
-                                <div class="card-body">
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                {{ Form::label('mysql_server', __('MySQL Server'), ['class' => 'form-label']) }}
-                                                {{ Form::text('mysql_server', env('MYSQL_SERVER'), ['class' => 'form-control', 'placeholder' => 'localhost']) }}
-                                            </div>
-                                            <div class="form-group mt-3">
-                                                {{ Form::label('mysql_port', __('MySQL Port'), ['class' => 'form-label']) }}
-                                                {{ Form::text('mysql_port', env('MYSQL_PORT', '3306'), ['class' => 'form-control']) }}
-                                            </div>
-                                            <div class="form-group mt-3">
-                                                {{ Form::label('mysql_db', __('Database Name'), ['class' => 'form-label']) }}
-                                                {{ Form::text('mysql_db', env('MYSQL_DB'), ['class' => 'form-control']) }}
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                {{ Form::label('mysql_table_line', __('Lines Table'), ['class' => 'form-label']) }}
-                                                {{ Form::text('mysql_table_line', env('MYSQL_TABLE_LINE'), ['class' => 'form-control']) }}
-                                            </div>
-                                            <div class="form-group mt-3">
-                                                {{ Form::label('mysql_table_sensor', __('Sensors Table'), ['class' => 'form-label']) }}
-                                                {{ Form::text('mysql_table_sensor', env('MYSQL_TABLE_SENSOR'), ['class' => 'form-control']) }}
-                                            </div>
-                                            <div class="form-group mt-3">
-                                                {{ Form::label('mysql_user', __('Database User'), ['class' => 'form-label']) }}
-                                                {{ Form::text('mysql_user', env('MYSQL_USER'), ['class' => 'form-control']) }}
-                                            </div>
-                                            <div class="form-group mt-3">
-                                                {{ Form::label('mysql_password', __('Database Password'), ['class' => 'form-label']) }}
-                                                <div class="input-group">
-                                                    {{ Form::password('mysql_password', ['class' => 'form-control', 'value' => env('MYSQL_PASSWORD'), 'id' => 'mysql_password']) }}
-                                                    <button class="btn btn-outline-secondary toggle-password" type="button">
-                                                        <i class="fas fa-eye"></i>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="row mt-3">
-                                        <div class="col-12 d-flex justify-content-between">
-                                            <button type="button" id="check-connection" class="btn btn-info">
-                                                <i class="fas fa-plug"></i> {{ __('Check Connection') }}
-                                            </button>
-                                            <button type="button" id="verify-sync-db" class="btn btn-warning">
-                                                <i class="fas fa-sync"></i> {{ __('Verify & Sync Database') }}
-                                            </button>
-                                        </div>
-                                        <div id="connection-status" class="col-12 mt-3 text-center"></div>
-                                    </div>
-                                </div>
-                            </div>
-
                             <!-- Local Server Settings -->
                             <div class="card mt-4">
                                 <div class="card-header">
@@ -769,8 +707,83 @@
                         </div>
                         {{ Form::close() }}
                     </div>
-                    {{-- Sección: Configuración Base de Datos Réplica --}}
+
+                    {{-- Sección: Upload Stats Settings --}}
                     <div id="useradd-3-7" class="card mb-4">
+                        {{ Form::open(['route' => 'settings.upload-stats', 'method' => 'post']) }}
+                        <div class="card-header">
+                            <h5>{{ __('Upload Stats Settings') }}</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        {{ Form::label('mysql_server', __('MySQL Server'), ['class' => 'form-label']) }}
+                                        {{ Form::text('mysql_server', env('MYSQL_SERVER'), ['class' => 'form-control', 'placeholder' => 'localhost']) }}
+                                    </div>
+                                    <div class="form-group mt-3">
+                                        {{ Form::label('mysql_port', __('MySQL Port'), ['class' => 'form-label']) }}
+                                        {{ Form::text('mysql_port', env('MYSQL_PORT', '3306'), ['class' => 'form-control']) }}
+                                    </div>
+                                    <div class="form-group mt-3">
+                                        {{ Form::label('mysql_db', __('Database Name'), ['class' => 'form-label']) }}
+                                        {{ Form::text('mysql_db', env('MYSQL_DB'), ['class' => 'form-control']) }}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        {{ Form::label('mysql_table_line', __('Lines Table'), ['class' => 'form-label']) }}
+                                        {{ Form::text('mysql_table_line', env('MYSQL_TABLE_LINE'), ['class' => 'form-control']) }}
+                                    </div>
+                                    <div class="form-group mt-3">
+                                        {{ Form::label('mysql_table_sensor', __('Sensors Table'), ['class' => 'form-label']) }}
+                                        {{ Form::text('mysql_table_sensor', env('MYSQL_TABLE_SENSOR'), ['class' => 'form-control']) }}
+                                    </div>
+                                    <div class="form-group mt-3">
+                                        {{ Form::label('mysql_user', __('Database User'), ['class' => 'form-label']) }}
+                                        {{ Form::text('mysql_user', env('MYSQL_USER'), ['class' => 'form-control']) }}
+                                    </div>
+                                    <div class="form-group mt-3">
+                                        {{ Form::label('mysql_password', __('Database Password'), ['class' => 'form-label']) }}
+                                        <div class="input-group">
+                                            {{ Form::password('mysql_password', [
+                                                'class' => 'form-control', 
+                                                'value' => env('MYSQL_PASSWORD'), 
+                                                'id' => 'mysql_password',
+                                                'autocomplete' => 'off',
+                                                'data-original-value' => env('MYSQL_PASSWORD')
+                                            ]) }}
+                                            <button class="btn btn-outline-secondary toggle-password" type="button" data-target="mysql_password">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-12 d-flex justify-content-between">
+                                    <div>
+                                        <button type="button" id="check-connection" class="btn btn-info">
+                                            <i class="fas fa-plug"></i> {{ __('Check Connection') }}
+                                        </button>
+                                        <button type="button" id="verify-sync-db" class="btn btn-warning ms-2">
+                                            <i class="fas fa-sync"></i> {{ __('Verify & Sync Database') }}
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="connection-status" class="col-12 mt-3 text-center"></div>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-whitesmoke">
+                            <span class="float-end">
+                                <button class="btn btn-primary" type="submit" id="save-upload-stats-btn">{{ __('Save Upload Stats Settings') }}</button>
+                            </span>
+                        </div>
+                        {{ Form::close() }}
+                    </div>
+
+                    {{-- Sección: Configuración de Base de Datos Réplica --}}
+                    <div id="useradd-3-8" class="card mb-4">
                         <form id="replicaDbForm">
                             @csrf
                             <div class="card-header">
@@ -972,8 +985,20 @@
 <script>
     // Toggle para mostrar/ocultar contraseña
     $(document).on('click', '.toggle-password', function() {
-        const input = $(this).siblings('input');
+        const targetId = $(this).data('target');
+        const input = $(`#${targetId}`);
         const icon = $(this).find('i');
+        
+        // If the input is a password field, store the original value before changing the type
+        if (input.attr('type') === 'password') {
+            input.attr('data-original-value', input.val());
+            input.attr('type', 'text');
+            icon.removeClass('fa-eye').addClass('fa-eye-slash');
+        } else {
+            input.attr('type', 'password');
+            input.val(input.attr('data-original-value') || '');
+            icon.removeClass('fa-eye-slash').addClass('fa-eye');
+        }
         
         if (input.attr('type') === 'password') {
             input.attr('type', 'text');
@@ -1258,8 +1283,24 @@
     
     // Save Upload Stats Settings
     $('form').on('submit', function(e) {
-        // This will be handled by the main form submission
+        // Make sure password field has the current value before submission
+        const $form = $(this);
+        const $passwordInput = $form.find('input[type="password"][name="mysql_password"]');
+        
+        // If password field is visible (not toggled), update its value from the input
+        if ($passwordInput.length && $passwordInput.attr('type') === 'password') {
+            $passwordInput.val($passwordInput.attr('data-original-value') || '');
+        }
+        
         // The settings will be saved to the .env file by the controller
+    });
+    
+    // Initialize password field with value from data-original-value if it exists
+    $(document).ready(function() {
+        const $passwordInput = $('input[type="password"][name="mysql_password"]');
+        if ($passwordInput.length && $passwordInput.data('original-value')) {
+            $passwordInput.attr('data-original-value', $passwordInput.data('original-value'));
+        }
     });
 </script>
 @endpush
