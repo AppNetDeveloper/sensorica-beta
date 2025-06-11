@@ -43,6 +43,7 @@ class DatabaseSeeder extends Seeder
             'servermonitor delete', 'servermonitor show', 'servermonitor index',
             'whatsapp show', 'whatsapp create', 'whatsapp update', 'whatsapp delete',
             'telegram show', 'telegram create', 'telegram update', 'telegram delete',
+            'process-show', 'process-create', 'process-edit', 'process-delete',
         ];
         
 

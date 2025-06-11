@@ -21,6 +21,16 @@ class ProductionLine extends Model
     ];
 
     /**
+     * Los procesos asociados a esta línea de producción.
+     */
+    public function processes()
+    {
+        return $this->belongsToMany(Process::class, 'production_line_process')
+            ->withPivot('order')
+            ->orderBy('production_line_process.order');
+    }
+
+    /**
      * Los atributos que deberían estar ocultos para los arrays.
      *
      * @var array<int, string>

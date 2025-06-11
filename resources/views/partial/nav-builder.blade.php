@@ -158,10 +158,19 @@ $settings = Utility::settings();
                 @endif
 
                 @if (auth()->user()->hasRole('admin') || auth()->user()->can('product-show'))
-                    <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
+                    <li class="dash-item dash-hasmenu {{ request()->is('confections*') ? 'active' : '' }}">
                         <a class="dash-link" href="{{ route('confections.index') }}">
                             <span class="dash-micon"><i class="fa-regular fa-lemon"></i></span>
                             <span class="dash-mtext custom-weight">{{ __('Confections') }}</span>
+                        </a>
+                    </li>
+                @endif
+
+                @if (auth()->user()->hasRole('admin') || auth()->user()->can('process-show'))
+                    <li class="dash-item dash-hasmenu {{ request()->is('processes*') ? 'active' : '' }}">
+                        <a class="dash-link" href="{{ route('processes.index') }}">
+                            <span class="dash-micon"><i class="fa-solid fa-gears"></i></span>
+                            <span class="dash-mtext custom-weight">{{ __('Processes') }}</span>
                         </a>
                     </li>
                 @endif

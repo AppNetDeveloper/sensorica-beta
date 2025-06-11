@@ -27,6 +27,7 @@ use App\Http\Controllers\RfidCategoryController;
 use App\Http\Controllers\RfidDeviceController;
 use App\Http\Controllers\WorkerController;
 use App\Http\Controllers\ConfectionController;
+use App\Http\Controllers\ProcessController;
 use App\Http\Controllers\RoleManageController;
 use App\Http\Controllers\PermissionManageController;
 use App\Http\Controllers\ScadaOrderController;
@@ -366,6 +367,9 @@ Route::post('users/store-or-update/ajax', [UserController::class, 'storeOrUpdate
 
 // AJAX para eliminar
 Route::delete('users/delete/ajax/{id}', [UserController::class, 'deleteAjax'])->name('users.deleteAjax');
+
+// Rutas para la gestión de procesos
+Route::resource('processes', ProcessController::class);
 
 Route::get('confections', [ConfectionController::class, 'index'])->name('confections.index');
 
