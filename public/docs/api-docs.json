@@ -1065,6 +1065,50 @@ paths:
                   status: { type: string }
                   message: { type: string }
                 type: object
+  /api/barcode-scans:
+    get:
+      tags:
+        - 'Barcode Scans'
+      summary: 'Obtener el último código de barras escaneado'
+      description: 'Devuelve el último código de barras escaneado para una línea de producción específica identificada por su token'
+      operationId: getLastBarcode
+      parameters:
+        -
+          name: token
+          in: query
+          description: 'Token de la línea de producción'
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Éxito
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean, example: true }
+                  data: { properties: { barcode: { type: string, example: ABC123456789 }, production_order_id: { type: integer, example: 1 }, operator_id: { type: integer, example: 5 }, scanned_at: { type: string, format: date-time, example: '2025-06-10T18:15:53+02:00' }, barcode_data: { type: object, nullable: true } }, type: object }
+                type: object
+        '400':
+          description: 'Error de validación'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean, example: false }
+                  message: { type: string, example: 'Token de línea de producción requerido' }
+                  errors: { type: object }
+                type: object
+        '404':
+          description: 'Recurso no encontrado'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean, example: false }
+                  message: { type: string, example: 'Línea de producción no encontrada con el token proporcionado' }
+                type: object
   '/api/control_weight/{supplierOrderId}':
     get:
       tags:
@@ -1998,6 +2042,30 @@ paths:
                   message: { type: string, example: 'Orden creada exitosamente.' }
                   data: { properties: { id: { type: integer } }, type: object }
                 type: object
+  /api/kanban/orders:
+    get:
+      tags:
+        - ProductionOrders
+      summary: 'Obtener órdenes optimizadas para el tablero Kanban'
+      operationId: 15e959c700a937f059d9301c5f56654d
+      parameters:
+        -
+          name: token
+          in: query
+          description: 'Token único de la línea de producción'
+          required: true
+          schema:
+            type: string
+            example: abcd1234
+      responses:
+        '200':
+          description: 'Lista de órdenes optimizada para el Kanban'
+          content:
+            application/json:
+              schema:
+                properties:
+                  data: { type: array, items: { properties: { id: { type: integer }, status: { type: string }, updated_at: { type: string, format: date-time } }, type: object } }
+                type: object
   '/api/production-orders/{id}':
     get:
       tags:
@@ -2872,6 +2940,48 @@ paths:
                 type: object
         '422':
           description: 'Error de validación'
+  /api/shift-history:
+    get:
+      tags:
+        - 'Shift History'
+      summary: 'Obtiene el historial de turnos paginado'
+      operationId: ff100227ed5c4f732616e3634224757b
+      responses:
+        '200':
+          description: 'Historial de turnos paginado'
+          content:
+            application/json:
+              schema:
+                properties:
+                  data: { type: array, items: { type: object } }
+                  links: { type: object }
+                  meta: { type: object }
+                type: object
+  '/api/shift-history/production-line/{id}':
+    get:
+      tags:
+        - 'Shift History'
+      summary: 'Obtiene el historial de turnos para una línea de producción específica'
+      operationId: f3fb5d4fbc90346ed9500684dd1a66ef
+      parameters:
+        -
+          name: id
+          in: path
+          description: 'ID de la línea de producción'
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 'Historial de turnos de la línea de producción'
+          content:
+            application/json:
+              schema:
+                properties:
+                  data: { type: array, items: { type: object } }
+                  links: { type: object }
+                  meta: { type: object }
+                type: object
   '/api/shift-history/production-line/{token}/last':
     get:
       tags:
@@ -4010,6 +4120,9 @@ components:
           $ref: '#/components/schemas/Refer'
       type: object
 tags:
+  -
+    name: 'Barcode Scans'
+    description: 'API para gestionar escaneos de códigos de barras'
   -
     name: Barcode
     description: Barcode

@@ -219,14 +219,22 @@ class CalculateProductionMonitorOeev2 extends Command
     private function calculateOeeForSensors($currentOrder, $countSensors, $monitor)
     {
         try {
+            // Validar que los parámetros de entrada sean válidos
+            if (!$currentOrder || !is_object($currentOrder)) {
+                throw new \Exception("Orden actual no válida");
+            }
             
-            $orderTimeActivitySeconds= $currentOrder->on_time + 1;
-            // Obtener datos de la orden
-            $this->info("[" . Carbon::now()->toDateTimeString() . "] Calculando OEE para sensores... Con tiempo total: {$orderTimeActivitySeconds} segundos");
-            $unitsMadeReal = $currentOrder ? $currentOrder->units_made_real : 0;
-            $downTime = $currentOrder ? $currentOrder->down_time : 0;
-            $prepairTime = $currentOrder ? $currentOrder->prepair_time : 0;
-            $productionStopTime = $currentOrder ? $currentOrder->production_stops_time : 0;
+            // Inicializar variables con valores por defecto
+            $oee = $oeeModbus = $oeeRfid = $unitsMadeTheoretical = 0;
+            $secondsPerUnitReal = $secondsPerUnitTheoretical = 0;
+            $unitsMadeReal = $currentOrder->units_made_real ?? 0;
+            $downTime = $currentOrder->down_time ?? 0;
+            $prepairTime = $currentOrder->prepair_time ?? 0;
+            $productionStopTime = $currentOrder->production_stops_time ?? 0;
+            
+            // Validar y obtener el tiempo de actividad
+            $orderTimeActivitySeconds = (int)($currentOrder->on_time ?? 0) + 1;
+            $this->info("[" . Carbon::now()->toDateTimeString() . "] Calculando OEE para orden #{$currentOrder->id} con tiempo total: {$orderTimeActivitySeconds} segundos");
 
             //obtenemos el ultimos regustro del shift_history por linea y con type= shift y action=start
             $shiftHistory = ShiftHistory::where('production_line_id', $currentOrder->production_line_id)
@@ -235,13 +243,14 @@ class CalculateProductionMonitorOeev2 extends Command
                 ->orderBy('id', 'desc')
                 ->first();
             
-            // Validar que no se intente dividir por cero
-            if ($unitsMadeReal <= 0) {
-                $this->error("[" . Carbon::now()->toDateTimeString() . "] units_made_real es 0 o negativo, no se puede calcular secondsPerUnitReal.");
+            // Validar y calcular secondsPerUnitReal
+            $numerator = $orderTimeActivitySeconds - ($downTime + $productionStopTime + $prepairTime);
+            if ($unitsMadeReal <= 0 || $numerator <= 0) {
+                $this->error("[" . Carbon::now()->toDateTimeString() . "] No se puede calcular secondsPerUnitReal. Unidades reales: {$unitsMadeReal}, Tiempo neto: {$numerator}");
                 $secondsPerUnitReal = 0;
             } else {
-                $secondsPerUnitReal = ($orderTimeActivitySeconds - ($downTime + $productionStopTime + $prepairTime)) / $unitsMadeReal;
-                $this->info("[" . Carbon::now()->toDateTimeString() . "] secondsPerUnitReal calculado: {$secondsPerUnitReal} segundos");
+                $secondsPerUnitReal = max(0, $numerator / $unitsMadeReal); // Aseguramos que no sea negativo
+                $this->info("[" . Carbon::now()->toDateTimeString() . "] secondsPerUnitReal calculado: {$secondsPerUnitReal} segundos (tiempo: {$numerator} / unidades: {$unitsMadeReal})");
             }
             
             if ($countSensors <= 0) {
@@ -305,10 +314,8 @@ class CalculateProductionMonitorOeev2 extends Command
 
             
             // Calcular la diferencia entre unidades teóricas y reales
-            $unitsDelayed = $unitsMadeTheoretical - $unitsMadeReal;
-            if($unitsDelayed<0){
-                $unitsDelayed=0;
-            }
+            $unitsDelayed = max(0, $unitsMadeTheoretical - $unitsMadeReal);
+            $this->info("[" . Carbon::now()->toDateTimeString() . "] Unidades retrasadas: {$unitsDelayed} (Teóricas: {$unitsMadeTheoretical}, Reales: {$unitsMadeReal})");
             
             //$this->info("[" . Carbon::now()->toDateTimeString() . "] Unidades teóricas: $unitsMadeTheoretical");
             //$this->info("[" . Carbon::now()->toDateTimeString() . "] Unidades reales: $unitsMadeReal");
@@ -316,13 +323,14 @@ class CalculateProductionMonitorOeev2 extends Command
             // Calcular la diferencia entre unidades teóricas y reales para slow time , esto se quita tambien el tiempo de parada de sensores y no identificadas
 
 
-            // Calcular OEE, validando que no se divida por cero
-            if ($unitsMadeTheoretical > 0) {
-                $oee = ($unitsMadeReal / $unitsMadeTheoretical) * 100;
-                $oee = number_format($oee, 2);
+            // Validar y calcular OEE
+            $oee = 0;
+            if ($unitsMadeTheoretical > 0 && $unitsMadeReal >= 0) {
+                $oeeValue = ($unitsMadeReal / $unitsMadeTheoretical) * 100;
+                $oee = number_format(min(100, max(0, $oeeValue)), 2); // Asegurar que esté entre 0 y 100
+                $this->info("[" . Carbon::now()->toDateTimeString() . "] OEE calculado: {$oee}% (Real: {$unitsMadeReal}, Teórico: {$unitsMadeTheoretical})");
             } else {
-                $this->error("[" . Carbon::now()->toDateTimeString() . "] No se pueden calcular OEE porque las unidades teóricas son 0.");
-                $oee = 0;
+                $this->error("[" . Carbon::now()->toDateTimeString() . "] No se pueden calcular OEE. Unidades reales: {$unitsMadeReal}, Unidades teóricas: {$unitsMadeTheoretical}");
             }
             
             // Calcular tiempos de finalización en función de las unidades pendientes
@@ -356,15 +364,20 @@ class CalculateProductionMonitorOeev2 extends Command
                 $monitorOee++;
             }
 
-            $totalOee = ($oee + $oeeModbus + $oeeRfid) / $monitorOee;
-            if ($totalOee > 100) {
-                $totalOee = 100;
+            // Calcular OEE total con validación
+            $totalOee = 0;
+            if ($monitorOee > 0) {
+                $totalOee = ($oee + $oeeModbus + $oeeRfid) / $monitorOee;
+                $totalOee = min(100, max(0, $totalOee)); // Asegurar que esté entre 0 y 100
             }
+            $this->info("[" . Carbon::now()->toDateTimeString() . "] OEE Total calculado: {$totalOee}% (OEE: {$oee}%, Modbus: {$oeeModbus}%, RFID: {$oeeRfid}%)");
             // Actualizar la orden si existe
             if ($currentOrder) {
-                $slowTimeDif=   $slowTime - $currentOrder->slow_time;
+                $slowTimeDif = $slowTime - $currentOrder->slow_time;
 
-                $unitsMadeTheoretical = ($totalOee / 100) * 
+                // Asegurarse de que $unitsMadeTheoretical sea un valor numérico válido
+                $unitsMadeTheoretical = is_numeric($unitsMadeTheoretical) ? $unitsMadeTheoretical : 0;
+                $unitsMadeTheoretical = ($totalOee / 100) * $unitsMadeTheoretical;
                 $currentOrder->units_per_minute_real = $unitsMadeTheoretical;
                 $currentOrder->units_per_minute_theoretical = $unitsMadeTheoreticalPerMinute;
                 $currentOrder->seconds_per_unit_real = $secondsPerUnitReal;
@@ -381,7 +394,7 @@ class CalculateProductionMonitorOeev2 extends Command
             }else{
                 $slowTimeDif= 0;
             }
-
+ 
             if($shiftHistory){
                 $shiftHistory->on_time = $shiftHistory->on_time + 1;
                 //$shiftHistory->oee = $totalOee;

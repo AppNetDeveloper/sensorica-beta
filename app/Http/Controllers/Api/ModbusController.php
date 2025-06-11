@@ -370,6 +370,15 @@ class ModbusController extends Controller
                 $relatedProcesses = ScadaOrderListProcess::where('scada_order_list_id', $scadaOrderListId)->get();
 
                 foreach ($relatedProcesses as $process) {
+                    // ==================================================================
+                    // NUEVA LÓGICA: Si un material ya ha sido usado (used=1), se ignora.
+                    if ($process->used == 1) {
+                        Log::info('Proceso ID ' . $process->id . ' omitido porque ya tiene used=1.');
+                        // Salta a la siguiente iteración del bucle, ignorando este material.
+                        continue; 
+                    }
+                    // ==================================================================
+
                     $originalLineValue = (float) $process->value;
 
                     // Calcular valores basados en el porcentaje global de cumplimiento

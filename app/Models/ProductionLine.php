@@ -53,5 +53,11 @@ class ProductionLine extends Model
     {
         return $this->hasOne(ShiftHistory::class)->latest();
     }
+    
+    // Relación con los escaneos de códigos de barras
+    public function barcodeScans()
+    {
+        return $this->hasMany(BarcodeScan::class);
+    }
 
 }

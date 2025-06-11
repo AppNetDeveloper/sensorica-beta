@@ -1069,117 +1069,151 @@ function mostrarOpcionesOrdenesTrabajo() {
                 let anyDisabled = false;
 
                 let childHtml = line.processes.map(process => {
-                    const childStatusColor = obtenerColorEstado(line.status);
-                    const requiredMaterial = process.material_name;
-                    const requiredQuantity = parseFloat(process.value);
+    const childStatusColor = obtenerColorEstado(line.status);
+    const requiredMaterial = process.material_name;
+    const requiredQuantity = parseFloat(process.value);
 
-                    // Verificar material en tolvas
-                    let isMaterialAvailable = false;
-                    let isQuantitySufficient = false;
-                    let tolvaDetails = {};
+    // Verificar material en tolvas (esta parte no cambia)
+    let isMaterialAvailable = false;
+    let isQuantitySufficient = false;
+    let tolvaDetails = {};
 
-                    tolvaData.forEach(tolva => {
-                        if (tolva.material_type === requiredMaterial) {
-                            isMaterialAvailable = true;
-                            if (parseFloat(tolva.last_value) >= requiredQuantity) {
-                                isQuantitySufficient = true;
-                            }
-                            tolvaDetails = {
-                                id: tolva.id,
-                                name: tolva.name,
-                                token: tolva.token,
-                                last_value: tolva.last_value
-                            };
-                        }
-                    });
+    tolvaData.forEach(tolva => {
+        if (tolva.material_type === requiredMaterial) {
+            isMaterialAvailable = true;
+            if (parseFloat(tolva.last_value) >= requiredQuantity) {
+                isQuantitySufficient = true;
+            }
+            tolvaDetails = {
+                id: tolva.id,
+                name: tolva.name,
+                token: tolva.token,
+                last_value: tolva.last_value
+            };
+        }
+    });
 
-                    const usarActualButton = (isMaterialAvailable && !isQuantitySufficient && !esRealizado) ? `
-                        <div style="margin-top: 10px; text-align: center;">
-                            <button style="
-                                padding: 15px 30px;
-                                background-color: #dc3545;
-                                color: #fff;
-                                border: none;
-                                border-radius: 10px;
-                                font-size: 1.5rem;
-                                cursor: pointer;
-                            " onclick="usarMaterialActual(${process.id})">Usar Actual</button>
-                        </div>
-                    ` : "";
+    // --- INICIO DE LA LÓGICA CORREGIDA PARA BOTONES ---
 
-                    if (line.process === 0) {
-                        if (process.used === 0) {
-                            allUnused = allUnused && true;
-                        } else {
-                            allUnused = false;
-                        }
+    // Solo se aplica a los procesos automáticos
+    if (line.process === 0) {
+        // Esta lógica para el botón "Iniciar Automático" general no cambia
+        if (process.used === 0) {
+            allUnused = allUnused && true;
+        } else {
+            allUnused = false;
+        }
+        if (!isMaterialAvailable || !isQuantitySufficient) {
+            anyDisabled = true;
+        }
 
-                        if (!isMaterialAvailable || !isQuantitySufficient) {
-                            anyDisabled = true;
-                        }
+        let finalButtonsHtml = '';
 
-                        // Botón Iniciar sólo si no está realizado
-                        const iniciarButton = (!esRealizado) ? `
-                            <div style="margin-top: 10px; text-align: center;">
-                                <button style="
-                                    padding: 15px 30px;
-                                    background-color: ${isMaterialAvailable && isQuantitySufficient ? '#007bff' : '#ccc'};
-                                    color: ${isMaterialAvailable && isQuantitySufficient ? '#fff' : '#999'};
-                                    border: none;
-                                    border-radius: 10px;
-                                    font-size: 1.5rem;
-                                    cursor: ${isMaterialAvailable && isQuantitySufficient ? 'pointer' : 'not-allowed'};
-                                " onclick="${isMaterialAvailable && isQuantitySufficient ?
-                                    `iniciarProceso(${process.id}, '${tolvaDetails.id}', '${tolvaDetails.token}', '${tolvaDetails.name}', '${tolvaDetails.last_value}', '${process.value} ${process.measure}')` : ''}"
-                                    ${!isMaterialAvailable || !isQuantitySufficient ? 'disabled' : ''}>
-                                    Iniciar
-                                </button>
-                            </div>
-                        ` : '';
-
-                        return `
-                            <div style="
-                                padding: 15px;
-                                margin: 15px 0;
-                                background-color: ${childStatusColor};
-                                border-radius: 5px;
-                                font-size: 1.5rem;
-                                display: flex;
-                                flex-direction: column;
-                            ">
-                                <div>
-                                    <strong hidden>ID: ${process.id} |</strong>
-                                    <strong>Material:</strong> ${requiredMaterial} |
-                                    <strong hidden>Orden: ${process.orden} |</strong>
-                                    <strong>Valor:</strong> ${process.value} ${process.measure} |
-                                    <strong>Tolva:</strong> ${tolvaDetails.name || 'No disponible'}
-                                    <strong hidden>ID Tolva: ${tolvaDetails.id || 'N/A'} </strong>
-                                    <strong hidden>Token Tolva: ${tolvaDetails.token || 'N/A'}</strong>
-                                    <strong hidden>Último Valor: ${tolvaDetails.last_value || 'N/A'}</strong>
-                                </div>
-                                ${iniciarButton}
-                                ${usarActualButton}
-                            </div>
-                        `;
-                    }
-
-                    return `
-                        <div style="
-                            padding: 15px;
-                            margin: 15px 0;
-                            background-color: ${childStatusColor};
-                            border-radius: 5px;
+        // Master switch: solo creamos botones si el lote entero no está "Hecho"
+        if (!esRealizado) {
+            // 1. Verificamos si el proceso individual ya fue usado
+            if (process.used === 1) {
+                // Si ya se usó, mostramos un botón verde desactivado
+                finalButtonsHtml = `
+                    <div style="margin-top: 10px; text-align: center;">
+                        <button style="
+                            padding: 15px 30px;
+                            background-color: #28a745; /* Verde de éxito */
+                            color: #fff;
+                            border: none;
+                            border-radius: 10px;
                             font-size: 1.5rem;
-                        ">
-                            <div>
-                                <strong>ID:</strong> ${process.id} |
-                                <strong>Material:</strong> ${requiredMaterial} |
-                                <strong>Orden:</strong> ${process.orden} |
-                                <strong>Valor:</strong> ${process.value} ${process.measure}
-                            </div>
-                        </div>
-                    `;
-                }).join("");
+                            cursor: not-allowed;
+                        " disabled>
+                            Realizado
+                        </button>
+                    </div>
+                `;
+            } else {
+                // 2. Si NO se ha usado, creamos los botones "Iniciar" y/o "Usar Actual"
+
+                // Lógica para el botón "Usar Actual" (le añadimos la comprobación de used === 0)
+                const usarActualButton = (isMaterialAvailable && !isQuantitySufficient && process.used === 0) ? `
+                    <div style="margin-top: 10px; text-align: center;">
+                        <button style="
+                            padding: 15px 30px;
+                            background-color: #dc3545;
+                            color: #fff;
+                            border: none;
+                            border-radius: 10px;
+                            font-size: 1.5rem;
+                            cursor: pointer;
+                        " onclick="usarMaterialActual(${process.id})">Usar Actual</button>
+                    </div>
+                ` : "";
+
+                // La condición para que el botón Iniciar esté activo AHORA ES CORRECTA
+                const puedeIniciar = isMaterialAvailable && isQuantitySufficient;
+
+                const iniciarButton = `
+                    <div style="margin-top: 10px; text-align: center;">
+                        <button style="
+                            padding: 15px 30px;
+                            background-color: ${puedeIniciar ? '#007bff' : '#ccc'};
+                            color: ${puedeIniciar ? '#fff' : '#999'};
+                            border: none;
+                            border-radius: 10px;
+                            font-size: 1.5rem;
+                            cursor: ${puedeIniciar ? 'pointer' : 'not-allowed'};
+                        " onclick="${puedeIniciar ? `iniciarProceso(${process.id}, '${tolvaDetails.id}', '${tolvaDetails.token}', '${tolvaDetails.name}', '${tolvaDetails.last_value}', '${process.value} ${process.measure}')` : ''}"
+                            ${!puedeIniciar ? 'disabled' : ''}>
+                            Iniciar
+                        </button>
+                    </div>
+                `;
+
+                finalButtonsHtml = iniciarButton + usarActualButton;
+            }
+        }
+
+        return `
+            <div style="
+                padding: 15px;
+                margin: 15px 0;
+                background-color: ${childStatusColor};
+                border-radius: 5px;
+                font-size: 1.5rem;
+                display: flex;
+                flex-direction: column;
+            ">
+                <div>
+                    <strong hidden>ID: ${process.id} |</strong>
+                    <strong>Material:</strong> ${requiredMaterial} |
+                    <strong hidden>Orden: ${process.orden} |</strong>
+                    <strong>Valor:</strong> ${process.value} ${process.measure} |
+                    <strong>Tolva:</strong> ${tolvaDetails.name || 'No disponible'}
+                    <strong hidden>ID Tolva: ${tolvaDetails.id || 'N/A'} </strong>
+                    <strong hidden>Token Tolva: ${tolvaDetails.token || 'N/A'}</strong>
+                    <strong hidden>Último Valor: ${tolvaDetails.last_value || 'N/A'}</strong>
+                </div>
+                ${finalButtonsHtml}
+            </div>
+        `;
+    }
+
+    // Si el proceso es manual (line.process === 1), se muestra sin botones como antes
+    return `
+        <div style="
+            padding: 15px;
+            margin: 15px 0;
+            background-color: ${childStatusColor};
+            border-radius: 5px;
+            font-size: 1.5rem;
+        ">
+            <div>
+                <strong>ID:</strong> ${process.id} |
+                <strong>Material:</strong> ${requiredMaterial} |
+                <strong>Orden:</strong> ${process.orden} |
+                <strong>Valor:</strong> ${process.value} ${process.measure}
+            </div>
+        </div>
+    `;
+}).join("");
 
                 // Botón "Iniciar Automático" sólo si no está realizado
                 const iniciarAutomaticoButton = (line.process === 0 && !esRealizado) ? `
@@ -1254,7 +1288,6 @@ function mostrarOpcionesOrdenesTrabajo() {
 }
 
 
-
 async function cargarDatosTolvas() {
     try {
         const response = await fetch(`/api/scada/${token}`);
@@ -1272,132 +1305,6 @@ async function cargarDatosTolvas() {
     }
 }
 
-    /**
-     * Función de espera simple (si no la tienes ya definida globalmente).
-     * @param {number} ms Milisegundos a esperar.
-     * @returns {Promise<void>}
-     */
-    function wait(ms) { // Asegúrate de que esta función esté disponible en el ámbito global o adáptala.
-        return new Promise(resolve => setTimeout(resolve, ms));
-    }
-
-    /**
-     * Maneja la acción de "Usar Material Actual" para una tolva específica.
-     * Muestra una confirmación con SweetAlert y, si se confirma, llama a la API
-     * para recalcular el proceso de dosificación. Finalmente, muestra el resultado.
-     *
-     * @param {string|number} id El ID de la tolva.
-     */
-    async function usarMaterialActual(id) {
-        if (isSwalOpen) {
-            console.log("Un diálogo de SweetAlert está activo. Se cerrará para abrir el nuevo.");
-            Swal.close();
-            isSwalOpen = false;
-        }
-        await wait(1000)
-        isSwalOpen = true; // Marcar que un Swal se va a abrir
-
-        // Añadir la espera aquí:
-        console.log("usarMaterialActual: isSwalOpen establecido a true, esperando 100ms...");
-        await wait(1000); // Espera 100 milisegundos (puedes ajustar este valor)
-        console.log("usarMaterialActual: Espera completada, isSwalOpen sigue siendo:", isSwalOpen);
-
-
-        const confirmResult = await Swal.fire({
-            title: 'Confirmar Recálculo',
-            html: `Estás a punto de pedir al sistema que recalcule el proceso de dosificación para la <strong>proceso ID: ${id}</strong>.<br><br>Se utilizará la cantidad de material actualmente disponible, y se intentará dejar un material residual de aproximadamente <strong> 50 kg</strong> por seguridad.<br><br>¿Deseas continuar?`,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#3085d6',
-            cancelButtonColor: '#d33',
-            confirmButtonText: 'Sí, recalcular',
-            cancelButtonText: 'Cancelar',
-            allowOutsideClick: false,
-            allowEscapeKey: false,
-            customClass: {
-              confirmButton: "custom-confirm-button", // Clase personalizada para el botón de confirmación
-              cancelButton: "custom-cancel-button",  // Clase personalizada para el botón de cancelación
-              popup: "swal-wide"                     // Clase para el contenedor del popup
-            },
-            willClose: () => {
-                // ... (sin cambios aquí)
-            }
-        });
-
-        if (confirmResult.isConfirmed) {
-            Swal.fire({
-                title: 'Procesando...',
-                html: 'Enviando solicitud al servidor.',
-                allowOutsideClick: false,
-                allowEscapeKey: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
-            });
-
-            try {
-                const apiUrl = `/api/tolvas/${id}/dosificacion/recalcular-automatico`;
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                });
-
-                const responseData = await response.json();
-
-                if (response.ok) {
-                    await Swal.fire({
-                        title: '¡Éxito!',
-                        html: `Respuesta del servidor para la tolva ID: ${id}:<br><strong>${responseData.message || 'Proceso completado.'}</strong>`,
-                        icon: 'success',
-                        allowOutsideClick: false,
-                        allowEscapeKey: false,
-                        willClose: () => {
-                            isSwalOpen = false;
-                        }
-                    });
-                } else {
-                    await Swal.fire({
-                        title: 'Error',
-                        html: `No se pudo completar la operación para la tolva ID: ${id}.<br>Servidor dice: <strong>${responseData.message || response.statusText || 'Error desconocido.'}</strong>`,
-                        icon: 'error',
-                        allowOutsideClick: false,
-                        allowEscapeKey: false,
-                        willClose: () => {
-                            isSwalOpen = false;
-                        }
-                    });
-                }
-            } catch (error) {
-                console.error('Error en la llamada API:', error);
-                await Swal.fire({
-                    title: 'Error de Conexión',
-                    text: `No se pudo conectar con el servidor o hubo un error al procesar la solicitud para la tolva ID: ${id}. Detalles: ${error.message}`,
-                    icon: 'error',
-                    allowOutsideClick: false,
-                    allowEscapeKey: false,
-                    willClose: () => {
-                        isSwalOpen = false;
-                    }
-                });
-            }
-        } else if (confirmResult.dismiss === Swal.DismissReason.cancel) {
-            await Swal.fire({
-                title: 'Cancelado',
-                text: `La operación de recálculo para la tolva ID: ${id} ha sido cancelada.`,
-                icon: 'info',
-                allowOutsideClick: false,
-                allowEscapeKey: false,
-                willClose: () => {
-                    isSwalOpen = false;
-                }
-            });
-        } else {
-            isSwalOpen = false;
-        }
-    }
 
 function obtenerColorEstado(status) {
     switch (status.toLowerCase()) {
@@ -1861,6 +1768,10 @@ async function esperarSwalCerrado(tiempoMs) {
 
     // Función para cargar los datos de SCADA
     async function cargarScadaData() {
+        //if (isSwalOpen) {
+         //   console.log("cargarScadaData: Un Swal está activo, se omite la actualización para no interferir.");
+          //  return; // Salir de la función si ya hay un Swal abierto
+       // }
       try {
         const response = await fetch(`/api/scada/${token}`);  // Usar el token extraído de la URL
         const data = await response.json();
@@ -2783,6 +2694,134 @@ function mostrarKeypad(targetInput) {
           }
       });
 }
+
+    /**
+     * Función de espera simple (si no la tienes ya definida globalmente).
+     * @param {number} ms Milisegundos a esperar.
+     * @returns {Promise<void>}
+     */
+    function wait(ms) { // Asegúrate de que esta función esté disponible en el ámbito global o adáptala.
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    /**
+     * Maneja la acción de "Usar Material Actual" para una tolva específica.
+     * Muestra una confirmación con SweetAlert y, si se confirma, llama a la API
+     * para recalcular el proceso de dosificación. Finalmente, muestra el resultado.
+     *
+     * @param {string|number} id El ID de la tolva.
+     */
+    async function usarMaterialActual(id) {
+        if (isSwalOpen) {
+            console.log("Un diálogo de SweetAlert está activo. Se cerrará para abrir el nuevo.");
+            Swal.close();
+            isSwalOpen = false;
+        }
+        await wait(1000)
+        isSwalOpen = true; // Marcar que un Swal se va a abrir
+
+        // Añadir la espera aquí:
+        console.log("usarMaterialActual: isSwalOpen establecido a true, esperando 100ms...");
+        await wait(1000); // Espera 100 milisegundos (puedes ajustar este valor)
+        console.log("usarMaterialActual: Espera completada, isSwalOpen sigue siendo:", isSwalOpen);
+
+
+        const confirmResult = await Swal.fire({
+            title: 'Confirmar Recálculo',
+            html: `Estás a punto de pedir al sistema que recalcule el proceso de dosificación para la <strong>proceso ID: ${id}</strong>.<br><br>Se utilizará la cantidad de material actualmente disponible, y se intentará dejar un material residual de aproximadamente <strong> 50 kg</strong> por seguridad.<br><br>¿Deseas continuar?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Sí, recalcular',
+            cancelButtonText: 'Cancelar',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            customClass: {
+              confirmButton: "custom-confirm-button", // Clase personalizada para el botón de confirmación
+              cancelButton: "custom-cancel-button",  // Clase personalizada para el botón de cancelación
+              popup: "swal-wide"                     // Clase para el contenedor del popup
+            },
+            willClose: () => {
+                // ... (sin cambios aquí)
+            }
+        });
+
+        if (confirmResult.isConfirmed) {
+            Swal.fire({
+                title: 'Procesando...',
+                html: 'Enviando solicitud al servidor.',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            try {
+                const apiUrl = `/api/tolvas/${id}/dosificacion/recalcular-automatico`;
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                });
+
+                const responseData = await response.json();
+
+                if (response.ok) {
+                    await Swal.fire({
+                        title: '¡Éxito!',
+                        html: `Respuesta del servidor para la tolva ID: ${id}:<br><strong>${responseData.message || 'Proceso completado.'}</strong>`,
+                        icon: 'success',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        willClose: () => {
+                            isSwalOpen = false;
+                        }
+                    });
+                } else {
+                    await Swal.fire({
+                        title: 'Error',
+                        html: `No se pudo completar la operación para la tolva ID: ${id}.<br>Servidor dice: <strong>${responseData.message || response.statusText || 'Error desconocido.'}</strong>`,
+                        icon: 'error',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        willClose: () => {
+                            isSwalOpen = false;
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('Error en la llamada API:', error);
+                await Swal.fire({
+                    title: 'Error de Conexión',
+                    text: `No se pudo conectar con el servidor o hubo un error al procesar la solicitud para la tolva ID: ${id}. Detalles: ${error.message}`,
+                    icon: 'error',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    willClose: () => {
+                        isSwalOpen = false;
+                    }
+                });
+            }
+        } else if (confirmResult.dismiss === Swal.DismissReason.cancel) {
+            await Swal.fire({
+                title: 'Cancelado',
+                text: `La operación de recálculo para la tolva ID: ${id} ha sido cancelada.`,
+                icon: 'info',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                willClose: () => {
+                    isSwalOpen = false;
+                }
+            });
+        } else {
+            isSwalOpen = false;
+        }
+    }
+
 
     // Función para modificar el slider
     function cerrarYModificarSlider(nuevoValor, tolvaId) {

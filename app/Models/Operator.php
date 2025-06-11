@@ -38,4 +38,10 @@ class Operator extends Model
     {
         return $this->hasMany(ShiftHistory::class, 'operator_id');
     }
+    
+    // Relación con los escaneos de códigos de barras
+    public function barcodeScans()
+    {
+        return $this->hasMany(BarcodeScan::class);
+    }
 }

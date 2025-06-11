@@ -23,6 +23,7 @@ class ProductionOrder extends Model
      */
     protected $fillable = [
         'production_line_id',
+        'original_production_line_id',
         'barcoder_id',
         'order_id',
         'json',
@@ -43,6 +44,14 @@ class ProductionOrder extends Model
     ];
 
     /**
+     * Obtener la línea de producción original de la orden
+     */
+    public function originalProductionLine()
+    {
+        return $this->belongsTo(ProductionLine::class, 'original_production_line_id');
+    }
+
+    /**
      * Get the production line associated with the order.
      */
     public function productionLine()
@@ -56,6 +65,14 @@ class ProductionOrder extends Model
     public function barcode()
     {
         return $this->belongsTo(Barcode::class);
+    }
+
+    /**
+     * Get the barcode scans associated with the order.
+     */
+    public function barcodeScans()
+    {
+        return $this->hasMany(BarcodeScan::class);
     }
 
     /**

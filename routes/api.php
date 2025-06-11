@@ -42,7 +42,7 @@ use App\Http\Controllers\Api\WorkerController;
 use App\Http\Controllers\Api\ShiftProcessEventController;
 use App\Http\Controllers\Api\RfidErrorPointController;
 use App\Http\Controllers\Api\IaPromptController; // Importa tu controlador
-
+use App\Http\Controllers\Api\BarcodeScansController;
 
 
 
@@ -251,6 +251,8 @@ Route::prefix('scada')->group(function () {
 });
 Route::get('scada-material/{token}', [ScadaMaterialTypeController::class, 'getScadaMaterialByToken']);
 
+// API optimizada para el tablero Kanban
+Route::get('/kanban/orders', [\App\Http\Controllers\Api\ProductionOrderController::class, 'getKanbanOrders']);
 
 // Orders API
 Route::prefix('production-orders')->group(function () {
@@ -318,6 +320,12 @@ Route::middleware('auth:api')->get('/user', function (Request $request) {
 //TOPFLOW API ENDPOINT
 //para recivir las referencias por api
 
+// Rutas para el manejo de incidencias en órdenes de producción
+Route::prefix('production-orders/{order}/incidents')->group(function () {
+    Route::get('/', [\App\Http\Controllers\Api\ProductionOrderIncidentController::class, 'index']);
+    Route::post('/', [\App\Http\Controllers\Api\ProductionOrderIncidentController::class, 'store']);
+});
+
 Route::prefix('reference-Topflow')->group(function () {
     Route::get('/', [ReferenceController::class, 'index']);
     Route::post('/', [ReferenceController::class, 'store']);
@@ -371,3 +379,7 @@ Route::get('/shift-history/production-line/{id}', [\App\Http\Controllers\Api\Shi
 
 // Ruta para obtener los estados actuales de los turnos
 Route::get('/shift/statuses', [\App\Http\Controllers\Api\ShiftStatusController::class, 'getStatuses'])->name('api.shift.statuses');
+
+// Rutas para la API de escaneos de códigos de barras
+Route::get('/barcode-scans', [BarcodeScansController::class, 'getLastBarcode']);
+Route::post('/barcode-scans', [BarcodeScansController::class, 'store']);
