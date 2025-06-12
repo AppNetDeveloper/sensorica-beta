@@ -88,6 +88,7 @@ class DatabaseSeeder extends Seeder
         }
         $this->call([
             IaPromptsTableSeeder::class,
+            OriginalOrderPermissionsTableSeeder::class,
             // Otros seeders que puedas tener...
         ]);
     }

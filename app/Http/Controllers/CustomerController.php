@@ -50,10 +50,13 @@ class CustomerController extends Controller
                 $weightStatsButton = "<a href='{$liveViewUrl}' class='btn btn-sm btn-success me-1' title='" . __('Weight Stats') . "' target='_blank'><i class='fas fa-weight-hanging me-1'></i>" . __('Weight Stats') . "</a>"; // target='_blank' para abrir en nueva pestaña
 
                 $prodStatsButton = "<a href='{$liveViewUrlProd}' class='btn btn-sm btn-warning me-1' title='" . __('Production Stats') . "' target='_blank'><i class='fas fa-chart-line me-1'></i>" . __('Production Stats') . "</a>"; // target='_blank' para abrir en nueva pestaña
-
+                
+                // Add Original Orders button
+                $originalOrdersUrl = route('customers.original-orders.index', $customer->id);
+                $originalOrdersButton = "<a href='{$originalOrdersUrl}' class='btn btn-sm btn-primary me-1' title='" . __('Original Orders') . "'><i class='fas fa-clipboard-list me-1'></i>" . __('Original Orders') . "</a>";
 
                 // Concatena todos los botones
-                return  $linesButton  . $weightStatsButton . $prodStatsButton. $editButton . $deleteForm;
+                return $originalOrdersButton . $linesButton . $weightStatsButton . $prodStatsButton . $editButton . $deleteForm;
             })
             // Indica a DataTables que la columna 'action' contiene HTML y no debe ser escapada
             ->rawColumns(['action'])

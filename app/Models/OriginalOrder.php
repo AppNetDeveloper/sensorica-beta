@@ -10,6 +10,7 @@ class OriginalOrder extends Model
     use HasFactory;
 
     protected $fillable = [
+        'customer_id',
         'order_id',
         'client_number',
         'order_details',
@@ -24,5 +25,13 @@ class OriginalOrder extends Model
     public function processes()
     {
         return $this->hasMany(OriginalOrderProcess::class);
+    }
+    
+    /**
+     * Get the customer that owns the original order.
+     */
+    public function customer()
+    {
+        return $this->belongsTo(Customer::class);
     }
 }

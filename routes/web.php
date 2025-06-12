@@ -14,6 +14,7 @@ use App\Http\Controllers\LoginSecurityController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DebugController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\CustomerOriginalOrderController;
 use App\Http\Controllers\ProductionLineController;
 use App\Http\Controllers\SensorController;
 use App\Http\Controllers\BarcodeController;
@@ -77,6 +78,13 @@ Route::get('customers/getCustomers', [CustomerController::class, 'getCustomers']
 // Ruta para la página principal de clientes
 Route::get('customers', [CustomerController::class, 'index'])->name('customers.index');
 Route::resource('customers', CustomerController::class)->except(['edit', 'update', 'destroy']);
+
+// Customer Original Orders
+Route::prefix('customers/{customer}')->name('customers.')->group(function () {
+    Route::resource('original-orders', CustomerOriginalOrderController::class)
+        ->names('original-orders')
+        ->parameters(['original-orders' => 'originalOrder']);
+});
 
 // Rutas para colores RFID
 // Rutas para colores RFID
