@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\ProductionLineProcessController;
 use App\Http\Controllers\ModualController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\RoleController;
@@ -103,7 +104,15 @@ Route::delete('/rfid-blocked/destroy-all', [RfidBlockedController::class, 'destr
 
 // Ruta para la página principal de sensores
 Route::get('sensors/{id}', [SensorController::class, 'listSensors'])->name('sensors.index');
-// Rutas para smartsensors
+// Rutas para ProductionLineProcess
+Route::prefix('productionlines/{production_line}/processes')->name('productionlines.processes.')->group(function () {
+    Route::get('/', [ProductionLineProcessController::class, 'index'])->name('index');
+    Route::get('/create', [ProductionLineProcessController::class, 'create'])->name('create');
+    Route::post('/', [ProductionLineProcessController::class, 'store'])->name('store');
+    Route::get('/{process}/edit', [ProductionLineProcessController::class, 'edit'])->name('edit');
+    Route::put('/{process}', [ProductionLineProcessController::class, 'update'])->name('update');
+    Route::delete('/{process}', [ProductionLineProcessController::class, 'destroy'])->name('destroy');
+});
 
 // Mostrar el listado de sensores para una línea de producción
 Route::get('smartsensors/{production_line_id}', [SensorController::class, 'index'])->name('smartsensors.index');

@@ -44,6 +44,7 @@ class DatabaseSeeder extends Seeder
             'whatsapp show', 'whatsapp create', 'whatsapp update', 'whatsapp delete',
             'telegram show', 'telegram create', 'telegram update', 'telegram delete',
             'process-show', 'process-create', 'process-edit', 'process-delete',
+            'productionline-process-view', 'productionline-process-create', 'productionline-process-edit', 'productionline-process-delete',
         ];
         
 

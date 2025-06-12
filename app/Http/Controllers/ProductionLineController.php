@@ -40,6 +40,7 @@ class ProductionLineController extends Controller
         $sensorListUrl  = route('sensors.index', $line->id);
         $deleteUrl      = route('productionlines.destroy', $line->id);
         $ordersUrl      = "/production-order-kanban?token={$line->token}";
+        $processesUrl   = route('productionlines.processes.index', $line->id);
         $liveViewUrl    = "/live-production/live.html?token={$line->token}";
         $liveMachineUrl = "/live-production/machine.html?token={$line->token}";
         $csrfToken      = csrf_token();
@@ -48,12 +49,18 @@ class ProductionLineController extends Controller
         $editBtn = "<a href='{$editUrl}' class='btn btn-sm btn-primary' title='" . __('buttons.edit') . "'>
                         <i class='fa fa-edit'></i> " . __('buttons.edit') . "
                     </a>";
-        $sensorBtn = "<a href='{$sensorListUrl}' class='btn btn-sm btn-info' title='" . __('buttons.sensors') . "'>
-                        <i class='fa fa-eye'></i> " . __('buttons.sensors') . "
-                      </a>";
-        $ordersBtn = "<a href='{$ordersUrl}' class='btn btn-sm btn-warning' title='" . __('buttons.orders') . "'>
-                        <i class='fa fa-list'></i> " . __('buttons.orders') . "
-                      </a>";
+        $sensorBtn = "<a href='{$sensorListUrl}' class='btn btn-sm btn-info' title='Sensors'>
+            <i class='fa fa-microchip'></i> " . __('Sensors') . "
+        </a>";
+
+        $processesBtn = "<a href='{$processesUrl}' class='btn btn-sm btn-primary' title='Processes'>
+            <i class='fa fa-cogs'></i> " . __('Processes') . "
+        </a>";
+
+        $ordersBtn = "<a href='{$ordersUrl}' class='btn btn-sm btn-secondary' title='Production Orders'>
+            <i class='fa fa-list'></i> " . __('Orders') . "
+        </a>";
+
         // Se añade target="_blank" para que abra en nueva ventana
         $liveViewBtn = "<a href='{$liveViewUrl}' target='_blank' rel='noopener noreferrer' class='btn btn-sm btn-secondary' title='" . __('buttons.live_view') . "'>
                         <i class='fa fa-tv'></i> " . __('buttons.live_view') . "
@@ -74,6 +81,7 @@ class ProductionLineController extends Controller
         // Combina todos los botones en una sola cadena HTML
         return implode(' ', [
             $sensorBtn,
+            $processesBtn, // Botón de procesos añadido aquí
             $ordersBtn,
             $liveViewBtn,
             $liveMachineBtn,
