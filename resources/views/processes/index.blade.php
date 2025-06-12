@@ -12,9 +12,9 @@
 @endsection
 
 @section('content')
-<div class="container-fluid">
-    <div class="row mt-3">
-        <div class="col-lg-12">
+<div class="container-fluid px-0">
+    <div class="row mt-3 mx-0">
+        <div class="col-12 px-0">
             <div class="card border-0 shadow" style="width: 100%;">
                 <div class="card-header bg-primary text-white">
                     <div class="d-flex justify-content-between align-items-center">
@@ -123,6 +123,15 @@
             padding: 1.25rem;
         }
         #processes-table_wrapper {
+            width: 100%;
+        }
+        .container-fluid.px-0 {
+            width: 100%;
+            max-width: 100%;
+        }
+        .row.mx-0 {
+            margin-left: 0;
+            margin-right: 0;
             width: 100%;
         }
     </style>
