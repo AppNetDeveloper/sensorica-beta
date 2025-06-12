@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Process; // Añadido para la relación belongsToMany
 
 class OriginalOrder extends Model
 {
@@ -24,7 +25,9 @@ class OriginalOrder extends Model
 
     public function processes()
     {
-        return $this->hasMany(OriginalOrderProcess::class);
+        return $this->belongsToMany(Process::class, 'original_order_processes')
+                    ->withPivot('created', 'finished')
+                    ->withTimestamps(); // Asumiendo que la tabla pivote tiene timestamps
     }
     
     /**

@@ -36,6 +36,7 @@ class CustomerOriginalOrderController extends Controller
     {
         $validated = $request->validate([
             'order_id' => 'required|unique:original_orders,order_id',
+            'client_number' => 'nullable|string|max:255', // Añadido
             'order_details' => 'required|json',
             'processes' => 'required|array',
             'processes.*' => 'exists:processes,id',
@@ -43,6 +44,7 @@ class CustomerOriginalOrderController extends Controller
 
         $originalOrder = $customer->originalOrders()->create([
             'order_id' => $validated['order_id'],
+            'client_number' => $validated['client_number'] ?? null, // Añadido
             'order_details' => $validated['order_details'],
             'processed' => false,
         ]);
@@ -84,6 +86,7 @@ class CustomerOriginalOrderController extends Controller
     {
         $validated = $request->validate([
             'order_id' => 'required|unique:original_orders,order_id,' . $originalOrder->id,
+            'client_number' => 'nullable|string|max:255', // Añadido
             'order_details' => 'required|json',
             'processes' => 'required|array',
             'processes.*' => 'exists:processes,id',
@@ -91,6 +94,7 @@ class CustomerOriginalOrderController extends Controller
 
         $originalOrder->update([
             'order_id' => $validated['order_id'],
+            'client_number' => $validated['client_number'] ?? null, // Añadido
             'order_details' => $validated['order_details'],
         ]);
 
