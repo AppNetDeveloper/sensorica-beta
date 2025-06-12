@@ -19,7 +19,7 @@ class CustomerOriginalOrderController extends Controller
 
     public function index(Customer $customer)
     {
-        $originalOrders = $customer->originalOrders()->latest()->paginate(10);
+        $originalOrders = $customer->originalOrders()->latest()->get();
         return view('customers.original-orders.index', compact('customer', 'originalOrders'));
     }
 

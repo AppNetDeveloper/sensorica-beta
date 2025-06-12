@@ -2,8 +2,6 @@
 
 @section('title', __('Create Original Order'))
 
-@section('title', __('Create Original Order'))
-
 @section('breadcrumb')
     <ul class="breadcrumb">
         <li class="breadcrumb-item">
@@ -42,7 +40,7 @@
             </div>
         </div>
     </div>
-@stop
+@endsection
 
 @push('js')
     <script>
