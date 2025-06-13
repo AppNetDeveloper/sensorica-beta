@@ -35,7 +35,8 @@ class OriginalOrder extends Model
     {
         return $this->belongsToMany(Process::class, 'original_order_processes')
                     ->withPivot('created', 'finished_at')
-                    ->withTimestamps(); // Asumiendo que la tabla pivote tiene timestamps
+                    ->withTimestamps()
+                    ->using(OriginalOrderProcess::class);
     }
     
     /**
@@ -53,13 +54,20 @@ class OriginalOrder extends Model
      */
     public function allProcessesFinished()
     {
-        if ($this->processes->isEmpty()) {
-            return false;
+        // An order must have at least one process to be considered "finishable" based on its processes.
+        // We use processes() to initiate a query, ensuring fresh data.
+        if ($this->processes()->count() === 0) {
+            return false; 
         }
         
-        return $this->processes->every(function($process) {
-            return $process->pivot->finished;
-        });
+        // Count how many of the associated processes DO NOT have a finished_at date in the pivot table.
+        // Again, using processes() ensures a fresh query.
+        $unfinishedProcessesCount = $this->processes()
+                                         ->wherePivotNull('finished_at')
+                                         ->count();
+                                         
+        // If the count of unfinished processes is zero, then all processes are finished.
+        return $unfinishedProcessesCount === 0;
     }
     
     /**

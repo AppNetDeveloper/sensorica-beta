@@ -75,25 +75,38 @@
                                     @error('processes')
                                         <div class="alert alert-danger">{{ $message }}</div>
                                     @enderror
-                                    <div class="select2-purple">
-                                        <select name="processes[]" id="processes" 
-                                                class="select2" multiple="multiple" 
-                                                data-placeholder="@lang('Select processes')" 
-                                                data-dropdown-css-class="select2-purple" 
-                                                style="width: 100%;" required>
+                                    <div class="mb-3" style="max-height: 200px; overflow-y: auto; border: 1px solid #ced4da; padding: .375rem .75rem; border-radius: .25rem;">
+                                        @if(isset($processes) && $processes->isNotEmpty())
                                             @foreach($processes as $process)
                                                 @php
-                                                    $isOptionSelected = (is_array(old('processes')) && in_array($process->id, old('processes'))) 
-                                                                        || (!old('processes') && $isEdit && in_array($process->id, $selectedProcesses));
+                                                    $isChecked = false;
+                                                    if (old('processes')) { // Check if old input exists for 'processes'
+                                                        if (is_array(old('processes'))) {
+                                                            $isChecked = in_array($process->id, old('processes'));
+                                                        }
+                                                    } elseif ($isEdit && isset($selectedProcesses) && is_array($selectedProcesses)) { // No old input, check if editing and selectedProcesses exists
+                                                        $isChecked = in_array($process->id, $selectedProcesses);
+                                                    }
                                                 @endphp
-                                                <option value="{{ $process->id }}" 
-                                                        {{ $isOptionSelected ? 'selected' : '' }}>
-                                                    {{ $process->name }}
-                                                </option>
+                                                <div class="custom-control custom-checkbox">
+                                                    <input type="checkbox" class="custom-control-input" 
+                                                           id="process_{{ $process->id }}" 
+                                                           name="processes[]" 
+                                                           value="{{ $process->id }}"
+                                                           {{ $isChecked ? 'checked' : '' }}>
+                                                    <label class="custom-control-label" for="process_{{ $process->id }}">{{ $process->name }}</label>
+                                                </div>
                                             @endforeach
-                                        </select>
+                                        @else
+                                            <p class="text-muted small">@lang('No processes available to select.')</p>
+                                        @endif
                                     </div>
                                     <small class="form-text text-muted">@lang('Select all processes that should be associated with this order.')</small>
+                                </div>
+                                
+                                <div class="alert alert-info mb-4">
+                                    <i class="icon fas fa-info-circle"></i>
+                                    @lang('First select the processes above, then mark their completion status below after saving.')
                                 </div>
                                 
                                 @if(isset($originalOrder) && $originalOrder->processes->isNotEmpty())
@@ -157,45 +170,19 @@
 </div>
 
 @push('styles')
-<!-- Select2 from CDN -->
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ttskch/select2-bootstrap4-theme@1.5.2/dist/select2-bootstrap4.min.css">
-<style>
-    .select2-container--default .select2-selection--multiple {
-        min-height: 38px;
-        padding: 5px 10px;
-    }
-    .select2-container--default .select2-selection--multiple .select2-selection__choice {
-        background-color: #6f42c1;
-        border-color: #6f42c1;
-        color: white;
-    }
-    .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
-        color: rgba(255, 255, 255, 0.7);
-    }
-</style>
+
 @endpush
 
 @push('scripts')
 <!-- jQuery (make sure it's loaded before Select2) -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<!-- Select2 from CDN -->
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         console.log('DOM fully loaded');
         
-        // Initialize Select2
-        if ($.fn.select2) {
-            console.log('Initializing Select2');
-            $('.select2').select2({
-                theme: 'bootstrap4',
-                width: 'resolve'
-            });
-        } else {
-            console.error('Select2 is not loaded');
-        }
+        // Select2 initialization was removed as it's no longer used.
 
         // Handle process finished toggles
         function updateProcessFinishedToggle(checkbox) {

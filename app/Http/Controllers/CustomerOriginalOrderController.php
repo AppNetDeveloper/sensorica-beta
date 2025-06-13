@@ -131,9 +131,8 @@ class CustomerOriginalOrderController extends Controller
             ];
         }
         $originalOrder->processes()->sync($processData);
-        
-        // Actualizar el estado finished_at de la orden principal si todos los procesos están terminados
-        $originalOrder->updateFinishedStatus();
+    
+    // The OriginalOrderProcess model's 'saved' event now handles updating the OriginalOrder's finished_at status.
 
         return redirect()->route('customers.original-orders.index', $customer->id)
             ->with('success', 'Original order updated successfully');
