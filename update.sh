@@ -36,7 +36,13 @@ pip show pymodbus
 # Cambiar al directorio del proyecto
 echo "Cambiando al directorio /var/www/html..."
 cd /var/www/html || { echo "Error: No se pudo cambiar al directorio /var/www/html"; exit 1; }
-
+    echo 'npm install update'
+    /usr/bin/npm install
+    /usr/bin/npm update
+    echo 'dar permiso composer root y instalar y actualizar'
+    export COMPOSER_ALLOW_SUPERUSER=1
+    /usr/local/bin/composer update
+   # /usr/bin/npm run dev
 # Detener todos los procesos de Supervisor
 #echo "Deteniendo todos los procesos de Supervisor..."
 #sudo supervisorctl stop all
