@@ -11,11 +11,12 @@ class OriginalOrder extends Model
     use HasFactory;
 
     protected $fillable = [
-        'customer_id',
         'order_id',
+        'customer_id',
         'client_number',
         'order_details',
-        'processed'
+        'processed',
+        'finished_at',
     ];
 
     protected $casts = [
@@ -33,7 +34,7 @@ class OriginalOrder extends Model
     public function processes()
     {
         return $this->belongsToMany(Process::class, 'original_order_processes')
-                    ->withPivot('created', 'finished')
+                    ->withPivot('created', 'finished_at')
                     ->withTimestamps(); // Asumiendo que la tabla pivote tiene timestamps
     }
     

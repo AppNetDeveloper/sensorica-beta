@@ -105,7 +105,7 @@
                                             </td>
                                             <td class="text-center">
                                                 @if($process->pivot->finished_at)
-                                                    <span class="badge bg-success">{{ $process->pivot->finished_at->format('Y-m-d H:i') }}</span>
+                                                    <span class="badge bg-success">{{ \Carbon\Carbon::parse($process->pivot->finished_at)->format('Y-m-d H:i') }}</span>
                                                 @else
                                                     <span class="badge bg-warning">@lang('Pending')</span>
                                                 @endif

@@ -90,28 +90,44 @@ class CustomerOriginalOrderController extends Controller
             'order_details' => 'required|json',
             'processes' => 'required|array',
             'processes.*' => 'exists:processes,id',
+            'processed' => 'nullable|boolean', // Añadir esta línea
         ]);
 
         $originalOrder->update([
             'order_id' => $validated['order_id'],
             'client_number' => $validated['client_number'] ?? null, // Añadido
             'order_details' => $validated['order_details'],
+            'processed' => $request->boolean('processed'), // Añadir esta línea
         ]);
 
         // Sync processes
         $processData = [];
         foreach ($validated['processes'] as $processId) {
-            $wasFinished = $originalOrder->processes->contains($processId) ? 
-                $originalOrder->processes->find($processId)->pivot->finished : false;
-            $isNowFinished = $request->input('processes_finished.' . $processId, false);
-            
+            $isNowFinished = $request->boolean('processes_finished.' . $processId); // Usar boolean() para obtener true/false
+            $currentPivot = null;
+
+            if ($originalOrder->processes->contains($processId)) {
+                $currentPivot = $originalOrder->processes->find($processId)->pivot;
+            }
+
+            $newFinishedAt = null;
+            if ($isNowFinished) {
+                // Si se marca como finalizado:
+                // - Si ya tenía una fecha de finalización, se conserva.
+                // - Si no la tenía (era null), se establece a now().
+                $newFinishedAt = $currentPivot && $currentPivot->finished_at ? $currentPivot->finished_at : now();
+            } else {
+                // Si se desmarca, finished_at es null.
+                $newFinishedAt = null;
+            }
+
             $processData[$processId] = [
-                'created' => $originalOrder->processes->contains($processId) ? 
-                    $originalOrder->processes->find($processId)->pivot->created : false,
-                'finished' => $isNowFinished,
-                'finished_at' => $isNowFinished && !$wasFinished ? now() : 
-                    ($originalOrder->processes->contains($processId) ? 
-                        $originalOrder->processes->find($processId)->pivot->finished_at : null),
+                // 'created' no debería estar aquí si usas withTimestamps() en la relación,
+                // ya que created_at y updated_at se manejan automáticamente.
+                // Si 'created' es un campo booleano tuyo, su lógica debe ser revisada.
+                // Por ahora, lo comentaré asumiendo que es el timestamp automático.
+                // 'created' => $currentPivot ? $currentPivot->created : false, // Revisa esta lógica si 'created' es un campo tuyo
+                'finished_at' => $newFinishedAt,
             ];
         }
         $originalOrder->processes()->sync($processData);

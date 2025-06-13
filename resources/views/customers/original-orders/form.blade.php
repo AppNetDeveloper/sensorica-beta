@@ -94,46 +94,46 @@
                                         </select>
                                     </div>
                                     <small class="form-text text-muted">@lang('Select all processes that should be associated with this order.')</small>
-                                    
-                                    @if(isset($originalOrder) && $originalOrder->processes->isNotEmpty())
-                                        <div class="mt-3">
-                                            <label>@lang('Process Status')</label>
-                                            <div class="list-group">
-                                                @foreach($originalOrder->processes as $process)
-                                                    @php
-                                                        $pivot = $process->pivot;
-                                                        $isFinished = $pivot->finished ?? false;
-                                                    @endphp
-                                                    <div class="list-group-item">
-                                                        <div class="d-flex w-100 justify-content-between align-items-center">
-                                                            <span class="process-name me-3">{{ $process->name }}</span>
-                                                            <div class="custom-control custom-switch">
-                                                                <input type="checkbox" class="custom-control-input process-finished-toggle" 
-                                                                       id="toggle_finished_{{ $process->id }}" 
-                                                                       data-process-id="{{ $process->id }}"
-                                                                       {{ $isFinished ? 'checked' : '' }}>
-                                                                <label class="custom-control-label" for="toggle_finished_{{ $process->id }}">
-                                                                    {{ $isFinished ? __('Finished') : __('Pending') }}
-                                                                </label>
-                                                            </div>
-                                                            </label>
-                                                        </div>
-                                                    </div>
-                                                @endforeach
-                                            </div>
-                                        </div>
-                                    @endif
                                 </div>
-
-                                <div class="form-group">
-                                    <div class="custom-control custom-switch">
-                                        <input type="checkbox" class="custom-control-input" 
-                                               id="processed" name="processed" value="1"
-                                               {{ old('processed', $originalOrder->processed ?? false) ? 'checked' : '' }}>
-                                        <label class="custom-control-label" for="processed">@lang('Mark as Processed')</label>
+                                
+                                @if(isset($originalOrder) && $originalOrder->processes->isNotEmpty())
+                                    <div class="form-group mt-4">
+                                        <h5 class="border-bottom pb-2">@lang('Process Status')</h5>
+                                        <p class="text-muted small">@lang('Mark processes as finished when they are completed.')</p>
+                                        <div class="list-group mt-3">
+                                            @foreach($originalOrder->processes as $process)
+                                                @php
+                                                    // Determina si el proceso está finalizado basándose en si 'finished_at' tiene un valor
+                                                    $isFinished = !is_null($process->pivot->finished_at);
+                                                @endphp
+                                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                                    <span class="process-name">{{ $process->name }}</span>
+                                                    <div class="custom-control custom-switch">
+                                                        <input type="checkbox" class="custom-control-input process-finished-toggle"
+                                                               id="toggle_finished_{{ $process->id }}"
+                                                               data-process-id="{{ $process->id }}"
+                                                               {{ $isFinished ? 'checked' : '' }}>
+                                                        <label class="custom-control-label" for="toggle_finished_{{ $process->id }}">
+                                                            {{ $isFinished ? __('Finished') : __('Mark as Finished') }}
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                                {{-- Asegúrate que el valor inicial del input oculto también refleje el estado correcto --}}
+                                                <input type="hidden" name="processes_finished[{{ $process->id }}]" value="{{ $isFinished ? '1' : '0' }}" id="process_finished_{{ $process->id }}">
+                                            @endforeach
+                                        </div>
                                     </div>
+                                    
+                                    <div class="form-group mt-4">
+                                        <div class="custom-control custom-switch">
+                                            <input type="checkbox" class="custom-control-input" 
+                                                   id="processed" name="processed" value="1"
+                                                   {{ old('processed', $originalOrder->processed ?? false) ? 'checked' : '' }}>
+                                            <label class="custom-control-label" for="processed">@lang('Mark as Processed')</label>
+                                        </div>
                                     <small class="form-text text-muted">@lang('Indicates whether this order has been processed in the system.')</small>
                                 </div>
+                                @endif
 
                                 <div class="alert alert-info">
                                     <h5><i class="icon fas fa-info"></i> @lang('Note'):</h5>
@@ -157,9 +157,9 @@
 </div>
 
 @push('styles')
-<!-- Select2 -->
-<link rel="stylesheet" href="{{ asset('adminlte/plugins/select2/css/select2.min.css') }}">
-<link rel="stylesheet" href="{{ asset('adminlte/plugins/select2-bootstrap4-theme/select2-bootstrap4.min.css') }}">
+<!-- Select2 from CDN -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ttskch/select2-bootstrap4-theme@1.5.2/dist/select2-bootstrap4.min.css">
 <style>
     .select2-container--default .select2-selection--multiple {
         min-height: 38px;
@@ -177,38 +177,84 @@
 @endpush
 
 @push('scripts')
-<!-- Select2 -->
-<script src="{{ asset('adminlte/plugins/select2/js/select2.full.min.js') }}"></script>
+<!-- jQuery (make sure it's loaded before Select2) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Select2 from CDN -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
 <script>
-    $(function () {
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOM fully loaded');
+        
         // Initialize Select2
-        $('.select2').select2({
-            theme: 'bootstrap4',
-            width: 'resolve'
-        });
+        if ($.fn.select2) {
+            console.log('Initializing Select2');
+            $('.select2').select2({
+                theme: 'bootstrap4',
+                width: 'resolve'
+            });
+        } else {
+            console.error('Select2 is not loaded');
+        }
 
         // Handle process finished toggles
-        $(document).on('change', '.process-finished-toggle', function() {
-            const processId = $(this).data('process-id');
-            const isFinished = $(this).is(':checked') ? '1' : '0';
+        function updateProcessFinishedToggle(checkbox) {
+            const $checkbox = $(checkbox);
+            const processId = $checkbox.data('process-id');
+            const isFinished = $checkbox.is(':checked') ? '1' : '0';
+            
+            console.log('Updating process:', processId, 'finished:', isFinished);
             
             // Update the hidden input
-            $(`#process_finished_${processId}`).val(isFinished);
+            const $hiddenInput = $(`#process_finished_${processId}`);
+            if ($hiddenInput.length) {
+                $hiddenInput.val(isFinished);
+                console.log('Updated hidden input:', $hiddenInput.attr('name'), '=', $hiddenInput.val());
+            } else {
+                console.error('Hidden input not found for process:', processId);
+            }
             
             // Update the label
-            $(this).next('label').text(
-                isFinished === '1' ? '{{ __("Finished") }}' : '{{ __("Mark as Finished") }}'
-            );
+            const $label = $checkbox.siblings('label');
+            if ($label.length) {
+                $label.text(isFinished === '1' ? '{{ __("Finished") }}' : '{{ __("Mark as Finished") }}');
+                console.log('Updated label text to:', $label.text());
+            } else {
+                console.error('Label not found for checkbox:', checkbox);
+            }
+        }
+
+        // Initialize toggle states on page load
+        console.log('Initializing toggle states');
+        $('.process-finished-toggle').each(function() {
+            updateProcessFinishedToggle(this);
+        });
+
+        // Handle toggle changes
+        $(document).on('change', '.process-finished-toggle', function() {
+            console.log('Toggle changed:', this);
+            updateProcessFinishedToggle(this);
+            
+            // Force form submission to test if the value is being sent
+            // $('form').submit();
         });
 
         // Format JSON on page load
         try {
             const textarea = document.getElementById('order_details');
-            const obj = JSON.parse(textarea.value);
-            textarea.value = JSON.stringify(obj, null, 4);
+            if (textarea && textarea.value) {
+                const obj = JSON.parse(textarea.value);
+                textarea.value = JSON.stringify(obj, null, 4);
+            }
         } catch (e) {
             console.error('Invalid JSON in order details', e);
         }
+        
+        // Debug: Log all hidden inputs
+        console.log('All hidden inputs:');
+        $('input[type="hidden"][name^="processes_finished"]').each(function() {
+            console.log($(this).attr('name'), '=', $(this).val());
+        });
     });
 </script>
 @endpush
