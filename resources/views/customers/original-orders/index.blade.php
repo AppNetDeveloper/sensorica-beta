@@ -49,6 +49,7 @@
                                     <th class="text-uppercase">@lang('ORDER ID')</th>
                                     <th class="text-uppercase">@lang('CLIENT NUMBER')</th>
                                     <th class="text-uppercase">@lang('PROCESSED')</th>
+                                    <th class="text-uppercase">@lang('FINISHED AT')</th>
                                     <th class="text-uppercase">@lang('CREATED AT')</th>
                                     <th class="text-uppercase">@lang('ACTIONS')</th>
                                 </tr>
@@ -65,6 +66,13 @@
                                                  <span class="badge bg-success">@lang('Yes')</span>
                                              @else
                                                  <span class="badge bg-warning">@lang('No')</span>
+                                             @endif
+                                         </td>
+                                         <td>
+                                             @if($order->finished_at)
+                                                 <span class="badge bg-success">{{ $order->finished_at->format('Y-m-d H:i') }}</span>
+                                             @else
+                                                 <span class="badge bg-info">@lang('Pending')</span>
                                              @endif
                                          </td>
                                          <td>{{ $order->created_at->format('Y-m-d H:i') }}</td>
@@ -177,8 +185,8 @@
                 },
                 order: [[0, 'asc']],
                 columnDefs: [
-                    { orderable: true, targets: [0, 1, 2, 3, 4] },
-                    { orderable: false, targets: [5], searchable: false }
+                    { orderable: true, targets: [0, 1, 2, 3, 4, 5] }, // Incluye la nueva columna 'Finished At'
+                    { orderable: false, targets: [6], searchable: false } // 'Actions' ahora es el target 6
                 ],
                 dom: '<"row"<"col-sm-12 col-md-6"B><"col-sm-12 col-md-6"f>>rtip',
                 buttons: [

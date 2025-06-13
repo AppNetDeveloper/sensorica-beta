@@ -101,14 +101,23 @@ class CustomerOriginalOrderController extends Controller
         // Sync processes
         $processData = [];
         foreach ($validated['processes'] as $processId) {
+            $wasFinished = $originalOrder->processes->contains($processId) ? 
+                $originalOrder->processes->find($processId)->pivot->finished : false;
+            $isNowFinished = $request->input('processes_finished.' . $processId, false);
+            
             $processData[$processId] = [
                 'created' => $originalOrder->processes->contains($processId) ? 
                     $originalOrder->processes->find($processId)->pivot->created : false,
-                'finished' => $originalOrder->processes->contains($processId) ? 
-                    $originalOrder->processes->find($processId)->pivot->finished : false,
+                'finished' => $isNowFinished,
+                'finished_at' => $isNowFinished && !$wasFinished ? now() : 
+                    ($originalOrder->processes->contains($processId) ? 
+                        $originalOrder->processes->find($processId)->pivot->finished_at : null),
             ];
         }
         $originalOrder->processes()->sync($processData);
+        
+        // Actualizar el estado finished_at de la orden principal si todos los procesos están terminados
+        $originalOrder->updateFinishedStatus();
 
         return redirect()->route('customers.original-orders.index', $customer->id)
             ->with('success', 'Original order updated successfully');

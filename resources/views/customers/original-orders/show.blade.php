@@ -51,6 +51,16 @@
                                     <th class="bg-light">@lang('Updated At')</th>
                                     <td>{{ $originalOrder->updated_at->format('Y-m-d H:i') }}</td>
                                 </tr>
+                                <tr>
+                                    <th class="bg-light">@lang('Finished At')</th>
+                                    <td>
+                                        @if($originalOrder->finished_at)
+                                            <span class="badge bg-success">{{ $originalOrder->finished_at->format('Y-m-d H:i') }}</span>
+                                        @else
+                                            <span class="badge bg-info">@lang('Pending')</span>
+                                        @endif
+                                    </td>
+                                </tr>
                             </table>
                         </div>
                         <div class="col-md-6">
@@ -79,7 +89,7 @@
                                     <tr>
                                         <th>@lang('Process')</th>
                                         <th>@lang('Created')</th>
-                                        <th>@lang('Finished')</th>
+                                        <th>@lang('Finished At')</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -94,10 +104,10 @@
                                                 @endif
                                             </td>
                                             <td class="text-center">
-                                                @if($process->pivot->finished)
-                                                    <span class="badge bg-success">@lang('Yes')</span>
+                                                @if($process->pivot->finished_at)
+                                                    <span class="badge bg-success">{{ $process->pivot->finished_at->format('Y-m-d H:i') }}</span>
                                                 @else
-                                                    <span class="badge bg-warning">@lang('No')</span>
+                                                    <span class="badge bg-warning">@lang('Pending')</span>
                                                 @endif
                                             </td>
                                         </tr>

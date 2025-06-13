@@ -13,12 +13,18 @@ class OriginalOrderProcess extends Model
         'original_order_id',
         'process_id',
         'created',
-        'finished'
+        'finished',
+        'finished_at'
     ];
 
     protected $casts = [
         'created' => 'boolean',
-        'finished' => 'boolean'
+        'finished' => 'boolean',
+        'finished_at' => 'datetime'
+    ];
+    
+    protected $dates = [
+        'finished_at'
     ];
 
     public function originalOrder()

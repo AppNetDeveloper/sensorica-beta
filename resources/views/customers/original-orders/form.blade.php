@@ -82,14 +82,47 @@
                                                 data-dropdown-css-class="select2-purple" 
                                                 style="width: 100%;" required>
                                             @foreach($processes as $process)
+                                                @php
+                                                    $isOptionSelected = (is_array(old('processes')) && in_array($process->id, old('processes'))) 
+                                                                        || (!old('processes') && $isEdit && in_array($process->id, $selectedProcesses));
+                                                @endphp
                                                 <option value="{{ $process->id }}" 
-                                                    {{ in_array($process->id, old('processes', $selectedProcesses)) ? 'selected' : '' }}>
+                                                        {{ $isOptionSelected ? 'selected' : '' }}>
                                                     {{ $process->name }}
                                                 </option>
                                             @endforeach
                                         </select>
                                     </div>
                                     <small class="form-text text-muted">@lang('Select all processes that should be associated with this order.')</small>
+                                    
+                                    @if(isset($originalOrder) && $originalOrder->processes->isNotEmpty())
+                                        <div class="mt-3">
+                                            <label>@lang('Process Status')</label>
+                                            <div class="list-group">
+                                                @foreach($originalOrder->processes as $process)
+                                                    @php
+                                                        $pivot = $process->pivot;
+                                                        $isFinished = $pivot->finished ?? false;
+                                                    @endphp
+                                                    <div class="list-group-item">
+                                                        <div class="d-flex w-100 justify-content-between align-items-center">
+                                                            <span class="process-name me-3">{{ $process->name }}</span>
+                                                            <div class="custom-control custom-switch">
+                                                                <input type="checkbox" class="custom-control-input process-finished-toggle" 
+                                                                       id="toggle_finished_{{ $process->id }}" 
+                                                                       data-process-id="{{ $process->id }}"
+                                                                       {{ $isFinished ? 'checked' : '' }}>
+                                                                <label class="custom-control-label" for="toggle_finished_{{ $process->id }}">
+                                                                    {{ $isFinished ? __('Finished') : __('Pending') }}
+                                                                </label>
+                                                            </div>
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                    @endif
                                 </div>
 
                                 <div class="form-group">
@@ -152,6 +185,20 @@
         $('.select2').select2({
             theme: 'bootstrap4',
             width: 'resolve'
+        });
+
+        // Handle process finished toggles
+        $(document).on('change', '.process-finished-toggle', function() {
+            const processId = $(this).data('process-id');
+            const isFinished = $(this).is(':checked') ? '1' : '0';
+            
+            // Update the hidden input
+            $(`#process_finished_${processId}`).val(isFinished);
+            
+            // Update the label
+            $(this).next('label').text(
+                isFinished === '1' ? '{{ __("Finished") }}' : '{{ __("Mark as Finished") }}'
+            );
         });
 
         // Format JSON on page load
