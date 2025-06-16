@@ -9,6 +9,7 @@
         .card {
             border-radius: 10px;
             box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            width: 100%;
         }
         .card-header {
             border-bottom: 1px solid rgba(0, 0, 0, 0.05);
@@ -82,7 +83,7 @@
 @endpush
 
 @section('content')
-    <div class="container-fluid py-4">
+    <div class="container-fluid py-4 px-1">
         <!-- Filtros -->
         <div class="card mb-4">
             <div class="card-header bg-light">

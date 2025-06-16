@@ -5,14 +5,17 @@
 
 {{-- Contenido principal --}}
 @section('content')
-    <div class="container-fluid py-4">
+    <div class="container-fluid py-4 px-1">
+        <div class="row mb-4">
+            <div class="col-12">
+                <h1 class="fs-4 fw-bold mb-0">Estadísticas de Modbus</h1>
+                <p class="text-muted">Visualización y análisis de datos de control de peso</p>
+            </div>
+        </div>
+        
         <div class="row">
             <div class="col-12">
                 <div class="card">
-                    <div class="card-header p-3">
-                        <h5 class="mb-0">Estadísticas de Modbus</h5>
-                        <p class="text-sm mb-0">Visualización y análisis de datos de control de peso</p>
-                    </div>
                     
                     {{-- Filtros Mejorados --}}
                     <div class="card border-0 shadow-sm mb-4">
@@ -233,12 +236,12 @@
                                                 N° Caja
                                             </th>
                                             <th width="20%">
-                                                <i class="fas fa-tachometer-alt me-1 text-muted"></i>
-                                                Báscula
+                                                <i class="fas fa-barcode me-1 text-muted"></i>
+                                                Código de Barras
                                             </th>
                                             <th width="20%">
                                                 <i class="fas fa-barcode me-1 text-muted"></i>
-                                                Lector Final
+                                                Código de Barras Final
                                             </th>
                                             <th class="text-end" width="15%">
                                                 <i class="far fa-clock me-1 text-muted"></i>
@@ -286,6 +289,11 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
     <style>
+        .card {
+            border-radius: 10px;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            width: 100%;
+        }
         .dt-buttons {
             margin-bottom: 1rem;
         }
@@ -293,6 +301,12 @@
             background-color: #28a745;
             color: #fff !important;
             border-radius: 5px;
+            margin: 0 2px;
+        }
+        .dataTables_wrapper .dataTables_paginate .paginate_button.current {
+            background: #0d6efd !important;
+            color: white !important;
+            border: none !important;
         }
         .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
             background-color: #218838;
@@ -305,10 +319,32 @@
         th {
             position: relative;
             padding-right: 20px;
+            background-color: #f8f9fa;
+            border-bottom: 2px solid #dee2e6;
+            white-space: nowrap;
         }
         .table-responsive {
             border-radius: 8px;
-            background-color: transparent; /* Fondo transparente */
+            background-color: white;
+            overflow-x: auto;
+        }
+        .table-hover tbody tr:hover {
+            background-color: rgba(13, 110, 253, 0.05) !important;
+        }
+        ::-webkit-scrollbar {
+            height: 8px;
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
         }
     </style>
 @endpush
@@ -375,7 +411,7 @@
                 data.forEach(device => {
                     $modbusSelect.append(`
                         <option value="${device.token}">
-                            ${device.name} (${device.ip || 'Sin IP'})
+                            ${device.name}
                         </option>
                     `);
                 });
@@ -482,7 +518,7 @@
                 columns: [
                     { 
                         data: 'last_control_weight',
-                        className: 'text-center',
+                        className: 'text-center fw-bold',
                         render: function(data) {
                             return data ? `${parseFloat(data).toFixed(2)} kg` : '-';
                         }
@@ -498,7 +534,7 @@
                         data: 'last_box_number',
                         className: 'text-center',
                         render: function(data) {
-                            return data || '-';
+                            return data ? `<span class="badge bg-info">${data}</span>` : '-';
                         }
                     },
                     { 
@@ -517,56 +553,41 @@
                         data: 'created_at',
                         className: 'text-end',
                         render: function(data) {
-                            return data ? moment(data).format('DD/MM/YYYY HH:mm:ss') : '-';
+                            if (!data) return '-';
+                            const date = moment(data);
+                            return `<span title="${date.format('LLLL')}">${date.format('DD/MM/YYYY HH:mm:ss')}</span>`;
                         }
                     }
                 ],
                 order: [[5, 'desc']],
                 responsive: true,
                 pageLength: 25,
-                lengthMenu: [10, 25, 50, 100],
-                dom: "<'row'<'col-md-6'l><'col-md-6'f>>" +
-                     "<'row'<'col-12'tr>>" +
-                     "<'row'<'col-md-5'i><'col-md-7'p>>",
+                lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Todos']],
+                dom: '<"row"<"col-md-6"l><"col-md-6 d-flex justify-content-end"f>>' +
+                     '<"row"<"col-12"tr>>' +
+                     '<"row mt-3"<"col-md-5"i><"col-md-7"p>>',
+
                 language: {
                     url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json'
                 },
                 initComplete: function() {
+                    // Mejorar la apariencia de los elementos del DataTable
+                    $('.dataTables_filter input').addClass('form-control form-control-sm');
+                    $('.dataTables_length select').addClass('form-select form-select-sm');
+                    
                     // Actualizar información de paginación
                     updateTableInfo();
                 },
                 drawCallback: function() {
                     // Actualizar información de paginación en cada cambio de página
                     updateTableInfo();
+                    
+                    // Aplicar efectos de hover a las filas
+                    $('tbody tr').addClass('table-hover');
                 }
             });
             
-            // Habilitar los botones de exportación
-            new $.fn.dataTable.Buttons(dataTable, {
-                buttons: [
-                    {
-                        extend: 'excel',
-                        text: '<i class="fas fa-file-excel me-1"></i> Excel',
-                        className: 'btn btn-sm btn-outline-success',
-                        exportOptions: {
-                            columns: ':visible'
-                        }
-                    },
-                    {
-                        extend: 'print',
-                        text: '<i class="fas fa-print me-1"></i> Imprimir',
-                        className: 'btn btn-sm btn-outline-secondary',
-                        exportOptions: {
-                            columns: ':visible'
-                        },
-                        customize: function(win) {
-                            $(win.document.body).find('h1').text('Reporte de Pesos');
-                        }
-                    }
-                ]
-            });
-            
-            dataTable.buttons().container().appendTo('#exportButtons');
+            // Los botones ya están configurados en la inicialización del DataTable
         }
         
         // Actualizar KPIs
@@ -681,14 +702,110 @@
             
             switch (type) {
                 case 'excel':
-                    dataTable.button('.buttons-excel').trigger();
+                    // Exportar a Excel manualmente
+                    let csvContent = "data:text/csv;charset=utf-8,";
+                    
+                    // Encabezados
+                    let headers = [];
+                    $(dataTable.table().header()).find('th').each(function() {
+                        headers.push('"' + $(this).text().trim() + '"');
+                    });
+                    csvContent += headers.join(",") + "\r\n";
+                    
+                    // Datos
+                    dataTable.rows().every(function() {
+                        let rowData = this.data();
+                        let row = [];
+                        
+                        // Peso
+                        row.push('"' + (rowData.last_control_weight ? parseFloat(rowData.last_control_weight).toFixed(2) + ' kg' : '-') + '"');
+                        
+                        // Dimensión
+                        row.push('"' + (rowData.last_dimension || '-') + '"');
+                        
+                        // N° Caja
+                        row.push('"' + (rowData.last_box_number || '-') + '"');
+                        
+                        // Código de Barras
+                        row.push('"' + (rowData.last_barcoder || '-') + '"');
+                        
+                        // Código de Barras Final
+                        row.push('"' + (rowData.last_final_barcoder || '-') + '"');
+                        
+                        // Fecha/Hora
+                        row.push('"' + (rowData.created_at ? moment(rowData.created_at).format('DD/MM/YYYY HH:mm:ss') : '-') + '"');
+                        
+                        csvContent += row.join(",") + "\r\n";
+                    });
+                    
+                    // Crear enlace de descarga
+                    let encodedUri = encodeURI(csvContent);
+                    let link = document.createElement("a");
+                    link.setAttribute("href", encodedUri);
+                    link.setAttribute("download", "Reporte_Pesos_" + moment().format('YYYY-MM-DD') + ".csv");
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
                     break;
+                    
                 case 'pdf':
                     // Implementar exportación a PDF si es necesario
                     showInfo('Exportar a PDF no implementado aún');
                     break;
+                    
                 case 'print':
-                    dataTable.button('.buttons-print').trigger();
+                    // Imprimir manualmente
+                    let printWindow = window.open('', '_blank');
+                    let tableHtml = '<html><head><title>Reporte de Pesos</title>';
+                    tableHtml += '<style>body{font-family:Arial,sans-serif;font-size:12px;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #ddd;padding:8px;text-align:left;}th{background-color:#f2f2f2;}</style>';
+                    tableHtml += '</head><body>';
+                    tableHtml += '<h1>Reporte de Pesos</h1>';
+                    tableHtml += '<p>Fecha: ' + moment().format('DD/MM/YYYY HH:mm:ss') + '</p>';
+                    tableHtml += '<table>';
+                    
+                    // Encabezados
+                    tableHtml += '<thead><tr>';
+                    $(dataTable.table().header()).find('th').each(function() {
+                        tableHtml += '<th>' + $(this).text().trim() + '</th>';
+                    });
+                    tableHtml += '</tr></thead>';
+                    
+                    // Datos
+                    tableHtml += '<tbody>';
+                    dataTable.rows().every(function() {
+                        let rowData = this.data();
+                        tableHtml += '<tr>';
+                        
+                        // Peso
+                        tableHtml += '<td>' + (rowData.last_control_weight ? parseFloat(rowData.last_control_weight).toFixed(2) + ' kg' : '-') + '</td>';
+                        
+                        // Dimensión
+                        tableHtml += '<td>' + (rowData.last_dimension || '-') + '</td>';
+                        
+                        // N° Caja
+                        tableHtml += '<td>' + (rowData.last_box_number || '-') + '</td>';
+                        
+                        // Código de Barras
+                        tableHtml += '<td>' + (rowData.last_barcoder || '-') + '</td>';
+                        
+                        // Código de Barras Final
+                        tableHtml += '<td>' + (rowData.last_final_barcoder || '-') + '</td>';
+                        
+                        // Fecha/Hora
+                        tableHtml += '<td>' + (rowData.created_at ? moment(rowData.created_at).format('DD/MM/YYYY HH:mm:ss') : '-') + '</td>';
+                        
+                        tableHtml += '</tr>';
+                    });
+                    tableHtml += '</tbody></table>';
+                    tableHtml += '</body></html>';
+                    
+                    printWindow.document.write(tableHtml);
+                    printWindow.document.close();
+                    printWindow.focus();
+                    setTimeout(function() {
+                        printWindow.print();
+                        printWindow.close();
+                    }, 500);
                     break;
             }
         }
