@@ -320,22 +320,17 @@
             padding-right: 15px;
         }
         .dataTables_wrapper .dataTables_paginate .paginate_button {
-            padding: 0.3em 0.8em;
-            margin-left: 2px;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-            background-color: #fff;
-            color: #333 !important;
+            border-radius: 4px !important;
+            margin: 0 2px;
         }
         .dataTables_wrapper .dataTables_paginate .paginate_button.current {
             background: #0d6efd !important;
             color: white !important;
-            border: 1px solid #0d6efd !important;
+            border: none !important;
         }
-        .dataTables_wrapper .dataTables_paginate .paginate_button:hover:not(.current) {
-            background-color: #f8f9fa !important;
-            color: #0d6efd !important;
-            border: 1px solid #dee2e6;
+        .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+            background: #0b5ed7 !important;
+            color: white !important;
         }
         .dataTables_wrapper .dataTables_filter input {
             border-radius: 4px;
@@ -634,7 +629,7 @@
                 responsive: true,
                 pageLength: 10,
                 lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Todos']],
-                dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>><"row"<"col-sm-12"tr>><"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+                dom: 'Bfrtip',
 
                 language: {
                     url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json'

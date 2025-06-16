@@ -182,8 +182,26 @@
 
         <!-- Tabla de Datos -->
         <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">Datos de Producción</h5>
+            <div class="card-header bg-white py-3 border-bottom">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">
+                        <i class="fas fa-table me-2 text-primary"></i>
+                        Datos de Producción
+                    </h6>
+                    <div class="d-flex">
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-sm btn-outline-success" id="exportExcel">
+                                <i class="fas fa-file-excel me-1"></i> Excel
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-danger" id="exportPDF">
+                                <i class="fas fa-file-pdf me-1"></i> PDF
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="printTable">
+                                <i class="fas fa-print me-1"></i> Imprimir
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
@@ -677,6 +695,169 @@
                     alert("Por favor, completa todos los campos.");
                 }
             });
+            
+            // Configurar eventos para los botones de exportación
+            $('#exportExcel').on('click', () => exportData('excel'));
+            $('#exportPDF').on('click', () => exportData('pdf'));
+            $('#printTable').on('click', () => exportData('print'));
         });
+        
+        // Función para exportar datos
+        function exportData(type) {
+            const table = $('#controlWeightTable').DataTable();
+            if (!table) {
+                alert('No hay datos para exportar');
+                return;
+            }
+            
+            switch (type) {
+                case 'excel':
+                    // Exportar a Excel manualmente
+                    let csvContent = "data:text/csv;charset=utf-8,";
+                    
+                    // Encabezados
+                    let headers = [];
+                    $(table.table().header()).find('th').each(function() {
+                        headers.push('"' + $(this).text().trim() + '"');
+                    });
+                    csvContent += headers.join(",") + "\r\n";
+                    
+                    // Datos
+                    table.rows().every(function() {
+                        let rowData = this.data();
+                        let row = [];
+                        
+                        // ID
+                        row.push('"' + (rowData.id || '-') + '"');
+                        
+                        // Línea
+                        row.push('"' + (rowData.production_line_name || '-') + '"');
+                        
+                        // Orden
+                        row.push('"' + (rowData.order_id || '-') + '"');
+                        
+                        // Caja
+                        row.push('"' + (rowData.box || '-') + '"');
+                        
+                        // Unidades
+                        row.push('"' + (rowData.units ? rowData.units.toLocaleString() : '-') + '"');
+                        
+                        // UPM Real
+                        row.push('"' + (rowData.units_per_minute_real ? rowData.units_per_minute_real.toFixed(2) : '-') + '"');
+                        
+                        // UPM Teórico
+                        row.push('"' + (rowData.units_per_minute_theoretical ? rowData.units_per_minute_theoretical.toFixed(2) : '-') + '"');
+                        
+                        // OEE
+                        row.push('"' + (rowData.oee ? rowData.oee.toFixed(2) + '%' : '-') + '"');
+                        
+                        // Estado
+                        const statusMap = {
+                            'in_progress': 'En Progreso',
+                            'completed': 'Completado',
+                            'paused': 'Pausado',
+                            'error': 'Error',
+                            'pending': 'Pendiente',
+                            'unknown': 'Desconocido'
+                        };
+                        row.push('"' + (statusMap[rowData.status] || statusMap['unknown']) + '"');
+                        
+                        // Actualizado
+                        row.push('"' + (rowData.updated_at ? new Date(rowData.updated_at).toLocaleString() : '-') + '"');
+                        
+                        csvContent += row.join(",") + "\r\n";
+                    });
+                    
+                    // Crear enlace de descarga
+                    let encodedUri = encodeURI(csvContent);
+                    let link = document.createElement("a");
+                    link.setAttribute("href", encodedUri);
+                    link.setAttribute("download", "Datos_Produccion_" + new Date().toLocaleDateString() + ".csv");
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    break;
+                    
+                case 'pdf':
+                    // Implementar exportación a PDF si es necesario
+                    alert('Exportar a PDF no implementado aún');
+                    break;
+                    
+                case 'print':
+                    // Imprimir manualmente
+                    let printWindow = window.open('', '_blank');
+                    let tableHtml = '<html><head><title>Datos de Producción</title>';
+                    tableHtml += '<style>body{font-family:Arial,sans-serif;font-size:12px;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #ddd;padding:8px;text-align:left;}th{background-color:#f2f2f2;}</style>';
+                    tableHtml += '</head><body>';
+                    tableHtml += '<h1>Datos de Producción</h1>';
+                    tableHtml += '<p>Fecha: ' + new Date().toLocaleString() + '</p>';
+                    tableHtml += '<table>';
+                    
+                    // Encabezados
+                    tableHtml += '<thead><tr>';
+                    $(table.table().header()).find('th').each(function() {
+                        tableHtml += '<th>' + $(this).text().trim() + '</th>';
+                    });
+                    tableHtml += '</tr></thead>';
+                    
+                    // Datos
+                    tableHtml += '<tbody>';
+                    table.rows().every(function() {
+                        let rowData = this.data();
+                        tableHtml += '<tr>';
+                        
+                        // ID
+                        tableHtml += '<td>' + (rowData.id || '-') + '</td>';
+                        
+                        // Línea
+                        tableHtml += '<td>' + (rowData.production_line_name || '-') + '</td>';
+                        
+                        // Orden
+                        tableHtml += '<td>' + (rowData.order_id || '-') + '</td>';
+                        
+                        // Caja
+                        tableHtml += '<td>' + (rowData.box || '-') + '</td>';
+                        
+                        // Unidades
+                        tableHtml += '<td>' + (rowData.units ? rowData.units.toLocaleString() : '-') + '</td>';
+                        
+                        // UPM Real
+                        tableHtml += '<td>' + (rowData.units_per_minute_real ? rowData.units_per_minute_real.toFixed(2) : '-') + '</td>';
+                        
+                        // UPM Teórico
+                        tableHtml += '<td>' + (rowData.units_per_minute_theoretical ? rowData.units_per_minute_theoretical.toFixed(2) : '-') + '</td>';
+                        
+                        // OEE
+                        tableHtml += '<td>' + (rowData.oee ? rowData.oee.toFixed(2) + '%' : '-') + '</td>';
+                        
+                        // Estado
+                        const statusMap = {
+                            'in_progress': 'En Progreso',
+                            'completed': 'Completado',
+                            'paused': 'Pausado',
+                            'error': 'Error',
+                            'pending': 'Pendiente',
+                            'unknown': 'Desconocido'
+                        };
+                        tableHtml += '<td>' + (statusMap[rowData.status] || statusMap['unknown']) + '</td>';
+                        
+                        // Actualizado
+                        tableHtml += '<td>' + (rowData.updated_at ? new Date(rowData.updated_at).toLocaleString() : '-') + '</td>';
+                        
+                        tableHtml += '</tr>';
+                    });
+                    tableHtml += '</tbody></table>';
+                    tableHtml += '</body></html>';
+                    
+                    printWindow.document.write(tableHtml);
+                    printWindow.document.close();
+                    printWindow.focus();
+                    setTimeout(function() {
+                        printWindow.print();
+                        printWindow.close();
+                    }, 500);
+                    break;
+            }
+        }
     </script>
 @endpush
