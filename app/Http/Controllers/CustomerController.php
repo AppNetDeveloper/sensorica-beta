@@ -30,8 +30,8 @@ class CustomerController extends Controller
                 $deleteUrl = route('customers.destroy', $customer->id);
                 $csrfToken = csrf_token();
                 // Genera URLs seguras si tu aplicación corre sobre HTTPS
-                $liveViewUrl = secure_url('/modbuses/liststats/weight?token=' . $customer->token_zerotier); // Usa token_zerotier si ese es el campo correcto
-                $liveViewUrlProd = secure_url('/productionlines/liststats?token=' . $customer->token_zerotier); // Usa token_zerotier si ese es el campo correcto
+                $liveViewUrl = secure_url('/modbuses/liststats/weight?token=' . $customer->token);
+                $liveViewUrlProd = secure_url('/productionlines/liststats?token=' . $customer->token);
 
                 // Construye el HTML para los botones con iconos (Font Awesome)
                 // Añade un pequeño margen a la derecha del icono (me-1)
