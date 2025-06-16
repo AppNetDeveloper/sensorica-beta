@@ -416,7 +416,10 @@
     <script src="https://cdn.datatables.net/responsive/2.4.1/js/dataTables.responsive.min.js"></script>
     <script src="https://cdn.datatables.net/responsive/2.4.1/js/responsive.bootstrap5.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.1/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/moment@2.29.1/locale/es.js"></script>
     
     <script>
@@ -629,7 +632,7 @@
                 responsive: true,
                 pageLength: 10,
                 lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Todos']],
-                dom: 'Bfrtip',
+                dom: 'frtip',
 
                 language: {
                     url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json'
@@ -766,55 +769,96 @@
             
             switch (type) {
                 case 'excel':
-                    // Exportar a Excel manualmente
-                    let csvContent = "data:text/csv;charset=utf-8,";
+                    // Exportar a Excel usando SheetJS (XLSX)
+                    const wb = XLSX.utils.book_new();
+                    const wsData = [];
                     
                     // Encabezados
-                    let headers = [];
+                    const headers = [];
                     $(dataTable.table().header()).find('th').each(function() {
-                        headers.push('"' + $(this).text().trim() + '"');
+                        headers.push($(this).text().trim());
                     });
-                    csvContent += headers.join(",") + "\r\n";
+                    wsData.push(headers);
                     
                     // Datos
                     dataTable.rows().every(function() {
-                        let rowData = this.data();
-                        let row = [];
+                        const rowData = this.data();
+                        const row = [];
                         
                         // Peso
-                        row.push('"' + (rowData.last_control_weight ? parseFloat(rowData.last_control_weight).toFixed(2) + ' kg' : '-') + '"');
+                        row.push(rowData.last_control_weight ? parseFloat(rowData.last_control_weight).toFixed(2) + ' kg' : '-');
                         
                         // Dimensión
-                        row.push('"' + (rowData.last_dimension || '-') + '"');
+                        row.push(rowData.last_dimension || '-');
                         
                         // N° Caja
-                        row.push('"' + (rowData.last_box_number || '-') + '"');
+                        row.push(rowData.last_box_number || '-');
                         
                         // Código de Barras
-                        row.push('"' + (rowData.last_barcoder || '-') + '"');
+                        row.push(rowData.last_barcoder || '-');
                         
                         // Código de Barras Final
-                        row.push('"' + (rowData.last_final_barcoder || '-') + '"');
+                        row.push(rowData.last_final_barcoder || '-');
                         
                         // Fecha/Hora
-                        row.push('"' + (rowData.created_at ? moment(rowData.created_at).format('DD/MM/YYYY HH:mm:ss') : '-') + '"');
+                        row.push(rowData.created_at ? moment(rowData.created_at).format('DD/MM/YYYY HH:mm:ss') : '-');
                         
-                        csvContent += row.join(",") + "\r\n";
+                        wsData.push(row);
                     });
                     
-                    // Crear enlace de descarga
-                    let encodedUri = encodeURI(csvContent);
-                    let link = document.createElement("a");
-                    link.setAttribute("href", encodedUri);
-                    link.setAttribute("download", "Reporte_Pesos_" + moment().format('YYYY-MM-DD') + ".csv");
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
+                    const ws = XLSX.utils.aoa_to_sheet(wsData);
+                    XLSX.utils.book_append_sheet(wb, ws, "Reporte de Pesos");
+                    
+                    // Guardar archivo
+                    XLSX.writeFile(wb, "Reporte_Pesos_" + moment().format('YYYY-MM-DD') + ".xlsx");
                     break;
                     
                 case 'pdf':
-                    // Implementar exportación a PDF si es necesario
-                    showInfo('Exportar a PDF no implementado aún');
+                    // Exportar a PDF usando jsPDF
+                    const { jsPDF } = window.jspdf;
+                    const doc = new jsPDF();
+                    
+                    // Título del documento
+                    doc.setFontSize(18);
+                    doc.text('Reporte de Pesos', 14, 22);
+                    doc.setFontSize(11);
+                    doc.text('Fecha: ' + moment().format('DD/MM/YYYY HH:mm:ss'), 14, 30);
+                    
+                    // Preparar datos para la tabla
+                    const pdfHeaders = [];
+                    $(dataTable.table().header()).find('th').each(function() {
+                        pdfHeaders.push({ title: $(this).text().trim(), dataKey: $(this).text().trim() });
+                    });
+                    
+                    const pdfData = [];
+                    dataTable.rows().every(function() {
+                        const rowData = this.data();
+                        const row = {};
+                        
+                        // Asignar datos a las columnas
+                        row[pdfHeaders[0].dataKey] = rowData.last_control_weight ? parseFloat(rowData.last_control_weight).toFixed(2) + ' kg' : '-';
+                        row[pdfHeaders[1].dataKey] = rowData.last_dimension || '-';
+                        row[pdfHeaders[2].dataKey] = rowData.last_box_number || '-';
+                        row[pdfHeaders[3].dataKey] = rowData.last_barcoder || '-';
+                        row[pdfHeaders[4].dataKey] = rowData.last_final_barcoder || '-';
+                        row[pdfHeaders[5].dataKey] = rowData.created_at ? moment(rowData.created_at).format('DD/MM/YYYY HH:mm:ss') : '-';
+                        
+                        pdfData.push(row);
+                    });
+                    
+                    // Generar tabla en PDF
+                    doc.autoTable({
+                        head: [pdfHeaders.map(h => h.title)],
+                        body: pdfData.map(row => pdfHeaders.map(h => row[h.dataKey])),
+                        startY: 40,
+                        margin: { top: 40 },
+                        styles: { overflow: 'linebreak' },
+                        headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+                        alternateRowStyles: { fillColor: [245, 245, 245] }
+                    });
+                    
+                    // Guardar PDF
+                    doc.save("Reporte_Pesos_" + moment().format('YYYY-MM-DD') + ".pdf");
                     break;
                     
                 case 'print':

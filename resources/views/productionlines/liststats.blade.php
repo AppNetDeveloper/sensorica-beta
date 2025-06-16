@@ -315,6 +315,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 
     <script>
         const token = new URLSearchParams(window.location.search).get('token');
@@ -366,15 +369,8 @@
                 updateKPIs(processedData);
                 
                 const table = $('#controlWeightTable').DataTable({
-                    dom: 'Bfrtip',
-                    buttons: [
-                        { 
-                            extend: 'excelHtml5', 
-                            text: '<i class="fas fa-file-excel me-1"></i> Exportar a Excel', 
-                            className: 'btn btn-sm btn-success',
-                            title: 'Datos de Producción - ' + new Date().toLocaleDateString()
-                        }
-                    ],
+                    dom: 'frtip',
+                    buttons: [],
                     scrollX: true,
                     responsive: true,
                     data: processedData,
@@ -712,44 +708,45 @@
             
             switch (type) {
                 case 'excel':
-                    // Exportar a Excel manualmente
-                    let csvContent = "data:text/csv;charset=utf-8,";
+                    // Exportar a Excel usando SheetJS (XLSX)
+                    const wb = XLSX.utils.book_new();
+                    const wsData = [];
                     
                     // Encabezados
-                    let headers = [];
+                    const headers = [];
                     $(table.table().header()).find('th').each(function() {
-                        headers.push('"' + $(this).text().trim() + '"');
+                        headers.push($(this).text().trim());
                     });
-                    csvContent += headers.join(",") + "\r\n";
+                    wsData.push(headers);
                     
                     // Datos
                     table.rows().every(function() {
-                        let rowData = this.data();
-                        let row = [];
+                        const rowData = this.data();
+                        const row = [];
                         
                         // ID
-                        row.push('"' + (rowData.id || '-') + '"');
+                        row.push(rowData.id || '-');
                         
                         // Línea
-                        row.push('"' + (rowData.production_line_name || '-') + '"');
+                        row.push(rowData.production_line_name || '-');
                         
                         // Orden
-                        row.push('"' + (rowData.order_id || '-') + '"');
+                        row.push(rowData.order_id || '-');
                         
                         // Caja
-                        row.push('"' + (rowData.box || '-') + '"');
+                        row.push(rowData.box || '-');
                         
                         // Unidades
-                        row.push('"' + (rowData.units ? rowData.units.toLocaleString() : '-') + '"');
+                        row.push(rowData.units ? rowData.units.toLocaleString() : '-');
                         
                         // UPM Real
-                        row.push('"' + (rowData.units_per_minute_real ? rowData.units_per_minute_real.toFixed(2) : '-') + '"');
+                        row.push(rowData.units_per_minute_real ? rowData.units_per_minute_real.toFixed(2) : '-');
                         
                         // UPM Teórico
-                        row.push('"' + (rowData.units_per_minute_theoretical ? rowData.units_per_minute_theoretical.toFixed(2) : '-') + '"');
+                        row.push(rowData.units_per_minute_theoretical ? rowData.units_per_minute_theoretical.toFixed(2) : '-');
                         
                         // OEE
-                        row.push('"' + (rowData.oee ? rowData.oee.toFixed(2) + '%' : '-') + '"');
+                        row.push(rowData.oee ? rowData.oee.toFixed(2) + '%' : '-');
                         
                         // Estado
                         const statusMap = {
@@ -760,27 +757,83 @@
                             'pending': 'Pendiente',
                             'unknown': 'Desconocido'
                         };
-                        row.push('"' + (statusMap[rowData.status] || statusMap['unknown']) + '"');
+                        row.push(statusMap[rowData.status] || statusMap['unknown']);
                         
                         // Actualizado
-                        row.push('"' + (rowData.updated_at ? new Date(rowData.updated_at).toLocaleString() : '-') + '"');
+                        row.push(rowData.updated_at ? new Date(rowData.updated_at).toLocaleString() : '-');
                         
-                        csvContent += row.join(",") + "\r\n";
+                        wsData.push(row);
                     });
                     
-                    // Crear enlace de descarga
-                    let encodedUri = encodeURI(csvContent);
-                    let link = document.createElement("a");
-                    link.setAttribute("href", encodedUri);
-                    link.setAttribute("download", "Datos_Produccion_" + new Date().toLocaleDateString() + ".csv");
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
+                    const ws = XLSX.utils.aoa_to_sheet(wsData);
+                    XLSX.utils.book_append_sheet(wb, ws, "Datos de Producción");
+                    
+                    // Guardar archivo
+                    XLSX.writeFile(wb, "Datos_Produccion_" + new Date().toLocaleDateString() + ".xlsx");
                     break;
                     
                 case 'pdf':
-                    // Implementar exportación a PDF si es necesario
-                    alert('Exportar a PDF no implementado aún');
+                    // Exportar a PDF usando jsPDF
+                    const { jsPDF } = window.jspdf;
+                    const doc = new jsPDF('l', 'mm', 'a4'); // Landscape para más columnas
+                    
+                    // Título del documento
+                    doc.setFontSize(18);
+                    doc.text('Datos de Producción', 14, 22);
+                    doc.setFontSize(11);
+                    doc.text('Fecha: ' + new Date().toLocaleString(), 14, 30);
+                    
+                    // Preparar datos para la tabla
+                    const pdfHeaders = [];
+                    $(table.table().header()).find('th').each(function() {
+                        pdfHeaders.push({ title: $(this).text().trim(), dataKey: $(this).text().trim() });
+                    });
+                    
+                    const pdfData = [];
+                    table.rows().every(function() {
+                        const rowData = this.data();
+                        const row = {};
+                        
+                        // Asignar datos a las columnas
+                        row[pdfHeaders[0].dataKey] = rowData.id || '-';
+                        row[pdfHeaders[1].dataKey] = rowData.production_line_name || '-';
+                        row[pdfHeaders[2].dataKey] = rowData.order_id || '-';
+                        row[pdfHeaders[3].dataKey] = rowData.box || '-';
+                        row[pdfHeaders[4].dataKey] = rowData.units ? rowData.units.toLocaleString() : '-';
+                        row[pdfHeaders[5].dataKey] = rowData.units_per_minute_real ? rowData.units_per_minute_real.toFixed(2) : '-';
+                        row[pdfHeaders[6].dataKey] = rowData.units_per_minute_theoretical ? rowData.units_per_minute_theoretical.toFixed(2) : '-';
+                        row[pdfHeaders[7].dataKey] = rowData.oee ? rowData.oee.toFixed(2) + '%' : '-';
+                        
+                        // Estado
+                        const statusMap = {
+                            'in_progress': 'En Progreso',
+                            'completed': 'Completado',
+                            'paused': 'Pausado',
+                            'error': 'Error',
+                            'pending': 'Pendiente',
+                            'unknown': 'Desconocido'
+                        };
+                        row[pdfHeaders[8].dataKey] = statusMap[rowData.status] || statusMap['unknown'];
+                        
+                        // Actualizado
+                        row[pdfHeaders[9].dataKey] = rowData.updated_at ? new Date(rowData.updated_at).toLocaleString() : '-';
+                        
+                        pdfData.push(row);
+                    });
+                    
+                    // Generar tabla en PDF
+                    doc.autoTable({
+                        head: [pdfHeaders.map(h => h.title)],
+                        body: pdfData.map(row => pdfHeaders.map(h => row[h.dataKey])),
+                        startY: 40,
+                        margin: { top: 40 },
+                        styles: { overflow: 'linebreak', fontSize: 8 },
+                        headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+                        alternateRowStyles: { fillColor: [245, 245, 245] }
+                    });
+                    
+                    // Guardar PDF
+                    doc.save("Datos_Produccion_" + new Date().toLocaleDateString() + ".pdf");
                     break;
                     
                 case 'print':
