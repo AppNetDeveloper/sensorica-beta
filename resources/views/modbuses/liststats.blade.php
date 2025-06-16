@@ -205,10 +205,10 @@
                                 </h6>
                                 <div class="d-flex">
                                     <div class="btn-group" role="group">
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" id="exportExcel">
+                                        <button type="button" class="btn btn-sm btn-outline-success" id="exportExcel">
                                             <i class="fas fa-file-excel me-1"></i> Excel
                                         </button>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" id="exportPDF">
+                                        <button type="button" class="btn btn-sm btn-outline-danger" id="exportPDF">
                                             <i class="fas fa-file-pdf me-1"></i> PDF
                                         </button>
                                         <button type="button" class="btn btn-sm btn-outline-secondary" id="printTable">
@@ -220,7 +220,7 @@
                         </div>
                         <div class="card-body p-0">
                             <div class="table-responsive">
-                                <table id="controlWeightTable" class="table table-hover align-middle mb-0">
+                                <table id="controlWeightTable" class="table table-hover" style="width:100%">
                                     <thead class="table-light">
                                         <tr>
                                             <th class="text-center" width="15%">
@@ -294,34 +294,88 @@
             box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
             width: 100%;
         }
-        .dt-buttons {
+        /* Estilos para DataTables */
+        .dataTables_wrapper {
+            padding: 0;
             margin-bottom: 1rem;
         }
+        .dataTables_length {
+            float: left !important;
+            margin-bottom: 15px;
+            padding-left: 15px;
+        }
+        .dataTables_filter {
+            float: right !important;
+            margin-bottom: 15px;
+            padding-right: 15px;
+        }
+        .dataTables_info {
+            padding-top: 0.85em;
+            float: left !important;
+            padding-left: 15px;
+        }
+        .dataTables_paginate {
+            padding-top: 0.5em;
+            float: right !important;
+            padding-right: 15px;
+        }
         .dataTables_wrapper .dataTables_paginate .paginate_button {
-            background-color: #28a745;
-            color: #fff !important;
-            border-radius: 5px;
-            margin: 0 2px;
+            padding: 0.3em 0.8em;
+            margin-left: 2px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            background-color: #fff;
+            color: #333 !important;
         }
         .dataTables_wrapper .dataTables_paginate .paginate_button.current {
             background: #0d6efd !important;
             color: white !important;
-            border: none !important;
+            border: 1px solid #0d6efd !important;
         }
-        .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
-            background-color: #218838;
+        .dataTables_wrapper .dataTables_paginate .paginate_button:hover:not(.current) {
+            background-color: #f8f9fa !important;
+            color: #0d6efd !important;
+            border: 1px solid #dee2e6;
         }
         .dataTables_wrapper .dataTables_filter input {
-            border-radius: 5px;
-            border: 1px solid #ddd;
-            padding: 5px;
+            border-radius: 4px;
+            border: 1px solid #ced4da;
+            padding: 0.375rem 0.75rem;
+            margin-left: 0.5rem;
         }
-        th {
+        .dataTables_wrapper .dataTables_length select {
+            border-radius: 4px;
+            border: 1px solid #ced4da;
+            padding: 0.375rem 0.75rem;
+            margin: 0 0.5rem;
+        }
+        .dt-buttons {
+            margin-bottom: 1rem;
+            display: inline-block;
+        }
+        .dt-button {
+            margin-right: 5px;
+        }
+        /* Estilos para la tabla */
+        table.dataTable {
+            width: 100% !important;
+            margin-bottom: 1rem;
+            clear: both;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        table.dataTable thead th {
             position: relative;
             padding-right: 20px;
             background-color: #f8f9fa;
             border-bottom: 2px solid #dee2e6;
             white-space: nowrap;
+            font-weight: 600;
+        }
+        table.dataTable tbody td {
+            padding: 0.75rem;
+            vertical-align: middle;
+            border-top: 1px solid #dee2e6;
         }
         .table-responsive {
             border-radius: 8px;
@@ -331,6 +385,7 @@
         .table-hover tbody tr:hover {
             background-color: rgba(13, 110, 253, 0.05) !important;
         }
+        /* Scrollbars personalizados */
         ::-webkit-scrollbar {
             height: 8px;
             width: 8px;
@@ -345,6 +400,10 @@
         }
         ::-webkit-scrollbar-thumb:hover {
             background: #555;
+        }
+        /* Evitar parpadeo durante la actualización */
+        .dataTable.no-footer {
+            border-bottom: 1px solid #dee2e6;
         }
     </style>
 @endpush
@@ -506,10 +565,22 @@
         function initializeOrUpdateDataTable(data) {
             const table = $('#controlWeightTable');
             
-            // Destruir la tabla existente si ya está inicializada
+            // Si la tabla ya está inicializada, solo actualizar los datos
             if ($.fn.DataTable.isDataTable(table)) {
-                dataTable.clear().destroy();
-                table.empty();
+                // Guardar la página actual, la configuración de búsqueda y el orden
+                const currentPage = dataTable.page();
+                const searchValue = dataTable.search();
+                const order = dataTable.order();
+                
+                // Actualizar los datos sin destruir la tabla y sin redibujar completamente
+                dataTable.clear().rows.add(data).draw(false);
+                
+                // Restaurar la página, la búsqueda y el orden
+                dataTable.search(searchValue).order(order).page(currentPage).draw(false);
+                
+                // Asegurarse de que los encabezados de columna se muestren correctamente
+                $('.dataTables_scrollHead').css('overflow', 'visible');
+                return;
             }
             
             // Inicializar DataTable
@@ -561,11 +632,9 @@
                 ],
                 order: [[5, 'desc']],
                 responsive: true,
-                pageLength: 25,
+                pageLength: 10,
                 lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Todos']],
-                dom: '<"row"<"col-md-6"l><"col-md-6 d-flex justify-content-end"f>>' +
-                     '<"row"<"col-12"tr>>' +
-                     '<"row mt-3"<"col-md-5"i><"col-md-7"p>>',
+                dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>><"row"<"col-sm-12"tr>><"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
 
                 language: {
                     url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json'
