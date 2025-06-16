@@ -19,7 +19,8 @@ class Customer extends Model
         'name',
         'token',
         'token_zerotier',
-        
+        'order_listing_url',
+        'order_detail_url'
     ];
 
     /**

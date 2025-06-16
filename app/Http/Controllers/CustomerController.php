@@ -37,23 +37,23 @@ class CustomerController extends Controller
                 // Añade un pequeño margen a la derecha del icono (me-1)
                 // Añade tooltips con el atributo 'title'
 
-                $editButton = "<a href='{$editUrl}' class='btn btn-sm btn-info me-1' title='" . __('Edit') . "'><i class='fas fa-edit me-1'></i>" . __('Edit') . "</a>";
+                $editButton = "<a href='{$editUrl}' class='btn btn-sm btn-info me-1' data-bs-toggle='tooltip' title='" . __('Edit') . "'><i class='fas fa-edit'></i></a>";
 
-                $linesButton = "<a href='{$productionLinesUrl}' class='btn btn-sm btn-secondary me-1' title='" . __('Production Lines') . "'><i class='fas fa-sitemap me-1'></i>" . __('Production Lines') . "</a>";
+                $linesButton = "<a href='{$productionLinesUrl}' class='btn btn-sm btn-secondary me-1' data-bs-toggle='tooltip' title='" . __('Production Lines') . "'><i class='fas fa-sitemap'></i></a>";
 
                 $deleteForm = "<form action='{$deleteUrl}' method='POST' style='display:inline;' onsubmit='return confirm(\"" . __('Are you sure?') . "\");'>
                                 <input type='hidden' name='_token' value='{$csrfToken}'>
                                 <input type='hidden' name='_method' value='DELETE'>
-                                <button type='submit' class='btn btn-sm btn-danger me-1' title='" . __('Delete') . "'><i class='fas fa-trash me-1'></i>" . __('Delete') . "</button>
+                                <button type='submit' class='btn btn-sm btn-danger me-1' data-bs-toggle='tooltip' title='" . __('Delete') . "'><i class='fas fa-trash'></i></button>
                                </form>";
 
-                $weightStatsButton = "<a href='{$liveViewUrl}' class='btn btn-sm btn-success me-1' title='" . __('Weight Stats') . "' target='_blank'><i class='fas fa-weight-hanging me-1'></i>" . __('Weight Stats') . "</a>"; // target='_blank' para abrir en nueva pestaña
+                $weightStatsButton = "<a href='{$liveViewUrl}' class='btn btn-sm btn-success me-1' data-bs-toggle='tooltip' title='" . __('Weight Stats') . "' target='_blank'><i class='fas fa-weight-hanging'></i></a>";
 
-                $prodStatsButton = "<a href='{$liveViewUrlProd}' class='btn btn-sm btn-warning me-1' title='" . __('Production Stats') . "' target='_blank'><i class='fas fa-chart-line me-1'></i>" . __('Production Stats') . "</a>"; // target='_blank' para abrir en nueva pestaña
+                $prodStatsButton = "<a href='{$liveViewUrlProd}' class='btn btn-sm btn-warning me-1' data-bs-toggle='tooltip' title='" . __('Production Stats') . "' target='_blank'><i class='fas fa-chart-line'></i></a>";
                 
                 // Add Original Orders button
                 $originalOrdersUrl = route('customers.original-orders.index', $customer->id);
-                $originalOrdersButton = "<a href='{$originalOrdersUrl}' class='btn btn-sm btn-primary me-1' title='" . __('Original Orders') . "'><i class='fas fa-clipboard-list me-1'></i>" . __('Original Orders') . "</a>";
+                $originalOrdersButton = "<a href='{$originalOrdersUrl}' class='btn btn-sm btn-primary me-1' data-bs-toggle='tooltip' title='" . __('Original Orders') . "'><i class='fas fa-clipboard-list'></i></a>";
 
                 // Concatena todos los botones
                 return $originalOrdersButton . $linesButton . $weightStatsButton . $prodStatsButton . $editButton . $deleteForm;
