@@ -161,28 +161,27 @@
                                             </td>
                                         </tr>
                                         @if($articles->isNotEmpty())
-                                            <tr>
-                                                <td colspan="7" class="p-0">
-                                                    <div class="table-responsive">
-                                                        <table class="table table-sm table-bordered mb-0">
-                                                            <thead class="bg-light">
+                                            <tr class="articles-row bg-light">
+                                                <td colspan="7" class="p-3">
+                                                    <h6 class="mb-2 font-weight-bold">@lang('Related Articles')</h6>
+                                                    <table class="table table-sm table-borderless mb-0 bg-white">
+                                                        <thead style="border-bottom: 2px solid #dee2e6;">
+                                                            <tr>
+                                                                <th style="width: 30%;">@lang('Article Code')</th>
+                                                                <th style="width: 50%;">@lang('Description')</th>
+                                                                <th style="width: 20%;">@lang('Group')</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            @foreach($articles as $article)
                                                                 <tr>
-                                                                    <th>@lang('Article Code')</th>
-                                                                    <th>@lang('Description')</th>
-                                                                    <th>@lang('Group')</th>
+                                                                    <td>{{ $article->codigo_articulo }}</td>
+                                                                    <td>{{ $article->descripcion_articulo }}</td>
+                                                                    <td>{{ $article->grupo_articulo }}</td>
                                                                 </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                @foreach($articles as $article)
-                                                                    <tr>
-                                                                        <td>{{ $article->codigo_articulo }}</td>
-                                                                        <td>{{ $article->descripcion_articulo }}</td>
-                                                                        <td>{{ $article->grupo_articulo }}</td>
-                                                                    </tr>
-                                                                @endforeach
-                                                            </tbody>
-                                                        </table>
-                                                    </div>
+                                                            @endforeach
+                                                        </tbody>
+                                                    </table>
                                                 </td>
                                             </tr>
                                         @endif
