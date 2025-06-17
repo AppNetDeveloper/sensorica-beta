@@ -238,6 +238,24 @@
                                                                                 <p class="text-muted mb-0">@lang('No articles associated with this process.')</p>
                                                                             @endforelse
                                                                         </div>
+
+                                                                        {{-- Form to add new articles --}}
+                                                                        <div class="add-article-form mt-3 pt-3 border-top">
+                                                                            <div class="row">
+                                                                                <div class="col-md-3">
+                                                                                    <input type="text" class="form-control form-control-sm new-article-code" placeholder="@lang('Code')">
+                                                                                </div>
+                                                                                <div class="col-md-4">
+                                                                                    <input type="text" class="form-control form-control-sm new-article-description" placeholder="@lang('Description')">
+                                                                                </div>
+                                                                                <div class="col-md-3">
+                                                                                    <input type="text" class="form-control form-control-sm new-article-group" placeholder="@lang('Group')">
+                                                                                </div>
+                                                                                <div class="col-md-2">
+                                                                                    <button type="button" class="btn btn-success btn-sm btn-block add-article-btn">@lang('Add')</button>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
                                                                     </div>
                                                                 </td>
                                                             </tr>
@@ -375,6 +393,49 @@ $(document).ready(function() {
         
         // Alternar el contenedor actual
         $articlesContainer.slideToggle(200);
+    });
+
+    // Logic to add a new article to a process
+    $(document).on('click', '.add-article-btn', function() {
+        const container = $(this).closest('.articles-container');
+        const articlesList = container.find('.articles-list');
+        const processUniqueId = articlesList.data('process-id');
+
+        const codeInput = container.find('.new-article-code');
+        const descriptionInput = container.find('.new-article-description');
+        const groupInput = container.find('.new-article-group');
+
+        const code = codeInput.val().trim();
+        const description = descriptionInput.val().trim();
+        const group = groupInput.val().trim();
+
+        if (code === '') {
+            alert("@lang('The article code cannot be empty.')");
+            return;
+        }
+
+        // Remove the 'No articles' message if it exists
+        articlesList.find('.text-muted').remove();
+
+        const articleIndex = articlesList.find('.article-item').length;
+
+        const newArticleHtml = `
+            <div class="article-item mb-2 p-2 bg-white rounded border">
+                <strong>@lang('Code'):</strong> ${code} | 
+                <strong>@lang('Description'):</strong> ${description} | 
+                <strong>@lang('Group'):</strong> ${group}
+
+                <input type="hidden" name="articles[${processUniqueId}][${articleIndex}][code]" value="${code}">
+                <input type="hidden" name="articles[${processUniqueId}][${articleIndex}][description]" value="${description}">
+                <input type="hidden" name="articles[${processUniqueId}][${articleIndex}][group]" value="${group}">
+            </div>`;
+
+        articlesList.append(newArticleHtml);
+
+        // Clear input fields
+        codeInput.val('');
+        descriptionInput.val('');
+        groupInput.val('');
     });
 
     updateNoProcessesMessage();

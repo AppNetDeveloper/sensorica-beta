@@ -156,8 +156,6 @@ class CustomerOriginalOrderController extends Controller
 
     public function update(Request $request, Customer $customer, OriginalOrder $originalOrder)
     {
-        // Log all request data for debugging
-        \Log::info('Update Original Order Request:', $request->all());
         // 1. Validar la petición.
         $validated = $request->validate([
             'order_id' => 'required|unique:original_orders,order_id,' . $originalOrder->id,
