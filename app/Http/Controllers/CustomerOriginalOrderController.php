@@ -156,6 +156,8 @@ class CustomerOriginalOrderController extends Controller
 
     public function update(Request $request, Customer $customer, OriginalOrder $originalOrder)
     {
+        // Log all request data for debugging
+        \Log::info('Update Original Order Request:', $request->all());
         // 1. Validar la petición.
         $validated = $request->validate([
             'order_id' => 'required|unique:original_orders,order_id,' . $originalOrder->id,
@@ -163,10 +165,11 @@ class CustomerOriginalOrderController extends Controller
             'delivery_date' => 'nullable|date',
             'in_stock' => 'sometimes|boolean',
             'order_details' => 'required|json',
-            'processes' => 'sometimes|array', // `sometimes` para permitir eliminar todos los procesos.
-            'processes.*' => 'exists:processes,id', // Validar que cada ID de proceso exista.
-            'processes_finished' => 'sometimes|array', // Contendrá los checkboxes marcados.
+            'processes' => 'sometimes|array',
+            'processes.*' => 'exists:processes,id',
+            'finished' => 'sometimes|array',
             'processed' => 'nullable|boolean',
+            'articles' => 'sometimes|array',
         ]);
 
         // 2. Actualizar los campos principales de la orden.
@@ -179,31 +182,30 @@ class CustomerOriginalOrderController extends Controller
             'processed' => $request->boolean('processed'),
         ]);
 
-        // Obtener los procesos existentes para poder actualizarlos
-        $existingProcesses = $originalOrder->processes->keyBy('pivot.id');
+        // 3. Obtener datos del formulario.
         $selectedProcesses = $request->input('processes', []);
         $finishedProcesses = $request->input('finished', []);
+        $articlesData = $request->input('articles', []);
         $orderDetails = json_decode($validated['order_details'], true);
-        $processedPivotIds = [];
         
-        // Primero, eliminar procesos que ya no están en la lista
+        // Mapeará los IDs únicos del formulario a los nuevos IDs de la tabla pivote.
+        $processedPivotIds = []; 
+        
+        // 4. Sincronización de procesos: eliminar todos y volver a crearlos.
         $originalOrder->processes()->detach();
         
-        // Luego, crear nuevas relaciones para cada instancia de proceso
         foreach ($selectedProcesses as $uniqueId => $processId) {
             if (!is_numeric($processId)) {
-                // Si es un ID temporal (nuevo proceso), extraer el ID real
                 if (strpos($processId, 'new_') === 0) {
                     $processId = substr($processId, 4);
                 } else {
-                    continue; // Saltar IDs no válidos
+                    continue;
                 }
             }
             
-            $process = Process::find($processId);
+            $process = \App\Models\Process::find($processId);
             if (!$process) continue;
             
-            // Calcular el tiempo basado en los detalles de la orden
             $time = 0;
             if (isset($orderDetails['grupos'])) {
                 foreach ($orderDetails['grupos'] as $grupo) {
@@ -217,10 +219,8 @@ class CustomerOriginalOrderController extends Controller
                 }
             }
             
-            // Determinar si el proceso está marcado como finalizado usando el ID único
             $isFinished = isset($finishedProcesses[$uniqueId]);
             
-            // Crear una nueva relación para esta instancia de proceso
             $pivotData = [
                 'time' => $time,
                 'created' => true,
@@ -230,43 +230,43 @@ class CustomerOriginalOrderController extends Controller
                 'updated_at' => now()
             ];
             
-            // Insertar manualmente la relación
             $pivotId = \DB::table('original_order_processes')->insertGetId(
                 array_merge(
-                    [
-                        'original_order_id' => $originalOrder->id,
-                        'process_id' => $processId
-                    ],
+                    ['original_order_id' => $originalOrder->id, 'process_id' => $processId],
                     $pivotData
                 )
             );
             
-            // Mantener el mapeo de IDs únicos a IDs de pivote para referencia
+            // Guardar el mapeo del ID del formulario al nuevo ID de la BD.
             $processedPivotIds[$uniqueId] = $pivotId;
         }
         
-        // Cargar las relaciones actualizadas
+        // 5. Cargar las nuevas relaciones de procesos para poder adjuntar artículos.
         $originalOrder->load('processes');
 
-        // Procesar los artículos para cada instancia de proceso
-        $processInstances = $originalOrder->processes()->withPivot('id')->get();
-        $processInstancesById = $processInstances->keyBy('pivot.id');
+        // 6. Sincronización de artículos usando el mapeo de IDs.
+        $remappedArticlesData = [];
+        if (is_array($articlesData)) {
+            foreach ($articlesData as $formUniqueId => $articles) {
+                // Usar el mapeo para encontrar el nuevo ID de pivote.
+                if (isset($processedPivotIds[$formUniqueId])) {
+                    $newPivotId = $processedPivotIds[$formUniqueId];
+                    $remappedArticlesData[$newPivotId] = $articles;
+                }
+            }
+        }
         
-        // Obtener los artículos enviados desde el formulario
-        $articlesData = $request->input('articles', []);
-        
-        // Recorremos cada instancia de proceso para procesar sus artículos
+        $processInstancesById = $originalOrder->processes->keyBy('pivot.id');
+
         foreach ($processInstancesById as $pivotId => $processInstance) {
-            // Eliminar artículos existentes para esta instancia de proceso
+            // Borrar artículos viejos.
             $processInstance->pivot->articles()->delete();
             
-            // Verificar si hay artículos para esta instancia de proceso
-            if (isset($articlesData[$pivotId])) {
-                $articles = $articlesData[$pivotId];
+            // Crear artículos nuevos si existen en los datos remapeados.
+            if (isset($remappedArticlesData[$pivotId])) {
+                $articles = $remappedArticlesData[$pivotId];
                 
-                // Crear nuevos artículos para esta instancia de proceso
-                foreach ($articles as $articleId => $articleData) {
-                    // Validar que tengamos al menos un código de artículo
+                foreach ($articles as $articleData) {
                     if (empty($articleData['code'])) continue;
                     
                     $processInstance->pivot->articles()->create([
@@ -277,9 +277,7 @@ class CustomerOriginalOrderController extends Controller
                 }
             }
         }
-    
-    // The OriginalOrderProcess model's 'saved' event now handles updating the OriginalOrder's finished_at status.
-
+        
         return redirect()->route('customers.original-orders.index', $customer->id)
             ->with('success', 'Original order updated successfully');
     }

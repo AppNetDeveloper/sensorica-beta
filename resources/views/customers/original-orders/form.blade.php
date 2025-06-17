@@ -228,6 +228,11 @@
                                                                                     <strong>@lang('Code'):</strong> {{ $article['code'] ?? 'N/A' }} | 
                                                                                     <strong>@lang('Description'):</strong> {{ $article['description'] ?? 'N/A' }} | 
                                                                                     <strong>@lang('Group'):</strong> {{ $article['group'] ?? 'N/A' }}
+
+                                                                                    {{-- Hidden inputs to send article data back to the server --}}
+                                                                                    <input type="hidden" name="articles[{{ $uniqueId }}][{{ $loop->index }}][code]" value="{{ $article['code'] ?? '' }}">
+                                                                                    <input type="hidden" name="articles[{{ $uniqueId }}][{{ $loop->index }}][description]" value="{{ $article['description'] ?? '' }}">
+                                                                                    <input type="hidden" name="articles[{{ $uniqueId }}][{{ $loop->index }}][group]" value="{{ $article['group'] ?? '' }}">
                                                                                 </div>
                                                                             @empty
                                                                                 <p class="text-muted mb-0">@lang('No articles associated with this process.')</p>
@@ -362,29 +367,14 @@ $(document).ready(function() {
 
     // Toggle para mostrar/ocultar artículos de un proceso
     $(document).on('click', '.toggle-articles', function() {
-        console.log('Botón de artículos clickeado.');
         const processId = $(this).data('process-id');
-        console.log('ID de proceso (uniqueId):', processId);
-
-        const selector = `tr[data-process-row="${processId}"] .articles-container`;
-        console.log('Buscando contenedor con el selector:', selector);
-
-        const $articlesContainer = $(selector);
-        console.log('Contenedor de artículos encontrado:', $articlesContainer);
-        console.log('Número de contenedores encontrados:', $articlesContainer.length);
-
-        if ($articlesContainer.length === 0) {
-            console.error('¡Error! No se encontró el contenedor de artículos. Revisa el selector y el DOM.');
-            return;
-        }
+        const $articlesContainer = $(`tr[data-process-row="${processId}"] .articles-container`);
         
         // Cerrar otros contenedores de artículos abiertos
         $('.articles-container').not($articlesContainer).slideUp(200);
         
         // Alternar el contenedor actual
-        console.log('Ejecutando slideToggle...');
         $articlesContainer.slideToggle(200);
-        console.log('slideToggle ejecutado.');
     });
 
     updateNoProcessesMessage();
