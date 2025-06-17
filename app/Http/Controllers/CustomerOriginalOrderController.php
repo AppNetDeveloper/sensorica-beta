@@ -113,6 +113,28 @@ class CustomerOriginalOrderController extends Controller
             $query->withPivot('id', 'time', 'created', 'finished', 'finished_at');
         }]);
         
+        // Preparar los artículos para cada proceso
+        $articlesData = [];
+        
+        foreach ($originalOrder->processes as $process) {
+            $pivotId = $process->pivot->id;
+            
+            // Cargar los artículos para este proceso
+            $articles = \App\Models\OriginalOrderArticle::where('original_order_process_id', $pivotId)->get();
+            
+            // Si hay artículos, los agregamos al array
+            if ($articles->count() > 0) {
+                $articlesData[$pivotId] = $articles->map(function($article) {
+                    return [
+                        'id' => $article->id,
+                        'code' => $article->codigo_articulo,
+                        'description' => $article->descripcion_articulo,
+                        'group' => $article->grupo_articulo
+                    ];
+                })->toArray();
+            }
+        }
+        
         // Depurar los procesos cargados
         \Log::info('Procesos cargados para edición de la orden ' . $originalOrder->id . ':');
         foreach ($originalOrder->processes as $process) {
@@ -127,7 +149,8 @@ class CustomerOriginalOrderController extends Controller
             'customer' => $customer,
             'originalOrder' => $originalOrder,
             'processes' => $processes,
-            'selectedProcesses' => $selectedProcesses
+            'selectedProcesses' => $selectedProcesses,
+            'articlesData' => json_encode($articlesData)
         ]);
     }
 
@@ -161,8 +184,14 @@ class CustomerOriginalOrderController extends Controller
         $selectedProcesses = $request->input('processes', []);
         $finishedProcesses = $request->input('processes_finished', []);
         $orderDetails = json_decode($validated['order_details'], true);
-
-        foreach ($selectedProcesses as $processId) {
+        
+        // Procesamos cada proceso seleccionado
+        foreach ($selectedProcesses as $uniqueId => $processId) {
+            // Verificamos si es un ID válido (podría ser un ID temporal con prefijo 'new_')
+            if (!is_numeric($processId)) {
+                continue; // Saltamos IDs no numéricos por seguridad
+            }
+            
             $process = Process::find($processId);
             if (!$process) continue; // Medida de seguridad, aunque la validación ya lo cubre.
 
@@ -181,8 +210,8 @@ class CustomerOriginalOrderController extends Controller
             }
 
             // Determinar si el proceso está marcado como finalizado.
-            // El formulario enviará `processes_finished[process_id] = 1` si está marcado.
-            $isFinished = isset($finishedProcesses[$processId]);
+            // El formulario enviará `processes_finished[unique_id] = 1` si está marcado.
+            $isFinished = isset($finishedProcesses[$uniqueId]);
 
             // Añadir los datos al array de sincronización.
             $syncData[$processId] = [
@@ -197,28 +226,30 @@ class CustomerOriginalOrderController extends Controller
         $originalOrder->processes()->sync($syncData);
 
         // Procesar los artículos para cada instancia de proceso
-        // Primero, obtenemos todas las instancias de procesos recién sincronizadas
         $processInstances = $originalOrder->processes()->withPivot('id')->get();
+        $processInstancesById = $processInstances->keyBy('pivot.id');
+        
+        // Obtener los artículos enviados desde el formulario
+        $articlesData = $request->input('articles', []);
         
         // Recorremos cada instancia de proceso para procesar sus artículos
-        foreach ($processInstances as $processInstance) {
-            $processId = $processInstance->id;
-            $processInstanceId = $processInstance->pivot->id; // Este es el original_order_process_id
+        foreach ($processInstancesById as $pivotId => $processInstance) {
+            // Eliminar artículos existentes para esta instancia de proceso
+            $processInstance->pivot->articles()->delete();
             
-            // Verificar si hay artículos para este proceso en el request
-            $articlesKey = "processes.{$processId}.articles";
-            $articles = $request->input($articlesKey);
-            
-            if ($articles) {
-                // Eliminar artículos existentes para esta instancia de proceso
-                $processInstance->pivot->articles()->delete();
+            // Verificar si hay artículos para esta instancia de proceso
+            if (isset($articlesData[$pivotId])) {
+                $articles = $articlesData[$pivotId];
                 
                 // Crear nuevos artículos para esta instancia de proceso
-                foreach ($articles as $articleData) {
+                foreach ($articles as $articleId => $articleData) {
+                    // Validar que tengamos al menos un código de artículo
+                    if (empty($articleData['code'])) continue;
+                    
                     $processInstance->pivot->articles()->create([
-                        'codigo_articulo' => $articleData['codigo_articulo'] ?? '',
-                        'descripcion_articulo' => $articleData['descripcion_articulo'] ?? '',
-                        'grupo_articulo' => $articleData['grupo_articulo'] ?? ''
+                        'codigo_articulo' => $articleData['code'] ?? '',
+                        'descripcion_articulo' => $articleData['description'] ?? '',
+                        'grupo_articulo' => $articleData['group'] ?? ''
                     ]);
                 }
             }

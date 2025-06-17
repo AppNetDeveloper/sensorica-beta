@@ -159,61 +159,56 @@
                                                     <tr>
                                                         <th>@lang('Code')</th>
                                                         <th>@lang('Name')</th>
+                                                        <th class="text-center">@lang('Articles')</th>
                                                         <th class="text-center">@lang('Finished')</th>
                                                         <th class="text-right">@lang('Actions')</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody id="processes_list">
-                                                    <script>
-                                                        console.log('%c--- INICIO DEBUG RENDERIZADO DE PROCESOS ---', 'color: blue; font-weight: bold;');
-                                                        console.log('Datos completos de la orden (incluye procesos):', @json($originalOrder));
-                                                    </script>
                                                     @php
-                                                        $processIdsToRender = old('processes', $originalOrder->processes->pluck('id')->all());
+                                                        // Si hay datos antiguos (error de validación), `old('processes')` será un array de [uniqueId => processId].
+                                                        // Si no, creamos un array similar a partir de la relación de la base de datos.
+                                                        $processesToRender = old('processes', $originalOrder->processes->mapWithKeys(function ($process) {
+                                                            return [$process->pivot->id => $process->id];
+                                                        }));
                                                     @endphp
 
-                                                    @if (!empty($processIdsToRender))
-                                                        @foreach ($processIdsToRender as $processId)
+                                                    @if ($processesToRender && count($processesToRender) > 0)
+                                                        @foreach ($processesToRender as $uniqueId => $processId)
                                                             @php
                                                                 $process = $processes->firstWhere('id', $processId);
-                                                                if (!$process) continue;
-
-                                                                $dbProcess = $originalOrder->processes->firstWhere('id', $processId);
-                                                                $dbFinished = $dbProcess ? $dbProcess->pivot->finished : false;
-                                                                $isFinished = old('processes_finished.' . $processId, $dbFinished);
+                                                                if (!$process) continue; // Protección contra procesos que ya no existen
+                                                                $isFinished = isset(old('processes_finished')[$uniqueId]) || 
+                                                                    (isset($originalOrder->processes) && 
+                                                                    $originalOrder->processes->contains('id', $processId) && 
+                                                                    $originalOrder->processes->firstWhere('id', $processId)->pivot->finished);
                                                             @endphp
-                                                            
-                                                            <script>
-                                                                // Script de depuración para este proceso
-                                                                console.groupCollapsed('Debug Proceso: {{ addslashes($process->name) }} (ID: {{ $processId }})');
-                                                                console.log('Valor de `finished` en BD (crudo):', @json($dbFinished));
-                                                                console.log('Tipo de dato en BD:', '{{ gettype($dbFinished) }}');
-                                                                console.log('Valor `isFinished` final (usado en @checked):', @json($isFinished));
-                                                                console.log('Tipo de dato final:', '{{ gettype($isFinished) }}');
-                                                                console.log('Objeto `pivot` completo:', @json($dbProcess->pivot ?? null));
-                                                                console.groupEnd();
-                                                            </script>
-
-                                                            <tr data-process-id="{{ $process->id }}">
+                                                            <tr data-unique-id="{{ $uniqueId }}" data-process-id="{{ $process->id }}">
                                                                 <td>{{ $process->code }}</td>
                                                                 <td>{{ $process->name }}</td>
                                                                 <td class="text-center">
+                                                                    <button type="button" class="btn btn-sm btn-info add-articles-btn" 
+                                                                            data-toggle="modal" 
+                                                                            data-target="#articlesModal" 
+                                                                            data-unique-id="{{ $uniqueId }}" 
+                                                                            data-process-name="{{ $process->name }}">
+                                                                        <i class="fas fa-plus"></i>
+                                                                    </button>
+                                                                </td>
+                                                                <td class="text-center">
                                                                     <div class="custom-control custom-switch">
-                                                                        <input type="checkbox"
-                                                                               class="custom-control-input"
-                                                                               id="finished_{{ $process->id }}"
-                                                                               name="processes_finished[{{ $process->id }}]"
-                                                                               value="1"
+                                                                        <input type="checkbox" class="custom-control-input" 
+                                                                               id="finished_{{ $uniqueId }}" 
+                                                                               name="processes_finished[{{ $uniqueId }}]" 
+                                                                               value="1" 
                                                                                {{ $isFinished ? 'checked' : '' }}>
-                                                                        <label class="custom-control-label" for="finished_{{ $process->id }}"></label>
+                                                                        <label class="custom-control-label" for="finished_{{ $uniqueId }}"></label>
                                                                     </div>
                                                                 </td>
                                                                 <td class="text-right process-actions">
-                                                                    <button type="button" class="btn btn-sm btn-danger remove-process">
-                                                                        <i class="fas fa-times"></i>
-                                                                    </button>
+                                                                    <button type="button" class="btn btn-sm btn-danger remove-process"><i class="fas fa-times"></i></button>
                                                                 </td>
-                                                                <input type="hidden" name="processes[]" value="{{ $process->id }}">
+                                                                <input type="hidden" name="processes[{{ $uniqueId }}]" value="{{ $process->id }}">
                                                             </tr>
                                                         @endforeach
                                                     @endif
@@ -251,49 +246,28 @@
                         <div class="modal-dialog modal-lg" role="document">
                             <div class="modal-content">
                                 <div class="modal-header">
-                                    <h5 class="modal-title" id="articlesModalLabel">@lang('Add Articles')</h5>
+                                    <h5 class="modal-title" id="articlesModalLabel">@lang('Add Articles for') <span id="process_name_display" class="font-weight-bold"></span></h5>
                                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                                         <span aria-hidden="true">&times;</span>
                                     </button>
                                 </div>
                                 <div class="modal-body">
-                                    <input type="hidden" id="current_process_id">
+                                    <!-- Hidden fields to track context -->
                                     <input type="hidden" id="current_unique_id">
+
+                                    <!-- Form to add a new article -->
                                     <div class="row mb-3">
-                                        <div class="col-md-12">
-                                            <h6 id="process_name_display"></h6>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="row mb-3">
-                                        <div class="col-md-4">
-                                            <div class="form-group">
-                                                <label for="article_code">@lang('Article Code')</label>
-                                                <input type="text" class="form-control" id="article_code" placeholder="@lang('Enter article code')">
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label for="article_description">@lang('Description')</label>
-                                                <input type="text" class="form-control" id="article_description" placeholder="@lang('Enter description')">
-                                            </div>
-                                        </div>
-                                        <div class="col-md-2">
-                                            <div class="form-group">
-                                                <label for="article_group">@lang('Group')</label>
-                                                <input type="text" class="form-control" id="article_group" placeholder="@lang('Group')">
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="row mb-3">
-                                        <div class="col-md-12">
-                                            <button type="button" id="add_article_btn" class="btn btn-primary">
-                                                <i class="fas fa-plus"></i> @lang('Add Article')
+                                        <div class="col-md-4"><input type="text" class="form-control" id="article_code" placeholder="@lang('Article Code')"></div>
+                                        <div class="col-md-5"><input type="text" class="form-control" id="article_description" placeholder="@lang('Description')"></div>
+                                        <div class="col-md-2"><input type="text" class="form-control" id="article_group" placeholder="@lang('Group')"></div>
+                                        <div class="col-md-1">
+                                            <button type="button" id="add_article_to_table_btn" class="btn btn-primary btn-block">
+                                                <i class="fas fa-plus"></i>
                                             </button>
                                         </div>
                                     </div>
-                                    
+
+                                    <!-- Table of added articles -->
                                     <div class="table-responsive mt-3">
                                         <table class="table table-bordered table-hover" id="articles_table">
                                             <thead class="bg-light">
@@ -304,20 +278,23 @@
                                                     <th width="80">@lang('Actions')</th>
                                                 </tr>
                                             </thead>
-                                            <tbody id="articles_list">
-                                                <!-- Articles will be added here dynamically -->
-                                            </tbody>
+                                            <tbody id="articles_list_in_modal"></tbody>
                                         </table>
-                                        <div id="no_articles" class="text-center p-3">
+                                        <div id="no_articles_in_modal" class="text-center p-3">
                                             <p class="text-muted mb-0">@lang('No articles added yet.')</p>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" id="close-articles-modal">@lang('Close')</button>
+                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">@lang('Close')</button>
                                 </div>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Container for hidden inputs that will be submitted with the form -->
+                    <div id="articles_hidden_inputs_container">
+                        <!-- Los artículos se cargarán dinámicamente con JavaScript -->
                     </div>
 
                 </form>
@@ -342,75 +319,144 @@
 
 @push('scripts')
 <script>
-    $(document).ready(function() {
-        // Función para actualizar la visibilidad del mensaje "No hay procesos"
-        function updateNoProcessesMessage() {
-            if ($('#processes_list tr').length === 0) {
-                $('#no_processes').removeClass('d-none');
-            } else {
-                $('#no_processes').addClass('d-none');
-            }
-        }
+$(document).ready(function() {
+    
+    const allProcesses = @json($processes->keyBy('id'));
+    const articlesData = @json(json_decode($articlesData ?? '{}', true));
 
-        // Almacenar los procesos en una variable JS para un acceso más seguro
-        const allProcesses = @json($processes->keyBy('id'));
+    function updateNoProcessesMessage() {
+        $('#no_processes').toggleClass('d-none', $('#processes_list tr').length > 0);
+    }
 
-        // 1. Añadir proceso a la tabla
-        $('#add_process_btn').on('click', function() {
-            const processId = $('#process_selector').val();
-            if (!processId) {
-                alert('Por favor, seleccione un proceso.');
-                return;
-            }
+    function updateNoArticlesMessage() {
+        $('#no_articles_in_modal').toggleClass('d-none', $('#articles_list_in_modal tr').length > 0);
+    }
 
-            // Evitar añadir duplicados
-            if ($(`#processes_list tr[data-process-id="${processId}"]`).length > 0) {
-                alert('Este proceso ya ha sido añadido.');
-                return;
-            }
+    function escapeHTML(str) {
+        if (typeof str !== 'string') return '';
+        return str.replace(/[&<>'"/]/g, tag => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;',
+            "'": '&#39;', '"': '&quot;', '/': '&#x2F;'
+        }[tag] || tag));
+    }
 
-            const process = allProcesses[processId];
-            
-            if (!process) {
-                alert('Error: No se encontró el proceso seleccionado.');
-                return;
-            }
+    // --- PROCESS MANAGEMENT ---
+    $('#add_process_btn').on('click', function() {
+        const processId = $('#process_selector').val();
+        if (!processId) return;
+        const process = allProcesses[processId];
+        if (!process) return;
 
-            const newRow = `
-                <tr data-process-id="${process.id}">
-                    <td>${process.code}</td>
-                    <td>${process.name}</td>
-                    <td class="text-center">
-                        <div class="custom-control custom-switch">
-                            <input type="checkbox"
-                                   class="custom-control-input"
-                                   id="finished_${process.id}"
-                                   name="processes_finished[${process.id}]"
-                                   value="1">
-                            <label class="custom-control-label" for="finished_${process.id}"></label>
-                        </div>
-                    </td>
-                    <td class="text-right process-actions">
-                        <button type="button" class="btn btn-sm btn-danger remove-process">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </td>
-                    <input type="hidden" name="processes[]" value="${process.id}">
-                </tr>
-            `;
-
-            $('#processes_list').append(newRow);
-            updateNoProcessesMessage();
-        });
-
-        // 2. Eliminar proceso de la tabla
-        $('#processes_list').on('click', '.remove-process', function() {
-            $(this).closest('tr').remove();
-            updateNoProcessesMessage();
-        });
-
-        // Inicializar el mensaje al cargar la página
+        // Para procesos nuevos, usamos un ID temporal pero NO permitimos añadir artículos
+        // hasta que se guarde el proceso en la base de datos
+        const uniqueId = `new_${processId}`;
+        const newRow = `
+            <tr data-unique-id="${uniqueId}" data-process-id="${process.id}">
+                <td>${process.code}</td>
+                <td>${process.name}</td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-sm btn-info add-articles-btn" disabled title="@lang('Save the order first to add articles')">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </td>
+                <td class="text-center">
+                    <div class="custom-control custom-switch">
+                        <input type="checkbox" class="custom-control-input" id="finished_${uniqueId}" name="processes_finished[${uniqueId}]" value="1">
+                        <label class="custom-control-label" for="finished_${uniqueId}"></label>
+                    </div>
+                </td>
+                <td class="text-right process-actions">
+                    <button type="button" class="btn btn-sm btn-danger remove-process"><i class="fas fa-times"></i></button>
+                    <input type="hidden" name="processes[${uniqueId}]" value="${process.id}">
+                </td>
+            </tr>`;
+        $('#processes_list').append(newRow);
         updateNoProcessesMessage();
     });
+
+    $('#processes_list').on('click', '.remove-process', function() {
+        const uniqueId = $(this).closest('tr').data('unique-id');
+        // Eliminar todos los artículos asociados a este proceso
+        $(`#articles_hidden_inputs_container .article-group[data-parent-unique-id="${uniqueId}"]`).remove();
+        $(this).closest('tr').remove();
+        updateNoProcessesMessage();
+    });
+
+    // --- ARTICLE MODAL MANAGEMENT ---
+    $('#articlesModal').on('show.bs.modal', function(event) {
+        const button = $(event.relatedTarget);
+        const uniqueId = button.data('unique-id');
+        $('#current_unique_id').val(uniqueId);
+        $('#process_name_display').text(button.data('process-name'));
+        
+        $('#articles_list_in_modal').empty();
+        $('#article_code, #article_description, #article_group').val('');
+
+        $(`#articles_hidden_inputs_container .article-group[data-parent-unique-id="${uniqueId}"]`).each(function() {
+            const articleUniqueId = $(this).data('article-unique-id');
+            const code = $(this).find('input[name*="[code]"]').val();
+            const description = $(this).find('input[name*="[description]"]').val();
+            const group = $(this).find('input[name*="[group]"]').val();
+            addArticleRowToModal(articleUniqueId, code, description, group);
+        });
+        updateNoArticlesMessage();
+    });
+
+    $('#add_article_to_table_btn').on('click', function() {
+        const parentUniqueId = $('#current_unique_id').val();
+        const code = $('#article_code').val();
+        if (!code || !parentUniqueId) return;
+        
+        const articleUniqueId = `art_${Date.now()}`;
+        const description = $('#article_description').val();
+        const group = $('#article_group').val();
+        
+        addArticleRowToModal(articleUniqueId, code, description, group);
+        addArticleHiddenInputs(parentUniqueId, articleUniqueId, code, description, group);
+        $('#article_code, #article_description, #article_group').val('');
+    });
+    
+    $('#articles_list_in_modal').on('click', '.remove-article-from-modal', function() {
+        const articleUniqueId = $(this).closest('tr').data('article-unique-id');
+        $(`.article-group[data-article-unique-id="${articleUniqueId}"]`).remove();
+        $(this).closest('tr').remove();
+        updateNoArticlesMessage();
+    });
+
+    function addArticleRowToModal(articleUniqueId, code, description, group) {
+        const newRow = `
+            <tr data-article-unique-id="${articleUniqueId}">
+                <td>${escapeHTML(code)}</td>
+                <td>${escapeHTML(description)}</td>
+                <td>${escapeHTML(group)}</td>
+                <td><button type="button" class="btn btn-xs btn-danger remove-article-from-modal"><i class="fas fa-times"></i></button></td>
+            </tr>`;
+        $('#articles_list_in_modal').append(newRow);
+        updateNoArticlesMessage();
+    }
+
+    function addArticleHiddenInputs(parentUniqueId, articleUniqueId, code, description, group) {
+        const inputs = `
+            <div class="article-group" data-parent-unique-id="${parentUniqueId}" data-article-unique-id="${articleUniqueId}">
+                <input type="hidden" name="articles[${parentUniqueId}][${articleUniqueId}][code]" value="${escapeHTML(code)}">
+                <input type="hidden" name="articles[${parentUniqueId}][${articleUniqueId}][description]" value="${escapeHTML(description)}">
+                <input type="hidden" name="articles[${parentUniqueId}][${articleUniqueId}][group]" value="${escapeHTML(group)}">
+            </div>`;
+        $('#articles_hidden_inputs_container').append(inputs);
+    }
+    
+    updateNoProcessesMessage();
+    
+    // Cargar los artículos iniciales desde los datos JSON
+    if (articlesData) {
+        Object.keys(articlesData).forEach(function(pivotId) {
+            const articles = articlesData[pivotId];
+            articles.forEach(function(article) {
+                const articleUniqueId = `db_${article.id}`;
+                addArticleHiddenInputs(pivotId, articleUniqueId, article.code, article.description, article.group);
+            });
+        });
+    }
+});
 </script>
 @endpush
