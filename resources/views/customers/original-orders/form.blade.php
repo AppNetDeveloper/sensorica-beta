@@ -219,7 +219,8 @@
                                             <p class="text-muted mb-0">@lang('No services added yet. Use the selector above to add services.')</p>
                                         </div>
                                         
-                                        <!-- El contenedor de inputs ocultos ya no es necesario. -->
+                                        <!-- Contenedor para los inputs ocultos de los artículos -->
+                                        <div id="articles_hidden_inputs_container" style="display: none;"></div>
                                     </div>
                                 </div>
                                 
@@ -322,7 +323,14 @@
 $(document).ready(function() {
     
     const allProcesses = @json($processes->keyBy('id'));
-    const articlesData = @json(json_decode($articlesData ?? '{}', true));
+    let articlesData = {};
+    try {
+        articlesData = @json($articlesData ?? []);
+        console.log('Articles data loaded:', articlesData);
+    } catch (e) {
+        console.error('Error parsing articles data:', e);
+        articlesData = {};
+    }
 
     function updateNoProcessesMessage() {
         $('#no_processes').toggleClass('d-none', $('#processes_list tr').length > 0);
@@ -355,7 +363,12 @@ $(document).ready(function() {
                 <td>${process.code}</td>
                 <td>${process.name}</td>
                 <td class="text-center">
-                    <button type="button" class="btn btn-sm btn-info add-articles-btn" disabled title="@lang('Save the order first to add articles')">
+                    <button type="button" class="btn btn-sm btn-info add-articles-btn" 
+                           data-toggle="modal" 
+                           data-target="#articlesModal" 
+                           data-unique-id="${uniqueId}" 
+                           data-process-name="${process.name}" 
+                           disabled title="@lang('Save the order first to add articles')">
                         <i class="fas fa-plus"></i>
                     </button>
                 </td>
@@ -384,36 +397,88 @@ $(document).ready(function() {
 
     // --- ARTICLE MODAL MANAGEMENT ---
     $('#articlesModal').on('show.bs.modal', function(event) {
+        console.log('Modal opening');
         const button = $(event.relatedTarget);
         const uniqueId = button.data('unique-id');
+        console.log('Process unique ID:', uniqueId);
+        
+        if (!uniqueId) {
+            console.error('No unique ID found on button:', button);
+            alert('Error: No se pudo identificar el proceso. Por favor, inténtalo de nuevo.');
+            return;
+        }
+        
+        // Asegurarse de que el ID único se establezca correctamente
         $('#current_unique_id').val(uniqueId);
-        $('#process_name_display').text(button.data('process-name'));
+        console.log('Set current_unique_id to:', $('#current_unique_id').val());
+        
+        // Guardar el ID único también como un atributo data para mayor seguridad
+        $('#articlesModal').data('current-unique-id', uniqueId);
+        
+        $('#process_name_display').text(button.data('process-name') || 'Proceso');
         
         $('#articles_list_in_modal').empty();
         $('#article_code, #article_description, #article_group').val('');
 
-        $(`#articles_hidden_inputs_container .article-group[data-parent-unique-id="${uniqueId}"]`).each(function() {
+        console.log('Looking for existing articles for process:', uniqueId);
+        const existingArticles = $(`#articles_hidden_inputs_container .article-group[data-parent-unique-id="${uniqueId}"]`);
+        console.log('Found existing articles:', existingArticles.length);
+        
+        existingArticles.each(function() {
             const articleUniqueId = $(this).data('article-unique-id');
             const code = $(this).find('input[name*="[code]"]').val();
             const description = $(this).find('input[name*="[description]"]').val();
             const group = $(this).find('input[name*="[group]"]').val();
+            console.log('Loading existing article:', {articleUniqueId, code, description, group});
             addArticleRowToModal(articleUniqueId, code, description, group);
         });
         updateNoArticlesMessage();
     });
 
     $('#add_article_to_table_btn').on('click', function() {
-        const parentUniqueId = $('#current_unique_id').val();
-        const code = $('#article_code').val();
-        if (!code || !parentUniqueId) return;
+        console.log('Add article button clicked');
         
-        const articleUniqueId = `art_${Date.now()}`;
+        // Obtener el ID único del proceso de múltiples fuentes para mayor robustez
+        let parentUniqueId = $('#current_unique_id').val();
+        
+        // Si no está en el campo oculto, intentar obtenerlo del atributo data del modal
+        if (!parentUniqueId) {
+            parentUniqueId = $('#articlesModal').data('current-unique-id');
+            console.log('Got parentUniqueId from modal data attribute:', parentUniqueId);
+        }
+        
+        // Si aún no lo tenemos, intentar obtenerlo del botón que abrió el modal
+        if (!parentUniqueId) {
+            const modalButton = $('.add-articles-btn[data-target="#articlesModal"]').filter(':visible').first();
+            if (modalButton.length) {
+                parentUniqueId = modalButton.data('unique-id');
+                console.log('Got parentUniqueId from visible button:', parentUniqueId);
+            }
+        }
+        
+        const code = $('#article_code').val();
+        console.log('Final Parent ID:', parentUniqueId, 'Code:', code);
+        
+        if (!code) {
+            alert('Por favor, ingrese un código de artículo.');
+            return;
+        }
+        
+        if (!parentUniqueId) {
+            console.error('No se pudo determinar el ID del proceso');
+            alert('Error: No se pudo identificar el proceso. Por favor, cierre el modal e inténtelo de nuevo.');
+            return;
+        }
+        
+        const articleUniqueId = `art_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
         const description = $('#article_description').val();
         const group = $('#article_group').val();
         
+        console.log('Adding article:', {articleUniqueId, code, description, group, parentUniqueId});
         addArticleRowToModal(articleUniqueId, code, description, group);
         addArticleHiddenInputs(parentUniqueId, articleUniqueId, code, description, group);
         $('#article_code, #article_description, #article_group').val('');
+        $('#article_code').focus();
     });
     
     $('#articles_list_in_modal').on('click', '.remove-article-from-modal', function() {
