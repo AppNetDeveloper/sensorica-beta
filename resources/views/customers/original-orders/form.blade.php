@@ -261,6 +261,13 @@
     .process-actions {
         white-space: nowrap;
     }
+    .articles-container {
+        /* display: none; is inline */
+        padding: 10px;
+        background-color: #f8f9fa;
+        border-top: 1px solid #dee2e6;
+        /* transition: all 0.3s ease-in-out; */ /* Comentado para probar conflicto con jQuery slideToggle */
+    }
 </style>
 @endpush
 
@@ -271,11 +278,7 @@ $(document).ready(function() {
     const allProcesses = @json($processes->keyBy('id'));
     
     // Mostrar en consola los datos de artículos recibidos del backend
-    @if(isset($articlesData) && is_array($articlesData) && count($articlesData) > 0)
-        console.log('Datos de artículos recibidos del backend:', @json($articlesData));
-    @else
-        console.log('No se recibieron datos de artículos del backend');
-    @endif
+    console.log('Datos de artículos recibidos del backend:', @json($articlesData));
 
     function updateNoProcessesMessage() {
         $('#no_processes').toggleClass('d-none', $('#processes_list tr').length > 0);
