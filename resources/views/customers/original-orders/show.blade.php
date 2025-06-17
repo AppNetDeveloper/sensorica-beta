@@ -161,11 +161,11 @@
                                             </td>
                                         </tr>
                                         @if($articles->isNotEmpty())
-                                            <tr class="articles-row bg-light">
-                                                <td colspan="7" class="p-3">
-                                                    <h6 class="mb-2 font-weight-bold">@lang('Related Articles')</h6>
-                                                    <table class="table table-sm table-borderless mb-0 bg-white">
-                                                        <thead style="border-bottom: 2px solid #dee2e6;">
+                                            <tr class="articles-row">
+                                                <td colspan="7" class="p-3 bg-light" style="border-top: 1px solid #e9ecef;">
+                                                    <h6 class="mb-3 font-weight-bold"><i class="fas fa-cubes text-secondary mr-2"></i>@lang('Related Articles')</h6>
+                                                    <table class="table table-sm table-hover mb-0 bg-white rounded">
+                                                        <thead class="thead-light">
                                                             <tr>
                                                                 <th style="width: 30%;">@lang('Article Code')</th>
                                                                 <th style="width: 50%;">@lang('Description')</th>
