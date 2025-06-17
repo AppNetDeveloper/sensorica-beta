@@ -203,9 +203,38 @@
                                                                     </div>
                                                                 </td>
                                                                 <td class="text-right process-actions">
+                                                                    <button type="button" class="btn btn-sm btn-info toggle-articles mr-1" data-process-id="{{ $uniqueId }}" title="@lang('Show/Hide Articles')">
+                                                                        <i class="fas fa-boxes"></i>
+                                                                    </button>
                                                                     <button type="button" class="btn btn-sm btn-danger remove-process"><i class="fas fa-times"></i></button>
                                                                 </td>
                                                                 <input type="hidden" name="processes[{{ $uniqueId }}]" value="{{ $process->id }}">
+                                                            </tr>
+                                                            {{-- Fila para los artículos del proceso --}}
+                                                            <tr class="process-articles" data-process-row="{{ $uniqueId }}">
+                                                                <td colspan="4" class="p-0 border-0">
+                                                                    <div class="articles-container" style="display: none; padding: 10px; background-color: #f8f9fa; border-top: 1px solid #dee2e6;">
+                                                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                                                            <h6 class="mb-0">@lang('Related Articles')</h6>
+                                                                        </div>
+                                                                        <div class="articles-list" data-process-id="{{ $uniqueId }}">
+                                                                            @php
+                                                                                $allArticles = is_string($articlesData) ? json_decode($articlesData, true) : ($articlesData ?? []);
+                                                                                $processArticles = $allArticles[$uniqueId] ?? [];
+                                                                            @endphp
+                                                                            
+                                                                            @forelse($processArticles as $article)
+                                                                                <div class="article-item mb-2 p-2 bg-white rounded border">
+                                                                                    <strong>@lang('Code'):</strong> {{ $article['code'] ?? 'N/A' }} | 
+                                                                                    <strong>@lang('Description'):</strong> {{ $article['description'] ?? 'N/A' }} | 
+                                                                                    <strong>@lang('Group'):</strong> {{ $article['group'] ?? 'N/A' }}
+                                                                                </div>
+                                                                            @empty
+                                                                                <p class="text-muted mb-0">@lang('No articles associated with this process.')</p>
+                                                                            @endforelse
+                                                                        </div>
+                                                                    </div>
+                                                                </td>
                                                             </tr>
                                                         @endforeach
                                                     @endif
@@ -331,8 +360,33 @@ $(document).ready(function() {
         updateNoProcessesMessage();
     });
 
+    // Toggle para mostrar/ocultar artículos de un proceso
+    $(document).on('click', '.toggle-articles', function() {
+        console.log('Botón de artículos clickeado.');
+        const processId = $(this).data('process-id');
+        console.log('ID de proceso (uniqueId):', processId);
 
-    
+        const selector = `tr[data-process-row="${processId}"] .articles-container`;
+        console.log('Buscando contenedor con el selector:', selector);
+
+        const $articlesContainer = $(selector);
+        console.log('Contenedor de artículos encontrado:', $articlesContainer);
+        console.log('Número de contenedores encontrados:', $articlesContainer.length);
+
+        if ($articlesContainer.length === 0) {
+            console.error('¡Error! No se encontró el contenedor de artículos. Revisa el selector y el DOM.');
+            return;
+        }
+        
+        // Cerrar otros contenedores de artículos abiertos
+        $('.articles-container').not($articlesContainer).slideUp(200);
+        
+        // Alternar el contenedor actual
+        console.log('Ejecutando slideToggle...');
+        $articlesContainer.slideToggle(200);
+        console.log('slideToggle ejecutado.');
+    });
+
     updateNoProcessesMessage();
 });
 </script>
