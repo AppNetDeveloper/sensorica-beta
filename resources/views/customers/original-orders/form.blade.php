@@ -324,13 +324,18 @@ $(document).ready(function() {
     
     const allProcesses = @json($processes->keyBy('id'));
     let articlesData = {};
-    try {
-        articlesData = @json($articlesData ?? []);
-        console.log('Articles data loaded:', articlesData);
-    } catch (e) {
-        console.error('Error parsing articles data:', e);
+    @if(isset($articlesData))
+        try {
+            // Asegurarse de que articlesData sea un objeto JavaScript válido
+            articlesData = JSON.parse(JSON.stringify(@json($articlesData ?? [])));
+            console.log('Articles data loaded:', articlesData);
+        } catch (e) {
+            console.error('Error parsing articlesData:', e);
+            articlesData = {};
+        }
+    @else
         articlesData = {};
-    }
+    @endif
 
     function updateNoProcessesMessage() {
         $('#no_processes').toggleClass('d-none', $('#processes_list tr').length > 0);
@@ -513,13 +518,21 @@ $(document).ready(function() {
     updateNoProcessesMessage();
     
     // Cargar los artículos iniciales desde los datos JSON
-    if (articlesData) {
-        Object.keys(articlesData).forEach(function(pivotId) {
-            const articles = articlesData[pivotId];
-            articles.forEach(function(article) {
-                const articleUniqueId = `db_${article.id}`;
-                addArticleHiddenInputs(pivotId, articleUniqueId, article.code, article.description, article.group);
-            });
+    if (articlesData && typeof articlesData === 'object' && !Array.isArray(articlesData)) {
+        // Solo procesar las claves que contienen arrays de artículos
+        Object.entries(articlesData).forEach(function([pivotId, articles]) {
+            // Verificar que pivotId sea numérico y articles sea un array
+            if (!isNaN(pivotId) && Array.isArray(articles)) {
+                articles.forEach(function(article) {
+                    if (article && typeof article === 'object' && article.id) {
+                        const articleUniqueId = `db_${article.id}`;
+                        const code = article.code || '';
+                        const description = article.description || '';
+                        const group = article.group || '';
+                        addArticleHiddenInputs(pivotId, articleUniqueId, code, description, group);
+                    }
+                });
+            }
         });
     }
 });
