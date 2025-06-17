@@ -159,9 +159,8 @@
                                                     <tr>
                                                         <th>@lang('Code')</th>
                                                         <th>@lang('Name')</th>
-                                                        <th class="text-center">@lang('Articles')</th>
-                                                        <th class="text-center">@lang('Finished')</th>
-                                                        <th class="text-right">@lang('Actions')</th>
+                                                        <th width="100">@lang('Finished')</th>
+                                                        <th width="80"></th>
                                                     </tr>
                                                 </thead>
                                                 <tbody id="processes_list">
@@ -186,15 +185,6 @@
                                                             <tr data-unique-id="{{ $uniqueId }}" data-process-id="{{ $process->id }}">
                                                                 <td>{{ $process->code }}</td>
                                                                 <td>{{ $process->name }}</td>
-                                                                <td class="text-center">
-                                                                    <button type="button" class="btn btn-sm btn-info add-articles-btn" 
-                                                                            data-toggle="modal" 
-                                                                            data-target="#articlesModal" 
-                                                                            data-unique-id="{{ $uniqueId }}" 
-                                                                            data-process-name="{{ $process->name }}">
-                                                                        <i class="fas fa-plus"></i>
-                                                                    </button>
-                                                                </td>
                                                                 <td class="text-center">
                                                                     <div class="custom-control custom-switch">
                                                                         <input type="checkbox" class="custom-control-input" 
@@ -242,59 +232,8 @@
                            class="btn btn-default">@lang('Cancel')</a>
                     </div>
                     
-                    <!-- Modal para agregar artículos -->
-                    <div class="modal fade" id="articlesModal" tabindex="-1" role="dialog" aria-labelledby="articlesModalLabel" aria-hidden="true">
-                        <div class="modal-dialog modal-lg" role="document">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title" id="articlesModalLabel">@lang('Add Articles for') <span id="process_name_display" class="font-weight-bold"></span></h5>
-                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                        <span aria-hidden="true">&times;</span>
-                                    </button>
-                                </div>
-                                <div class="modal-body">
-                                    <!-- Hidden fields to track context -->
-                                    <input type="hidden" id="current_unique_id">
-
-                                    <!-- Form to add a new article -->
-                                    <div class="row mb-3">
-                                        <div class="col-md-4"><input type="text" class="form-control" id="article_code" placeholder="@lang('Article Code')"></div>
-                                        <div class="col-md-5"><input type="text" class="form-control" id="article_description" placeholder="@lang('Description')"></div>
-                                        <div class="col-md-2"><input type="text" class="form-control" id="article_group" placeholder="@lang('Group')"></div>
-                                        <div class="col-md-1">
-                                            <button type="button" id="add_article_to_table_btn" class="btn btn-primary btn-block">
-                                                <i class="fas fa-plus"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <!-- Table of added articles -->
-                                    <div class="table-responsive mt-3">
-                                        <table class="table table-bordered table-hover" id="articles_table">
-                                            <thead class="bg-light">
-                                                <tr>
-                                                    <th>@lang('Code')</th>
-                                                    <th>@lang('Description')</th>
-                                                    <th>@lang('Group')</th>
-                                                    <th width="80">@lang('Actions')</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="articles_list_in_modal"></tbody>
-                                        </table>
-                                        <div id="no_articles_in_modal" class="text-center p-3">
-                                            <p class="text-muted mb-0">@lang('No articles added yet.')</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">@lang('Close')</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
                     <!-- Container for hidden inputs that will be submitted with the form -->
-                    <div id="articles_hidden_inputs_container">
+                    <div id="articles_hidden_inputs_container" style="display: none;">
                         <!-- Los artículos se cargarán dinámicamente con JavaScript -->
                     </div>
 
@@ -323,34 +262,26 @@
 $(document).ready(function() {
     
     const allProcesses = @json($processes->keyBy('id'));
-    let articlesData = {};
-    @if(isset($articlesData))
-        try {
-            // Asegurarse de que articlesData sea un objeto JavaScript válido
-            articlesData = JSON.parse(JSON.stringify(@json($articlesData ?? [])));
-            console.log('Articles data loaded:', articlesData);
-        } catch (e) {
-            console.error('Error parsing articlesData:', e);
-            articlesData = {};
-        }
+    
+    // Mostrar en consola los datos de artículos recibidos del backend
+    @if(isset($articlesData) && is_array($articlesData) && count($articlesData) > 0)
+        console.log('Datos de artículos recibidos del backend:', @json($articlesData));
     @else
-        articlesData = {};
+        console.log('No se recibieron datos de artículos del backend');
     @endif
 
     function updateNoProcessesMessage() {
         $('#no_processes').toggleClass('d-none', $('#processes_list tr').length > 0);
     }
 
-    function updateNoArticlesMessage() {
-        $('#no_articles_in_modal').toggleClass('d-none', $('#articles_list_in_modal tr').length > 0);
-    }
-
     function escapeHTML(str) {
-        if (typeof str !== 'string') return '';
-        return str.replace(/[&<>'"/]/g, tag => ({
-            '&': '&amp;', '<': '&lt;', '>': '&gt;',
-            "'": '&#39;', '"': '&quot;', '/': '&#x2F;'
-        }[tag] || tag));
+        if (!str) return '';
+        return str.toString()
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
     }
 
     // --- PROCESS MANAGEMENT ---
@@ -367,16 +298,6 @@ $(document).ready(function() {
             <tr data-unique-id="${uniqueId}" data-process-id="${process.id}">
                 <td>${process.code}</td>
                 <td>${process.name}</td>
-                <td class="text-center">
-                    <button type="button" class="btn btn-sm btn-info add-articles-btn" 
-                           data-toggle="modal" 
-                           data-target="#articlesModal" 
-                           data-unique-id="${uniqueId}" 
-                           data-process-name="${process.name}" 
-                           disabled title="@lang('Save the order first to add articles')">
-                        <i class="fas fa-plus"></i>
-                    </button>
-                </td>
                 <td class="text-center">
                     <div class="custom-control custom-switch">
                         <input type="checkbox" class="custom-control-input" id="finished_${uniqueId}" name="processes_finished[${uniqueId}]" value="1">
@@ -400,141 +321,9 @@ $(document).ready(function() {
         updateNoProcessesMessage();
     });
 
-    // --- ARTICLE MODAL MANAGEMENT ---
-    $('#articlesModal').on('show.bs.modal', function(event) {
-        console.log('Modal opening');
-        const button = $(event.relatedTarget);
-        const uniqueId = button.data('unique-id');
-        console.log('Process unique ID:', uniqueId);
-        
-        if (!uniqueId) {
-            console.error('No unique ID found on button:', button);
-            alert('Error: No se pudo identificar el proceso. Por favor, inténtalo de nuevo.');
-            return;
-        }
-        
-        // Asegurarse de que el ID único se establezca correctamente
-        $('#current_unique_id').val(uniqueId);
-        console.log('Set current_unique_id to:', $('#current_unique_id').val());
-        
-        // Guardar el ID único también como un atributo data para mayor seguridad
-        $('#articlesModal').data('current-unique-id', uniqueId);
-        
-        $('#process_name_display').text(button.data('process-name') || 'Proceso');
-        
-        $('#articles_list_in_modal').empty();
-        $('#article_code, #article_description, #article_group').val('');
 
-        console.log('Looking for existing articles for process:', uniqueId);
-        const existingArticles = $(`#articles_hidden_inputs_container .article-group[data-parent-unique-id="${uniqueId}"]`);
-        console.log('Found existing articles:', existingArticles.length);
-        
-        existingArticles.each(function() {
-            const articleUniqueId = $(this).data('article-unique-id');
-            const code = $(this).find('input[name*="[code]"]').val();
-            const description = $(this).find('input[name*="[description]"]').val();
-            const group = $(this).find('input[name*="[group]"]').val();
-            console.log('Loading existing article:', {articleUniqueId, code, description, group});
-            addArticleRowToModal(articleUniqueId, code, description, group);
-        });
-        updateNoArticlesMessage();
-    });
-
-    $('#add_article_to_table_btn').on('click', function() {
-        console.log('Add article button clicked');
-        
-        // Obtener el ID único del proceso de múltiples fuentes para mayor robustez
-        let parentUniqueId = $('#current_unique_id').val();
-        
-        // Si no está en el campo oculto, intentar obtenerlo del atributo data del modal
-        if (!parentUniqueId) {
-            parentUniqueId = $('#articlesModal').data('current-unique-id');
-            console.log('Got parentUniqueId from modal data attribute:', parentUniqueId);
-        }
-        
-        // Si aún no lo tenemos, intentar obtenerlo del botón que abrió el modal
-        if (!parentUniqueId) {
-            const modalButton = $('.add-articles-btn[data-target="#articlesModal"]').filter(':visible').first();
-            if (modalButton.length) {
-                parentUniqueId = modalButton.data('unique-id');
-                console.log('Got parentUniqueId from visible button:', parentUniqueId);
-            }
-        }
-        
-        const code = $('#article_code').val();
-        console.log('Final Parent ID:', parentUniqueId, 'Code:', code);
-        
-        if (!code) {
-            alert('Por favor, ingrese un código de artículo.');
-            return;
-        }
-        
-        if (!parentUniqueId) {
-            console.error('No se pudo determinar el ID del proceso');
-            alert('Error: No se pudo identificar el proceso. Por favor, cierre el modal e inténtelo de nuevo.');
-            return;
-        }
-        
-        const articleUniqueId = `art_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-        const description = $('#article_description').val();
-        const group = $('#article_group').val();
-        
-        console.log('Adding article:', {articleUniqueId, code, description, group, parentUniqueId});
-        addArticleRowToModal(articleUniqueId, code, description, group);
-        addArticleHiddenInputs(parentUniqueId, articleUniqueId, code, description, group);
-        $('#article_code, #article_description, #article_group').val('');
-        $('#article_code').focus();
-    });
-    
-    $('#articles_list_in_modal').on('click', '.remove-article-from-modal', function() {
-        const articleUniqueId = $(this).closest('tr').data('article-unique-id');
-        $(`.article-group[data-article-unique-id="${articleUniqueId}"]`).remove();
-        $(this).closest('tr').remove();
-        updateNoArticlesMessage();
-    });
-
-    function addArticleRowToModal(articleUniqueId, code, description, group) {
-        const newRow = `
-            <tr data-article-unique-id="${articleUniqueId}">
-                <td>${escapeHTML(code)}</td>
-                <td>${escapeHTML(description)}</td>
-                <td>${escapeHTML(group)}</td>
-                <td><button type="button" class="btn btn-xs btn-danger remove-article-from-modal"><i class="fas fa-times"></i></button></td>
-            </tr>`;
-        $('#articles_list_in_modal').append(newRow);
-        updateNoArticlesMessage();
-    }
-
-    function addArticleHiddenInputs(parentUniqueId, articleUniqueId, code, description, group) {
-        const inputs = `
-            <div class="article-group" data-parent-unique-id="${parentUniqueId}" data-article-unique-id="${articleUniqueId}">
-                <input type="hidden" name="articles[${parentUniqueId}][${articleUniqueId}][code]" value="${escapeHTML(code)}">
-                <input type="hidden" name="articles[${parentUniqueId}][${articleUniqueId}][description]" value="${escapeHTML(description)}">
-                <input type="hidden" name="articles[${parentUniqueId}][${articleUniqueId}][group]" value="${escapeHTML(group)}">
-            </div>`;
-        $('#articles_hidden_inputs_container').append(inputs);
-    }
     
     updateNoProcessesMessage();
-    
-    // Cargar los artículos iniciales desde los datos JSON
-    if (articlesData && typeof articlesData === 'object' && !Array.isArray(articlesData)) {
-        // Solo procesar las claves que contienen arrays de artículos
-        Object.entries(articlesData).forEach(function([pivotId, articles]) {
-            // Verificar que pivotId sea numérico y articles sea un array
-            if (!isNaN(pivotId) && Array.isArray(articles)) {
-                articles.forEach(function(article) {
-                    if (article && typeof article === 'object' && article.id) {
-                        const articleUniqueId = `db_${article.id}`;
-                        const code = article.code || '';
-                        const description = article.description || '';
-                        const group = article.group || '';
-                        addArticleHiddenInputs(pivotId, articleUniqueId, code, description, group);
-                    }
-                });
-            }
-        });
-    }
 });
 </script>
 @endpush
