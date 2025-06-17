@@ -179,23 +179,31 @@ class CustomerOriginalOrderController extends Controller
             'processed' => $request->boolean('processed'),
         ]);
 
-        // 3. Preparar los datos para sincronizar los procesos.
-        $syncData = [];
+        // Obtener los procesos existentes para poder actualizarlos
+        $existingProcesses = $originalOrder->processes->keyBy('pivot.id');
         $selectedProcesses = $request->input('processes', []);
-        $finishedProcesses = $request->input('processes_finished', []);
+        $finishedProcesses = $request->input('finished', []);
         $orderDetails = json_decode($validated['order_details'], true);
+        $processedPivotIds = [];
         
-        // Procesamos cada proceso seleccionado
+        // Primero, eliminar procesos que ya no están en la lista
+        $originalOrder->processes()->detach();
+        
+        // Luego, crear nuevas relaciones para cada instancia de proceso
         foreach ($selectedProcesses as $uniqueId => $processId) {
-            // Verificamos si es un ID válido (podría ser un ID temporal con prefijo 'new_')
             if (!is_numeric($processId)) {
-                continue; // Saltamos IDs no numéricos por seguridad
+                // Si es un ID temporal (nuevo proceso), extraer el ID real
+                if (strpos($processId, 'new_') === 0) {
+                    $processId = substr($processId, 4);
+                } else {
+                    continue; // Saltar IDs no válidos
+                }
             }
             
             $process = Process::find($processId);
-            if (!$process) continue; // Medida de seguridad, aunque la validación ya lo cubre.
-
-            // Calcular el tiempo basado en los detalles de la orden.
+            if (!$process) continue;
+            
+            // Calcular el tiempo basado en los detalles de la orden
             $time = 0;
             if (isset($orderDetails['grupos'])) {
                 foreach ($orderDetails['grupos'] as $grupo) {
@@ -203,27 +211,42 @@ class CustomerOriginalOrderController extends Controller
                         if ($servicio['CodigoArticulo'] === $process->code) {
                             $cantidad = (float) $servicio['Cantidad'];
                             $time = $cantidad * $process->factor_correccion;
-                            break 2; // Salir de ambos bucles una vez encontrado.
+                            break 2;
                         }
                     }
                 }
             }
-
-            // Determinar si el proceso está marcado como finalizado.
-            // El formulario enviará `processes_finished[unique_id] = 1` si está marcado.
+            
+            // Determinar si el proceso está marcado como finalizado usando el ID único
             $isFinished = isset($finishedProcesses[$uniqueId]);
-
-            // Añadir los datos al array de sincronización.
-            $syncData[$processId] = [
+            
+            // Crear una nueva relación para esta instancia de proceso
+            $pivotData = [
                 'time' => $time,
+                'created' => true,
                 'finished' => $isFinished,
-                // 'finished_at' se gestiona automáticamente en el modelo `OriginalOrderProcess`.
+                'finished_at' => $isFinished ? now() : null,
+                'created_at' => now(),
+                'updated_at' => now()
             ];
+            
+            // Insertar manualmente la relación
+            $pivotId = \DB::table('original_order_processes')->insertGetId(
+                array_merge(
+                    [
+                        'original_order_id' => $originalOrder->id,
+                        'process_id' => $processId
+                    ],
+                    $pivotData
+                )
+            );
+            
+            // Mantener el mapeo de IDs únicos a IDs de pivote para referencia
+            $processedPivotIds[$uniqueId] = $pivotId;
         }
-
-        // 4. Sincronizar los procesos.
-        // `sync()` se encarga de añadir, actualizar y eliminar las relaciones necesarias.
-        $originalOrder->processes()->sync($syncData);
+        
+        // Cargar las relaciones actualizadas
+        $originalOrder->load('processes');
 
         // Procesar los artículos para cada instancia de proceso
         $processInstances = $originalOrder->processes()->withPivot('id')->get();

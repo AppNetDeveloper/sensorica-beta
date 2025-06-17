@@ -177,10 +177,17 @@
                                                             @php
                                                                 $process = $processes->firstWhere('id', $processId);
                                                                 if (!$process) continue; // Protección contra procesos que ya no existen
-                                                                $isFinished = isset(old('processes_finished')[$uniqueId]) || 
-                                                                    (isset($originalOrder->processes) && 
-                                                                    $originalOrder->processes->contains('id', $processId) && 
-                                                                    $originalOrder->processes->firstWhere('id', $processId)->pivot->finished);
+                                                                
+                                                                // Buscar el pivote por ID único si existe
+                                                                $pivot = null;
+                                                                if (isset($originalOrder->processes)) {
+                                                                    $pivot = $originalOrder->processes->first(function($p) use ($uniqueId) {
+                                                                        return $p->pivot->id == $uniqueId;
+                                                                    });
+                                                                }
+                                                                
+                                                                $isFinished = isset(old('finished')[$uniqueId]) || 
+                                                                    ($pivot && $pivot->pivot->finished);
                                                             @endphp
                                                             <tr data-unique-id="{{ $uniqueId }}" data-process-id="{{ $process->id }}">
                                                                 <td>{{ $process->code }}</td>
@@ -189,7 +196,7 @@
                                                                     <div class="custom-control custom-switch">
                                                                         <input type="checkbox" class="custom-control-input" 
                                                                                id="finished_{{ $uniqueId }}" 
-                                                                               name="processes_finished[{{ $uniqueId }}]" 
+                                                                               name="finished[{{ $uniqueId }}]" 
                                                                                value="1" 
                                                                                {{ $isFinished ? 'checked' : '' }}>
                                                                         <label class="custom-control-label" for="finished_{{ $uniqueId }}"></label>
@@ -300,7 +307,7 @@ $(document).ready(function() {
                 <td>${process.name}</td>
                 <td class="text-center">
                     <div class="custom-control custom-switch">
-                        <input type="checkbox" class="custom-control-input" id="finished_${uniqueId}" name="processes_finished[${uniqueId}]" value="1">
+                        <input type="checkbox" class="custom-control-input" id="finished_${uniqueId}" name="finished[${uniqueId}]" value="1">
                         <label class="custom-control-label" for="finished_${uniqueId}"></label>
                     </div>
                 </td>

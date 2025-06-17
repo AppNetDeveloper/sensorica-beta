@@ -37,7 +37,7 @@ class OriginalOrder extends Model
     public function processes()
     {
         return $this->belongsToMany(Process::class, 'original_order_processes')
-                    ->withPivot('created', 'finished_at')
+                    ->withPivot(['id', 'time', 'created', 'finished', 'finished_at'])
                     ->withTimestamps()
                     ->using(OriginalOrderProcess::class);
     }
