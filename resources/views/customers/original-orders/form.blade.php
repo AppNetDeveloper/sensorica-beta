@@ -63,18 +63,41 @@
                                     @enderror
                                 </div>
 
-                                <div class="form-group form-check">
-                                    <input type="checkbox" name="in_stock" id="in_stock" 
-                                           class="form-check-input @error('in_stock') is-invalid @enderror"
-                                           value="1" 
-                                           {{ old('in_stock', isset($originalOrder) && $originalOrder->in_stock ? 'checked' : '') }}>
-                                    <label class="form-check-label" for="in_stock">@lang('In Stock')</label>
-                                    @error('in_stock')
-                                        <span class="invalid-feedback" role="alert">
-                                            <strong>{{ $message }}</strong>
-                                        </span>
-                                    @enderror
-                                    <small class="form-text text-muted d-block">@lang('Check if the material is currently in stock')</small>
+                                <div class="form-group">
+                                    <div class="form-check">
+                                        <input type="checkbox" name="in_stock" id="in_stock" 
+                                               class="form-check-input @error('in_stock') is-invalid @enderror"
+                                               value="1" 
+                                               {{ old('in_stock', isset($originalOrder) && $originalOrder->in_stock ? 'checked' : '') }}>
+                                        <label class="form-check-label" for="in_stock">@lang('In Stock')</label>
+                                        @error('in_stock')
+                                            <span class="invalid-feedback" role="alert">
+                                                <strong>{{ $message }}</strong>
+                                            </span>
+                                        @enderror
+                                        <small class="form-text text-muted d-block">@lang('Check if the material is currently in stock')</small>
+                                    </div>
+                                    
+                                    <div class="form-check mt-2">
+                                        <input type="checkbox" name="processed" id="processed" 
+                                               class="form-check-input @error('processed') is-invalid @enderror"
+                                               value="1" 
+                                               {{ old('processed', isset($originalOrder) && $originalOrder->processed ? 'checked' : '') }}>
+                                        <label class="form-check-label" for="processed">@lang('Mark as Processed')</label>
+                                        @error('processed')
+                                            <span class="invalid-feedback" role="alert">
+                                                <strong>{{ $message }}</strong>
+                                            </span>
+                                        @enderror
+                                        <small class="form-text text-muted d-block">@lang('Indicates if this order has been processed in the system')</small>
+                                        
+                                        @if(isset($originalOrder) && $originalOrder->finished_at)
+                                            <div class="mt-2">
+                                                <strong>@lang('Processed on'):</strong> 
+                                                <span class="text-info">{{ $originalOrder->finished_at->format('d/m/Y H:i:s') }}</span>
+                                            </div>
+                                        @endif
+                                    </div>
                                 </div>
 
                                 <div class="form-group">
@@ -102,77 +125,110 @@
                                         <div class="alert alert-danger">{{ $message }}</div>
                                     @enderror
                                     <div class="mb-3" style="max-height: 200px; overflow-y: auto; border: 1px solid #ced4da; padding: .375rem .75rem; border-radius: .25rem;">
-                                        @if(isset($processes) && $processes->isNotEmpty())
-                                            @foreach($processes as $process)
-                                                @php
-                                                    $isChecked = false;
-                                                    if (old('processes')) { // Check if old input exists for 'processes'
-                                                        if (is_array(old('processes'))) {
-                                                            $isChecked = in_array($process->id, old('processes'));
-                                                        }
-                                                    } elseif ($isEdit && isset($selectedProcesses) && is_array($selectedProcesses)) { // No old input, check if editing and selectedProcesses exists
-                                                        $isChecked = in_array($process->id, $selectedProcesses);
-                                                    }
-                                                @endphp
-                                                <div class="custom-control custom-checkbox">
-                                                    <input type="checkbox" class="custom-control-input" 
-                                                           id="process_{{ $process->id }}" 
-                                                           name="processes[]" 
-                                                           value="{{ $process->id }}"
-                                                           {{ $isChecked ? 'checked' : '' }}>
-                                                    <label class="custom-control-label" for="process_{{ $process->id }}">{{ $process->name }}</label>
-                                                </div>
-                                            @endforeach
-                                        @else
-                                            <p class="text-muted small">@lang('No processes available to select.')</p>
-                                        @endif
-                                    </div>
-                                    <small class="form-text text-muted">@lang('Select all processes that should be associated with this order.')</small>
-                                </div>
-                                
-                                <div class="alert alert-info mb-4">
-                                    <i class="icon fas fa-info-circle"></i>
-                                    @lang('First select the processes above, then mark their completion status below after saving.')
-                                </div>
-                                
-                                @if(isset($originalOrder) && $originalOrder->processes->isNotEmpty())
-                                    <div class="form-group mt-4">
-                                        <h5 class="border-bottom pb-2">@lang('Process Status')</h5>
-                                        <p class="text-muted small">@lang('Mark processes as finished when they are completed.')</p>
-                                        <div class="list-group mt-3">
-                                            @foreach($originalOrder->processes as $process)
-                                                @php
-                                                    // Determina si el proceso está finalizado basándose en si 'finished_at' tiene un valor
-                                                    $isFinished = !is_null($process->pivot->finished_at);
-                                                @endphp
-                                                <div class="list-group-item d-flex justify-content-between align-items-center">
-                                                    <span class="process-name">{{ $process->name }}</span>
-                                                    <div class="custom-control custom-switch">
-                                                        <input type="checkbox" class="custom-control-input process-finished-toggle"
-                                                               id="toggle_finished_{{ $process->id }}"
-                                                               data-process-id="{{ $process->id }}"
-                                                               {{ $isFinished ? 'checked' : '' }}>
-                                                        <label class="custom-control-label" for="toggle_finished_{{ $process->id }}">
-                                                            {{ $isFinished ? __('Finished') : __('Mark as Finished') }}
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                                {{-- Asegúrate que el valor inicial del input oculto también refleje el estado correcto --}}
-                                                <input type="hidden" name="processes_finished[{{ $process->id }}]" value="{{ $isFinished ? '1' : '0' }}" id="process_finished_{{ $process->id }}">
-                                            @endforeach
+                                        <div class="input-group">
+                                            <select id="process_selector" class="form-control">
+                                                <option value="">@lang('Select a service...')</option>
+                                                @if(isset($processes) && $processes->isNotEmpty())
+                                                    @foreach($processes as $process)
+                                                        <option value="{{ $process->id }}" 
+                                                                data-name="{{ $process->name }}" 
+                                                                data-code="{{ $process->code }}">
+                                                            {{ $process->name }} ({{ $process->code }})
+                                                        </option>
+                                                    @endforeach
+                                                @endif
+                                            </select>
+                                            <div class="input-group-append">
+                                                <button type="button" id="add_process_btn" class="btn btn-primary">
+                                                    <i class="fas fa-plus"></i> @lang('Add')
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
-                                    
-                                    <div class="form-group mt-4">
-                                        <div class="custom-control custom-switch">
-                                            <input type="checkbox" class="custom-control-input" 
-                                                   id="processed" name="processed" value="1"
-                                                   {{ old('processed', $originalOrder->processed ?? false) ? 'checked' : '' }}>
-                                            <label class="custom-control-label" for="processed">@lang('Mark as Processed')</label>
-                                        </div>
-                                    <small class="form-text text-muted">@lang('Indicates whether this order has been processed in the system.')</small>
                                 </div>
-                                @endif
+
+                                <!-- Lista de procesos añadidos -->
+                                <div class="card mb-4">
+                                    <div class="card-header">
+                                        <h5 class="mb-0">@lang('Added Services')</h5>
+                                    </div>
+                                    <div class="card-body p-0">
+                                        <div class="table-responsive">
+                                            <table class="table table-hover mb-0" id="processes_table">
+                                                <thead class="bg-light">
+                                                    <tr>
+                                                        <th>@lang('Code')</th>
+                                                        <th>@lang('Name')</th>
+                                                        <th class="text-center">@lang('Finished')</th>
+                                                        <th class="text-right">@lang('Actions')</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="processes_list">
+                                                    <script>
+                                                        console.log('%c--- INICIO DEBUG RENDERIZADO DE PROCESOS ---', 'color: blue; font-weight: bold;');
+                                                        console.log('Datos completos de la orden (incluye procesos):', @json($originalOrder));
+                                                    </script>
+                                                    @php
+                                                        $processIdsToRender = old('processes', $originalOrder->processes->pluck('id')->all());
+                                                    @endphp
+
+                                                    @if (!empty($processIdsToRender))
+                                                        @foreach ($processIdsToRender as $processId)
+                                                            @php
+                                                                $process = $processes->firstWhere('id', $processId);
+                                                                if (!$process) continue;
+
+                                                                $dbProcess = $originalOrder->processes->firstWhere('id', $processId);
+                                                                $dbFinished = $dbProcess ? $dbProcess->pivot->finished : false;
+                                                                $isFinished = old('processes_finished.' . $processId, $dbFinished);
+                                                            @endphp
+                                                            
+                                                            <script>
+                                                                // Script de depuración para este proceso
+                                                                console.groupCollapsed('Debug Proceso: {{ addslashes($process->name) }} (ID: {{ $processId }})');
+                                                                console.log('Valor de `finished` en BD (crudo):', @json($dbFinished));
+                                                                console.log('Tipo de dato en BD:', '{{ gettype($dbFinished) }}');
+                                                                console.log('Valor `isFinished` final (usado en @checked):', @json($isFinished));
+                                                                console.log('Tipo de dato final:', '{{ gettype($isFinished) }}');
+                                                                console.log('Objeto `pivot` completo:', @json($dbProcess->pivot ?? null));
+                                                                console.groupEnd();
+                                                            </script>
+
+                                                            <tr data-process-id="{{ $process->id }}">
+                                                                <td>{{ $process->code }}</td>
+                                                                <td>{{ $process->name }}</td>
+                                                                <td class="text-center">
+                                                                    <div class="custom-control custom-switch">
+                                                                        <input type="checkbox"
+                                                                               class="custom-control-input"
+                                                                               id="finished_{{ $process->id }}"
+                                                                               name="processes_finished[{{ $process->id }}]"
+                                                                               value="1"
+                                                                               {{ $isFinished ? 'checked' : '' }}>
+                                                                        <label class="custom-control-label" for="finished_{{ $process->id }}"></label>
+                                                                    </div>
+                                                                </td>
+                                                                <td class="text-right process-actions">
+                                                                    <button type="button" class="btn btn-sm btn-danger remove-process">
+                                                                        <i class="fas fa-times"></i>
+                                                                    </button>
+                                                                </td>
+                                                                <input type="hidden" name="processes[]" value="{{ $process->id }}">
+                                                            </tr>
+                                                        @endforeach
+                                                    @endif
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <div id="no_processes" class="text-center p-3 {{ !empty($processIdsToRender) ? 'd-none' : '' }}">
+                                            <p class="text-muted mb-0">@lang('No services added yet. Use the selector above to add services.')</p>
+                                        </div>
+                                        
+                                        <!-- El contenedor de inputs ocultos ya no es necesario. -->
+                                    </div>
+                                </div>
+                                
+                                <!-- The Process Status section has been merged with the Added Services section above -->
 
                                 <div class="alert alert-info">
                                     <h5><i class="icon fas fa-info"></i> @lang('Note'):</h5>
@@ -183,12 +239,87 @@
                     </div>
 
                     <div class="card-footer">
-                        <button type="submit" class="btn btn-primary">
+                        <button type="submit" class="btn btn-primary" id="save_changes_btn">
                             <i class="fas fa-save"></i> {{ $isEdit ? __('Update') : __('Create') }} @lang('Order')
                         </button>
                         <a href="{{ route('customers.original-orders.index', $customer->id) }}" 
                            class="btn btn-default">@lang('Cancel')</a>
                     </div>
+                    
+                    <!-- Modal para agregar artículos -->
+                    <div class="modal fade" id="articlesModal" tabindex="-1" role="dialog" aria-labelledby="articlesModalLabel" aria-hidden="true">
+                        <div class="modal-dialog modal-lg" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="articlesModalLabel">@lang('Add Articles')</h5>
+                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                </div>
+                                <div class="modal-body">
+                                    <input type="hidden" id="current_process_id">
+                                    <input type="hidden" id="current_unique_id">
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <h6 id="process_name_display"></h6>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row mb-3">
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="article_code">@lang('Article Code')</label>
+                                                <input type="text" class="form-control" id="article_code" placeholder="@lang('Enter article code')">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label for="article_description">@lang('Description')</label>
+                                                <input type="text" class="form-control" id="article_description" placeholder="@lang('Enter description')">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <div class="form-group">
+                                                <label for="article_group">@lang('Group')</label>
+                                                <input type="text" class="form-control" id="article_group" placeholder="@lang('Group')">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <button type="button" id="add_article_btn" class="btn btn-primary">
+                                                <i class="fas fa-plus"></i> @lang('Add Article')
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="table-responsive mt-3">
+                                        <table class="table table-bordered table-hover" id="articles_table">
+                                            <thead class="bg-light">
+                                                <tr>
+                                                    <th>@lang('Code')</th>
+                                                    <th>@lang('Description')</th>
+                                                    <th>@lang('Group')</th>
+                                                    <th width="80">@lang('Actions')</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="articles_list">
+                                                <!-- Articles will be added here dynamically -->
+                                            </tbody>
+                                        </table>
+                                        <div id="no_articles" class="text-center p-3">
+                                            <p class="text-muted mb-0">@lang('No articles added yet.')</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" id="close-articles-modal">@lang('Close')</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                 </form>
             </div>
         </div>
@@ -196,78 +327,90 @@
 </div>
 
 @push('styles')
-
+<style>
+    #processes_table tbody tr {
+        cursor: pointer;
+    }
+    #processes_table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+    .process-actions {
+        white-space: nowrap;
+    }
+</style>
 @endpush
 
 @push('scripts')
-<!-- jQuery (make sure it's loaded before Select2) -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
-
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('DOM fully loaded');
-        
-        // Select2 initialization was removed as it's no longer used.
-
-        // Handle process finished toggles
-        function updateProcessFinishedToggle(checkbox) {
-            const $checkbox = $(checkbox);
-            const processId = $checkbox.data('process-id');
-            const isFinished = $checkbox.is(':checked') ? '1' : '0';
-            
-            console.log('Updating process:', processId, 'finished:', isFinished);
-            
-            // Update the hidden input
-            const $hiddenInput = $(`#process_finished_${processId}`);
-            if ($hiddenInput.length) {
-                $hiddenInput.val(isFinished);
-                console.log('Updated hidden input:', $hiddenInput.attr('name'), '=', $hiddenInput.val());
+    $(document).ready(function() {
+        // Función para actualizar la visibilidad del mensaje "No hay procesos"
+        function updateNoProcessesMessage() {
+            if ($('#processes_list tr').length === 0) {
+                $('#no_processes').removeClass('d-none');
             } else {
-                console.error('Hidden input not found for process:', processId);
-            }
-            
-            // Update the label
-            const $label = $checkbox.siblings('label');
-            if ($label.length) {
-                $label.text(isFinished === '1' ? '{{ __("Finished") }}' : '{{ __("Mark as Finished") }}');
-                console.log('Updated label text to:', $label.text());
-            } else {
-                console.error('Label not found for checkbox:', checkbox);
+                $('#no_processes').addClass('d-none');
             }
         }
 
-        // Initialize toggle states on page load
-        console.log('Initializing toggle states');
-        $('.process-finished-toggle').each(function() {
-            updateProcessFinishedToggle(this);
-        });
+        // Almacenar los procesos en una variable JS para un acceso más seguro
+        const allProcesses = @json($processes->keyBy('id'));
 
-        // Handle toggle changes
-        $(document).on('change', '.process-finished-toggle', function() {
-            console.log('Toggle changed:', this);
-            updateProcessFinishedToggle(this);
-            
-            // Force form submission to test if the value is being sent
-            // $('form').submit();
-        });
-
-        // Format JSON on page load
-        try {
-            const textarea = document.getElementById('order_details');
-            if (textarea && textarea.value) {
-                const obj = JSON.parse(textarea.value);
-                textarea.value = JSON.stringify(obj, null, 4);
+        // 1. Añadir proceso a la tabla
+        $('#add_process_btn').on('click', function() {
+            const processId = $('#process_selector').val();
+            if (!processId) {
+                alert('Por favor, seleccione un proceso.');
+                return;
             }
-        } catch (e) {
-            console.error('Invalid JSON in order details', e);
-        }
-        
-        // Debug: Log all hidden inputs
-        console.log('All hidden inputs:');
-        $('input[type="hidden"][name^="processes_finished"]').each(function() {
-            console.log($(this).attr('name'), '=', $(this).val());
+
+            // Evitar añadir duplicados
+            if ($(`#processes_list tr[data-process-id="${processId}"]`).length > 0) {
+                alert('Este proceso ya ha sido añadido.');
+                return;
+            }
+
+            const process = allProcesses[processId];
+            
+            if (!process) {
+                alert('Error: No se encontró el proceso seleccionado.');
+                return;
+            }
+
+            const newRow = `
+                <tr data-process-id="${process.id}">
+                    <td>${process.code}</td>
+                    <td>${process.name}</td>
+                    <td class="text-center">
+                        <div class="custom-control custom-switch">
+                            <input type="checkbox"
+                                   class="custom-control-input"
+                                   id="finished_${process.id}"
+                                   name="processes_finished[${process.id}]"
+                                   value="1">
+                            <label class="custom-control-label" for="finished_${process.id}"></label>
+                        </div>
+                    </td>
+                    <td class="text-right process-actions">
+                        <button type="button" class="btn btn-sm btn-danger remove-process">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </td>
+                    <input type="hidden" name="processes[]" value="${process.id}">
+                </tr>
+            `;
+
+            $('#processes_list').append(newRow);
+            updateNoProcessesMessage();
         });
+
+        // 2. Eliminar proceso de la tabla
+        $('#processes_list').on('click', '.remove-process', function() {
+            $(this).closest('tr').remove();
+            updateNoProcessesMessage();
+        });
+
+        // Inicializar el mensaje al cargar la página
+        updateNoProcessesMessage();
     });
 </script>
 @endpush

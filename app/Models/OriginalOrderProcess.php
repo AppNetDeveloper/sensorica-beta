@@ -55,16 +55,17 @@ class OriginalOrderProcess extends Pivot
      */
     protected static function booted()
     {
-        static::saved(function (OriginalOrderProcess $pivot) {
-            // Check if the 'finished_at' attribute was actually changed during this save operation.
-            // This prevents unnecessary updates if other pivot attributes were changed.
-            if ($pivot->isDirty('finished_at') || $pivot->wasChanged('finished_at')) {
-                // Get the parent OriginalOrder model
-                $originalOrder = $pivot->originalOrder;
+        static::saving(function ($pivot) {
+            // Si el campo 'finished' ha cambiado, actualizamos 'finished_at' automáticamente.
+            if ($pivot->isDirty('finished')) {
+                $pivot->finished_at = $pivot->finished ? now() : null;
+            }
+        });
 
-                if ($originalOrder) {
-                    // Call the method on OriginalOrder to update its overall finished_at status.
-                    // The allProcessesFinished() method within OriginalOrder will now query the DB directly.
+        static::saved(function (OriginalOrderProcess $pivot) {
+            // Si el estado 'finished' cambió, actualizamos el estado general de la orden.
+            if ($pivot->wasChanged('finished')) {
+                if ($originalOrder = $pivot->originalOrder) {
                     $originalOrder->updateFinishedStatus();
                 }
             }

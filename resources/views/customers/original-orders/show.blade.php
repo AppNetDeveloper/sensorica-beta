@@ -121,7 +121,24 @@
                                         @php
                                             $pivot = $process->pivot;
                                             $articles = $pivot->articles ?? collect();
+                                            
+                                            // Depurar los valores del pivot
+                                            // Forzar la conversión a boolean
+                                            $isFinished = (bool)$pivot->finished;
+                                            
+                                            $debugInfo = "Process ID: {$process->id}, Code: {$process->code}, ";
+                                            $debugInfo .= "Pivot ID: {$pivot->id}, ";
+                                            $debugInfo .= "finished (raw): {$pivot->finished}, ";
+                                            $debugInfo .= "finished (bool): " . ($isFinished ? 'true' : 'false') . ", ";
+                                            $debugInfo .= "finished_at: " . ($pivot->finished_at ?? 'null');
+                                            
+                                            // Asignar el valor convertido de vuelta al pivot
+                                            $pivot->finished = $isFinished;
+                                            
+                                            // Escribir en el log para depuración
+                                            \Log::info($debugInfo);
                                         @endphp
+                                        <!-- Debug: {{ $debugInfo }} -->
                                         <tr>
                                             <td>{{ $process->code }}</td>
                                             <td>{{ $process->name }}</td>
@@ -136,8 +153,8 @@
                                                 @endif
                                             </td>
                                             <td class="text-center">
-                                                @if($pivot->finished_at)
-                                                    <span class="badge bg-success">{{ $pivot->finished_at->format('Y-m-d H:i') }}</span>
+                                                @if($pivot->finished)
+                                                    <span class="badge bg-success">{{ $pivot->finished_at ? $pivot->finished_at->format('Y-m-d H:i') : __('Finished') }}</span>
                                                 @else
                                                     <span class="badge bg-warning">@lang('Pending')</span>
                                                 @endif

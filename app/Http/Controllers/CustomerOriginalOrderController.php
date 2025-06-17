@@ -88,13 +88,39 @@ class CustomerOriginalOrderController extends Controller
 
     public function show(Customer $customer, OriginalOrder $originalOrder)
     {
-        $originalOrder->load('processes');
+        // Cargar procesos con todos los campos pivot explícitamente
+        $originalOrder->load(['processes' => function($query) {
+            $query->withPivot('id', 'time', 'created', 'finished', 'finished_at');
+        }]);
+        
+        // Depurar los procesos cargados
+        \Log::info('Procesos cargados para la orden ' . $originalOrder->id . ':');
+        foreach ($originalOrder->processes as $process) {
+            \Log::info("Proceso ID: {$process->id}, Código: {$process->code}, finished: " . 
+                      ($process->pivot->finished ? 'true' : 'false') . 
+                      ", finished_at: " . ($process->pivot->finished_at ?? 'null'));
+        }
+        
         return view('customers.original-orders.show', compact('customer', 'originalOrder'));
     }
 
     public function edit(Customer $customer, OriginalOrder $originalOrder)
     {
         $processes = Process::all();
+        
+        // Cargar procesos con todos los campos pivot explícitamente
+        $originalOrder->load(['processes' => function($query) {
+            $query->withPivot('id', 'time', 'created', 'finished', 'finished_at');
+        }]);
+        
+        // Depurar los procesos cargados
+        \Log::info('Procesos cargados para edición de la orden ' . $originalOrder->id . ':');
+        foreach ($originalOrder->processes as $process) {
+            \Log::info("Proceso ID: {$process->id}, Código: {$process->code}, finished: " . 
+                      ($process->pivot->finished ? 'true' : 'false') . 
+                      ", finished_at: " . ($process->pivot->finished_at ?? 'null'));
+        }
+        
         $selectedProcesses = $originalOrder->processes->pluck('id')->toArray();
         
         return view('customers.original-orders.edit', [
@@ -107,17 +133,20 @@ class CustomerOriginalOrderController extends Controller
 
     public function update(Request $request, Customer $customer, OriginalOrder $originalOrder)
     {
+        // 1. Validar la petición.
         $validated = $request->validate([
             'order_id' => 'required|unique:original_orders,order_id,' . $originalOrder->id,
             'client_number' => 'nullable|string|max:255',
             'delivery_date' => 'nullable|date',
             'in_stock' => 'sometimes|boolean',
             'order_details' => 'required|json',
-            'processes' => 'required|array',
-            'processes.*' => 'exists:processes,id',
+            'processes' => 'sometimes|array', // `sometimes` para permitir eliminar todos los procesos.
+            'processes.*' => 'exists:processes,id', // Validar que cada ID de proceso exista.
+            'processes_finished' => 'sometimes|array', // Contendrá los checkboxes marcados.
             'processed' => 'nullable|boolean',
         ]);
 
+        // 2. Actualizar los campos principales de la orden.
         $originalOrder->update([
             'order_id' => $validated['order_id'],
             'client_number' => $validated['client_number'] ?? null,
@@ -127,60 +156,73 @@ class CustomerOriginalOrderController extends Controller
             'processed' => $request->boolean('processed'),
         ]);
 
-        // Sync processes
-        $processData = [];
+        // 3. Preparar los datos para sincronizar los procesos.
+        $syncData = [];
+        $selectedProcesses = $request->input('processes', []);
+        $finishedProcesses = $request->input('processes_finished', []);
         $orderDetails = json_decode($validated['order_details'], true);
-        
-        foreach ($validated['processes'] as $processId) {
-            $process = Process::findOrFail($processId);
+
+        foreach ($selectedProcesses as $processId) {
+            $process = Process::find($processId);
+            if (!$process) continue; // Medida de seguridad, aunque la validación ya lo cubre.
+
+            // Calcular el tiempo basado en los detalles de la orden.
             $time = 0;
-            
-            // Buscar la cantidad en los detalles del pedido
             if (isset($orderDetails['grupos'])) {
                 foreach ($orderDetails['grupos'] as $grupo) {
                     foreach ($grupo['servicios'] ?? [] as $servicio) {
                         if ($servicio['CodigoArticulo'] === $process->code) {
                             $cantidad = (float) $servicio['Cantidad'];
                             $time = $cantidad * $process->factor_correccion;
-                            break 2; // Salir de ambos bucles
+                            break 2; // Salir de ambos bucles una vez encontrado.
                         }
                     }
                 }
             }
-            
-            // Inicializar con valores por defecto
-            $processData[$processId] = [
+
+            // Determinar si el proceso está marcado como finalizado.
+            // El formulario enviará `processes_finished[process_id] = 1` si está marcado.
+            $isFinished = isset($finishedProcesses[$processId]);
+
+            // Añadir los datos al array de sincronización.
+            $syncData[$processId] = [
                 'time' => $time,
-                'created' => false,
-                'finished' => false,
-                'finished_at' => null
+                'finished' => $isFinished,
+                // 'finished_at' se gestiona automáticamente en el modelo `OriginalOrderProcess`.
             ];
+        }
 
-            // Si el proceso ya existía, mantener su estado actual
-            if ($originalOrder->processes->contains($processId)) {
-                $currentPivot = $originalOrder->processes->find($processId)->pivot;
-                $processData[$processId] = array_merge($processData[$processId], [
-                    'created' => $currentPivot->created,
-                    'finished' => $currentPivot->finished,
-                    'finished_at' => $currentPivot->finished_at
-                ]);
-            }
+        // 4. Sincronizar los procesos.
+        // `sync()` se encarga de añadir, actualizar y eliminar las relaciones necesarias.
+        $originalOrder->processes()->sync($syncData);
 
-            // Actualizar estado de finalización si se envía en el request
-            $isNowFinished = $request->boolean('processes_finished.' . $processId);
-            if ($isNowFinished) {
-                // Si se marca como finalizado y no lo estaba antes
-                if (!$processData[$processId]['finished']) {
-                    $processData[$processId]['finished'] = true;
-                    $processData[$processId]['finished_at'] = now();
+        // Procesar los artículos para cada instancia de proceso
+        // Primero, obtenemos todas las instancias de procesos recién sincronizadas
+        $processInstances = $originalOrder->processes()->withPivot('id')->get();
+        
+        // Recorremos cada instancia de proceso para procesar sus artículos
+        foreach ($processInstances as $processInstance) {
+            $processId = $processInstance->id;
+            $processInstanceId = $processInstance->pivot->id; // Este es el original_order_process_id
+            
+            // Verificar si hay artículos para este proceso en el request
+            $articlesKey = "processes.{$processId}.articles";
+            $articles = $request->input($articlesKey);
+            
+            if ($articles) {
+                // Eliminar artículos existentes para esta instancia de proceso
+                $processInstance->pivot->articles()->delete();
+                
+                // Crear nuevos artículos para esta instancia de proceso
+                foreach ($articles as $articleData) {
+                    $processInstance->pivot->articles()->create([
+                        'codigo_articulo' => $articleData['codigo_articulo'] ?? '',
+                        'descripcion_articulo' => $articleData['descripcion_articulo'] ?? '',
+                        'grupo_articulo' => $articleData['grupo_articulo'] ?? ''
+                    ]);
                 }
-            } else {
-                // Si se desmarca como finalizado
-                $processData[$processId]['finished'] = false;
-                $processData[$processId]['finished_at'] = null;
             }
         }
-        $originalOrder->processes()->sync($processData);
     
     // The OriginalOrderProcess model's 'saved' event now handles updating the OriginalOrder's finished_at status.
 
