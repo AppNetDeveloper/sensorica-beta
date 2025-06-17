@@ -4,7 +4,10 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Models\OriginalOrder;
+use App\Models\OrderFieldMapping;
+use App\Models\ProductionLine;
 
 class Customer extends Model
 {
@@ -22,6 +25,14 @@ class Customer extends Model
         'order_listing_url',
         'order_detail_url'
     ];
+
+    /**
+     * Obtiene los mapeos de campos para este cliente
+     */
+    public function fieldMappings(): HasMany
+    {
+        return $this->hasMany(OrderFieldMapping::class);
+    }
 
     /**
      * Los atributos que deberían estar ocultos para los arrays.

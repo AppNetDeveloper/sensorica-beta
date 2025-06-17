@@ -9,7 +9,15 @@ class Process extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['code', 'name', 'sequence', 'description'];
+    protected $fillable = ['code', 'name', 'sequence', 'description', 'factor_correccion'];
+    
+    protected $attributes = [
+        'factor_correccion' => 1.00
+    ];
+    
+    protected $casts = [
+        'factor_correccion' => 'decimal:2'
+    ];
     
     /**
      * Obtener las líneas de producción asociadas a este proceso

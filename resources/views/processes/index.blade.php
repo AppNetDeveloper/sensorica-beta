@@ -45,6 +45,7 @@
                                     <th>#</th>
                                     <th class="text-uppercase">@lang('CÓDIGO')</th>
                                     <th class="text-uppercase">@lang('NOMBRE')</th>
+                                    <th class="text-uppercase">@lang('FACTOR')</th>
                                     <th class="text-uppercase">@lang('SECUENCIA')</th>
                                     <th class="text-uppercase">@lang('DESCRIPCIÓN')</th>
                                     <th class="text-uppercase">@lang('ACCIONES')</th>
@@ -56,6 +57,7 @@
                                         <td>{{ $index + 1 }}</td>
                                         <td>{{ $process->code }}</td>
                                         <td>{{ $process->name }}</td>
+                                        <td class="text-center">{{ number_format($process->factor_correccion, 2) }}</td>
                                         <td>{{ $process->sequence }}</td>
                                         <td>{{ $process->description ?? 'N/A' }}</td>
                                         <td>
@@ -83,9 +85,6 @@
                                         </td>
                                     </tr>
                                 @empty
-                                    <tr>
-                                        <td colspan="6" class="text-center">@lang('No processes found.')</td>
-                                    </tr>
                                 @endforelse
                             </tbody>
                         </table>
@@ -125,6 +124,77 @@
         #processes-table_wrapper {
             width: 100%;
         }
+        .dataTables_paginate {
+            margin-top: 0.5rem;
+        }
+        .page-item.active .page-link {
+            background-color: #6c757d;
+            border-color: #6c757d;
+        }
+        .page-link {
+            color: #6c757d;
+        }
+        .page-link:hover {
+            color: #5a6268;
+        }
+        .dataTables_info {
+            padding-top: 0.5rem;
+        }
+        .table-striped tbody tr:nth-of-type(odd) {
+            background-color: rgba(0, 0, 0, 0.02);
+        }
+        .table-hover tbody tr:hover {
+            background-color: rgba(0, 0, 0, 0.075);
+        }
+        .dataTables_length select {
+            border-radius: 0.25rem;
+            padding: 0.375rem 0.75rem;
+            border: 1px solid #ced4da;
+        }
+        .dataTables_filter input {
+            border-radius: 0.25rem;
+            padding: 0.375rem 0.75rem;
+            border: 1px solid #ced4da;
+        }
+        /* Ocultar los íconos de ordenación predeterminados de DataTables */
+        .sorting:before, .sorting:after, .sorting_asc:before, .sorting_asc:after, .sorting_desc:before, .sorting_desc:after {
+            display: none !important;
+        }
+        .dataTables_wrapper .dataTables_paginate .paginate_button {
+            padding: 0.25rem 0.5rem;
+        }
+        .dataTables_wrapper .dataTables_paginate .paginate_button.current {
+            background: #6c757d;
+            color: white !important;
+            border: 1px solid #6c757d;
+        }
+        .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+            background: #5a6268;
+            color: white !important;
+            border: 1px solid #5a6268;
+        }
+        /* Mejora el aspecto de la tabla */
+        #processes-table {
+            border-collapse: separate;
+            border-spacing: 0;
+            border-radius: 0.25rem;
+            overflow: hidden;
+        }
+        #processes-table thead th {
+            border-top: none;
+            border-bottom: 2px solid #dee2e6;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 0.5px;
+        }
+        .card {
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        }
+        .card-header {
+            border-bottom: 0;
+        }
+    </style>
         .container-fluid.px-0 {
             width: 100%;
             max-width: 100%;
@@ -147,37 +217,65 @@
     <script>
         $(document).ready(function() {
             const table = $('#processes-table').DataTable({
-                responsive: true,
-                scrollX: true,
+                responsive: {
+                    details: false  // Deshabilitar detalles responsivos para evitar duplicación
+                },
+                scrollX: false, // Desactivar scrollX para evitar duplicación de encabezados
+                pagingType: 'simple_numbers',
                 language: {
                     search: "{{ __('Search:') }}",
                     lengthMenu: "{{ __('Show _MENU_ entries') }}",
                     info: "{{ __('Showing _START_ to _END_ of _TOTAL_ entries') }}",
-                    infoEmpty: "{{ __('Showing 0 to 0 of 0 entries') }}",
+                    infoEmpty: "{{ __('No entries to show') }}",
                     infoFiltered: "{{ __('(filtered from _MAX_ total entries)') }}",
                     paginate: {
                         first: "{{ __('First') }}",
                         last: "{{ __('Last') }}",
-                        next: "{{ __('Next') }}",
-                        previous: "{{ __('Previous') }}"
+                        next: '»',
+                        previous: '«'
                     },
                     emptyTable: "{{ __('No data available in table') }}",
-                    zeroRecords: "{{ __('No matching records found') }}"
+                    zeroRecords: "{{ __('No matching records found') }}",
+                    infoPostFix: ""
                 },
+                dom: "<'row mb-3'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
+                     "<'row'<'col-sm-12'tr>>" +
+                     "<'row mt-3'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7 d-flex justify-content-end'p>>",
+                autoWidth: false, // Evitar cálculo automático de ancho
                 order: [[0, 'asc']],
                 columnDefs: [
-                    { orderable: true, targets: [0, 1, 2, 3, 4] },
-                    { orderable: false, targets: [5], searchable: false }
-                ],
-                dom: '<"row"<"col-sm-12 col-md-6"B><"col-sm-12 col-md-6"f>>rtip',
-                buttons: [
-                    {
-                        extend: 'pageLength',
-                        className: 'btn btn-secondary'
+                    { 
+                        orderable: true, 
+                        targets: [0, 1, 2, 3, 4],
+                        className: 'text-center'
+                    },
+                    { 
+                        orderable: false, 
+                        targets: [5], 
+                        searchable: false,
+                        className: 'text-center'
                     }
                 ],
                 lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "{{ __('All') }}"]],
-                pageLength: 10
+                pageLength: 10,
+                initComplete: function() {
+                    // Mejora el aspecto de la tabla después de inicializar
+                    $('#processes-table_wrapper').addClass('pb-3');
+                    $('#processes-table_length label').addClass('font-weight-normal');
+                    $('#processes-table_filter label').addClass('font-weight-normal');
+                    $('#processes-table_paginate').addClass('mt-3');
+                    
+                    // Añade íconos a los botones de ordenación
+                    setTimeout(function() {
+                        // Limpiar cualquier ícono existente primero
+                        $('.sorting i, .sorting_asc i, .sorting_desc i').remove();
+                        
+                        // Añadir nuevos íconos
+                        $('.sorting').append(' <i class="fas fa-sort text-muted"></i>');
+                        $('.sorting_asc').append(' <i class="fas fa-sort-up"></i>');
+                        $('.sorting_desc').append(' <i class="fas fa-sort-down"></i>');
+                    }, 100);
+                }
             });
 
             // Actualizar la tabla si hay un mensaje de éxito o error

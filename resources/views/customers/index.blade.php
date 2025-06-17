@@ -27,9 +27,6 @@
                                     <tr>
                                         <th>ID</th>
                                         <th>{{ __('Name') }}</th>
-                                        <th>{{ __('Token ZeroTier') }}</th>
-                                        <th>{{ __('Order Listing URL') }}</th>
-                                        <th>{{ __('Order Detail URL') }}</th>
                                         <th>{{ __('Created At') }}</th>
                                         <th>{{ __('Action') }}</th> {{-- Asegúrate que esta columna sea la última --}}
                                     </tr>
@@ -88,7 +85,8 @@
                     { 
                         data: 'id', 
                         name: 'id',
-                        className: 'text-center'
+                        className: 'text-center',
+                        width: '80px'
                     },
                     { 
                         data: 'name', 
@@ -96,53 +94,21 @@
                         className: 'fw-semibold'
                     },
                     { 
-                        data: 'token_zerotier', 
-                        name: 'token_zerotier',
-                        render: function(data) {
-                            return data ? '<span class="text-truncate d-inline-block" style="max-width: 100px;" title="' + data + '">' + data + '</span>' : '-';
-                        },
-                        className: 'text-muted small'
-                    },
-                    { 
-                        data: 'order_listing_url', 
-                        name: 'order_listing_url',
-                        render: function(data) {
-                            return data ? '<a href="' + data + '" target="_blank" class="text-primary text-truncate d-inline-block" style="max-width: 150px;" title="' + data + '">' + 
-                                '<i class="fas fa-external-link-alt me-1"></i>' + 
-                                data.replace(/^https?:\/\//, '').split('/')[0] + 
-                                '</a>' : '-';
-                        },
-                        className: 'small'
-                    },
-                    { 
-                        data: 'order_detail_url', 
-                        name: 'order_detail_url',
-                        render: function(data) {
-                            if (!data) return '-';
-                            const displayUrl = data.replace('{order_id}', 'ID')
-                                .replace(/^https?:\/\//, '');
-                            return '<a href="' + data.replace('{order_id}', 'ID') + '" target="_blank" class="text-primary text-truncate d-inline-block" style="max-width: 150px;" title="' + data + '">' +
-                                '<i class="fas fa-external-link-alt me-1"></i>' +
-                                displayUrl.split('/')[0] + '...' +
-                                '</a>';
-                        },
-                        className: 'small'
-                    },
-                    { 
                         data: 'created_at', 
                         name: 'created_at',
+                        className: 'text-center',
+                        width: '150px',
                         render: function(data) {
-                            return data ? moment(data).format('DD/MM/YYYY') : '-';
-                        },
-                        className: 'text-center small text-muted'
+                            return data ? moment(data).format('LL') : '-';
+                        }
                     },
                     { 
                         data: 'action', 
                         name: 'action', 
                         orderable: false, 
                         searchable: false,
-                        className: 'text-nowrap text-end',
-                        width: '120px'
+                        className: 'text-center',
+                        width: '150px'
                     }
                 ],
                 columnDefs: [
@@ -151,10 +117,13 @@
                     {
                         targets: -1, // Última columna (Acción)
                         render: function (data, type, full, meta) {
-                             // Devuelve el HTML que viene del servidor para las acciones
+                            // Devuelve el HTML que viene del servidor para las acciones
                             return data;
                         }
-                    }
+                    },
+                    { width: '10%', targets: 0 }, // Ancho para ID
+                    { width: '40%', targets: 1 }, // Ancho para Nombre
+                    { width: '20%', targets: 2 }  // Ancho para Fecha de creación
                 ],
                 language: {
                     url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json" // URL para español

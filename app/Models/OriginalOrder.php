@@ -17,6 +17,8 @@ class OriginalOrder extends Model
         'order_details',
         'processed',
         'finished_at',
+        'delivery_date',
+        'in_stock',
     ];
 
     protected $casts = [
@@ -28,7 +30,8 @@ class OriginalOrder extends Model
     protected $dates = [
         'created_at',
         'updated_at',
-        'finished_at'
+        'finished_at',
+        'delivery_date'
     ];
 
     public function processes()

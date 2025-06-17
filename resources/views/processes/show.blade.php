@@ -49,6 +49,10 @@
                                     <td>{{ $process->name }}</td>
                                 </tr>
                                 <tr>
+                                    <th>Factor de Corrección:</th>
+                                    <td>{{ number_format($process->factor_correccion, 2) }}</td>
+                                </tr>
+                                <tr>
                                     <th>Orden de Secuencia:</th>
                                     <td>{{ $process->sequence }}</td>
                                 </tr>

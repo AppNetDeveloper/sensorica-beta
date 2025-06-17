@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\Pivot;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class OriginalOrderProcess extends Pivot
 {
@@ -12,20 +13,30 @@ class OriginalOrderProcess extends Pivot
     protected $fillable = [
         'original_order_id',
         'process_id',
+        'time',
         'created',
         'finished',
         'finished_at'
     ];
-
+    
     protected $casts = [
+        'time' => 'decimal:2',
         'created' => 'boolean',
         'finished' => 'boolean',
         'finished_at' => 'datetime'
     ];
-    
+
     protected $dates = [
         'finished_at'
     ];
+
+    /**
+     * Obtener los artículos asociados a este proceso de pedido
+     */
+    public function articles(): HasMany
+    {
+        return $this->hasMany(OriginalOrderArticle::class, 'original_order_process_id');
+    }
 
     public function originalOrder()
     {

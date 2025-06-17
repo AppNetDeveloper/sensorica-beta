@@ -80,6 +80,10 @@ Route::get('customers', [CustomerController::class, 'index'])->name('customers.i
 Route::resource('customers', CustomerController::class)->except(['edit', 'update', 'destroy']);
 
 // Customer Original Orders
+// Ruta para obtener el HTML de una fila de mapeo de campos
+Route::get('customers/{customer}/field-mapping-row', [CustomerController::class, 'fieldMappingRow'])
+    ->name('customers.field-mapping-row');
+
 Route::prefix('customers/{customer}')->name('customers.')->group(function () {
     Route::resource('original-orders', CustomerOriginalOrderController::class)
         ->names('original-orders')

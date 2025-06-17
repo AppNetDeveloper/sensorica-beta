@@ -54,7 +54,7 @@ class ProcessController extends Controller
         $validated = $request->validate([
             'code' => 'required|string|max:50|unique:processes,code',
             'name' => 'required|string|max:255',
-            'sequence' => 'required|integer|min:1|unique:processes,sequence',
+            'sequence' => 'required|integer|min:1', // Eliminada validación unique para permitir secuencias repetidas
             'description' => 'nullable|string',
         ]);
 
@@ -98,7 +98,7 @@ class ProcessController extends Controller
         $validated = $request->validate([
             'code' => 'required|string|max:50|unique:processes,code,' . $process->id,
             'name' => 'required|string|max:255',
-            'sequence' => 'required|integer|min:1|unique:processes,sequence,' . $process->id,
+            'sequence' => 'required|integer|min:1', // Eliminada validación unique para permitir secuencias repetidas
             'description' => 'nullable|string',
         ]);
 

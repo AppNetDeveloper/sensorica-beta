@@ -56,6 +56,16 @@
                         </div>
                         
                         <div class="mb-3">
+                            <label for="factor_correccion" class="form-label">@lang('Correction Factor') <span class="text-danger">*</span></label>
+                            <input type="number" step="0.01" min="0.01" class="form-control @error('factor_correccion') is-invalid @enderror" 
+                                   id="factor_correccion" name="factor_correccion" value="{{ old('factor_correccion', $process->factor_correccion) }}" required>
+                            <small class="form-text text-muted">@lang('Factor used to calculate the time for this process (time = quantity * factor)')</small>
+                            @error('factor_correccion')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                        
+                        <div class="mb-3">
                             <label for="description" class="form-label">@lang('Description')</label>
                             <textarea class="form-control @error('description') is-invalid @enderror" 
                                      id="description" name="description" rows="3">{{ old('description', $process->description) }}</textarea>

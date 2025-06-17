@@ -44,6 +44,26 @@
                                     </td>
                                 </tr>
                                 <tr>
+                                    <th class="bg-light">@lang('Delivery Date')</th>
+                                    <td>
+                                        @if($originalOrder->delivery_date)
+                                            {{ $originalOrder->delivery_date->format('Y-m-d H:i') }}
+                                        @else
+                                            <span class="text-muted">@lang('Not specified')</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th class="bg-light">@lang('Stock Status')</th>
+                                    <td>
+                                        @if($originalOrder->in_stock)
+                                            <span class="badge bg-success"><i class="fas fa-check-circle"></i> @lang('In Stock')</span>
+                                        @else
+                                            <span class="badge bg-warning"><i class="fas fa-exclamation-circle"></i> @lang('Out of Stock')</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                                <tr>
                                     <th class="bg-light">@lang('Created At')</th>
                                     <td>{{ $originalOrder->created_at->format('Y-m-d H:i') }}</td>
                                 </tr>
@@ -87,33 +107,71 @@
                             <table class="table table-bordered table-striped">
                                 <thead class="bg-light">
                                     <tr>
+                                        <th>@lang('Code')</th>
                                         <th>@lang('Process')</th>
+                                        <th>@lang('Sequence')</th>
+                                        <th>@lang('Correction Factor')</th>
+                                        <th>@lang('Time')</th>
                                         <th>@lang('Created')</th>
                                         <th>@lang('Finished At')</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @forelse($originalOrder->processes as $process)
+                                    @forelse($originalOrder->processes->sortBy('sequence') as $process)
+                                        @php
+                                            $pivot = $process->pivot;
+                                            $articles = $pivot->articles ?? collect();
+                                        @endphp
                                         <tr>
+                                            <td>{{ $process->code }}</td>
                                             <td>{{ $process->name }}</td>
+                                            <td class="text-center">{{ $process->sequence }}</td>
+                                            <td class="text-center">{{ number_format($process->factor_correccion, 2) }}</td>
+                                            <td class="text-center">{{ $pivot->time ? number_format($pivot->time, 2) . 'h' : '-' }}</td>
                                             <td class="text-center">
-                                                @if($process->pivot->created)
+                                                @if($pivot->created)
                                                     <span class="badge bg-success">@lang('Yes')</span>
                                                 @else
                                                     <span class="badge bg-warning">@lang('No')</span>
                                                 @endif
                                             </td>
                                             <td class="text-center">
-                                                @if($process->pivot->finished_at)
-                                                    <span class="badge bg-success">{{ \Carbon\Carbon::parse($process->pivot->finished_at)->format('Y-m-d H:i') }}</span>
+                                                @if($pivot->finished_at)
+                                                    <span class="badge bg-success">{{ $pivot->finished_at->format('Y-m-d H:i') }}</span>
                                                 @else
                                                     <span class="badge bg-warning">@lang('Pending')</span>
                                                 @endif
                                             </td>
                                         </tr>
+                                        @if($articles->isNotEmpty())
+                                            <tr>
+                                                <td colspan="7" class="p-0">
+                                                    <div class="table-responsive">
+                                                        <table class="table table-sm table-bordered mb-0">
+                                                            <thead class="bg-light">
+                                                                <tr>
+                                                                    <th>@lang('Article Code')</th>
+                                                                    <th>@lang('Description')</th>
+                                                                    <th>@lang('Group')</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                @foreach($articles as $article)
+                                                                    <tr>
+                                                                        <td>{{ $article->codigo_articulo }}</td>
+                                                                        <td>{{ $article->descripcion_articulo }}</td>
+                                                                        <td>{{ $article->grupo_articulo }}</td>
+                                                                    </tr>
+                                                                @endforeach
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        @endif
                                     @empty
                                         <tr>
-                                            <td colspan="3" class="text-center">@lang('No processes associated with this order.')</td>
+                                            <td colspan="7" class="text-center">@lang('No processes associated with this order.')</td>
                                         </tr>
                                     @endforelse
                                 </tbody>
