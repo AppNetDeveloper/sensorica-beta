@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Models\OriginalOrder;
 use App\Models\OrderFieldMapping;
 use App\Models\ProductionLine;
+use App\Models\ProcessFieldMapping;
 
 class Customer extends Model
 {
@@ -32,6 +33,14 @@ class Customer extends Model
     public function fieldMappings(): HasMany
     {
         return $this->hasMany(OrderFieldMapping::class);
+    }
+
+    /**
+     * Obtiene los mapeos de campos de procesos para este cliente
+     */
+    public function processFieldMappings(): HasMany
+    {
+        return $this->hasMany(ProcessFieldMapping::class);
     }
 
     /**

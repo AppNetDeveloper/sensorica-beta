@@ -87,15 +87,27 @@
                             <h4>@lang('Order Details')</h4>
                             <div class="bg-light p-3 rounded border">
                                 @php
-                                    $details = json_decode($originalOrder->order_details, true);
+                                    // Compatibilidad con ambos formatos: string JSON y array
+                                    if (is_string($originalOrder->order_details)) {
+                                        // Si es string, intentar decodificar JSON
+                                        $details = json_decode($originalOrder->order_details, true);
+                                    } elseif (is_array($originalOrder->order_details)) {
+                                        // Si ya es array, usar directamente
+                                        $details = $originalOrder->order_details;
+                                    } else {
+                                        // Fallback para otros tipos
+                                        $details = null;
+                                    }
                                 @endphp
-                                @if(is_array($details))
+                                @if(is_array($details) && !empty($details))
                                     <pre class="mb-0" style="max-height: 300px; overflow-y: auto;">{{ json_encode($details, JSON_PRETTY_PRINT) }}</pre>
+                                @elseif(is_string($originalOrder->order_details))
+                                    {{-- Mostrar string JSON tal como está si no se pudo decodificar --}}
+                                    <pre class="mb-0" style="max-height: 300px; overflow-y: auto;">{{ $originalOrder->order_details }}</pre>
                                 @else
                                     <div class="alert alert-warning">
-                                        <i class="fas fa-exclamation-triangle"></i> @lang('Invalid JSON format')
+                                        <i class="fas fa-exclamation-triangle"></i> @lang('No order details available')
                                     </div>
-                                    {{ $originalOrder->order_details }}
                                 @endif
                             </div>
                         </div>

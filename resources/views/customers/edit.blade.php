@@ -286,6 +286,192 @@
         
         // Inicializar botones de movimiento
         updateMoveButtons();
+        
+        // ========== SECCIÓN PARA MAPEOS DE PROCESOS ==========
+        
+        // Inicializar el índice para nuevos mapeos de procesos
+        let processMappingIndex = {{ $customer->processFieldMappings->count() }};
+        const processMappingsContainer = document.getElementById('process-mappings-container');
+        const addProcessMappingBtn = document.getElementById('add-process-mapping');
+        
+        // Función para actualizar los índices de los mapeos de procesos
+        function updateProcessMappingIndexes() {
+            const rows = processMappingsContainer.querySelectorAll('.mapping-row');
+            rows.forEach((row, index) => {
+                // Actualizar el atributo data-index
+                row.setAttribute('data-index', index);
+                
+                // Actualizar los nombres de los campos del formulario
+                const inputs = row.querySelectorAll('[name^="process_field_mappings["]');
+                inputs.forEach(input => {
+                    const name = input.getAttribute('name');
+                    const newName = name.replace(/process_field_mappings\[\d+\]/g, `process_field_mappings[${index}]`);
+                    input.setAttribute('name', newName);
+                });
+                
+                // Actualizar los IDs de los checkboxes de transformaciones
+                const checkboxes = row.querySelectorAll('input[type="checkbox"][id^="process_transformation_"]');
+                checkboxes.forEach(checkbox => {
+                    const id = checkbox.getAttribute('id');
+                    const newId = id.replace(/process_transformation_\d+_/, `process_transformation_${index}_`);
+                    checkbox.setAttribute('id', newId);
+                    
+                    // Actualizar el for del label asociado
+                    const label = document.querySelector(`label[for="${id}"]`);
+                    if (label) {
+                        label.setAttribute('for', newId);
+                    }
+                });
+            });
+            
+            // Actualizar el contador para nuevos mapeos
+            processMappingIndex = rows.length;
+        }
+        
+        // Función para actualizar los botones de mover de procesos
+        function updateProcessMoveButtons() {
+            const rows = processMappingsContainer.querySelectorAll('.mapping-row');
+            rows.forEach((row, index) => {
+                const upBtn = row.querySelector('.move-up');
+                const downBtn = row.querySelector('.move-down');
+                
+                if (upBtn) {
+                    upBtn.style.visibility = index === 0 ? 'hidden' : 'visible';
+                }
+                
+                if (downBtn) {
+                    downBtn.style.visibility = index === rows.length - 1 ? 'hidden' : 'visible';
+                }
+            });
+            
+            // Actualizar los índices después de mover
+            updateProcessMappingIndexes();
+        }
+        
+        // Añadir nuevo mapeo de proceso
+        if (addProcessMappingBtn) {
+            addProcessMappingBtn.addEventListener('click', function() {
+                // Deshabilitar el botón para evitar múltiples clics
+                const originalText = addProcessMappingBtn.innerHTML;
+                addProcessMappingBtn.disabled = true;
+                addProcessMappingBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Cargando...';
+
+                fetch(`{{ route('customers.field-mapping-row', $customer->id) }}?type=process&index=${processMappingIndex}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Error en la respuesta del servidor');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            const div = document.createElement('div');
+                            div.className = 'mapping-row mb-3 p-3 border rounded';
+                            div.setAttribute('data-index', processMappingIndex);
+                            div.innerHTML = data.html;
+                            
+                            // Remover el mensaje de "no hay mapeos" si existe
+                            const noMappingsAlert = processMappingsContainer.querySelector('.alert-info');
+                            if (noMappingsAlert) {
+                                noMappingsAlert.remove();
+                            }
+                            
+                            processMappingsContainer.appendChild(div);
+                            processMappingIndex++;
+                            
+                            // Actualizar botones de movimiento
+                            updateProcessMoveButtons();
+                            
+                            // Animación de entrada
+                            setTimeout(() => {
+                                div.style.transition = 'box-shadow 0.3s';
+                                div.style.boxShadow = '0 0 0 2px var(--bs-success)';
+                                setTimeout(() => {
+                                    div.style.boxShadow = 'none';
+                                }, 1000);
+                            }, 100);
+                            
+                            // Mostrar notificación de éxito
+                            showToast('Nuevo mapeo de proceso agregado correctamente', 'success');
+                        } else {
+                            throw new Error(data.message || 'Error al crear el mapeo de proceso');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        showToast('Error: ' + error.message, 'danger');
+                    })
+                    .finally(() => {
+                        // Restaurar el botón
+                        addProcessMappingBtn.disabled = false;
+                        addProcessMappingBtn.innerHTML = originalText;
+                    });
+            });
+        }
+        
+        // Delegación de eventos para los botones de eliminar y mover de procesos
+        if (processMappingsContainer) {
+            processMappingsContainer.addEventListener('click', function(e) {
+                const row = e.target.closest('.mapping-row');
+                if (!row) return;
+                
+                // Eliminar mapeo de proceso
+                if (e.target.closest('.remove-mapping')) {
+                    if (confirm('¿Estás seguro de que quieres eliminar este mapeo de proceso?')) {
+                        // Agregar clase para animación
+                        row.style.transition = 'opacity 0.3s';
+                        row.style.opacity = '0';
+                        
+                        setTimeout(() => {
+                            row.remove();
+                            updateProcessMoveButtons();
+                            
+                            // Si no quedan mapeos, mostrar el mensaje
+                            if (processMappingsContainer.querySelectorAll('.mapping-row').length === 0) {
+                                const alertDiv = document.createElement('div');
+                                alertDiv.className = 'alert alert-info';
+                                alertDiv.textContent = 'No hay mapeos de procesos definidos. Haz clic en "Añadir Mapeo de Proceso" para crear uno nuevo.';
+                                processMappingsContainer.appendChild(alertDiv);
+                            }
+                            
+                            // Mostrar notificación
+                            showToast('Mapeo de proceso eliminado correctamente', 'success');
+                        }, 300);
+                    }
+                    return;
+                }
+                
+                // Mover hacia arriba
+                if (e.target.closest('.move-up')) {
+                    const prevRow = row.previousElementSibling;
+                    if (prevRow && prevRow.classList.contains('mapping-row')) {
+                        row.parentNode.insertBefore(row, prevRow);
+                        updateProcessMoveButtons();
+                        showToast('Mapeo movido hacia arriba', 'success');
+                    }
+                    return;
+                }
+                
+                // Mover hacia abajo
+                if (e.target.closest('.move-down')) {
+                    const nextRow = row.nextElementSibling;
+                    if (nextRow && nextRow.classList.contains('mapping-row')) {
+                        row.parentNode.insertBefore(nextRow, row);
+                        updateProcessMoveButtons();
+                        showToast('Mapeo movido hacia abajo', 'success');
+                    }
+                    return;
+                }
+            });
+            
+            // Actualizar índices después de mover
+            updateProcessMappingIndexes();
+        }
+        
+        // Inicializar botones de movimiento de procesos
+        if (processMappingsContainer) {
+            updateProcessMoveButtons();
+        }
     });
 </script>
 @endpush
@@ -414,6 +600,45 @@
                                 @else
                                     <div class="alert alert-info">
                                         No hay mapeos definidos. Haz clic en "Añadir Mapeo" para crear uno nuevo.
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Sección de Mapeo de Campos para Procesos -->
+                    <div class="card mt-4">
+                        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-0">{{ __('Mapeo de Campos URL de Detalle de Pedido') }}</h6>
+                                <small class="text-muted">
+                                    {{ __('Define cómo se mapean los campos de la API de detalle a la tabla original_order_processes') }}
+                                </small>
+                            </div>
+                            <button type="button" id="add-process-mapping" class="btn btn-sm btn-success">
+                                <i class="fas fa-plus me-1"></i> {{ __('Añadir Mapeo de Proceso') }}
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small">
+                                Define cómo se mapean los campos de la API de detalle de pedido a los campos de la tabla original_order_processes.
+                            </p>
+                            
+                            <div id="process-mappings-container">
+                                @if($customer->processFieldMappings->count() > 0)
+                                    @foreach($customer->processFieldMappings as $index => $mapping)
+                                        @include('customers.partials.process_field_mappings', [
+                                            'index' => $index,
+                                            'mapping' => $mapping,
+                                            'processStandardFields' => $processStandardFields,
+                                            'transformationOptions' => $transformationOptions,
+                                            'isFirst' => $loop->first,
+                                            'isLast' => $loop->last
+                                        ])
+                                    @endforeach
+                                @else
+                                    <div class="alert alert-info">
+                                        No hay mapeos de procesos definidos. Haz clic en "Añadir Mapeo de Proceso" para crear uno nuevo.
                                     </div>
                                 @endif
                             </div>

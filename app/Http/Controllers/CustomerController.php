@@ -83,11 +83,16 @@ class CustomerController extends Controller
     {
         try {
             // Cargar el cliente con sus mapeos de campos ordenados
-            $customer = Customer::with(['fieldMappings' => function($query) {
-                $query->orderBy('id');
-            }])->findOrFail($id);
+            $customer = Customer::with([
+                'fieldMappings' => function($query) {
+                    $query->orderBy('id');
+                },
+                'processFieldMappings' => function($query) {
+                    $query->orderBy('id');
+                }
+            ])->findOrFail($id);
             
-            // Campos estándar que podríamos querer mapear
+            // Campos estándar que podríamos querer mapear para orders
             $standardFields = [
                 'order_id' => 'ID del Pedido',
                 'client_number' => 'Número de Cliente',
@@ -96,17 +101,23 @@ class CustomerController extends Controller
                 'in_stock' => 'En Stock (1/0)'
             ];
             
+            // Campos estándar que podríamos querer mapear para procesos
+            $processStandardFields = [
+                'process_id' => 'ID del Proceso',
+                'time' => 'Tiempo del Proceso'
+            ];
+            
             // Opciones de transformaciones disponibles
             $transformationOptions = [
                 'trim' => 'Eliminar espacios',
                 'uppercase' => 'Convertir a mayúsculas',
                 'lowercase' => 'Convertir a minúsculas',
-                'number' => 'Convertir a número',
-                'date' => 'Formatear como fecha',
+                'to_integer' => 'Convertir a entero',
+                'to_float' => 'Convertir a decimal',
                 'to_boolean' => 'Convertir a booleano (1/0)'
             ];
             
-            return view('customers.edit', compact('customer', 'standardFields', 'transformationOptions'));
+            return view('customers.edit', compact('customer', 'standardFields', 'processStandardFields', 'transformationOptions'));
             
         } catch (\Exception $e) {
             \Log::error('Error al cargar el formulario de edición del cliente: ' . $e->getMessage());
@@ -157,7 +168,13 @@ class CustomerController extends Controller
             'field_mappings.*.target_field' => 'required_with:field_mappings|string',
             'field_mappings.*.transformations' => 'nullable|array',
             'field_mappings.*.transformations.*' => 'string',
-            'field_mappings.*.is_required' => 'nullable|boolean'
+            'field_mappings.*.is_required' => 'nullable|boolean',
+            'process_field_mappings' => 'nullable|array',
+            'process_field_mappings.*.source_field' => 'required_with:process_field_mappings|string',
+            'process_field_mappings.*.target_field' => 'required_with:process_field_mappings|string',
+            'process_field_mappings.*.transformations' => 'nullable|array',
+            'process_field_mappings.*.transformations.*' => 'string',
+            'process_field_mappings.*.is_required' => 'nullable|boolean'
         ]);
 
         // Validar la solicitud
@@ -182,7 +199,7 @@ class CustomerController extends Controller
                 'token' => $validatedData['token'] ?? null,
             ]);
 
-            // Sincronizar los mapeos de campos si existen
+            // Sincronizar los mapeos de campos de orders si existen
             if (isset($validatedData['field_mappings'])) {
                 $updatedMappingIds = [];
                 
@@ -223,6 +240,47 @@ class CustomerController extends Controller
                 $customer->fieldMappings()->delete();
             }
 
+            // Sincronizar los mapeos de campos de procesos si existen
+            if (isset($validatedData['process_field_mappings'])) {
+                $updatedProcessMappingIds = [];
+                
+                // Procesar cada mapeo de proceso
+                foreach ($validatedData['process_field_mappings'] as $mappingData) {
+                    $mappingId = $mappingData['id'] ?? null;
+                    
+                    if ($mappingId) {
+                        // Actualizar mapeo existente
+                        $mapping = $customer->processFieldMappings()->find($mappingId);
+                        if ($mapping) {
+                            $mapping->update([
+                                'source_field' => $mappingData['source_field'],
+                                'target_field' => $mappingData['target_field'],
+                                'transformations' => $mappingData['transformations'] ?? [],
+                                'is_required' => $mappingData['is_required'] ?? false,
+                            ]);
+                            $updatedProcessMappingIds[] = $mapping->id;
+                        }
+                    } else {
+                        // Crear nuevo mapeo
+                        $mapping = $customer->processFieldMappings()->create([
+                            'source_field' => $mappingData['source_field'],
+                            'target_field' => $mappingData['target_field'],
+                            'transformations' => $mappingData['transformations'] ?? [],
+                            'is_required' => $mappingData['is_required'] ?? false,
+                        ]);
+                        $updatedProcessMappingIds[] = $mapping->id;
+                    }
+                }
+                
+                // Eliminar mapeos que no están en la lista actualizada
+                if (!empty($updatedProcessMappingIds)) {
+                    $customer->processFieldMappings()->whereNotIn('id', $updatedProcessMappingIds)->delete();
+                }
+            } else {
+                // Si no hay mapeos, eliminar todos los existentes
+                $customer->processFieldMappings()->delete();
+            }
+
             // Confirmar la transacción
             DB::commit();
 
@@ -260,33 +318,61 @@ class CustomerController extends Controller
     {
         try {
             $index = $request->input('index', 0);
+            $type = $request->input('type', 'order'); // 'order' o 'process'
             
-            // Usar el mismo array de campos estándar que en create/edit
-            $standardFields = [
-                'order_id' => 'ID del Pedido',
-                'client_number' => 'Número de Cliente',
-                'created_at' => 'Fecha de Creación',
-                'delivery_date' => 'Fecha de Entrega',
-                'in_stock' => 'En Stock (1/0)'
-            ];
-            
-            // Opciones de transformaciones disponibles
-            $transformationOptions = [
-                'trim' => 'Eliminar espacios',
-                'uppercase' => 'Convertir a mayúsculas',
-                'lowercase' => 'Convertir a minúsculas',
-                'number' => 'Convertir a número',
-                'date' => 'Formatear como fecha',
-                'to_boolean' => 'Convertir a booleano (1/0)'
-            ];
-            
-            // Renderizar la vista parcial para la fila de mapeo
-            $html = view('customers.partials.field_mappings', [
-                'index' => $index,
-                'standardFields' => $standardFields,
-                'transformationOptions' => $transformationOptions,
-                'mapping' => null
-            ])->render();
+            if ($type === 'process') {
+                // Campos estándar para procesos
+                $standardFields = [
+                    'process_id' => 'ID del Proceso',
+                    'time' => 'Tiempo del Proceso'
+                ];
+                
+                // Opciones de transformaciones disponibles
+                $transformationOptions = [
+                    'trim' => 'Eliminar espacios',
+                    'uppercase' => 'Convertir a mayúsculas',
+                    'lowercase' => 'Convertir a minúsculas',
+                    'to_integer' => 'Convertir a entero',
+                    'to_float' => 'Convertir a decimal',
+                    'to_boolean' => 'Convertir a booleano (1/0)'
+                ];
+                
+                // Renderizar la vista parcial para la fila de mapeo de procesos
+                $html = view('customers.partials.process_field_mappings', [
+                    'index' => $index,
+                    'processStandardFields' => $standardFields,
+                    'transformationOptions' => $transformationOptions,
+                    'mapping' => null
+                ])->render();
+                
+            } else {
+                // Usar el mismo array de campos estándar que en create/edit para orders
+                $standardFields = [
+                    'order_id' => 'ID del Pedido',
+                    'client_number' => 'Número de Cliente',
+                    'created_at' => 'Fecha de Creación',
+                    'delivery_date' => 'Fecha de Entrega',
+                    'in_stock' => 'En Stock (1/0)'
+                ];
+                
+                // Opciones de transformaciones disponibles
+                $transformationOptions = [
+                    'trim' => 'Eliminar espacios',
+                    'uppercase' => 'Convertir a mayúsculas',
+                    'lowercase' => 'Convertir a minúsculas',
+                    'to_integer' => 'Convertir a entero',
+                    'to_float' => 'Convertir a decimal',
+                    'to_boolean' => 'Convertir a booleano (1/0)'
+                ];
+                
+                // Renderizar la vista parcial para la fila de mapeo de orders
+                $html = view('customers.partials.field_mappings', [
+                    'index' => $index,
+                    'standardFields' => $standardFields,
+                    'transformationOptions' => $transformationOptions,
+                    'mapping' => null
+                ])->render();
+            }
             
             return response()->json([
                 'success' => true,
