@@ -385,9 +385,9 @@
                     <div class="card mt-4">
                         <div class="card-header bg-light d-flex justify-content-between align-items-center">
                             <div>
-                                <h6 class="mb-0">{{ __('Mapeo de Campos') }}</h6>
+                                <h6 class="mb-0">{{ __('Mapeo de Campos URL de Listado de Pedidos') }}</h6>
                                 <small class="text-muted">
-                                    {{ __('Define cómo se mapean los campos de la API a la base de datos') }}
+                                    {{ __('Define cómo se mapean los campos de la API a la base de datos con URL de Listado de Pedidos') }}
                                 </small>
                             </div>
                             <button type="button" id="add-mapping" class="btn btn-sm btn-primary">
