@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Models\Process; // Añadido para la relación belongsToMany
+use Illuminate\Support\Facades\Log;
 
 class OriginalOrder extends Model
 {
@@ -24,7 +24,7 @@ class OriginalOrder extends Model
     protected $casts = [
         'order_details' => 'json',
         'processed' => 'boolean',
-        'finished_at' => 'datetime'
+        'finished_at' => 'datetime',
     ];
     
     protected $dates = [
@@ -34,61 +34,84 @@ class OriginalOrder extends Model
         'delivery_date'
     ];
 
+    /**
+     * IMPORTANTE: Se han eliminado los eventos como updated() para evitar bucles infinitos.
+     * La lógica ahora vive en los dos métodos de abajo, que son llamados por el controlador.
+     */
+
     public function processes()
     {
         return $this->belongsToMany(Process::class, 'original_order_processes')
+                    ->using(OriginalOrderProcess::class)
                     ->withPivot(['id', 'time', 'created', 'finished', 'finished_at'])
-                    ->withTimestamps()
-                    ->using(OriginalOrderProcess::class);
+                    ->withTimestamps();
     }
     
-    /**
-     * Get the customer that owns the original order.
-     */
     public function customer()
     {
         return $this->belongsTo(Customer::class);
     }
     
-    /**
-     * Check if all processes are finished for this order
-     *
-     * @return bool
-     */
-    public function allProcessesFinished()
+    public function articles()
     {
-        // An order must have at least one process to be considered "finishable" based on its processes.
-        // We use processes() to initiate a query, ensuring fresh data.
-        if ($this->processes()->count() === 0) {
-            return false; 
-        }
-        
-        // Count how many of the associated processes DO NOT have a finished_at date in the pivot table.
-        // Again, using processes() ensures a fresh query.
-        $unfinishedProcessesCount = $this->processes()
-                                         ->wherePivotNull('finished_at')
-                                         ->count();
-                                         
-        // If the count of unfinished processes is zero, then all processes are finished.
-        return $unfinishedProcessesCount === 0;
+        return $this->hasManyThrough(
+            OriginalOrderArticle::class,
+            OriginalOrderProcess::class,
+            'original_order_id',
+            'original_order_process_id',
+            'id',
+            'id'
+        );
+    }
+    
+    public function orderProcesses()
+    {
+        return $this->hasMany(OriginalOrderProcess::class, 'original_order_id');
     }
     
     /**
-     * Update the finished_at timestamp if all processes are finished
+     * Comprueba si todos los procesos de esta orden están finalizados.
+     * Esta es la lógica correcta para contar los procesos.
      *
      * @return bool
      */
-    public function updateFinishedStatus()
+    /**
+     * Comprueba si todos los procesos de esta orden están finalizados.
+     */
+    public function allProcessesFinished(): bool
     {
-        if ($this->allProcessesFinished() && !$this->finished_at) {
+        $totalProcesses = $this->orderProcesses()->count();
+        if ($totalProcesses === 0) return false;
+        
+        $finishedProcesses = $this->orderProcesses()->where('finished', true)->count();
+        return $finishedProcesses === $totalProcesses;
+    }
+    
+    /**
+     * Actualiza el estado de finalización y se guarda a sí mismo de forma segura.
+     * Este método es público para ser llamado desde el evento del modelo pivot.
+     */
+    public function updateFinishedStatus(): bool
+    {
+        $allFinished = $this->allProcessesFinished();
+        $changed = false;
+        
+        if ($allFinished && is_null($this->finished_at)) {
             $this->finished_at = now();
-            return $this->save();
+            $changed = true;
+            Log::info("Orden {$this->id}: Todos los procesos finalizados. Marcando como terminada.");
+        } 
+        elseif (!$allFinished && !is_null($this->finished_at)) {
+            $this->finished_at = null;
+            $changed = true;
+            Log::info("Orden {$this->id}: Un proceso fue revertido. Eliminando fecha de finalización.");
         }
         
-        // If not all processes are finished but finished_at is set, clear it
-        if (!$this->allProcessesFinished() && $this->finished_at) {
-            $this->finished_at = null;
-            return $this->save();
+        if ($changed) {
+            // ¡ESTA ES LA CLAVE!
+            // saveQuietly() guarda el modelo SIN disparar ningún evento (como 'updated').
+            // Esto rompe el bucle infinito.
+            return $this->saveQuietly(); 
         }
         
         return false;

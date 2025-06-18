@@ -304,21 +304,45 @@
 
 @push('styles')
 <style>
+    /* Asegurar que la tabla tenga scroll horizontal cuando sea necesario */
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        max-width: 100%;
+    }
+    
+    /* Estilos para la tabla de procesos */
     #processes_table tbody tr {
         cursor: pointer;
     }
+    
     #processes_table tbody tr:hover {
         background-color: #f8f9fa;
     }
+    
+    /* Alineación vertical de contenido en celdas */
+    #processes_table th,
+    #processes_table td {
+        vertical-align: middle !important;
+    }
+    
     .process-actions {
         white-space: nowrap;
     }
+    
     .articles-container {
-        /* display: none; is inline */
         padding: 10px;
         background-color: #f8f9fa;
         border-top: 1px solid #dee2e6;
-        /* transition: all 0.3s ease-in-out; */ /* Comentado para probar conflicto con jQuery slideToggle */
+    }
+    
+    /* Media query para apilar columnas en pantallas menores a 1700px */
+    @media (max-width: 1700px) {
+        .card-body > .row > .col-md-6 {
+            flex: 0 0 100%;
+            max-width: 100%;
+            margin-bottom: 20px;
+        }
     }
 </style>
 @endpush

@@ -10,16 +10,67 @@ use Symfony\Component\Process\Exception\ProcessFailedException;
 
 class ReplicateDatabaseNightly extends Command
 {
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
     protected $signature = 'db:replicate-nightly';
-    protected $description = 'Dumps the primary database (boisol) and fully replaces the secondary database (sol), reteniendo dumps fallidos 7 días.';
 
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected $description = 'Dumps the primary database and replaces the secondary, detecting automatically between mysql/mariadb tools.';
+
+    /**
+     * Finds the first available executable from a list of candidates.
+     *
+     * @param array $commands
+     * @return string|null
+     */
+    private function findExecutable(array $commands): ?string
+    {
+        foreach ($commands as $command) {
+            // 'command -v' is a portable way to check if a command exists in the system's PATH.
+            $process = Process::fromShellCommandline("command -v " . escapeshellarg($command));
+            $process->run();
+            if ($process->isSuccessful()) {
+                return $command;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Execute the console command.
+     *
+     * @return int
+     */
     public function handle()
     {
         $this->info('>>> Iniciando proceso de copia nocturna de base de datos');
 
+        // --- NEW: Detect available database tools ---
+        $this->info("Detectando herramientas de base de datos...");
+        $dumpExecutable = $this->findExecutable(['mysqldump', 'mariadb-dump']);
+        $clientExecutable = $this->findExecutable(['mysql', 'mariadb']);
+
+        if (!$dumpExecutable) {
+            $this->error("ERROR: No se encontró 'mysqldump' ni 'mariadb-dump'. Por favor, instale uno de los dos.");
+            return 1;
+        }
+
+        if (!$clientExecutable) {
+            $this->error("ERROR: No se encontró el cliente 'mysql' ni 'mariadb'. Por favor, instale uno de los dos.");
+            return 1;
+        }
+        $this->info("-> Herramientas detectadas: '{$dumpExecutable}' y '{$clientExecutable}'.");
+
         // --- 0. Directorio temporal y retención de 7 días ---
         $tempDir = storage_path('app/backup-temp');
-        if (! is_dir($tempDir)) {
+        if (!is_dir($tempDir)) {
             mkdir($tempDir, 0755, true);
         }
         foreach (glob("{$tempDir}/*.sql") as $oldFile) {
@@ -36,7 +87,7 @@ class ReplicateDatabaseNightly extends Command
         // --- 2. Configuración Origen ---
         $sourceConn   = Config::get('database.default');
         $sourceConfig = Config::get("database.connections.{$sourceConn}");
-        if (! $sourceConfig) {
+        if (!$sourceConfig) {
             $this->error("No se encontró la conexión de BD '{$sourceConn}'.");
             return 1;
         }
@@ -53,17 +104,18 @@ class ReplicateDatabaseNightly extends Command
         $tgtHost = env('REPLICA_DB_HOST');
         $tgtPort = env('REPLICA_DB_PORT', 3306);
 
-        if (! $tgtDb || ! $tgtUser || ! $tgtPass || ! $tgtHost) {
+        if (!$tgtDb || !$tgtUser || !$tgtPass || !$tgtHost) {
             $this->error("Faltan vars de entorno REPLICA_DB_* para BD destino.");
             return 1;
         }
 
-        // --- 4. Dump con DROP TABLE ---
+        // --- 4. Dump con DROP TABLE (usando el ejecutable detectado) ---
         $this->info("Paso 1: Creando volcado de '{$srcDb}' en '{$dumpFile}'...");
         $dumpCmd = sprintf(
-            'mariadb-dump --skip-tz-utc --host=%s --port=%s --user=%s --password=%s '.
-            '--single-transaction --skip-lock-tables --routines --events '.
+            '%s --skip-tz-utc --host=%s --port=%s --user=%s --password=%s ' .
+            '--single-transaction --skip-lock-tables --routines --events ' .
             '--add-drop-table %s > %s',
+            $dumpExecutable, // CAMBIO: Variable dinámica
             escapeshellarg($srcHost),
             escapeshellarg($srcPort),
             escapeshellarg($srcUser),
@@ -92,7 +144,8 @@ class ReplicateDatabaseNightly extends Command
             $tgtDb
         );
         $recreateCmd = sprintf(
-            'mariadb --host=%s --port=%s --user=%s --password=%s -e %s',
+            '%s --host=%s --port=%s --user=%s --password=%s -e %s',
+            $clientExecutable, // CAMBIO: Variable dinámica
             escapeshellarg($tgtHost),
             escapeshellarg($tgtPort),
             escapeshellarg($tgtUser),
@@ -107,20 +160,18 @@ class ReplicateDatabaseNightly extends Command
             $procRecreate->mustRun();
             $this->info("-> Base de datos destino '{$tgtDb}' recreada correctamente.");
         } catch (ProcessFailedException $e) {
-            // Registra el mensaje de excepción
             Log::error("Error recrear BD destino '{$tgtDb}': " . $e->getMessage());
-            // Muestra en consola el detalle de STDERR y STDOUT
             $this->error("ERROR al limpiar la BD destino. Detalle:");
             $this->error($procRecreate->getErrorOutput());
             $this->error($procRecreate->getOutput());
             return 1;
         }
-        
 
         // --- 6. Restaurar Dump en Destino ---
         $this->info("Paso 3: Restaurando volcado en '{$tgtDb}'...");
         $restoreCmd = sprintf(
-            'mariadb --host=%s --port=%s --user=%s --password=%s %s < %s',
+            '%s --host=%s --port=%s --user=%s --password=%s %s < %s',
+            $clientExecutable, // CAMBIO: Variable dinámica
             escapeshellarg($tgtHost),
             escapeshellarg($tgtPort),
             escapeshellarg($tgtUser),

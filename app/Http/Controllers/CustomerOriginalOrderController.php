@@ -6,6 +6,8 @@ use App\Models\Customer;
 use App\Models\OriginalOrder;
 use App\Models\Process;
 use Illuminate\Http\Request;
+use App\Models\OriginalOrderProcess;
+use App\Models\OriginalOrderArticle;
 
 class CustomerOriginalOrderController extends Controller
 {

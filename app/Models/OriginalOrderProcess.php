@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Log;
 
 class OriginalOrderProcess extends Pivot
 {
@@ -25,69 +27,54 @@ class OriginalOrderProcess extends Pivot
         'finished' => 'boolean',
         'finished_at' => 'datetime'
     ];
-
+    
     protected $dates = [
         'finished_at'
     ];
 
-    /**
-     * Obtener los artículos asociados a este proceso de pedido
-     */
-    public function articles(): HasMany
-    {
-        return $this->hasMany(OriginalOrderArticle::class, 'original_order_process_id');
-    }
-
-    public function originalOrder()
-    {
-        return $this->belongsTo(OriginalOrder::class);
-    }
-
-    public function process()
-    {
-        return $this->belongsTo(Process::class);
-    }
+    protected $table = 'original_order_processes';
 
     /**
      * The "booted" method of the model.
+     * Se encarga de la lógica interna del propio modelo.
      *
      * @return void
      */
     protected static function booted()
     {
-        static::saving(function ($pivot) {
-            // Si el campo 'finished' ha cambiado, actualizamos 'finished_at' automáticamente.
+        Log::info("OriginalOrderProcess booted");
+        
+        static::saving(function (self $pivot) {
             if ($pivot->isDirty('finished')) {
                 $pivot->finished_at = $pivot->finished ? now() : null;
             }
         });
 
-        static::saved(function (OriginalOrderProcess $pivot) {
-            // Si el estado 'finished' cambió, actualizamos el estado general de la orden.
-            if ($pivot->wasChanged('finished')) {
-                if ($originalOrder = $pivot->originalOrder) {
-                    $originalOrder->updateFinishedStatus();
-                }
-            }
+        // Evento DESPUÉS de guardar: notifica a la orden padre.
+        static::saved(function (self $pivot) {
+            // ¡CAMBIO CLAVE! Se ha eliminado la condición "if ($pivot->wasChanged('finished'))".
+            // Ahora, siempre que se guarde un proceso (ya sea nuevo o actualizado),
+            // se notificará al padre para que verifique su estado.
+            
+            Log::info("Proceso {$pivot->id} guardado. Notificando a la orden padre {$pivot->original_order_id} para que verifique su estado.");
+            
+            // La lógica de notificación se mantiene.
+            $pivot->originalOrder?->updateFinishedStatus();
         });
     }
+    
+    public function articles(): HasMany
+    {
+        return $this->hasMany(OriginalOrderArticle::class, 'original_order_process_id');
+    }
 
-    // Ensure the pivot model knows about the parent relationship key if it's non-standard
-    // In this case, 'original_order_id' is standard for an originalOrder() relationship.
-    // public function getParentKeyName()
-    // {
-    //     return 'original_order_id'; 
-    // }
+    public function originalOrder(): BelongsTo
+    {
+        return $this->belongsTo(OriginalOrder::class, 'original_order_id');
+    }
 
-    // If you need to access the OriginalOrder model instance from the pivot model instance:
-    // public function originalOrder()
-    // {
-    //     return $this->belongsTo(OriginalOrder::class, 'original_order_id');
-    // }
-
-    // If you need to access the Process model instance from the pivot model instance:
-    // public function process()
-    // {
-    //     return $this->belongsTo(Process::class);
-    // }
+    public function process(): BelongsTo
+    {
+        return $this->belongsTo(Process::class);
+    }
 }
