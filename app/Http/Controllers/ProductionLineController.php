@@ -17,11 +17,15 @@ class ProductionLineController extends Controller
 
     public function getProductionLines(Request $request, $customer_id, DataTables $dataTables)
     {
-        $query = ProductionLine::where('customer_id', $customer_id);
+        $query = ProductionLine::withCount('processes')
+            ->where('customer_id', $customer_id);
     
-        return DataTables::of($query)
+        return $dataTables->eloquent($query)
             ->addColumn('action', function ($line) {
                 return $this->getActionButtons($line);
+            })
+            ->addColumn('processes_count', function($line) {
+                return $line->processes_count;
             })
             ->rawColumns(['action']) // Permitir HTML en la columna 'action'
             ->make(true);

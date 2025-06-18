@@ -1,79 +1,82 @@
+@php
+    $mappings = $mappings ?? [];
+    $processStandardFields = $processStandardFields ?? [];
+    $index = $index ?? 0;
+    $mapping = $mapping ?? null;
+    $isFirst = $isFirst ?? false;
+    $isLast = $isLast ?? false;
+    
+    // Si no hay mapeo, creamos uno vacío
+    if (!$mapping) {
+        $mapping = new \App\Models\ProcessFieldMapping([
+            'source_field' => '',
+            'target_field' => '',
+            'transformations' => [],
+            'is_required' => true
+        ]);
+    }
+    
+    // Opciones de transformaciones disponibles
+    $transformationOptions = [
+        'trim' => 'Eliminar espacios',
+        'uppercase' => 'Convertir a mayúsculas',
+        'lowercase' => 'Convertir a minúsculas',
+        'number' => 'Convertir a número',
+        'date' => 'Formatear como fecha',
+        'to_boolean' => 'Convertir a booleano (1/0)',
+    ];
+@endphp
+
 <div class="mapping-row mb-3 p-3 border rounded" data-index="{{ $index }}">
-    <div class="row">
-        <div class="col-md-4">
-            <div class="form-group">
-                <label for="process_field_mappings_{{ $index }}_source_field" class="form-label">{{ __('Campo de Origen (API)') }}</label>
-                <input type="text" 
-                       name="process_field_mappings[{{ $index }}][source_field]" 
-                       id="process_field_mappings_{{ $index }}_source_field"
-                       class="form-control" 
-                       value="{{ old('process_field_mappings.' . $index . '.source_field', $mapping->source_field ?? '') }}"
-                       placeholder="ej: ProcessCode, ProcessName">
-                <small class="form-text text-muted">{{ __('Nombre del campo en la respuesta de la API') }}</small>
-            </div>
+    <input type="hidden" name="process_field_mappings[{{ $index }}][id]" value="{{ $mapping->id ?? '' }}">
+    <div class="row g-3">
+        <div class="col-md-5">
+            <label class="form-label">Campo en la API</label>
+            <input type="text" 
+                   name="process_field_mappings[{{ $index }}][source_field]" 
+                   class="form-control source-field" 
+                   value="{{ old("process_field_mappings.{$index}.source_field", $mapping->source_field) }}" 
+                   placeholder="ej: grupos[*].servicios[*].CodigoArticulo"
+                   required>
+            <small class="text-muted">Ruta al campo en el JSON de la API. Usa [*] para arrays.</small>
         </div>
         
-        <div class="col-md-4">
-            <div class="form-group">
-                <label for="process_field_mappings_{{ $index }}_target_field" class="form-label">{{ __('Campo de Destino (BD)') }}</label>
-                <select name="process_field_mappings[{{ $index }}][target_field]" 
-                        id="process_field_mappings_{{ $index }}_target_field"
-                        class="form-control">
-                    <option value="">{{ __('Seleccionar campo...') }}</option>
-                    @foreach($processStandardFields as $field => $label)
-                        <option value="{{ $field }}" 
-                                {{ old('process_field_mappings.' . $index . '.target_field', $mapping->target_field ?? '') == $field ? 'selected' : '' }}>
-                            {{ $label }}
-                        </option>
-                    @endforeach
-                </select>
-                <small class="form-text text-muted">{{ __('Campo en la tabla original_order_processes') }}</small>
-            </div>
+        <div class="col-md-5">
+            <label class="form-label">Campo en la base de datos</label>
+            <select name="process_field_mappings[{{ $index }}][target_field]" class="form-select target-field" required>
+                <option value="">-- Seleccionar campo --</option>
+                @foreach($processStandardFields as $value => $label)
+                    <option value="{{ $value }}" {{ old("process_field_mappings.{$index}.target_field", $mapping->target_field) == $value ? 'selected' : '' }}>
+                        {{ $label }} ({{ $value }})
+                    </option>
+                @endforeach
+            </select>
         </div>
         
-        <div class="col-md-3">
-            <div class="form-group">
-                <label class="form-label">{{ __('Transformaciones') }}</label>
-                <div class="transformations-container">
-                    @foreach($transformationOptions as $transformation => $label)
-                        <div class="form-check form-check-inline">
-                            <input type="checkbox" 
-                                   name="process_field_mappings[{{ $index }}][transformations][]" 
-                                   id="process_transformation_{{ $index }}_{{ $transformation }}"
-                                   class="form-check-input" 
-                                   value="{{ $transformation }}"
-                                   {{ in_array($transformation, old('process_field_mappings.' . $index . '.transformations', $mapping->transformations ?? [])) ? 'checked' : '' }}>
-                            <label class="form-check-label" for="process_transformation_{{ $index }}_{{ $transformation }}">
-                                {{ $label }}
-                            </label>
-                        </div>
-                    @endforeach
-                </div>
-            </div>
-            
-            <div class="form-check mt-2">
+        <div class="col-md-2 d-flex align-items-end">
+            <div class="form-check form-switch mb-3">
+                <input type="hidden" name="process_field_mappings[{{ $index }}][is_required]" value="0">
                 <input type="checkbox" 
                        name="process_field_mappings[{{ $index }}][is_required]" 
-                       id="process_field_mappings_{{ $index }}_is_required"
                        class="form-check-input" 
                        value="1"
-                       {{ old('process_field_mappings.' . $index . '.is_required', $mapping->is_required ?? true) ? 'checked' : '' }}>
-                <label class="form-check-label" for="process_field_mappings_{{ $index }}_is_required">
-                    {{ __('Campo requerido') }}
-                </label>
+                       {{ old("process_field_mappings.{$index}.is_required", $mapping->is_required) ? 'checked' : '' }}>
+                <label class="form-check-label">Requerido</label>
             </div>
-        </div>
-        
-        <div class="col-md-1">
-            <div class="mapping-actions d-flex flex-column align-items-center">
-                <button type="button" class="btn btn-sm btn-outline-secondary move-up mb-1" 
-                        {{ $isFirst ?? false ? 'style=visibility:hidden' : '' }}>
-                    <i class="fas fa-arrow-up"></i>
-                </button>
-                <button type="button" class="btn btn-sm btn-outline-secondary move-down mb-1"
-                        {{ $isLast ?? false ? 'style=visibility:hidden' : '' }}>
-                    <i class="fas fa-arrow-down"></i>
-                </button>
+            
+            <div class="ms-auto">
+                @if(!$isFirst)
+                    <button type="button" class="btn btn-sm btn-outline-secondary move-up">
+                        <i class="fas fa-arrow-up"></i>
+                    </button>
+                @endif
+                
+                @if(!$isLast)
+                    <button type="button" class="btn btn-sm btn-outline-secondary move-down">
+                        <i class="fas fa-arrow-down"></i>
+                    </button>
+                @endif
+                
                 <button type="button" class="btn btn-sm btn-outline-danger remove-mapping">
                     <i class="fas fa-trash"></i>
                 </button>
@@ -81,8 +84,22 @@
         </div>
     </div>
     
-    <!-- Campo oculto para el ID del mapeo existente -->
-    @if(isset($mapping) && $mapping->id)
-        <input type="hidden" name="process_field_mappings[{{ $index }}][id]" value="{{ $mapping->id }}">
-    @endif
+    <div class="transformations-container mt-2">
+        <label class="form-label small">Transformaciones:</label>
+        <div class="d-flex flex-wrap gap-2">
+            @foreach($transformationOptions as $value => $label)
+                <div class="form-check form-check-inline">
+                    <input type="checkbox" 
+                           name="process_field_mappings[{{ $index }}][transformations][]" 
+                           class="form-check-input" 
+                           value="{{ $value }}"
+                           id="process_transformation_{{ $index }}_{{ $value }}"
+                           {{ in_array($value, old("process_field_mappings.{$index}.transformations", $mapping->transformations ?? [])) ? 'checked' : '' }}>
+                    <label class="form-check-label small" for="process_transformation_{{ $index }}_{{ $value }}">
+                        {{ $label }}
+                    </label>
+                </div>
+            @endforeach
+        </div>
+    </div>
 </div>

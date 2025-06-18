@@ -472,6 +472,196 @@
         if (processMappingsContainer) {
             updateProcessMoveButtons();
         }
+        
+        // ========== SECCIÓN PARA MAPEOS DE ARTÍCULOS ==========
+        
+        // Inicializar el índice para nuevos mapeos de artículos
+        let articleMappingIndex = {{ $customer->articleFieldMappings->count() }};
+        const articleMappingsContainer = document.getElementById('article-mappings-container');
+        const addArticleMappingBtn = document.getElementById('add-article-mapping');
+        
+        // Función para actualizar los índices de los mapeos de artículos
+        function updateArticleMappingIndexes() {
+            const rows = articleMappingsContainer.querySelectorAll('.mapping-row');
+            rows.forEach((row, index) => {
+                // Actualizar el atributo data-index
+                row.setAttribute('data-index', index);
+                
+                // Actualizar los nombres de los campos del formulario
+                const inputs = row.querySelectorAll('[name^="article_field_mappings["]');
+                inputs.forEach(input => {
+                    const name = input.getAttribute('name');
+                    const newName = name.replace(/article_field_mappings\[\d+\]/g, `article_field_mappings[${index}]`);
+                    input.setAttribute('name', newName);
+                });
+                
+                // Actualizar los IDs de los checkboxes de transformaciones
+                const checkboxes = row.querySelectorAll('input[type="checkbox"][id^="article_transformation_"]');
+                checkboxes.forEach(checkbox => {
+                    const id = checkbox.getAttribute('id');
+                    const newId = id.replace(/article_transformation_\d+_/, `article_transformation_${index}_`);
+                    checkbox.setAttribute('id', newId);
+                    
+                    // Actualizar el for del label asociado
+                    const label = document.querySelector(`label[for="${id}"]`);
+                    if (label) {
+                        label.setAttribute('for', newId);
+                    }
+                });
+            });
+            
+            // Actualizar el contador para nuevos mapeos
+            articleMappingIndex = rows.length;
+        }
+        
+        // Función para actualizar los botones de mover de artículos
+        function updateArticleMoveButtons() {
+            const rows = articleMappingsContainer.querySelectorAll('.mapping-row');
+            rows.forEach((row, index) => {
+                const upBtn = row.querySelector('.move-up');
+                const downBtn = row.querySelector('.move-down');
+                
+                if (upBtn) {
+                    upBtn.style.visibility = index === 0 ? 'hidden' : 'visible';
+                }
+                
+                if (downBtn) {
+                    downBtn.style.visibility = index === rows.length - 1 ? 'hidden' : 'visible';
+                }
+            });
+            
+            // Actualizar los índices después de mover
+            updateArticleMappingIndexes();
+        }
+        
+        // Agregar nuevo mapeo de artículo
+        if (addArticleMappingBtn) {
+            addArticleMappingBtn.addEventListener('click', function() {
+                const newRow = document.createElement('div');
+                newRow.className = 'mapping-row mb-3 p-3 border rounded';
+                newRow.setAttribute('data-index', articleMappingIndex);
+                
+                newRow.innerHTML = `
+                    <input type="hidden" name="article_field_mappings[${articleMappingIndex}][id]" value="">
+                    <div class="row g-3">
+                        <div class="col-md-5">
+                            <label class="form-label">Campo en la API</label>
+                            <input type="text" 
+                                   name="article_field_mappings[${articleMappingIndex}][source_field]" 
+                                   class="form-control source-field" 
+                                   placeholder="ej: grupos[*].articulos[*].CodigoArticulo"
+                                   required>
+                            <small class="text-muted">Ruta al campo en el JSON de la API. Usa [*] para arrays.</small>
+                        </div>
+                        
+                        <div class="col-md-5">
+                            <label class="form-label">Campo en la base de datos</label>
+                            <select name="article_field_mappings[${articleMappingIndex}][target_field]" class="form-select target-field" required>
+                                <option value="">-- Seleccionar campo --</option>
+                                @foreach($articleStandardFields as $value => $label)
+                                    <option value="{{ $value }}">{{ $label }} ({{ $value }})</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-2 d-flex align-items-end">
+                            <div class="form-check form-switch mb-3">
+                                <input type="hidden" name="article_field_mappings[${articleMappingIndex}][is_required]" value="0">
+                                <input type="checkbox" 
+                                       name="article_field_mappings[${articleMappingIndex}][is_required]" 
+                                       class="form-check-input" 
+                                       value="1"
+                                       checked>
+                                <label class="form-check-label">Requerido</label>
+                            </div>
+                            
+                            <div class="ms-auto">
+                                <button type="button" class="btn btn-sm btn-outline-secondary move-up">
+                                    <i class="fas fa-arrow-up"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary move-down">
+                                    <i class="fas fa-arrow-down"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger remove-mapping">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="transformations-container mt-2">
+                        <label class="form-label small">Transformaciones:</label>
+                        <div class="d-flex flex-wrap gap-2">
+                            @foreach($transformationOptions as $value => $label)
+                                <div class="form-check form-check-inline">
+                                    <input type="checkbox" 
+                                           name="article_field_mappings[${articleMappingIndex}][transformations][]" 
+                                           class="form-check-input" 
+                                           value="{{ $value }}"
+                                           id="article_transformation_${articleMappingIndex}_{{ $value }}">
+                                    <label class="form-check-label small" for="article_transformation_${articleMappingIndex}_{{ $value }}">
+                                        {{ $label }}
+                                    </label>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                `;
+                
+                articleMappingsContainer.appendChild(newRow);
+                articleMappingIndex++;
+                updateArticleMoveButtons();
+                showToast('Nuevo mapeo de artículo agregado', 'success');
+            });
+        }
+        
+        // Manejar eventos de artículos (eliminar y mover)
+        if (articleMappingsContainer) {
+            articleMappingsContainer.addEventListener('click', function(e) {
+                const row = e.target.closest('.mapping-row');
+                if (!row) return;
+                
+                // Eliminar mapeo
+                if (e.target.closest('.remove-mapping')) {
+                    if (confirm('¿Estás seguro de que quieres eliminar este mapeo de artículo?')) {
+                        row.remove();
+                        updateArticleMoveButtons();
+                        showToast('Mapeo de artículo eliminado', 'success');
+                    }
+                    return;
+                }
+                
+                // Mover hacia arriba
+                if (e.target.closest('.move-up')) {
+                    const prevRow = row.previousElementSibling;
+                    if (prevRow && prevRow.classList.contains('mapping-row')) {
+                        row.parentNode.insertBefore(row, prevRow);
+                        updateArticleMoveButtons();
+                        showToast('Mapeo movido hacia arriba', 'success');
+                    }
+                    return;
+                }
+                
+                // Mover hacia abajo
+                if (e.target.closest('.move-down')) {
+                    const nextRow = row.nextElementSibling;
+                    if (nextRow && nextRow.classList.contains('mapping-row')) {
+                        row.parentNode.insertBefore(nextRow, row);
+                        updateArticleMoveButtons();
+                        showToast('Mapeo movido hacia abajo', 'success');
+                    }
+                    return;
+                }
+            });
+            
+            // Actualizar índices después de mover
+            updateArticleMappingIndexes();
+        }
+        
+        // Inicializar botones de movimiento de artículos
+        if (articleMappingsContainer) {
+            updateArticleMoveButtons();
+        }
     });
 </script>
 @endpush
@@ -645,8 +835,44 @@
                         </div>
                     </div>
                     
-                    <!-- Mapeos de Campos de Artículos -->
-                    @include('customers.partials.article_field_mappings')
+                    <!-- Sección de Mapeo de Campos para Artículos -->
+                    <div class="card mt-4">
+                        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-0">{{ __('Mapeo de Campos de Artículos') }}</h6>
+                                <small class="text-muted">
+                                    {{ __('Define cómo se mapean los campos de artículos de la API a la tabla original_order_articles') }}
+                                </small>
+                            </div>
+                            <button type="button" id="add-article-mapping" class="btn btn-sm btn-success">
+                                <i class="fas fa-plus me-1"></i> {{ __('Añadir Mapeo de Artículo') }}
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small">
+                                Define cómo se mapean los campos de artículos de la API a los campos de la base de datos.
+                            </p>
+                            
+                            <div id="article-mappings-container">
+                                @if($customer->articleFieldMappings->count() > 0)
+                                    @foreach($customer->articleFieldMappings as $index => $mapping)
+                                        @include('customers.partials.article_field_mappings', [
+                                            'index' => $index,
+                                            'mapping' => $mapping,
+                                            'articleStandardFields' => $articleStandardFields,
+                                            'transformationOptions' => $transformationOptions,
+                                            'isFirst' => $loop->first,
+                                            'isLast' => $loop->last
+                                        ])
+                                    @endforeach
+                                @else
+                                    <div class="alert alert-info">
+                                        No hay mapeos de artículos definidos. Haz clic en "Añadir Mapeo de Artículo" para crear uno nuevo.
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
                     
                     <div class="d-flex justify-content-between mt-4">
                         <a href="{{ route('customers.index') }}" class="btn btn-secondary">

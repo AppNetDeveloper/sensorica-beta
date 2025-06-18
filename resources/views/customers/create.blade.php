@@ -47,11 +47,6 @@
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Inicializar el índice para nuevos mapeos
-        let mappingIndex = 0;
-        const mappingsContainer = document.getElementById('mappings-container');
-        const addMappingBtn = document.getElementById('add-mapping');
-        
         // Función para generar un token seguro
         window.generateToken = function() {
             const tokenField = document.getElementById('token');
@@ -60,183 +55,353 @@
             return false;
         };
         
-        // Función para actualizar los índices de los mapeos
-        function updateMappingIndexes() {
-            const rows = document.querySelectorAll('.mapping-row');
-            rows.forEach((row, index) => {
-                // Actualizar el atributo data-index
-                row.setAttribute('data-index', index);
-                
-                // Actualizar los nombres de los campos del formulario
-                const inputs = row.querySelectorAll('[name^="field_mappings["]');
-                inputs.forEach(input => {
-                    const name = input.getAttribute('name');
-                    const newName = name.replace(/field_mappings\[\d+\]/g, `field_mappings[${index}]`);
-                    input.setAttribute('name', newName);
-                });
-                
-                // Actualizar los IDs de los checkboxes de transformaciones
-                const checkboxes = row.querySelectorAll('input[type="checkbox"][id^="transformation_"]');
-                checkboxes.forEach(checkbox => {
-                    const id = checkbox.getAttribute('id');
-                    const newId = id.replace(/transformation_\d+_/, `transformation_${index}_`);
-                    checkbox.setAttribute('id', newId);
-                    
-                    // Actualizar el for del label asociado
-                    const label = document.querySelector(`label[for="${id}"]`);
-                    if (label) {
-                        label.setAttribute('for', newId);
-                    }
-                });
-            });
-            
-            // Actualizar el contador para nuevos mapeos
-            mappingIndex = rows.length;
-            
-            // Mostrar/ocultar mensaje de "No hay mapeos"
-            const noMappingsAlert = document.querySelector('#mappings-container > .alert');
-            if (noMappingsAlert) {
-                noMappingsAlert.style.display = rows.length === 0 ? 'block' : 'none';
-            }
-        }
-        
-        // Función para actualizar los botones de mover
-        function updateMoveButtons() {
-            const rows = mappingsContainer.querySelectorAll('.mapping-row');
-            rows.forEach((row, index) => {
-                const upBtn = row.querySelector('.move-up');
-                const downBtn = row.querySelector('.move-down');
-                
-                if (upBtn) {
-                    upBtn.style.visibility = index === 0 ? 'hidden' : 'visible';
-                }
-                
-                if (downBtn) {
-                    downBtn.style.visibility = index === rows.length - 1 ? 'hidden' : 'visible';
-                }
-            });
-            
-            // Actualizar los índices después de mover
-            updateMappingIndexes();
-        }
-        
         // Función para mostrar notificación
         function showToast(message, type = 'success') {
-            // Si ya existe un toast, lo eliminamos
             const existingToast = document.querySelector('.toast-message');
             if (existingToast) {
                 existingToast.remove();
             }
             
             const toast = document.createElement('div');
-            toast.className = `toast-message position-fixed bottom-0 end-0 m-3 p-3 bg-${type} text-white rounded shadow`;
-            toast.style.zIndex = '1100';
-            toast.textContent = message;
+            toast.className = `alert alert-${type} toast-message position-fixed`;
+            toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            toast.innerHTML = `<i class="fas fa-${type === 'success' ? 'check' : 'exclamation'}-circle me-2"></i>${message}`;
             document.body.appendChild(toast);
             
-            // Eliminar la notificación después de 3 segundos
             setTimeout(() => {
                 toast.remove();
             }, 3000);
         }
         
-        // Agregar un nuevo mapeo
-        addMappingBtn.addEventListener('click', function() {
-            // Deshabilitar el botón para evitar múltiples clics
-            const originalText = addMappingBtn.innerHTML;
-            addMappingBtn.disabled = true;
-            addMappingBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Cargando...';
-            
-            // Hacer una petición para obtener el HTML de la fila
-            fetch(`/customers/0/field-mapping-row?index=${mappingIndex}`, {
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        // ========== SECCIÓN PARA MAPEOS DE ÓRDENES ==========
+        
+        let mappingIndex = 0;
+        const mappingsContainer = document.getElementById('mappings-container');
+        const addMappingBtn = document.getElementById('add-mapping');
+        
+        // Agregar nuevo mapeo de orden
+        if (addMappingBtn) {
+            addMappingBtn.addEventListener('click', function() {
+                const newRow = document.createElement('div');
+                newRow.className = 'mapping-row mb-3 p-3 border rounded';
+                newRow.setAttribute('data-index', mappingIndex);
+                
+                newRow.innerHTML = `
+                    <input type="hidden" name="field_mappings[${mappingIndex}][id]" value="">
+                    <div class="row g-3">
+                        <div class="col-md-5">
+                            <label class="form-label">Campo en la API</label>
+                            <input type="text" 
+                                   name="field_mappings[${mappingIndex}][source_field]" 
+                                   class="form-control source-field" 
+                                   placeholder="ej: order_id, client_number"
+                                   required>
+                            <small class="text-muted">Ruta al campo en el JSON de la API. Usa [*] para arrays.</small>
+                        </div>
+                        
+                        <div class="col-md-5">
+                            <label class="form-label">Campo en la base de datos</label>
+                            <select name="field_mappings[${mappingIndex}][target_field]" class="form-select target-field" required>
+                                <option value="">-- Seleccionar campo --</option>
+                                @foreach($standardFields as $value => $label)
+                                    <option value="{{ $value }}">{{ $label }} ({{ $value }})</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-2 d-flex align-items-end">
+                            <div class="form-check form-switch mb-3">
+                                <input type="hidden" name="field_mappings[${mappingIndex}][is_required]" value="0">
+                                <input type="checkbox" 
+                                       name="field_mappings[${mappingIndex}][is_required]" 
+                                       class="form-check-input" 
+                                       value="1"
+                                       checked>
+                                <label class="form-check-label">Requerido</label>
+                            </div>
+                            
+                            <div class="ms-auto">
+                                <button type="button" class="btn btn-sm btn-outline-danger remove-mapping">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="transformations-container mt-2">
+                        <label class="form-label small">Transformaciones:</label>
+                        <div class="d-flex flex-wrap gap-2">
+                            @foreach($transformationOptions as $value => $label)
+                                <div class="form-check form-check-inline">
+                                    <input type="checkbox" 
+                                           name="field_mappings[${mappingIndex}][transformations][]" 
+                                           class="form-check-input" 
+                                           value="{{ $value }}"
+                                           id="transformation_${mappingIndex}_{{ $value }}">
+                                    <label class="form-check-label small" for="transformation_${mappingIndex}_{{ $value }}">
+                                        {{ $label }}
+                                    </label>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                `;
+                
+                mappingsContainer.appendChild(newRow);
+                mappingIndex++;
+                
+                // Ocultar mensaje de "No hay mapeos"
+                const noMappingsAlert = mappingsContainer.querySelector('.alert-info');
+                if (noMappingsAlert) {
+                    noMappingsAlert.style.display = 'none';
                 }
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Error en la respuesta del servidor');
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    // Crear un elemento temporal para el nuevo mapeo
-                    const temp = document.createElement('div');
-                    temp.innerHTML = data.html.trim();
-                    const newMapping = temp.firstChild;
-                    
-                    // Ocultar el mensaje de "No hay mapeos" si existe
-                    const noMappingsAlert = document.querySelector('#mappings-container > .alert');
-                    if (noMappingsAlert) {
-                        noMappingsAlert.style.display = 'none';
-                    }
-                    
-                    // Agregar el nuevo mapeo al contenedor
-                    mappingsContainer.appendChild(newMapping);
-                    
-                    // Actualizar índices y botones
-                    updateMoveButtons();
-                    
-                    // Mostrar notificación
-                    showToast('Nuevo mapeo añadido');
-                } else {
-                    throw new Error(data.message || 'Error al cargar el formulario de mapeo');
-                }
-            })
-            .catch(error => {
-                console.error('Error al cargar el formulario de mapeo:', error);
-                showToast('Error al cargar el formulario de mapeo', 'danger');
-            })
-            .finally(() => {
-                // Restaurar el botón
-                addMappingBtn.disabled = false;
-                addMappingBtn.innerHTML = originalText;
+                
+                showToast('Nuevo mapeo agregado', 'success');
             });
-        });
+        }
         
-        // Manejar eventos de clic en el contenedor de mapeos
-        mappingsContainer.addEventListener('click', function(e) {
-            const row = e.target.closest('.mapping-row');
-            if (!row) return;
-            
-            // Eliminar mapeo
-            if (e.target.closest('.remove-mapping')) {
-                if (confirm('¿Estás seguro de que deseas eliminar este mapeo?')) {
-                    row.remove();
-                    updateMoveButtons();
-                    showToast('Mapeo eliminado');
+        // Manejar eventos de órdenes (eliminar)
+        if (mappingsContainer) {
+            mappingsContainer.addEventListener('click', function(e) {
+                if (e.target.closest('.remove-mapping')) {
+                    const row = e.target.closest('.mapping-row');
+                    if (row && confirm('¿Estás seguro de que quieres eliminar este mapeo?')) {
+                        row.remove();
+                        
+                        // Mostrar mensaje si no hay mapeos
+                        const remainingRows = mappingsContainer.querySelectorAll('.mapping-row');
+                        if (remainingRows.length === 0) {
+                            const noMappingsAlert = mappingsContainer.querySelector('.alert-info');
+                            if (noMappingsAlert) {
+                                noMappingsAlert.style.display = 'block';
+                            }
+                        }
+                        
+                        showToast('Mapeo eliminado', 'success');
+                    }
                 }
-                return;
-            }
-            
-            // Mover mapeo hacia arriba
-            if (e.target.closest('.move-up')) {
-                const prevRow = row.previousElementSibling;
-                if (prevRow) {
-                    row.parentNode.insertBefore(row, prevRow);
-                    updateMoveButtons();
-                }
-                return;
-            }
-            
-            // Mover mapeo hacia abajo
-            if (e.target.closest('.move-down')) {
-                const nextRow = row.nextElementSibling;
-                if (nextRow) {
-                    row.parentNode.insertBefore(nextRow, row);
-                    updateMoveButtons();
-                }
-                return;
-            }
-        });
+            });
+        }
         
-        // Inicializar tooltips
-        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl);
-        });
+        // ========== SECCIÓN PARA MAPEOS DE PROCESOS ==========
+        
+        let processMappingIndex = 0;
+        const processMappingsContainer = document.getElementById('process-mappings-container');
+        const addProcessMappingBtn = document.getElementById('add-process-mapping');
+        
+        // Agregar nuevo mapeo de proceso
+        if (addProcessMappingBtn) {
+            addProcessMappingBtn.addEventListener('click', function() {
+                const newRow = document.createElement('div');
+                newRow.className = 'mapping-row mb-3 p-3 border rounded';
+                newRow.setAttribute('data-index', processMappingIndex);
+                
+                newRow.innerHTML = `
+                    <input type="hidden" name="process_field_mappings[${processMappingIndex}][id]" value="">
+                    <div class="row g-3">
+                        <div class="col-md-5">
+                            <label class="form-label">Campo en la API</label>
+                            <input type="text" 
+                                   name="process_field_mappings[${processMappingIndex}][source_field]" 
+                                   class="form-control source-field" 
+                                   placeholder="ej: grupos[*].servicios[*].CodigoArticulo"
+                                   required>
+                            <small class="text-muted">Ruta al campo en el JSON de la API. Usa [*] para arrays.</small>
+                        </div>
+                        
+                        <div class="col-md-5">
+                            <label class="form-label">Campo en la base de datos</label>
+                            <select name="process_field_mappings[${processMappingIndex}][target_field]" class="form-select target-field" required>
+                                <option value="">-- Seleccionar campo --</option>
+                                @foreach($processStandardFields as $value => $label)
+                                    <option value="{{ $value }}">{{ $label }} ({{ $value }})</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-2 d-flex align-items-end">
+                            <div class="form-check form-switch mb-3">
+                                <input type="hidden" name="process_field_mappings[${processMappingIndex}][is_required]" value="0">
+                                <input type="checkbox" 
+                                       name="process_field_mappings[${processMappingIndex}][is_required]" 
+                                       class="form-check-input" 
+                                       value="1"
+                                       checked>
+                                <label class="form-check-label">Requerido</label>
+                            </div>
+                            
+                            <div class="ms-auto">
+                                <button type="button" class="btn btn-sm btn-outline-danger remove-mapping">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="transformations-container mt-2">
+                        <label class="form-label small">Transformaciones:</label>
+                        <div class="d-flex flex-wrap gap-2">
+                            @foreach($transformationOptions as $value => $label)
+                                <div class="form-check form-check-inline">
+                                    <input type="checkbox" 
+                                           name="process_field_mappings[${processMappingIndex}][transformations][]" 
+                                           class="form-check-input" 
+                                           value="{{ $value }}"
+                                           id="process_transformation_${processMappingIndex}_{{ $value }}">
+                                    <label class="form-check-label small" for="process_transformation_${processMappingIndex}_{{ $value }}">
+                                        {{ $label }}
+                                    </label>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                `;
+                
+                processMappingsContainer.appendChild(newRow);
+                processMappingIndex++;
+                
+                // Ocultar mensaje de "No hay mapeos"
+                const noMappingsAlert = processMappingsContainer.querySelector('.alert-info');
+                if (noMappingsAlert) {
+                    noMappingsAlert.style.display = 'none';
+                }
+                
+                showToast('Nuevo mapeo de proceso agregado', 'success');
+            });
+        }
+        
+        // Manejar eventos de procesos (eliminar)
+        if (processMappingsContainer) {
+            processMappingsContainer.addEventListener('click', function(e) {
+                if (e.target.closest('.remove-mapping')) {
+                    const row = e.target.closest('.mapping-row');
+                    if (row && confirm('¿Estás seguro de que quieres eliminar este mapeo de proceso?')) {
+                        row.remove();
+                        
+                        // Mostrar mensaje si no hay mapeos
+                        const remainingRows = processMappingsContainer.querySelectorAll('.mapping-row');
+                        if (remainingRows.length === 0) {
+                            const noMappingsAlert = processMappingsContainer.querySelector('.alert-info');
+                            if (noMappingsAlert) {
+                                noMappingsAlert.style.display = 'block';
+                            }
+                        }
+                        
+                        showToast('Mapeo de proceso eliminado', 'success');
+                    }
+                }
+            });
+        }
+        
+        // ========== SECCIÓN PARA MAPEOS DE ARTÍCULOS ==========
+        
+        let articleMappingIndex = 0;
+        const articleMappingsContainer = document.getElementById('article-mappings-container');
+        const addArticleMappingBtn = document.getElementById('add-article-mapping');
+        
+        // Agregar nuevo mapeo de artículo
+        if (addArticleMappingBtn) {
+            addArticleMappingBtn.addEventListener('click', function() {
+                const newRow = document.createElement('div');
+                newRow.className = 'mapping-row mb-3 p-3 border rounded';
+                newRow.setAttribute('data-index', articleMappingIndex);
+                
+                newRow.innerHTML = `
+                    <input type="hidden" name="article_field_mappings[${articleMappingIndex}][id]" value="">
+                    <div class="row g-3">
+                        <div class="col-md-5">
+                            <label class="form-label">Campo en la API</label>
+                            <input type="text" 
+                                   name="article_field_mappings[${articleMappingIndex}][source_field]" 
+                                   class="form-control source-field" 
+                                   placeholder="ej: grupos[*].articulos[*].CodigoArticulo"
+                                   required>
+                            <small class="text-muted">Ruta al campo en el JSON de la API. Usa [*] para arrays.</small>
+                        </div>
+                        
+                        <div class="col-md-5">
+                            <label class="form-label">Campo en la base de datos</label>
+                            <select name="article_field_mappings[${articleMappingIndex}][target_field]" class="form-select target-field" required>
+                                <option value="">-- Seleccionar campo --</option>
+                                @foreach($articleStandardFields as $value => $label)
+                                    <option value="{{ $value }}">{{ $label }} ({{ $value }})</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-2 d-flex align-items-end">
+                            <div class="form-check form-switch mb-3">
+                                <input type="hidden" name="article_field_mappings[${articleMappingIndex}][is_required]" value="0">
+                                <input type="checkbox" 
+                                       name="article_field_mappings[${articleMappingIndex}][is_required]" 
+                                       class="form-check-input" 
+                                       value="1"
+                                       checked>
+                                <label class="form-check-label">Requerido</label>
+                            </div>
+                            
+                            <div class="ms-auto">
+                                <button type="button" class="btn btn-sm btn-outline-danger remove-mapping">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="transformations-container mt-2">
+                        <label class="form-label small">Transformaciones:</label>
+                        <div class="d-flex flex-wrap gap-2">
+                            @foreach($transformationOptions as $value => $label)
+                                <div class="form-check form-check-inline">
+                                    <input type="checkbox" 
+                                           name="article_field_mappings[${articleMappingIndex}][transformations][]" 
+                                           class="form-check-input" 
+                                           value="{{ $value }}"
+                                           id="article_transformation_${articleMappingIndex}_{{ $value }}">
+                                    <label class="form-check-label small" for="article_transformation_${articleMappingIndex}_{{ $value }}">
+                                        {{ $label }}
+                                    </label>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                `;
+                
+                articleMappingsContainer.appendChild(newRow);
+                articleMappingIndex++;
+                
+                // Ocultar mensaje de "No hay mapeos"
+                const noMappingsAlert = articleMappingsContainer.querySelector('.alert-info');
+                if (noMappingsAlert) {
+                    noMappingsAlert.style.display = 'none';
+                }
+                
+                showToast('Nuevo mapeo de artículo agregado', 'success');
+            });
+        }
+        
+        // Manejar eventos de artículos (eliminar)
+        if (articleMappingsContainer) {
+            articleMappingsContainer.addEventListener('click', function(e) {
+                if (e.target.closest('.remove-mapping')) {
+                    const row = e.target.closest('.mapping-row');
+                    if (row && confirm('¿Estás seguro de que quieres eliminar este mapeo de artículo?')) {
+                        row.remove();
+                        
+                        // Mostrar mensaje si no hay mapeos
+                        const remainingRows = articleMappingsContainer.querySelectorAll('.mapping-row');
+                        if (remainingRows.length === 0) {
+                            const noMappingsAlert = articleMappingsContainer.querySelector('.alert-info');
+                            if (noMappingsAlert) {
+                                noMappingsAlert.style.display = 'block';
+                            }
+                        }
+                        
+                        showToast('Mapeo de artículo eliminado', 'success');
+                    }
+                }
+            });
+        }
         
         // Generar token al cargar la página si no hay valor
         const tokenField = document.getElementById('token');
@@ -321,28 +486,79 @@
                         </div>
                     </div>
                     
+                    <!-- Sección de Mapeo de Campos para Órdenes -->
                     <div class="card mt-4">
                         <div class="card-header bg-light d-flex justify-content-between align-items-center">
                             <div>
-                                <h6 class="mb-0">{{ __('Mapeo de Campos') }}</h6>
+                                <h6 class="mb-0">{{ __('Mapeo de Campos de Órdenes') }}</h6>
                                 <small class="text-muted">
-                                    Define cómo se mapean los campos de la API a los campos de la base de datos.
+                                    {{ __('Define cómo se mapean los campos de la API a los campos de la base de datos') }}
                                 </small>
                             </div>
-                            <button type="button" class="btn btn-sm btn-primary" id="add-mapping">
+                            <button type="button" id="add-mapping" class="btn btn-sm btn-success">
                                 <i class="fas fa-plus me-1"></i> {{ __('Añadir Mapeo') }}
                             </button>
                         </div>
-                        
                         <div class="card-body">
                             <p class="text-muted small">
                                 Define cómo se mapean los campos de la API a los campos de la base de datos.
                             </p>
                             
                             <div id="mappings-container">
-                                <!-- Las filas de mapeo se agregarán aquí dinámicamente -->
                                 <div class="alert alert-info">
                                     No hay mapeos definidos. Haz clic en "Añadir Mapeo" para crear uno nuevo.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Sección de Mapeo de Campos para Procesos -->
+                    <div class="card mt-4">
+                        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-0">{{ __('Mapeo de Campos URL de Detalle de Pedido') }}</h6>
+                                <small class="text-muted">
+                                    {{ __('Define cómo se mapean los campos de la API de detalle a la tabla original_order_processes') }}
+                                </small>
+                            </div>
+                            <button type="button" id="add-process-mapping" class="btn btn-sm btn-success">
+                                <i class="fas fa-plus me-1"></i> {{ __('Añadir Mapeo de Proceso') }}
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small">
+                                Define cómo se mapean los campos de procesos de la API a los campos de la base de datos.
+                            </p>
+                            
+                            <div id="process-mappings-container">
+                                <div class="alert alert-info">
+                                    No hay mapeos de procesos definidos. Haz clic en "Añadir Mapeo de Proceso" para crear uno nuevo.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Sección de Mapeo de Campos para Artículos -->
+                    <div class="card mt-4">
+                        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-0">{{ __('Mapeo de Campos de Artículos') }}</h6>
+                                <small class="text-muted">
+                                    {{ __('Define cómo se mapean los campos de artículos de la API a la tabla original_order_articles') }}
+                                </small>
+                            </div>
+                            <button type="button" id="add-article-mapping" class="btn btn-sm btn-success">
+                                <i class="fas fa-plus me-1"></i> {{ __('Añadir Mapeo de Artículo') }}
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small">
+                                Define cómo se mapean los campos de artículos de la API a los campos de la base de datos.
+                            </p>
+                            
+                            <div id="article-mappings-container">
+                                <div class="alert alert-info">
+                                    No hay mapeos de artículos definidos. Haz clic en "Añadir Mapeo de Artículo" para crear uno nuevo.
                                 </div>
                             </div>
                         </div>
