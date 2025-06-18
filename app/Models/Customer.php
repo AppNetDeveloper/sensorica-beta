@@ -9,6 +9,7 @@ use App\Models\OriginalOrder;
 use App\Models\OrderFieldMapping;
 use App\Models\ProductionLine;
 use App\Models\ProcessFieldMapping;
+use App\Models\ArticleFieldMapping;
 
 class Customer extends Model
 {
@@ -41,6 +42,14 @@ class Customer extends Model
     public function processFieldMappings(): HasMany
     {
         return $this->hasMany(ProcessFieldMapping::class);
+    }
+
+    /**
+     * Obtiene los mapeos de campos de artículos para este cliente
+     */
+    public function articleFieldMappings(): HasMany
+    {
+        return $this->hasMany(ArticleFieldMapping::class);
     }
 
     /**

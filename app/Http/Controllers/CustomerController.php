@@ -174,7 +174,11 @@ class CustomerController extends Controller
             'process_field_mappings.*.target_field' => 'required_with:process_field_mappings|string',
             'process_field_mappings.*.transformations' => 'nullable|array',
             'process_field_mappings.*.transformations.*' => 'string',
-            'process_field_mappings.*.is_required' => 'nullable|boolean'
+            'process_field_mappings.*.is_required' => 'nullable|boolean',
+            'article_mappings' => 'nullable|array',
+            'article_mappings.*.source_field' => 'required_with:article_mappings|string',
+            'article_mappings.*.target_field' => 'required_with:article_mappings|string',
+            'article_mappings.*.transformation' => 'nullable|string'
         ]);
 
         // Validar la solicitud
@@ -279,6 +283,45 @@ class CustomerController extends Controller
             } else {
                 // Si no hay mapeos, eliminar todos los existentes
                 $customer->processFieldMappings()->delete();
+            }
+
+            // Sincronizar los mapeos de campos de artículos si existen
+            if (isset($validatedData['article_mappings'])) {
+                $updatedArticleMappingIds = [];
+                
+                // Procesar cada mapeo de artículo
+                foreach ($validatedData['article_mappings'] as $mappingData) {
+                    $mappingId = $mappingData['id'] ?? null;
+                    
+                    if ($mappingId) {
+                        // Actualizar mapeo existente
+                        $mapping = $customer->articleFieldMappings()->find($mappingId);
+                        if ($mapping) {
+                            $mapping->update([
+                                'source_field' => $mappingData['source_field'],
+                                'target_field' => $mappingData['target_field'],
+                                'transformation' => $mappingData['transformation'] ? json_decode($mappingData['transformation'], true) : null,
+                            ]);
+                            $updatedArticleMappingIds[] = $mapping->id;
+                        }
+                    } else {
+                        // Crear nuevo mapeo
+                        $mapping = $customer->articleFieldMappings()->create([
+                            'source_field' => $mappingData['source_field'],
+                            'target_field' => $mappingData['target_field'],
+                            'transformation' => $mappingData['transformation'] ? json_decode($mappingData['transformation'], true) : null,
+                        ]);
+                        $updatedArticleMappingIds[] = $mapping->id;
+                    }
+                }
+                
+                // Eliminar mapeos que no están en la lista actualizada
+                if (!empty($updatedArticleMappingIds)) {
+                    $customer->articleFieldMappings()->whereNotIn('id', $updatedArticleMappingIds)->delete();
+                }
+            } else {
+                // Si no hay mapeos, eliminar todos los existentes
+                $customer->articleFieldMappings()->delete();
             }
 
             // Confirmar la transacción

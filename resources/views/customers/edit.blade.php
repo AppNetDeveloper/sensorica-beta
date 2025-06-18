@@ -645,6 +645,9 @@
                         </div>
                     </div>
                     
+                    <!-- Mapeos de Campos de Artículos -->
+                    @include('customers.partials.article_field_mappings')
+                    
                     <div class="d-flex justify-content-between mt-4">
                         <a href="{{ route('customers.index') }}" class="btn btn-secondary">
                             <i class="fas fa-arrow-left me-1"></i> {{ __('Cancelar') }}
