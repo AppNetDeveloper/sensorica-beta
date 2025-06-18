@@ -8,7 +8,7 @@ use App\Models\OrderFieldMapping;
 use App\Models\Process;
 use App\Models\OriginalOrderProcess;
 use App\Models\OriginalOrderArticle;
-use App\Concerns\LoggableCommand;
+use App\Concerns\ConsoleLoggableCommand;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\DB;
 
 class CheckOrdersFromApi extends Command
 {
-    use LoggableCommand;
+    use ConsoleLoggableCommand;
     protected $signature = 'orders:check';
     protected $description = 'Verifica pedidos desde la API y los compara con la base de datos local';
 
