@@ -13,29 +13,20 @@
 
 @section('content')
 <!-- Controles -->
-<div class="card mb-4">
-    <div class="card-header">
-        <h5 class="mb-0">{{ __('Order Kanban') }}</h5>
-    </div>
-    <div class="card-body d-flex justify-content-between">
-        <a href="{{ route('customers.order-organizer', $customer) }}" class="btn btn-secondary">
-            <i class="ti ti-arrow-left me-1"></i> {{ __('Back to Processes') }}
-        </a>
-    </div>
-</div>
-
-
     <!-- Barra de Filtros y Controles -->
     <div class="mb-3 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md">
         <div class="d-flex flex-wrap items-center justify-content-between gap-3">
             <div class="d-flex flex-wrap items-center gap-3">
-            <div class="position-relative flex-grow-1" style="max-width: 400px;">
-                <i class="fas fa-search position-absolute top-50 start-0 translate-middle-y ms-3 text-gray-400"></i>
-                <input type="text" id="searchInput" placeholder="{{ __('Search by order ID or customer...') }}"
-                       class="form-control ps-5" style="width: 100%;">
+                <a href="{{ route('customers.order-organizer', $customer) }}" class="btn btn-secondary me-2">
+                    <i class="ti ti-arrow-left me-1"></i> {{ __('Back to Processes') }}
+                </a>
+                <div class="position-relative" style="max-width: 400px;">
+                    <i class="fas fa-search position-absolute top-50 start-0 translate-middle-y ms-3 text-gray-400"></i>
+                    <input type="text" id="searchInput" placeholder="{{ __('Search by order ID or customer...') }}"
+                           class="form-control ps-5" style="width: 100%;">
+                </div>
             </div>
-            </div>
-            <div class="d-flex items-center gap-3">
+            <div class="d-flex items-center gap-2">
                 <button id="refreshBtn" class="btn btn-light" title="{{ __('Refresh') }}">
                     <i class="fas fa-sync-alt text-primary"></i>
                 </button>
