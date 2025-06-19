@@ -98,12 +98,23 @@ class ListStockOrdersCommand extends Command
         $this->info("ORDER ID: {$order->id} | Customer: " . ($order->customer ? $order->customer->name : 'N/A') . " | Delivery: " . ($order->delivery_date ? $order->delivery_date->format('Y-m-d') : 'N/A'));
         $this->info(str_repeat('-', 80));
 
-        // Display processes
+        // Display processes with lowest sequence
         if ($order->orderProcesses->isNotEmpty()) {
-            $this->info("\nPROCESSES:");
+            // Group processes by their sequence
+            $groupedBySequence = $order->orderProcesses->groupBy(function ($item) {
+                return $item->process->sequence ?? 999; // Default to high number if sequence is not set
+            })->sortKeys();
+            
+            // Get the lowest sequence number
+            $lowestSequence = $groupedBySequence->keys()->first();
+            
+            // Get all processes with the lowest sequence
+            $lowestSequenceProcesses = $groupedBySequence->get($lowestSequence, collect());
+            
+            $this->info("\nPROCESSES (Lowest Sequence: {$lowestSequence}):");
             $this->table(
                 ['Pivot ID', 'Process ID', 'Code', 'Name', 'Sequence', 'Time', 'Created', 'Finished', 'Finished At'],
-                $order->orderProcesses->map(function ($orderProcess) {
+                $lowestSequenceProcesses->map(function ($orderProcess) {
                     return [
                         $orderProcess->id,
                         $orderProcess->process_id,
@@ -118,8 +129,8 @@ class ListStockOrdersCommand extends Command
                 })
             );
 
-            // Display articles for each process
-            foreach ($order->orderProcesses as $orderProcess) {
+            // Display articles for each process with lowest sequence
+            foreach ($lowestSequenceProcesses as $orderProcess) {
                 if ($orderProcess->articles->isNotEmpty()) {
                     $this->info("\nArticles for Process ID {$orderProcess->id} (" . ($orderProcess->process->name ?? 'N/A') . "):");
                     $this->table(
