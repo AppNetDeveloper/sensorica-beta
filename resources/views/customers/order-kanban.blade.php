@@ -255,14 +255,14 @@
             box-shadow: var(--card-shadow); 
             margin-bottom: 0.5rem;
             flex: 0 0 auto;
-            min-height: 100px;
+            min-height: 50px; /* Altura reducida cuando está colapsada */
+            max-height: 400px; /* Altura máxima cuando está expandida */
+            overflow: hidden;
             box-sizing: border-box;
             width: 100%;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-            position: relative; 
-            cursor: grab; 
-            overflow: hidden;
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            cursor: pointer;
             position: relative;
         }
         .kanban-card.dragging { 
@@ -350,7 +350,18 @@
         .card-menu:hover { color: var(--primary-color); }
         .assigned-avatars .avatar-img { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--card-bg); margin-left: -10px; }
         .assigned-avatars .avatar-img:first-child { margin-left: 0; }
-        .kanban-card.collapsed .kanban-card-body, .kanban-card.collapsed .kanban-card-footer { display: none; }
+        .kanban-card:not(.collapsed) {
+            min-height: 150px; /* Altura cuando está expandida */
+        }
+        
+        .kanban-card.collapsed .kanban-card-body, 
+        .kanban-card.collapsed .kanban-card-footer { 
+            display: none; 
+        }
+        
+        .kanban-card.collapsed {
+            min-height: 50px; /* Altura cuando está colapsada */
+        }
         
         /* Estilos para la columna de estados finales */
         .final-states-container {
