@@ -80,12 +80,106 @@
             --scrollbar-thumb: #475569; --primary-color: #60a5fa; --danger-color: #f87171; --text-muted: #94a3b8;
         }
 
-        .kanban-board { display: flex; gap: 1rem; padding: 1rem; overflow-x: auto; background-color: var(--kanban-bg); min-height: calc(100vh - 350px); }
+        /* Contenedor principal del tablero */
+        #kanbanContainer {
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 200px); /* Ajustar según tu header */
+            overflow: hidden;
+        }
+
+        .kanban-board { 
+            display: flex; 
+            gap: 1rem; 
+            padding: 1rem; 
+            overflow-x: auto; 
+            overflow-y: hidden;
+            background-color: var(--kanban-bg);
+            flex: 1;
+            min-height: 0; /* Importante para que funcione el scroll */
+            align-items: flex-start;
+        }
+        
+        /* Estilos para pantalla completa */
+        :fullscreen #kanbanContainer {
+            width: 100%;
+            height: 100vh;
+            background-color: var(--kanban-bg);
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        :fullscreen .kanban-board {
+            flex: 1;
+            min-height: 0; /* Permite que el contenedor se encoja si es necesario */
+            padding: 1rem 1rem 0.5rem;
+            align-items: flex-start;
+        }
+        
+        :fullscreen .kanban-column {
+            height: 100%;
+            max-height: 100% !important;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        :fullscreen .kanban-column .column-cards {
+            max-height: none !important;
+            flex: 1;
+            overflow-y: auto;
+        }
         .kanban-board::-webkit-scrollbar { height: 10px; }
         .kanban-board::-webkit-scrollbar-track { background: transparent; }
         .kanban-board::-webkit-scrollbar-thumb { background-color: var(--scrollbar-thumb); border-radius: 10px; border: 2px solid var(--kanban-bg); }
 
-        .kanban-column { flex: 0 0 340px; background-color: var(--column-bg); border-radius: 12px; min-width: 340px; display: flex; flex-direction: column; border: 1px solid var(--column-border); box-shadow: 0 1px 4px rgba(0,0,0,0.05); max-height: calc(100vh - 390px); }
+        .kanban-column { 
+            flex: 0 0 340px; 
+            background-color: var(--column-bg); 
+            border-radius: 12px; 
+            min-width: 340px; 
+            display: flex; 
+            flex-direction: column; 
+            border: 1px solid var(--column-border); 
+            box-shadow: 0 1px 4px rgba(0,0,0,0.05); 
+            height: 100%;
+            max-height: 100%;
+        }
+        
+        /* Ajustar altura en pantalla completa */
+        :fullscreen .kanban-column {
+            max-height: calc(100vh - 100px) !important;
+            height: 100%;
+        }
+        
+        /* Contenedor de tarjetas con scroll */
+        .kanban-column .column-cards {
+            flex: 1 1 auto;
+            overflow-y: auto;
+            min-height: 100px;
+            padding: 0.5rem;
+            padding-right: 4px;
+            margin: 0;
+        }
+        
+        /* Cabecera de columna fija */
+        .kanban-column .column-header {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background-color: var(--column-bg);
+        }
+        
+        /* Estilos para el scrollbar en las columnas */
+        .kanban-column .column-cards::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .kanban-column .column-cards::-webkit-scrollbar-thumb {
+            background-color: var(--scrollbar-thumb);
+            border-radius: 3px;
+        }
         .column-header { padding: 0.75rem 1rem; position: sticky; top: 0; background-color: var(--column-bg); z-index: 10; border-bottom: 1px solid var(--column-border); display: flex; align-items: center; justify-content: space-between; }
         .column-title { font-weight: 600; color: var(--header-text); margin: 0; font-size: 1rem; }
         .column-cards { padding: 0.75rem; overflow-y: auto; flex-grow: 1; }
