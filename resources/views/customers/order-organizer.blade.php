@@ -4,22 +4,20 @@
 
 @section('page-title', __('Order Organizer'))
 
-@section('page-breadcrumb')
-    <li class="breadcrumb-item"><a href="{{ route('home') }}">{{ __('Dashboard') }}</a></li>
-    <li class="breadcrumb-item"><a href="{{ route('customers.index') }}">{{ __('Customers') }}</a></li>
-    <li class="breadcrumb-item">{{ $customer->name }}</li>
-    <li class="breadcrumb-item">{{ __('Order Organizer') }}</li>
+@section('breadcrumb')
+    <div class="mb-4">
+    <ul class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ route('home') }}">{{ __('Dashboard') }}</a></li>
+        <li class="breadcrumb-item"><a href="{{ route('customers.index') }}">{{ __('Customers') }}</a></li>
+        <li class="breadcrumb-item">{{ $customer->name }} - {{ __('Order Organizer') }}</li>
+    </ul>
+    </div>
 @endsection
 
 @section('content')
 <div class="card">
     <div class="card-header">
-        <div class="d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">{{ __('Processes') }}</h5>
-            <a href="{{ route('customers.index') }}" class="btn btn-sm btn-primary">
-                <i class="ti ti-arrow-left me-1"></i> {{ __('Back to Customers') }}
-            </a>
-        </div>
+        <h5 class="mb-0">{{ __('Processes') }}</h5>
     </div>
     <div class="card-body">
         @if($groupedProcesses->count() > 0)
