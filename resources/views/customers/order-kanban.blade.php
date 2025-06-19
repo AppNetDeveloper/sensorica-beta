@@ -459,8 +459,14 @@
         // Initialize production lines from PHP
         const productionLines = @json($productionLines ?? []);
         
+        // Log process information to console
+        console.log('Proceso actual:');
+        console.log('- ID:', {{ $process->id }});
+        console.log('- Nombre:', '{{ $process->name }}');
+        console.log('- Descripción:', '{{ $process->description }}');
+        
         // Log production lines to console
-        console.log('Líneas de producción para el proceso {{ $process->name }} (ID: {{ $process->id }})');
+        console.log('\nLíneas de producción para el proceso {{ $process->name }} (ID: {{ $process->id }})');
         console.log('Número de líneas:', productionLines.length);
         productionLines.forEach((line, index) => {
             console.log(`${index + 1}. ${line.name} (ID: ${line.id})`);
@@ -845,20 +851,37 @@
 
         function createCardHTML(order) {
             const createdAtFormatted = new Date(order.created_at).toLocaleDateString();
+            // Obtener la descripción del proceso desde la variable global o del objeto order
+            const processDescription = '{{ $process->description }}';
+            
             return `
                 <div class="kanban-card-header" onclick="this.parentElement.classList.toggle('collapsed')">
-                    <div class="fw-bold text-sm text-gray-700 dark:text-gray-200">#${order.order_id}</div>
-                    <span class="card-menu" role="button" onclick="event.stopPropagation(); showCardMenu('${order.id}')"><i class="fas fa-ellipsis-h"></i></span>
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="fw-bold text-sm text-gray-700 dark:text-gray-200">#${order.order_id}</div>
+                            ${processDescription ? `<div class="text-xs text-muted mt-1">${processDescription}</div>` : ''}
+                        </div>
+                        <span class="card-menu" role="button" onclick="event.stopPropagation(); showCardMenu('${order.id}')">
+                            <i class="fas fa-ellipsis-h"></i>
+                        </span>
+                    </div>
                 </div>
                 <div class="kanban-card-body">
-                    <p class="fw-semibold text-base mb-3" title="${order.json.refer.descrip}">${order.json.refer.descrip}</p>
-                    <div class="d-flex justify-content-between align-items-center text-sm text-gray-600 dark:text-gray-300 mb-3">
-                        <span class="d-flex align-items-center gap-2" title="{{__('Boxes')}}"><i class="fas fa-box-open text-gray-400"></i> ${order.box || 0}</span>
-                        <span class="d-flex align-items-center gap-2" title="{{__('Units')}}"><i class="fas fa-dolly text-gray-400"></i> ${order.units || 0}</span>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-xs text-muted">${order.json?.refer?.customerId || 'N/A'}</span>
+                        <span class="badge" style="background-color: ${order.statusColor || '#6b7280'}">
+                            ${order.status?.replace('_', ' ').toUpperCase() || 'PENDING'}
+                        </span>
                     </div>
-                    <div class="text-xs text-gray-500 dark:text-gray-400 mt-3 pt-2 border-top">
-                        <p><strong>{{__("Customer")}}:</strong> ${order.json.refer.customerId}</p>
-                        <p><strong>{{__("Created")}}:</strong> ${createdAtFormatted}</p>
+                    <div class="text-sm mb-2">${order.json?.refer?.descrip || 'Sin descripción'}</div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-box text-muted me-1"></i>
+                            <span class="text-xs">${order.box || 0} cajas</span>
+                            <i class="fas fa-cubes text-muted ms-2 me-1"></i>
+                            <span class="text-xs">${order.units || 0} uds</span>
+                        </div>
+                        <div class="text-xs text-muted">${createdAtFormatted}</div>
                     </div>
                 </div>
                 <div class="kanban-card-footer">
