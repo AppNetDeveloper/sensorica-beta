@@ -81,13 +81,31 @@
                                 </div>
                                 <div class="form-group">
                                     <label for="order_details">@lang('Order Details (JSON)') *</label>
+                                    @php
+                                        $orderDetailsValue = old('order_details', $originalOrder->order_details ?? null);
+                                        $defaultJson = json_encode([
+                                            'product' => '',
+                                            'quantity' => 0,
+                                            'due_date' => ''
+                                        ], JSON_PRETTY_PRINT);
+
+                                        if (is_string($orderDetailsValue)) {
+                                            // Si es un string, intentamos decodificarlo para ver si es JSON válido
+                                            $decoded = json_decode($orderDetailsValue, true);
+                                            $orderDetailsValue = json_last_error() === JSON_ERROR_NONE 
+                                                ? json_encode($decoded, JSON_PRETTY_PRINT)
+                                                : $orderDetailsValue;
+                                        } elseif (is_array($orderDetailsValue)) {
+                                            // Si es un array, lo convertimos a JSON formateado
+                                            $orderDetailsValue = json_encode($orderDetailsValue, JSON_PRETTY_PRINT);
+                                        } else {
+                                            // Valor por defecto si no hay datos
+                                            $orderDetailsValue = $defaultJson;
+                                        }
+                                    @endphp
                                     <textarea name="order_details" id="order_details" 
-                                               class="form-control @error('order_details') is-invalid @enderror" 
-                                               rows="8" required>{{ old('order_details', $originalOrder->order_details ?? '{
-    "product": "",
-    "quantity": 0,
-    "due_date": ""
-}') }}</textarea>
+                                              class="form-control @error('order_details') is-invalid @enderror" 
+                                              rows="8" required>{{ $orderDetailsValue }}</textarea>
                                     @error('order_details')
                                         <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
                                     @enderror
