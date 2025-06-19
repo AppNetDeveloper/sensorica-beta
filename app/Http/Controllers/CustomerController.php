@@ -41,23 +41,26 @@ class CustomerController extends Controller
                 $editButton = "<a href='{$editUrl}' class='btn btn-sm btn-info me-1' data-bs-toggle='tooltip' title='" . __('Edit') . "'><i class='fas fa-edit'></i></a>";
 
                 $linesButton = "<a href='{$productionLinesUrl}' class='btn btn-sm btn-secondary me-1' data-bs-toggle='tooltip' title='" . __('Production Lines') . "'><i class='fas fa-sitemap'></i></a>";
+                
+                // Botón del organizador de órdenes
+                $orderOrganizerUrl = route('customers.order-organizer', $customer->id);
+                $orderOrganizerButton = "<a href='{$orderOrganizerUrl}' class='btn btn-sm btn-primary me-1' data-bs-toggle='tooltip' title='" . __('Order Organizer') . "'><i class='fas fa-tasks'></i></a>";
+
+                $weightStatsButton = "<a href='{$liveViewUrl}' class='btn btn-sm btn-success me-1' data-bs-toggle='tooltip' title='" . __('Weight Stats') . "' target='_blank'><i class='fas fa-weight-hanging'></i></a>";
+                
+                $productionStatsButton = "<a href='{$liveViewUrlProd}' class='btn btn-sm btn-warning me-1' data-bs-toggle='tooltip' title='" . __('Production Stats') . "' target='_blank'><i class='fas fa-chart-line'></i></a>";
+                
+                // Botón de Órdenes Originales
+                $originalOrdersUrl = route('customers.original-orders.index', $customer->id);
+                $originalOrdersButton = "<a href='{$originalOrdersUrl}' class='btn btn-sm btn-dark me-1' data-bs-toggle='tooltip' title='" . __('Original Orders') . "'><i class='fas fa-clipboard-list'></i></a>";
 
                 $deleteForm = "<form action='{$deleteUrl}' method='POST' style='display:inline;' onsubmit='return confirm(\"" . __('Are you sure?') . "\");'>
                                 <input type='hidden' name='_token' value='{$csrfToken}'>
                                 <input type='hidden' name='_method' value='DELETE'>
                                 <button type='submit' class='btn btn-sm btn-danger me-1' data-bs-toggle='tooltip' title='" . __('Delete') . "'><i class='fas fa-trash'></i></button>
                                </form>";
-
-                $weightStatsButton = "<a href='{$liveViewUrl}' class='btn btn-sm btn-success me-1' data-bs-toggle='tooltip' title='" . __('Weight Stats') . "' target='_blank'><i class='fas fa-weight-hanging'></i></a>";
-
-                $prodStatsButton = "<a href='{$liveViewUrlProd}' class='btn btn-sm btn-warning me-1' data-bs-toggle='tooltip' title='" . __('Production Stats') . "' target='_blank'><i class='fas fa-chart-line'></i></a>";
-                
-                // Add Original Orders button
-                $originalOrdersUrl = route('customers.original-orders.index', $customer->id);
-                $originalOrdersButton = "<a href='{$originalOrdersUrl}' class='btn btn-sm btn-primary me-1' data-bs-toggle='tooltip' title='" . __('Original Orders') . "'><i class='fas fa-clipboard-list'></i></a>";
-
-                // Concatena todos los botones
-                return $linesButton . $originalOrdersButton . $weightStatsButton . $prodStatsButton . $editButton . $deleteForm;
+                               
+                return "<div class='d-flex flex-wrap'>" . $orderOrganizerButton . $editButton . $linesButton . $originalOrdersButton . $weightStatsButton . $productionStatsButton . $deleteForm . "</div>";
             })
             // Indica a DataTables que la columna 'action' contiene HTML y no debe ser escapada
             ->rawColumns(['action'])
@@ -71,6 +74,92 @@ class CustomerController extends Controller
     {
         $customers = Customer::all();
         dd($customers); 
+    }
+    
+    /**
+     * Muestra el organizador de órdenes para un cliente
+     *
+     * @param Customer $customer
+     * @return \Illuminate\View\View
+     */
+    public function showOrderOrganizer(Customer $customer)
+    {
+        // Cargar las líneas de producción del cliente con sus procesos
+        $productionLines = $customer->productionLines()
+            ->with('processes')
+            ->get()
+            ->filter(function($item) {
+                return $item->processes->isNotEmpty(); // Filtra solo líneas con procesos
+            });
+            
+        // Obtener procesos únicos con sus líneas
+        $uniqueProcesses = collect();
+        
+        foreach ($productionLines as $line) {
+            $process = $line->processes->first();
+            if ($process) {
+                $description = $process->description ?: 'Sin descripción';
+                if (!$uniqueProcesses->has($description)) {
+                    $uniqueProcesses->put($description, [
+                        'process' => $process,
+                        'lines' => collect()
+                    ]);
+                }
+                $uniqueProcesses[$description]['lines']->push($line);
+            }
+        }
+        
+        // Ordenar por el nombre del proceso
+        $sortedProcesses = $uniqueProcesses->sortBy(function($item) {
+            return $item['process']->name;
+        });
+            
+        return view('customers.order-organizer', [
+            'customer' => $customer,
+            'groupedProcesses' => $sortedProcesses,
+            'totalLines' => $productionLines->count()
+        ]);
+    }
+    
+    /**
+     * Muestra el tablero Kanban para un proceso específico
+     *
+     * @param  \App\Models\Customer  $customer
+     * @param  \App\Models\Process  $process
+     * @return \Illuminate\View\View
+     */
+    public function showOrderKanban(Customer $customer, \App\Models\Process $process)
+    {
+        // Verificar que el proceso pertenece al cliente y obtener las líneas de producción
+        $productionLines = $customer->productionLines()
+            ->whereHas('processes', function($query) use ($process) {
+                $query->where('process_id', $process->id);
+            })
+            ->with(['processes' => function($query) use ($process) {
+                $query->where('process_id', $process->id);
+            }])
+            ->get();
+            
+        if ($productionLines->isEmpty()) {
+            abort(404, 'El proceso no está asociado a este cliente o no hay líneas de producción configuradas.');
+        }
+        
+        // Obtener los datos completos de las líneas de producción
+        $productionLinesData = $productionLines->map(function($line) {
+            return [
+                'id' => $line->id,
+                'name' => $line->name
+            ];
+        })->toArray();
+        
+        // Registrar en el log para depuración
+        \Log::info('Líneas de producción para el proceso ' . $process->id . ':', $productionLinesData);
+        
+        return view('customers.order-kanban', [
+            'customer' => $customer,
+            'process' => $process,
+            'productionLines' => $productionLinesData
+        ]);
     }
 
     /**
@@ -534,5 +623,4 @@ class CustomerController extends Controller
                 ->withInput();
         }
     }
-
 }

@@ -84,10 +84,20 @@ Route::resource('customers', CustomerController::class)->except(['edit', 'update
 Route::get('customers/{customer}/field-mapping-row', [CustomerController::class, 'fieldMappingRow'])
     ->name('customers.field-mapping-row');
 
-Route::prefix('customers/{customer}')->name('customers.')->group(function () {
-    Route::resource('original-orders', CustomerOriginalOrderController::class)
-        ->names('original-orders')
-        ->parameters(['original-orders' => 'originalOrder']);
+Route::prefix('customers')->name('customers.')->group(function () {
+    Route::prefix('{customer}')->group(function () {
+        Route::resource('original-orders', CustomerOriginalOrderController::class)
+            ->names('original-orders')
+            ->parameters(['original-orders' => 'originalOrder']);
+            
+        // Rutas para el organizador de órdenes y tablero Kanban
+        Route::get('order-organizer', [CustomerController::class, 'showOrderOrganizer'])
+            ->name('order-organizer');
+            
+        Route::get('order-kanban/{process}', [CustomerController::class, 'showOrderKanban'])
+            ->name('order-kanban')
+            ->where('process', '[0-9]+');
+    });
 });
 
 // Rutas para colores RFID
