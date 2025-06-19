@@ -96,9 +96,46 @@ class ListStockOrdersCommand extends Command
      *
      * @param \App\Models\OriginalOrder $order
      * @param \App\Models\OriginalOrderProcess $orderProcess
+     * @param int $processNumber
      * @return array
      */
-    protected function generateProcessJson($order, $orderProcess)
+    private function publishMqttMessage($topic, $message)
+    {
+        try {
+            // Prepare data to store, including timestamp
+            $data = [
+                'topic'     => $topic,
+                'message'   => $message,
+                'timestamp' => now()->toDateTimeString(),
+            ];
+        
+            // Convert to JSON
+            $jsonData = json_encode($data);
+        
+            // Sanitize topic to avoid subfolder creation
+            $sanitizedTopic = str_replace('/', '_', $topic);
+            // Generate unique ID using microtime
+            $uniqueId = round(microtime(true) * 1000); // milliseconds
+        
+            // Save to server 1
+            $fileName1 = storage_path("app/mqtt/server1/{$sanitizedTopic}_{$uniqueId}.json");
+            if (!file_exists(dirname($fileName1))) {
+                mkdir(dirname($fileName1), 0755, true);
+            }
+            file_put_contents($fileName1, $jsonData . PHP_EOL);
+        
+            // Save to server 2
+            $fileName2 = storage_path("app/mqtt/server2/{$sanitizedTopic}_{$uniqueId}.json");
+            if (!file_exists(dirname($fileName2))) {
+                mkdir(dirname($fileName2), 0755, true);
+            }
+            file_put_contents($fileName2, $jsonData . PHP_EOL);
+        } catch (\Exception $e) {
+            \Log::error("Error storing MQTT message in file: " . $e->getMessage());
+        }
+    }
+
+    protected function generateProcessJson($order, $orderProcess, $processNumber = 1)
     {
         $json = [
             'orderId' => (string)$order->id,
@@ -135,7 +172,8 @@ class ListStockOrdersCommand extends Command
                 ],
                 'standardTime' => [
                     [
-                        'value' => (float)$orderProcess->time,
+                        'value' => 0, // Default value set to 0
+                        'totalTime' => (float)$orderProcess->time, // Original time value in new field
                         'magnitude1' => 'Uds/hr',
                         'measure1' => 'uds',
                         'magnitude2' => "",
@@ -147,14 +185,55 @@ class ListStockOrdersCommand extends Command
         ];
         
         // Convert to JSON string and back to array to ensure proper encoding
-        return json_decode(json_encode($json), true);
+        $jsonData = json_decode(json_encode($json), true);
+        
+        try {
+            // Publish the process JSON to MQTT
+            $this->publishMqttMessage('barcoder/prod_order_notice', json_encode($jsonData));
+            
+            // Mark this specific process as created
+            $orderProcess->update(['created' => 1]);
+            
+            // Ensure the parent order is marked as processed
+            if ($order->processed == 0) {
+                $order->update(['processed' => 1]);
+            }
+            
+        } catch (\Exception $e) {
+            $this->error("Error publishing process JSON or updating status: " . $e->getMessage());
+        }
+        
+        return $jsonData;
     }
 
     protected function displayOrderInfo($order)
     {
+        try {
+            // Add a small delay to prevent overwhelming the MQTT server
+            usleep(300000); // 300ms delay
+            
+            // Publish MQTT message with order info
+            $this->publishMqttMessage('barcoder/prod_order_notice', json_encode([
+                'order_id' => $order->id,
+                'customer' => $order->customer ? $order->customer->name : 'N/A',
+                'delivery_date' => $order->delivery_date ? $order->delivery_date->format('Y-m-d') : 'N/A',
+                'timestamp' => now()->toDateTimeString()
+            ]));
+            
+            // Mark the order as processed
+            $order->update(['processed' => 1]);
+            
+            // Mark the order processes as created
+            $order->orderProcesses()->update(['created' => 1]);
+            
+        } catch (\Exception $e) {
+            $this->error("Error updating order status: " . $e->getMessage());
+        }
+
         // Display basic order info
         $this->info("\n" . str_repeat('=', 80));
         $this->info("ORDER ID: {$order->id} | Customer: " . ($order->customer ? $order->customer->name : 'N/A') . " | Delivery: " . ($order->delivery_date ? $order->delivery_date->format('Y-m-d') : 'N/A'));
+        $this->info("MQTT Topic: barcoder/prod_order_notice");
         $this->info(str_repeat('-', 80));
 
         // Display processes with lowest sequence

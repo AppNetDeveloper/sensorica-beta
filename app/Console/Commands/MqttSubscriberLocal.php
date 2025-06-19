@@ -13,7 +13,9 @@ class MqttSubscriberLocal extends Command
     protected $signature = 'mqtt:subscribe-local';
     protected $description = 'Subscribe to MQTT topics and update order notices';
 
-
+    // Default topic to subscribe to
+    protected const DEFAULT_TOPIC = 'barcoder/prod_order_notice';
+    
     protected $subscribedTopics = [];
     protected $shouldContinue = true;
 
@@ -89,15 +91,23 @@ class MqttSubscriberLocal extends Command
     private function subscribeToAllTopics(MqttClient $mqtt)
     {
         $timestamp = Carbon::now()->format('Y-m-d H:i:s');
-        $topics = Barcode::pluck('mqtt_topic_barcodes')->map(function ($topic) {
-            return $topic . "/prod_order_notice";
-        })->toArray();
+        
+        // Subscribe to all barcode topics
+        $topics = Barcode::pluck('mqtt_topic_barcodes')
+            ->map(function ($topic) {
+                return $topic . "/prod_order_notice";
+            })
+            ->toArray();
+
+        // Add default topic
+        $topics[] = self::DEFAULT_TOPIC;
+        $topics = array_unique($topics);
 
         foreach ($topics as $topic) {
             $this->subscribeToTopic($mqtt, $topic);
         }
 
-        $this->info("[{$timestamp}] Subscribed to initial topics.");
+        $this->info("[{$timestamp}] Subscribed to initial topics including default topic: " . self::DEFAULT_TOPIC);
     }
 
     private function cleanAndValidateJson($rawJson)
@@ -124,6 +134,7 @@ class MqttSubscriberLocal extends Command
     private function processMessage($topic, $message)
     {
         $timestamp = Carbon::now()->format('Y-m-d H:i:s');
+        $isDefaultTopic = ($topic === self::DEFAULT_TOPIC);
 
         // Limpiar y validar el JSON
         $cleanMessageJson = $this->cleanAndValidateJson($message);
@@ -131,15 +142,25 @@ class MqttSubscriberLocal extends Command
             return; // JSON inválido, salir
         }
 
+        // Decode the message to check if it's a production order
+        $messageData = json_decode($cleanMessageJson, true);
+        
+        if ($isDefaultTopic && isset($messageData['orderId'])) {
+            // Handle default topic message (production order)
+            $this->handleProductionOrder($messageData, $timestamp);
+            return;
+        }
+
+        // Handle barcode topic message
         $originalTopic = str_replace('/prod_order_notice', '', $topic);
         $barcodes = Barcode::where('mqtt_topic_barcodes', $originalTopic)->get();
 
         if ($barcodes->isEmpty()) {
             $this->error("[{$timestamp}] No barcodes found for topic: {$topic}");
             return;
-        } else {
-            $this->info("[{$timestamp}] Barcodes found for topic: {$topic}");
         }
+        
+        $this->info("[{$timestamp}] Barcodes found for topic: {$topic}");
 
         foreach ($barcodes as $barcode) {
             $this->info("[{$timestamp}] Verificando barcode ID: {$barcode->id}, sended: {$barcode->sended}");
@@ -156,4 +177,56 @@ class MqttSubscriberLocal extends Command
         }
     }
     
+    /**
+     * Get the default barcode ID to use for production orders
+     * 
+     * @return int|null
+     */
+    private function getDefaultBarcodeId()
+    {
+        try {
+            // Try to find a default barcode
+            $defaultBarcode = \App\Models\Barcode::first();
+            return $defaultBarcode ? $defaultBarcode->id : null;
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Handle production order messages from the default topic
+     * 
+     * @param array $messageData
+     * @param string $timestamp
+     * @return void
+     */
+    private function handleProductionOrder(array $messageData, string $timestamp)
+    {
+        try {
+            // Get default barcode ID
+            $barcoderId = $this->getDefaultBarcodeId();
+            
+            if (!$barcoderId) {
+                throw new \Exception("No se pudo encontrar un código de barras por defecto");
+            }
+
+            // Create or update production order
+            $productionOrder = \App\Models\ProductionOrder::updateOrCreate(
+                ['order_id' => $messageData['orderId']],
+                [
+                    'barcoder_id' => $barcoderId,
+                    'production_line_id' => null, // Set production_line_id to null for default topic
+                    'json' => json_encode($messageData),
+                    'status' => 'pending',
+                    'processed' => false,
+                    'orden' => \App\Models\ProductionOrder::max('orden') + 1 // Auto-increment order
+                ]
+            );
+            
+            $this->info("[{$timestamp}] Production order processed: {$messageData['orderId']}");
+            
+        } catch (\Exception $e) {
+            $this->error("[{$timestamp}] Error processing production order: " . $e->getMessage());
+        }
+    }
 }
