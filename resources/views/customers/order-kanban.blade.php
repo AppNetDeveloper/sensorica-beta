@@ -121,6 +121,7 @@
         :fullscreen .kanban-column {
             height: 100%;
             max-height: 100% !important;
+            overflow: hidden;
             display: flex;
             flex-direction: column;
         }
@@ -142,9 +143,10 @@
             display: flex; 
             flex-direction: column; 
             border: 1px solid var(--column-border); 
-            box-shadow: 0 1px 4px rgba(0,0,0,0.05); 
+            box-shadow: 0 1px 4px rgba(0,0,0,0.05);
             height: 100%;
             max-height: 100%;
+            overflow: hidden;
         }
         
         /* Ajustar altura en pantalla completa */
@@ -158,9 +160,61 @@
             flex: 1 1 auto;
             overflow-y: auto;
             min-height: 100px;
+            max-height: 100%;
             padding: 0.5rem;
             padding-right: 4px;
             margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 8px; /* Espaciado consistente entre tarjetas */
+            scrollbar-width: thin;
+            scrollbar-color: #c1c1c1 #f1f1f1;
+        }
+        
+        /* Estilos para la barra de desplazamiento */
+        .kanban-column .column-cards::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .kanban-column .column-cards::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+        
+        .kanban-column .column-cards::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+        
+        .kanban-column .column-cards::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+        
+        /* Contenedor de tarjetas en secciones de estado final */
+        .final-state-section .column-cards {
+            max-height: calc(100vh - 250px) !important;
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 8px;
+            scrollbar-width: thin;
+            scrollbar-color: #c1c1c1 #f1f1f1;
+        }
+        
+        .final-state-section .column-cards::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .final-state-section .column-cards::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+        
+        .final-state-section .column-cards::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
         }
         
         /* Cabecera de columna fija */
@@ -182,7 +236,15 @@
         }
         .column-header { padding: 0.75rem 1rem; position: sticky; top: 0; background-color: var(--column-bg); z-index: 10; border-bottom: 1px solid var(--column-border); display: flex; align-items: center; justify-content: space-between; }
         .column-title { font-weight: 600; color: var(--header-text); margin: 0; font-size: 1rem; }
-        .column-cards { padding: 0.75rem; overflow-y: auto; flex-grow: 1; }
+        .column-cards { 
+            padding: 0.75rem; 
+            overflow-y: auto; 
+            flex-grow: 1; 
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-height: 100px;
+        }
         
         .kanban-card { 
             background-color: var(--card-bg); 
@@ -191,7 +253,13 @@
             border: 1px solid var(--card-border); 
             border-left: 5px solid; 
             box-shadow: var(--card-shadow); 
-            margin-bottom: 1rem; 
+            margin-bottom: 0.5rem;
+            flex: 0 0 auto;
+            min-height: 100px;
+            box-sizing: border-box;
+            width: 100%;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            position: relative; 
             cursor: grab; 
             overflow: hidden;
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -294,16 +362,43 @@
             gap: 12px;
         }
         
+        /* Secciones de estado final */
         .final-state-section {
-            background-color: var(--card-bg);
+            background-color: rgba(0, 0, 0, 0.02);
             border-radius: 8px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
+            margin-bottom: 1rem;
+            border: 1px dashed var(--column-border);
             display: flex;
             flex-direction: column;
             flex: 1;
             min-height: 150px;
-            border: 1px solid var(--card-border);
+            overflow: hidden;
+        }
+        
+        .final-state-section .column-cards {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-height: 60px;
+            max-height: calc(100vh - 200px); /* Altura máxima para forzar el scroll */
+        }
+        
+        /* Asegurar que el contenedor de tarjetas use el espacio disponible */
+        .final-state-section {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 150px;
+            max-height: 100%;
+            overflow: hidden;
+        }
+        
+        /* Asegurar que las secciones de estado final en pantalla completa */
+        :fullscreen .final-state-section {
+            flex: 1;
         }
         
         .final-state-header {
@@ -912,6 +1007,11 @@
                 return;
             }
             
+            // Si el objetivo es el área de tarjetas, subir al contenedor padre
+            if (targetContainer.classList.contains('column-cards')) {
+                targetContainer = targetContainer.closest('.kanban-column, .final-state-section') || targetContainer;
+            }
+            
             // Determinar el destino final (columna y estado)
             let targetColumnEl, targetState, targetStateName = '', targetCardsContainer;
             
@@ -920,30 +1020,48 @@
                 targetColumnEl = targetContainer.closest('.kanban-column');
                 targetCardsContainer = targetColumnEl?.querySelector('.column-cards');
                 targetState = null;
+                
+                // Verificar si estamos en una sección de estado final
+                const finalStateSection = targetContainer.closest('.final-state-section');
+                if (finalStateSection) {
+                    targetState = finalStateSection.dataset.state;
+                    targetStateName = finalStateSection.querySelector('.final-state-title')?.textContent || '';
+                }
             } else if (targetContainer.classList.contains('final-state-section')) {
                 // Si es una sección de estado final
                 targetState = targetContainer.dataset.state;
                 targetColumnEl = targetContainer.closest('.kanban-column');
                 targetCardsContainer = targetContainer.querySelector('.column-cards');
                 targetStateName = targetContainer.querySelector('.final-state-title')?.textContent || '';
-            } else if (targetContainer.classList.contains('column-cards')) {
-                // Si se suelta directamente en el área de tarjetas
-                targetColumnEl = targetContainer.closest('.kanban-column');
-                targetCardsContainer = targetContainer;
-                
-                // Si es una sección de estado final, obtener el estado
-                const finalStateSection = targetContainer.closest('.final-state-section');
-                if (finalStateSection) {
-                    targetState = finalStateSection.dataset.state;
-                    targetStateName = finalStateSection.querySelector('.final-state-title')?.textContent || '';
-                } else {
-                    targetState = null;
-                }
-            } else {
+            } else if (targetContainer.classList.contains('kanban-column')) {
                 // Si es una columna normal, obtener su contenedor de tarjetas
                 targetColumnEl = targetContainer;
-                targetCardsContainer = targetColumnEl.querySelector('.column-cards');
+                targetCardsContainer = targetContainer.querySelector('.column-cards');
                 targetState = null;
+                
+                // Verificar si hay una sección de estado final dentro de la columna
+                if (targetColumnEl.id === 'final_states') {
+                    // Si es la columna de estados finales, buscar la sección más cercana al punto de soltado
+                    const finalStateSections = Array.from(targetColumnEl.querySelectorAll('.final-state-section'));
+                    const dropY = event.clientY;
+                    
+                    // Encontrar la sección más cercana al punto de soltado
+                    const closestSection = finalStateSections.reduce((closest, section) => {
+                        const rect = section.getBoundingClientRect();
+                        const distance = Math.abs(rect.top + (rect.height / 2) - dropY);
+                        
+                        if (distance < closest.distance) {
+                            return { section, distance };
+                        }
+                        return closest;
+                    }, { section: null, distance: Infinity }).section;
+                    
+                    if (closestSection) {
+                        targetState = closestSection.dataset.state;
+                        targetCardsContainer = closestSection.querySelector('.column-cards');
+                        targetStateName = closestSection.querySelector('.final-state-title')?.textContent || '';
+                    }
+                }
             }
             
             if (!targetColumnEl) {
