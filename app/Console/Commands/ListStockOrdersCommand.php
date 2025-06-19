@@ -91,6 +91,65 @@ class ListStockOrdersCommand extends Command
         }
     }
 
+    /**
+     * Generate JSON structure for a process
+     *
+     * @param \App\Models\OriginalOrder $order
+     * @param \App\Models\OriginalOrderProcess $orderProcess
+     * @return array
+     */
+    protected function generateProcessJson($order, $orderProcess)
+    {
+        $json = [
+            'orderId' => (string)$order->id,
+            'customerOrderId' => "",
+            'customerReferenceId' => "",
+            'barcode' => (string)\Illuminate\Support\Str::uuid(),
+            'quantity' => 0,
+            'unit' => 'Cajas',
+            'isAuto' => 0,
+            'refer' => [
+                '_id' => "",
+                'company_name' => $order->customer ? $order->customer->name : 'N/A',
+                'id' => $order->customer_id ? (string)$order->customer_id : "",
+                'families' => "",
+                'customerId' => $order->client_number ? $order->client_number : "",
+                'eanCode' => (string)\Illuminate\Support\Str::uuid(),
+                'rfidCode' => (string)\Illuminate\Support\Str::uuid(),
+                'descrip' => $orderProcess->process ? $orderProcess->process->name : "",
+                'value' => 0,
+                'magnitude' => 'Masa',
+                'envase' => $orderProcess->process ? $orderProcess->process->name : "",
+                'envase_value' => "",
+                'measure' => 'Kg',
+                'groupLevel' => [
+                    [
+                        'id' => "",
+                        'level' => 1,
+                        'uds' => 0,
+                        'total' => 0,
+                        'measure' => 'Kg',
+                        'eanCode' => "",
+                        'envase' => ""
+                    ]
+                ],
+                'standardTime' => [
+                    [
+                        'value' => (float)$orderProcess->time,
+                        'magnitude1' => 'Uds/hr',
+                        'measure1' => 'uds',
+                        'magnitude2' => "",
+                        'measure2' => "",
+                        'machineId' => []
+                    ]
+                ]
+            ]
+        ];
+        
+        // Convert to JSON string and back to array to ensure proper encoding
+        return json_decode(json_encode($json), true);
+    }
+
     protected function displayOrderInfo($order)
     {
         // Display basic order info
@@ -130,7 +189,13 @@ class ListStockOrdersCommand extends Command
             );
 
             // Display articles for each process with lowest sequence
+            $processesJson = [];
+            
             foreach ($lowestSequenceProcesses as $orderProcess) {
+                // Generate JSON for this process
+                $processJson = $this->generateProcessJson($order, $orderProcess);
+                $processesJson[] = $processJson;
+                
                 if ($orderProcess->articles->isNotEmpty()) {
                     $this->info("\nArticles for Process ID {$orderProcess->id} (" . ($orderProcess->process->name ?? 'N/A') . "):");
                     $this->table(
@@ -143,6 +208,19 @@ class ListStockOrdersCommand extends Command
                             ];
                         })
                     );
+                }
+            }
+            
+            // Display the generated JSON
+            if (!empty($processesJson)) {
+                $this->info("\nGENERATED JSON:");
+                foreach ($processesJson as $index => $json) {
+                    $this->info("\nProcess " . ($index + 1) . " JSON:");
+                    $this->info(json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+                    
+                    // Also show a more compact version for easier reading
+                    $this->info("\nCompact JSON (copy-paste friendly):");
+                    $this->info(str_replace('    ', ' ', json_encode($json)));
                 }
             }
         } else {
