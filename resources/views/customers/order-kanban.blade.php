@@ -29,20 +29,11 @@
     <div class="mb-3 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md">
         <div class="d-flex flex-wrap items-center justify-content-between gap-3">
             <div class="d-flex flex-wrap items-center gap-3">
-                <select id="statusFilter" class="form-select" style="min-width: 150px;">
-                    <option value="">{{ __('All statuses') }}</option>
-                    <option value="0">{{ __('To Do') }}</option>
-                    <option value="1">{{ __('In Progress') }}</option>
-                    <option value="2">{{ __('Completed') }}</option>
-                    <option value="3">{{ __('Incident') }}</option>
-                    <option value="4">{{ __('Paused') }}</option>
-                    <option value="5">{{ __('Cancelled') }}</option>
-                </select>
-                <div class="position-relative">
-                    <i class="fas fa-search position-absolute top-50 start-0 translate-middle-y ms-3 text-gray-400"></i>
-                    <input type="text" id="searchInput" placeholder="{{ __('Search...') }}"
-                           class="form-control ps-5" style="min-width: 250px;">
-                </div>
+            <div class="position-relative flex-grow-1" style="max-width: 400px;">
+                <i class="fas fa-search position-absolute top-50 start-0 translate-middle-y ms-3 text-gray-400"></i>
+                <input type="text" id="searchInput" placeholder="{{ __('Search by order ID or customer...') }}"
+                       class="form-control ps-5" style="width: 100%;">
+            </div>
             </div>
             <div class="d-flex items-center gap-3">
                 <button id="refreshBtn" class="btn btn-light" title="{{ __('Refresh') }}">
@@ -99,9 +90,95 @@
         .column-title { font-weight: 600; color: var(--header-text); margin: 0; font-size: 1rem; }
         .column-cards { padding: 0.75rem; overflow-y: auto; flex-grow: 1; }
         
-        .kanban-card { background-color: var(--card-bg); color: var(--card-text); border-radius: 10px; border: 1px solid var(--card-border); border-left: 5px solid; box-shadow: var(--card-shadow); margin-bottom: 1rem; cursor: grab; overflow: hidden; }
-        .kanban-card.dragging { opacity: 0.6; transform: rotate(3deg); }
-        .kanban-card:hover { transform: translateY(-4px); box-shadow: var(--card-shadow-hover); }
+        .kanban-card { 
+            background-color: var(--card-bg); 
+            color: var(--card-text); 
+            border-radius: 10px; 
+            border: 1px solid var(--card-border); 
+            border-left: 5px solid; 
+            box-shadow: var(--card-shadow); 
+            margin-bottom: 1rem; 
+            cursor: grab; 
+            overflow: hidden;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+        .kanban-card.dragging { 
+            opacity: 0.8; 
+            transform: rotate(2deg) scale(1.02);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.15), 0 6px 6px rgba(0,0,0,0.1);
+            z-index: 1000;
+            transition: none;
+        }
+        .kanban-card:hover { 
+            transform: translateY(-2px); 
+            box-shadow: 0 7px 14px rgba(0,0,0,0.1), 0 3px 6px rgba(0,0,0,0.08);
+        }
+        .kanban-card:active { 
+            cursor: grabbing;
+            transform: rotate(1deg) scale(0.99);
+        }
+        .kanban-card.drag-over {
+            border: 2px dashed var(--primary-color);
+            background-color: rgba(59, 130, 246, 0.05);
+        }
+        
+        /* Efecto al soltar una tarjeta */
+        .kanban-card.card-dropped {
+            animation: cardDropped 0.3s ease-out;
+        }
+        
+        @keyframes cardDropped {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            70% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); }
+        }
+        
+        /* Efecto de confirmación */
+        .drop-confirmation {
+            position: absolute;
+            pointer-events: none;
+            z-index: 1000;
+        }
+        
+        /* Mejoras en el toast */
+        .toast-notification {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: white;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            z-index: 9999;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        
+        .toast-notification.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        
+        .toast-notification i {
+            font-size: 1.5rem;
+        }
+        
+        /* Mejoras en las columnas durante el arrastre */
+        .kanban-column.drag-over {
+            box-shadow: inset 0 0 0 2px var(--primary-color);
+            transform: translateY(-2px);
+            transition: all 0.2s ease;
+        }
+        
+        /* Efecto de elevación al pasar sobre una tarjeta */
+        .kanban-card:hover {
+            z-index: 5;
+        }
 
         .kanban-card-header { padding: 0.75rem 1.25rem; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
         .kanban-card-body { padding: 0 1.25rem 1.25rem 1.25rem; }
@@ -157,6 +234,18 @@
         
         .final-state-section.dragover .column-cards {
             background-color: var(--card-hover-bg);
+        }
+        
+        .kanban-card {
+            transform: none !important;
+            will-change: transform, box-shadow;
+        }
+        
+        .drag-clone {
+            transform: rotate(1deg) !important;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2) !important;
+            transition: transform 0.1s ease, box-shadow 0.1s ease !important;
+            will-change: transform, box-shadow;
         }
     </style>
 @endpush
@@ -237,33 +326,211 @@
 
         const kanbanBoard = document.querySelector('.kanban-board');
         const searchInput = document.getElementById('searchInput');
-        const statusFilter = document.getElementById('statusFilter');
 
         function generateDummyData() {
+            // Limpiar columnas existentes
+            Object.keys(columns).forEach(key => {
+                if (columns[key].items) {
+                    columns[key].items = [];
+                }
+            });
+
+            // Generar datos de ejemplo
             masterOrderList = [
-                { id: 1, order_id: 'OP-001', status: 0, box: 10, units: 100, created_at: '2025-06-20T10:00:00Z', json: { refer: { descrip: 'Producto A - Modelo Premium', customerId: 'Cliente Alpha' } } },
-                { id: 2, order_id: 'OP-002', status: 1, box: 5, units: 50, created_at: '2025-06-20T11:00:00Z', json: { refer: { descrip: 'Producto B - Edición Limitada', customerId: 'Cliente Beta' } } },
-                { id: 3, order_id: 'OP-003', status: 2, box: 20, units: 200, created_at: '2025-06-19T09:00:00Z', json: { refer: { descrip: 'Componente C - Estándar', customerId: 'Cliente Gamma' } } },
-                { id: 4, order_id: 'OP-004', status: 3, box: 1, units: 10, created_at: '2025-06-18T15:00:00Z', json: { refer: { descrip: 'Producto D - Prototipo', customerId: 'Cliente Delta' } } },
-                { id: 5, order_id: 'OP-005', status: 4, box: 8, units: 80, created_at: '2025-06-17T12:00:00Z', json: { refer: { descrip: 'Producto E - Básico', customerId: 'Cliente Epsilon' } } },
-                { id: 6, order_id: 'OP-006', status: 0, box: 12, units: 120, created_at: '2025-06-21T08:00:00Z', json: { refer: { descrip: 'Producto F - Industrial', customerId: 'Cliente Zeta' } } },
-                { id: 7, order_id: 'OP-007', status: 1, box: 15, units: 150, created_at: '2025-06-21T09:30:00Z', json: { refer: { descrip: 'Accesorio G - Kit Completo', customerId: 'Cliente Eta' } } },
+                { 
+                    id: 1, 
+                    order_id: 'OP-001', 
+                    status: 'pending', 
+                    box: 10, 
+                    units: 100, 
+                    created_at: '2025-06-20T10:00:00Z', 
+                    json: { 
+                        refer: { 
+                            descrip: 'Producto A - Modelo Premium', 
+                            customerId: 'Cliente Alpha' 
+                        } 
+                    },
+                    statusColor: '#6b7280'
+                },
+                { 
+                    id: 2, 
+                    order_id: 'OP-002', 
+                    status: 'in_progress', 
+                    productionLineId: 1,
+                    box: 5, 
+                    units: 50, 
+                    created_at: '2025-06-20T11:00:00Z', 
+                    json: { 
+                        refer: { 
+                            descrip: 'Producto B - Edición Limitada', 
+                            customerId: 'Cliente Beta' 
+                        } 
+                    },
+                    statusColor: '#3b82f6'
+                },
+                { 
+                    id: 3, 
+                    order_id: 'OP-003', 
+                    status: 'completed', 
+                    productionLineId: 2,
+                    box: 20, 
+                    units: 200, 
+                    created_at: '2025-06-19T09:00:00Z', 
+                    json: { 
+                        refer: { 
+                            descrip: 'Componente C - Estándar', 
+                            customerId: 'Cliente Gamma' 
+                        } 
+                    },
+                    statusColor: '#10b981'
+                },
+                { 
+                    id: 4, 
+                    order_id: 'OP-004', 
+                    status: 'incidents', 
+                    box: 1, 
+                    units: 10, 
+                    created_at: '2025-06-18T15:00:00Z', 
+                    json: { 
+                        refer: { 
+                            descrip: 'Producto D - Prototipo', 
+                            customerId: 'Cliente Delta' 
+                        } 
+                    },
+                    statusColor: '#ef4444'
+                },
+                { 
+                    id: 5, 
+                    order_id: 'OP-005', 
+                    status: 'cancelled', 
+                    box: 8, 
+                    units: 80, 
+                    created_at: '2025-06-17T12:00:00Z', 
+                    json: { 
+                        refer: { 
+                            descrip: 'Producto E - Básico', 
+                            customerId: 'Cliente Epsilon' 
+                        } 
+                    },
+                    statusColor: '#6b7280'
+                },
+                { 
+                    id: 6, 
+                    order_id: 'OP-006', 
+                    status: 'pending', 
+                    box: 12, 
+                    units: 120, 
+                    created_at: '2025-06-21T08:00:00Z', 
+                    json: { 
+                        refer: { 
+                            descrip: 'Producto F - Industrial', 
+                            customerId: 'Cliente Zeta' 
+                        } 
+                    },
+                    statusColor: '#6b7280'
+                },
+                { 
+                    id: 7, 
+                    order_id: 'OP-007', 
+                    status: 'in_progress', 
+                    productionLineId: 1,
+                    box: 15, 
+                    units: 150, 
+                    created_at: '2025-06-21T09:30:00Z', 
+                    json: { 
+                        refer: { 
+                            descrip: 'Accesorio G - Kit Completo', 
+                            customerId: 'Cliente Eta' 
+                        } 
+                    },
+                    statusColor: '#3b82f6'
+                },
             ];
-            applyAndRenderFilters();
+
+            // Asignar órdenes a las columnas correspondientes
+            masterOrderList.forEach(order => {
+                let targetColumn = 'pending_assignment';
+                
+                // Determinar la columna de destino basada en el estado
+                if (order.status === 'completed' || order.status === 'incidents' || order.status === 'cancelled') {
+                    targetColumn = 'final_states';
+                } else if (order.productionLineId) {
+                    // Buscar la columna de la línea de producción
+                    const lineColumn = Object.entries(columns).find(([key, col]) => 
+                        col.productionLineId === order.productionLineId
+                    );
+                    if (lineColumn) {
+                        targetColumn = lineColumn[0];
+                    }
+                }
+                
+                // Asegurarse de que la columna tenga un array de items
+                if (!columns[targetColumn].items) {
+                    columns[targetColumn].items = [];
+                }
+                
+                // Agregar la orden a la columna correspondiente
+                columns[targetColumn].items.push(order);
+            });
+
+            // Renderizar el tablero
+            renderBoard(masterOrderList);
+            
+            // Mostrar notificación
+            showToast('Datos de ejemplo cargados correctamente', {
+                icon: 'check-circle',
+                iconColor: '#10b981'
+            });
         }
         
         function applyAndRenderFilters() {
-            const searchTerm = searchInput.value.trim().toLowerCase();
-            const statusValue = statusFilter.value;
+            const searchTerm = searchInput ? searchInput.value.trim().toLowerCase() : '';
+            
+            // Si no hay término de búsqueda, mostrar todas las órdenes
+            if (!searchTerm) {
+                // Reconstruir el tablero con todas las órdenes en sus columnas correspondientes
+                Object.values(columns).forEach(column => {
+                    if (column.items) column.items = [];
+                });
+                
+                masterOrderList.forEach(order => {
+                    let targetColumn = 'pending_assignment';
+                    
+                    // Determinar la columna de destino basada en el estado
+                    if (order.status === 'completed' || order.status === 'incidents' || order.status === 'cancelled') {
+                        targetColumn = 'final_states';
+                    } else if (order.productionLineId) {
+                        // Buscar la columna de la línea de producción
+                        const lineColumn = Object.entries(columns).find(([key, col]) => 
+                            col.productionLineId === order.productionLineId
+                        );
+                        if (lineColumn) {
+                            targetColumn = lineColumn[0];
+                        }
+                    }
+                    
+                    // Asegurarse de que la columna tenga un array de items
+                    if (!columns[targetColumn].items) {
+                        columns[targetColumn].items = [];
+                    }
+                    
+                    // Agregar la orden a la columna correspondiente
+                    columns[targetColumn].items.push(order);
+                });
+                
+                renderBoard(masterOrderList);
+                return;
+            }
 
+            // Filtrar órdenes por el término de búsqueda
             const filteredOrders = masterOrderList.filter(order => {
-                const searchMatch = !searchTerm || 
-                                    (order.order_id && String(order.order_id).toLowerCase().includes(searchTerm)) || 
-                                    (order.json?.refer?.descrip && order.json.refer.descrip.toLowerCase().includes(searchTerm)) ||
-                                    (order.json?.refer?.customerId && order.json.refer.customerId.toLowerCase().includes(searchTerm));
-
-                const statusMatch = !statusValue || String(order.status) === statusValue;
-                return searchMatch && statusMatch;
+                // Buscar coincidencias en varios campos
+                return (
+                    (order.order_id && String(order.order_id).toLowerCase().includes(searchTerm)) || 
+                    (order.json?.refer?.descrip && order.json.refer.descrip.toLowerCase().includes(searchTerm)) ||
+                    (order.json?.refer?.customerId && order.json.refer.customerId.toLowerCase().includes(searchTerm)) ||
+                    (order.status && String(order.status).toLowerCase().includes(searchTerm))
+                );
             });
             renderBoard(filteredOrders);
         }
@@ -403,156 +670,463 @@
                 </div>`;
         }
 
-        function handleDragStart(event) { draggedCard = event.target; setTimeout(() => event.target.classList.add('dragging'), 0); }
-        function handleDragEnd(event) { event.target.classList.remove('dragging'); draggedCard = null; }
+        function handleDragStart(event) {
+            draggedCard = event.target.closest('.kanban-card');
+            if (!draggedCard) return;
+            
+            // Guardar la transformación original para restaurarla después
+            draggedCard.originalTransform = draggedCard.style.transform;
+            
+            // Agregar clase de arrastre con retraso para mejor feedback
+            setTimeout(() => {
+                if (!draggedCard) return;
+                
+                draggedCard.classList.add('dragging');
+                
+                // Crear clon para el efecto de arrastre
+                const rect = draggedCard.getBoundingClientRect();
+                dragClone = draggedCard.cloneNode(true);
+                dragClone.classList.add('drag-clone');
+                dragClone.style.width = `${rect.width}px`;
+                dragClone.style.height = `${rect.height}px`;
+                dragClone.style.position = 'fixed';
+                dragClone.style.top = `${rect.top}px`;
+                dragClone.style.left = `${rect.left}px`;
+                dragClone.style.opacity = '0.8';
+                dragClone.style.zIndex = '1000';
+                dragClone.style.pointerEvents = 'none';
+                dragClone.style.transform = 'none'; // Asegurar que el clon no tenga transformación
+                document.body.appendChild(dragClone);
+                
+                // Ocultar la tarjeta original temporalmente pero mantener su espacio
+                draggedCard.style.visibility = 'hidden';
+                draggedCard.style.position = 'absolute';
+                draggedCard.style.top = '0';
+                draggedCard.style.left = '0';
+            }, 10);
+            
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', draggedCard.dataset.id);
+            
+            // Agregar clase al cuerpo para indicar que se está arrastrando
+            document.body.classList.add('dragging-active');
+        }
+        
+        function handleDragEnd(event) {
+            if (!draggedCard) return;
+            
+            // Restaurar estilos
+            draggedCard.classList.remove('dragging');
+            
+            // Eliminar el clon si existe
+            if (dragClone && dragClone.parentNode) {
+                dragClone.parentNode.removeChild(dragClone);
+                dragClone = null;
+            }
+            
+            // Restaurar la tarjeta original
+            if (draggedCard) {
+                draggedCard.style.visibility = 'visible';
+                draggedCard.style.position = '';
+                draggedCard.style.top = '';
+                draggedCard.style.left = '';
+                draggedCard.style.transform = draggedCard.originalTransform || '';
+                draggedCard.style.width = '';
+                draggedCard.style.height = '';
+                draggedCard.style.zIndex = '';
+                
+                // Forzar un reflow para asegurar que los estilos se apliquen
+                void draggedCard.offsetHeight;
+            }
+            
+            // Limpiar referencias
+            draggedCard = null;
+            
+            // Quitar clase del cuerpo
+            document.body.classList.remove('dragging-active');
+            
+            // Resetear zonas de drop
+            resetDropZones();
+        }
+        
         function dragOver(event) {
             event.preventDefault();
-            const targetColumn = event.target.closest('.kanban-column, .final-state-section');
+            if (!draggedCard) return;
+            
+            // Encontrar el contenedor objetivo más cercano
+            const targetContainer = event.target.closest('.kanban-column, .final-state-section, .kanban-card');
+            if (!targetContainer) return;
+            
+            // Determinar el área de destino
+            let dropZone;
+            let targetColumn;
+            
+            if (targetContainer.classList.contains('kanban-card')) {
+                // Si el objetivo es una tarjeta, obtener su columna
+                targetColumn = targetContainer.closest('.kanban-column');
+                dropZone = targetColumn?.querySelector('.column-cards');
+            } else if (targetContainer.classList.contains('final-state-section')) {
+                // Si es una sección de estado final
+                targetColumn = targetContainer.closest('.kanban-column');
+                dropZone = targetContainer.querySelector('.column-cards');
+                
+                // Resaltar la sección de estado
+                document.querySelectorAll('.final-state-section').forEach(section => {
+                    section.style.transform = section === targetContainer ? 'scale(1.01)' : '';
+                    section.style.boxShadow = section === targetContainer ? '0 4px 12px rgba(0,0,0,0.1)' : '';
+                    section.style.transition = 'all 0.2s ease';
+                });
+            } else {
+                // Si es una columna normal
+                targetColumn = targetContainer;
+                dropZone = targetContainer.querySelector('.column-cards');
+            }
+            
+            // Resaltar la columna/área de destino
             if (targetColumn) {
-                targetColumn.classList.add('drag-over');
+                // Quitar resaltado de todas las columnas
+                document.querySelectorAll('.kanban-column').forEach(col => {
+                    col.style.boxShadow = '';
+                    col.style.transform = '';
+                });
                 
-                // Resaltar el área de soltado objetivo
-                const dropZone = targetColumn.classList.contains('final-state-section') ? 
-                    targetColumn.querySelector('.column-cards') : 
-                    targetColumn.querySelector('.column-cards');
-                
-                if (dropZone) {
-                    dropZone.style.backgroundColor = 'var(--card-hover-bg)';
+                // Resaltar la columna objetivo
+                if (!targetContainer.classList.contains('kanban-card')) {
+                    targetColumn.style.boxShadow = 'inset 0 0 0 2px var(--primary-color)';
+                    targetColumn.style.transform = 'translateY(-2px)';
+                    targetColumn.style.transition = 'all 0.2s ease';
                 }
+            }
+            
+            // Resaltar el área de soltado
+            if (dropZone) {
+                dropZone.style.background = 'rgba(59, 130, 246, 0.05)';
+                dropZone.style.borderRadius = '8px';
+                dropZone.style.border = '2px dashed var(--primary-color)';
+                dropZone.style.transition = 'all 0.2s ease';
             }
         }
 
         function drop(event) {
             event.preventDefault();
-            
-            // Encontrar el contenedor de destino (columna o sección de estado final)
-            let targetContainer = event.target.closest('.kanban-column, .final-state-section');
-            if (!targetContainer) return;
             if (!draggedCard) return;
-
-            // Remover clases de arrastre
-            document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
-            document.querySelectorAll('.column-cards').forEach(el => {
-                el.style.backgroundColor = '';
-            });
-
-            // Obtener información del contenedor de destino
-            let targetColumnEl, targetState;
             
-            if (targetContainer.classList.contains('kanban-column')) {
-                // Es una columna normal
-                targetColumnEl = targetContainer;
-                targetState = null;
-            } else {
-                // Es una sección de estado final
-                targetState = targetContainer.dataset.state;
-                targetColumnEl = targetContainer.closest('.kanban-column');
+            // Encontrar el contenedor de destino
+            let targetContainer = event.target.closest('.kanban-column, .final-state-section, .kanban-card, .column-cards');
+            if (!targetContainer) {
+                resetDropZones();
+                return;
             }
             
-            if (!targetColumnEl) return;
-
+            // Determinar el destino final (columna y estado)
+            let targetColumnEl, targetState, targetStateName = '', targetCardsContainer;
+            
+            if (targetContainer.classList.contains('kanban-card')) {
+                // Si se suelta sobre otra tarjeta, obtener su columna
+                targetColumnEl = targetContainer.closest('.kanban-column');
+                targetCardsContainer = targetColumnEl?.querySelector('.column-cards');
+                targetState = null;
+            } else if (targetContainer.classList.contains('final-state-section')) {
+                // Si es una sección de estado final
+                targetState = targetContainer.dataset.state;
+                targetColumnEl = targetContainer.closest('.kanban-column');
+                targetCardsContainer = targetContainer.querySelector('.column-cards');
+                targetStateName = targetContainer.querySelector('.final-state-title')?.textContent || '';
+            } else if (targetContainer.classList.contains('column-cards')) {
+                // Si se suelta directamente en el área de tarjetas
+                targetColumnEl = targetContainer.closest('.kanban-column');
+                targetCardsContainer = targetContainer;
+                
+                // Si es una sección de estado final, obtener el estado
+                const finalStateSection = targetContainer.closest('.final-state-section');
+                if (finalStateSection) {
+                    targetState = finalStateSection.dataset.state;
+                    targetStateName = finalStateSection.querySelector('.final-state-title')?.textContent || '';
+                } else {
+                    targetState = null;
+                }
+            } else {
+                // Si es una columna normal, obtener su contenedor de tarjetas
+                targetColumnEl = targetContainer;
+                targetCardsContainer = targetColumnEl.querySelector('.column-cards');
+                targetState = null;
+            }
+            
+            if (!targetColumnEl) {
+                resetDropZones();
+                return;
+            }
+            
             const targetColumnId = targetColumnEl.id;
             const targetColumn = columns[targetColumnId];
-            if (!targetColumn) return;
-
-            // Remover de la columna anterior
+            if (!targetColumn) {
+                resetDropZones();
+                return;
+            }
+            
+            // Obtener información de la columna de origen
             const previousContainer = draggedCard.closest('.kanban-column, .final-state-section');
             const previousColumnId = previousContainer?.closest('.kanban-column')?.id;
             const previousColumn = previousColumnId ? columns[previousColumnId] : null;
             
-            if (previousColumn) {
-                previousColumn.items = previousColumn.items.filter(item => item.id !== draggedCard.dataset.id);
+            // Si se suelta en la misma ubicación, no hacer nada
+            if (previousContainer === targetContainer) {
+                resetDropZones();
+                return;
             }
-
-            // Agregar a la nueva columna/sección
-            const order = masterOrderList.find(o => o.id.toString() === draggedCard.dataset.id);
-            if (order) {
-                // Inicializar el array de items si no existe
-                targetColumn.items = targetColumn.items || [];
+            
+            // Obtener el ID de la tarjeta arrastrada
+            const draggedCardId = parseInt(draggedCard.dataset.id);
+            
+            // Encontrar la orden en la lista maestra
+            const order = masterOrderList.find(o => o.id === draggedCardId);
+            if (!order) {
+                console.error('Orden no encontrada:', draggedCardId);
+                resetDropZones();
+                return;
+            }
+            
+            // Remover de la columna anterior
+            if (previousColumn) {
+                previousColumn.items = previousColumn.items.filter(item => item.id !== order.id);
+            }
+            
+            // Actualizar el estado del pedido según el destino
+            if (targetState) {
+                // Si es un estado final (completado, incidencia, cancelado)
+                order.status = targetState;
+                order.statusColor = {
+                    'completed': '#10b981',
+                    'incidents': '#ef4444',
+                    'cancelled': '#6b7280',
+                    'pending': '#6b7280',
+                    'in_progress': '#3b82f6'
+                }[targetState] || '#3b82f6';
                 
-                // Actualizar el estado del pedido si es una sección de estado final
+                // Si es un estado final, quitar de la línea de producción
+                if (['completed', 'incidents', 'cancelled'].includes(targetState)) {
+                    order.productionLineId = null;
+                }
+            } else if (targetColumnEl) {
+                // Si es una columna de producción
+                const targetColumnId = targetColumnEl.id;
+                const targetColumn = columns[targetColumnId];
+                
+                if (targetColumn && targetColumn.type === 'production') {
+                    order.productionLineId = targetColumn.productionLineId;
+                    order.status = 'in_progress';
+                    order.statusColor = '#3b82f6';
+                } else if (targetColumnId === 'pending_assignment') {
+                    // Si se mueve a pendientes
+                    order.productionLineId = null;
+                    order.status = 'pending';
+                    order.statusColor = '#6b7280';
+                }
+            }
+            
+            // Aplicar efecto visual al cambiar de estado
+            if (draggedCard) {
+                draggedCard.style.transition = 'all 0.3s ease';
+                draggedCard.style.transform = 'scale(1.02)';
+                draggedCard.style.boxShadow = '0 10px 20px rgba(0,0,0,0.15)';
+                
+                // Actualizar el color del borde según el estado
+                if (order.statusColor) {
+                    draggedCard.style.borderLeftColor = order.statusColor;
+                }
+                
+                // Restaurar la transición después de la animación
+                setTimeout(() => {
+                    if (draggedCard) {
+                        draggedCard.style.transition = 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)';
+                        draggedCard.style.transform = '';
+                        draggedCard.style.boxShadow = '';
+                    }
+                }, 300);
+            }
+            
+            // Inicializar el array de items si no existe
+            targetColumn.items = targetColumn.items || [];
+            
+            // Agregar a la columna si no existe ya
+            if (!targetColumn.items.some(item => item.id === order.id)) {
+                targetColumn.items.push(order);
+            }
+            
+            // Actualizar el ID de la línea de producción en la tarjeta
+            if (draggedCard) {
+                draggedCard.dataset.productionLineId = order.productionLineId || '';
+                
+                // Actualizar los estilos de la tarjeta
+                if (order.statusColor) {
+                    draggedCard.style.borderLeftColor = order.statusColor;
+                }
+                
+                // Actualizar el estado en el atributo de datos
+                draggedCard.dataset.status = order.status;
+            }
+            
+            // Mover la tarjeta al contenedor correcto con animación
+            let cardsContainer = null;
+            
+            if (targetState) {
+                // Buscar el contenedor de la sección de estado específica
+                const stateSection = targetColumnEl.querySelector(`.final-state-section[data-state="${targetState}"]`);
+                if (stateSection) {
+                    cardsContainer = stateSection.querySelector('.column-cards');
+                }
+            } else {
+                // Usar el contenedor de la columna principal
+                cardsContainer = targetColumnEl.querySelector('.column-cards');
+            }
+            
+            // Si no se encontró un contenedor, usar el predeterminado
+            if (!cardsContainer) {
+                console.warn('No se encontró el contenedor de destino, usando contenedor predeterminado');
+                cardsContainer = targetColumnEl.querySelector('.column-cards');
+            }
+            
+            if (cardsContainer) {
+                // Actualizar el estilo de la tarjeta según el estado
                 if (targetState) {
-                    order.status = targetState;
-                    order.statusColor = {
+                    const color = {
                         'completed': '#10b981',
                         'incidents': '#ef4444',
                         'cancelled': '#6b7280'
                     }[targetState] || '#6b7280';
-                }
-                
-                // Agregar a la columna si no existe ya
-                if (!targetColumn.items.some(item => item.id === order.id)) {
-                    targetColumn.items.push(order);
-                }
-                
-                // Actualizar el ID de la línea de producción (si corresponde)
-                const productionLineId = targetColumn.productionLineId || '';
-                draggedCard.dataset.productionLineId = productionLineId;
-                
-                // Actualizar el pedido en la lista maestra
-                order.productionLineId = productionLineId;
-                
-                // Mover la tarjeta al contenedor correcto
-                let cardsContainer;
-                if (targetState) {
-                    // Buscar el contenedor de la sección de estado específica
-                    cardsContainer = targetColumnEl.querySelector(`.final-state-section[data-state="${targetState}"] .column-cards`);
-                } else {
-                    // Usar el contenedor de la columna principal
-                    cardsContainer = targetColumnEl.querySelector('.column-cards');
-                }
-                
-                if (cardsContainer) {
-                    // Actualizar el estilo de la tarjeta según el estado
-                    if (targetState) {
-                        const color = {
-                            'completed': '#10b981',
-                            'incidents': '#ef4444',
-                            'cancelled': '#6b7280'
-                        }[targetState] || '#6b7280';
-                        
-                        draggedCard.style.borderLeftColor = color;
-                    }
                     
-                    cardsContainer.appendChild(draggedCard);
+                    draggedCard.style.borderLeftColor = color;
                 }
                 
-                // Mostrar notificación
-                const fromColumn = previousColumn ? previousColumn.name : 'Desconocido';
-                const toColumn = targetState ? 
-                    targetColumn.subStates?.find(s => s.id === targetState)?.name || targetColumn.name : 
-                    targetColumn.name;
+                // Añadir clase temporal para la animación
+                draggedCard.classList.add('card-dropped');
                 
-                showToast(`Orden movida de <strong>${fromColumn}</strong> a <strong>${toColumn}</strong>`);
+                // Insertar la tarjeta en el nuevo contenedor
+                cardsContainer.appendChild(draggedCard);
                 
-                console.log(`Orden ${order.order_id} movida de ${fromColumn} a ${toColumn}`, {
-                    estado: targetState,
-                    lineaProduccion: productionLineId
+                // Mostrar efecto de confirmación
+                const confirmEl = document.createElement('div');
+                confirmEl.className = 'drop-confirmation';
+                confirmEl.innerHTML = '<i class="fas fa-check-circle"></i>';
+                confirmEl.style.position = 'absolute';
+                confirmEl.style.top = '50%';
+                confirmEl.style.left = '50%';
+                confirmEl.style.transform = 'translate(-50%, -50%) scale(0.5)';
+                confirmEl.style.opacity = '0';
+                confirmEl.style.transition = 'all 0.3s ease';
+                confirmEl.style.fontSize = '48px';
+                confirmEl.style.color = targetState ? 
+                    (targetState === 'completed' ? '#10b981' : 
+                     targetState === 'incidents' ? '#ef4444' : '#6b7280') : 
+                    '#3b82f6';
+                
+                cardsContainer.appendChild(confirmEl);
+                
+                // Animar el efecto de confirmación
+                requestAnimationFrame(() => {
+                    confirmEl.style.transform = 'translate(-50%, -50%) scale(1.5)';
+                    confirmEl.style.opacity = '0.9';
+                    
+                    setTimeout(() => {
+                        confirmEl.style.transform = 'translate(-50%, -50%) scale(1)';
+                        confirmEl.style.opacity = '0';
+                        
+                        setTimeout(() => {
+                            confirmEl.remove();
+                        }, 300);
+                    }, 200);
                 });
             }
             
+            // Mostrar notificación
+            const fromColumn = previousColumn ? previousColumn.name : 'Sin asignar';
+            const toColumn = targetState ? 
+                targetColumn.subStates?.find(s => s.id === targetState)?.name || targetColumn.name : 
+                targetColumn.name;
+            
+            showToast(`<i class="fas fa-arrow-right me-2"></i> Orden movida de <strong>${fromColumn}</strong> a <strong>${toColumn}</strong>`, {
+                icon: 'check-circle',
+                iconColor: targetState ? 
+                    (targetState === 'completed' ? '#10b981' : 
+                     targetState === 'incidents' ? '#ef4444' : '#6b7280') : 
+                    '#3b82f6'
+            });
+            
+            console.log(`Orden ${order.order_id} movida de ${fromColumn} a ${toColumn}`, {
+                estado: targetState,
+                lineaProduccion: productionLineId
+            });
+            
+            // Limpiar estilos y restablecer
+            resetDropZones();
             draggedCard = null;
         }
+
+        function resetDropZones() {
+            // Limpiar estilos de todas las columnas
+            document.querySelectorAll('.kanban-column, .final-state-section, .column-cards').forEach(el => {
+                el.style.boxShadow = '';
+                el.style.transform = '';
+                el.style.background = '';
+                el.style.border = '';
+                el.style.borderRadius = '';
+                el.style.transition = '';
+            });
+            
+            // Remover clases de arrastre
+            document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+        }
         
-        function showToast(message) {
+        function showToast(message, options = {}) {
             const toast = document.createElement('div');
             toast.className = 'toast-notification';
+            
+            // Configuración por defecto
+            const defaultOptions = {
+                icon: 'check-circle',
+                iconColor: '#3b82f6',
+                duration: 3000
+            };
+            
+            // Combinar opciones con valores por defecto
+            const config = { ...defaultOptions, ...options };
+            
+            // Crear el contenido del toast
             toast.innerHTML = `
-                <div class="toast-content">
-                    <i class="fas fa-check-circle text-success me-2"></i>
-                    <span>${message}</span>
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-${config.icon} me-2" style="color: ${config.iconColor}"></i>
+                    <div>${message}</div>
                 </div>
-                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
             `;
+            
+            // Agregar al documento
             document.body.appendChild(toast);
             
-            // Inicializar toast de Bootstrap
-            const bsToast = new bootstrap.Toast(toast, { autohide: true, delay: 3000 });
-            bsToast.show();
+            // Forzar el reflow para que la animación funcione
+            void toast.offsetWidth;
             
-            // Eliminar el toast después de que se oculte
-            toast.addEventListener('hidden.bs.toast', function() {
-                toast.remove();
+            // Mostrar con animación
+            setTimeout(() => toast.classList.add('show'), 10);
+            
+            // Configurar el tiempo de visualización
+            setTimeout(() => {
+                toast.classList.remove('show');
+                // Eliminar después de la animación
+                setTimeout(() => {
+                    if (toast.parentNode) {
+                        toast.remove();
+                    }
+                }, 300);
+            }, config.duration);
+            
+            // Cerrar al hacer clic
+            toast.addEventListener('click', () => {
+                toast.classList.remove('show');
+                setTimeout(() => {
+                    if (toast.parentNode) {
+                        toast.remove();
+                    }
+                }, 300);
             });
         }
 
@@ -594,8 +1168,9 @@
         generateDummyData(); // Cargar datos ficticios al inicio
         document.getElementById('refreshBtn').addEventListener('click', generateDummyData);
         document.getElementById('fullscreenBtn').addEventListener('click', toggleFullscreen);
-        statusFilter.addEventListener('change', applyAndRenderFilters);
-        searchInput.addEventListener('input', () => setTimeout(applyAndRenderFilters, 300));
+        if (searchInput) {
+            searchInput.addEventListener('input', () => setTimeout(applyAndRenderFilters, 300));
+        }
     });
     </script>
 @endpush
