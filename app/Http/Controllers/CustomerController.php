@@ -135,16 +135,31 @@ class CustomerController extends Controller
             ->whereHas('processes', function($query) use ($process) {
                 $query->where('process_id', $process->id);
             })
-            ->with(['processes' => function($query) use ($process) {
-                $query->where('process_id', $process->id);
-            }])
+            ->with('processes')
             ->get();
             
         if ($productionLines->isEmpty()) {
-            abort(404, 'El proceso no está asociado a este cliente o no hay líneas de producción configuradas.');
+            return redirect()->back()->with('error', 'No se encontraron líneas de producción para este proceso.');
         }
         
-        // Obtener los datos completos de las líneas de producción
+        // Obtener las órdenes sin asignar (production_line_id = null) para este proceso
+        $unassignedOrders = \App\Models\ProductionOrder::whereNull('production_line_id')
+            ->where('status', '!=', 'cancelled') // Excluir órdenes canceladas si es necesario
+            ->get()
+            ->map(function($order) {
+                return [
+                    'id' => $order->id,
+                    'order_id' => $order->order_id,
+                    'status' => 'pending',
+                    'box' => $order->box ?? 0,
+                    'units' => $order->units ?? 0,
+                    'created_at' => $order->created_at,
+                    'json' => $order->json ?? [],
+                    'statusColor' => '#6b7280' // Color gris para pendientes
+                ];
+            });
+        
+        // Preparar datos de líneas de producción para la vista
         $productionLinesData = $productionLines->map(function($line) {
             return [
                 'id' => $line->id,
@@ -158,7 +173,8 @@ class CustomerController extends Controller
         return view('customers.order-kanban', [
             'customer' => $customer,
             'process' => $process,
-            'productionLines' => $productionLinesData
+            'productionLines' => $productionLinesData,
+            'unassignedOrders' => $unassignedOrders
         ]);
     }
 
@@ -177,6 +193,9 @@ class CustomerController extends Controller
                     $query->orderBy('id');
                 },
                 'processFieldMappings' => function($query) {
+                    $query->orderBy('id');
+                },
+                'articleFieldMappings' => function($query) {
                     $query->orderBy('id');
                 }
             ])->findOrFail($id);
@@ -206,7 +225,20 @@ class CustomerController extends Controller
                 'to_boolean' => 'Convertir a booleano (1/0)'
             ];
             
-            return view('customers.edit', compact('customer', 'standardFields', 'processStandardFields', 'transformationOptions'));
+            // Define article standard fields
+            $articleStandardFields = [
+                'codigo_articulo' => 'Código de Artículo (Requerido)',
+                'descripcion_articulo' => 'Descripción del Artículo',
+                'grupo_articulo' => 'Grupo del Artículo'
+            ];
+            
+            return view('customers.edit', compact(
+                'customer', 
+                'standardFields', 
+                'processStandardFields', 
+                'articleStandardFields',
+                'transformationOptions'
+            ));
             
         } catch (\Exception $e) {
             \Log::error('Error al cargar el formulario de edición del cliente: ' . $e->getMessage());
@@ -264,10 +296,12 @@ class CustomerController extends Controller
             'process_field_mappings.*.transformations' => 'nullable|array',
             'process_field_mappings.*.transformations.*' => 'string',
             'process_field_mappings.*.is_required' => 'nullable|boolean',
-            'article_mappings' => 'nullable|array',
-            'article_mappings.*.source_field' => 'required_with:article_mappings|string',
-            'article_mappings.*.target_field' => 'required_with:article_mappings|string',
-            'article_mappings.*.transformation' => 'nullable|string'
+            'article_field_mappings' => 'nullable|array',
+            'article_field_mappings.*.source_field' => 'required_with:article_field_mappings|string',
+            'article_field_mappings.*.target_field' => 'required_with:article_field_mappings|string',
+            'article_field_mappings.*.transformations' => 'nullable|array',
+            'article_field_mappings.*.transformations.*' => 'string',
+            'article_field_mappings.*.is_required' => 'nullable|boolean'
         ]);
 
         // Validar la solicitud
@@ -375,11 +409,11 @@ class CustomerController extends Controller
             }
 
             // Sincronizar los mapeos de campos de artículos si existen
-            if (isset($validatedData['article_mappings'])) {
+            if (isset($validatedData['article_field_mappings'])) {
                 $updatedArticleMappingIds = [];
                 
                 // Procesar cada mapeo de artículo
-                foreach ($validatedData['article_mappings'] as $mappingData) {
+                foreach ($validatedData['article_field_mappings'] as $mappingData) {
                     $mappingId = $mappingData['id'] ?? null;
                     
                     if ($mappingId) {
@@ -389,7 +423,8 @@ class CustomerController extends Controller
                             $mapping->update([
                                 'source_field' => $mappingData['source_field'],
                                 'target_field' => $mappingData['target_field'],
-                                'transformation' => $mappingData['transformation'] ? json_decode($mappingData['transformation'], true) : null,
+                                'transformations' => $mappingData['transformations'] ?? [],
+                                'is_required' => $mappingData['is_required'] ?? false,
                             ]);
                             $updatedArticleMappingIds[] = $mapping->id;
                         }
@@ -398,7 +433,8 @@ class CustomerController extends Controller
                         $mapping = $customer->articleFieldMappings()->create([
                             'source_field' => $mappingData['source_field'],
                             'target_field' => $mappingData['target_field'],
-                            'transformation' => $mappingData['transformation'] ? json_decode($mappingData['transformation'], true) : null,
+                            'transformations' => $mappingData['transformations'] ?? [],
+                            'is_required' => $mappingData['is_required'] ?? false,
                         ]);
                         $updatedArticleMappingIds[] = $mapping->id;
                     }
@@ -531,17 +567,35 @@ class CustomerController extends Controller
             'in_stock' => 'En Stock (1/0)'
         ];
         
+        // Campos estándar para procesos
+        $processStandardFields = [
+            'process_id' => 'ID del Proceso',
+            'time' => 'Tiempo del Proceso'
+        ];
+        
+        // Campos estándar para artículos
+        $articleStandardFields = [
+            'codigo_articulo' => 'Código de Artículo (Requerido)',
+            'descripcion_articulo' => 'Descripción del Artículo',
+            'grupo_articulo' => 'Grupo del Artículo'
+        ];
+        
         // Opciones de transformaciones disponibles
         $transformationOptions = [
             'trim' => 'Eliminar espacios',
             'uppercase' => 'Convertir a mayúsculas',
             'lowercase' => 'Convertir a minúsculas',
-            'number' => 'Convertir a número',
-            'date' => 'Formatear como fecha',
+            'to_integer' => 'Convertir a entero',
+            'to_float' => 'Convertir a decimal',
             'to_boolean' => 'Convertir a booleano (1/0)'
         ];
         
-        return view('customers.create', compact('standardFields', 'transformationOptions'));
+        return view('customers.create', compact(
+            'standardFields', 
+            'processStandardFields',
+            'articleStandardFields',
+            'transformationOptions'
+        ));
     }
 
     public function store(Request $request)
@@ -565,7 +619,19 @@ class CustomerController extends Controller
             'field_mappings.*.target_field' => 'required_with:field_mappings|string',
             'field_mappings.*.transformations' => 'nullable|array',
             'field_mappings.*.transformations.*' => 'string',
-            'field_mappings.*.is_required' => 'nullable|boolean'
+            'field_mappings.*.is_required' => 'nullable|boolean',
+            'process_field_mappings' => 'nullable|array',
+            'process_field_mappings.*.source_field' => 'required_with:process_field_mappings|string',
+            'process_field_mappings.*.target_field' => 'required_with:process_field_mappings|string',
+            'process_field_mappings.*.transformations' => 'nullable|array',
+            'process_field_mappings.*.transformations.*' => 'string',
+            'process_field_mappings.*.is_required' => 'nullable|boolean',
+            'article_field_mappings' => 'nullable|array',
+            'article_field_mappings.*.source_field' => 'required_with:article_field_mappings|string',
+            'article_field_mappings.*.target_field' => 'required_with:article_field_mappings|string',
+            'article_field_mappings.*.transformations' => 'nullable|array',
+            'article_field_mappings.*.transformations.*' => 'string',
+            'article_field_mappings.*.is_required' => 'nullable|boolean'
         ]);
 
         // Validar la solicitud
@@ -598,6 +664,30 @@ class CustomerController extends Controller
             if (isset($validatedData['field_mappings'])) {
                 foreach ($validatedData['field_mappings'] as $mappingData) {
                     $customer->fieldMappings()->create([
+                        'source_field' => $mappingData['source_field'],
+                        'target_field' => $mappingData['target_field'],
+                        'transformations' => $mappingData['transformations'] ?? [],
+                        'is_required' => $mappingData['is_required'] ?? false,
+                    ]);
+                }
+            }
+
+            // Sincronizar los mapeos de procesos si existen
+            if (isset($validatedData['process_field_mappings'])) {
+                foreach ($validatedData['process_field_mappings'] as $mappingData) {
+                    $customer->processFieldMappings()->create([
+                        'source_field' => $mappingData['source_field'],
+                        'target_field' => $mappingData['target_field'],
+                        'transformations' => $mappingData['transformations'] ?? [],
+                        'is_required' => $mappingData['is_required'] ?? false,
+                    ]);
+                }
+            }
+
+            // Sincronizar los mapeos de artículos si existen
+            if (isset($validatedData['article_field_mappings'])) {
+                foreach ($validatedData['article_field_mappings'] as $mappingData) {
+                    $customer->articleFieldMappings()->create([
                         'source_field' => $mappingData['source_field'],
                         'target_field' => $mappingData['target_field'],
                         'transformations' => $mappingData['transformations'] ?? [],

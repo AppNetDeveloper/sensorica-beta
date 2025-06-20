@@ -74,7 +74,7 @@ class ProductionOrder extends Model
     {
         return $this->hasMany(BarcodeScan::class);
     }
-
+    
     /**
      * Boot method to handle model events.
      */

@@ -333,7 +333,25 @@
             z-index: 5;
         }
 
-        .kanban-card-header { padding: 0.75rem 1.25rem; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+        .kanban-card-header { 
+            padding: 0.75rem 1.25rem; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: flex-start; 
+            cursor: pointer; 
+            overflow: visible;
+            white-space: normal;
+            word-break: break-word;
+        }
+        .kanban-card-header .fw-bold {
+            font-size: 0.875rem;
+            color: var(--card-text);
+            margin-bottom: 0.25rem;
+            white-space: normal;
+            overflow: visible;
+            text-overflow: clip;
+            word-break: break-word;
+        }
         .kanban-card-body { padding: 0 1.25rem 1.25rem 1.25rem; }
         .kanban-card-footer { padding: 0.75rem 1.25rem; border-top: 1px solid var(--card-border); background-color: var(--column-bg); font-size: 0.875rem; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center; }
         
@@ -466,6 +484,17 @@
         let masterOrderList = []; // Empezará vacía y se llenará con datos ficticios.
         let draggedCard = null;
 
+        // Agregar órdenes sin asignar del backend si existen
+        @if(isset($unassignedOrders) && count($unassignedOrders) > 0)
+            const unassignedOrders = @json($unassignedOrders);
+            
+            // Agregar las órdenes sin asignar a la lista maestra
+            if (unassignedOrders && unassignedOrders.length > 0) {
+                masterOrderList = [...unassignedOrders];
+                console.log('Órdenes sin asignar cargadas:', unassignedOrders);
+            }
+        @endif
+
         // Columnas principales
         const columns = {
             // Columna de pendientes
@@ -525,124 +554,141 @@
         const searchInput = document.getElementById('searchInput');
 
         function generateDummyData() {
+            // No generar datos de ejemplo, solo limpiar columnas
+            if (!masterOrderList || masterOrderList.length === 0) {
+                console.log('No hay órdenes para mostrar');
+                // Limpiar columnas existentes
+                Object.keys(columns).forEach(key => {
+                    if (columns[key]?.items) {
+                        columns[key].items = [];
+                    }
+                });
+                return; // Salir temprano si no hay datos
+
+                // Generar datos de ejemplo
+                const dummyOrders = [
+                    { 
+                        id: 1, 
+                        order_id: 'OP-001', 
+                        status: 'pending', 
+                        box: 10, 
+                        units: 100, 
+                        created_at: '2025-06-20T10:00:00Z', 
+                        json: { 
+                            refer: { 
+                                descrip: 'Producto A - Modelo Premium', 
+                                customerId: 'Cliente Alpha' 
+                            } 
+                        },
+                        statusColor: '#6b7280'
+                    },
+                        { 
+                        id: 2, 
+                        order_id: 'OP-002', 
+                        status: 'in_progress', 
+                        productionLineId: 1,
+                        box: 5, 
+                        units: 50, 
+                        created_at: '2025-06-20T11:00:00Z', 
+                        json: { 
+                            refer: { 
+                                descrip: 'Producto B - Edición Limitada', 
+                                customerId: 'Cliente Beta' 
+                            } 
+                        },
+                        statusColor: '#3b82f6'
+                    },
+                    { 
+                        id: 3, 
+                        order_id: 'OP-003', 
+                        status: 'completed', 
+                        productionLineId: 2,
+                        box: 20, 
+                        units: 200, 
+                        created_at: '2025-06-19T09:00:00Z', 
+                        json: { 
+                            refer: { 
+                                descrip: 'Componente C - Estándar', 
+                                customerId: 'Cliente Gamma' 
+                            } 
+                        },
+                        statusColor: '#10b981'
+                    },
+                    { 
+                        id: 4, 
+                        order_id: 'OP-004', 
+                        status: 'incidents', 
+                        box: 1, 
+                        units: 10, 
+                        created_at: '2025-06-18T15:00:00Z', 
+                        json: { 
+                            refer: { 
+                                descrip: 'Producto D - Prototipo', 
+                                customerId: 'Cliente Delta' 
+                            } 
+                        },
+                        statusColor: '#ef4444'
+                    },
+                    { 
+                        id: 5, 
+                        order_id: 'OP-005', 
+                        status: 'cancelled', 
+                        box: 8, 
+                        units: 80, 
+                        created_at: '2025-06-17T12:00:00Z', 
+                        json: { 
+                            refer: { 
+                                descrip: 'Producto E - Básico', 
+                                customerId: 'Cliente Epsilon' 
+                            } 
+                        },
+                        statusColor: '#6b7280'
+                    },
+                    { 
+                        id: 6, 
+                        order_id: 'OP-006', 
+                        status: 'pending', 
+                        box: 12, 
+                        units: 120, 
+                        created_at: '2025-06-21T08:00:00Z', 
+                        json: { 
+                            refer: { 
+                                descrip: 'Producto F - Industrial', 
+                                customerId: 'Cliente Zeta' 
+                            } 
+                        },
+                        statusColor: '#6b7280'
+                    },
+                    { 
+                        id: 7, 
+                        order_id: 'OP-007', 
+                        status: 'in_progress', 
+                        productionLineId: 1,
+                        box: 15, 
+                        units: 150, 
+                        created_at: '2025-06-21T09:30:00Z', 
+                        json: { 
+                            refer: { 
+                                descrip: 'Accesorio G - Kit Completo', 
+                                customerId: 'Cliente Eta' 
+                            } 
+                        },
+                        statusColor: '#3b82f6'
+                    }
+                ];
+
+
+                // Asignar las órdenes de ejemplo a la lista maestra
+                masterOrderList = [...dummyOrders];
+                console.log('Datos de ejemplo generados:', dummyOrders);
+            }
+
             // Limpiar columnas existentes
             Object.keys(columns).forEach(key => {
                 if (columns[key].items) {
                     columns[key].items = [];
                 }
             });
-
-            // Generar datos de ejemplo
-            masterOrderList = [
-                { 
-                    id: 1, 
-                    order_id: 'OP-001', 
-                    status: 'pending', 
-                    box: 10, 
-                    units: 100, 
-                    created_at: '2025-06-20T10:00:00Z', 
-                    json: { 
-                        refer: { 
-                            descrip: 'Producto A - Modelo Premium', 
-                            customerId: 'Cliente Alpha' 
-                        } 
-                    },
-                    statusColor: '#6b7280'
-                },
-                { 
-                    id: 2, 
-                    order_id: 'OP-002', 
-                    status: 'in_progress', 
-                    productionLineId: 1,
-                    box: 5, 
-                    units: 50, 
-                    created_at: '2025-06-20T11:00:00Z', 
-                    json: { 
-                        refer: { 
-                            descrip: 'Producto B - Edición Limitada', 
-                            customerId: 'Cliente Beta' 
-                        } 
-                    },
-                    statusColor: '#3b82f6'
-                },
-                { 
-                    id: 3, 
-                    order_id: 'OP-003', 
-                    status: 'completed', 
-                    productionLineId: 2,
-                    box: 20, 
-                    units: 200, 
-                    created_at: '2025-06-19T09:00:00Z', 
-                    json: { 
-                        refer: { 
-                            descrip: 'Componente C - Estándar', 
-                            customerId: 'Cliente Gamma' 
-                        } 
-                    },
-                    statusColor: '#10b981'
-                },
-                { 
-                    id: 4, 
-                    order_id: 'OP-004', 
-                    status: 'incidents', 
-                    box: 1, 
-                    units: 10, 
-                    created_at: '2025-06-18T15:00:00Z', 
-                    json: { 
-                        refer: { 
-                            descrip: 'Producto D - Prototipo', 
-                            customerId: 'Cliente Delta' 
-                        } 
-                    },
-                    statusColor: '#ef4444'
-                },
-                { 
-                    id: 5, 
-                    order_id: 'OP-005', 
-                    status: 'cancelled', 
-                    box: 8, 
-                    units: 80, 
-                    created_at: '2025-06-17T12:00:00Z', 
-                    json: { 
-                        refer: { 
-                            descrip: 'Producto E - Básico', 
-                            customerId: 'Cliente Epsilon' 
-                        } 
-                    },
-                    statusColor: '#6b7280'
-                },
-                { 
-                    id: 6, 
-                    order_id: 'OP-006', 
-                    status: 'pending', 
-                    box: 12, 
-                    units: 120, 
-                    created_at: '2025-06-21T08:00:00Z', 
-                    json: { 
-                        refer: { 
-                            descrip: 'Producto F - Industrial', 
-                            customerId: 'Cliente Zeta' 
-                        } 
-                    },
-                    statusColor: '#6b7280'
-                },
-                { 
-                    id: 7, 
-                    order_id: 'OP-007', 
-                    status: 'in_progress', 
-                    productionLineId: 1,
-                    box: 15, 
-                    units: 150, 
-                    created_at: '2025-06-21T09:30:00Z', 
-                    json: { 
-                        refer: { 
-                            descrip: 'Accesorio G - Kit Completo', 
-                            customerId: 'Cliente Eta' 
-                        } 
-                    },
-                    statusColor: '#3b82f6'
-                },
-            ];
 
             // Asignar órdenes a las columnas correspondientes
             masterOrderList.forEach(order => {
@@ -673,11 +719,17 @@
             // Renderizar el tablero
             renderBoard(masterOrderList);
             
-            // Mostrar notificación
-            showToast('Datos de ejemplo cargados correctamente', {
-                icon: 'check-circle',
-                iconColor: '#10b981'
-            });
+            // Mostrar notificación solo si se cargaron datos de ejemplo
+            if (masterOrderList.length > 0 && 
+                masterOrderList[0] && 
+                masterOrderList[0].order_id && 
+                typeof masterOrderList[0].order_id === 'string' && 
+                masterOrderList[0].order_id.startsWith('OP-')) {
+                showToast('Datos de ejemplo cargados correctamente', {
+                    icon: 'check-circle',
+                    iconColor: '#10b981'
+                });
+            }
         }
         
         function applyAndRenderFilters() {
@@ -1393,10 +1445,37 @@
         }
 
         function toggleFullscreen() {
+            const element = document.getElementById('kanbanContainer');
+            
+            // Función para manejar el cambio de pantalla completa
+            function onFullscreenChange() {
+                document.body.classList.toggle('fullscreen-mode', !!document.fullscreenElement);
+            }
+            
+            // Agregar el listener para cambios en el estado de pantalla completa
+            document.addEventListener('fullscreenchange', onFullscreenChange);
+            
+            // Alternar pantalla completa
             if (!document.fullscreenElement) {
-                document.getElementById('kanbanContainer').requestFullscreen().catch(err => alert(`Error: ${err.message}`));
+                if (element.requestFullscreen) {
+                    element.requestFullscreen().catch(err => {
+                        console.error('Error al intentar pantalla completa:', err);
+                        showToast('No se pudo activar el modo pantalla completa', { icon: 'exclamation-triangle', iconColor: '#ef4444' });
+                    });
+                } else if (element.webkitRequestFullscreen) { // Safari
+                    element.webkitRequestFullscreen();
+                } else if (element.msRequestFullscreen) { // IE11
+                    element.msRequestFullscreen();
+                }
             } else {
-                document.exitFullscreen();
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) { // Safari
+                    document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) { // IE11
+                    document.msExitFullscreen();
+                }
+                document.body.classList.remove('fullscreen-mode');
             }
         }
         

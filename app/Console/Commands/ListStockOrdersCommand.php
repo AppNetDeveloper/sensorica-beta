@@ -138,7 +138,7 @@ class ListStockOrdersCommand extends Command
     protected function generateProcessJson($order, $orderProcess, $processNumber = 1)
     {
         $json = [
-            'orderId' => (string)$order->id,
+            'orderId' => (string)$order->order_id,
             'customerOrderId' => "",
             'customerReferenceId' => "",
             'barcode' => (string)\Illuminate\Support\Str::uuid(),
@@ -222,9 +222,8 @@ class ListStockOrdersCommand extends Command
             
             // Mark the order as processed
             $order->update(['processed' => 1]);
-            
-            // Mark the order processes as created
-            $order->orderProcesses()->update(['created' => 1]);
+            // Note: We don't mark processes as created here anymore
+            // Each process will be marked as created individually in generateProcessJson
             
         } catch (\Exception $e) {
             $this->error("Error updating order status: " . $e->getMessage());
