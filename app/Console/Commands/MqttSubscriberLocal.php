@@ -222,7 +222,10 @@ class MqttSubscriberLocal extends Command
                 'processed' => false,
                 'orden' => \App\Models\ProductionOrder::max('orden') + 1, // Auto-increment order
                 'theoretical_time' => isset($messageData['theoretical_time']) ? floatval($messageData['theoretical_time']) : null,
-                'process_category' => $messageData['process_category'] ?? null
+                'process_category' => $messageData['process_category'] ?? null,
+                //agragamos delivery date pero nos aseguramos que es timestamp  lo formateamos para que sea compatible con timestamp laravel
+                // si no esta el campo ponemos null
+                'delivery_date' => isset($messageData['delivery_date']) ? \Carbon\Carbon::parse($messageData['delivery_date']) : null,
             ];
             
             // Create or update production order

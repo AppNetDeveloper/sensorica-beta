@@ -43,7 +43,9 @@ class ProductionOrder extends Model
      * @var array
      */
     protected $casts = [
-        'json' => 'array', // Esto asegura que el campo json se maneje como un arreglo automáticamente
+        'delivery_date' => 'datetime', // Laravel convertirá automáticamente a Carbon y viceversa
+        'json'          => 'array',    // Convierte la columna JSON a un array de PHP automáticamente
+        'processed'     => 'boolean',
     ];
 
     /**
