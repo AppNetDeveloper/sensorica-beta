@@ -43,8 +43,10 @@ use App\Http\Controllers\ScanPostController;
 use App\Http\Controllers\ServerMonitorController;
 use App\Http\Controllers\TelegramController;
 use App\Http\Controllers\RfidBlockedController;
-use App\Http\Controllers\IaPromptAdminController; // Asegúrate de importar tu controlador
+use App\Http\Controllers\IaPromptAdminController;
 
+// Rutas para el Kanban Board
+Route::post('production-orders/update-batch', [ProductionOrderController::class, 'updateBatch'])->name('production-orders.update-batch')->middleware(['auth', 'XSS']);
 
 
 /*

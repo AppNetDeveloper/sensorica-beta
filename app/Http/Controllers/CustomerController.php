@@ -142,22 +142,62 @@ class CustomerController extends Controller
             return redirect()->back()->with('error', 'No se encontraron líneas de producción para este proceso.');
         }
         
-        // Obtener las órdenes sin asignar (production_line_id = null) para este proceso
-        $unassignedOrders = \App\Models\ProductionOrder::whereNull('production_line_id')
-            ->where('status', '!=', 'cancelled') // Excluir órdenes canceladas si es necesario
+        // Obtener todas las órdenes para este proceso específico
+        // Incluimos todas las órdenes, incluso las canceladas
+        $processOrders = \App\Models\ProductionOrder::where('process_category', $process->description) // Filtrar por la categoría del proceso actual
             ->get()
             ->map(function($order) {
+                // Determinar el estado y color según el código de status
+                $statusName = 'pending';
+                $statusColor = '#6b7280'; // Gris por defecto
+                
+                switch ($order->status) {
+                    case 0:
+                        $statusName = 'pending'; // Pendiente
+                        $statusColor = '#6b7280'; // Gris
+                        break;
+                    case 1:
+                        $statusName = 'in_progress'; // En proceso
+                        $statusColor = '#3b82f6'; // Azul
+                        break;
+                    case 2:
+                        $statusName = 'completed'; // Finalizado
+                        $statusColor = '#10b981'; // Verde
+                        break;
+                    case 3:
+                        $statusName = 'paused'; // Pausado
+                        $statusColor = '#f59e0b'; // Amarillo/ámbar
+                        break;
+                    case 4:
+                        $statusName = 'cancelled'; // Cancelado
+                        $statusColor = '#6b7280'; // Gris oscuro
+                        break;
+                    case 5:
+                        $statusName = 'incidents'; // Con incidencia
+                        $statusColor = '#ef4444'; // Rojo
+                        break;
+                }
+                
                 return [
                     'id' => $order->id,
                     'order_id' => $order->order_id,
-                    'status' => 'pending',
+                    'status' => $statusName,
+                    'status_code' => $order->status,
+                    'productionLineId' => $order->production_line_id,
                     'box' => $order->box ?? 0,
                     'units' => $order->units ?? 0,
                     'created_at' => $order->created_at,
+                    'delivery_date' => $order->delivery_date,
                     'json' => $order->json ?? [],
-                    'statusColor' => '#6b7280' // Color gris para pendientes
+                    'statusColor' => $statusColor
                 ];
             });
+        
+        // Registrar en el log para depuración
+        \Log::info('Órdenes para el proceso ' . $process->description . ':', [
+            'count' => $processOrders->count(),
+            'process_id' => $process->id
+        ]);
         
         // Preparar datos de líneas de producción para la vista
         $productionLinesData = $productionLines->map(function($line) {
@@ -174,7 +214,7 @@ class CustomerController extends Controller
             'customer' => $customer,
             'process' => $process,
             'productionLines' => $productionLinesData,
-            'unassignedOrders' => $unassignedOrders
+            'processOrders' => $processOrders
         ]);
     }
 

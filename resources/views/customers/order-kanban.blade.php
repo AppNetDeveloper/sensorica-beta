@@ -27,6 +27,9 @@
                 </div>
             </div>
             <div class="d-flex items-center gap-2">
+                <button id="saveChangesBtn" class="btn btn-primary" title="{{ __('Save Changes') }}">
+                    <i class="fas fa-save me-1"></i> {{ __('Guardar') }}
+                </button>
                 <button id="refreshBtn" class="btn btn-light" title="{{ __('Refresh') }}">
                     <i class="fas fa-sync-alt text-primary"></i>
                 </button>
@@ -483,15 +486,18 @@
         
         let masterOrderList = []; // Empezará vacía y se llenará con datos ficticios.
         let draggedCard = null;
-
-        // Agregar órdenes sin asignar del backend si existen
-        @if(isset($unassignedOrders) && count($unassignedOrders) > 0)
-            const unassignedOrders = @json($unassignedOrders);
+        let placeholder = null;
+        let sourceColumnId = null; // Variable para guardar la columna de origen
+        let dragSuccessful = false; // Variable para rastrear si el drop fue exitoso
+        
+        // Agregar órdenes del proceso desde el backend si existen
+        @if(isset($processOrders) && count($processOrders) > 0)
+            const processOrders = @json($processOrders);
             
-            // Agregar las órdenes sin asignar a la lista maestra
-            if (unassignedOrders && unassignedOrders.length > 0) {
-                masterOrderList = [...unassignedOrders];
-                console.log('Órdenes sin asignar cargadas:', unassignedOrders);
+            // Agregar las órdenes del proceso a la lista maestra
+            if (processOrders && processOrders.length > 0) {
+                masterOrderList = [...processOrders];
+                console.log('Órdenes del proceso cargadas:', processOrders);
             }
         @endif
 
@@ -785,22 +791,98 @@
         }
 
         function renderBoard(ordersToRender) {
+            console.log('Renderizando tablero Kanban...');
+            
+            // Inicializar las columnas del tablero aunque no haya órdenes
             initializeBoardColumns();
             
-            // Asignar todas las órdenes a la columna 'Pendientes Asignación' por defecto
+            // Resetear variables de arrastre
+            draggedCard = null;
+            dragClone = null;
+            dragSuccessful = false;
+            
+            // IMPORTANTE: Limpiar completamente todas las tarjetas del tablero
+            // para evitar duplicados al renderizar
+            document.querySelectorAll('.kanban-column .column-cards').forEach(container => {
+                container.innerHTML = '';
+            });
+            
+            document.querySelectorAll('.final-state-section .column-cards').forEach(container => {
+                container.innerHTML = '';
+            });
+            
+            // Si no hay órdenes para renderizar, mostrar el tablero vacío pero construido
+            if (!ordersToRender || ordersToRender.length === 0) {
+                console.log('No hay órdenes para mostrar, pero el tablero se ha construido');
+                return;
+            }
+            
+            // Distribuir las órdenes en las columnas correspondientes según las reglas especificadas
             ordersToRender.forEach(order => {
-                const pendingColumn = columns['pending_assignment'];
-                if (!pendingColumn) return;
-
-                const columnCardsContainer = document.querySelector(`#${pendingColumn.id} .column-cards`);
-                if (columnCardsContainer) {
-                    const cardElement = createCardElement(order);
-                    columnCardsContainer.appendChild(cardElement);
+                let targetColumnId = 'pending_assignment'; // Por defecto, va a pendientes
+                let subStateId = null; // Para estados finales
+                
+                // Regla 1: Estados finales van a la columna 'final_states'
+                if (order.status === 'completed' || order.status === 'incidents' || order.status === 'cancelled') {
+                    targetColumnId = 'final_states';
                     
-                    // Asignar la orden a la columna en el modelo de datos
-                    if (!pendingColumn.items) pendingColumn.items = [];
-                    pendingColumn.items.push(order);
+                    // Determinar la subsección correcta dentro de estados finales
+                    if (order.status === 'completed') subStateId = 'completed';
+                    else if (order.status === 'incidents') subStateId = 'incidents';
+                    else if (order.status === 'cancelled') subStateId = 'cancelled';
                 }
+                // Regla 2: Si tiene production_line_id, va a la columna de esa línea
+                else if (order.productionLineId || order.production_line_id) {
+                    // Usar cualquiera de los dos campos que esté disponible
+                    const lineId = order.productionLineId || order.production_line_id;
+                    
+                    // Asegurar que ambos campos estén sincronizados
+                    order.productionLineId = lineId;
+                    order.production_line_id = lineId;
+                    
+                    console.log(`Inicializando orden ${order.id} con production_line_id: ${lineId}`);
+                    
+                    // Buscar la columna de la línea de producción
+                    const lineColumn = Object.entries(columns).find(([key, col]) => 
+                        col.productionLineId === lineId
+                    );
+                    if (lineColumn) {
+                        targetColumnId = lineColumn[0];
+                    }
+                }
+                // Regla 3: Si no tiene production_line_id y no es estado final, va a pendientes asignación
+                // (ya está asignado por defecto)
+                
+                const targetColumn = columns[targetColumnId];
+                if (!targetColumn) return;
+                
+                // Renderizar la tarjeta en la columna correspondiente
+                if (targetColumnId === 'final_states' && subStateId) {
+                    // Para estados finales, necesitamos encontrar la subsección correcta
+                    const subStateContainer = document.querySelector(`#${targetColumnId} .column-cards[data-state="${subStateId}"]`);
+                    if (subStateContainer) {
+                        const cardElement = createCardElement(order);
+                        subStateContainer.appendChild(cardElement);
+                    }
+                } else {
+                    // Para columnas normales (pendientes y líneas de producción)
+                    const columnCardsContainer = document.querySelector(`#${targetColumnId} .column-cards`);
+                    if (columnCardsContainer) {
+                        const cardElement = createCardElement(order);
+                        columnCardsContainer.appendChild(cardElement);
+                    }
+                }
+                
+                // Asignar la orden a la columna en el modelo de datos
+                if (!targetColumn.items) targetColumn.items = [];
+                targetColumn.items.push(order);
+                
+                // Registrar en consola para depuración
+                console.log(`Orden ${order.order_id} (ID: ${order.id}) asignada a columna ${targetColumnId}${subStateId ? ' (subsección: ' + subStateId + ')' : ''}`, {
+                    status: order.status,
+                    status_code: order.status_code,
+                    productionLineId: order.productionLineId
+                });
             });
         }
 
@@ -894,6 +976,8 @@
 
         function createCardHTML(order) {
             const createdAtFormatted = new Date(order.created_at).toLocaleDateString();
+            // Formatear fecha de entrega si existe
+            const deliveryDateFormatted = order.delivery_date ? new Date(order.delivery_date).toLocaleDateString() : null;
             // Obtener la descripción del proceso desde la variable global o del objeto order
             const processDescription = '{{ $process->description }}';
             
@@ -917,15 +1001,23 @@
                         </span>
                     </div>
                     <div class="text-sm mb-2">${order.json?.refer?.descrip || 'Sin descripción'}</div>
-                    <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
                         <div class="d-flex align-items-center">
                             <i class="fas fa-box text-muted me-1"></i>
                             <span class="text-xs">${order.box || 0} cajas</span>
                             <i class="fas fa-cubes text-muted ms-2 me-1"></i>
                             <span class="text-xs">${order.units || 0} uds</span>
                         </div>
-                        <div class="text-xs text-muted">${createdAtFormatted}</div>
+                        <div class="text-xs text-muted">
+                            <i class="far fa-calendar-alt me-1"></i>${createdAtFormatted}
+                        </div>
                     </div>
+                    ${deliveryDateFormatted ? `
+                    <div class="d-flex justify-content-end align-items-center">
+                        <div class="text-xs text-muted" style="color: #e67e22 !important;">
+                            <i class="fas fa-truck me-1"></i>${deliveryDateFormatted}
+                        </div>
+                    </div>` : ''}
                 </div>
                 <div class="kanban-card-footer">
                      <span class="text-xs fw-medium">{{__("Assigned")}}</span>
@@ -939,6 +1031,16 @@
         function handleDragStart(event) {
             draggedCard = event.target.closest('.kanban-card');
             if (!draggedCard) return;
+
+            // Guardar la columna de origen
+            const sourceColumn = draggedCard.closest('.kanban-column');
+            if (sourceColumn) {
+                sourceColumnId = sourceColumn.id;
+                console.log(`Iniciando arrastre desde la columna: ${sourceColumnId}`);
+            } else {
+                sourceColumnId = null;
+                console.warn('No se pudo determinar la columna de origen.');
+            }
             
             // Guardar la transformación original para restaurarla después
             draggedCard.originalTransform = draggedCard.style.transform;
@@ -992,6 +1094,7 @@
             
             // Restaurar la tarjeta original
             if (draggedCard) {
+                // Restaurar completamente todos los estilos para evitar problemas visuales
                 draggedCard.style.visibility = 'visible';
                 draggedCard.style.position = '';
                 draggedCard.style.top = '';
@@ -999,11 +1102,24 @@
                 draggedCard.style.transform = draggedCard.originalTransform || '';
                 draggedCard.style.width = '';
                 draggedCard.style.height = '';
+                draggedCard.style.opacity = '';
+                draggedCard.style.zIndex = '';
+                
+                // Asegurarse de que la tarjeta sea visible y tenga el tamaño correcto
+                setTimeout(() => {
+                    if (draggedCard) {
+                        draggedCard.style.display = '';
+                        draggedCard.style.visibility = 'visible';
+                    }
+                }, 50);
                 draggedCard.style.zIndex = '';
                 
                 // Forzar un reflow para asegurar que los estilos se apliquen
                 void draggedCard.offsetHeight;
             }
+            
+            // Resetear el indicador de éxito para el próximo arrastre
+            dragSuccessful = false;
             
             // Limpiar referencias
             draggedCard = null;
@@ -1074,14 +1190,122 @@
         }
 
         function drop(event) {
+            let targetColumnEl = null; // Declaración única al inicio
             event.preventDefault();
             if (!draggedCard) return;
+            
+            console.log('=== INICIO DROP EVENT ===');
+            console.log('Tarjeta arrastrada ID:', draggedCard.dataset.id);
+            
+            // Limpiar cualquier estilo residual del drag
+            draggedCard.style.position = '';
+            draggedCard.style.top = '';
+            draggedCard.style.left = '';
+            draggedCard.style.visibility = 'visible';
             
             // Encontrar el contenedor de destino
             let targetContainer = event.target.closest('.kanban-column, .final-state-section, .kanban-card, .column-cards');
             if (!targetContainer) {
+                console.log('No se encontró contenedor destino');
                 resetDropZones();
                 return;
+            }
+            
+            console.log('Target container tipo:', targetContainer.classList.toString());
+            console.log('Target container ID:', targetContainer.id || 'Sin ID');
+            
+            // Si el objetivo es una tarjeta o un contenedor de tarjetas, manejar el reordenamiento
+            if ((targetContainer.classList.contains('kanban-card') && targetContainer !== draggedCard) || 
+                targetContainer.classList.contains('column-cards')) {
+                
+                // Determinar el contenedor de tarjetas correcto
+                let cardsContainer;
+                let targetCard = null;
+                
+                if (targetContainer.classList.contains('kanban-card')) {
+                    // Si el objetivo es una tarjeta
+                    targetCard = targetContainer;
+                    cardsContainer = targetContainer.closest('.column-cards');
+                    console.log('Destino es una tarjeta, contenedor:', cardsContainer?.id || 'Sin ID');
+                } else {
+                    // Si el objetivo es el contenedor de tarjetas
+                    cardsContainer = targetContainer;
+                    targetColumnEl = cardsContainer.closest('.kanban-column'); // FIX: Get parent column
+                    console.log('Destino es un contenedor de tarjetas, columna padre:', targetColumnEl?.id || 'Sin ID');
+                }
+                
+                // Verificar que estamos en una columna válida
+                if (!cardsContainer) {
+                    console.log('No se encontró contenedor de tarjetas válido');
+                    return;
+                }
+                
+                // Si soltamos directamente en el contenedor (no en una tarjeta)
+                if (!targetCard) {
+                    // Añadir al final del contenedor
+                    cardsContainer.appendChild(draggedCard);
+                } else {
+                    // Determinar si insertar antes o después de la tarjeta objetivo
+                    const targetRect = targetCard.getBoundingClientRect();
+                    const targetMiddleY = targetRect.top + (targetRect.height / 2);
+                    const mouseY = event.clientY;
+                    
+                    // Eliminar la tarjeta de su posición actual primero
+                    if (draggedCard.parentNode) {
+                        draggedCard.parentNode.removeChild(draggedCard);
+                    }
+                    
+                    if (mouseY < targetMiddleY) {
+                        // Insertar antes del objetivo
+                        cardsContainer.insertBefore(draggedCard, targetCard);
+                    } else {
+                        // Insertar después del objetivo
+                        cardsContainer.insertBefore(draggedCard, targetCard.nextSibling);
+                    }
+                }
+                
+                // Actualizar el modelo de datos para reflejar el nuevo orden
+                updateColumnDataOrder(cardsContainer);
+                
+                // Marcar como exitoso y salir
+                dragSuccessful = true;
+                resetDropZones();
+                return;
+            }
+            
+            // Función para actualizar el orden de las tarjetas en el modelo de datos
+            function updateColumnDataOrder(container) {
+                // Encontrar la columna a la que pertenece este contenedor
+                const columnElement = container.closest('.kanban-column');
+                if (!columnElement) return;
+                
+                const columnId = columnElement.dataset.columnId;
+                if (!columnId || !columns[columnId]) return;
+                
+                // Obtener todas las tarjetas en el orden actual del DOM
+                const cardElements = Array.from(container.querySelectorAll('.kanban-card'));
+                
+                // Actualizar el orden en el modelo de datos
+                columns[columnId].items = cardElements.map(cardEl => {
+                    const cardId = parseInt(cardEl.dataset.id);
+                    return masterOrderList.find(order => order.id === cardId);
+                }).filter(Boolean); // Eliminar posibles undefined
+            }
+            
+            // Obtener el ID de la tarjeta arrastrada
+            const cardId = parseInt(draggedCard.dataset.id);
+            
+            // Verificar si ya existe una tarjeta con el mismo ID en el destino
+            // para evitar duplicados
+            const existingCards = document.querySelectorAll(`.kanban-card[data-id="${cardId}"]`);
+            if (existingCards.length > 1) {
+                console.warn(`Se encontraron ${existingCards.length} instancias de la tarjeta ${cardId}`);
+                // Eliminar todas las instancias excepto la que estamos arrastrando
+                existingCards.forEach(card => {
+                    if (card !== draggedCard && card.parentNode) {
+                        card.parentNode.removeChild(card);
+                    }
+                });
             }
             
             // Si el objetivo es el área de tarjetas, subir al contenedor padre
@@ -1090,7 +1314,7 @@
             }
             
             // Determinar el destino final (columna y estado)
-            let targetColumnEl, targetState, targetStateName = '', targetCardsContainer;
+            let targetState, targetStateName = '', targetCardsContainer;
             
             if (targetContainer.classList.contains('kanban-card')) {
                 // Si se suelta sobre otra tarjeta, obtener su columna
@@ -1168,8 +1392,8 @@
             const draggedCardId = parseInt(draggedCard.dataset.id);
             
             // Encontrar la orden en la lista maestra
-            const order = masterOrderList.find(o => o.id === draggedCardId);
-            if (!order) {
+            let orderObj = masterOrderList.find(o => o.id === draggedCardId);
+            if (!orderObj) {
                 console.error('Orden no encontrada:', draggedCardId);
                 resetDropZones();
                 return;
@@ -1177,24 +1401,65 @@
             
             // Remover de la columna anterior
             if (previousColumn) {
-                previousColumn.items = previousColumn.items.filter(item => item.id !== order.id);
+                previousColumn.items = previousColumn.items.filter(item => item.id !== orderObj.id);
+                
+                // Asegurarse de que la tarjeta se elimine físicamente de su contenedor anterior
+                if (draggedCard && draggedCard.parentNode) {
+                    // Guardar una referencia al nodo antes de eliminarlo
+                    const originalCard = draggedCard;
+                    draggedCard.parentNode.removeChild(draggedCard);
+                    draggedCard = originalCard;
+                }
             }
             
-            // Actualizar el estado del pedido según el destino
-            if (targetState) {
-                // Si es un estado final (completado, incidencia, cancelado)
-                order.status = targetState;
-                order.statusColor = {
+            // Actualizar el modelo de datos
+            const orderId = draggedCard.dataset.id;
+            // Verificar que estamos trabajando con la misma orden
+            if (orderObj.id != orderId) {
+                console.warn('ID de orden no coincide, actualizando referencia');
+                const updatedOrder = masterOrderList.find(o => o.id == orderId);
+                if (!updatedOrder) {
+                    console.error('No se encontró la orden en masterOrderList:', orderId);
+                    return;
+                }
+                // Actualizar referencia a la orden
+                orderObj = updatedOrder;
+            }
+            
+            console.log('Orden antes de actualizar:', {
+                id: orderObj.id,
+                productionLineId: orderObj.productionLineId,
+                production_line_id: orderObj.production_line_id,
+                status: orderObj.status
+            });
+            
+            // Encontrar la columna de destino
+            targetColumnEl = targetContainer.closest('.kanban-column');
+            let targetStateEl = targetContainer.closest('.final-state-section');
+            
+            console.log('Destino encontrado:', {
+                targetColumnEl: targetColumnEl?.id || 'No encontrado',
+                targetStateEl: targetStateEl?.dataset?.state || 'No encontrado'
+            });
+            
+            // Actualizar el estado de la orden según la columna de destino
+            targetState = null;
+            if (targetStateEl) {
+                // Si es un estado final
+                targetState = targetStateEl.dataset.state;
+                orderObj.status = targetState;
+                orderObj.statusColor = {
                     'completed': '#10b981',
-                    'incidents': '#ef4444',
-                    'cancelled': '#6b7280',
+                    'cancelled': '#ef4444',
+                    'incidents': '#f59e0b',
                     'pending': '#6b7280',
                     'in_progress': '#3b82f6'
                 }[targetState] || '#3b82f6';
                 
                 // Si es un estado final, quitar de la línea de producción
                 if (['completed', 'incidents', 'cancelled'].includes(targetState)) {
-                    order.productionLineId = null;
+                    orderObj.productionLineId = null;
+                    orderObj.production_line_id = null; // Asegurar que ambos campos se actualicen
                 }
             } else if (targetColumnEl) {
                 // Si es una columna de producción
@@ -1202,14 +1467,19 @@
                 const targetColumn = columns[targetColumnId];
                 
                 if (targetColumn && targetColumn.type === 'production') {
-                    order.productionLineId = targetColumn.productionLineId;
-                    order.status = 'in_progress';
-                    order.statusColor = '#3b82f6';
+                    // Actualizar tanto productionLineId como production_line_id para asegurar consistencia
+                    orderObj.productionLineId = targetColumn.productionLineId;
+                    orderObj.production_line_id = targetColumn.productionLineId; // Añadido para asegurar que se envíe correctamente
+                    orderObj.status = 'in_progress';
+                    orderObj.statusColor = '#3b82f6';
+                    console.log(`Orden ${orderObj.id} asignada a línea de producción ${targetColumn.productionLineId}`);
                 } else if (targetColumnId === 'pending_assignment') {
                     // Si se mueve a pendientes
-                    order.productionLineId = null;
-                    order.status = 'pending';
-                    order.statusColor = '#6b7280';
+                    orderObj.productionLineId = null;
+                    orderObj.production_line_id = null; // Añadido para asegurar que se envíe correctamente
+                    orderObj.status = 'pending';
+                    orderObj.statusColor = '#6b7280';
+                    console.log(`Orden ${orderObj.id} movida a pendientes de asignación`);
                 }
             }
             
@@ -1220,8 +1490,8 @@
                 draggedCard.style.boxShadow = '0 10px 20px rgba(0,0,0,0.15)';
                 
                 // Actualizar el color del borde según el estado
-                if (order.statusColor) {
-                    draggedCard.style.borderLeftColor = order.statusColor;
+                if (orderObj.statusColor) {
+                    draggedCard.style.borderLeftColor = orderObj.statusColor;
                 }
                 
                 // Restaurar la transición después de la animación
@@ -1238,44 +1508,65 @@
             targetColumn.items = targetColumn.items || [];
             
             // Agregar a la columna si no existe ya
-            if (!targetColumn.items.some(item => item.id === order.id)) {
-                targetColumn.items.push(order);
+            if (!targetColumn.items.some(item => item.id === orderObj.id)) {
+                targetColumn.items.push(orderObj);
             }
             
-            // Actualizar el ID de la línea de producción en la tarjeta
+            // Actualizar el ID de la línea de producción en la tarjeta y en el objeto de datos maestro
             if (draggedCard) {
-                draggedCard.dataset.productionLineId = order.productionLineId || '';
+                draggedCard.dataset.productionLineId = orderObj.productionLineId || '';
+                
+                // Actualizar el objeto en masterOrderList para mantener la sincronización
+                const masterOrderIndex = masterOrderList.findIndex(o => o.id === orderObj.id);
+                if (masterOrderIndex !== -1) {
+                    masterOrderList[masterOrderIndex].productionLineId = orderObj.productionLineId;
+                    masterOrderList[masterOrderIndex].production_line_id = orderObj.productionLineId;
+                    console.log(`Actualizado masterOrderList[${masterOrderIndex}].production_line_id = ${orderObj.productionLineId}`);
+                }
                 
                 // Actualizar los estilos de la tarjeta
-                if (order.statusColor) {
-                    draggedCard.style.borderLeftColor = order.statusColor;
+                if (orderObj.statusColor) {
+                    draggedCard.style.borderLeftColor = orderObj.statusColor;
                 }
                 
                 // Actualizar el estado en el atributo de datos
-                draggedCard.dataset.status = order.status;
+                draggedCard.dataset.status = orderObj.status;
             }
             
             // Mover la tarjeta al contenedor correcto con animación
             let cardsContainer = null;
             
-            if (targetState) {
-                // Buscar el contenedor de la sección de estado específica
-                const stateSection = targetColumnEl.querySelector(`.final-state-section[data-state="${targetState}"]`);
-                if (stateSection) {
-                    cardsContainer = stateSection.querySelector('.column-cards');
+            // Verificar que tenemos una columna de destino válida
+            if (targetColumnEl) {
+                if (targetState) {
+                    // Buscar el contenedor de la sección de estado específica
+                    const stateSection = targetColumnEl.querySelector(`.final-state-section[data-state="${targetState}"]`);
+                    if (stateSection) {
+                        cardsContainer = stateSection.querySelector('.column-cards');
+                    }
+                } else {
+                    // Usar el contenedor de la columna principal
+                    cardsContainer = targetColumnEl.querySelector('.column-cards');
+                }
+                
+                // Si no se encontró un contenedor, usar el predeterminado
+                if (!cardsContainer) {
+                    console.warn('No se encontró el contenedor de destino, usando contenedor predeterminado');
+                    cardsContainer = targetColumnEl.querySelector('.column-cards');
                 }
             } else {
-                // Usar el contenedor de la columna principal
-                cardsContainer = targetColumnEl.querySelector('.column-cards');
-            }
-            
-            // Si no se encontró un contenedor, usar el predeterminado
-            if (!cardsContainer) {
-                console.warn('No se encontró el contenedor de destino, usando contenedor predeterminado');
-                cardsContainer = targetColumnEl.querySelector('.column-cards');
+                console.error('No se encontró una columna de destino válida');
             }
             
             if (cardsContainer) {
+                // IMPORTANTE: Verificar si ya existe una tarjeta con el mismo ID en el destino
+                // y eliminarla para evitar duplicados
+                const existingCard = cardsContainer.querySelector(`.kanban-card[data-id="${orderObj.id}"]`);
+                if (existingCard && existingCard !== draggedCard) {
+                    console.log(`Eliminando tarjeta duplicada con ID ${orderObj.id} del contenedor destino`);
+                    cardsContainer.removeChild(existingCard);
+                }
+                
                 // Actualizar el estilo de la tarjeta según el estado
                 if (targetState) {
                     const color = {
@@ -1287,11 +1578,21 @@
                     draggedCard.style.borderLeftColor = color;
                 }
                 
+                // Importante: Restaurar los estilos de posición antes de mover la tarjeta
+                // para que se posicione correctamente en el nuevo contenedor
+                draggedCard.style.position = '';
+                draggedCard.style.top = '';
+                draggedCard.style.left = '';
+                draggedCard.style.visibility = 'visible';
+                
                 // Añadir clase temporal para la animación
                 draggedCard.classList.add('card-dropped');
                 
                 // Insertar la tarjeta en el nuevo contenedor
                 cardsContainer.appendChild(draggedCard);
+                
+                // Marcar el arrastre como exitoso
+                dragSuccessful = true;
                 
                 // Mostrar efecto de confirmación
                 const confirmEl = document.createElement('div');
@@ -1343,12 +1644,34 @@
             
             console.log(`Orden ${order.order_id} movida de ${fromColumn} a ${toColumn}`, {
                 estado: targetState,
-                lineaProduccion: productionLineId
+                lineaProduccion: order.productionLineId
             });
             
-            // Limpiar estilos y restablecer
+            // Eliminar la tarjeta de la columna de origen en la estructura de datos
+            if (sourceColumnId && sourceColumnId !== targetColumnEl?.id) {
+                const sourceCol = columns[sourceColumnId];
+                if (sourceCol && sourceCol.items) {
+                    const itemIndex = sourceCol.items.findIndex(item => item.id == orderObj.id);
+                    if (itemIndex > -1) {
+                        sourceCol.items.splice(itemIndex, 1);
+                        console.log(`Orden ${orderObj.id} eliminada de la columna de origen: ${sourceColumnId}`);
+                    }
+                } else if (columns['final_states'] && columns['final_states'].subStates) {
+                    // Manejar si la tarjeta viene de un sub-estado
+                    Object.values(columns['final_states'].subStates).forEach(subState => {
+                        const itemIndex = subState.items.findIndex(item => item.id == orderObj.id);
+                        if (itemIndex > -1) {
+                            subState.items.splice(itemIndex, 1);
+                            console.log(`Orden ${orderObj.id} eliminada del sub-estado de origen: ${subState.id}`);
+                        }
+                    });
+                }
+            }
+
+            // Restablecer las zonas de drop y la tarjeta arrastrada
             resetDropZones();
             draggedCard = null;
+            sourceColumnId = null; // Limpiar la columna de origen
         }
 
         function resetDropZones() {
@@ -1479,9 +1802,164 @@
             }
         }
         
+        // --- GUARDAR CAMBIOS DEL KANBAN ---
+        
+        function saveKanbanChanges() {
+            // Mostrar indicador de carga
+            const saveBtn = document.getElementById('saveChangesBtn');
+            const originalContent = saveBtn.innerHTML;
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> {{ __("Guardando...") }}';
+            saveBtn.disabled = true;
+            
+            // Recopilar todas las órdenes que han sido movidas a columnas de producción
+            const updatedOrders = [];
+            
+            console.log('=== INICIO GUARDADO DE KANBAN ===');
+            console.log('Columnas disponibles:', Object.keys(columns));
+            
+            // Primero, asegurarse de que todas las órdenes en masterOrderList tengan production_line_id actualizado
+            masterOrderList.forEach(order => {
+                // Buscar en qué columna está esta orden
+                let foundInColumn = null;
+                Object.keys(columns).forEach(columnId => {
+                    const column = columns[columnId];
+                    const orderInColumn = column.items.find(item => item.id === order.id);
+                    if (orderInColumn) {
+                        foundInColumn = column;
+                    }
+                });
+                
+                // Actualizar production_line_id según la columna donde está
+                if (foundInColumn) {
+                    if (foundInColumn.type === 'production' && foundInColumn.productionLineId) {
+                        // Si está en una columna de producción, actualizar el ID
+                        order.productionLineId = foundInColumn.productionLineId;
+                        order.production_line_id = foundInColumn.productionLineId;
+                        console.log(`Sincronizado orden ${order.id} con production_line_id=${order.production_line_id} (columna ${foundInColumn.name})`);
+                    } else if (foundInColumn.id === 'pending_assignment' || foundInColumn.id === 'final_states') {
+                        // Si está en pendientes o estados finales, establecer como null
+                        order.productionLineId = null;
+                        order.production_line_id = null;
+                        console.log(`Sincronizado orden ${order.id} con production_line_id=null (columna ${foundInColumn.id})`);
+                    }
+                }
+            });
+            
+            const processedOrderIds = new Set();
+
+            // Status mapping from string to integer
+            const statusMap = {
+                'pending': 0,
+                'in_progress': 1,
+                'completed': 2,
+                'cancelled': 4,
+                'incidents': 5
+            };
+
+            Object.keys(columns).forEach(columnId => {
+                const column = columns[columnId];
+                console.log(`Procesando columna para guardado: ${column.name || columnId}`);
+
+                const processItems = (items, productionLineId, statusStr) => {
+                    (items || []).forEach((order, index) => {
+                        if (processedOrderIds.has(order.id)) {
+                            console.warn(`Orden duplicada encontrada y omitida: ID ${order.id}`);
+                            return; // Skip duplicate
+                        }
+                        
+                        const finalStatus = statusMap[statusStr] !== undefined ? statusMap[statusStr] : 0;
+
+                        updatedOrders.push({
+                            id: order.id,
+                            production_line_id: productionLineId,
+                            orden: index,
+                            status: finalStatus
+                        });
+                        processedOrderIds.add(order.id);
+                    });
+                };
+
+                if (column.id === 'final_states') {
+                    Object.values(column.subStates).forEach(subState => {
+                        processItems(subState.items, null, subState.id);
+                    });
+                } else if (column.type === 'production') {
+                    processItems(column.items, column.productionLineId, 'in_progress');
+                } else if (column.id === 'pending_assignment') {
+                    processItems(column.items, null, 'pending');
+                }
+            });
+            
+            // Verificar que los datos a enviar sean correctos
+            console.log('Órdenes a actualizar:', updatedOrders);
+            
+            // Verificar si hay alguna orden con production_line_id incorrecto
+            updatedOrders.forEach(order => {
+                // Si la orden está en una columna de producción pero tiene production_line_id null
+                const orderInMaster = masterOrderList.find(o => o.id == order.id);
+                if (orderInMaster && orderInMaster.productionLineId && order.production_line_id === null) {
+                    console.warn(`Corrigiendo orden ${order.id} con production_line_id null pero productionLineId=${orderInMaster.productionLineId}`);
+                    order.production_line_id = orderInMaster.productionLineId;
+                }
+            });
+            
+            // Enviar los datos al servidor mediante AJAX
+            fetch('{{ route('production-orders.update-batch') }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({ orders: updatedOrders })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Error al guardar los cambios');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Mostrar mensaje de éxito
+                showToast(`<i class="fas fa-check-circle me-2"></i> ${data.message || 'Cambios guardados correctamente'}`, {
+                    icon: 'check-circle',
+                    iconColor: '#10b981'
+                });
+                
+                // Restaurar el botón
+                saveBtn.innerHTML = originalContent;
+                saveBtn.disabled = false;
+                
+                // Recargar la página después de un breve retraso para que el usuario vea el mensaje de éxito
+                setTimeout(() => {
+                    // Mostrar indicador de recarga
+                    const refreshBtn = document.getElementById('refreshBtn');
+                    if (refreshBtn) {
+                        refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin text-primary"></i>';
+                    }
+                    
+                    // Recargar la página completa
+                    window.location.reload();
+                }, 1000); // Retraso de 1 segundo para que el usuario vea el mensaje de éxito
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                
+                // Mostrar mensaje de error
+                showToast(`<i class="fas fa-exclamation-triangle me-2"></i> Error al guardar los cambios: ${error.message}`, {
+                    icon: 'exclamation-triangle',
+                    iconColor: '#ef4444'
+                });
+                
+                // Restaurar el botón
+                saveBtn.innerHTML = originalContent;
+                saveBtn.disabled = false;
+            });
+        }
+        
         // --- INICIALIZACIÓN Y EVENTOS ---
         
         generateDummyData(); // Cargar datos ficticios al inicio
+        document.getElementById('saveChangesBtn').addEventListener('click', saveKanbanChanges);
         document.getElementById('refreshBtn').addEventListener('click', generateDummyData);
         document.getElementById('fullscreenBtn').addEventListener('click', toggleFullscreen);
         if (searchInput) {

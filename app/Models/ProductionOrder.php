@@ -31,7 +31,10 @@ class ProductionOrder extends Model
         'box',
         'units_box',
         'units',
-        'orden', // Nuevo campo añadido para el orden de fabricación
+        'orden', // Orden de fabricación
+        'theoretical_time', // Tiempo teórico del proceso
+        'process_category', // Categoría del proceso
+        'delivery_date'
     ];
 
     /**

@@ -203,6 +203,9 @@ class MqttSubscriberLocal extends Command
     private function handleProductionOrder(array $messageData, string $timestamp)
     {
         try {
+            // Log the received message for debugging
+            $this->info("[" . $timestamp . "] Processing production order: " . json_encode($messageData));
+            
             // Get default barcode ID
             $barcoderId = $this->getDefaultBarcodeId();
             
@@ -210,18 +213,26 @@ class MqttSubscriberLocal extends Command
                 throw new \Exception("No se pudo encontrar un código de barras por defecto");
             }
 
+            // Prepare data for update or create
+            $orderData = [
+                'barcoder_id' => $barcoderId,
+                'production_line_id' => null, // Set production_line_id to null for default topic
+                'json' => json_encode($messageData),
+                'status' => 'pending',
+                'processed' => false,
+                'orden' => \App\Models\ProductionOrder::max('orden') + 1, // Auto-increment order
+                'theoretical_time' => isset($messageData['theoretical_time']) ? floatval($messageData['theoretical_time']) : null,
+                'process_category' => $messageData['process_category'] ?? null
+            ];
+            
             // Create or update production order
             $productionOrder = \App\Models\ProductionOrder::updateOrCreate(
                 ['order_id' => $messageData['orderId']],
-                [
-                    'barcoder_id' => $barcoderId,
-                    'production_line_id' => null, // Set production_line_id to null for default topic
-                    'json' => json_encode($messageData),
-                    'status' => 'pending',
-                    'processed' => false,
-                    'orden' => \App\Models\ProductionOrder::max('orden') + 1 // Auto-increment order
-                ]
+                $orderData
             );
+            
+            // Log the saved data for debugging
+            $this->info("[" . $timestamp . "] Saved production order data: " . json_encode($orderData));
             
             $this->info("[{$timestamp}] Production order processed: {$messageData['orderId']}");
             

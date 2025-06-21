@@ -145,6 +145,11 @@ class ListStockOrdersCommand extends Command
             'quantity' => 0,
             'unit' => 'Cajas',
             'isAuto' => 0,
+            'theoretical_time' => (float)$orderProcess->time,
+            'process_id' => $orderProcess->process_id,
+            'process_code' => $orderProcess->process->code ?? '',
+            'process_category' => $orderProcess->process->description ?? '',
+            'delivery_date' => $order->delivery_date,
             'refer' => [
                 '_id' => "",
                 'company_name' => $order->customer ? $order->customer->name : 'N/A',

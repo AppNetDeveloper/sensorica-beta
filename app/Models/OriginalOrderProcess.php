@@ -18,7 +18,8 @@ class OriginalOrderProcess extends Pivot
         'time',
         'created',
         'finished',
-        'finished_at'
+        'finished_at',
+        'grupo_numero'
     ];
     
     protected $casts = [

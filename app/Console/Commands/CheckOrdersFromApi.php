@@ -13,6 +13,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Artisan;
 
 class CheckOrdersFromApi extends Command
 {
@@ -215,6 +216,31 @@ class CheckOrdersFromApi extends Command
         $this->line('💡 Para revisar errores específicos, consulta los logs del sistema');
         $this->newLine();
         $this->line('🎉 Comando CheckOrdersFromApi finalizado correctamente');
+
+                // ================================================================
+        // INICIO DE LA MODIFICACIÓN: Llamar al segundo comando
+        // ================================================================
+        $this->newLine();
+        $this->info('✅ Verificación de pedidos completada. Ejecutando ahora: orders:list-stock');
+
+        try {
+            // Ejecuta el comando 'orders:list-stock'
+            Artisan::call('orders:list-stock');
+            
+            // Opcional: puedes capturar y mostrar la salida del comando ejecutado
+            $salidaDelComando = Artisan::output();
+            $this->line("--- Salida de orders:list-stock ---");
+            $this->line($salidaDelComando);
+            $this->line("------------------------------------");
+
+        } catch (\Exception $e) {
+            $this->error('❌ Ocurrió un error al ejecutar el comando orders:list-stock.');
+            $this->error($e->getMessage());
+            Log::error("Fallo al ejecutar orders:list-stock desde orders:check: " . $e->getMessage());
+        }
+        // ================================================================
+        // FIN DE LA MODIFICACIÓN
+        // ================================================================
         
         return 0;
     }
@@ -300,11 +326,31 @@ class CheckOrdersFromApi extends Command
         $totalProcessesCreated = 0;
         
         foreach ($orderDetails['grupos'] as $index => $grupo) {
-            $this->logLine("    Procesando grupo " . ($index + 1) . "...");
-            $this->logLine("    🔍 Analizando contenido del grupo...");
-            $processesCreated = $this->processGroupItems($customer, $grupo, $order);
-            $totalProcessesCreated += $processesCreated;
-            $this->logLine("    📊 Procesos creados en este grupo: {$processesCreated}");
+            $grupoNum = $grupo['grupoNum'] ?? ($index + 1);
+            $this->logLine("\n    =======================================");
+            $this->logLine("    🏷️  PROCESANDO GRUPO {$grupoNum}");
+            $this->logLine("    =======================================");
+            $this->logLine("    🔍 Contenido del grupo:");
+            $this->logLine("       - Artículos: " . (isset($grupo['articulos']) ? count($grupo['articulos']) : '0'));
+            $this->logLine("       - Servicios: " . (isset($grupo['servicios']) ? count($grupo['servicios']) : '0'));
+            $this->logLine("    🔄 Iniciando procesamiento...");
+            
+            try {
+                $processesCreated = $this->processGroupItems($customer, $grupo, $order);
+                $totalProcessesCreated += $processesCreated;
+                $this->logLine("    ✅ Procesamiento del grupo {$grupoNum} completado");
+                $this->logLine("    📊 Procesos creados en este grupo: {$processesCreated}");
+            } catch (\Exception $e) {
+                $this->logError("    ❌ Error procesando grupo {$grupoNum}: " . $e->getMessage());
+                Log::error("Error procesando grupo {$grupoNum}", [
+                    'order_id' => $order->order_id,
+                    'grupo' => $grupo,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+            }
+            
+            $this->logLine("    =======================================\n");
         }
         
         $this->logLine("  📊 Total de procesos creados en esta sesión: {$totalProcessesCreated}");
@@ -351,21 +397,28 @@ class CheckOrdersFromApi extends Command
     private function processGroupItems(Customer $customer, array $grupo, OriginalOrder $order)
     {
         $processedItems = 0;
-        $this->logLine("      🔍 Analizando estructura del grupo...");
+        $grupoNum = $grupo['grupoNum'] ?? 'N/A';
+        
+        $this->logLine("      🔍 Analizando estructura del grupo {$grupoNum}...");
+        $this->logLine("      📝 Claves disponibles: " . implode(', ', array_keys($grupo)));
         
         foreach ($grupo as $key => $value) {
             if (is_array($value)) {
-                $this->logLine("      → Analizando '{$key}' (" . count($value) . " elementos)");
+                $this->logLine("\n      → Analizando '{$key}' (" . count($value) . " elementos)");
                 
                 // Procesar servicios (procesos)
                 if ($key === 'servicios' || strpos($key, 'servicio') !== false) {
                     $this->logLine("        🔧 Identificado como SERVICIOS - procesando como procesos...");
+                    $this->logLine("        🔄 Iniciando procesamiento de " . count($value) . " servicios...");
                     $processedItems += $this->processServices($customer, $value, $key, $order, $grupo);
+                    $this->logLine("        ✅ Procesados " . count($value) . " servicios en el grupo {$grupoNum}");
                 }
                 // Procesar artículos
                 elseif ($key === 'articulos' || strpos($key, 'articulo') !== false) {
                     $this->logLine("        📦 Identificado como ARTÍCULOS - procesando como materiales...");
+                    $this->logLine("        🔄 Iniciando procesamiento de " . count($value) . " artículos...");
                     $this->processArticles($customer, $value, $key, $order, $grupo);
+                    $this->logLine("        ✅ Procesados " . count($value) . " artículos en el grupo {$grupoNum}");
                 }
                 else {
                     $this->logLine("        🔍 Verificando mapeos configurados para '{$key}'...");
@@ -418,49 +471,97 @@ class CheckOrdersFromApi extends Command
         $processedItems = 0;
         
         $this->logLine("        🔍 Verificando mapeos configurados para servicios...");
+        $this->logLine("        🔍 Grupo actual: " . ($grupo['grupoNum'] ?? 'N/A') . ", Total de servicios: " . count($servicios));
         // Verificar si hay mapeos configurados para servicios
         $mappings = $customer->processFieldMappings->filter(function ($mapping) use ($key) {
             return strpos($mapping->source_field, "grupos[*].{$key}[*].") === 0;
         });
         
-        if (!$mappings->isEmpty()) {
-            $this->logLine("        ✅ Encontrados " . $mappings->count() . " mapeos para '{$key}'");
-            $this->logLine("        🔄 Iniciando procesamiento de " . count($servicios) . " servicios...");
-            
-            foreach ($servicios as $index => $servicio) {
-                $this->logLine("        Procesando {$key}[{$index}]:");
-                $this->logLine("          🔍 Aplicando mapeos de proceso...");
-                $processData = $this->mapProcessData($customer, $servicio, $key);
-                if ($processData) {
-                    $this->logLine("          ✅ Datos mapeados correctamente");
-                    $this->logLine("          💾 Creando proceso en la base de datos...");
-                    $createdProcess = $this->createOrderProcess($order, $processData);
-                    if ($createdProcess && is_object($createdProcess)) {
-                        $processedItems++;
-                        $this->logLine("          ✅ Proceso creado exitosamente (ID: {$createdProcess->id})");
-                        
-                        // Procesar artículos asociados a este proceso si existen en el mismo grupo
-                        if (isset($grupo['articulos']) && is_array($grupo['articulos'])) {
-                            $this->logLine("          📦 Procesando artículos asociados a este proceso...");
-                            $this->processArticlesForProcess($customer, $grupo['articulos'], $createdProcess, $grupo);
-                        } else {
-                            $this->logLine("          ℹ️ No hay artículos asociados en este grupo");
-                        }
-                    } else {
-                        $this->logLine("          ❌ Error al crear el proceso");
-                        $this->logLine("          📝 Registrando error en logs...");
-                    }
-                } else {
-                    $this->logLine("        ⚠️ No se pudo mapear el servicio");
-                    $this->logLine("          📝 Datos del servicio no válidos o mapeo fallido");
-                }
-            }
-        } else {
-            $this->logLine("        → No hay mapeos configurados para '{$key}'");
-            $this->logLine("          ⚠️ Los servicios no se procesarán por falta de configuración");
+        if ($mappings->isEmpty()) {
+            $this->logLine("        ⚠️ No hay mapeos configurados para servicios en '{$key}'. Se omitirán los servicios.");
+            $this->logLine("        ℹ️ Asegúrate de configurar los mapeos de procesos en la configuración del cliente");
+            return 0;
         }
         
-        $this->logLine("        📊 Servicios procesados exitosamente: {$processedItems}");
+        $this->logLine("        ✅ Encontrados " . $mappings->count() . " mapeos para '{$key}'");
+        
+        // Verificar si los servicios están en un array numérico o asociativo
+        $isNumericArray = array_keys($servicios) === range(0, count($servicios) - 1);
+        
+        if (!$isNumericArray) {
+            // Si es un array asociativo, convertirlo a numérico para procesarlo correctamente
+            $servicios = [$servicios];
+            $this->logLine("        🔄 Se detectó un array asociativo, convirtiendo a array numérico para procesar");
+        }
+        
+        $this->logLine("        🔄 Iniciando procesamiento de " . count($servicios) . " servicios...");
+        
+        foreach ($servicios as $index => $servicio) {
+            $this->logLine("        📋 Procesando servicio [{$index}]:");
+            $this->logLine("          🔍 Datos del servicio: " . json_encode($servicio));
+            $this->logLine("          🔍 Código de artículo: " . ($servicio['CodigoArticulo'] ?? 'No definido'));
+            
+            // Verificar si el servicio tiene un código de servicio
+            if (!isset($servicio['CodigoArticulo'])) {
+                $this->logLine("          ⚠️ El servicio no tiene un código de artículo, se omitirá");
+                $this->logLine("          📝 Datos del servicio: " . json_encode($servicio));
+                continue;
+            }
+            
+            $this->logLine("          🔍 Aplicando mapeos de proceso...");
+            $this->logLine("          🔄 Mapeando datos del servicio...");
+            $processData = $this->mapProcessData($customer, $servicio, $key);
+            $this->logLine("          🔄 Datos mapeados: " . json_encode($processData));
+            
+            if ($processData) {
+                // Asegurarse de que el grupo esté incluido en los datos del proceso
+                if (isset($grupo['grupoNum']) && !isset($processData['grupo_numero'])) {
+                    $processData['grupo_numero'] = (string)$grupo['grupoNum'];
+                    $this->logLine("          🔄 Añadiendo grupo_numero: " . $processData['grupo_numero']);
+                }
+                
+                $this->logLine("          ✅ Datos mapeados correctamente");
+                $this->logLine("          💾 Creando proceso en la base de datos...");
+                
+                $createdProcess = $this->createOrderProcess($order, $processData);
+                
+                if ($createdProcess && is_object($createdProcess)) {
+                    $processedItems++;
+                    $this->logLine("          ✅ Proceso creado exitosamente (ID: {$createdProcess->id})");
+                    
+                    // Procesar artículos asociados a este proceso si existen en el mismo grupo
+                    if (isset($grupo['articulos']) && is_array($grupo['articulos'])) {
+                        $this->logLine("          📦 Procesando " . count($grupo['articulos']) . " artículos asociados a este proceso...");
+                        $articlesCreated = $this->processArticlesForProcess($customer, $grupo['articulos'], $createdProcess, $grupo);
+                        $this->logLine("          ✅ Se crearon {$articlesCreated} artículos para este proceso");
+                    } else {
+                        $this->logLine("          ℹ️ No hay artículos asociados en este grupo");
+                    }
+                    
+                    // Verificar si hay artículos en el grupo raíz
+                    $orderDetails = $order->order_details;
+                    if (isset($orderDetails['articulos']) && is_array($orderDetails['articulos'])) {
+                        $this->logLine("          📦 Procesando artículos del grupo raíz...");
+                        $articlesCreated = $this->processArticlesForProcess($customer, $orderDetails['articulos'], $createdProcess, $grupo);
+                        $this->logLine("          ✅ Se crearon {$articlesCreated} artículos del grupo raíz");
+                    }
+                } else {
+                    $this->logLine("          ❌ Error al crear el proceso");
+                    $this->logLine("          📝 Registrando error en logs...");
+                    Log::error("Error al crear proceso", [
+                        'order_id' => $order->id,
+                        'process_data' => $processData,
+                        'grupo' => $grupo
+                    ]);
+                }
+            } else {
+                $this->logLine("          ⚠️ No se pudo mapear el servicio");
+                $this->logLine("          📝 Datos del servicio no válidos o mapeo fallido");
+                $this->logLine("          📝 Datos del servicio: " . json_encode($servicio));
+            }
+        }
+        
+        $this->logLine("        📊 Total de servicios procesados: {$processedItems}");
         return $processedItems;
     }
 
@@ -487,40 +588,74 @@ class CheckOrdersFromApi extends Command
      */
     private function processArticlesForProcess(Customer $customer, array $articulos, $process, array $grupo)
     {
-        $this->line("          🔍 Verificando mapeos configurados para artículos...");
+        $this->logLine("          🔍 Verificando mapeos configurados para artículos...");
+        
         // Verificar si hay mapeos configurados para artículos
         $mappings = $customer->articleFieldMappings->filter(function ($mapping) {
             return strpos($mapping->source_field, "grupos[*].articulos[*].") === 0;
         });
         
         if ($mappings->isEmpty()) {
-            $this->line("          → No hay mapeos de artículos configurados");
-            $this->line("          ℹ️ Los artículos no se procesarán por falta de configuración");
-            return;
+            $this->logLine("          → No hay mapeos de artículos configurados");
+            $this->logLine("          ℹ️ Los artículos no se procesarán por falta de configuración");
+            return 0;
         }
         
         $this->logLine("          ✅ Encontrados " . $mappings->count() . " mapeos de artículos");
         $this->logLine("          → Procesando " . count($articulos) . " artículos para el proceso {$process->id}");
         $createdArticles = 0;
         
+        // Verificar si los artículos están en un array numérico o asociativo
+        $isNumericArray = array_keys($articulos) === range(0, count($articulos) - 1);
+        
+        if (!$isNumericArray) {
+            // Si es un array asociativo, convertirlo a numérico para procesarlo correctamente
+            $articulos = [$articulos];
+            $this->logLine("          🔄 Se detectó un array asociativo, convirtiendo a array numérico para procesar");
+        }
+        
         foreach ($articulos as $index => $articulo) {
             $this->logLine("            📦 Procesando artículo [{$index}]:");
+            
+            // Verificar si el artículo tiene un campo CodigoArticulo
+            if (!isset($articulo['CodigoArticulo'])) {
+                $this->logLine("              ⚠️ El artículo no tiene un código de artículo, se omitirá");
+                $this->logLine("              📝 Datos del artículo: " . json_encode($articulo));
+                continue;
+            }
+            
             $this->logLine("              🔍 Aplicando mapeos de artículo...");
             $articleData = $this->mapArticleData($customer, $articulo);
+            
             if ($articleData) {
+                // Asegurarse de que el grupo esté incluido en los datos del artículo
+                if (isset($grupo['grupoNum']) && !isset($articleData['grupo_articulo'])) {
+                    $articleData['grupo_articulo'] = (string)$grupo['grupoNum'];
+                    $this->logLine("              🔄 Añadiendo grupo_articulo: " . $articleData['grupo_articulo']);
+                }
+                
                 $this->logLine("              ✅ Datos de artículo mapeados correctamente");
                 $this->logLine("              💾 Creando artículo en la base de datos...");
-                $created = $this->createOrderArticle($process->id, $articleData);
+                
+                $created = $this->createOrderArticle($process->id, $articleData, $grupo);
+                
                 if ($created) {
                     $createdArticles++;
                     $this->logLine("              ✅ Artículo creado exitosamente");
                 } else {
                     $this->logLine("              ❌ Error al crear el artículo");
                     $this->logLine("              📝 Registrando error en logs...");
+                    
+                    Log::error("Error al crear artículo para el proceso", [
+                        'process_id' => $process->id,
+                        'article_data' => $articleData,
+                        'grupo' => $grupo
+                    ]);
                 }
             } else {
                 $this->logLine("              ⚠️ No se pudo mapear el artículo");
                 $this->logLine("              📝 Datos del artículo no válidos o mapeo fallido");
+                $this->logLine("              📝 Datos del artículo: " . json_encode($articulo));
             }
         }
         
@@ -528,15 +663,26 @@ class CheckOrdersFromApi extends Command
         if ($createdArticles > 0) {
             $this->logLine("          📝 Registrando éxito de artículos en logs...");
         }
+        
+        return $createdArticles;
     }
     
     private function mapProcessData(Customer $customer, array $item, string $type)
     {
         $mappedData = [];
+        $this->logLine("          🔎 Iniciando mapeo para tipo: {$type}");
+        $this->logLine("          🔎 Total de mapeos disponibles: " . $customer->processFieldMappings->count());
         
         // Aplicar mapeos de campos de procesos
         foreach ($customer->processFieldMappings as $mapping) {
             $sourceField = $mapping->source_field;
+            $this->logLine("          🔄 Procesando mapeo: {$sourceField} (Target: {$mapping->target_field})");
+            
+            // Verificar si el mapeo es para este tipo
+            if (strpos($sourceField, "grupos[*].{$type}[*].") !== 0) {
+                $this->logLine("          ⏩ Saltando - No coincide con el tipo actual");
+                continue;
+            }
             
             // Verificar si el mapeo es para este tipo
             if (strpos($sourceField, "grupos[*].{$type}[*].") === 0) {
@@ -546,15 +692,29 @@ class CheckOrdersFromApi extends Command
                 // Obtener el valor del item
                 $sourceValue = data_get($item, $fieldName);
                 
+                // Si no encontramos el valor, intentar con el grupo específico
+                if ($sourceValue === null && isset($item['GrupoNum'])) {
+                    $grupoNum = $item['GrupoNum'];
+                    $this->logLine("      🔄 Intentando con grupo específico: grupos[{$grupoNum}].{$type}[*].{$fieldName}");
+                    $sourceValue = data_get($item, $fieldName);
+                }
+                
                 if ($sourceValue !== null) {
                     // Aplicar transformaciones
                     $transformedValue = $mapping->applyTransformations($sourceValue);
+                    
+                    // Guardar el valor original
                     $mappedData[$mapping->target_field] = $transformedValue;
+                    
+
                     
                     $this->logLine("      → Mapeo: {$fieldName} -> {$mapping->target_field} = '{$transformedValue}'");
                 } else {
                     $this->logLine("      ⚠️ Campo '{$fieldName}' no encontrado en el item");
+                    $this->logLine("      ℹ️ Estructura del item: " . json_encode(array_keys($item)));
                 }
+            } else {
+                $this->logLine("      ⏭️ Mapeo no coincide con el tipo '{$type}': {$sourceField}");
             }
         }
         
@@ -570,11 +730,16 @@ class CheckOrdersFromApi extends Command
                 return false;
             }
             
+            // Usar el código de búsqueda si está disponible, de lo contrario usar el process_id normal
+            // En createOrderProcess
+            $processCode = $processData['process_id'];
+            $this->logLine("    🔍 Buscando proceso con código: {$processCode}");
+            
             // Buscar el proceso por code
-            $process = Process::where('code', $processData['process_id'])->first();
+            $process = Process::where('code', $processCode)->first();
             
             if (!$process) {
-                $this->logWarning("    ⚠️ No se encontró proceso con código: {$processData['process_id']}");
+                $this->logWarning("    ⚠️ No se encontró proceso con código: {$processCode}");
                 return false;
             }
             
@@ -582,13 +747,14 @@ class CheckOrdersFromApi extends Command
             $rawTime = $processData['time'] ?? 0;
             $calculatedTime = $rawTime * $process->factor_correccion;
             
-            // Verificar si ya existe este proceso para esta orden
+            // Verificar si ya existe este proceso para esta orden en el mismo grupo
             $existingProcess = OriginalOrderProcess::where('original_order_id', $order->id)
                                                  ->where('process_id', $process->id)
+                                                 ->where('grupo_numero', $processData['grupo_numero'] ?? null)
                                                  ->first();
             
             if ($existingProcess) {
-                $this->logLine("    → Proceso {$process->code} ya existe para esta orden");
+                $this->logLine("    → Proceso {$process->code} ya existe para esta orden en el grupo {$processData['grupo_numero']}");
                 return false;
             }
             
@@ -653,39 +819,77 @@ class CheckOrdersFromApi extends Command
     /**
      * Crea un artículo asociado a un proceso
      */
-    private function createOrderArticle($processId, array $articleData)
+    private function createOrderArticle($processId, array $articleData, array $grupo = [])
     {
         try {
+            $this->logLine("        🔍 Validando datos del artículo...");
+            
             // Verificar que tenemos los datos mínimos requeridos
-            if (!isset($articleData['codigo_articulo'])) {
+            if (empty($articleData['codigo_articulo'])) {
                 $this->logWarning("        ⚠️ Artículo sin código - se omite");
+                $this->logLine("        📝 Datos del artículo: " . json_encode($articleData));
                 return false;
             }
             
-            // Verificar si ya existe este artículo para este proceso
-            $existingArticle = OriginalOrderArticle::where('original_order_process_id', $processId)
-                                                  ->where('codigo_articulo', $articleData['codigo_articulo'])
-                                                  ->first();
+            // Verificar que el processId es válido
+            if (empty($processId)) {
+                $this->logError("        ❌ ID de proceso inválido");
+                return false;
+            }
+            
+            $this->logLine("        🔍 Verificando si el artículo ya existe en este grupo...");
+            
+            // Construir la consulta para verificar duplicados
+            $query = OriginalOrderArticle::where('original_order_process_id', $processId)
+                ->where('codigo_articulo', $articleData['codigo_articulo']);
+            
+            // Si hay un grupo definido, incluirlo en la verificación de duplicados
+            if (isset($articleData['grupo_articulo'])) {
+                $query->where('grupo_articulo', $articleData['grupo_articulo']);
+                $this->logLine("        🔍 Buscando duplicados para código: {$articleData['codigo_articulo']} en grupo: {$articleData['grupo_articulo']}");
+            } else {
+                $this->logLine("        🔍 Buscando duplicados para código: {$articleData['codigo_articulo']} (sin grupo específico)");
+            }
+            
+            $existingArticle = $query->first();
             
             if ($existingArticle) {
-                $this->logLine("        → Artículo {$articleData['codigo_articulo']} ya existe para este proceso");
+                $grupoInfo = isset($articleData['grupo_articulo']) ? " en grupo: {$articleData['grupo_articulo']}" : "";
+                $this->logLine("        → Artículo {$articleData['codigo_articulo']}{$grupoInfo} ya existe en este proceso (ID: {$existingArticle->id})");
                 return false;
             }
             
-            // Crear el artículo
-            OriginalOrderArticle::create([
-                'original_order_process_id' => $processId,
-                'codigo_articulo' => $articleData['codigo_articulo'],
-                'descripcion_articulo' => $articleData['descripcion_articulo'] ?? '',
-                'grupo_articulo' => $articleData['grupo_articulo'] ?? '',
-            ]);
+            $this->logLine("        💾 Creando nuevo artículo...");
             
-            $this->logLine("        ✅ Artículo creado: {$articleData['codigo_articulo']}");
-            
-            return true;
+            // Crear el artículo con manejo de errores detallado
+            try {
+                $article = new OriginalOrderArticle([
+                    'original_order_process_id' => $processId,
+                    'codigo_articulo' => $articleData['codigo_articulo'],
+                    'descripcion_articulo' => $articleData['descripcion_articulo'] ?? '',
+                    'grupo_articulo' => $articleData['grupo_articulo'] ?? '',
+                ]);
+                
+                if (!$article->save()) {
+                    $this->logError("        ❌ Error al guardar el artículo");
+                    $this->logLine("        📝 Errores: " . json_encode($article->getErrors()));
+                    return false;
+                }
+                
+                $this->logLine("        ✅ Artículo creado exitosamente: {$article->codigo_articulo} (ID: {$article->id})");
+                return true;
+                
+            } catch (\Exception $e) {
+                $this->logError("        ❌ Error al guardar el artículo: " . $e->getMessage());
+                if (isset($e->errorInfo)) {
+                    $this->logLine("        📝 Error SQL: " . json_encode($e->errorInfo));
+                }
+                return false;
+            }
             
         } catch (\Exception $e) {
-            $this->logError("        ❌ Error creando artículo: " . $e->getMessage());
+            $this->logError("        ❌ Error inesperado al crear artículo: " . $e->getMessage());
+            $this->logLine("        📝 Trace: " . $e->getTraceAsString());
             return false;
         }
     }
