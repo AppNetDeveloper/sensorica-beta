@@ -16,7 +16,7 @@
 <div class="mb-3 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md">
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
         <div class="d-flex flex-wrap align-items-center gap-3">
-            <a href="{{ route('customers.order-organizer', $customer) }}" class="btn btn-secondary me-2">
+            <a href="{{ route('customers.order-organizer', $customer) }}" class="btn btn-secondary me-2" id="backToProcessesBtn">
                 <i class="ti ti-arrow-left me-1"></i> {{ __('Back to Processes') }}
             </a>
             <div class="position-relative" style="max-width: 400px;">
@@ -52,7 +52,7 @@
             --header-bg: #ffffff; --header-text: #374151; --card-bg: #ffffff;
             --card-text: #1f2937; --card-hover-bg: #f9fafb; --card-border: #e5e7eb;
             --card-shadow: 0 2px 4px rgba(0,0,0,0.06); --card-shadow-hover: 0 5px 15px rgba(0,0,0,0.1);
-            --scrollbar-thumb: #d1d5db; --primary-color: #3b82f6; --danger-color: #ef4444; --text-muted: #6b7280;
+            --scrollbar-thumb: #d1d5db; --primary-color: #3b82f6; --danger-color: #ef4444; --warning-color: #f59e0b; --text-muted: #6b7280;
             --placeholder-bg: rgba(59, 130, 246, 0.2);
         }
 
@@ -61,7 +61,7 @@
             --header-bg: #334155; --header-text: #f1f5f9; --card-bg: #2d3748;
             --card-text: #e2e8f0; --card-hover-bg: #334155; --card-border: #4a5568;
             --card-shadow: 0 2px 4px rgba(0,0,0,0.2); --card-shadow-hover: 0 5px 15px rgba(0,0,0,0.3);
-            --scrollbar-thumb: #475569; --primary-color: #60a5fa; --danger-color: #f87171; --text-muted: #94a3b8;
+            --scrollbar-thumb: #475569; --primary-color: #60a5fa; --danger-color: #f87171; --warning-color: #fca5a5; --text-muted: #94a3b8;
             --placeholder-bg: rgba(96, 165, 250, 0.2);
         }
 
@@ -88,6 +88,7 @@
         .final-state-title { font-weight: 600; font-size: 0.9rem; color: var(--header-text); }
 
         .kanban-card { background-color: var(--card-bg); color: var(--card-text); border-radius: 10px; border: 1px solid var(--card-border); border-left: 5px solid; box-shadow: var(--card-shadow); flex-shrink: 0; overflow: hidden; width: 100%; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); cursor: grab; }
+        .kanban-card.urgent { border: 1px solid var(--danger-color); box-shadow: 0 0 10px rgba(239, 68, 68, 0.2); }
         .kanban-card.collapsed .kanban-card-body, .kanban-card.collapsed .kanban-card-footer { display: none; }
         .kanban-card.dragging { opacity: 0; height: 0; padding: 0; margin: 0; border: none; overflow: hidden; }
         .kanban-card:hover { transform: translateY(-2px); box-shadow: var(--card-shadow-hover); }
@@ -114,6 +115,9 @@
         const kanbanBoard = document.querySelector('.kanban-board');
         const searchInput = document.getElementById('searchInput');
         let masterOrderList = @json($processOrders);
+        const customerId = {{ $customer->id }};
+        
+        let hasUnsavedChanges = false; // Bandera para rastrear cambios
         
         const columns = {
             'pending_assignment': { id: 'pending_assignment', name: 'Pendientes Asignación', items: [], color: '#9ca3af', productionLineId: null, type: 'status' },
@@ -124,7 +128,7 @@
             'final_states': { id: 'final_states', name: 'Estados Finales', items: [], color: '#6b7280', productionLineId: null, type: 'final_states',
                 subStates: [
                     { id: 'completed', name: 'Finalizados', color: '#10b981', items: [] },
-                    { id: 'incidents', name: 'Incidencias', color: '#ef4444', items: [] },
+                    { id: 'paused', name: 'Incidencias', color: '#f59e0b', items: [] },
                     { id: 'cancelled', name: 'Cancelados', color: '#6b7280', items: [] }
                 ]
             }
@@ -139,8 +143,8 @@
             
             let ordersToDisplay = searchTerm ? masterOrderList.filter(order => {
                 return (String(order.order_id || '').toLowerCase().includes(searchTerm) ||
-                        String(order.json?.refer?.descrip || '').toLowerCase().includes(searchTerm) ||
-                        String(order.json?.refer?.customerId || '').toLowerCase().includes(searchTerm));
+                        String(order.json?.descrip || '').toLowerCase().includes(searchTerm) ||
+                        String(order.customerId || '').toLowerCase().includes(searchTerm));
             }) : [...masterOrderList];
 
             if (shouldSort) {
@@ -156,10 +160,9 @@
 
             ordersToDisplay.forEach(order => {
                 let targetColumnKey = null;
-                // El `status` ya viene como texto desde el controlador
-                if (['completed', 'incidents', 'cancelled'].includes(order.status)) {
+                if (['completed', 'paused', 'cancelled'].includes(order.status)) {
                     targetColumnKey = 'final_states';
-                } else if (order.productionLineId) { // usa `productionLineId` como en el controlador
+                } else if (order.productionLineId) {
                     targetColumnKey = `line_${order.productionLineId}`;
                 } else {
                     targetColumnKey = 'pending_assignment';
@@ -262,6 +265,8 @@
 
         function drop(event) {
             event.preventDefault();
+            hasUnsavedChanges = true; // Un cambio ha ocurrido
+            
             if (!draggedCard) return;
 
             const cardId = parseInt(draggedCard.dataset.id);
@@ -280,7 +285,6 @@
             const columnData = columns[targetColumnEl.id];
             const targetIsProduction = columnData && columnData.type === 'production';
             
-            // Lógica de status: si es final, se asigna. Si no, SIEMPRE es 'pending'.
             orderObj.status = targetIsFinalState ? targetColumnEl.dataset.state : 'pending';
             orderObj.productionLineId = targetIsProduction ? columnData.productionLineId : null;
             
@@ -346,26 +350,61 @@
             const deliveryDateFormatted = order.delivery_date ? new Date(order.delivery_date).toLocaleDateString() : '';
             const processDescription = '{{ $process->description }}';
 
+            let urgencyIconHtml = '';
+            let isUrgent = false;
+            if (order.delivery_date && !['completed', 'cancelled'].includes(order.status)) {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                const deliveryDate = new Date(order.delivery_date);
+                deliveryDate.setHours(0, 0, 0, 0);
+
+                if (!isNaN(deliveryDate)) {
+                    const diffTime = deliveryDate - today;
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    
+                    if (diffDays <= 5 && diffDays >= 0) {
+                        isUrgent = true;
+                        const daySingular = '{{ __("día") }}';
+                        const dayPlural = '{{ __("días") }}';
+                        const urgentPrefix = '{{ __("Urgente: Entrega en") }}';
+                        const titleText = `${urgentPrefix} ${diffDays} ${diffDays === 1 ? daySingular : dayPlural}`;
+                        urgencyIconHtml = `<span class="ms-2" title="${titleText}"><i class="fas fa-exclamation-triangle text-danger"></i></span>`;
+                    }
+                }
+            }
+
+            if(isUrgent) {
+                card.classList.add('urgent');
+            }
+
             card.innerHTML = `
                 <div class="kanban-card-header" onclick="this.parentElement.classList.toggle('collapsed')">
-                    <div><div class="fw-bold text-sm">#${order.order_id}</div>
+                    <div>
+                        <div class="fw-bold text-sm d-flex align-items-center">#${order.order_id}${urgencyIconHtml}</div>
                         ${processDescription ? `<div class="text-xs text-muted mt-1">${processDescription}</div>` : ''}
-                    </div><span class="card-menu" role="button" onclick="event.stopPropagation(); showCardMenu(${order.id})"><i class="fas fa-ellipsis-h"></i></span>
-                </div><div class="kanban-card-body">
+                    </div>
+                    <span class="card-menu" role="button" data-order-id="${order.id}"><i class="fas fa-ellipsis-h"></i></span>
+                </div>
+                <div class="kanban-card-body">
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="text-xs text-muted">${order.json?.customerId || 'N/A'}</span>
+                        <span class="text-sm fw-bold text-muted">${order.customerId || 'Sin Cliente'}</span>
                         <span class="badge" style="background-color: ${order.statusColor || '#6b7280'}; color: white;">${(order.status || 'PENDING').replace(/_/g, ' ').toUpperCase()}</span>
                     </div>
                     <div class="text-sm mb-2">${order.json?.descrip || 'Sin descripción'}</div>
                     <div class="d-flex justify-content-between align-items-center mb-1">
-                         <div class="d-flex align-items-center">
-                             <i class="fas fa-box text-muted me-1"></i><span class="text-xs">${order.box || 0} cajas</span>
-                             <i class="fas fa-cubes text-muted ms-2 me-1"></i><span class="text-xs">${order.units || 0} uds</span>
+                         <div class="d-flex align-items-center flex-wrap">
+                            <span class="d-flex align-items-center me-3"><i class="fas fa-box text-muted me-1"></i><span class="text-xs">${order.box || 0}</span></span>
+                            <span class="d-flex align-items-center me-3"><i class="fas fa-cubes text-muted me-1"></i><span class="text-xs">${order.units || 0}</span></span>
+                            <span class="d-flex align-items-center"><i class="far fa-clock text-muted me-1"></i><span class="text-xs">${order.theoretical_time || 'N/A'}</span></span>
                          </div>
-                         <div class="text-xs text-muted"><i class="far fa-calendar-alt me-1"></i>${createdAtFormatted}</div>
                     </div>
-                    ${deliveryDateFormatted ? `<div class="d-flex justify-content-end align-items-center"><div class="text-xs" style="color: #e67e22 !important;"><i class="fas fa-truck me-1"></i>${deliveryDateFormatted}</div></div>` : ''}
-                </div><div class="kanban-card-footer">
+                    <div class="d-flex justify-content-between align-items-center mt-2">
+                        <div class="text-xs text-muted"><i class="far fa-calendar-alt me-1"></i>${createdAtFormatted}</div>
+                        ${deliveryDateFormatted ? `<div class="text-xs text-danger fw-bold"><i class="fas fa-truck me-1"></i>${deliveryDateFormatted}</div>` : ''}
+                    </div>
+                </div>
+                <div class="kanban-card-footer">
                     <span class="text-xs fw-medium">{{__("Assigned")}}</span>
                     <div class="assigned-avatars d-flex align-items-center"><img class="avatar-img" style="width:28px; height:28px; border-radius:50%;" src="https://i.pravatar.cc/40?img=1" alt="user"></div>
                 </div>`;
@@ -381,10 +420,8 @@
             saveBtn.disabled = true;
 
             const updatedOrders = [];
-            //he modificado incidents por 3 para que sea como pausados y las incidencias se quedan solo internas 
-            const statusMap = { 'pending': 0, 'in_progress': 1, 'completed': 2, 'cancelled': 4, 'incidents': 3, 'paused': 3 };
+            const statusMap = { 'pending': 0, 'completed': 2, 'cancelled': 4, 'paused': 3 };
             
-            // El orden ya está correcto en `masterOrderList`
             masterOrderList.forEach((order, index) => {
                 updatedOrders.push({
                     id: order.id,
@@ -402,6 +439,7 @@
             .then(response => response.json().then(data => ({ ok: response.ok, data })))
             .then(({ ok, data }) => {
                 if (!ok) throw data;
+                hasUnsavedChanges = false; // Restablecer la bandera al guardar
                 showToast(data.message || 'Cambios guardados', 'success');
             })
             .catch(error => {
@@ -420,14 +458,37 @@
         
         function showCardMenu(orderId) {
             const order = masterOrderList.find(o => o.id == orderId);
+            if (!order) return;
+
+            const originalOrderUrl = order.original_order_id ? `/customers/${customerId}/original-orders/${order.original_order_id}` : '#';
+            const isOriginalOrderDisabled = !order.original_order_id;
+
             Swal.fire({
                 title: `{{ __('Order') }} #${order.order_id}`,
-                showCloseButton: true, showConfirmButton: false,
-                html: `<div class="d-flex flex-column gap-2 my-4"><button id="viewJsonBtn" class="btn btn-primary w-100">{{ __('View Data') }}</button></div>`,
+                showCloseButton: true,
+                showConfirmButton: false,
+                html: `
+                    <div class="d-flex flex-column gap-2 my-4">
+                        <button id="viewJsonBtn" class="btn btn-primary w-100">{{ __('View Data') }}</button>
+                        <button id="viewOriginalOrderBtn" class="btn btn-info w-100" ${isOriginalOrderDisabled ? 'disabled' : ''}>
+                            {{ __('View Original Order') }}
+                        </button>
+                    </div>`,
                 didOpen: () => {
-                    Swal.getPopup().querySelector('#viewJsonBtn').addEventListener('click', () => {
-                        Swal.fire({ title: "{{ __('Order Data') }}", html: `<pre class="text-start text-sm p-4 bg-light rounded" style="max-height: 400px; overflow-y: auto;">${JSON.stringify(order, null, 2)}</pre>` });
+                    const popup = Swal.getPopup();
+                    popup.querySelector('#viewJsonBtn').addEventListener('click', () => {
+                        Swal.fire({ 
+                            title: "{{ __('Order Data') }}", 
+                            html: `<pre class="text-start text-sm p-4 bg-light rounded" style="max-height: 400px; overflow-y: auto;">${JSON.stringify(order, null, 2)}</pre>` 
+                        });
                     });
+                    
+                    if (!isOriginalOrderDisabled) {
+                        popup.querySelector('#viewOriginalOrderBtn').addEventListener('click', () => {
+                            window.open(originalOrderUrl, '_blank');
+                            Swal.close();
+                        });
+                    }
                 }
             });
         }
@@ -441,15 +502,55 @@
             }
         }
         
-        // --- 6. INICIALIZACIÓN ---
+        // --- 6. INICIALIZACIÓN Y EVENT LISTENERS ---
         
         document.getElementById('saveChangesBtn').addEventListener('click', saveKanbanChanges);
         document.getElementById('refreshBtn').addEventListener('click', () => window.location.reload());
         document.getElementById('fullscreenBtn').addEventListener('click', toggleFullscreen);
         searchInput.addEventListener('input', () => setTimeout(() => distributeAndRender(true), 300));
         
+        // Event delegation para los menús de las tarjetas
+        kanbanBoard.addEventListener('click', function(event) {
+            const menuButton = event.target.closest('.card-menu');
+            if (menuButton) {
+                event.stopPropagation();
+                const orderId = menuButton.dataset.orderId;
+                if(orderId) showCardMenu(orderId);
+            }
+        });
+        
+        // Listener para el botón de volver atrás
+        document.getElementById('backToProcessesBtn').addEventListener('click', function(event) {
+            if (hasUnsavedChanges) {
+                event.preventDefault(); // Detener la navegación
+                Swal.fire({
+                    title: '{{ __("¿Estás seguro?") }}',
+                    text: "{{ __('Tienes cambios sin guardar que se perderán.') }}",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: '{{ __("Sí, salir") }}',
+                    cancelButtonText: '{{ __("Cancelar") }}'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        window.location.href = this.href; // Continuar a la URL del botón
+                    }
+                });
+            }
+        });
+        
+        // Listener para el evento de salir de la página del navegador
+        window.addEventListener('beforeunload', function (e) {
+            if (hasUnsavedChanges) {
+                e.preventDefault();
+                e.returnValue = ''; // Requerido por la mayoría de navegadores
+            }
+        });
+
         distributeAndRender(true);
-        console.log('Kanban final inicializado.');
+        console.log('Kanban final inicializado con aviso de cambios.');
     });
     </script>
 @endpush
+

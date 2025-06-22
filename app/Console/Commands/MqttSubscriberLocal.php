@@ -226,6 +226,8 @@ class MqttSubscriberLocal extends Command
                 //agragamos delivery date pero nos aseguramos que es timestamp  lo formateamos para que sea compatible con timestamp laravel
                 // si no esta el campo ponemos null
                 'delivery_date' => isset($messageData['delivery_date']) ? \Carbon\Carbon::parse($messageData['delivery_date']) : null,
+                'customerId' => $messageData['refer']['customerId'] ?? 'Sin Cliente',
+                'original_order_id' => $messageData['original_order_id'] ?? null,
             ];
             
             // Create or update production order

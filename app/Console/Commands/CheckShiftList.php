@@ -98,7 +98,11 @@ class CheckShiftList extends Command
                     }
                 } else {
                     $this->info("[" . Carbon::now()->toDateTimeString() . "]No es un día laboral. Día: {$dayOfWeek}");
+                    // No procesar turnos si no es día laboral
+                    sleep(1);
+                    continue;
                 }
+                
                 //Procesamos turno de start
                 $shifts = ShiftList::whereBetween('start', [$startLowerBound, $startUpperBound])
                                     ->where('updated_at', '<', $twoSecondsAgo)
@@ -108,7 +112,6 @@ class CheckShiftList extends Command
                                     })
                                     ->get();
             
-
                 $this->info("[" . Carbon::now()->toDateTimeString() . "]Shifts encontrados para 'start': " . $shifts->count());
 
                 foreach ($shifts as $shift) {

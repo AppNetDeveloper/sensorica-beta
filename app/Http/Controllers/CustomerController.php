@@ -165,8 +165,7 @@ class CustomerController extends Controller
                         $statusColor = '#10b981'; // Verde
                         break;
                     case 3:
-                        //$statusName = 'paused'; // Pausado
-                        $statusName = 'incidents'; // Con incidencia
+                        $statusName = 'paused'; // Pausado
                         $statusColor = '#f59e0b'; // Amarillo/ámbar
                         break;
                     case 4:
@@ -190,7 +189,10 @@ class CustomerController extends Controller
                     'created_at' => $order->created_at,
                     'delivery_date' => $order->delivery_date,
                     'json' => $order->json ?? [],
-                    'statusColor' => $statusColor
+                    'statusColor' => $statusColor,
+                    'theoretical_time' => $order->theoretical_time ?? 'Sin Tiempo Teórico',
+                    'customerId' => $order->customerId ?? 'Sin Cliente',
+                    'original_order_id' => $order->original_order_id ?? 'Sin Orden Original',
                 ];
             });
         

@@ -34,8 +34,18 @@ class ProductionOrder extends Model
         'orden', // Orden de fabricación
         'theoretical_time', // Tiempo teórico del proceso
         'process_category', // Categoría del proceso
-        'delivery_date'
+        'delivery_date',
+        'customerId', // ID del cliente
+        'original_order_id' // Referencia a la orden original
     ];
+    
+    /**
+     * Get the original order that owns the production order.
+     */
+    public function originalOrder()
+    {
+        return $this->belongsTo(\App\Models\OriginalOrder::class, 'original_order_id');
+    }
 
     /**
      * The attributes that should be cast to native types.

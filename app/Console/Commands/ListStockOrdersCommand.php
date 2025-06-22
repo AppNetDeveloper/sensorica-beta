@@ -150,6 +150,7 @@ class ListStockOrdersCommand extends Command
             'process_code' => $orderProcess->process->code ?? '',
             'process_category' => $orderProcess->process->description ?? '',
             'delivery_date' => $order->delivery_date,
+            'original_order_id' => $order->id,
             'refer' => [
                 '_id' => "",
                 'company_name' => $order->customer ? $order->customer->name : 'N/A',
