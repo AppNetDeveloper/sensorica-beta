@@ -118,7 +118,22 @@ class CheckOrdersFromApi extends Command
                                     'existing_order_id' => $existingOrder->id
                                 ]);
                                 
-                                // Solo actualizar los detalles del pedido, no reprocesar procesos
+                                // Verificar si necesitamos actualizar el campo in_stock
+                                if ($existingOrder->in_stock == 0) {
+                                    $this->logLine("🔍 Verificando si el pedido está en stock en la API...");
+                                    
+                                    // Buscar el campo in_stock en los datos mapeados (viene de la API)
+                                    $inStockFromApi = $mappedData['in_stock'] ?? null;
+                                    
+                                    if ($inStockFromApi === 'Si' || $inStockFromApi === true) {
+                                        $this->logLine("🔄 Actualizando in_stock a 1 para el pedido {$orderId}", 'info');
+                                        $existingOrder->in_stock = 1;
+                                        $existingOrder->save();
+                                        $this->logLine("✅ Campo in_stock actualizado correctamente", 'info');
+                                    }
+                                }
+                                
+                                // Actualizar los detalles del pedido, no reprocesar procesos
                                 $this->logLine("🔄 Actualizando detalles de la orden existente...");
                                 $this->processOrderDetails($customer, $existingOrder, $orderId);
                                 

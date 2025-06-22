@@ -678,7 +678,7 @@ Formatea la respuesta para que sea f√°cil de leer. No incluyas frases como "Bas√
     async function callGeminiAPI(prompt) {
         let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
         const payload = { contents: chatHistory };
-        const apiKey = "AIzaSyCqoVbApNZ3niVEltmC3dcPR5_VkBTnlwM"; // IMPORTANT: Replace with your actual API key or use a secure method to provide it.
+        const apiKey = ""; // IMPORTANT: Replace with your actual API key or use a secure method to provide it.
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
         try {
