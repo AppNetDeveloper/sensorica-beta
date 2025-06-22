@@ -165,7 +165,8 @@ class CustomerController extends Controller
                         $statusColor = '#10b981'; // Verde
                         break;
                     case 3:
-                        $statusName = 'paused'; // Pausado
+                        //$statusName = 'paused'; // Pausado
+                        $statusName = 'incidents'; // Con incidencia
                         $statusColor = '#f59e0b'; // Amarillo/ámbar
                         break;
                     case 4:

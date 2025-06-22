@@ -43,9 +43,11 @@ class ProductionOrder extends Model
      * @var array
      */
     protected $casts = [
-        'delivery_date' => 'datetime', // Laravel convertirá automáticamente a Carbon y viceversa
-        'json'          => 'array',    // Convierte la columna JSON a un array de PHP automáticamente
-        'processed'     => 'boolean',
+        'json' => 'array',
+        'processed' => 'boolean',
+        'orden' => 'integer',
+        'delivery_date' => 'datetime',
+        'status' => 'integer', // Es importante mantener el cast a integer
     ];
 
     /**
