@@ -152,7 +152,7 @@
                                         @endphp
                                         <!-- Debug: {{ $debugInfo }} -->
                                         <tr>
-                                            <td>{{ $process->code }}</td>
+                                            <td>{{ $process->code }} @if($pivot->grupo_numero)(Grupo {{ $pivot->grupo_numero }})@endif</td>
                                             <td>{{ $process->name }}</td>
                                             <td class="text-center">{{ $process->sequence }}</td>
                                             <td class="text-center">{{ number_format($process->factor_correccion, 2) }}</td>

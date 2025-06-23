@@ -43,7 +43,7 @@ class OriginalOrder extends Model
     {
         return $this->belongsToMany(Process::class, 'original_order_processes')
                     ->using(OriginalOrderProcess::class)
-                    ->withPivot(['id', 'time', 'created', 'finished', 'finished_at'])
+                    ->withPivot(['id', 'time', 'created', 'finished', 'finished_at', 'grupo_numero']) // <-- ¡AÑADIDO!
                     ->withTimestamps();
     }
     
@@ -67,6 +67,15 @@ class OriginalOrder extends Model
     public function orderProcesses()
     {
         return $this->hasMany(OriginalOrderProcess::class, 'original_order_id');
+    }
+    public function productionOrders()
+    {
+        return $this->hasMany(ProductionOrder::class, 'original_order_id');
+    }
+
+    public function originalOrderProcesses()
+    {
+        return $this->hasMany(OriginalOrderProcess::class);
     }
     
     /**

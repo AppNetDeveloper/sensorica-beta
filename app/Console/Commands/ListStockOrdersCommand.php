@@ -137,6 +137,20 @@ class ListStockOrdersCommand extends Command
 
     protected function generateProcessJson($order, $orderProcess, $processNumber = 1)
     {
+        // Get all processes with the same order_id and grupo_numero
+        $groupProcesses = \App\Models\OriginalOrderProcess::where('original_order_id', $order->id)
+            ->where('grupo_numero', $orderProcess->grupo_numero)
+            ->with('process') // Eager load the process relationship
+            ->get();
+        
+        // Extract and format process descriptions
+        $processDescriptions = $groupProcesses->map(function($proc) {
+            return $proc->process ? $proc->process->description : null;
+        })->filter()->values()->toArray();
+        
+        // Join descriptions with comma and space
+        $formattedDescriptions = implode(', ', $processDescriptions);
+        
         $json = [
             'orderId' => (string)$order->order_id,
             'customerOrderId' => "",
@@ -151,6 +165,8 @@ class ListStockOrdersCommand extends Command
             'process_category' => $orderProcess->process->description ?? '',
             'delivery_date' => $order->delivery_date,
             'original_order_id' => $order->id,
+            'grupo_numero' => $orderProcess->grupo_numero,
+            'processes_to_do' => $formattedDescriptions,
             'refer' => [
                 '_id' => "",
                 'company_name' => $order->customer ? $order->customer->name : 'N/A',
@@ -216,7 +232,7 @@ class ListStockOrdersCommand extends Command
     {
         try {
             // Add a small delay to prevent overwhelming the MQTT server
-            usleep(300000); // 300ms delay
+            usleep(500000); // 00ms delay
             
             // Publish MQTT message with order info
             $this->publishMqttMessage('barcoder/prod_order_notice', json_encode([

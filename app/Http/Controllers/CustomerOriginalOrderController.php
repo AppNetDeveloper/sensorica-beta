@@ -8,6 +8,7 @@ use App\Models\Process;
 use Illuminate\Http\Request;
 use App\Models\OriginalOrderProcess;
 use App\Models\OriginalOrderArticle;
+use Illuminate\Support\Facades\DB;
 
 class CustomerOriginalOrderController extends Controller
 {
@@ -284,8 +285,19 @@ class CustomerOriginalOrderController extends Controller
 
     public function destroy(Customer $customer, OriginalOrder $originalOrder)
     {
-        $originalOrder->delete();
+        // Usamos una transacción para asegurar que o todo funciona, o nada se borra.
+        DB::transaction(function () use ($originalOrder) {
+            
+            // 1. PRIMERO: Busca y borra los "hijos" (ProductionOrders)
+            //    (Esto asume que tienes la relación "productionOrders" en tu modelo OriginalOrder)
+            $originalOrder->productionOrders()->delete();
+    
+            // 2. AHORA SÍ: Borra el "padre" (OriginalOrder)
+            $originalOrder->delete();
+    
+        });
+    
         return redirect()->route('customers.original-orders.index', $customer->id)
-            ->with('success', 'Original order deleted successfully');
+            ->with('success', 'Orden original y sus dependencias borradas con éxito');
     }
 }

@@ -31,12 +31,15 @@ class ProductionOrder extends Model
         'box',
         'units_box',
         'units',
-        'orden', // Orden de fabricación
-        'theoretical_time', // Tiempo teórico del proceso
-        'process_category', // Categoría del proceso
+        'orden', // Manufacturing order
+        'theoretical_time', // Theoretical process time
+        'process_category', // Process category
         'delivery_date',
-        'customerId', // ID del cliente
-        'original_order_id' // Referencia a la orden original
+        'customerId', // Customer ID
+        'original_order_id', // Reference to original order
+        'grupo_numero', // Group number
+        'processes_to_do', // Number of processes to do
+        'processes_done' // Number of processes completed
     ];
     
     /**

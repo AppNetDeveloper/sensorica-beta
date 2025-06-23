@@ -778,6 +778,7 @@ class CheckOrdersFromApi extends Command
                 'original_order_id' => $order->id,
                 'process_id' => $process->id,
                 'time' => $calculatedTime,
+                'grupo_numero'      => $processData['grupo_numero'] ?? null, // <-- LÍNEA AÑADIDA
                 'created' => 0,
                 'finished' => 0,
                 'finished_at' => null
