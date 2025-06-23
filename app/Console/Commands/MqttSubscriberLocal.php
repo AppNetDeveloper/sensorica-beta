@@ -229,6 +229,7 @@ class MqttSubscriberLocal extends Command
                 'grupo_numero' => $messageData['grupo_numero'] ?? null,
                 'processes_to_do' => $messageData['processes_to_do'] ?? null,
                 'processes_done' => $messageData['processes_done'] ?? null,
+                'original_order_process_id' => $messageData['original_order_process_id'] ?? null,
             ];
             
             // Create or update production order

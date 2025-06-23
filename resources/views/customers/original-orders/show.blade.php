@@ -156,7 +156,7 @@
                                             <td>{{ $process->name }}</td>
                                             <td class="text-center">{{ $process->sequence }}</td>
                                             <td class="text-center">{{ number_format($process->factor_correccion, 2) }}</td>
-                                            <td class="text-center">{{ $pivot->time ? number_format($pivot->time, 2) . 'h' : '-' }}</td>
+                                            <td class="text-center">{{ $pivot->time ? number_format($pivot->time, 2) . 'Seg' : '-' }}</td>
                                             <td class="text-center">
                                                 @if($pivot->created)
                                                     <span class="badge bg-success">@lang('Yes')</span>

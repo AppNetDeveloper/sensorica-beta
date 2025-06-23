@@ -25,7 +25,10 @@
                        class="form-control ps-5" style="width: 100%;">
             </div>
         </div>
-        <div class="d-flex align-items-center gap-2">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <button id="autoOrganizeBtn" class="btn btn-light" title="{{ __('Organizar con IA') }}">
+                ✨
+            </button>
             <button id="saveChangesBtn" class="btn btn-primary" title="{{ __('Save Changes') }}">
                 <i class="fas fa-save me-1"></i> {{ __('Guardar') }}
             </button>
@@ -54,6 +57,7 @@
             --card-shadow: 0 2px 4px rgba(0,0,0,0.06); --card-shadow-hover: 0 5px 15px rgba(0,0,0,0.1);
             --scrollbar-thumb: #d1d5db; --primary-color: #3b82f6; --danger-color: #ef4444; --warning-color: #f59e0b; --text-muted: #6b7280;
             --placeholder-bg: rgba(59, 130, 246, 0.2);
+            --progress-bg: #e9ecef; --progress-bar-bg: #28a745;
         }
 
         body.dark {
@@ -63,6 +67,7 @@
             --card-shadow: 0 2px 4px rgba(0,0,0,0.2); --card-shadow-hover: 0 5px 15px rgba(0,0,0,0.3);
             --scrollbar-thumb: #475569; --primary-color: #60a5fa; --danger-color: #f87171; --warning-color: #fca5a5; --text-muted: #94a3b8;
             --placeholder-bg: rgba(96, 165, 250, 0.2);
+            --progress-bg: #4a5568; --progress-bar-bg: #48bb78;
         }
 
         #kanbanContainer { display: flex; flex-direction: column; height: calc(100vh - 220px); overflow: hidden; }
@@ -74,12 +79,16 @@
         .kanban-column { flex: 0 0 340px; background-color: var(--column-bg); border-radius: 12px; min-width: 340px; display: flex; flex-direction: column; border: 1px solid var(--column-border); box-shadow: 0 1px 4px rgba(0,0,0,0.05); max-height: 100%; overflow: hidden; }
         .kanban-column.drag-over { border-color: var(--primary-color); }
         .column-header { padding: 0.75rem 1rem; position: sticky; top: 0; background-color: var(--header-bg); z-index: 10; border-bottom: 1px solid var(--column-border); display: flex; align-items: center; justify-content: space-between; }
-        .column-title { font-weight: 600; color: var(--header-text); margin: 0; font-size: 1rem; }
+        .column-title { font-weight: 600; color: var(--header-text); margin: 0; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .column-cards { padding: 0.75rem; overflow-y: auto; flex-grow: 1; display: flex; flex-direction: column; gap: 8px; min-height: 100px; }
         .column-cards::-webkit-scrollbar { width: 6px; }
         .column-cards::-webkit-scrollbar-thumb { background-color: var(--scrollbar-thumb); border-radius: 3px; }
 
         .placeholder { background-color: var(--placeholder-bg); border: 1px dashed var(--primary-color); border-radius: 8px; margin: 4px 0; flex-shrink: 0; transition: all 0.2s ease; }
+
+        .column-header-stats { display: flex; align-items: center; gap: 0.5rem; }
+        .card-count-badge, .time-sum-badge { background-color: rgba(0,0,0,0.08); color: var(--header-text); padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.75rem; font-weight: 500; white-space: nowrap; }
+        .time-sum-badge .fa-clock { margin-right: 0.25rem; }
 
         .final-states-container { display: flex; flex-direction: column; flex-grow: 1; overflow-y: auto; padding: 0.5rem; gap: 1rem; }
         .final-state-section { background-color: transparent; border-radius: 8px; border: 1px dashed var(--column-border); display: flex; flex-direction: column; flex: 1; min-height: 150px; overflow: hidden; transition: all 0.2s ease; }
@@ -97,10 +106,21 @@
         .kanban-card-body { padding: 0 1.25rem 1.25rem 1.25rem; }
         .kanban-card-footer { padding: 0.75rem 1.25rem; border-top: 1px solid var(--card-border); background-color: var(--column-bg); font-size: 0.875rem; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center; }
         .card-menu { font-size: 1rem; color: var(--text-muted); cursor: pointer; }
+        .group-badge { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; color: white; font-size: 0.75rem; font-weight: bold; margin-left: 8px; }
+        .progress-container { margin-top: 0.75rem; }
+        .progress { height: 8px; background-color: var(--progress-bg); border-radius: 4px; overflow: hidden; }
+        .progress-bar { height: 100%; background-color: var(--progress-bar-bg); border-radius: 4px; transition: width 0.3s ease; }
+        
+        .process-list { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+        .process-tag { padding: 0.2rem 0.5rem; border-radius: 9999px; font-size: 0.7rem; font-weight: 500; }
+        .process-tag-done { background-color: var(--column-bg); color: var(--text-muted); text-decoration: line-through; }
+        .process-tag-pending { background-color: var(--warning-color); color: white; }
+
 
         :fullscreen #kanbanContainer { height: 100vh; padding: 1rem; }
         :fullscreen .kanban-board { align-items: stretch; }
         :fullscreen .kanban-column { height: 100%; }
+        .cursor-pointer { cursor: pointer; }
     </style>
 @endpush
 
@@ -117,24 +137,182 @@
         let masterOrderList = @json($processOrders);
         const customerId = {{ $customer->id }};
         
-        let hasUnsavedChanges = false; // Bandera para rastrear cambios
+        let hasUnsavedChanges = false;
+
+        const translations = {
+            noOrdersToOrganize: "{{ __('No hay órdenes o líneas de producción para organizar.') }}",
+            organizingWithAIError: "{{ __('Error al organizar con IA:') }}",
+            organizingWithAISuccess: "{{ __('Órdenes reorganizadas con IA.') }}",
+            urgentOrder: "{{ __('Pedido Urgente') }}",
+            day: "{{ __('día') }}",
+            days: "{{ __('días') }}",
+            urgentDeliveryPrefix: "{{ __('Urgente: Entrega en') }}",
+            progress: "{{ __('Progreso') }}",
+            noCustomer: "{{ __('Sin Cliente') }}",
+            noDescription: "{{ __('Sin descripción') }}",
+            unassigned: "{{ __('Assigned') }}",
+            saving: "{{ __('Guardando...') }}",
+            changesSaved: "{{ __('Cambios guardados') }}",
+            unknownError: "{{ __('Error desconocido.') }}",
+            confirmTitle: "{{ __('¿Estás seguro?') }}",
+            confirmText: "{{ __('Tienes cambios sin guardar que se perderán.') }}",
+            confirmButton: "{{ __('Sí, salir') }}",
+            cancelButton: "{{ __('Cancelar') }}",
+            fullscreenError: "{{ __('No se pudo activar la pantalla completa.') }}",
+            cardCountTitle: "{{ __('Número de tarjetas') }}",
+            totalTimeTitle: "{{ __('Tiempo total teórico') }}"
+        };
         
         const columns = {
-            'pending_assignment': { id: 'pending_assignment', name: 'Pendientes Asignación', items: [], color: '#9ca3af', productionLineId: null, type: 'status' },
+            'pending_assignment': { id: 'pending_assignment', name: `{{__('Pendientes Asignación')}}`, items: [], color: '#9ca3af', productionLineId: null, type: 'status' },
             ...(@json($productionLines)).reduce((acc, line) => ({
                 ...acc,
                 [`line_${line.id}`]: { id: `line_${line.id}`, name: line.name, items: [], color: '#3b82f6', productionLineId: line.id, type: 'production' }
             }), {}),
-            'final_states': { id: 'final_states', name: 'Estados Finales', items: [], color: '#6b7280', productionLineId: null, type: 'final_states',
+            'final_states': { id: 'final_states', name: `{{__('Estados Finales')}}`, items: [], color: '#6b7280', productionLineId: null, type: 'final_states',
                 subStates: [
-                    { id: 'completed', name: 'Finalizados', color: '#10b981', items: [] },
-                    { id: 'paused', name: 'Incidencias', color: '#f59e0b', items: [] },
-                    { id: 'cancelled', name: 'Cancelados', color: '#6b7280', items: [] }
+                    { id: 'completed', name: `{{__('Finalizados')}}`, color: '#10b981', items: [] },
+                    { id: 'paused', name: `{{__('Incidencias')}}`, color: '#f59e0b', items: [] },
+                    { id: 'cancelled', name: `{{__('Cancelados')}}`, color: '#6b7280', items: [] }
                 ]
             }
         };
 
         let draggedCard = null;
+
+        // --- LÓGICA DE ORGANIZACIÓN AUTOMÁTICA CON IA (GEMINI) ---
+        
+        function isOrderUrgent(order) {
+            if (!order.delivery_date || ['completed', 'cancelled'].includes(order.status)) {
+                return false;
+            }
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const deliveryDate = new Date(order.delivery_date);
+            deliveryDate.setHours(0, 0, 0, 0);
+            if (isNaN(deliveryDate)) return false;
+            const diffTime = deliveryDate - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return diffDays <= 5;
+        }
+
+        async function autoOrganizeWithAI() {
+            const apiKey = "AIzaSyDt4KWXISfHgcDCLX2IJIXXf2rY0NjxVvo";
+            const autoOrganizeBtn = document.getElementById('autoOrganizeBtn');
+            autoOrganizeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            autoOrganizeBtn.disabled = true;
+
+            try {
+                const workableOrders = masterOrderList
+                    .filter(order => !['completed', 'paused', 'cancelled'].includes(order.status))
+                    .map(order => ({
+                        id: order.id,
+                        delivery_date: order.delivery_date,
+                        theoretical_time: parseFloat(order.theoretical_time) || 1,
+                        is_urgent: isOrderUrgent(order)
+                    }));
+                
+                const productionLines = Object.values(columns)
+                    .filter(c => c.type === 'production')
+                    .map(c => ({ id: c.productionLineId, name: c.name }));
+
+                if (workableOrders.length === 0 || productionLines.length === 0) {
+                    showToast(translations.noOrdersToOrganize, 'info');
+                    return;
+                }
+
+                const prompt = `
+                    Eres un experto en planificación de producción. Tu tarea es organizar las siguientes órdenes de producción de la manera más eficiente posible, asignándolas a las líneas de producción disponibles.
+
+                    Reglas de Priorización y Balanceo:
+                    1.  **Balanceo de Carga:** El objetivo principal es balancear la carga de trabajo total (suma de 'theoretical_time') entre todas las líneas de producción de la forma más equitativa posible.
+                    2.  **Urgencia:** Las órdenes marcadas como 'is_urgent: true' tienen la máxima prioridad y deben ser procesadas antes que las no urgentes.
+                    3.  **Fecha de Entrega:** Dentro de cada grupo (urgentes y no urgentes), las órdenes con la 'delivery_date' más cercana en el tiempo deben ir primero.
+                    4.  **Tiempo Teórico:** Si todo lo demás es igual, las órdenes con mayor 'theoretical_time' van primero.
+
+                    Líneas de Producción Disponibles:
+                    ${JSON.stringify(productionLines)}
+
+                    Órdenes a Organizar:
+                    ${JSON.stringify(workableOrders)}
+
+                    Tu respuesta DEBE ser únicamente un objeto JSON con una clave "assignments" que contenga un array. CADA ORDEN de la lista 'Órdenes a Organizar' debe tener su correspondiente entrada en el array "assignments". No dejes ninguna orden sin asignar. Cada elemento del array debe ser un objeto con "order_id" (número) y "assigned_line_id" (número). No incluyas explicaciones ni texto adicional.
+                `;
+
+                console.log("--- PROMPT ENVIADO A GEMINI ---", prompt);
+
+                const payload = {
+                    contents: [{ role: "user", parts: [{ text: prompt }] }],
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                        responseSchema: {
+                            type: "OBJECT",
+                            properties: {
+                                "assignments": {
+                                    type: "ARRAY",
+                                    items: {
+                                        type: "OBJECT",
+                                        properties: {
+                                            "order_id": { "type": "NUMBER" },
+                                            "assigned_line_id": { "type": "NUMBER" }
+                                        },
+                                        required: ["order_id", "assigned_line_id"]
+                                    }
+                                }
+                            },
+                            required: ["assignments"]
+                        }
+                    }
+                };
+
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorBody = await response.json();
+                    throw new Error(`Error de la API de Gemini: ${errorBody.error?.message || response.statusText}`);
+                }
+                
+                const result = await response.json();
+                console.log("--- RESPUESTA RECIBIDA DE GEMINI (RAW) ---", result);
+                
+                const jsonText = result.candidates[0].content.parts[0].text;
+                const parsedResult = JSON.parse(jsonText);
+                const assignments = parsedResult.assignments;
+
+                masterOrderList.forEach(order => {
+                    if (!['completed', 'paused', 'cancelled'].includes(order.status)) {
+                        order.productionLineId = null;
+                        order.status = 'pending';
+                    }
+                });
+
+                hasUnsavedChanges = true;
+                assignments.forEach(assignment => {
+                    const order = masterOrderList.find(o => o.id === assignment.order_id);
+                    if (order) {
+                        order.productionLineId = assignment.assigned_line_id;
+                        order.status = 'pending';
+                    }
+                });
+                
+                masterOrderList.forEach((order, index) => order.orden = index);
+                
+                distributeAndRender(false);
+                showToast(translations.organizingWithAISuccess, 'success');
+
+            } catch (error) {
+                console.error('Error al organizar con IA:', error);
+                showToast(`${translations.organizingWithAIError} ${error.message}`, 'error');
+            } finally {
+                autoOrganizeBtn.innerHTML = '✨';
+                autoOrganizeBtn.disabled = false;
+            }
+        }
 
         // --- 2. LÓGICA PRINCIPAL DE RENDERIZADO ---
 
@@ -187,7 +365,19 @@
 
             Object.values(columns).forEach(column => {
                 const columnElement = createColumnElement(column);
-                fragment.appendChild(columnElement);
+                
+                let allItems = (column.type === 'final_states') 
+                    ? column.subStates.flatMap(sub => sub.items) 
+                    : column.items;
+                
+                let totalCards = allItems.length;
+                let totalSeconds = allItems.reduce((sum, order) => sum + parseTimeToSeconds(order.theoretical_time), 0);
+                
+                const cardCountBadge = columnElement.querySelector('.card-count-badge');
+                const timeSumBadge = columnElement.querySelector('.time-sum-badge');
+                if (cardCountBadge) cardCountBadge.textContent = totalCards;
+                if (timeSumBadge) timeSumBadge.innerHTML = `<i class="far fa-clock"></i> ${formatSecondsToTime(totalSeconds)}`;
+                
                 const appendCards = (items, container) => {
                     if (items && container) {
                         items.forEach(order => container.appendChild(createCardElement(order)));
@@ -203,6 +393,7 @@
                     const container = columnElement.querySelector('.column-cards');
                     appendCards(column.items, container);
                 }
+                fragment.appendChild(columnElement);
             });
             kanbanBoard.appendChild(fragment);
         }
@@ -265,7 +456,7 @@
 
         function drop(event) {
             event.preventDefault();
-            hasUnsavedChanges = true; // Un cambio ha ocurrido
+            hasUnsavedChanges = true;
             
             if (!draggedCard) return;
 
@@ -309,9 +500,19 @@
             columnElement.className = 'kanban-column';
             columnElement.id = column.id;
             
+            let headerStatsHtml = `
+                <div class="column-header-stats">
+                    <span class="card-count-badge" title="${translations.cardCountTitle}">0</span>
+                    <span class="time-sum-badge" title="${translations.totalTimeTitle}"><i class="far fa-clock"></i> 00:00:00</span>
+                </div>
+            `;
+            
             let innerHTML;
             if (column.type === 'final_states') {
-                innerHTML = `<div class="column-header"><h3 class="column-title">${column.name}</h3></div>
+                innerHTML = `<div class="column-header">
+                                <h3 class="column-title">${column.name}</h3>
+                                ${headerStatsHtml}
+                             </div>
                              <div class="final-states-container">
                                  ${column.subStates.map(subState => `
                                      <div class="final-state-section" data-state="${subState.id}" style="border-left-color: ${subState.color};">
@@ -326,7 +527,10 @@
                     el.addEventListener('drop', drop);
                 });
             } else {
-                innerHTML = `<div class="column-header" style="border-left: 4px solid ${column.color};"><h3 class="column-title">${column.name}</h3></div>
+                innerHTML = `<div class="column-header" style="border-left: 4px solid ${column.color};">
+                                <h3 class="column-title">${column.name}</h3>
+                                ${headerStatsHtml}
+                             </div>
                              <div class="column-cards"></div>`;
                 columnElement.innerHTML = innerHTML;
                 columnElement.querySelector('.column-cards').addEventListener('dragover', dragOver);
@@ -351,32 +555,49 @@
             const processDescription = '{{ $process->description }}';
 
             let urgencyIconHtml = '';
-            let isUrgent = false;
-            if (order.delivery_date && !['completed', 'cancelled'].includes(order.status)) {
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-
-                const deliveryDate = new Date(order.delivery_date);
-                deliveryDate.setHours(0, 0, 0, 0);
-
-                if (!isNaN(deliveryDate)) {
-                    const diffTime = deliveryDate - today;
-                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                    
-                    if (diffDays <= 5 && diffDays >= 0) {
-                        isUrgent = true;
-                        const daySingular = '{{ __("día") }}';
-                        const dayPlural = '{{ __("días") }}';
-                        const urgentPrefix = '{{ __("Urgente: Entrega en") }}';
-                        const titleText = `${urgentPrefix} ${diffDays} ${diffDays === 1 ? daySingular : dayPlural}`;
-                        urgencyIconHtml = `<span class="ms-2" title="${titleText}"><i class="fas fa-exclamation-triangle text-danger"></i></span>`;
-                    }
-                }
-            }
-
-            if(isUrgent) {
+            if (isOrderUrgent(order)) {
                 card.classList.add('urgent');
+                const titleText = translations.urgentOrder;
+                urgencyIconHtml = `<span class="ms-2" title="${titleText}"><i class="fas fa-exclamation-triangle text-danger"></i></span>`;
             }
+
+            const groupNumber = order.grupo_numero || 0;
+            const groupColors = ['#6b7280', '#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
+            const groupBadgeHtml = groupNumber > 0 ? `<span class="group-badge" style="background-color: ${groupColors[groupNumber-1] || '#6b7280'}" title="Grupo ${groupNumber}">${groupNumber}</span>` : '';
+            
+            const countProcesses = (processString) => {
+                if (!processString || typeof processString !== 'string') return 0;
+                return processString.split(',').filter(p => p.trim() !== '').length;
+            };
+
+            const processesDoneCount = countProcesses(order.processes_done);
+            const processesToDoCount = countProcesses(order.processes_to_do);
+            const totalProcesses = processesDoneCount + processesToDoCount;
+            const progressPercentage = totalProcesses > 0 ? (processesDoneCount / totalProcesses) * 100 : 0;
+            
+            const progressHtml = `
+                <div class="progress-container">
+                    <div class="d-flex justify-content-between text-xs text-muted mb-1">
+                        <span>${translations.progress}</span>
+                        <span>${processesDoneCount} / ${totalProcesses}</span>
+                    </div>
+                    <div class="progress">
+                        <div class="progress-bar" style="width: ${progressPercentage}%;" role="progressbar"></div>
+                    </div>
+                </div>`;
+
+            const doneProcessesList = order.processes_done ? order.processes_done.split(',').filter(p => p.trim() !== '') : [];
+            const toDoProcessesList = order.processes_to_do ? order.processes_to_do.split(',').filter(p => p.trim() !== '') : [];
+
+            const doneHtml = doneProcessesList.map(p => `<span class="process-tag process-tag-done">${p.trim()}</span>`).join('');
+            const toDoHtml = toDoProcessesList.map(p => `<span class="process-tag process-tag-pending">${p.trim()}</span>`).join('');
+
+            const processListHtml = `
+                <div class="mt-2">
+                    <div class="process-list">
+                        ${doneHtml}${toDoHtml}
+                    </div>
+                </div>`;
 
             card.innerHTML = `
                 <div class="kanban-card-header" onclick="this.parentElement.classList.toggle('collapsed')">
@@ -388,11 +609,13 @@
                 </div>
                 <div class="kanban-card-body">
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="text-sm fw-bold text-muted">${order.customerId || 'Sin Cliente'}</span>
+                        <span class="d-flex align-items-center text-sm fw-bold text-muted">${order.customerId || translations.noCustomer} ${groupBadgeHtml}</span>
                         <span class="badge" style="background-color: ${order.statusColor || '#6b7280'}; color: white;">${(order.status || 'PENDING').replace(/_/g, ' ').toUpperCase()}</span>
                     </div>
-                    <div class="text-sm mb-2">${order.json?.descrip || 'Sin descripción'}</div>
-                    <div class="d-flex justify-content-between align-items-center mb-1">
+                    <div class="text-sm mb-2">${order.json?.descrip || translations.noDescription}</div>
+                    ${progressHtml}
+                    ${processListHtml}
+                    <div class="d-flex justify-content-between align-items-center mt-3">
                          <div class="d-flex align-items-center flex-wrap">
                             <span class="d-flex align-items-center me-3"><i class="fas fa-box text-muted me-1"></i><span class="text-xs">${order.box || 0}</span></span>
                             <span class="d-flex align-items-center me-3"><i class="fas fa-cubes text-muted me-1"></i><span class="text-xs">${order.units || 0}</span></span>
@@ -405,18 +628,36 @@
                     </div>
                 </div>
                 <div class="kanban-card-footer">
-                    <span class="text-xs fw-medium">{{__("Assigned")}}</span>
+                    <span class="text-xs fw-medium">${translations.unassigned}</span>
                     <div class="assigned-avatars d-flex align-items-center"><img class="avatar-img" style="width:28px; height:28px; border-radius:50%;" src="https://i.pravatar.cc/40?img=1" alt="user"></div>
                 </div>`;
             return card;
+        }
+        
+        // --- Funciones auxiliares de tiempo ---
+        function parseTimeToSeconds(timeStr = "00:00:00") {
+            if (!timeStr || typeof timeStr !== 'string' || !timeStr.match(/^\d{2}:\d{2}:\d{2}$/)) {
+                return 0;
+            }
+            const parts = timeStr.split(':').map(Number);
+            return parts[0] * 3600 + parts[1] * 60 + parts[2];
+        }
+
+        function formatSecondsToTime(totalSeconds) {
+            if (isNaN(totalSeconds) || totalSeconds < 0) {
+                return "00:00:00";
+            }
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = Math.floor(totalSeconds % 60);
+            return [hours, minutes, seconds].map(v => v.toString().padStart(2, '0')).join(':');
         }
 
         // --- 5. GUARDADO DE DATOS Y OTROS EVENTOS ---
 
         function saveKanbanChanges() {
             const saveBtn = document.getElementById('saveChangesBtn');
-            const originalContent = saveBtn.innerHTML;
-            saveBtn.innerHTML = `<i class="fas fa-spinner fa-spin me-1"></i> {{ __("Guardando...") }}`;
+            saveBtn.innerHTML = `<i class="fas fa-spinner fa-spin me-1"></i> ${translations.saving}`;
             saveBtn.disabled = true;
 
             const updatedOrders = [];
@@ -439,14 +680,14 @@
             .then(response => response.json().then(data => ({ ok: response.ok, data })))
             .then(({ ok, data }) => {
                 if (!ok) throw data;
-                hasUnsavedChanges = false; // Restablecer la bandera al guardar
-                showToast(data.message || 'Cambios guardados', 'success');
+                hasUnsavedChanges = false;
+                showToast(data.message || translations.changesSaved, 'success');
             })
             .catch(error => {
-                showToast(`Error: ${error.message || 'Error desconocido.'}`, 'error');
+                showToast(`Error: ${error.message || translations.unknownError}`, 'error');
             })
             .finally(() => {
-                saveBtn.innerHTML = originalContent;
+                saveBtn.innerHTML = `<i class="fas fa-save me-1"></i> {{ __('Guardar') }}`;
                 saveBtn.disabled = false;
             });
         }
@@ -496,7 +737,7 @@
         function toggleFullscreen() {
             const element = document.getElementById('kanbanContainer');
             if (!document.fullscreenElement) {
-                element.requestFullscreen().catch(err => showToast('No se pudo activar la pantalla completa.', 'error'));
+                element.requestFullscreen().catch(err => showToast(translations.fullscreenError, 'error'));
             } else {
                 document.exitFullscreen();
             }
@@ -507,9 +748,10 @@
         document.getElementById('saveChangesBtn').addEventListener('click', saveKanbanChanges);
         document.getElementById('refreshBtn').addEventListener('click', () => window.location.reload());
         document.getElementById('fullscreenBtn').addEventListener('click', toggleFullscreen);
+        document.getElementById('autoOrganizeBtn').addEventListener('click', autoOrganizeWithAI);
+        
         searchInput.addEventListener('input', () => setTimeout(() => distributeAndRender(true), 300));
         
-        // Event delegation para los menús de las tarjetas
         kanbanBoard.addEventListener('click', function(event) {
             const menuButton = event.target.closest('.card-menu');
             if (menuButton) {
@@ -519,38 +761,35 @@
             }
         });
         
-        // Listener para el botón de volver atrás
         document.getElementById('backToProcessesBtn').addEventListener('click', function(event) {
             if (hasUnsavedChanges) {
-                event.preventDefault(); // Detener la navegación
+                event.preventDefault();
                 Swal.fire({
-                    title: '{{ __("¿Estás seguro?") }}',
-                    text: "{{ __('Tienes cambios sin guardar que se perderán.') }}",
+                    title: translations.confirmTitle,
+                    text: translations.confirmText,
                     icon: 'warning',
                     showCancelButton: true,
                     confirmButtonColor: '#3085d6',
                     cancelButtonColor: '#d33',
-                    confirmButtonText: '{{ __("Sí, salir") }}',
-                    cancelButtonText: '{{ __("Cancelar") }}'
+                    confirmButtonText: translations.confirmButton,
+                    cancelButtonText: translations.cancelButton
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        window.location.href = this.href; // Continuar a la URL del botón
+                        window.location.href = this.href;
                     }
                 });
             }
         });
         
-        // Listener para el evento de salir de la página del navegador
         window.addEventListener('beforeunload', function (e) {
             if (hasUnsavedChanges) {
                 e.preventDefault();
-                e.returnValue = ''; // Requerido por la mayoría de navegadores
+                e.returnValue = '';
             }
         });
 
         distributeAndRender(true);
-        console.log('Kanban final inicializado con aviso de cambios.');
+        console.log('Kanban final inicializado con campos adicionales y para traducción.');
     });
     </script>
 @endpush
-

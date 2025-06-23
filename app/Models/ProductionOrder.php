@@ -37,6 +37,7 @@ class ProductionOrder extends Model
         'delivery_date',
         'customerId', // Customer ID
         'original_order_id', // Reference to original order
+        'original_order_process_id', // Reference to original order process
         'grupo_numero', // Group number
         'processes_to_do', // Number of processes to do
         'processes_done' // Number of processes completed
@@ -48,6 +49,14 @@ class ProductionOrder extends Model
     public function originalOrder()
     {
         return $this->belongsTo(\App\Models\OriginalOrder::class, 'original_order_id');
+    }
+
+    /**
+     * Get the original order process that this production order is associated with.
+     */
+    public function originalOrderProcess()
+    {
+        return $this->belongsTo(\App\Models\OriginalOrderProcess::class, 'original_order_process_id');
     }
 
     /**

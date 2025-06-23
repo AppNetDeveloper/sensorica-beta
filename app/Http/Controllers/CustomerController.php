@@ -146,7 +146,7 @@ class CustomerController extends Controller
         // Incluimos todas las órdenes, incluso las canceladas
         $processOrders = \App\Models\ProductionOrder::where('process_category', $process->description) // Filtrar por la categoría del proceso actual
             ->get()
-            ->map(function($order) {
+            ->map(function($order){
                 // Determinar el estado y color según el código de status
                 $statusName = 'pending';
                 $statusColor = '#6b7280'; // Gris por defecto
@@ -178,6 +178,14 @@ class CustomerController extends Controller
                         break;
                 }
                 
+                // 1. Preparamos la variable con el valor por defecto
+                $tiempoTeoricoFormateado = 'Sin Tiempo Teórico';
+
+                // 2. Si existe el tiempo teórico en segundos, lo convertimos
+                if (isset($order->theoretical_time)) {
+                    // *** CORRECCIÓN: Llamada al método estático con `self::` ***
+                    $tiempoTeoricoFormateado = self::convertirSegundosA_H_M_S($order->theoretical_time);
+                }
                 return [
                     'id' => $order->id,
                     'order_id' => $order->order_id,
@@ -190,7 +198,10 @@ class CustomerController extends Controller
                     'delivery_date' => $order->delivery_date,
                     'json' => $order->json ?? [],
                     'statusColor' => $statusColor,
-                    'theoretical_time' => $order->theoretical_time ?? 'Sin Tiempo Teórico',
+                    'grupo_numero' => $order->grupo_numero ?? '0',
+                    'processes_to_do' => $order->processes_to_do ?? 'Sin Procesos',
+                    'processes_done' => $order->processes_done ?? '',
+                    'theoretical_time' => $tiempoTeoricoFormateado,
                     'customerId' => $order->customerId ?? 'Sin Cliente',
                     'original_order_id' => $order->original_order_id ?? 'Sin Orden Original',
                 ];
@@ -220,7 +231,26 @@ class CustomerController extends Controller
             'processOrders' => $processOrders
         ]);
     }
+    /**
+     * Convierte un número total de segundos a formato HH:MM:SS.
+     *
+     * @param int $segundos El número total de segundos.
+     * @return string El tiempo formateado como "H:i:s".
+     */
+    private function convertirSegundosA_H_M_S(int $segundos) {
+        // Evita valores negativos o no numéricos
+        if (!is_numeric($segundos) || $segundos < 0) {
+            return '00:00:00';
+        }
 
+        // Calcula horas, minutos y segundos
+        $horas = floor($segundos / 3600);
+        $minutos = floor(($segundos % 3600) / 60);
+        $segundos_restantes = $segundos % 60;
+
+        // Formatea la salida para que siempre tenga dos dígitos (01, 02, etc.)
+        return sprintf('%02d:%02d:%02d', $horas, $minutos, $segundos_restantes);
+    }
     /**
      * Muestra el formulario para editar un cliente existente.
      *

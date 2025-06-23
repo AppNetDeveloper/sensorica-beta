@@ -70,7 +70,7 @@ class CheckOrdersFromApi extends Command
                 if (empty($orders)) {
                     $this->logWarning("⚠️ No se encontraron pedidos para el cliente: {$customer->name}");
                     $this->logLine("📝 Registrando ausencia de pedidos en logs...");
-                    Log::info("Sin pedidos para cliente {$customer->name}");
+
                     continue;
                 }
 
@@ -110,13 +110,7 @@ class CheckOrdersFromApi extends Command
                             if ($existingOrder) {
                                 $this->logLine("✓ El order_id {$orderId} EXISTE en la base de datos (ID: {$existingOrder->id})", 'info');
                                 $this->logLine("📝 Registrando orden existente en logs...");
-                                
-                                Log::info("Order ID {$orderId} ya existe", [
-                                    'customer_id' => $customer->id,
-                                    'customer_name' => $customer->name,
-                                    'order_id' => $orderId,
-                                    'existing_order_id' => $existingOrder->id
-                                ]);
+
                                 
                                 // Verificar si necesitamos actualizar el campo in_stock
                                 if ($existingOrder->in_stock == 0) {
@@ -159,14 +153,7 @@ class CheckOrdersFromApi extends Command
                                     $newOrder = OriginalOrder::create($mappedData);
                                     
                                     $this->logLine("  ✅ Pedido {$orderId} creado exitosamente (ID: {$newOrder->id})", 'info');
-                                    
-                                    Log::info("Order ID {$orderId} creado", [
-                                        'customer_id' => $customer->id,
-                                        'customer_name' => $customer->name,
-                                        'order_id' => $orderId,
-                                        'new_order_id' => $newOrder->id,
-                                        'mapped_data' => $mappedData
-                                    ]);
+
                                     
                                     // Llamar al order_detail_url para obtener detalles del nuevo pedido
                                     $this->processOrderDetails($customer, $newOrder, $orderId);
@@ -192,10 +179,6 @@ class CheckOrdersFromApi extends Command
                             }
                         } else {
                             $this->logWarning("  No se pudo obtener order_id del mapeo");
-                            Log::warning("Sin order_id para cliente {$customer->name}", [
-                                'customer_id' => $customer->id,
-                                'mapped_data' => $mappedData
-                            ]);
                         }
                         
                     } catch (\Exception $e) {
@@ -300,13 +283,7 @@ class CheckOrdersFromApi extends Command
             $this->logLine("  ✅ Detalles del pedido {$orderId} guardados exitosamente", 'info');
             $this->logLine("     Elementos encontrados: " . count($orderDetails));
             $this->logLine("  📝 Registrando éxito en logs del sistema...");
-            
-            Log::info("Detalles del pedido {$orderId} guardados", [
-                'customer_id' => $customer->id,
-                'order_id' => $orderId,
-                'order_db_id' => $order->id,
-                'details_count' => count($orderDetails)
-            ]);
+
             
         } catch (\Exception $e) {
             $this->logError("  ❌ Error procesando detalles del pedido {$orderId}: " . $e->getMessage());
@@ -329,11 +306,7 @@ class CheckOrdersFromApi extends Command
         if (!is_array($orderDetails) || !isset($orderDetails['grupos'])) {
             $this->logWarning("    ⚠️ No se encontraron grupos en los detalles del pedido");
             $this->logLine("    📝 Estructura de datos inválida - registrando en logs...");
-            Log::warning("Estructura de datos inválida para orden {$order->order_id}", [
-                'customer_id' => $customer->id,
-                'order_id' => $order->order_id,
-                'order_details_structure' => is_array($orderDetails) ? array_keys($orderDetails) : 'not_array'
-            ]);
+
             return 0;
         }
         
@@ -380,12 +353,7 @@ class CheckOrdersFromApi extends Command
                 $this->logLine("  📝 Registrando eliminación en logs...");
                 
                 try {
-                    Log::warning("Eliminando orden sin procesos válidos", [
-                        'customer_id' => $customer->id,
-                        'order_id' => $order->order_id,
-                        'order_db_id' => $order->id,
-                        'reason' => 'no_valid_processes'
-                    ]);
+
                     
                     $order->delete();
                     $this->logInfo("  ✅ Orden {$order->order_id} eliminada exitosamente");
