@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Yajra\DataTables\DataTables;
 use Illuminate\Support\Facades\Log; // Agrega esta línea para usar Log
 use Illuminate\Support\Facades\DB;
+use App\Models\ProductionOrder;
 
 
 class CustomerController extends Controller
@@ -205,7 +206,8 @@ class CustomerController extends Controller
                     'theoretical_time' => $tiempoTeoricoFormateado,
                     'customerId' => $order->customerId ?? 'Sin Cliente',
                     'original_order_id' => $order->original_order_id ?? 'Sin Orden Original',
-                    'orden' => (int)($order->orden ?? '0'), // Corregir el campo orden para que sea un número en lugar de una cadena
+                    //en lugar de 0 por defecto aqui 'orden' => (int)($order->orden ?? '0') ponemos que sea por production_line_id el orden mas grande que existe y le damos +1
+                    'orden' => $order->production_line_id ? ProductionOrder::where('production_line_id', $order->production_line_id)->max('orden') + 1 : 0,
                 ];
             });
         
