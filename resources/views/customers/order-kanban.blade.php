@@ -84,8 +84,23 @@
         .column-cards::-webkit-scrollbar { width: 6px; }
         .column-cards::-webkit-scrollbar-thumb { background-color: var(--scrollbar-thumb); border-radius: 3px; }
 
-        .placeholder { background-color: var(--placeholder-bg); border: 1px dashed var(--primary-color); border-radius: 8px; margin: 4px 0; flex-shrink: 0; transition: all 0.2s ease; }
-
+        .placeholder { 
+            background-color: var(--placeholder-bg); 
+            border: 3px dashed var(--primary-color); 
+            border-radius: 12px; 
+            margin: 15px 0; 
+            flex-shrink: 0; 
+            transition: all 0.2s ease; 
+            min-height: 120px; 
+            opacity: 0.8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            color: var(--primary-color);
+            font-weight: 600;
+            pointer-events: none;
+        }
         .column-header-stats { display: flex; align-items: center; gap: 0.5rem; }
         .card-count-badge, .time-sum-badge { background-color: rgba(0,0,0,0.08); color: var(--header-text); padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.75rem; font-weight: 500; white-space: nowrap; }
         .time-sum-badge .fa-clock { margin-right: 0.25rem; }
@@ -139,7 +154,10 @@
         const productionLinesData = @json($productionLines);
         
         let hasUnsavedChanges = false;
-
+        let draggedCard = null;
+        let cachedDropPosition = null; // Cachear posición detectada durante dragOver
+        let cachedTargetContainer = null; // Cachear contenedor objetivo
+        
         const translations = {
             noOrdersToOrganize: "{{ __('No hay órdenes o líneas de producción para organizar.') }}",
             organizingWithAIError: "{{ __('Error al organizar con IA:') }}",
@@ -179,8 +197,6 @@
                 ]
             }
         };
-
-        let draggedCard = null;
 
         // --- LÓGICA DE ORGANIZACIÓN AUTOMÁTICA CON IA (GEMINI) ---
         
@@ -408,76 +424,226 @@
         // --- 3. FUNCIONES DE DRAG & DROP ---
         
         function getDragAfterElement(container, y) {
+            console.log('🔍 getDragAfterElement - Y:', y);
+            
             const draggableElements = [...container.querySelectorAll('.kanban-card:not(.dragging)')];
-            return draggableElements.reduce((closest, child) => {
+            console.log('🔍 Elementos disponibles:', draggableElements.length);
+            
+            draggableElements.forEach((el, i) => {
+                const box = el.getBoundingClientRect();
+                const offset = y - box.top - (box.height * 0.8);
+                console.log(`Elemento ${i} (ID: ${el.dataset.id}): top=${box.top}, height=${box.height}, offset=${offset}`);
+            });
+            
+            const result = draggableElements.reduce((closest, child) => {
                 const box = child.getBoundingClientRect();
-                const offset = y - box.top - box.height / 2;
+                // Zona de detección más amplia - 80% de la altura del elemento
+                const offset = y - box.top - (box.height * 0.8);
                 if (offset < 0 && offset > closest.offset) {
+                    console.log(`✅ Nuevo closest: ${child.dataset.id} con offset ${offset}`);
                     return { offset: offset, element: child };
                 } else {
                     return closest;
                 }
-            }, { offset: Number.NEGATIVE_INFINITY }).element;
+            }, { offset: Number.NEGATIVE_INFINITY });
+            
+            console.log('🎯 Resultado final:', result.element ? result.element.dataset.id : 'ninguno');
+            return result.element;
         }
 
         function handleDragStart(event) {
+            console.log('🚀 HANDLE DRAG START');
             draggedCard = event.target.closest('.kanban-card');
-            if (!draggedCard) return;
+            if (!draggedCard) {
+                console.log('❌ No se encontró kanban-card');
+                return;
+            }
+            console.log('✅ Drag card encontrada:', draggedCard.dataset.id);
             setTimeout(() => { if (draggedCard) draggedCard.classList.add('dragging'); }, 0);
             event.dataTransfer.effectAllowed = 'move';
             event.dataTransfer.setData('text/plain', draggedCard.dataset.id);
         }
 
-        function handleDragEnd() {
+        function handleDragEnd(event) {
+            console.log('🏁 HANDLE DRAG END');
             if (draggedCard) draggedCard.classList.remove('dragging');
             draggedCard = null;
+            
+            // Limpiar caché de posición
+            cachedDropPosition = null;
+            cachedTargetContainer = null;
+            
             document.querySelectorAll('.placeholder').forEach(p => p.remove());
             resetDropZones();
         }
 
         function dragOver(event) {
+            console.log('🔄 DRAG OVER - Target:', event.target.tagName, event.target.className);
             event.preventDefault();
-            if (!draggedCard) return;
-            const targetCardsContainer = event.target.closest('.column-cards');
-            if (!targetCardsContainer) return;
+            if (!draggedCard) {
+                console.log('❌ DRAG OVER - No hay draggedCard');
+                return;
+            }
+            
+            // Buscar el contenedor de tarjetas de forma más tolerante
+            let targetCardsContainer = event.target.closest('.column-cards');
+            
+            // Si no encontramos el contenedor directamente, buscar en la columna completa
+            if (!targetCardsContainer) {
+                const targetColumn = event.target.closest('.kanban-column, .final-state-section');
+                if (targetColumn) {
+                    targetCardsContainer = targetColumn.querySelector('.column-cards');
+                    console.log('🔄 DRAG OVER - Usando columna completa');
+                }
+            }
+            
+            if (!targetCardsContainer) {
+                console.log('❌ DRAG OVER - No se encontró contenedor');
+                return;
+            }
+            
+            console.log('✅ DRAG OVER - Contenedor encontrado');
+            
             const columnTarget = targetCardsContainer.closest('.kanban-column, .final-state-section');
             if (columnTarget) {
                 resetDropZones();
                 columnTarget.classList.add('drag-over');
             }
+            
+            // Limpiar placeholders existentes
             document.querySelectorAll('.placeholder').forEach(p => p.remove());
+            
+            // Crear y mostrar placeholder Y cachear posición
             const afterElement = getDragAfterElement(targetCardsContainer, event.clientY);
+            
+            // 🎯 CACHEAR la posición detectada para usar en drop
+            cachedDropPosition = {
+                afterElement: afterElement,
+                afterElementId: afterElement ? parseInt(afterElement.dataset.id) : null,
+                clientY: event.clientY
+            };
+            cachedTargetContainer = targetCardsContainer;
+            console.log('💾 CACHEADO - afterElement:', cachedDropPosition.afterElementId || 'ninguno');
+            
             const placeholder = document.createElement('div');
             placeholder.className = 'placeholder';
-            placeholder.style.height = `${draggedCard.offsetHeight}px`;
+            placeholder.innerHTML = '⬇️ Soltar aquí ⬇️';
+            placeholder.style.height = `${Math.max(draggedCard.offsetHeight, 120)}px`;
+            
             if (afterElement) {
                 targetCardsContainer.insertBefore(placeholder, afterElement);
             } else {
                 targetCardsContainer.appendChild(placeholder);
             }
         }
-        
-        function resetDropZones() {
-             document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
-        }
 
         function drop(event) {
             event.preventDefault();
             hasUnsavedChanges = true;
             
-            if (!draggedCard) return;
+            console.log('🎯 DROP INICIADO');
+            console.log('Event target:', event.target);
+            console.log('Event target classes:', event.target.className);
+            
+            if (!draggedCard) {
+                console.log('❌ FALLO: No hay draggedCard');
+                return;
+            }
 
             const cardId = parseInt(draggedCard.dataset.id);
             const orderObj = masterOrderList.find(o => o.id === cardId);
-            const targetCardsContainer = event.target.closest('.column-cards');
+            
+            console.log('Card ID:', cardId);
+            console.log('Order encontrada:', !!orderObj);
+            
+            // Búsqueda SUPER tolerante del contenedor objetivo
+            let targetCardsContainer = null;
+            let targetColumn = null;
+            
+            // Método 1: Buscar contenedor de tarjetas directamente
+            targetCardsContainer = event.target.closest('.column-cards');
+            if (targetCardsContainer) {
+                console.log('✅ Método 1: Encontrado contenedor directo');
+            } else {
+                console.log('❌ Método 1: No encontrado contenedor directo');
+            }
+            
+            // Método 2: Si no funciona, buscar cualquier columna cercana
+            if (!targetCardsContainer) {
+                targetColumn = event.target.closest('.kanban-column, .final-state-section');
+                console.log('Columna encontrada en método 2:', !!targetColumn);
+                if (targetColumn) {
+                    targetCardsContainer = targetColumn.querySelector('.column-cards');
+                    if (targetCardsContainer) {
+                        console.log('✅ Método 2: Encontrado via columna');
+                    } else {
+                        console.log('❌ Método 2: Columna encontrada pero sin .column-cards');
+                    }
+                } else {
+                    console.log('❌ Método 2: No se encontró columna');
+                }
+            }
+            
+            // Método 3: Si aún no funciona, buscar en el elemento padre
+            if (!targetCardsContainer) {
+                console.log('🔍 Método 3: Buscando en elementos padre...');
+                let element = event.target;
+                let attempts = 0;
+                while (element && element !== document.body && attempts < 10) {
+                    attempts++;
+                    console.log(`Intento ${attempts}:`, element.tagName, element.className);
+                    const column = element.querySelector('.kanban-column, .final-state-section');
+                    if (column) {
+                        targetCardsContainer = column.querySelector('.column-cards');
+                        if (targetCardsContainer) {
+                            console.log('✅ Método 3: Encontrado via elemento padre');
+                            break;
+                        }
+                    }
+                    element = element.parentElement;
+                }
+                if (!targetCardsContainer) {
+                    console.log('❌ Método 3: No encontrado después de', attempts, 'intentos');
+                }
+            }
+            
+            // Método 4: Como último recurso, usar la columna que tiene drag-over
+            if (!targetCardsContainer) {
+                console.log('🔍 Método 4: Buscando columna con drag-over...');
+                const dragOverColumn = document.querySelector('.kanban-column.drag-over, .final-state-section.drag-over');
+                console.log('Columna drag-over encontrada:', !!dragOverColumn);
+                if (dragOverColumn) {
+                    targetCardsContainer = dragOverColumn.querySelector('.column-cards');
+                    if (targetCardsContainer) {
+                        console.log('✅ Método 4: Encontrado via drag-over');
+                    } else {
+                        console.log('❌ Método 4: Columna drag-over sin .column-cards');
+                    }
+                } else {
+                    console.log('❌ Método 4: No hay columnas con drag-over');
+                }
+            }
             
             document.querySelectorAll('.placeholder').forEach(p => p.remove());
 
-            if (!orderObj || !targetCardsContainer) {
+            // Solo fallar si realmente no encontramos NADA
+            if (!orderObj) {
+                console.log('❌ DROP FALLIDO: No se encontró orderObj para cardId:', cardId);
+                handleDragEnd();
+                return;
+            }
+            
+            if (!targetCardsContainer) {
+                console.log('❌ DROP FALLIDO: No se encontró contenedor objetivo después de 4 métodos');
+                console.log('Todas las columnas disponibles:');
+                document.querySelectorAll('.kanban-column, .final-state-section').forEach((col, i) => {
+                    console.log(`Columna ${i}:`, col.className, 'tiene .column-cards:', !!col.querySelector('.column-cards'));
+                });
                 handleDragEnd();
                 return;
             }
 
+            console.log('✅ DROP EXITOSO: Contenedor encontrado');
             const targetColumnEl = targetCardsContainer.closest('.kanban-column, .final-state-section');
             const targetIsFinalState = targetColumnEl.classList.contains('final-state-section');
             const columnData = columns[targetColumnEl.id];
@@ -496,17 +662,42 @@
                 orderObj.productionLineId = null;
             }
 
+            console.log('🎯 Usando posición cacheada en lugar de recalcular...');
+            console.log('💾 Posición cacheada:', cachedDropPosition ? cachedDropPosition.afterElementId : 'ninguna');
+            
+            let afterElement = null;
+            let afterElementId = null;
+            
+            // Usar posición cacheada si está disponible
+            if (cachedDropPosition && cachedDropPosition.afterElementId) {
+                afterElementId = cachedDropPosition.afterElementId;
+                console.log('✅ Usando afterElement cacheado:', afterElementId);
+            } else {
+                console.log('⚠️ No hay posición cacheada, insertando al final');
+            }
+            
+            // Eliminar de posición original
             const oldMasterIndex = masterOrderList.findIndex(o => o.id === cardId);
             if (oldMasterIndex > -1) masterOrderList.splice(oldMasterIndex, 1);
             
-            const afterElement = getDragAfterElement(targetCardsContainer, event.clientY);
-            if (afterElement) {
-                const newMasterIndex = masterOrderList.findIndex(o => o.id === parseInt(afterElement.dataset.id));
-                masterOrderList.splice(newMasterIndex, 0, orderObj);
+            if (afterElementId) {
+                // Insertar ANTES del afterElement
+                const newMasterIndex = masterOrderList.findIndex(o => o.id === afterElementId);
+                console.log('Insertando en índice:', newMasterIndex, 'antes de tarjeta:', afterElementId);
+                if (newMasterIndex > -1) {
+                    masterOrderList.splice(newMasterIndex, 0, orderObj);
+                } else {
+                    // Si no encuentra el afterElement en masterOrderList, agregar al final
+                    console.log('No se encontró afterElement en masterOrderList, agregando al final');
+                    masterOrderList.push(orderObj);
+                }
             } else {
+                // No hay afterElement, insertar al final
+                console.log('No hay afterElement, insertando al final');
                 masterOrderList.push(orderObj);
             }
             
+            // Lógica especial para columnas de producción
             if (targetIsProduction) {
                 const targetItems = masterOrderList.filter(o => o.productionLineId === columnData.productionLineId);
                 const inProgressItem = targetItems.find(o => o.status === 'in_progress');
@@ -526,8 +717,18 @@
             distributeAndRender(false, () => recalculatePositions());
         }
 
-        // --- 4. FUNCIONES PARA CREAR ELEMENTOS DEL DOM ---
+        function resetDropZones() {
+             document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+             // Pequeño delay antes de limpiar placeholders para dar más tiempo
+             setTimeout(() => {
+                 if (!draggedCard) {
+                     document.querySelectorAll('.placeholder').forEach(p => p.remove());
+                 }
+             }, 100);
+        }
 
+        // --- 4. FUNCIONES PARA CREAR ELEMENTOS DEL DOM ---
+        
         function createColumnElement(column) {
             const columnElement = document.createElement('div');
             columnElement.className = 'kanban-column';
@@ -559,6 +760,9 @@
                     el.addEventListener('dragleave', resetDropZones);
                     el.addEventListener('drop', drop);
                 });
+                columnElement.addEventListener('dragover', dragOver);
+                columnElement.addEventListener('dragleave', resetDropZones);
+                columnElement.addEventListener('drop', drop);
             } else {
                 innerHTML = `<div class="column-header" style="border-left: 4px solid ${column.color};">
                                 <h3 class="column-title">${column.name}</h3>
@@ -569,6 +773,9 @@
                 columnElement.querySelector('.column-cards').addEventListener('dragover', dragOver);
                 columnElement.querySelector('.column-cards').addEventListener('dragleave', resetDropZones);
                 columnElement.querySelector('.column-cards').addEventListener('drop', drop);
+                columnElement.addEventListener('dragover', dragOver);
+                columnElement.addEventListener('dragleave', resetDropZones);
+                columnElement.addEventListener('drop', drop);
             }
             return columnElement;
         }
@@ -830,6 +1037,20 @@
                 e.returnValue = '';
             }
         });
+
+        // Listener global para detectar drops no capturados
+        document.addEventListener('drop', function(event) {
+            console.log('🌍 DROP GLOBAL DETECTADO - Target:', event.target.tagName, event.target.className);
+            console.log('🌍 DROP GLOBAL - Tiene draggedCard:', !!draggedCard);
+        }, true);
+        
+        // Listener global para dragover
+        document.addEventListener('dragover', function(event) {
+            // Solo log cada 10 eventos para no saturar
+            if (Math.random() < 0.1) {
+                console.log('🌍 DRAGOVER GLOBAL - Target:', event.target.tagName, event.target.className);
+            }
+        }, true);
 
         function recalculatePositions() {
             const cards = kanbanBoard.querySelectorAll('.kanban-card');
