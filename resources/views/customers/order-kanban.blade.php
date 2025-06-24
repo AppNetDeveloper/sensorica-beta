@@ -235,6 +235,9 @@
                 `;
 
                 console.log("--- PROMPT ENVIADO A GEMINI ---", prompt);
+                
+               
+                
 
                 const payload = {
                     contents: [{ role: "user", parts: [{ text: prompt }] }],
@@ -259,7 +262,7 @@
                         }
                     }
                 };
-
+                
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
                 const response = await fetch(apiUrl, {
                     method: 'POST',
@@ -273,6 +276,7 @@
                 }
                 
                 const result = await response.json();
+                wait(30000);  //30 seconds in milliseconds
                 console.log("--- RESPUESTA RECIBIDA DE GEMINI (RAW) ---", result);
                 
                 const jsonText = result.candidates[0].content.parts[0].text;
@@ -291,7 +295,8 @@
                     const order = masterOrderList.find(o => o.id === assignment.order_id);
                     if (order) {
                         order.productionLineId = assignment.assigned_line_id;
-                        order.status = 'pending';
+                        // Al organizar, todas empiezan como 'pending'
+                        order.status = 'pending'; 
                     }
                 });
                 
@@ -471,9 +476,20 @@
             const columnData = columns[targetColumnEl.id];
             const targetIsProduction = columnData && columnData.type === 'production';
             
-            orderObj.status = targetIsFinalState ? targetColumnEl.dataset.state : 'pending';
-            orderObj.productionLineId = targetIsProduction ? columnData.productionLineId : null;
-            
+            // --- LÓGICA DE STATUS MEJORADA ---
+            if (targetIsFinalState) {
+                orderObj.status = targetColumnEl.dataset.state;
+                orderObj.productionLineId = null;
+            } else if (targetIsProduction) {
+                const columnItems = columns[targetColumnEl.id].items;
+                const hasInProgress = columnItems.some(item => item.status === 'in_progress' && item.id !== cardId);
+                orderObj.status = hasInProgress ? 'pending' : 'in_progress';
+                orderObj.productionLineId = columnData.productionLineId;
+            } else { 
+                orderObj.status = 'pending';
+                orderObj.productionLineId = null;
+            }
+
             const oldMasterIndex = masterOrderList.findIndex(o => o.id === cardId);
             if (oldMasterIndex > -1) masterOrderList.splice(oldMasterIndex, 1);
             
@@ -485,6 +501,22 @@
                 masterOrderList.push(orderObj);
             }
             
+            if (targetIsProduction) {
+                const targetItems = masterOrderList.filter(o => o.productionLineId === columnData.productionLineId);
+                const inProgressItem = targetItems.find(o => o.status === 'in_progress');
+                if (inProgressItem) {
+                    const itemIndex = masterOrderList.findIndex(o => o.id === inProgressItem.id);
+                    if (itemIndex > -1) masterOrderList.splice(itemIndex, 1);
+
+                    const firstIndexOfGroup = masterOrderList.findIndex(o => o.productionLineId === columnData.productionLineId);
+                    if (firstIndexOfGroup > -1) {
+                        masterOrderList.splice(firstIndexOfGroup, 0, inProgressItem);
+                    } else {
+                         masterOrderList.push(inProgressItem);
+                    }
+                }
+            }
+
             distributeAndRender(false);
         }
 
@@ -633,7 +665,6 @@
             return card;
         }
         
-        // --- Funciones auxiliares de tiempo ---
         function parseTimeToSeconds(timeStr = "00:00:00") {
             if (!timeStr || typeof timeStr !== 'string' || !timeStr.match(/^\d{2}:\d{2}:\d{2}$/)) {
                 return 0;
@@ -660,7 +691,7 @@
             saveBtn.disabled = true;
 
             const updatedOrders = [];
-            const statusMap = { 'pending': 0, 'completed': 2, 'cancelled': 4, 'paused': 3 };
+            const statusMap = { 'pending': 0, 'in_progress': 1, 'completed': 2, 'cancelled': 4, 'paused': 3 };
             
             masterOrderList.forEach((order, index) => {
                 updatedOrders.push({
@@ -796,6 +827,14 @@
 
         distributeAndRender(true);
         console.log('Kanban final inicializado.');
+
+        function wait(ms){
+            var start = new Date().getTime();
+            var end = start;
+            while(end < start + ms) {
+                end = new Date().getTime();
+            }
+        }
     });
     </script>
 @endpush
