@@ -6,6 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\ProductionOrder;
 use App\Models\ProductionLine; // Importar el modelo de líneas de producción
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log; // Asegúrate de importar la clase Log
+use Illuminate\Support\Facades\DB; // Importar Facade DB para la consulta
+use Illuminate\Support\Facades\Cache;
 
 class ProductionOrderController extends Controller
 {
@@ -293,161 +296,280 @@ class ProductionOrderController extends Controller
     public function updateOrder(Request $request, $id)
     {
         $order = ProductionOrder::find($id);
-
+    
         if (!$order) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Orden no encontrada.',
-            ], 404);
+            return response()->json(['success' => false, 'message' => 'Orden no encontrada.'], 404);
         }
-
-        // Validar el token
+    
         $request->validate([
             'token' => 'required|string',
             'orden' => 'nullable|integer|min:0',
             'status' => 'nullable|integer|min:0|max:5',
         ]);
-
-        // Buscar la línea de producción por token
+    
+        $validatedData = $request->all();
+    
+        // --- VERIFICACIÓN DE CAMBIOS (LA PARTE CLAVE) ---
+    
+        // Comprobamos si los campos que nos importan vienen en la petición Y si su valor es diferente al actual.
+        // Usamos `isset` para evitar el error si el campo no viene en el JSON.
+        $hasStatusChanged = isset($validatedData['status']) && $order->status != $validatedData['status'];
+        $hasOrderChanged = isset($validatedData['orden']) && $order->orden != $validatedData['orden'];
+    
+        // Si NADA ha cambiado, salimos inmediatamente.
+        if (!$hasStatusChanged && !$hasOrderChanged) {
+            Log::info("Orden ID {$id}: Sin cambios en status u orden. Actualización omitida.");
+            return response()->json(['success' => true, 'message' => 'Sin cambios detectados, actualización omitida.']);
+        }
+    
+        // --- SI LLEGAMOS AQUÍ, ES PORQUE SÍ HAY CAMBIOS ---
+    
+        Log::info("Orden ID {$id}: Cambios detectados. Procediendo con la actualización.");
+    
+        // El resto de la lógica de actualización...
         $productionLine = ProductionLine::where('token', $request->token)->first();
         if (!$productionLine) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Línea de producción no encontrada o token inválido',
-            ], 400);
+            return response()->json(['success' => false, 'message' => 'Línea de producción no encontrada o token inválido'], 400);
         }
         
-        $validatedData = $request->all();
         $currentProductionLineId = $productionLine->id;
-        
-        // Si la orden cambia a estado 3 (Pausa/Incidencia)
-        if (isset($validatedData['status']) && $validatedData['status'] == 3) {
-            // Guardar la línea actual como original si no existe
+    
+        if ($hasStatusChanged && $validatedData['status'] == 3) {
             if (!$order->original_production_line_id) {
                 $order->original_production_line_id = $order->production_line_id;
             }
         } 
-        // Si la orden cambia DE estado 3 a otro estado
-        elseif ($order->status == 3 && isset($validatedData['status']) && $validatedData['status'] != 3) {
-            // Actualizar la línea de producción a la línea que está realizando el cambio
+        elseif ($order->status == 3 && $hasStatusChanged && $validatedData['status'] != 3) {
             $order->production_line_id = $currentProductionLineId;
         }
-        // Para cualquier otro caso, actualizar la línea de producción si es necesario
         elseif ($order->production_line_id != $currentProductionLineId) {
             $order->production_line_id = $currentProductionLineId;
         }
-
-        if (isset($validatedData['orden'])) {
+    
+        // Actualizamos los valores en el modelo
+        if ($hasOrderChanged) {
             $order->orden = $validatedData['orden'];
         }
-
-        if (isset($validatedData['status'])) {
+        if ($hasStatusChanged) {
             $order->status = $validatedData['status'];
         }
-
+    
+        // Guardamos TODOS los cambios en la base de datos de una vez.
         $order->save();
-
+    
+        // --- LÓGICA MQTT ---
+        // Solo si el estado ha cambiado, intentamos enviar el mensaje.
+        if ($hasStatusChanged) {
+            $lockKey = 'mqtt_lock_for_order_' . $order->order_id;
+            if (Cache::add($lockKey, true, 3)) {
+                Log::info("Bloqueo de caché adquirido para [{$lockKey}]. Procesando envío MQTT.");
+                try {
+                    $order->refresh();
+                    $action = match ((int)$order->status) {
+                        1 => 0,
+                        2 => 1,
+                        default => null,
+                    };
+                
+                    if ($action !== null) {
+                        $barcoder = \App\Models\Barcode::where('production_line_id', $order->production_line_id)->first();
+                        if ($barcoder && !empty($barcoder->mqtt_topic_barcodes)) {
+                            // ... el resto de tu lógica MQTT ...
+                            $topic = $barcoder->mqtt_topic_barcodes . '/prod_order_mac';
+                            $messagePayload = json_encode([
+                                "action"    => $action, 
+                                "orderId"   => $order->order_id,
+                                "quantity"  => 0,
+                                "machineId" => $barcoder->machine_id ?? "", 
+                                "opeId" => $barcoder->ope_id ?? "",
+                            ]);
+                            $this->publishMqttMessage($topic, $messagePayload);
+                            // Si la orden se ha finalizado, activar la siguiente en la cola.
+                            if ((int)$order->status === 2) {
+                                $this->activateNextOrder($order, $barcoder);
+                            }
+                            Log::info("Mensaje MQTT enviado para orden {$order->id}.");
+                        } else {
+                            Log::warning("Barcoder/Topic no encontrado para orden {$order->id}.");
+                        }
+            
+                    }
+                } catch (\Exception $e) {
+                    Log::error("Error en MQTT para orden {$order->id}: " . $e->getMessage());
+                }
+            } else {
+                Log::info("Envío MQTT omitido para orden {$order->id} por bloqueo de caché.");
+            }
+        }
+    
         return response()->json([
             'success' => true,
             'message' => 'Orden actualizada exitosamente.',
-            'data' => [
-                'id' => $order->id,
-                'orden' => $order->orden,
-                'status' => $order->status,
-                'production_line_id' => $currentProductionLineId,
-                'original_production_line_id' => $order->original_production_line_id,
-            ],
+            'data' => $order,
         ]);
     }
+    private function activateNextOrder(ProductionOrder $finishedOrder, $barcoder)
+    {
+        // ¡CORREGIDO! Usamos el modelo ProductionOrder, no 'self'.
+        $nextOrderInLine = ProductionOrder::where('production_line_id', $finishedOrder->production_line_id)
+                    ->where('orden', '>', $finishedOrder->orden)
+                    ->where('status', 0)
+                    ->orderBy('orden', 'asc')
+                    ->first();
+
+        if ($nextOrderInLine) {
+            Log::info("Orden [{$finishedOrder->id}] finalizada. Lógica para activar la siguiente orden [{$nextOrderInLine->id}] se ejecutaría aquí.");
+            $topic = $barcoder->mqtt_topic_barcodes . '/prod_order_mac';
+            $messagePayload = json_encode([
+                "action"    => 0, 
+                "orderId"   => $nextOrderInLine->order_id,
+                "quantity"  => 0,
+                "machineId" => $barcoder->machine_id ?? "", 
+                "opeId" => $barcoder->ope_id ?? "",
+            ]);
+            //ponemos un sleep de 1 segundo para dar tiempo a que el sistema se actualice
+            sleep(0.5);
+            $this->publishMqttMessage($topic, $messagePayload);
+        } else {
+            Log::info("Orden [{$finishedOrder->id}] finalizada. No hay más órdenes en la cola para la línea [{$finishedOrder->production_line_id}].");
+        }
+    }
     /**
- * @OA\Post(
- *     path="/api/production-orders",
- *     summary="Crear una nueva orden de producción",
- *     tags={"ProductionOrders"},
- *     @OA\RequestBody(
- *         required=true,
- *         @OA\JsonContent(
- *             @OA\Property(property="production_line_id", type="integer", example=1),
- *             @OA\Property(property="order_id", type="string", example="231118"),
- *             @OA\Property(property="status", type="integer", example=1),
- *             @OA\Property(property="box", type="integer", example=945),
- *             @OA\Property(property="units_box", type="integer", example=30),
- *             @OA\Property(property="units", type="integer", example=28350),
- *             @OA\Property(property="orden", type="integer", example=0)
- *         )
- *     ),
- *     @OA\Response(
- *         response=201,
- *         description="Orden creada exitosamente",
- *         @OA\JsonContent(
- *             @OA\Property(property="success", type="boolean", example=true),
- *             @OA\Property(property="message", type="string", example="Orden creada exitosamente."),
- *             @OA\Property(property="data", type="object", @OA\Property(property="id", type="integer"))
- *         )
- *     )
- * )
- */
-public function store(Request $request)
-{
-    $validatedData = $request->validate([
-        'production_line_id' => 'required|integer|exists:production_lines,id',
-        'order_id' => 'required|string',
-        'status' => 'required|integer|min:0|max:5',
-        'box' => 'required|integer',
-        'units_box' => 'required|integer',
-        'units' => 'required|integer',
-        'orden' => 'required|integer|min:0',
-    ]);
+     * @OA\Post(
+     *     path="/api/production-orders",
+     *     summary="Crear una nueva orden de producción",
+     *     tags={"ProductionOrders"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="production_line_id", type="integer", example=1),
+     *             @OA\Property(property="order_id", type="string", example="231118"),
+     *             @OA\Property(property="status", type="integer", example=1),
+     *             @OA\Property(property="box", type="integer", example=945),
+     *             @OA\Property(property="units_box", type="integer", example=30),
+     *             @OA\Property(property="units", type="integer", example=28350),
+     *             @OA\Property(property="orden", type="integer", example=0)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Orden creada exitosamente",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Orden creada exitosamente."),
+     *             @OA\Property(property="data", type="object", @OA\Property(property="id", type="integer"))
+     *         )
+     *     )
+     * )
+     */
+    public function store(Request $request)
+    {
+        $validatedData = $request->validate([
+            'production_line_id' => 'required|integer|exists:production_lines,id',
+            'order_id' => 'required|string',
+            'status' => 'required|integer|min:0|max:5',
+            'box' => 'required|integer',
+            'units_box' => 'required|integer',
+            'units' => 'required|integer',
+            'orden' => 'required|integer|min:0',
+        ]);
 
-    $order = ProductionOrder::create($validatedData);
+        $order = ProductionOrder::create($validatedData);
 
-    return response()->json([
-        'success' => true,
-        'message' => 'Orden creada exitosamente.',
-        'data' => $order,
-    ], 201);
-}
-
-/**
- * @OA\Delete(
- *     path="/api/production-orders/{id}",
- *     summary="Eliminar una orden de producción",
- *     tags={"ProductionOrders"},
- *     @OA\Parameter(
- *         name="id",
- *         in="path",
- *         description="ID de la orden de producción",
- *         required=true,
- *         @OA\Schema(type="integer")
- *     ),
- *     @OA\Response(
- *         response=200,
- *         description="Orden eliminada exitosamente",
- *         @OA\JsonContent(
- *             @OA\Property(property="success", type="boolean", example=true),
- *             @OA\Property(property="message", type="string", example="Orden eliminada exitosamente.")
- *         )
- *     ),
- *     @OA\Response(
- *         response=404,
- *         description="Orden no encontrada"
- *     )
- * )
- */
-public function destroy($id)
-{
-    $order = ProductionOrder::find($id);
-
-    if (!$order) {
-        return response()->json(['error' => 'Orden no encontrada'], 404);
+        return response()->json([
+            'success' => true,
+            'message' => 'Orden creada exitosamente.',
+            'data' => $order,
+        ], 201);
     }
 
-    $order->delete();
+    /**
+     * @OA\Delete(
+     *     path="/api/production-orders/{id}",
+     *     summary="Eliminar una orden de producción",
+     *     tags={"ProductionOrders"},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         description="ID de la orden de producción",
+     *         required=true,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Orden eliminada exitosamente",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Orden eliminada exitosamente.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Orden no encontrada"
+     *     )
+     * )
+     */
+    public function destroy($id)
+    {
+        $order = ProductionOrder::find($id);
 
-    return response()->json([
-        'success' => true,
-        'message' => 'Orden eliminada exitosamente.',
-    ]);
+        if (!$order) {
+            return response()->json(['error' => 'Orden no encontrada'], 404);
+        }
+
+        $order->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Orden eliminada exitosamente.',
+        ]);
 }
+    /**
+     * Stores the MQTT message in two different server directories as JSON files.
+     * This simulates publishing a message for later processing.
+     *
+     * @param string $topic The MQTT topic.
+     * @param string $message The JSON message string.
+     */
+    private function publishMqttMessage($topic, $message)
+    {
+        try {
+            // Preparar los datos a almacenar, agregando la fecha y hora
+            $data = [
+                'topic'     => $topic,
+                'message'   => $message,
+                'timestamp' => now()->toDateTimeString(),
+            ];
+        
+            // Convertir a JSON
+            $jsonData = json_encode($data, JSON_PRETTY_PRINT);
+        
+            // Sanitizar el topic para evitar creación de subcarpetas en el nombre del archivo
+            $sanitizedTopic = str_replace('/', '_', $topic);
+            // Generar un identificador único usando microtime para alta precisión
+            $uniqueId = round(microtime(true) * 1000); // en milisegundos
+        
+            // Guardar en servidor 1
+            $path1 = storage_path("app/mqtt/server1");
+            if (!file_exists($path1)) {
+                mkdir($path1, 0755, true);
+            }
+            $fileName1 = "{$path1}/{$sanitizedTopic}_{$uniqueId}.json";
+            file_put_contents($fileName1, $jsonData . PHP_EOL);
+            Log::info("Mensaje almacenado en archivo (server1): {$fileName1}");
+        
+            // Guardar en servidor 2
+            $path2 = storage_path("app/mqtt/server2");
+            if (!file_exists($path2)) {
+                mkdir($path2, 0755, true);
+            }
+            $fileName2 = "{$path2}/{$sanitizedTopic}_{$uniqueId}.json";
+            file_put_contents($fileName2, $jsonData . PHP_EOL);
+            Log::info("Mensaje almacenado en archivo (server2): {$fileName2}");
+
+        } catch (\Exception $e) {
+            Log::error("Error storing message in file: " . $e->getMessage());
+        }
+    }
 
 }

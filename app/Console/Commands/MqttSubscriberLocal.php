@@ -7,6 +7,7 @@ use App\Models\Barcode;
 use PhpMqtt\Client\MqttClient;
 use PhpMqtt\Client\ConnectionSettings;
 use Carbon\Carbon;
+use App\Models\ProductionOrder;
 
 class MqttSubscriberLocal extends Command
 {
@@ -205,46 +206,63 @@ class MqttSubscriberLocal extends Command
         try {
             // Log the received message for debugging
             $this->info("[" . $timestamp . "] Processing production order: " . json_encode($messageData));
-            
+
             // Get default barcode ID
-            $barcoderId = $this->getDefaultBarcodeId();
-            
+            $barcoderId = $this->getDefaultBarcodeId(); // Asegúrate de que este método exista y funcione
+
             if (!$barcoderId) {
                 throw new \Exception("No se pudo encontrar un código de barras por defecto");
+            }
+            // 1. Busca si ya existe una orden con el mismo order_id.
+            $existingOrder = ProductionOrder::where('order_id', $messageData['orderId'])->first();
+
+            // 2. Si existe, modifica la orden anterior para "archivarla".
+            if ($existingOrder) {
+                // Genera un nuevo ID para la orden antigua añadiendo la fecha y hora.
+                // Formato: 'orderIdOriginal-AñoMesDía-HoraMinutoSegundo'
+                $newIdForOldOrder = $existingOrder->order_id . '-' . $existingOrder->process_category;
+                $this->info("[" . $timestamp . "] Archived existing order: " . $existingOrder->order_id);
+                // Actualiza el order_id de la orden existente.
+                $existingOrder->order_id = $newIdForOldOrder;
+
+                // Opcional: Puedes marcarla de alguna otra forma si tienes un campo de estado.
+                // $existingOrder->status = 'archivado';
+
+                $existingOrder->save();
             }
 
             // Prepare data for update or create
             $orderData = [
-                'barcoder_id' => $barcoderId,
-                'production_line_id' => null, // Set production_line_id to null for default topic
-                'json' => json_encode($messageData),
-                'status' => 'pending',
-                'processed' => false,
-                'orden' => \App\Models\ProductionOrder::max('orden') + 1, // Auto-increment order
-                'theoretical_time' => isset($messageData['theoretical_time']) ? floatval($messageData['theoretical_time']) : null,
-                'process_category' => $messageData['process_category'] ?? null,
-                'delivery_date' => isset($messageData['delivery_date']) ? \Carbon\Carbon::parse($messageData['delivery_date']) : null,
-                'customerId' => $messageData['refer']['customerId'] ?? 'Sin Cliente',
-                'original_order_id' => $messageData['original_order_id'] ?? null,
-                'grupo_numero' => $messageData['grupo_numero'] ?? null,
-                'processes_to_do' => $messageData['processes_to_do'] ?? null,
-                'processes_done' => $messageData['processes_done'] ?? null,
+                'order_id'                  => $messageData['orderId'],
+                'barcoder_id'               => $barcoderId,
+                'production_line_id'        => null, // Set production_line_id to null for default topic
+                // *** CAMBIO CLAVE AQUÍ: Asigna el array directamente, no lo decodifiques de nuevo ***
+                'json'                      => $messageData,
+                'status'                    => '0',
+                // Asegúrate de que 'orden' sea un campo que realmente quieres auto-incrementar así,
+                // o que sea un campo con un valor predeterminado si es un valor de ordenamiento.
+                // Podría haber condiciones de carrera si muchos procesos intentan crear al mismo tiempo.
+                'orden'                     => ProductionOrder::max('orden') + 1,
+                'theoretical_time'          => isset($messageData['theoretical_time']) ? floatval($messageData['theoretical_time']) : null,
+                'process_category'          => $messageData['process_category'] ?? null,
+                'delivery_date'             => isset($messageData['delivery_date']) ? Carbon::parse($messageData['delivery_date']) : null,
+                'customerId'                => $messageData['refer']['customerId'] ?? 'Sin Cliente',
+                'original_order_id'         => $messageData['original_order_id'] ?? null,
+                'grupo_numero'              => $messageData['grupo_numero'] ?? null,
+                'processes_to_do'           => $messageData['processes_to_do'] ?? null,
+                'processes_done'            => $messageData['processes_done'] ?? null,
                 'original_order_process_id' => $messageData['original_order_process_id'] ?? null,
             ];
-            
-            // Create or update production order
-            $productionOrder = \App\Models\ProductionOrder::updateOrCreate(
-                ['order_id' => $messageData['orderId']],
-                $orderData
-            );
-            
-            // Log the saved data for debugging
-            $this->info("[" . $timestamp . "] Saved production order data: " . json_encode($orderData));
-            
+
+            $productionOrder = ProductionOrder::create($orderData);
+
+            // Log de depuración para ver la orden creada
+            $this->info("[" . $timestamp . "] Saved new production order with ID: " . $productionOrder->id . ", OrderID: " . $productionOrder->order_id . ", Status: " . $productionOrder->status);
             $this->info("[{$timestamp}] Production order processed: {$messageData['orderId']}");
-            
-        } catch (\Exception $e) {
-            $this->error("[{$timestamp}] Error processing production order: " . $e->getMessage());
+    
+        } catch (\Throwable $e) { // <-- CAMBIO CLAVE AQUÍ
+            $this->error("[{$timestamp}] FATAL ERROR processing production order: " . $e->getMessage());
+            $this->error($e->getTraceAsString()); // Esto es crucial para ver dónde falla
         }
     }
 }

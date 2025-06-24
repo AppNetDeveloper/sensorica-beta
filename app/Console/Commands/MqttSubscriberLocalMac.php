@@ -195,7 +195,7 @@ class MqttSubscriberLocalMac extends Command
                             $box = (int) $orderJson['quantity'];
                             $units = (int) $orderJson['refer']['groupLevel'][0]['uds'];
     
-                            if ($box > 0 && $units > 0) {
+                            if ($box >= 0 && $units >= 0) {
                                 $this->createOrderStat($barcode, $orderId, $box, $units, $productionOrder->id, $referId);
                             } else {
                                 $this->logError("Valores inválidos en JSON de ProductionOrder: box={$box}, units={$units}, orderId={$orderId}");
@@ -434,6 +434,25 @@ class MqttSubscriberLocalMac extends Command
             $productListId = null;
             $this->logError("No se encontró el product_list_id para el referId: {$referId}");
         }
+
+        // --- INICIO DE LA MODIFICACIÓN ---
+
+        // 1. Buscar la ProductionOrder usando el ID para obtener el theoretical_time
+        $productionOrder = ProductionOrder::find($productionOrderId);
+        $theoreticalEndTime = 0; // Valor por defecto ahora es 0
+
+        if ($productionOrder) {
+            // 2. Usar el operador ternario para asignar el valor.
+            // Si 'theoretical_time' no está vacío y no es nulo, se usa su valor. Si no, se usa 0.
+            $theoreticalEndTime = !empty($productionOrder->theoretical_time) ? $productionOrder->theoretical_time : 0;
+            
+            $this->logInfo("Theoretical end time '{$theoreticalEndTime}' obtenido/procesado para ProductionOrder ID: {$productionOrderId}");
+        } else {
+            // Si la orden no se encuentra, $theoreticalEndTime ya es 0 por el valor por defecto.
+            $this->logError("No se pudo encontrar la ProductionOrder con ID: {$productionOrderId}. Se usará 0 como theoretical_time.");
+        }
+
+        // --- FIN DE LA MODIFICACIÓN ---
     
         try {
             $orderStat = OrderStat::create([
@@ -457,6 +476,7 @@ class MqttSubscriberLocalMac extends Command
                 'units_delayed' => 0,
                 'slow_time' => 0,
                 'oee' => null,
+                'theoretical_end_time' => $theoreticalEndTime, // 2. Añadir el valor al crear el registro
             ]);
     
             $this->logInfo("OrderStat creada correctamente para orderId: {$orderId}");

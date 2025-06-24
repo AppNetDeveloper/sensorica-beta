@@ -153,6 +153,7 @@
             unassigned: "{{ __('Assigned') }}",
             saving: "{{ __('Guardando...') }}",
             changesSaved: "{{ __('Cambios guardados') }}",
+            errorSaving: "{{ __('Error al guardar. Revise la consola para más detalles.') }}",
             unknownError: "{{ __('Error desconocido.') }}",
             confirmTitle: "{{ __('¿Estás seguro?') }}",
             confirmText: "{{ __('Tienes cambios sin guardar que se perderán.') }}",
@@ -223,19 +224,13 @@
 
                 const prompt = `
                     Eres un experto en planificación de producción. Tu tarea es organizar las siguientes órdenes de producción de la manera más eficiente posible, asignándolas a las líneas de producción disponibles.
-
                     Reglas de Priorización y Balanceo:
                     1.  **Balanceo de Carga:** El objetivo principal es balancear la carga de trabajo total (suma de 'theoretical_time') entre todas las líneas de producción de la forma más equitativa posible.
                     2.  **Urgencia:** Las órdenes marcadas como 'is_urgent: true' tienen la máxima prioridad y deben ser procesadas antes que las no urgentes.
                     3.  **Fecha de Entrega:** Dentro de cada grupo (urgentes y no urgentes), las órdenes con la 'delivery_date' más cercana en el tiempo deben ir primero.
                     4.  **Tiempo Teórico:** Si todo lo demás es igual, las órdenes con mayor 'theoretical_time' van primero.
-
-                    Líneas de Producción Disponibles:
-                    ${JSON.stringify(productionLines)}
-
-                    Órdenes a Organizar:
-                    ${JSON.stringify(workableOrders)}
-
+                    Líneas de Producción Disponibles: ${JSON.stringify(productionLines)}
+                    Órdenes a Organizar: ${JSON.stringify(workableOrders)}
                     Tu respuesta DEBE ser únicamente un objeto JSON con una clave "assignments" que contenga un array. CADA ORDEN de la lista 'Órdenes a Organizar' debe tener su correspondiente entrada en el array "assignments". No dejes ninguna orden sin asignar. Cada elemento del array debe ser un objeto con "order_id" (número) y "assigned_line_id" (número). No incluyas explicaciones ni texto adicional.
                 `;
 
@@ -367,8 +362,8 @@
                 const columnElement = createColumnElement(column);
                 
                 let allItems = (column.type === 'final_states') 
-                    ? column.subStates.flatMap(sub => sub.items) 
-                    : column.items;
+                    ? column.subStates.flatMap(sub => sub.items || []) 
+                    : (column.items || []);
                 
                 let totalCards = allItems.length;
                 let totalSeconds = allItems.reduce((sum, order) => sum + parseTimeToSeconds(order.theoretical_time), 0);
@@ -598,19 +593,23 @@
                         ${doneHtml}${toDoHtml}
                     </div>
                 </div>`;
+            
+            const statusBadgeHtml = `<span class="badge" style="background-color: ${order.statusColor || '#6b7280'}; color: white;">${(order.status || 'PENDING').replace(/_/g, ' ').toUpperCase()}</span>`;
 
             card.innerHTML = `
                 <div class="kanban-card-header" onclick="this.parentElement.classList.toggle('collapsed')">
-                    <div>
+                    <div class="me-2" style="flex-grow: 1;">
                         <div class="fw-bold text-sm d-flex align-items-center">#${order.order_id}${urgencyIconHtml}</div>
                         ${processDescription ? `<div class="text-xs text-muted mt-1">${processDescription}</div>` : ''}
                     </div>
-                    <span class="card-menu" role="button" data-order-id="${order.id}"><i class="fas fa-ellipsis-h"></i></span>
+                    <div class="d-flex flex-column align-items-end">
+                        <span class="card-menu" role="button" data-order-id="${order.id}"><i class="fas fa-ellipsis-h"></i></span>
+                        <div class="mt-2">${statusBadgeHtml}</div>
+                    </div>
                 </div>
                 <div class="kanban-card-body">
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <span class="d-flex align-items-center text-sm fw-bold text-muted">${order.customerId || translations.noCustomer} ${groupBadgeHtml}</span>
-                        <span class="badge" style="background-color: ${order.statusColor || '#6b7280'}; color: white;">${(order.status || 'PENDING').replace(/_/g, ' ').toUpperCase()}</span>
                     </div>
                     <div class="text-sm mb-2">${order.json?.descrip || translations.noDescription}</div>
                     ${progressHtml}
@@ -666,9 +665,9 @@
             masterOrderList.forEach((order, index) => {
                 updatedOrders.push({
                     id: order.id,
-                    production_line_id: order.productionLineId,
+                    production_line_id: order.productionLineId ? order.productionLineId : null,
                     orden: index,
-                    status: statusMap[order.status]
+                    status: statusMap[order.status] !== undefined ? statusMap[order.status] : 0
                 });
             });
 
@@ -677,14 +676,21 @@
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
                 body: JSON.stringify({ orders: updatedOrders })
             })
-            .then(response => response.json().then(data => ({ ok: response.ok, data })))
-            .then(({ ok, data }) => {
-                if (!ok) throw data;
+            .then(async response => {
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(errorText);
+                }
+                return response.json();
+            })
+            .then(data => {
                 hasUnsavedChanges = false;
                 showToast(data.message || translations.changesSaved, 'success');
             })
             .catch(error => {
-                showToast(`Error: ${error.message || translations.unknownError}`, 'error');
+                console.error("--- ERROR AL GUARDAR: RESPUESTA COMPLETA DEL SERVIDOR ---");
+                console.log(error.message);
+                showToast(translations.errorSaving, 'error');
             })
             .finally(() => {
                 saveBtn.innerHTML = `<i class="fas fa-save me-1"></i> {{ __('Guardar') }}`;
@@ -789,7 +795,7 @@
         });
 
         distributeAndRender(true);
-        console.log('Kanban final inicializado con campos adicionales y para traducción.');
+        console.log('Kanban final inicializado.');
     });
     </script>
 @endpush

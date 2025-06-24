@@ -4,6 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log; // Asegúrate de importar la clase Log
+use Illuminate\Support\Facades\DB; // Importar Facade DB para la consulta
+use Illuminate\Support\Facades\Cache;
 
 class ProductionOrder extends Model
 {
@@ -70,6 +73,7 @@ class ProductionOrder extends Model
         'orden' => 'integer',
         'delivery_date' => 'datetime',
         'status' => 'integer', // Es importante mantener el cast a integer
+        'theoretical_time' => 'float', // Si lo guardas como float
     ];
 
     /**
@@ -110,24 +114,43 @@ class ProductionOrder extends Model
     protected static function boot()
     {
         parent::boot();
-
-        // Evento antes de crear un registro
+    
+        // --- Evento `creating` (se mantiene exactamente igual) ---
+        // Se ejecuta una sola vez, antes de que un nuevo registro se inserte en la BD.
         static::creating(function ($model) {
             // Asignar valor incremental al campo `orden`
             $lastOrder = self::max('orden');
             $model->orden = $lastOrder !== null ? $lastOrder + 1 : 0;
-
-            // Verificar si el order_id ya existe
+            
+            // Asignar status predeterminado si no viene uno
+            $model->status = $model->status ?? 0; // 0: Pendiente (predeterminado)
+            
+            // Lógica para archivar una orden existente con el mismo order_id
             $existingOrder = self::where('order_id', $model->order_id)->first();
-
             if ($existingOrder) {
-                // Si existe, marcar como incidencia
-                $model->status = 5; // 5: Con incidencias
-                $model->order_id = $model->order_id . 'Duplicado';
-            } else {
-                // Estado predeterminado si no hay duplicados
-                $model->status = $model->status ?? 0; // 0: Pendiente (predeterminado)
+                $existingOrder->order_id = $existingOrder->order_id . '-' . $existingOrder->process_category;
+               // $existingOrder->status = 2;
+                $existingOrder->save();
+            }
+        });
+    
+        // --- Evento `saved` (con la lógica MQTT corregida) ---
+        // Se ejecuta después de guardar (crear o actualizar) el modelo.
+        static::saved(function ($model) {
+            // Disparador: solo actuar si el campo 'status' ha sido modificado y es 1 o 2.
+            if ($model->isDirty('status') && in_array($model->status, [2])) {
+                
+                // Lógica de negocio que se mantiene: actualizar el proceso original si finaliza.
+                if ($model->status == 2 && $model->original_order_process_id) {
+                    $originalOrderProcess = \App\Models\OriginalOrderProcess::find($model->original_order_process_id);
+                    if ($originalOrderProcess) {
+                        $originalOrderProcess->update(['finished' => 1, 'finished_at' => now()]);
+                    }
+                }
+
             }
         });
     }
+
 }
+

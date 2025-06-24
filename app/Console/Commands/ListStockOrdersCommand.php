@@ -28,7 +28,7 @@ class ListStockOrdersCommand extends Command
      * Esta descripción se muestra cuando se ejecuta 'php artisan list'.
      * @var string
      */
-    protected $description = 'Lista todas las órdenes originales en stock, no finalizadas y no procesadas, procesando la secuencia más baja por grupo.';
+    protected $description = 'Busca órdenes en stock y procesa la siguiente tarea pendiente (secuencia más baja no finalizada) de cada grupo.';
 
     /**
      * Crea una nueva instancia del comando.
@@ -54,8 +54,8 @@ class ListStockOrdersCommand extends Command
         try {
             // Inicia una consulta Eloquent para obtener las órdenes.
             $orders = OriginalOrder::where('in_stock', 1) // Condición: la orden debe estar en stock.
-                ->whereNull('finished_at') // Condición: la orden no debe estar finalizada.
-                ->where('processed', 0) // Condición: la orden no debe haber sido procesada previamente.
+                ->whereNull('finished_at') // Condición: la orden no debe estar finalizada en su totalidad.
+                // Se elimina ->where('processed', 0) para incluir órdenes parcialmente procesadas y buscar su siguiente tarea.
                 ->with([
                     'customer', // Carga ansiosa (Eager Loading) de la relación con el cliente para evitar N+1 queries.
                     'orderProcesses.process', // Carga la relación 'orderProcesses' y, anidada, la relación 'process' de cada uno.
@@ -67,7 +67,7 @@ class ListStockOrdersCommand extends Command
             // Cuenta el número de órdenes encontradas.
             $count = $orders->count();
             // Registra cuántas órdenes se encontraron.
-            $this->logInfo("Se encontraron {$count} órdenes en stock que no están finalizadas ni procesadas.");
+            $this->logInfo("Se encontraron {$count} órdenes activas en stock.");
 
             // Si no se encontraron órdenes, informa al usuario y termina la ejecución.
             if ($count === 0) {
@@ -166,13 +166,27 @@ class ListStockOrdersCommand extends Command
             ->with('process') // Carga la relación 'process' para acceder a sus datos.
             ->get();
         
-        // Mapea los procesos del grupo para obtener solo las descripciones.
-        $processDescriptions = $groupProcesses->map(function($proc) {
-            return $proc->process ? $proc->process->description : null;
-        })->filter()->values()->toArray(); // Elimina nulos, reindexa y convierte a array.
         
-        // Une todas las descripciones en un único string separado por comas.
-        $formattedDescriptions = implode(', ', $processDescriptions);
+        // --- INICIO DE LA NUEVA LÓGICA PARA PROCESOS REALIZADOS/PENDIENTES ---
+
+        // 1. Ordena todos los procesos del grupo por su secuencia para asegurar el orden correcto en las listas.
+        $sortedProcesses = $groupProcesses->sortBy(function($proc) {
+            return $proc->process->sequence ?? 999;
+        });
+
+        // 2. Los procesos "realizados" son todos aquellos que ya tienen 'finished' = 1.
+        $doneDescriptionsList = $sortedProcesses
+            ->where('finished', 1)
+            ->map(function($proc) {
+                return $proc->process->description;
+            })->filter()->values()->toArray();
+
+        // 3. Los procesos "pendientes" son todos los que tienen 'finished' = 0 (incluyendo el actual).
+        $toDoDescriptionsList = $sortedProcesses
+            ->where('finished', 0)
+            ->map(function($proc) {
+                return $proc->process->description;
+            })->filter()->values()->toArray();
         
         // Construye la estructura principal del array que se convertirá en JSON.
         $json = [
@@ -189,9 +203,10 @@ class ListStockOrdersCommand extends Command
             'process_category' => $orderProcess->process->description ?? '',
             'delivery_date' => $order->delivery_date,
             'original_order_id' => $order->id,
-            'original_order_process_id' => $orderProcess->id,
+            'original_order_process_id' => $orderProcess->id, // Tu campo personalizado.
             'grupo_numero' => $orderProcess->grupo_numero,
-            'processes_to_do' => $formattedDescriptions, // El string con todas las descripciones del grupo.
+            'processes_to_do' => implode(', ', $toDoDescriptionsList), // Usa la nueva lista de pendientes.
+            'processes_done' => implode(', ', $doneDescriptionsList), // Usa la nueva lista de realizados.
             'refer' => [
                 '_id' => "",
                 'company_name' => $order->customer ? $order->customer->name : 'N/A',
@@ -255,29 +270,13 @@ class ListStockOrdersCommand extends Command
     }
 
     /**
-     * Muestra la información de una orden individual, aplicando la lógica de agrupación.
+     * Muestra la información de una orden individual, aplicando la lógica de agrupación y estado.
      *
      * @param \App\Models\OriginalOrder $order La orden a procesar.
      * @return void
      */
     protected function displayOrderInfo($order)
     {
-        try {
-            // Pausa la ejecución por 500ms para no saturar el sistema de archivos (o el broker MQTT real).
-            usleep(500000);
-            
-            // Publica un mensaje inicial con la información general de la orden.
-            $this->publishMqttMessage('barcoder/prod_order_notice', json_encode([
-                'order_id' => $order->id,
-                'customer' => $order->customer ? $order->customer->name : 'N/A',
-                'delivery_date' => $order->delivery_date ? $order->delivery_date->format('Y-m-d') : 'N/A',
-                'timestamp' => now()->toDateTimeString()
-            ]));
-            
-        } catch (\Exception $e) {
-            $this->error("Error al publicar el aviso inicial de la orden: " . $e->getMessage());
-        }
-
         // Muestra información básica de la orden en la consola.
         $this->info("\n" . str_repeat('=', 80));
         $this->info("ORDER ID: {$order->id} | Customer: " . ($order->customer ? $order->customer->name : 'N/A') . " | Delivery: " . ($order->delivery_date ? $order->delivery_date->format('Y-m-d') : 'N/A'));
@@ -286,73 +285,86 @@ class ListStockOrdersCommand extends Command
         // Comprueba si la orden tiene procesos asociados.
         if ($order->orderProcesses->isNotEmpty()) {
 
-            // --- INICIO DE LA LÓGICA DE AGRUPACIÓN MODIFICADA ---
+            // --- INICIO DE LA LÓGICA DE AGRUPACIÓN Y SELECCIÓN DE TAREA ---
 
             // 1. Agrupa todos los procesos de la orden por su 'grupo_numero'.
-            // El resultado es una colección donde cada clave es un 'grupo_numero' y el valor es otra colección con los procesos de ese grupo.
             $groupsByGrupoNumero = $order->orderProcesses->groupBy('grupo_numero');
 
             // 2. Prepara una colección vacía donde se guardarán los procesos a ejecutar.
             $processesToExecute = collect();
 
             // 3. Itera sobre cada grupo de procesos (uno por cada 'grupo_numero').
-            foreach ($groupsByGrupoNumero as $processesInGroup) {
-                // 4. Dentro de cada grupo, ordena los procesos por la secuencia de su proceso relacionado (de menor a mayor).
-                // Si un proceso no tiene secuencia, se le asigna 999 para que quede al final.
-                // 'first()' obtiene solo el primer elemento de la colección ordenada, es decir, el de menor secuencia.
-                $lowestSequenceProcessInGroup = $processesInGroup
-                    ->sortBy(function ($orderProcess) {
-                        return $orderProcess->process->sequence ?? 999;
-                    })
-                    ->first();
+            foreach ($groupsByGrupoNumero as $grupoNumero => $processesInGroup) {
                 
-                // 5. Si se encontró un proceso (el grupo no estaba vacío), se añade a la colección final.
-                if ($lowestSequenceProcessInGroup) {
-                    $processesToExecute->push($lowestSequenceProcessInGroup);
+                // 4. --- LÓGICA CORREGIDA ---
+                // Primero, comprobar si ya hay un proceso en este grupo que está "en producción" (creado pero no finalizado).
+                $isTaskInProgress = $processesInGroup->contains(function ($process) {
+                    return $process->created == 1 && $process->finished == 0;
+                });
+
+                // 5. Si ya hay una tarea en curso para este grupo, no hacemos nada y pasamos al siguiente grupo.
+                if ($isTaskInProgress) {
+                    // Opcional: registrar que se está esperando para depuración.
+                    $this->info("Grupo {$grupoNumero}: Hay una tarea en progreso. Esperando a que finalice.");
+                    continue; // Pasa al siguiente grupo_numero.
+                }
+
+                // 6. Si no hay nada en curso, buscamos la siguiente tarea para iniciar.
+                // La siguiente tarea es la que NO está finalizada y NO ha sido creada.
+                $pendingProcesses = $processesInGroup->where('finished', 0)->where('created', 0);
+
+                // 7. Si hay procesos pendientes para iniciar en este grupo...
+                if ($pendingProcesses->isNotEmpty()) {
+                    // ...los ordenamos por secuencia y tomamos el primero (el de menor secuencia).
+                    $nextProcessToExecute = $pendingProcesses
+                        ->sortBy(function ($orderProcess) {
+                            return $orderProcess->process->sequence ?? 999; // Ordena por la secuencia del proceso relacionado.
+                        })
+                        ->first(); // Obtiene el de la secuencia más baja de los pendientes.
+                    
+                    // 8. Añade el proceso encontrado a nuestra colección final para procesarlo.
+                    if ($nextProcessToExecute) {
+                        $processesToExecute->push($nextProcessToExecute);
+                    }
                 }
             }
             
-            // --- FIN DE LA LÓGICA DE AGRUPACIÓN MODIFICADA ---
+            // --- FIN DE LA LÓGICA DE SELECCIÓN ---
 
-            // Muestra una tabla en la consola con los procesos seleccionados (uno por grupo).
-            $this->info("\nPROCESOS A EJECUTAR (Secuencia más baja por cada grupo):");
+            // Si no se encontró ningún proceso nuevo para ejecutar en ningún grupo, informa y termina para esta orden.
+            if ($processesToExecute->isEmpty()) {
+                $this->info("No hay nuevas tareas pendientes para esta orden en este momento.");
+                $this->info(str_repeat('=', 80) . "\n");
+                return;
+            }
+
+            // Muestra una tabla en la consola con los procesos seleccionados (la siguiente tarea de cada grupo).
+            $this->info("\nPROCESOS A EJECUTAR (Siguiente tarea pendiente por cada grupo):");
             $this->table(
-                ['Grupo', 'Pivot ID', 'Process ID', 'Code', 'Name', 'Sequence', 'Time', 'Created'],
+                ['Grupo', 'Pivot ID', 'Process ID', 'Name', 'Sequence', 'Time', 'Created', 'Finished'],
                 $processesToExecute->map(function ($orderProcess) {
                     return [
                         $orderProcess->grupo_numero,
                         $orderProcess->id,
                         $orderProcess->process_id,
-                        $orderProcess->process->code ?? 'N/A',
                         $orderProcess->process->name ?? 'N/A',
                         $orderProcess->process->sequence ?? 'N/A',
                         $orderProcess->time,
-                        $orderProcess->created ? 'Yes' : 'No',
+                        $orderProcess->created ? 'Yes' : 'No', // Siempre será 'No' aquí
+                        $orderProcess->finished ? 'Yes' : 'No', // Siempre será 'No' aquí
                     ];
                 })
             );
 
-            // Itera sobre la colección final de procesos a ejecutar para generar su JSON y mostrar sus artículos.
+            // Itera sobre la colección final de procesos a ejecutar para generar su JSON.
             $processesJson = [];
             foreach ($processesToExecute as $orderProcess) {
+                // Pausa para no saturar.
+                usleep(500000);
+                
                 // Llama al método que genera y publica el JSON.
                 $processJson = $this->generateProcessJson($order, $orderProcess);
                 $processesJson[] = $processJson;
-                
-                // Si el proceso tiene artículos asociados, los muestra en otra tabla.
-                if ($orderProcess->articles->isNotEmpty()) {
-                    $this->info("\nArtículos para Proceso ID {$orderProcess->id} (Grupo: {$orderProcess->grupo_numero}, Nombre: " . ($orderProcess->process->name ?? 'N/A') . "):");
-                    $this->table(
-                        ['Código', 'Descripción', 'Grupo Artículo'],
-                        $orderProcess->articles->map(function ($article) {
-                            return [
-                                $article->codigo_articulo,
-                                $article->descripcion_articulo,
-                                $article->grupo_articulo
-                            ];
-                        })
-                    );
-                }
             }
             
             // Si se generaron JSONs, los muestra en la consola.
