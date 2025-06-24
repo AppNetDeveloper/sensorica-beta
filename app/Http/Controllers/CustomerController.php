@@ -145,6 +145,7 @@ class CustomerController extends Controller
         // Obtener todas las órdenes para este proceso específico
         // Incluimos todas las órdenes, incluso las canceladas
         $processOrders = \App\Models\ProductionOrder::where('process_category', $process->description) // Filtrar por la categoría del proceso actual
+            ->orderBy('orden', 'asc') // Agregar ordenamiento por el campo orden
             ->get()
             ->map(function($order){
                 // Determinar el estado y color según el código de status
@@ -204,6 +205,7 @@ class CustomerController extends Controller
                     'theoretical_time' => $tiempoTeoricoFormateado,
                     'customerId' => $order->customerId ?? 'Sin Cliente',
                     'original_order_id' => $order->original_order_id ?? 'Sin Orden Original',
+                    'orden' => (int)($order->orden ?? '0'), // Corregir el campo orden para que sea un número en lugar de una cadena
                 ];
             });
         

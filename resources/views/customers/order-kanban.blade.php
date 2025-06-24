@@ -136,6 +136,7 @@
         const searchInput = document.getElementById('searchInput');
         let masterOrderList = @json($processOrders);
         const customerId = {{ $customer->id }};
+        const productionLinesData = @json($productionLines);
         
         let hasUnsavedChanges = false;
 
@@ -166,10 +167,10 @@
         
         const columns = {
             'pending_assignment': { id: 'pending_assignment', name: `{{__('Pendientes Asignación')}}`, items: [], color: '#9ca3af', productionLineId: null, type: 'status' },
-            ...(@json($productionLines)).reduce((acc, line) => ({
-                ...acc,
-                [`line_${line.id}`]: { id: `line_${line.id}`, name: line.name, items: [], color: '#3b82f6', productionLineId: line.id, type: 'production' }
-            }), {}),
+            ...productionLinesData.reduce((acc, line) => {
+                acc[`line_${line.id}`] = { id: `line_${line.id}`, name: line.name, items: [], color: '#3b82f6', productionLineId: line.id, type: 'production' };
+                return acc;
+            }, {}),
             'final_states': { id: 'final_states', name: `{{__('Estados Finales')}}`, items: [], color: '#6b7280', productionLineId: null, type: 'final_states',
                 subStates: [
                     { id: 'completed', name: `{{__('Finalizados')}}`, color: '#10b981', items: [] },
@@ -235,9 +236,6 @@
                 `;
 
                 console.log("--- PROMPT ENVIADO A GEMINI ---", prompt);
-                
-               
-                
 
                 const payload = {
                     contents: [{ role: "user", parts: [{ text: prompt }] }],
@@ -262,7 +260,7 @@
                         }
                     }
                 };
-                
+
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
                 const response = await fetch(apiUrl, {
                     method: 'POST',
@@ -276,13 +274,18 @@
                 }
                 
                 const result = await response.json();
-                wait(30000);  //30 seconds in milliseconds
                 console.log("--- RESPUESTA RECIBIDA DE GEMINI (RAW) ---", result);
                 
                 const jsonText = result.candidates[0].content.parts[0].text;
                 const parsedResult = JSON.parse(jsonText);
-                const assignments = parsedResult.assignments;
+                
+                if (!parsedResult.assignments || parsedResult.assignments.length < workableOrders.length) {
+                    console.warn("La IA no ha asignado todas las órdenes. Las no asignadas quedarán en pendientes.");
+                }
 
+                hasUnsavedChanges = true;
+                const assignedLineIds = new Set();
+                
                 masterOrderList.forEach(order => {
                     if (!['completed', 'paused', 'cancelled'].includes(order.status)) {
                         order.productionLineId = null;
@@ -290,19 +293,22 @@
                     }
                 });
 
-                hasUnsavedChanges = true;
-                assignments.forEach(assignment => {
+                parsedResult.assignments.forEach(assignment => {
                     const order = masterOrderList.find(o => o.id === assignment.order_id);
                     if (order) {
                         order.productionLineId = assignment.assigned_line_id;
-                        // Al organizar, todas empiezan como 'pending'
-                        order.status = 'pending'; 
+                        if (!assignedLineIds.has(assignment.assigned_line_id)) {
+                            order.status = 'in_progress';
+                            assignedLineIds.add(assignment.assigned_line_id);
+                        } else {
+                            order.status = 'pending';
+                        }
                     }
                 });
                 
                 masterOrderList.forEach((order, index) => order.orden = index);
                 
-                distributeAndRender(false);
+                distributeAndRender(false, () => recalculatePositions());
                 showToast(translations.organizingWithAISuccess, 'success');
 
             } catch (error) {
@@ -316,7 +322,7 @@
 
         // --- 2. LÓGICA PRINCIPAL DE RENDERIZADO ---
 
-        function distributeAndRender(shouldSort = true) {
+        function distributeAndRender(shouldSort = true, callback = null) {
             const searchTerm = searchInput.value.trim().toLowerCase();
             
             let ordersToDisplay = searchTerm ? masterOrderList.filter(order => {
@@ -357,6 +363,7 @@
             });
             
             renderBoard();
+            if (callback) callback();
         }
 
         function renderBoard() {
@@ -476,7 +483,6 @@
             const columnData = columns[targetColumnEl.id];
             const targetIsProduction = columnData && columnData.type === 'production';
             
-            // --- LÓGICA DE STATUS MEJORADA ---
             if (targetIsFinalState) {
                 orderObj.status = targetColumnEl.dataset.state;
                 orderObj.productionLineId = null;
@@ -517,7 +523,7 @@
                 }
             }
 
-            distributeAndRender(false);
+            distributeAndRender(false, () => recalculatePositions());
         }
 
         // --- 4. FUNCIONES PARA CREAR ELEMENTOS DEL DOM ---
@@ -825,16 +831,19 @@
             }
         });
 
+        function recalculatePositions() {
+            const cards = kanbanBoard.querySelectorAll('.kanban-card');
+            cards.forEach((card, index) => {
+                const orderId = parseInt(card.dataset.id);
+                const order = masterOrderList.find(o => o.id === orderId);
+                if (order) {
+                    order.orden = index;
+                }
+            });
+        }
+
         distributeAndRender(true);
         console.log('Kanban final inicializado.');
-
-        function wait(ms){
-            var start = new Date().getTime();
-            var end = start;
-            while(end < start + ms) {
-                end = new Date().getTime();
-            }
-        }
     });
     </script>
 @endpush
