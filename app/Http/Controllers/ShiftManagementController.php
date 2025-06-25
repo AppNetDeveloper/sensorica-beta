@@ -20,8 +20,11 @@ class ShiftManagementController extends Controller
      */
     public function index()
     {
-        // Trae las líneas con su último historial
-        $productionLines = ProductionLine::with('lastShiftHistory')->get();
+        // Trae las líneas con su último historial ordenadas alfabéticamente por nombre
+        $productionLines = ProductionLine::with('lastShiftHistory')
+            ->orderBy('name', 'asc')
+            ->get();
+            
         return view('shift.index', compact('productionLines'));
     }
     

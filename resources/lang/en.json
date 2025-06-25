@@ -737,5 +737,13 @@
     "Incidencias": "Incidents",
     "Cancelados": "Canceled",
     "View Data": "View Data",
-    "View Original Order": "View Original Order"
+    "View Original Order": "View Original Order",
+    "Nou Ordre": "New Order",
+    "Actualitzeu l'ordre per canviar la seqüència d'aquest procés.": "Update the order to change the sequence of this process.",
+    "DESCRIPCIÓ": "DESCRIPTION",
+    "Actualitzar Ordre": "Update Order",
+    "Processes de la Línia de Producció": "Processes of the Production Line",
+    "Processos de la Línia de Producció": "Processes of the Production Line",
+    "Order Organizer": "AiXmart Kanban",
+    "Organize Orders": "AiXmart Kanban"
 }

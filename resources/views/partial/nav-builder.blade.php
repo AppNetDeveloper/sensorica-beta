@@ -139,7 +139,7 @@ $settings = Utility::settings();
                 @endcan
 
 
-                @if (auth()->user()->hasRole('admin') || auth()->user()->can('customer-show'))
+                @if (auth()->user()->hasRole('admin') || auth()->user()->can('customer-show') || auth()->user()->can('productionline-show'))
                     <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
                         <a class="dash-link" href="{{ route('customers.index') }}">
                             <span class="dash-micon"><i class="fa-regular fa-building"></i></span>

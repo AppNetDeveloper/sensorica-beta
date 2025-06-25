@@ -30,7 +30,6 @@
                                 <div class="card-header">
                                     <div class="d-flex justify-content-between align-items-center">
                                         <h5 class="mb-0">{{ $line->name }}</h5>
-                                        <span class="badge bg-primary">ID #{{ $line->id }}</span>
                                     </div>
                                     <div id="status-badge-{{ $line->id }}" class="mt-1 text-center">
                                         <!-- Estado se actualizará aquí dinámicamente -->
@@ -150,7 +149,7 @@
             <!-- Tabla de Historial de Turnos -->
             <div class="card border-0 shadow mt-4">
                 <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">{{ __('Historial de Turnos') }}</h5>
+                    <h5 class="mb-0 text-white fs-5">{{ __('Historial de Turnos') }}</h5>
                 </div>
                 <div class="card-body">
                     <div class="mb-3 row">
@@ -279,6 +278,34 @@
             </form>
         </div>
     </div>
+
+    {{-- Modal de carga --}}
+    <div class="modal fade" id="loadingModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-transparent border-0 shadow-none">
+                <div class="modal-body text-center">
+                    <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                    <h5 class="mt-3 text-white">Reiniciando servicios, por favor espere...</h5>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        #loadingModal .modal-content {
+            background: transparent;
+            border: none;
+            box-shadow: none;
+        }
+        #loadingModal .modal-body {
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 10px;
+            padding: 2rem;
+            color: white;
+        }
+    </style>
 @endsection
 
 @push('style')
@@ -346,8 +373,8 @@
                         className: 'btn btn-success'
                     }
                 ],
-                order: [[0, 'desc']],
-                processing: true, // Indicador de carga
+                order: [[1, 'asc']], // Ordenar por Production Line de forma ascendente por defecto
+                    processing: true, // Indicador de carga
                 // serverSide: false, // Asumiendo carga client-side desde la API
                 ajax: {
                     url: apiIndexUrl,
@@ -383,13 +410,14 @@
                                     <i class="fa fa-edit"></i> {{-- Icono Editar --}}
                                 </button>
                             `;
-                            // Se mantiene el formulario de borrado original
+                            // Formulario de borrado mejorado con AJAX
                             const deleteForm = `
                                 <form
+                                    id="deleteForm-${row.id}"
                                     action="${deleteUrlTemplate.replace(':id', row.id)}"
                                     method="POST"
                                     style="display:inline;"
-                                    onsubmit="return confirm('{{ __('Are you sure?') }}');" {{-- Confirmación simple --}}
+                                    class="delete-shift-form"
                                 >
                                     @csrf
                                     @method('DELETE')
@@ -397,6 +425,7 @@
                                         type="submit"
                                         class="btn btn-sm btn-danger"
                                         title="{{ __('Delete') }}"
+                                        data-id="${row.id}"
                                     >
                                         <i class="fa fa-trash"></i> {{-- Icono Borrar --}}
                                     </button>
@@ -418,28 +447,232 @@
                 table.ajax.reload();
             });
 
+            // Manejador para el borrado de turnos
+            $(document).on('submit', '.delete-shift-form', function(e) {
+                e.preventDefault();
+                const form = $(this);
+                const id = form.find('button[type="submit"]').data('id');
+                
+                // Mostrar confirmación con SweetAlert2
+                Swal.fire({
+                    title: '{{ __("Are you sure?") }}',
+                    text: '{{ __("You won't be able to revert this!") }}',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: '{{ __("Yes, delete it!") }}',
+                    cancelButtonText: '{{ __("Cancel") }}'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // Mostrar modal de carga
+                        showLoadingModal();
+                        
+                        // Deshabilitar botón para evitar múltiples envíos
+                        form.find('button[type="submit"]').prop('disabled', true);
+                        
+                        // Enviar la petición de borrado
+                        $.ajax({
+                            url: form.attr('action'),
+                            type: 'POST',
+                            data: form.serialize(),
+                            success: function(response) {
+                                hideLoadingModal();
+                                if (response.success) {
+                                    // Mostrar mensaje de éxito
+                                    Swal.fire(
+                                        '{{ __("Deleted!") }}',
+                                        '{{ __("The shift has been deleted.") }}',
+                                        'success'
+                                    );
+                                    // Recargar la tabla
+                                    table.ajax.reload();
+                                } else {
+                                    // Mostrar error
+                                    Swal.fire(
+                                        '{{ __("Error") }}',
+                                        response.message || '{{ __("Could not delete the shift.") }}',
+                                        'error'
+                                    );
+                                }
+                            },
+                            error: function(xhr) {
+                                hideLoadingModal();
+                                console.error("Delete Error:", xhr);
+                                Swal.fire(
+                                    '{{ __("Error") }}',
+                                    xhr.responseJSON?.message || '{{ __("Server error.") }}',
+                                    'error'
+                                );
+                            },
+                            complete: function() {
+                                // Rehabilitar botón
+                                form.find('button[type="submit"]').prop('disabled', false);
+                            }
+                        });
+                    }
+                });
+                
+                return false;
+            });
+
             // --- MANEJO MODALES (Crear/Editar) ---
 
-            // Enviar formulario de creación
+            // Variable global para el modal de carga
+            let loadingModal = null;
+            
+            // Función para mostrar el modal de carga
+            function showLoadingModal() {
+                const modalElement = document.getElementById('loadingModal');
+                if (modalElement) {
+                    // Cerrar cualquier instancia previa
+                    if (loadingModal) {
+                        try { loadingModal.hide(); } catch(e) { console.error('Error al cerrar modal previo:', e); }
+                        loadingModal.dispose();
+                    }
+                    // Crear nueva instancia
+                    loadingModal = new bootstrap.Modal(modalElement, {
+                        backdrop: 'static',
+                        keyboard: false
+                    });
+                    loadingModal.show();
+                }
+                return loadingModal;
+            }
+            
+            // Función para ocultar el modal de carga
+            function hideLoadingModal() {
+                if (loadingModal) {
+                    try {
+                        loadingModal.hide();
+                        // Esperar a que termine la animación
+                        const modalElement = document.getElementById('loadingModal');
+                        if (modalElement) {
+                            modalElement.addEventListener('hidden.bs.modal', function handler() {
+                                modalElement.removeEventListener('hidden.bs.modal', handler);
+                                if (loadingModal) {
+                                    loadingModal.dispose();
+                                    loadingModal = null;
+                                }
+                            }, { once: true });
+                        }
+                    } catch (e) {
+                        console.error('Error al ocultar modal:', e);
+                        // Forzar eliminación del backdrop
+                        const backdrops = document.querySelectorAll('.modal-backdrop');
+                        backdrops.forEach(el => el.remove());
+                        // Forzar eliminación de clases de modal abierto
+                        document.body.classList.remove('modal-open');
+                        document.body.style.overflow = '';
+                        document.body.style.paddingRight = '';
+                        loadingModal = null;
+                    }
+                }
+            }
+            
             $('#createShiftForm').on('submit', function(e) {
                 e.preventDefault();
-                const formData = $(this).serialize();
-                $.post(storeUrl, formData)
-                    .done(response => {
-                        if (response.success) {
-                            Swal.fire('{{ __("Saved") }}', response.message, 'success');
-                            table.ajax.reload(null, false); // Recargar sin perder paginación
-                            $('#createShiftModal').modal('hide');
-                        } else {
-                            // Mostrar errores si vienen en la respuesta
-                            const errorMsg = response.errors ? Object.values(response.errors).join('<br>') : response.message;
-                            Swal.fire('{{ __("Error") }}', errorMsg || '{{ __("Could not save.") }}', 'error');
+                const form = $(this);
+                
+                // Obtener los valores del formulario manualmente
+                const formData = new FormData();
+                formData.append('_token', $('meta[name="csrf-token"]').attr('content'));
+                formData.append('production_line_id', $('#createProductionLineId').val());
+                formData.append('start', $('#createStartTime').val());
+                formData.append('end', $('#createEndTime').val());
+                
+                // Mostrar modal de carga
+                showLoadingModal();
+                
+                // Deshabilitar botones para evitar múltiples envíos
+                const submitButton = form.find('button[type="submit"]');
+                submitButton.prop('disabled', true);
+                
+                // Limpiar errores previos
+                form.find('.is-invalid').removeClass('is-invalid');
+                form.find('.invalid-feedback').remove();
+                
+                // Usar fetch con FormData
+                fetch(storeUrl, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    // Importante: No establecer Content-Type, fetch lo hará automáticamente con el boundary
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(err => Promise.reject(err));
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        // Cerrar el modal de carga antes de mostrar el éxito
+                        hideLoadingModal();
+                        
+                        // Cerrar el modal de creación
+                        const createModal = bootstrap.Modal.getInstance(document.getElementById('createShiftModal'));
+                        if (createModal) {
+                            createModal.hide();
                         }
-                    })
-                    .fail(xhr => {
-                        console.error("Create Error:", xhr);
-                        Swal.fire('{{ __("Error") }}', xhr.responseJSON?.message || '{{ __("Server error.") }}', 'error');
-                    });
+                        
+                        // Resetear el formulario
+                        form[0].reset();
+                        
+                        // Mostrar mensaje de éxito
+                        Swal.fire({
+                            title: '{{ __("Success") }}',
+                            text: '{{ __("Shift created successfully") }}',
+                            icon: 'success',
+                            confirmButtonText: 'OK'
+                        });
+                        
+                        // Recargar datos
+                        table.ajax.reload();
+                        updateShiftStatuses();
+                    } else {
+                        throw new Error(data.message || '{{ __("Error creating shift") }}');
+                    }
+                })
+                .catch(error => {
+                    console.error("Create Error:", error);
+                    hideLoadingModal();
+                    
+                    // Mostrar errores de validación si existen
+                    if (error.errors) {
+                        Object.entries(error.errors).forEach(([field, messages]) => {
+                            const input = form.find(`[name="${field}"]`);
+                            if (input.length) {
+                                input.addClass('is-invalid');
+                                const errorDiv = $(`<div class="invalid-feedback">${messages[0]}</div>`);
+                                input.after(errorDiv);
+                            }
+                        });
+                        
+                        // Mostrar el primer error como mensaje general
+                        const firstError = Object.values(error.errors)[0][0];
+                        Swal.fire({
+                            title: '{{ __("Validation Error") }}',
+                            text: firstError || '{{ __("Please correct the errors in the form.") }}',
+                            icon: 'error',
+                            confirmButtonText: 'OK'
+                        });
+                    } else {
+                        Swal.fire({
+                            title: '{{ __("Error") }}',
+                            text: error.message || '{{ __("Server error. Please try again.") }}',
+                            icon: 'error',
+                            confirmButtonText: 'OK'
+                        });
+                    }
+                })
+                .finally(() => {
+                    // Rehabilitar botón de envío
+                    submitButton.prop('disabled', false);
+                });
             });
 
             // Cargar datos en modal de edición
@@ -622,17 +855,17 @@
                 const statusBadge = $(`#status-badge-${lineId}`);
                 if (statusBadge.length) {
                     if (!lastShift) {
-                        statusBadge.html('<span class="badge bg-secondary"><i class="fas fa-power-off me-1"></i> {{ __("shift.shift_stopped") }}</span>');
+                        statusBadge.html('<span class="badge bg-secondary fs-5"><i class="fas fa-power-off me-1"></i> {{ __("shift.shift_stopped") }}</span>');
                     } else if (lastShift.type === 'shift' && lastShift.action === 'start') {
-                        statusBadge.html('<span class="badge bg-success"><i class="fas fa-play-circle me-1"></i> {{ __("shift.shift_in_progress") }}</span>');
+                        statusBadge.html('<span class="badge bg-success fs-5"><i class="fas fa-play-circle me-1"></i> {{ __("shift.shift_in_progress") }}</span>');
                     } else if (lastShift.type === 'stop' && lastShift.action === 'start') {
-                        statusBadge.html('<span class="badge bg-warning text-dark"><i class="fas fa-pause-circle me-1"></i> {{ __("shift.shift_paused") }}</span>');
+                        statusBadge.html('<span class="badge bg-warning text-dark fs-5"><i class="fas fa-pause-circle me-1"></i> {{ __("shift.shift_paused") }}</span>');
                     } else if (lastShift.type === 'stop' && lastShift.action === 'end') {
-                        statusBadge.html('<span class="badge bg-info text-white"><i class="fas fa-redo me-1"></i> {{ __("shift.shift_resumed") }}</span>');
+                        statusBadge.html('<span class="badge bg-info text-white fs-5"><i class="fas fa-redo me-1"></i> {{ __("shift.shift_resumed") }}</span>');
                     } else if (lastShift.type === 'shift' && lastShift.action === 'end') {
-                        statusBadge.html('<span class="badge bg-danger"><i class="fas fa-stop-circle me-1"></i> {{ __("shift.shift_ended") }}</span>');
+                        statusBadge.html('<span class="badge bg-danger fs-5"><i class="fas fa-stop-circle me-1"></i> {{ __("shift.shift_ended") }}</span>');
                     } else {
-                        statusBadge.html('<span class="badge bg-secondary"><i class="fas fa-question-circle me-1"></i> {{ __("shift.status_unknown") }}</span>');
+                        statusBadge.html('<span class="badge bg-secondary fs-5"><i class="fas fa-question-circle me-1"></i> {{ __("shift.status_unknown") }}</span>');
                     }
                 }
                 

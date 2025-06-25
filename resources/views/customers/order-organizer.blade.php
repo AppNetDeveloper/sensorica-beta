@@ -31,9 +31,7 @@
                         <div class="card h-100 border-0 shadow-sm">
                             <div class="card-body d-flex flex-column">
                                 <h5 class="card-title text-center mb-2">{{ $process->description ?: 'Sin descripción' }}</h5>
-                                <p class="card-text small text-muted mb-3 text-center">
-                                    {{ $process->name }}
-                                </p>
+
                                 <div class="text-center text-muted small mb-2">
                                     {{ $lines->count() }} {{ trans_choice('maquina|maquinas', $lines->count()) }}
                                 </div>

@@ -18,7 +18,7 @@
             <div class="card border-0 shadow" style="width: 100%;">
                 <div class="card-header bg-primary text-white">
                     <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">@lang('List of Processes')</h5>
+                        <h5 class="mb-0 text-white">@lang('List of Processes')</h5>
                         @can('process-create')
                         <a href="{{ route('processes.create') }}" class="btn btn-light btn-sm">
                             <i class="fas fa-plus"></i> @lang('New Process')

@@ -21,7 +21,7 @@
             <div class="card border-0 shadow" style="width: 100%;">
                 <div class="card-header bg-primary text-white">
                     <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">{{ __('Processos de la Línia de Producció') }}: {{ $productionLine->name }}</h5>
+                        <h5 class="mb-0 text-white">{{ __('Processos de la Línia de Producció') }}: {{ $productionLine->name }}</h5>
                         <div>
                             @can('productionline-process-create')
                             <a href="{{ route('productionlines.processes.create', $productionLine->id) }}" class="btn btn-light btn-sm">
@@ -90,7 +90,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="4" class="text-center py-3">{{ __('No s\'han trobat processos associats.') }}</td>
+                                        <td class="text-center" colspan="4">{{ __('No s\'han trobat processos associats.') }}</td>
                                     </tr>
                                 @endforelse
                             </tbody>
@@ -105,10 +105,11 @@
 
 @push('style')
     {{-- DataTables CSS --}}
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
-    {{-- Extensión Responsive de DataTables --}}
-    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.4.1/css/responsive.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.4.1/css/responsive.bootstrap5.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/searchpanes/2.2.0/css/searchPanes.bootstrap5.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/select/1.7.0/css/select.bootstrap5.min.css">
 
     <style>
         .table th, .table td {
@@ -169,57 +170,151 @@
 @push('scripts')
     {{-- jQuery --}}
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
-    {{-- DataTables núcleo --}}
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    {{-- DataTables Core --}}
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-    {{-- Extensiones DataTables: Buttons, JSZip, etc. --}}
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    
+    {{-- DataTables Extensions --}}
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.bootstrap5.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
-
-    {{-- Extensión Responsive de DataTables --}}
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.colVis.min.js"></script>
+    
+    {{-- DataTables Responsive --}}
     <script src="https://cdn.datatables.net/responsive/2.4.1/js/dataTables.responsive.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.4.1/js/responsive.bootstrap5.min.js"></script>
+    
+    {{-- DataTables SearchPanes --}}
+    <script src="https://cdn.datatables.net/searchpanes/2.2.0/js/dataTables.searchPanes.min.js"></script>
+    <script src="https://cdn.datatables.net/searchpanes/2.2.0/js/searchPanes.bootstrap5.min.js"></script>
+    
+    {{-- DataTables Select --}}
+    <script src="https://cdn.datatables.net/select/1.7.0/js/dataTables.select.min.js"></script>
 
     <script>
         $(document).ready(function() {
-            const table = $('#processes-table').DataTable({
+            // Verificar si hay filas en la tabla
+            const hasRows = $('#processes-table tbody tr').length > 0;
+            
+            // Configuración base de DataTables
+            const tableConfig = {
                 responsive: true,
                 scrollX: true,
+                // Habilitar búsqueda y paginación
+                searching: true,
+                paging: true,
+                pageLength: 10,
+                lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "{{ __('All') }}"]],
                 language: {
                     search: "{{ __('Search:') }}",
                     lengthMenu: "{{ __('Show _MENU_ entries') }}",
                     info: "{{ __('Showing _START_ to _END_ of _TOTAL_ entries') }}",
-                    infoEmpty: "{{ __('Showing 0 to 0 of 0 entries') }}",
+                    infoEmpty: "{{ __('No records available') }}",
                     infoFiltered: "{{ __('(filtered from _MAX_ total entries)') }}",
+                    emptyTable: "{{ __('No data available in table') }}",
+                    zeroRecords: "{{ __('No matching records found') }}",
+                    loadingRecords: "{{ __('Loading...') }}",
+                    processing: "{{ __('Processing...') }}",
+                    searchPlaceholder: "{{ __('Search...') }}",
                     paginate: {
                         first: "{{ __('First') }}",
                         last: "{{ __('Last') }}",
                         next: "{{ __('Next') }}",
                         previous: "{{ __('Previous') }}"
-                    },
-                    emptyTable: "{{ __('No data available in table') }}",
-                    zeroRecords: "{{ __('No matching records found') }}"
+                    }
                 },
-                order: [[0, 'asc']],
+                // Configuración de columnas
                 columnDefs: [
-                    { orderable: true, targets: [0, 1, 2] },
-                    { orderable: false, targets: [3], searchable: false }
+                    { 
+                        width: '10%', 
+                        targets: 0, 
+                        className: 'text-center',
+                        orderable: true // Permitir ordenar por orden
+                    },
+                    { 
+                        width: '20%', 
+                        targets: 1,
+                        orderable: true // Permitir ordenar por código
+                    },
+                    { 
+                        width: '40%', 
+                        targets: 2,
+                        orderable: true // Permitir ordenar por nombre
+                    },
+                    { 
+                        width: '30%', 
+                        targets: 3, 
+                        orderable: false, // No permitir ordenar por acciones
+                        className: 'text-center' 
+                    }
                 ],
-                dom: 'Bfrtip',
+                // Ordenar por la primera columna (orden) de forma ascendente por defecto
+                order: [[0, 'asc']],
+                // Configuración completa del DOM para mostrar todas las características
+                dom: '<"d-flex justify-content-between align-items-center mb-3"<"d-flex"B><"d-flex"f>>rt<"d-flex justify-content-between"<"d-flex"li><"d-flex"p>>',
                 buttons: [
                     {
                         extend: 'pageLength',
-                        className: 'btn btn-secondary'
+                        className: 'btn btn-secondary btn-sm',
+                        text: '<i class="fas fa-list"></i> {{ __("Show") }}'
+                    },
+                    {
+                        extend: 'excel',
+                        text: '<i class="fas fa-file-excel"></i> Excel',
+                        className: 'btn btn-success btn-sm',
+                        exportOptions: {
+                            columns: [0, 1, 2]
+                        }
+                    },
+                    {
+                        extend: 'pdf',
+                        text: '<i class="fas fa-file-pdf"></i> PDF',
+                        className: 'btn btn-danger btn-sm',
+                        exportOptions: {
+                            columns: [0, 1, 2]
+                        }
+                    },
+                    {
+                        extend: 'print',
+                        text: '<i class="fas fa-print"></i> {{ __("Print") }}',
+                        className: 'btn btn-info btn-sm',
+                        exportOptions: {
+                            columns: [0, 1, 2]
+                        }
                     }
-                ],
-                lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "{{ __('Tots') }}"]],
-                pageLength: 10
-            });
+                ]
+            };
 
-            // Actualizar la tabla si hay un mensaje de éxito o error
-            @if(session('success') || session('error'))
-                table.draw(false);
-            @endif
+            // Inicializar DataTables con la configuración adecuada según si hay datos o no
+            let table;
+            
+            if (hasRows) {
+                // Si hay filas en el HTML, inicializar con esos datos
+                table = $('#processes-table').DataTable(tableConfig);
+                console.log('DataTables inicializado con datos existentes');
+            } else {
+                // Si no hay filas, inicializar con datos vacíos pero manteniendo la estructura
+                table = $('#processes-table').DataTable({
+                    ...tableConfig,
+                    data: [],
+                    columns: [
+                        { title: '{{ __("Ordre") }}', className: 'text-center' },
+                        { title: '{{ __("Codi") }}' },
+                        { title: '{{ __("Nom") }}' },
+                        { title: '{{ __("Accions") }}', className: 'text-center' }
+                    ]
+                });
+                console.log('DataTables inicializado con datos vacíos');
+                // Mostrar mensaje de "no hay datos"
+                table.clear().draw();
+            }
+            
+            // Asegurarse de que la tabla es responsiva
+            new $.fn.dataTable.Responsive(table);
         });
     </script>
 @endpush

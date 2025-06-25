@@ -63,6 +63,7 @@
                 processing: true,
                 serverSide: true,
                 ajax: "/customers/" + customer_id + "/productionlinesjson",
+                order: [[1, 'asc']], // Ordenar por la columna de nombre (índice 1) de forma ascendente
                 responsive: {
                     details: {
                         type: 'column',      // Indica que la columna será la encargada de mostrar/ocultar detalles

@@ -113,7 +113,13 @@
 
         .kanban-card { background-color: var(--card-bg); color: var(--card-text); border-radius: 10px; border: 1px solid var(--card-border); border-left: 5px solid; box-shadow: var(--card-shadow); flex-shrink: 0; overflow: hidden; width: 100%; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); cursor: grab; }
         .kanban-card.urgent { border: 1px solid var(--danger-color); box-shadow: 0 0 10px rgba(239, 68, 68, 0.2); }
-        .kanban-card.collapsed .kanban-card-body, .kanban-card.collapsed .kanban-card-footer { display: none; }
+        .kanban-card.collapsed .kanban-card-body,
+        .kanban-card.collapsed .kanban-card-footer,
+        .kanban-card.collapsed .kanban-card-body .process-list,
+        .kanban-card.collapsed .kanban-card-body .progress-container,
+        .kanban-card.collapsed .kanban-card-body .d-flex.justify-content-between.align-items-center:not(:first-child) { 
+            display: none; 
+        }
         .kanban-card.dragging { opacity: 0; height: 0; padding: 0; margin: 0; border: none; overflow: hidden; }
         .kanban-card:hover { transform: translateY(-2px); box-shadow: var(--card-shadow-hover); }
 
@@ -128,7 +134,7 @@
         
         .process-list { display: flex; flex-wrap: wrap; gap: 0.25rem; }
         .process-tag { padding: 0.2rem 0.5rem; border-radius: 9999px; font-size: 0.7rem; font-weight: 500; }
-        .process-tag-done { background-color: var(--column-bg); color: var(--text-muted); text-decoration: line-through; }
+        .process-tag-done { background-color: #10b981; color: white; }
         .process-tag-pending { background-color: var(--warning-color); color: white; }
 
 
@@ -246,6 +252,7 @@
                     2.  **Urgencia:** Las órdenes marcadas como 'is_urgent: true' tienen la máxima prioridad y deben ser procesadas antes que las no urgentes.
                     3.  **Fecha de Entrega:** Dentro de cada grupo (urgentes y no urgentes), las órdenes con la 'delivery_date' más cercana en el tiempo deben ir primero.
                     4.  **Tiempo Teórico:** Si todo lo demás es igual, las órdenes con mayor 'theoretical_time' van primero.
+                    5.  **Se tiene que organizar de tal maneras las tarjetas en cada production_line que la suma de theoretical_time sea lo mas equilibrado entre todas las production_lines.
                     Líneas de Producción Disponibles: ${JSON.stringify(productionLines)}
                     Órdenes a Organizar: ${JSON.stringify(workableOrders)}
                     Tu respuesta DEBE ser únicamente un objeto JSON con una clave "assignments" que contenga un array. CADA ORDEN de la lista 'Órdenes a Organizar' debe tener su correspondiente entrada en el array "assignments". No dejes ninguna orden sin asignar. Cada elemento del array debe ser un objeto con "order_id" (número) y "assigned_line_id" (número). No incluyas explicaciones ni texto adicional.
@@ -291,7 +298,10 @@
                 
                 const result = await response.json();
                 console.log("--- RESPUESTA RECIBIDA DE GEMINI (RAW) ---", result);
-                
+
+                 // Espera sin bloquear la página
+                await wait(20000); // Espera 20 segundos
+
                 const jsonText = result.candidates[0].content.parts[0].text;
                 const parsedResult = JSON.parse(jsonText);
                 
@@ -1065,6 +1075,12 @@
 
         distributeAndRender(true);
         console.log('Kanban final inicializado.');
+
+        //ponemos un wait que reciva ms desde otra parte
+        function wait(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
     });
     </script>
 @endpush

@@ -45,6 +45,8 @@ class DatabaseSeeder extends Seeder
             'telegram show', 'telegram create', 'telegram update', 'telegram delete',
             'process-show', 'process-create', 'process-edit', 'process-delete',
             'productionline-process-view', 'productionline-process-create', 'productionline-process-edit', 'productionline-process-delete',
+            'productionline-show', 'productionline-create', 'productionline-edit', 'productionline-delete',
+            'productionline-sensors', 'productionline-orders', 'productionline-live-view', 'productionline-live-machine',
         ];
         
 

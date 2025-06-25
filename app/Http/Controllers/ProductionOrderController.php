@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 use App\Models\ProductionOrder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
+use App\Models\Barcode;
 
 class ProductionOrderController extends Controller
 {
@@ -74,6 +76,9 @@ class ProductionOrderController extends Controller
                         $errors[] = $errorMsg;
                         continue;
                     }
+                    // <--- CAMBIO CLAVE: Guardar el estado original ANTES de actualizar
+                    $originalStatus = $order->status;
+                    $newStatus = (int)$orderData['status'];
                     
                     // Registrar el estado actual antes de la actualización
                     Log::debug("$logPrefix Estado actual", [
@@ -97,6 +102,66 @@ class ProductionOrderController extends Controller
                     $order->refresh();
                     $updatedCount++;
                     
+                    // <--- CAMBIO CLAVE: Comprobar si el estado ha cambiado para activar la lógica MQTT
+                    $statusHasChanged = $originalStatus !== $newStatus;
+
+                    if ($statusHasChanged) {
+                        Log::info("$logPrefix El estado ha cambiado de {$originalStatus} a {$newStatus}. Se evaluará el envío de MQTT.");
+                        
+                        $action = match ($newStatus) {
+                            1 => 0, // Corresponde a "Iniciar"
+                            2 => 1, // Corresponde a "Finalizar"
+                            default => null,
+                        };
+
+                        // Si el nuevo estado es 1 o 2, procedemos con MQTT
+                        if ($action !== null) {
+                            $lockKey = 'mqtt_lock_for_order_' . $order->id;
+                            if (Cache::add($lockKey, true, 5)) { // Bloqueo de 5 segundos para evitar duplicados
+                                Log::info("$logPrefix Bloqueo de caché adquirido para [{$lockKey}]. Procesando envío MQTT.");
+                                try {
+                                    // Usamos el production_line_id con el que se acaba de actualizar la orden
+                                    $productionLineIdForMqtt = $orderData['production_line_id'];
+
+                                    if ($productionLineIdForMqtt) {
+                                        $barcoder = Barcode::where('production_line_id', $productionLineIdForMqtt)->first();
+                                        
+                                        if ($barcoder && !empty($barcoder->mqtt_topic_barcodes)) {
+                                            $topic = $barcoder->mqtt_topic_barcodes . '/prod_order_mac';
+                                            $messagePayload = json_encode([
+                                                "action"    => $action, 
+                                                "orderId"   => $order->order_id, // Usar el campo correcto (e.g., order_id o id)
+                                                "quantity"  => 0,
+                                                "machineId" => $barcoder->machine_id ?? "", 
+                                                "opeId"     => $barcoder->ope_id ?? "",
+                                            ]);
+
+                                            $this->publishMqttMessage($topic, $messagePayload);
+                                            Log::info("$logPrefix Mensaje MQTT enviado a tópico [{$topic}]");
+
+                                            // Si la orden se ha finalizado (status 2), activar la siguiente
+                                            if ($newStatus === 2) {
+                                                $this->activateNextOrder($order, $barcoder);
+                                                Log::info("$logPrefix Llamada a activateNextOrder ejecutada.");
+                                            }
+                                        } else {
+                                            Log::warning("$logPrefix No se encontró Barcoder o topic MQTT para la línea de producción ID: {$productionLineIdForMqtt}. No se envió el mensaje.");
+                                        }
+                                    } else {
+                                         Log::warning("$logPrefix La orden no tiene una línea de producción asignada. No se envió el mensaje MQTT.");
+                                    }
+                                } catch (\Exception $e) {
+                                    // El error de MQTT se registra, pero no detiene la transacción principal
+                                    Log::error("$logPrefix Error durante el envío de MQTT: " . $e->getMessage(), [
+                                        'exception' => $e->getTraceAsString()
+                                    ]);
+                                }
+                            } else {
+                                Log::info("$logPrefix Envío MQTT omitido para orden {$order->id} porque ya hay un proceso en curso (bloqueo de caché activo).");
+                            }
+                        }
+                    } // Fin de la lógica MQTT
+
                     Log::debug("$logPrefix Actualización exitosa", [
                         'nuevo_production_line_id' => $order->production_line_id,
                         'nuevo_orden' => $order->orden,
@@ -181,4 +246,78 @@ class ProductionOrderController extends Controller
             Log::debug("Tiempo de ejecución: " . round($executionTime, 3) . " segundos");
         }
     }
+    private function activateNextOrder(ProductionOrder $finishedOrder, $barcoder)
+    {
+        // ¡CORREGIDO! Usamos el modelo ProductionOrder, no 'self'.
+        $nextOrderInLine = ProductionOrder::where('production_line_id', $finishedOrder->production_line_id)
+                    ->where('orden', '>', $finishedOrder->orden)
+                    ->where('status', 0)
+                    ->orderBy('orden', 'asc')
+                    ->first();
+
+        if ($nextOrderInLine) {
+            Log::info("Orden [{$finishedOrder->id}] finalizada. Lógica para activar la siguiente orden [{$nextOrderInLine->id}] se ejecutaría aquí.");
+            $topic = $barcoder->mqtt_topic_barcodes . '/prod_order_mac';
+            $messagePayload = json_encode([
+                "action"    => 0, 
+                "orderId"   => $nextOrderInLine->order_id,
+                "quantity"  => 0,
+                "machineId" => $barcoder->machine_id ?? "", 
+                "opeId" => $barcoder->ope_id ?? "",
+            ]);
+            //ponemos un sleep de 1 segundo para dar tiempo a que el sistema se actualice
+            sleep(0.5);
+            $this->publishMqttMessage($topic, $messagePayload);
+        } else {
+            Log::info("Orden [{$finishedOrder->id}] finalizada. No hay más órdenes en la cola para la línea [{$finishedOrder->production_line_id}].");
+        }
+    }
+        /**
+     * Stores the MQTT message in two different server directories as JSON files.
+     * This simulates publishing a message for later processing.
+     *
+     * @param string $topic The MQTT topic.
+     * @param string $message The JSON message string.
+     */
+    private function publishMqttMessage($topic, $message)
+    {
+        try {
+            // Preparar los datos a almacenar, agregando la fecha y hora
+            $data = [
+                'topic'     => $topic,
+                'message'   => $message,
+                'timestamp' => now()->toDateTimeString(),
+            ];
+        
+            // Convertir a JSON
+            $jsonData = json_encode($data, JSON_PRETTY_PRINT);
+        
+            // Sanitizar el topic para evitar creación de subcarpetas en el nombre del archivo
+            $sanitizedTopic = str_replace('/', '_', $topic);
+            // Generar un identificador único usando microtime para alta precisión
+            $uniqueId = round(microtime(true) * 1000); // en milisegundos
+        
+            // Guardar en servidor 1
+            $path1 = storage_path("app/mqtt/server1");
+            if (!file_exists($path1)) {
+                mkdir($path1, 0755, true);
+            }
+            $fileName1 = "{$path1}/{$sanitizedTopic}_{$uniqueId}.json";
+            file_put_contents($fileName1, $jsonData . PHP_EOL);
+            Log::info("Mensaje almacenado en archivo (server1): {$fileName1}");
+        
+            // Guardar en servidor 2
+            $path2 = storage_path("app/mqtt/server2");
+            if (!file_exists($path2)) {
+                mkdir($path2, 0755, true);
+            }
+            $fileName2 = "{$path2}/{$sanitizedTopic}_{$uniqueId}.json";
+            file_put_contents($fileName2, $jsonData . PHP_EOL);
+            Log::info("Mensaje almacenado en archivo (server2): {$fileName2}");
+
+        } catch (\Exception $e) {
+            Log::error("Error storing message in file: " . $e->getMessage());
+        }
+    }
+
 }

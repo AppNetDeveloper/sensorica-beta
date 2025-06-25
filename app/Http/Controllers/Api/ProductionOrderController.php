@@ -295,12 +295,7 @@ class ProductionOrderController extends Controller
      */
     public function updateOrder(Request $request, $id)
     {
-        $order = ProductionOrder::find($id);
-    
-        if (!$order) {
-            return response()->json(['success' => false, 'message' => 'Orden no encontrada.'], 404);
-        }
-    
+
         $request->validate([
             'token' => 'required|string',
             'orden' => 'nullable|integer|min:0',
@@ -308,7 +303,24 @@ class ProductionOrderController extends Controller
         ]);
     
         $validatedData = $request->all();
+
+        $order = ProductionOrder::find($id);
     
+        if (!$order) {
+            return response()->json(['success' => false, 'message' => 'Orden no encontrada.'], 404);
+        }
+    
+        // 🔥 AGREGAR ESTA VALIDACIÓN:
+        $productionLine = ProductionLine::where('token', $request->token)->first();
+        
+        if (!$productionLine) {
+            return response()->json(['success' => false, 'message' => 'Token inválido.'], 400);
+        }
+        
+        // 🔥 VERIFICAR QUE LA ORDEN PERTENECE A ESTA LÍNEA:
+        if ($order->production_line_id !== $productionLine->id) {
+            return response()->json(['success' => false, 'message' => 'No tienes permisos para modificar esta orden.'], 403);
+        }
         // --- VERIFICACIÓN DE CAMBIOS (LA PARTE CLAVE) ---
     
         // Comprobamos si los campos que nos importan vienen en la petición Y si su valor es diferente al actual.
@@ -342,9 +354,11 @@ class ProductionOrderController extends Controller
         elseif ($order->status == 3 && $hasStatusChanged && $validatedData['status'] != 3) {
             $order->production_line_id = $currentProductionLineId;
         }
-        elseif ($order->production_line_id != $currentProductionLineId) {
-            $order->production_line_id = $currentProductionLineId;
-        }
+        // ❌ COMENTADO: Esta línea causaba que órdenes cambiaran de línea de producción
+        // lo que podía resultar en duplicados de order_id
+        // elseif ($order->production_line_id != $currentProductionLineId) {
+        //     $order->production_line_id = $currentProductionLineId;
+        // }
     
         // Actualizamos los valores en el modelo
         if ($hasOrderChanged) {
@@ -360,7 +374,7 @@ class ProductionOrderController extends Controller
         // --- LÓGICA MQTT ---
         // Solo si el estado ha cambiado, intentamos enviar el mensaje.
         if ($hasStatusChanged) {
-            $lockKey = 'mqtt_lock_for_order_' . $order->order_id;
+            $lockKey = 'mqtt_lock_for_order_' . $order->order_id . '_line_' . $order->production_line_id;
             if (Cache::add($lockKey, true, 3)) {
                 Log::info("Bloqueo de caché adquirido para [{$lockKey}]. Procesando envío MQTT.");
                 try {

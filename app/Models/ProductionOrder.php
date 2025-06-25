@@ -7,10 +7,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log; // Asegúrate de importar la clase Log
 use Illuminate\Support\Facades\DB; // Importar Facade DB para la consulta
 use Illuminate\Support\Facades\Cache;
+use App\Models\Barcode; // Importar el modelo Barcode
 
 class ProductionOrder extends Model
 {
     use HasFactory;
+    
 
     /**
      * The table associated with the model.
@@ -118,23 +120,47 @@ class ProductionOrder extends Model
         // --- Evento `creating` (se mantiene exactamente igual) ---
         // Se ejecuta una sola vez, antes de que un nuevo registro se inserte en la BD.
         static::creating(function ($model) {
-            // Asignar valor incremental al campo `orden`
-            $lastOrder = self::max('orden');
+            // Asignar valor incremental al campo `orden` POR LÍNEA DE PRODUCCIÓN
+            $lastOrder = self::where('production_line_id', $model->production_line_id)->max('orden');
             $model->orden = $lastOrder !== null ? $lastOrder + 1 : 0;
             
             // Asignar status predeterminado si no viene uno
             $model->status = $model->status ?? 0; // 0: Pendiente (predeterminado)
             
             // Lógica para archivar una orden existente con el mismo order_id
-            $existingOrder = self::where('order_id', $model->order_id)->first();
+            $existingOrder = self::where('order_id', $model->order_id)
+                               ->where('production_line_id', $model->production_line_id)
+                               ->first();
             if ($existingOrder) {
-                $existingOrder->order_id = $existingOrder->order_id . '-' . $existingOrder->process_category;
+                // Proteger contra valores nulos o vacíos usando fecha/hora como fallback
+                $processCategory = $existingOrder->process_category ?: date('Ymd');
+                $grupoNumero = $existingOrder->grupo_numero ?: date('His');
+                
+                $existingOrder->order_id = $existingOrder->order_id . '-' . $processCategory . '-' . $grupoNumero;
                // $existingOrder->status = 2;
                 $existingOrder->save();
             }
         });
-    
-        // --- Evento `saved` (con la lógica MQTT corregida) ---
+        
+        // --- Evento `saving` ---
+        // Se ejecuta ANTES de guardar (crear o actualizar). Ideal para modificar datos que se van a guardar.
+        static::saving(function ($model) {
+            // Comprobamos si el 'production_line_id' ha cambiado.
+            if ($model->isDirty('production_line_id')) {
+                // Buscar el barcoder asociado a esta nueva línea de producción
+                $barcoder = Barcode::where('production_line_id', $model->production_line_id)->first();
+                
+                // Si encontramos un barcoder, actualizamos el barcoder_id.
+                // Este cambio se incluirá en la consulta de guardado.
+                if ($barcoder) {
+                    $model->barcoder_id = $barcoder->id;
+                    Log::info("Asignando barcoder_id {$barcoder->id} a la orden {$model->id} antes de guardar.");
+                } else {
+                   // $model->barcoder_id = null; // Opcional: limpiar el barcoder si no se encuentra uno nuevo.
+                    Log::warning("No se encontró barcoder para la línea de producción {$model->production_line_id}, barcoder_id se establecerá a null.");
+                }
+            }
+        });
         // Se ejecuta después de guardar (crear o actualizar) el modelo.
         static::saved(function ($model) {
             // Disparador: solo actuar si el campo 'status' ha sido modificado y es 1 o 2.
@@ -147,10 +173,8 @@ class ProductionOrder extends Model
                         $originalOrderProcess->update(['finished' => 1, 'finished_at' => now()]);
                     }
                 }
-
             }
         });
     }
 
 }
-

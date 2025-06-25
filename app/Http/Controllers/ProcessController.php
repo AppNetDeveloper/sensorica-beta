@@ -83,6 +83,8 @@ class ProcessController extends Controller
      */
     public function edit(Process $process)
     {
+        // Asegurarse de que el factor de corrección use punto como separador decimal
+        $process->factor_correccion = number_format((float)$process->factor_correccion, 2, '.', '');
         return view('processes.edit', compact('process'));
     }
 
@@ -95,11 +97,13 @@ class ProcessController extends Controller
      */
     public function update(Request $request, Process $process)
     {
+        // Validar los datos
         $validated = $request->validate([
             'code' => 'required|string|max:50|unique:processes,code,' . $process->id,
             'name' => 'required|string|max:255',
-            'sequence' => 'required|integer|min:1', // Eliminada validación unique para permitir secuencias repetidas
+            'sequence' => 'required|integer|min:1',
             'description' => 'nullable|string',
+            'factor_correccion' => 'required|numeric|min:0.1|max:10000',
         ]);
 
         $process->update($validated);

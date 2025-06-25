@@ -12,9 +12,11 @@
         <div class="col-lg-12">
             <div class="mb-3">
                 {{-- Botón para añadir clientes con un icono --}}
-                <a href="{{ route('customers.create') }}" class="btn btn-primary">
-                    <i class="fas fa-plus me-1"></i> {{ __('Add Customers') }}
-                </a>
+                @can('productionline-create')
+                    <a href="{{ route('customers.create') }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i> {{ __('Add Customers') }}
+                    </a>
+                @endcan
             </div>
             <div class="card">
                 <div class="card-body">

@@ -57,8 +57,15 @@
                         
                         <div class="mb-3">
                             <label for="factor_correccion" class="form-label">@lang('Correction Factor') <span class="text-danger">*</span></label>
-                            <input type="number" step="0.01" min="0.01" class="form-control @error('factor_correccion') is-invalid @enderror" 
-                                   id="factor_correccion" name="factor_correccion" value="{{ old('factor_correccion', $process->factor_correccion) }}" required>
+                            @php
+                                $factorValue = old('factor_correccion', $process->factor_correccion);
+                                $factorValue = is_numeric($factorValue) ? number_format((float)$factorValue, 2, '.', '') : $factorValue;
+                            @endphp
+                            <input type="text" class="form-control @error('factor_correccion') is-invalid @enderror" 
+                                   id="factor_correccion" name="factor_correccion" 
+                                   value="{{ $factorValue }}" required 
+                                   inputmode="decimal" pattern="^\d+(\.\d{1,2})?$" 
+                                   title="Por favor usa punto como separador decimal (ejemplo: 1.50)">
                             <small class="form-text text-muted">@lang('Factor used to calculate the time for this process (time = quantity * factor)')</small>
                             @error('factor_correccion')
                                 <div class="invalid-feedback">{{ $message }}</div>

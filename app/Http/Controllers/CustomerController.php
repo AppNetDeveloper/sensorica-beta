@@ -37,31 +37,55 @@ class CustomerController extends Controller
 
                 // Construye el HTML para los botones con iconos (Font Awesome)
                 // Añade un pequeño margen a la derecha del icono (me-1)
-                // Añade tooltips con el atributo 'title'
-
-                $editButton = "<a href='{$editUrl}' class='btn btn-sm btn-info me-1' data-bs-toggle='tooltip' title='" . __('Edit') . "'><i class='fas fa-edit'></i></a>";
-
-                $linesButton = "<a href='{$productionLinesUrl}' class='btn btn-sm btn-secondary me-1' data-bs-toggle='tooltip' title='" . __('Production Lines') . "'><i class='fas fa-sitemap'></i></a>";
+                // Inicializar botones
+                $buttons = [];
                 
-                // Botón del organizador de órdenes
-                $orderOrganizerUrl = route('customers.order-organizer', $customer->id);
-                $orderOrganizerButton = "<a href='{$orderOrganizerUrl}' class='btn btn-sm btn-primary me-1' data-bs-toggle='tooltip' title='" . __('Order Organizer') . "'><i class='fas fa-tasks'></i></a>";
+                // Botón del organizador de órdenes (solo con permiso productionline-orders)
+                if (auth()->user()->can('productionline-orders')) {
+                    $orderOrganizerUrl = route('customers.order-organizer', $customer->id);
+                    $orderOrganizerButton = "<a href='{$orderOrganizerUrl}' class='btn btn-sm btn-primary me-1' data-bs-toggle='tooltip' title='" . __('Order Organizer') . "'><i class='fas fa-tasks'></i></a>";
+                    $buttons[] = $orderOrganizerButton;
+                }
 
+                // Botón de editar (solo con permiso productionline-edit)
+                if (auth()->user()->can('productionline-edit')) {
+                    $editButton = "<a href='{$editUrl}' class='btn btn-sm btn-info me-1' data-bs-toggle='tooltip' title='" . __('Edit') . "'><i class='fas fa-edit'></i></a>";
+                    $buttons[] = $editButton;
+                }
+
+                // Botón de líneas de producción (solo con permiso productionline-edit)
+                if (auth()->user()->can('productionline-edit')) {
+                    $linesButton = "<a href='{$productionLinesUrl}' class='btn btn-sm btn-secondary me-1' data-bs-toggle='tooltip' title='" . __('Production Lines') . "'><i class='fas fa-sitemap'></i></a>";
+                    $buttons[] = $linesButton;
+                }
+
+                // Botón de Órdenes Originales (solo con permiso productionline-orders)
+                if (auth()->user()->can('productionline-orders')) {
+                    $originalOrdersUrl = route('customers.original-orders.index', $customer->id);
+                    $originalOrdersButton = "<a href='{$originalOrdersUrl}' class='btn btn-sm btn-dark me-1' data-bs-toggle='tooltip' title='" . __('Original Orders') . "'><i class='fas fa-clipboard-list'></i></a>";
+                    $buttons[] = $originalOrdersButton;
+                }
+
+                // Botón de estadísticas de peso
                 $weightStatsButton = "<a href='{$liveViewUrl}' class='btn btn-sm btn-success me-1' data-bs-toggle='tooltip' title='" . __('Weight Stats') . "' target='_blank'><i class='fas fa-weight-hanging'></i></a>";
+                $buttons[] = $weightStatsButton;
                 
+                // Botón de estadísticas de producción
                 $productionStatsButton = "<a href='{$liveViewUrlProd}' class='btn btn-sm btn-warning me-1' data-bs-toggle='tooltip' title='" . __('Production Stats') . "' target='_blank'><i class='fas fa-chart-line'></i></a>";
-                
-                // Botón de Órdenes Originales
-                $originalOrdersUrl = route('customers.original-orders.index', $customer->id);
-                $originalOrdersButton = "<a href='{$originalOrdersUrl}' class='btn btn-sm btn-dark me-1' data-bs-toggle='tooltip' title='" . __('Original Orders') . "'><i class='fas fa-clipboard-list'></i></a>";
+                $buttons[] = $productionStatsButton;
 
-                $deleteForm = "<form action='{$deleteUrl}' method='POST' style='display:inline;' onsubmit='return confirm(\"" . __('Are you sure?') . "\");'>
-                                <input type='hidden' name='_token' value='{$csrfToken}'>
-                                <input type='hidden' name='_method' value='DELETE'>
-                                <button type='submit' class='btn btn-sm btn-danger me-1' data-bs-toggle='tooltip' title='" . __('Delete') . "'><i class='fas fa-trash'></i></button>
-                               </form>";
-                               
-                return "<div class='d-flex flex-wrap'>" . $orderOrganizerButton . $editButton . $linesButton . $originalOrdersButton . $weightStatsButton . $productionStatsButton . $deleteForm . "</div>";
+                // Botón de eliminar (solo con permiso productionline-delete)
+                if (auth()->user()->can('productionline-delete')) {
+                    $deleteForm = "<form action='{$deleteUrl}' method='POST' style='display:inline;' onsubmit='return confirm(\"" . __('Are you sure?') . "\");'>
+                                    <input type='hidden' name='_token' value='{$csrfToken}'>
+                                    <input type='hidden' name='_method' value='DELETE'>
+                                    <button type='submit' class='btn btn-sm btn-danger me-1' data-bs-toggle='tooltip' title='" . __('Delete') . "'><i class='fas fa-trash'></i></button>
+                                   </form>";
+                    $buttons[] = $deleteForm;
+                }
+                
+                // Combinar todos los botones en un solo string HTML
+                return "<div class='d-flex flex-wrap'>" . implode('', $buttons) . "</div>";
             })
             // Indica a DataTables que la columna 'action' contiene HTML y no debe ser escapada
             ->rawColumns(['action'])
@@ -110,9 +134,9 @@ class CustomerController extends Controller
             }
         }
         
-        // Ordenar por el nombre del proceso
+        // Ordenar por la descripción del proceso
         $sortedProcesses = $uniqueProcesses->sortBy(function($item) {
-            return $item['process']->name;
+            return $item['process']->description ?: '';
         });
             
         return view('customers.order-organizer', [

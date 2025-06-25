@@ -220,7 +220,10 @@ class MqttSubscriberLocal extends Command
             if ($existingOrder) {
                 // Genera un nuevo ID para la orden antigua añadiendo la fecha y hora.
                 // Formato: 'orderIdOriginal-AñoMesDía-HoraMinutoSegundo'
-                $newIdForOldOrder = $existingOrder->order_id . '-' . $existingOrder->process_category;
+                $processCategory = $existingOrder->process_category ?: date('Ymd');
+                $grupoNumero = $existingOrder->grupo_numero ?: date('His');
+                
+                $newIdForOldOrder = $existingOrder->order_id . '-' . $processCategory . '-' . $grupoNumero;
                 $this->info("[" . $timestamp . "] Archived existing order: " . $existingOrder->order_id);
                 // Actualiza el order_id de la orden existente.
                 $existingOrder->order_id = $newIdForOldOrder;
