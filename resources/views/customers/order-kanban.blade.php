@@ -848,13 +848,28 @@
                         ${doneHtml}${toDoHtml}
                     </div>
                 </div>`;
-            
+
+            // Generar HTML para las descripciones de artículos
+            let articlesHtml = '';
+            if (order.articles_descriptions && order.articles_descriptions.length > 0) {
+                const articlesList = order.articles_descriptions.map(desc => `<span class="badge bg-secondary me-1 mb-1">${desc}</span>`).join('');
+                articlesHtml = `<div class="text-sm mb-2"><strong>Artículos:</strong><br>${articlesList}</div>`;
+            }
+
+            // Generar HTML para la descripción solo si existe y no es el texto por defecto
+            let descripHtml = '';
+            const descripText = order.json?.descrip || '';
+            if (descripText && descripText !== translations.noDescription && descripText.trim() !== '') {
+                descripHtml = `<div class="text-sm mb-2">${descripText}</div>`;
+            }
+
             const statusBadgeHtml = `<span class="badge" style="background-color: ${order.statusColor || '#6b7280'}; color: white;">${(order.status || 'PENDING').replace(/_/g, ' ').toUpperCase()}</span>`;
 
             card.innerHTML = `
                 <div class="kanban-card-header" onclick="this.parentElement.classList.toggle('collapsed')">
                     <div class="me-2" style="flex-grow: 1;">
-                        <div class="fw-bold text-sm d-flex align-items-center">#${order.order_id}${urgencyIconHtml}</div>
+                        <div class="fw-bold text-sm d-flex align-items-center">#${order.order_id}${urgencyIconHtml} ${groupBadgeHtml}</div>
+                        <div class="text-xs fw-bold text-muted mt-1">${order.customerId || translations.noCustomer}</div>
                         ${processDescription ? `<div class="text-xs text-muted mt-1">${processDescription}</div>` : ''}
                     </div>
                     <div class="d-flex flex-column align-items-end">
@@ -863,10 +878,8 @@
                     </div>
                 </div>
                 <div class="kanban-card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="d-flex align-items-center text-sm fw-bold text-muted">${order.customerId || translations.noCustomer} ${groupBadgeHtml}</span>
-                    </div>
-                    <div class="text-sm mb-2">${order.json?.descrip || translations.noDescription}</div>
+                    ${descripHtml}
+                    ${articlesHtml}
                     ${progressHtml}
                     ${processListHtml}
                     <div class="d-flex justify-content-between align-items-center mt-3">

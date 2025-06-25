@@ -212,6 +212,17 @@ class CustomerController extends Controller
                     // *** CORRECCIÓN: Llamada al método estático con `self::` ***
                     $tiempoTeoricoFormateado = self::convertirSegundosA_H_M_S($order->theoretical_time);
                 }
+                
+                // Obtener las descripciones de artículos asociados al proceso
+                $articlesDescriptions = [];
+                if ($order->original_order_process_id) {
+                    $articles = \App\Models\OriginalOrderArticle::where('original_order_process_id', $order->original_order_process_id)
+                        ->pluck('descripcion_articulo')
+                        ->filter() // Filtrar valores nulos o vacíos
+                        ->toArray();
+                    $articlesDescriptions = $articles;
+                }
+                
                 return [
                     'id' => $order->id,
                     'order_id' => $order->order_id,
@@ -230,6 +241,7 @@ class CustomerController extends Controller
                     'theoretical_time' => $tiempoTeoricoFormateado,
                     'customerId' => $order->customerId ?? 'Sin Cliente',
                     'original_order_id' => $order->original_order_id ?? 'Sin Orden Original',
+                    'articles_descriptions' => $articlesDescriptions,
                     //en lugar de 0 por defecto aqui 'orden' => (int)($order->orden ?? '0') ponemos que sea por production_line_id el orden mas grande que existe y le damos +1
                     'orden' => $order->production_line_id ? ProductionOrder::where('production_line_id', $order->production_line_id)->max('orden') + 1 : 0,
                 ];

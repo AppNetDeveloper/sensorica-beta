@@ -158,13 +158,13 @@
         .kanban-title {
             font-weight: 600;
             color: #1e293b;
-            margin-bottom: 0.5rem; /* Aún más reducido */
-            margin-top: -0.25rem; /* Subir un poco el texto */
+            margin-bottom: 0.75rem;
+            margin-top: -0.25rem;
             text-align: center;
-            padding: 0.15rem 0 0.05rem; /* Mínimo padding */
+            padding: 0.25rem 0 0.15rem;
             position: relative;
-            font-size: 0.9rem; /* Texto aún más pequeño */
-            letter-spacing: 0.5px; /* Mejor legibilidad para texto pequeño */
+            font-size: 1.1rem; /* Texto más grande */
+            letter-spacing: 0.5px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -174,12 +174,12 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            height: 1.25rem;
-            min-width: 1.25rem;
-            font-size: 0.75rem;
+            height: 1.5rem; /* Más alto */
+            min-width: 1.5rem; /* Más ancho */
+            font-size: 0.9rem; /* Texto más grande */
             border-radius: 9999px;
             margin-left: 0.5rem;
-            padding: 0 0.25rem;
+            padding: 0 0.35rem; /* Más padding horizontal */
             background-color: #e5e7eb;
             color: #374151;
             font-weight: 600;
@@ -476,25 +476,31 @@
             <div class="w-full mb-4 md:mb-0 px-2 md:col-span-2">
                  <div class="text-sm max-w-md mx-auto md:mx-0">
 
+                    <div class="flex justify-between py-0.5">
+                        <span style="background-color: #f9fafb; padding: 5px; border-radius: 5px;" class="text-gray-600 font-medium">ORDEN EN CURSO</span>
+                    </div>
                      <div class="flex justify-between py-0.5">
-                         <span class="text-gray-600">TIEMPO EN PARADA / Orden</span>
+                         <span class="text-gray-600">TIEMPO EN PARADA / FALTA MATERIAL</span>
                          <span id="tiempo-parada-val" class="font-mono font-medium text-gray-800 data-value">00:00:00</span> </div>
+                    <div class="flex justify-between py-0.5">
+                         <span class="text-gray-600">TIEMPO EN PARADA</span>
+                         <span id="tiempo-parada-noidentificada-val" class="font-mono font-medium text-gray-800 data-value">00:00:00</span> </div> 
                      <div class="flex justify-between py-0.5">
-                         <span class="text-gray-600">TIEMPO PREPARACION / Orden</span>
+                         <span class="text-gray-600">TIEMPO PREPARACION</span>
                          <span id="tiempo-preparacion-val" class="font-mono font-medium text-gray-800 data-value">00:00:00</span> </div>
                      <div class="flex justify-between py-0.5">
-                         <span class="text-gray-600">TIEMPO LENTO / Orden</span>
+                         <span class="text-gray-600">TIEMPO LENTO</span>
                          <span id="tiempo-lento-val" class="font-mono font-medium text-gray-800 data-value">00:00:00</span> </div>
                      <div id="unidades-hechas-container" class="flex justify-between py-0.5">
-                          <span class="text-gray-600">Unidades Hechas / Orden</span>
+                          <span class="text-gray-600">Unidades Hechas</span>
                           <span id="unidades-hechas-val" class="font-mono font-medium text-gray-800 data-value">0</span>
                       </div>
                      <div id="unidades-pendientes-container" class="flex justify-between py-0.5">
-                          <span class="text-gray-600">Unidades Pendientes / Orden</span>
+                          <span class="text-gray-600">Unidades Pendientes</span>
                           <span id="unidades-pendientes-val" class="font-mono font-medium text-gray-800 data-value">0</span>
                       </div>
                      <div id="unidades-retrasadas-container" class="flex justify-between py-0.5">
-                          <span class="text-gray-600">Unidades Retrasadas / Orden</span>
+                          <span class="text-gray-600">Unidades Retrasadas</span>
                           <span id="unidades-retrasadas-val" class="font-mono font-medium text-gray-800 data-value">0</span>
                       </div>
                  </div>
@@ -511,16 +517,24 @@
         <div class="md:grid md:grid-cols-3 md:gap-6 items-start border-t border-gray-200 pt-2 pb-2">
             <div class="w-full mb-4 md:mb-0 px-2 md:col-span-2">
                  <div class="text-sm max-w-md mx-auto md:mx-0">
+                    <div class="flex justify-between py-0.5">
+                        <!-- vamos a darle un color a la maquina para que paresca que es como un header-->
+                        <span style="background-color: #f9fafb; padding: 5px; border-radius: 5px;" class="text-gray-600 font-medium">MAQUINA</span>
+                    </div>
                      <div class="flex justify-between py-0.5">
-                         <span class="text-gray-600">TIEMPO EN PARADA / Maquina</span>
+                         <span class="text-gray-600">TIEMPO EN PARADA / FALTA MATERIAL</span>
                          <span id="tiempo-parada-maquina-val" class="font-mono font-medium text-gray-800 data-value">00:00:00</span>
                      </div>
                      <div class="flex justify-between py-0.5">
-                         <span class="text-gray-600">TIEMPO PREPARACION / Maquina</span>
+                        <span class="text-gray-600">TIEMPO EN PARADA</span>
+                        <span id="tiempo-parada-maquina-noidentificada-val" class="font-mono font-medium text-gray-800 data-value">00:00:00</span>
+                    </div>
+                     <div class="flex justify-between py-0.5">
+                         <span class="text-gray-600">TIEMPO PREPARACION</span>
                          <span id="tiempo-preparacion-maquina-val" class="font-mono font-medium text-gray-800 data-value">00:00:00</span>
                      </div>
                      <div class="flex justify-between py-0.5">
-                         <span class="text-gray-600">TIEMPO LENTO / Maquina</span>
+                         <span class="text-gray-600">TIEMPO LENTO</span>
                          <span id="tiempo-lento-maquina-val" class="font-mono font-medium text-gray-800 data-value">00:00:00</span>
                      </div>
                      <div class="flex justify-between py-0.5">
@@ -538,7 +552,7 @@
         </div>
         <div class="border-t border-gray-200 pt-6">
             <div class="flex justify-between text-sm text-gray-500 mb-1">
-                <span id="shift-start-time-label">HORA INICIO</span> <span id="shift-end-time-label">HORA FIN</span>
+                <span id="shift-start-time-label" class="font-mono font-medium text-gray-800">HORA INICIO</span> <span id="shift-end-time-label" class="font-mono font-medium text-gray-800">HORA FIN</span>
             </div>
             <div id="progress-bar-container" class="w-full bg-gray-200 rounded-full h-4 overflow-hidden flex">
                  <div id="shift-delay-bar" class="progress-bar-segment" style="width: 0%; background-color: #8B0000;"></div>
@@ -548,12 +562,11 @@
                  <div id="shift-late-bar" class="progress-bar-segment" style="width: 0%; background-color: #FFCC00;"></div>
                  <div id="shift-progress-bar" class="progress-bar-segment bg-green-500" style="width: 0%;"></div>
             </div>
-            <div class="flex justify-between text-sm mt-0.5">
+            <div class="flex justify-between text-sm mt-1.5">
                 <div class="flex justify-start space-x-2">
-                     <span class="text-gray-600">TIEMPO PAUSA:</span>
-                     <span id="tiempo-pausa-val" class="font-mono font-medium text-gray-800">00:00:00</span>
+                     <span id="tiempo-pausa-val" class="font-mono font-medium text-gray-800">TIEMPO PAUSA:</span>
                 </div>
-                <span id="shift-info-text" class="text-gray-500">SIN DATOS</span>
+                <span id="shift-info-text" class="font-mono font-medium text-gray-800">SIN DATOS</span>
             </div>
             
             <!-- Leyenda de colores para la barra de progreso -->
@@ -1488,7 +1501,8 @@
 
                     const totalButtonPauseMs = totalPauseDurationSeconds * 1000;
                     const formattedButtonPause = formatDuration(totalButtonPauseMs);
-                    tiempoPausaValSpan.text(formattedButtonPause);
+                    // tiempoPausaValSpan.text(formattedButtonPause);
+                    tiempoPausaValSpan.text(`TIEMPO PAUSA: ${formattedButtonPause}`);
                     tiempoPausaVal2Span.text(formattedButtonPause); // Actualizar también el segundo elemento
 
                     const isShiftEnded = (type === 'shift' && action === 'end');
@@ -1996,12 +2010,6 @@
                 card.dataset.cardId = order.id;
                 card.dataset.orderSort = order.orden || 0;
                 
-                // Agregar manejador de doble clic
-                card.addEventListener('dblclick', (e) => {
-                    e.stopPropagation();
-                    showOrderDetails(order.id);
-                });
-                
                 // Determinar si hay unidades y si es urgente
                 const hasUnits = order.units && order.units > 0;
                 const isUrgent = order.json && order.json.urgent;
@@ -2013,10 +2021,15 @@
                             <span class="font-bold text-xs text-gray-800" style="letter-spacing: -0.3px;">${order.order_id || 'N/A'}</span>
                             ${isUrgent ? '<i class="fas fa-bolt text-orange-500 ml-1" title="Urgente"></i>' : ''}
                         </div>
-                        <span class="text-xs text-gray-600">${(order.json && order.json.refer && order.json.refer.customerId) ? order.json.refer.customerId : 'N/A'}</span>
+                        <div class="flex items-center">
+                            <span class="text-xs text-gray-600 mr-2">${(order.json && order.json.refer && order.json.refer.customerId) ? order.json.refer.customerId : 'N/A'}</span>
+                            <button class="card-menu-btn text-gray-500 hover:text-gray-700 p-1" data-order-id="${order.id}">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                        </div>
                     </div>
                     <div class="mb-2 text-xs text-gray-700">
-                       ${(order.json && order.json.refer && order.json.refer.descrip) ? order.json.refer.descrip : 'Sin descripción'}
+                    ${(order.json && order.json.refer && order.json.refer.descrip) ? order.json.refer.descrip : 'Sin descripción'}
                     </div>
                     <div class="flex justify-between items-center text-xs text-gray-500">
                         <span><i class="far fa-calendar-alt mr-1"></i>${formatDate(order.created_at)}</span>
@@ -2025,8 +2038,97 @@
                             ${order.units || 0} ${order.json && order.json.unit ? order.json.unit : ''}
                         </span>
                     </div>`;
-                    
+                
+                // Agregar evento de click para el botón de menú (después de crear el HTML)
+                const menuBtn = card.querySelector('.card-menu-btn');
+                if (menuBtn) {
+                    menuBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        // Verificar si hay un operario seleccionado
+                        if (!currentWorker) {
+                            showWorkerRequiredAlert();
+                            return;
+                        }
+                        showOrderDetails(order.id);
+                    });
+                }
+                // Agregar evento de doble click solo para tarjetas "en curso" (status 1)
+                if (order.status === 1) {
+                    card.addEventListener('dblclick', (e) => {
+                        e.stopPropagation();
+                        // Verificar si hay un operario seleccionado
+                        if (!currentWorker) {
+                            showWorkerRequiredAlert();
+                            return;
+                        }
+                        // Mostrar confirmación usando SweetAlert2 (que ya está incluido)
+                        Swal.fire({
+                            title: '¿Estás seguro?',
+                            text: 'Estás a punto de cambiar esta tarjeta a finalizadas',
+                            icon: 'question',
+                            showCancelButton: true,
+                            confirmButtonColor: '#22c55e',
+                            cancelButtonColor: '#ef4444',
+                            confirmButtonText: 'Sí, finalizar',
+                            cancelButtonText: 'No, cancelar'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                // Cambiar el estado de la tarjeta a finalizada (status 2)
+                                updateOrderStatus(order.id, 2);
+                            }
+                        });
+                    });
+                }
                 return card;
+            }
+            // Función para actualizar el estado de una orden de producción
+            async function updateOrderStatus(orderId, newStatus) {
+                try {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const productionLineToken = urlParams.get('token');
+                    
+                    if (!productionLineToken) {
+                        throw new Error('No se encontró el token de la línea de producción');
+                    }
+                    
+                    const updateResponse = await fetch(`${API_BASE_URL}/api/production-orders/${orderId}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                        },
+                        body: JSON.stringify({
+                            status: newStatus,
+                            token: productionLineToken
+                        })
+                    });
+
+                    if (!updateResponse.ok) {
+                        throw new Error('Error al actualizar el estado de la orden');
+                    }
+
+                    // Refrescar los datos del Kanban
+                    fetchProductionOrders(productionLineToken);
+                    fetchOrderStats(productionLineToken);
+                    
+                    return true;
+                } catch (error) {
+                    console.error('Error al actualizar el estado de la orden:', error);
+                    
+                    // Mostrar error con SweetAlert2
+                    if (window.Swal && typeof window.Swal.fire === 'function') {
+                        window.Swal.fire({
+                            title: 'Error',
+                            text: 'No se pudo actualizar el estado de la orden: ' + error.message,
+                            icon: 'error',
+                            timer: 3000,
+                            showConfirmButton: false
+                        });
+                    }
+                    
+                    return false;
+                }
             }
 
             function processProductionOrders(ordersData) {
@@ -3604,18 +3706,6 @@
                 if (header) {
                     header.style.cursor = 'grab';
                     header.style.userSelect = 'none';
-                    
-                    // Añadir un indicador visual más claro
-                    const title = header.querySelector('h3');
-                    if (title) {
-                        // Comprobar si ya tiene el indicador
-                        if (!header.querySelector('.drag-indicator')) {
-                            const dragIndicator = document.createElement('span');
-                            dragIndicator.className = 'drag-indicator';
-                            dragIndicator.innerHTML = ' <i class="fa fa-arrows-alt" style="font-size: 10px; color: #6b7280;"></i>';
-                            title.appendChild(dragIndicator);
-                        }
-                    }
                 }
                 
                 // Variables para el cálculo de posición
