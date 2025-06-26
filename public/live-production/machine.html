@@ -1037,20 +1037,41 @@
                 } catch (e) { console.error("Error formatting time:", dateTimeString, e); }
                 return '--:--';
             }
-             // --- Función para formatear fecha (DD/MM/YYYY) ---
-             function formatDate(dateString) {
+             // --- Función para formatear fechas ISO a formato local
+            function formatDate(dateString) {
                 if (!dateString) return 'N/A';
-                try {
-                    const date = new Date(dateString);
-                    if (isNaN(date.getTime())) return 'N/A'; // Fecha inválida
-                    const day = date.getDate().toString().padStart(2, '0');
-                    const month = (date.getMonth() + 1).toString().padStart(2, '0'); // Meses son 0-indexados
-                    const year = date.getFullYear();
-                    return `${day}/${month}/${year}`;
-                } catch (e) {
-                    console.error("Error formatting date:", dateString, e);
-                    return 'N/A';
+                const date = new Date(dateString);
+                return date.toLocaleDateString('es-ES', { 
+                    year: 'numeric', 
+                    month: '2-digit', 
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }).replace(',', '');
+            }
+
+            // Función para formatear segundos a formato legible
+            function formatSeconds(seconds) {
+                if (!seconds || isNaN(parseInt(seconds))) return 'N/A';
+                
+                seconds = parseInt(seconds);
+                const hours = Math.floor(seconds / 3600);
+                const minutes = Math.floor((seconds % 3600) / 60);
+                const remainingSeconds = seconds % 60;
+                
+                let formattedTime = '';
+                
+                if (hours > 0) {
+                    formattedTime += `${hours}h `;
                 }
+                
+                if (minutes > 0 || hours > 0) {
+                    formattedTime += `${minutes}m `;
+                }
+                
+                formattedTime += `${remainingSeconds}s`;
+                
+                return formattedTime;
             }
 
 
@@ -2015,28 +2036,28 @@
                 const isUrgent = order.json && order.json.urgent;
                 
                 card.innerHTML = `
-                    <div class="flex justify-between items-center mb-2">
+                    <div class="flex justify-between items-center mb-1">
                         <div class="flex items-center">
                             ${statusIcon}
                             <span class="font-bold text-xs text-gray-800" style="letter-spacing: -0.3px;">${order.order_id || 'N/A'}</span>
                             ${isUrgent ? '<i class="fas fa-bolt text-orange-500 ml-1" title="Urgente"></i>' : ''}
                         </div>
-                        <div class="flex items-center">
-                            <span class="text-xs text-gray-600 mr-2">${(order.json && order.json.refer && order.json.refer.customerId) ? order.json.refer.customerId : 'N/A'}</span>
-                            <button class="card-menu-btn text-gray-500 hover:text-gray-700 p-1" data-order-id="${order.id}">
-                                <i class="fas fa-ellipsis-v"></i>
-                            </button>
-                        </div>
+                        <button class="card-menu-btn text-gray-500 hover:text-gray-700 p-1" data-order-id="${order.id}">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
                     </div>
-                    <div class="mb-2 text-xs text-gray-700">
-                    ${(order.json && order.json.refer && order.json.refer.descrip) ? order.json.refer.descrip : 'Sin descripción'}
+                    <div class="mb-1 text-xs text-gray-600 font-medium flex items-center">
+                        <i class="fas fa-user-tie text-blue-500 mr-1" title="Cliente"></i>
+                        ${(order.json && order.json.refer && order.json.refer.customerId) ? order.json.refer.customerId : 'N/A'}
                     </div>
+                    <div class="mb-2 text-xs text-gray-700 flex items-center">
+                        <i class="fas fa-clock text-indigo-500 mr-1" title="Tiempo teórico"></i>
+                        <span>Tiempo: ${order.theoretical_time ? formatSeconds(order.theoretical_time) : 'No disponible'}</span>
+                    </div>
+                    <div class="articles-container-${order.id}"></div>
                     <div class="flex justify-between items-center text-xs text-gray-500">
-                        <span><i class="far fa-calendar-alt mr-1"></i>${formatDate(order.created_at)}</span>
-                        <span class="font-medium text-gray-700">
-                            ${hasUnits ? '<i class="fas fa-cubes mr-1"></i>' : ''}
-                            ${order.units || 0} ${order.json && order.json.unit ? order.json.unit : ''}
-                        </span>
+                        <span><i class="far fa-calendar-alt mr-1" title="Fecha de creación"></i>${formatDate(order.created_at)}</span>
+                        <span><i class="fas fa-truck-loading text-green-600 mr-1" title="Fecha de entrega"></i>${order.delivery_date ? formatDate(order.delivery_date) : 'Sin fecha'}</span>
                     </div>`;
                 
                 // Agregar evento de click para el botón de menú (después de crear el HTML)
@@ -2053,7 +2074,9 @@
                     });
                 }
                 // Agregar evento de doble click solo para tarjetas "en curso" (status 1)
+                console.log('Estado de la orden:', order.id, 'Status:', order.status);
                 if (order.status === 1) {
+                    console.log('Orden en curso detectada:', order.id);
                     card.addEventListener('dblclick', (e) => {
                         e.stopPropagation();
                         // Verificar si hay un operario seleccionado
@@ -2078,11 +2101,84 @@
                             }
                         });
                     });
+                    
+                    // Cargar y mostrar los artículos asociados a la orden en curso
+                    const articlesContainer = card.querySelector(`.articles-container-${order.id}`);
+                    if (articlesContainer) {
+                        // Mostrar indicador de carga
+                        articlesContainer.innerHTML = '<div class="text-xs text-gray-500 italic">Cargando artículos...</div>';
+                        
+                        // Obtener los artículos asociados a la orden
+                        getOrderArticles(order.id).then(articles => {
+                            if (articles && articles.length > 0) {
+                                // Crear contenedor con título para los artículos
+                                let articlesHTML = `
+                                    <div class="mt-2 mb-2 bg-blue-50 rounded-md p-2">
+                                        <div class="font-semibold text-xs text-blue-700 mb-1">ARTÍCULOS EN PRODUCCIÓN:</div>
+                                        <div class="articles-list">
+                                `;
+                                
+                                // Agregar cada artículo a la lista
+                                articles.forEach(article => {
+                                    articlesHTML += `
+                                        <div class="text-xs text-gray-700 mb-1">
+                                            <span class="font-medium">${article.codigo_articulo || 'N/A'}</span> - 
+                                            ${article.descripcion_articulo || 'Sin descripción'}
+                                        </div>
+                                    `;
+                                });
+                                
+                                articlesHTML += `</div></div>`;
+                                articlesContainer.innerHTML = articlesHTML;
+                            } else {
+                                // No hay artículos asociados
+                                articlesContainer.innerHTML = '';
+                            }
+                        });
+                    }
                 }
                 return card;
             }
-            // Función para actualizar el estado de una orden de producción
-            async function updateOrderStatus(orderId, newStatus) {
+            // Función para obtener los artículos asociados a una orden de producción
+async function getOrderArticles(orderId) {
+    console.log('API_BASE_URL:', API_BASE_URL);
+    try {
+        console.log('Llamando a getOrderArticles para orden ID:', orderId);
+        const urlParams = new URLSearchParams(window.location.search);
+        const productionLineToken = urlParams.get('token');
+        
+        console.log('Token de línea de producción:', productionLineToken);
+        
+        if (!productionLineToken) {
+            throw new Error('No se encontró el token de la línea de producción');
+        }
+        
+        console.log('URL de la API:', `${API_BASE_URL}/api/production-orders/${orderId}/articles`);
+        const response = await fetch(`${API_BASE_URL}/api/production-orders/${orderId}/articles`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            }
+        });
+        
+        console.log('Respuesta HTTP:', response.status, response.statusText);
+        
+        if (!response.ok) {
+            throw new Error(`Error HTTP: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('Datos recibidos:', data);
+        return data.data || [];
+    } catch (error) {
+        console.error('Error al obtener artículos:', error);
+        return [];
+    }
+}
+
+// Función para actualizar el estado de una orden de producción
+async function updateOrderStatus(orderId, newStatus) {
                 try {
                     const urlParams = new URLSearchParams(window.location.search);
                     const productionLineToken = urlParams.get('token');

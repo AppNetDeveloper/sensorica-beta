@@ -43,6 +43,7 @@ use App\Http\Controllers\Api\ShiftProcessEventController;
 use App\Http\Controllers\Api\RfidErrorPointController;
 use App\Http\Controllers\Api\IaPromptController; // Importa tu controlador
 use App\Http\Controllers\Api\BarcodeScansController;
+use App\Http\Controllers\Api\ProductionOrderArticlesController;
 
 
 
@@ -383,3 +384,6 @@ Route::get('/shift/statuses', [\App\Http\Controllers\Api\ShiftStatusController::
 // Rutas para la API de escaneos de códigos de barras
 Route::get('/barcode-scans', [BarcodeScansController::class, 'getLastBarcode']);
 Route::post('/barcode-scans', [BarcodeScansController::class, 'store']);
+
+// Ruta para obtener los artículos asociados a una orden de producción
+Route::get('/production-orders/{id}/articles', [ProductionOrderArticlesController::class, 'getArticles']);
