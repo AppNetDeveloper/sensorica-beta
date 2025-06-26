@@ -394,13 +394,16 @@ class ProductionOrderController extends Controller
         if ($hasOrderChanged) {
             $order->orden = $validatedData['orden'];
         }
-        if ($hasStatusChanged) {
+        // Guardar el estado anterior antes de actualizar
+        $previousStatus = null;
+        if ($hasStatusChanged && isset($validatedData['status'])) {
+            $previousStatus = $order->status; // Guardamos el estado anterior antes de actualizarlo
             $order->status = $validatedData['status'];
         }
     
         // Guardamos TODOS los cambios en la base de datos de una vez.
         $order->save();
-    
+        
         // --- LÓGICA MQTT ---
         // Solo si el estado ha cambiado, intentamos enviar el mensaje.
         if ($hasStatusChanged) {
@@ -409,9 +412,13 @@ class ProductionOrderController extends Controller
                 Log::info("Bloqueo de caché adquirido para [{$lockKey}]. Procesando envío MQTT.");
                 try {
                     $order->refresh();
-                    $action = match ((int)$order->status) {
-                        1 => 0,
-                        2 => 1,
+                    $currentStatus = (int)$order->status;
+                    
+                    // Asignar acción MQTT según el estado actual y el anterior
+                    $action = match ($currentStatus) {
+                        1 => 0,  // EN CURSO -> acción 0
+                        2 => 1,   // FINALIZADA -> acción 1
+                        3 => $previousStatus == 1 ? 0 : null,  // Si viene de EN CURSO a INCIDENCIA, enviar acción 0
                         default => null,
                     };
                 

@@ -3505,8 +3505,9 @@ async function updateOrderStatus(orderId, newStatus) {
                     if (xhr.status === 200) {
                         const response = JSON.parse(xhr.responseText);
                         if (response.success && response.data && Array.isArray(response.data)) {
-                            // Buscar la orden con status: "1" (EN CURSO)
-                            const activeOrder = response.data.find(order => order.status === "1");
+                            // Buscar la orden con status: "1" o 1 (EN CURSO)
+                            // Usar comparación flexible para manejar tanto strings como números
+                            const activeOrder = response.data.find(order => order.status == 1 || order.status === "1");
                             if (activeOrder) {
                                 activeOrderId = activeOrder.id;
                                 console.log('Orden activa encontrada en API:', activeOrderId);
