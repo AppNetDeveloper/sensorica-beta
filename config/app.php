@@ -67,7 +67,7 @@ return [
     |
     */
 
-    'timezone' => env('TIMEZONE', 'UTC'),
+    'timezone' => env('APP_TIMEZONE', 'Europe/Madrid'),
 
     /*
     |--------------------------------------------------------------------------

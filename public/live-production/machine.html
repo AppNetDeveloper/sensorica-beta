@@ -378,6 +378,29 @@
         .select2-container--default .select2-dropdown {
             z-index: 1050 !important; /* Asegurar que el dropdown de Select2 esté sobre otros elementos del panel */
         }
+        
+        /* === Estilos para el campo de búsqueda === */
+        .search-input {
+            background-color: #fff;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+        
+        .search-input:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+            outline: none;
+        }
+        
+        .search-input::placeholder {
+            color: #94a3b8;
+            font-style: italic;
+        }
+        
+        .kanban-card.hidden-by-search {
+            display: none;
+        }
+        
         /* === Estilo para alinear valores de datos === */
         .data-value {
             min-width: 80px; /* Ajustar según sea necesario para "00:00:00" */
@@ -448,6 +471,9 @@
         <div id="kanban-board" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mb-4">
             <div id="col-pendiente" data-column-name="PENDIENTES" class="kanban-column">
                 <h2 class="kanban-title">PENDIENTES <span class="column-counter">0</span></h2>
+                <div class="search-container mb-2">
+                    <input type="text" id="search-pendientes" class="search-input w-full px-3 py-1 text-sm border border-gray-300 rounded" placeholder="Buscar en pendientes...">
+                </div>
                 </div>
             <div id="col-en-curso" data-column-name="EN CURSO" class="kanban-column">
                 <h2 class="kanban-title">EN CURSO <span class="column-counter">0</span></h2>
@@ -2342,6 +2368,14 @@ async function updateOrderStatus(orderId, newStatus) {
                     if (counter) {
                         counter.textContent = ordersByColumn[status].length;
                     }
+                    
+                    // Si es la columna de pendientes y hay una búsqueda activa, volver a aplicar el filtro
+                    if (status === '0' && targetColumn.id === 'col-pendiente') {
+                        const searchInput = document.getElementById('search-pendientes');
+                        if (searchInput && searchInput.value.trim() !== '') {
+                            filterPendientesCards(searchInput.value.trim().toLowerCase());
+                        }
+                    }
                 }
                 
                 console.log("Production orders processed and Kanban board updated.");
@@ -4155,6 +4189,49 @@ async function updateOrderStatus(orderId, newStatus) {
                         barcodeInput.value = '';
                     }
                 });
+            }
+            
+            // ===== Funcionalidad de búsqueda para tarjetas pendientes =====
+            const searchPendientesInput = document.getElementById('search-pendientes');
+            if (searchPendientesInput) {
+                searchPendientesInput.addEventListener('input', function() {
+                    filterPendientesCards(this.value.trim().toLowerCase());
+                });
+            }
+            
+            // Función para filtrar tarjetas en la columna de pendientes
+            function filterPendientesCards(searchText) {
+                const pendientesColumn = document.getElementById('col-pendiente');
+                if (!pendientesColumn) return;
+                
+                const cards = pendientesColumn.querySelectorAll('.kanban-card');
+                let visibleCount = 0;
+                
+                cards.forEach(card => {
+                    // Buscar en todos los textos visibles de la tarjeta
+                    const cardText = card.textContent.toLowerCase();
+                    const isVisible = searchText === '' || cardText.includes(searchText);
+                    
+                    // Mostrar u ocultar la tarjeta según el resultado
+                    if (isVisible) {
+                        card.classList.remove('hidden-by-search');
+                        visibleCount++;
+                    } else {
+                        card.classList.add('hidden-by-search');
+                    }
+                });
+                
+                // Actualizar el contador para mostrar solo las tarjetas visibles
+                const counter = pendientesColumn.querySelector('.column-counter');
+                if (counter) {
+                    // Si hay texto de búsqueda, mostrar "X/Y" donde X son las visibles y Y el total
+                    if (searchText !== '' && cards.length > 0) {
+                        counter.textContent = `${visibleCount}/${cards.length}`;
+                    } else {
+                        // Si no hay búsqueda, mostrar solo el total
+                        counter.textContent = cards.length;
+                    }
+                }
             }
             
             // ===== Funcionalidad de pantalla completa para el tablero Kanban =====

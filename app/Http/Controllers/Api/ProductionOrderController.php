@@ -185,19 +185,32 @@ class ProductionOrderController extends Controller
             ], 400);
         }
 
+        //sacamos de production_orders el ultimos registro por production_line_id 
+        $lastOrders = ProductionOrder::where('production_line_id', $productionLine->id)->orderBy('id', 'desc')->take(1)->get();
+
         $today = now()->format('Y-m-d');
 
         // Obtener solo las órdenes necesarias para el tablero Kanban
         $orders = ProductionOrder::whereIn('status', ['0', '1', '2', '3', '4', '5'])
-            ->where(function($query) use ($productionLine, $today) {
+            ->where(function($query) use ($productionLine, $today, $lastOrders) {
                 // Caso 1: Órdenes de esta línea que no son status 2 ni 3
                 $query->where(function($q) use ($productionLine) {
                     $q->where('production_line_id', $productionLine->id)
                       ->where('status', '!=', 3)
                       ->where('status', '!=', 2);
                 })
-                // Caso 2: Órdenes con status 3 (de cualquier línea)
-                ->orWhere('status', 3)
+                // Caso 2: Órdenes con status 3 pero solo de la misma categoría de proceso
+                ->orWhere(function($q) use ($productionLine, $lastOrders) {
+                    // Verificar si hay órdenes previas para esta línea
+                    if ($lastOrders->isNotEmpty()) {
+                        $q->where('status', 3)
+                          ->where('process_category', $lastOrders->first()->process_category);
+                    } else {
+                        // Si no hay órdenes previas, solo mostrar las incidencias de esta línea
+                        $q->where('status', 3)
+                          ->where('production_line_id', $productionLine->id);
+                    }
+                })
                 // Caso 3: Órdenes finalizadas (status 2) solo de hoy
                 ->orWhere(function($q) use ($productionLine, $today) {
                     $q->where('production_line_id', $productionLine->id)
@@ -317,8 +330,25 @@ class ProductionOrderController extends Controller
             return response()->json(['success' => false, 'message' => 'Token inválido.'], 400);
         }
         
-        // 🔥 VERIFICAR QUE LA ORDEN PERTENECE A ESTA LÍNEA:
-        if ($order->production_line_id !== $productionLine->id) {
+        // 🔥 VERIFICAR PERMISOS PARA MODIFICAR LA ORDEN:
+        // Caso 1: Si la orden pertenece a esta línea, permitir modificación
+        // Caso 2: Si la orden es una incidencia (status 3) y tiene el mismo process_category, permitir modificación
+        $lastOrders = ProductionOrder::where('production_line_id', $productionLine->id)->orderBy('id', 'desc')->take(1)->get();
+        
+        $canModify = false;
+        
+        // Caso 1: La orden pertenece a esta línea
+        if ($order->production_line_id === $productionLine->id) {
+            $canModify = true;
+        } 
+        // Caso 2: Es una incidencia y tiene el mismo process_category que la última orden de esta línea
+        elseif ($order->status == 3 && $lastOrders->isNotEmpty()) {
+            if ($order->process_category == $lastOrders->first()->process_category) {
+                $canModify = true;
+            }
+        }
+        
+        if (!$canModify) {
             return response()->json(['success' => false, 'message' => 'No tienes permisos para modificar esta orden.'], 403);
         }
         // --- VERIFICACIÓN DE CAMBIOS (LA PARTE CLAVE) ---
