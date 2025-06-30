@@ -417,7 +417,7 @@ class ProductionOrderController extends Controller
                     // Asignar acción MQTT según el estado actual y el anterior
                     $action = match ($currentStatus) {
                         1 => 0,  // EN CURSO -> acción 0
-                        2 => 1,   // FINALIZADA -> acción 1
+                        2 => $previousStatus == 1 ? 1 : null,   // FINALIZADA -> acción 1
                         3 => $previousStatus == 1 ? 0 : null,  // Si viene de EN CURSO a INCIDENCIA, enviar acción 0
                         default => null,
                     };
@@ -434,10 +434,12 @@ class ProductionOrderController extends Controller
                                 "machineId" => $barcoder->machine_id ?? "", 
                                 "opeId" => $barcoder->ope_id ?? "",
                             ]);
-                            $this->publishMqttMessage($topic, $messagePayload);
+                            
                             // Si la orden se ha finalizado, activar la siguiente en la cola.
-                            if ((int)$order->status === 2) {
+                            if ((int)$order->status === 2 || (int)$order->status === 3) {
                                 $this->activateNextOrder($order, $barcoder);
+                            }else{
+                                $this->publishMqttMessage($topic, $messagePayload);
                             }
                             Log::info("Mensaje MQTT enviado para orden {$order->id}.");
                         } else {
@@ -463,7 +465,7 @@ class ProductionOrderController extends Controller
     {
         // ¡CORREGIDO! Usamos el modelo ProductionOrder, no 'self'.
         $nextOrderInLine = ProductionOrder::where('production_line_id', $finishedOrder->production_line_id)
-                    ->where('orden', '>', $finishedOrder->orden)
+                   // ->where('orden', '>', $finishedOrder->orden)
                     ->where('status', 0)
                     ->orderBy('orden', 'asc')
                     ->first();

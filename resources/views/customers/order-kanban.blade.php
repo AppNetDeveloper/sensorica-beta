@@ -252,7 +252,8 @@
                     2.  **Urgencia:** Las órdenes marcadas como 'is_urgent: true' tienen la máxima prioridad y deben ser procesadas antes que las no urgentes.
                     3.  **Fecha de Entrega:** Dentro de cada grupo (urgentes y no urgentes), las órdenes con la 'delivery_date' más cercana en el tiempo deben ir primero.
                     4.  **Tiempo Teórico:** Si todo lo demás es igual, las órdenes con mayor 'theoretical_time' van primero.
-                    5.  **Se tiene que organizar de tal maneras las tarjetas en cada production_line que la suma de theoretical_time sea lo mas equilibrado entre todas las production_lines.
+                    5.  **Se tiene que usar los id reales de production_line_id no se tienen que inventar estos id .
+                    6.  **Se tiene que usar los id reales de order_id no se tienen que inventar estos id . Ademas no olvidar de ninguno
                     Líneas de Producción Disponibles: ${JSON.stringify(productionLines)}
                     Órdenes a Organizar: ${JSON.stringify(workableOrders)}
                     Tu respuesta DEBE ser únicamente un objeto JSON con una clave "assignments" que contenga un array. CADA ORDEN de la lista 'Órdenes a Organizar' debe tener su correspondiente entrada en el array "assignments". No dejes ninguna orden sin asignar. Cada elemento del array debe ser un objeto con "order_id" (número) y "assigned_line_id" (número). No incluyas explicaciones ni texto adicional.
@@ -426,6 +427,9 @@
                     const container = columnElement.querySelector('.column-cards');
                     appendCards(column.items, container);
                 }
+                
+                // Actualizar los tiempos acumulados para esta columna
+                updateAccumulatedTimes(columnElement);
                 fragment.appendChild(columnElement);
             });
             kanbanBoard.appendChild(fragment);
@@ -724,7 +728,20 @@
                 }
             }
 
-            distributeAndRender(false, () => recalculatePositions());
+            distributeAndRender(false, () => {
+                // Recalcular posiciones
+                recalculatePositions();
+                
+                // Actualizar los tiempos acumulados en todas las columnas
+                document.querySelectorAll('.kanban-column').forEach(column => {
+                    updateAccumulatedTimes(column);
+                });
+                
+                // También actualizar en secciones de estados finales
+                document.querySelectorAll('.final-state-section').forEach(section => {
+                    updateAccumulatedTimes(section);
+                });
+            });
         }
 
         function resetDropZones() {
@@ -886,7 +903,12 @@
                          <div class="d-flex align-items-center flex-wrap">
                             <span class="d-flex align-items-center me-3"><i class="fas fa-box text-muted me-1"></i><span class="text-xs">${order.box || 0}</span></span>
                             <span class="d-flex align-items-center me-3"><i class="fas fa-cubes text-muted me-1"></i><span class="text-xs">${order.units || 0}</span></span>
-                            <span class="d-flex align-items-center"><i class="far fa-clock text-muted me-1"></i><span class="text-xs">${order.theoretical_time || 'N/A'}</span></span>
+                             <div class="d-flex flex-column">
+                                <span class="d-flex align-items-center"><i class="far fa-clock text-muted me-1" title="Tiempo teórico"></i><span class="text-xs">${order.theoretical_time || 'N/A'} </span></span>
+                             </div>
+                             <div class="d-flex flex-column">
+                                <span class="d-flex align-items-center accumulated-time-badge d-none" title="Tiempo acumulado de tarjetas anteriores"> <i class="fas fa-hourglass-half text-muted me-1"></i><span class="text-xs">00:00:00</span></span>
+                             </div>
                          </div>
                     </div>
                     <div class="d-flex justify-content-between align-items-center mt-2">
@@ -917,6 +939,68 @@
             const minutes = Math.floor((totalSeconds % 3600) / 60);
             const seconds = Math.floor(totalSeconds % 60);
             return [hours, minutes, seconds].map(v => v.toString().padStart(2, '0')).join(':');
+        }
+        
+        // Función para calcular el tiempo acumulado de las tarjetas por encima
+        function updateAccumulatedTimes(columnElement) {
+            const cards = columnElement.querySelectorAll('.column-cards > .kanban-card');
+            let accumulatedTime = 0;
+            
+            // Recorremos las tarjetas de arriba a abajo
+            cards.forEach((card) => {
+                const orderId = parseInt(card.dataset.id);
+                const order = masterOrderList.find(o => o.id === orderId);
+                
+                if (order) {
+                    // Guardamos el tiempo acumulado hasta esta tarjeta
+                    card.dataset.accumulatedTime = accumulatedTime;
+                    
+                    // Actualizamos el elemento que muestra el tiempo acumulado
+                    const accTimeBadge = card.querySelector('.accumulated-time-badge');
+                    if (accTimeBadge) {
+                        accTimeBadge.innerHTML = `<i class="fas fa-hourglass-half text-muted me-1"></i><span class="text-xs">${formatSecondsToTime(accumulatedTime)}</span>`;
+                        
+                        // Solo mostramos el badge si hay tiempo acumulado
+                        if (accumulatedTime > 0) {
+                            accTimeBadge.classList.remove('d-none');
+                        } else {
+                            accTimeBadge.classList.add('d-none');
+                        }
+                    }
+                    
+                    // Sumamos el tiempo de esta tarjeta para la siguiente
+                    accumulatedTime += parseTimeToSeconds(order.theoretical_time || '00:00:00');
+                }
+            });
+            
+            // También actualizamos para las tarjetas en estados finales si existen
+            const finalStateSections = columnElement.querySelectorAll('.final-state-section .column-cards');
+            finalStateSections.forEach(section => {
+                let sectionAccumulatedTime = 0;
+                const sectionCards = section.querySelectorAll('.kanban-card');
+                
+                sectionCards.forEach((card) => {
+                    const orderId = parseInt(card.dataset.id);
+                    const order = masterOrderList.find(o => o.id === orderId);
+                    
+                    if (order) {
+                        card.dataset.accumulatedTime = sectionAccumulatedTime;
+                        
+                        const accTimeBadge = card.querySelector('.accumulated-time-badge');
+                        if (accTimeBadge) {
+                            accTimeBadge.innerHTML = `<i class="fas fa-hourglass-half text-muted me-1"></i><span class="text-xs">${formatSecondsToTime(sectionAccumulatedTime)}</span>`;
+                            
+                            if (sectionAccumulatedTime > 0) {
+                                accTimeBadge.classList.remove('d-none');
+                            } else {
+                                accTimeBadge.classList.add('d-none');
+                            }
+                        }
+                        
+                        sectionAccumulatedTime += parseTimeToSeconds(order.theoretical_time || '00:00:00');
+                    }
+                });
+            });
         }
 
         // --- 5. GUARDADO DE DATOS Y OTROS EVENTOS ---
@@ -1086,8 +1170,19 @@
             });
         }
 
-        distributeAndRender(true);
-        console.log('Kanban final inicializado.');
+        distributeAndRender(true, () => {
+            // Actualizar los tiempos acumulados en todas las columnas al inicializar
+            document.querySelectorAll('.kanban-column').forEach(column => {
+                updateAccumulatedTimes(column);
+            });
+            
+            // También actualizar en secciones de estados finales
+            document.querySelectorAll('.final-state-section').forEach(section => {
+                updateAccumulatedTimes(section);
+            });
+            
+            console.log('Kanban final inicializado con tiempos acumulados');
+        });
 
         //ponemos un wait que reciva ms desde otra parte
         function wait(ms) {

@@ -474,6 +474,8 @@
                 <div class="search-container mb-2">
                     <input type="text" id="search-pendientes" class="search-input w-full px-3 py-1 text-sm border border-gray-300 rounded" placeholder="Buscar en pendientes...">
                 </div>
+                
+
                 </div>
             <div id="col-en-curso" data-column-name="EN CURSO" class="kanban-column">
                 <h2 class="kanban-title">EN CURSO <span class="column-counter">0</span></h2>
@@ -629,6 +631,7 @@
                     <label class="block text-sm font-medium text-gray-700 mb-1">Motivo</label>
                     <select id="incidentReason" class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                         <option value="">Selecciona un motivo</option>
+                        <option value="reasignar">Reasignar a otra Máquina</option>
                         <option value="pausado">Pausado</option>
                         <option value="averia">Avería</option>
                         <option value="falta_material">Falta de material</option>
@@ -681,8 +684,8 @@
                 </div>
                 <p id="noIncidentsMessage" class="text-gray-500 text-sm mb-4">No hay incidencias registradas para esta orden.</p>
                 
-                <!-- Formulario para nueva incidencia -->
-                <div class="mt-6 bg-gray-50 p-4 rounded-lg">
+                <!-- Formulario para nueva incidencia  LE HE PEUSTO HIDDE PARA QUE NO SE MUESTRE PERO SI EN ALGUN MOMENTO SE NECESITA SE BORRA HIDE-->
+                <div class="mt-6 bg-gray-50 p-4 rounded-lg" hidden>
                     <h5 class="font-medium mb-3 text-gray-700">Registrar nueva incidencia</h5>
                     <form id="newIncidentForm" class="space-y-3">
                         <input type="hidden" id="orderIncidentOrderId" name="order_id">
@@ -1893,10 +1896,7 @@
                             </div>
                             <div class="text-lg font-semibold">${orderData.order_id || 'Sin referencia'}</div>
                             <div class="text-gray-600">${(orderData.json && orderData.json.refer && orderData.json.refer.descrip) || 'Sin descripción'}</div>
-                            <div class="flex justify-between text-sm text-gray-500 mt-2">
-                                <span>Cantidad: ${orderData.units || 'N/A'} ${orderData.json && orderData.json.unit ? orderData.json.unit : ''}</span>
-                                <span>Prioridad: ${orderData.priority || 'Media'}</span>
-                            </div>
+
                         </div>`;
                     
                     // Mostrar incidencias
@@ -3956,9 +3956,8 @@ async function updateOrderStatus(orderId, newStatus) {
             makeDraggable(tiempoPanel, 'tiempoPanel');
             
             // Posicionar el panel de tiempo debajo del panel de código de barras
-            if (barcodePanel && tiempoPanel) {
-                // Posición inicial si no hay posición guardada
-                if (!localStorage.getItem('tiempoPanelPosition')) {
+            function positionTiempoPanel() {
+                if (tiempoPanel && barcodePanel) {
                     // Obtener la posición y dimensiones del panel de código de barras
                     const barcodePanelRect = barcodePanel.getBoundingClientRect();
                     
@@ -3966,6 +3965,25 @@ async function updateOrderStatus(orderId, newStatus) {
                     tiempoPanel.style.top = (barcodePanelRect.bottom + 10) + 'px';
                     tiempoPanel.style.left = barcodePanelRect.left + 'px';
                 }
+            }
+            
+            // Llamar a la función para posicionar inicialmente el panel
+            positionTiempoPanel();
+            
+            // Agregar un observador para detectar cambios en la posición del panel de código de barras
+            const barcodeObserver = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.type === 'attributes' && 
+                        (mutation.attributeName === 'style' || mutation.attributeName === 'class')) {
+                        // Si el panel de código de barras cambia de posición, actualizar la posición del panel de tiempo
+                        setTimeout(positionTiempoPanel, 100); // Pequeño retraso para asegurar que los cambios se han aplicado
+                    }
+                });
+            });
+            
+            // Configurar el observador
+            if (barcodePanel) {
+                barcodeObserver.observe(barcodePanel, { attributes: true });
             }
             
             // Controlar visibilidad de estadísticas de unidades según parámetro URL
@@ -4200,6 +4218,207 @@ async function updateOrderStatus(orderId, newStatus) {
                 });
             }
             
+            // ===== Teclado Virtual Flotante Universal =====
+            let activeInputElement = null; // Referencia al campo de entrada activo
+            
+            function initializeVirtualKeyboard() {
+                const virtualKeyboard = document.getElementById('virtual-keyboard');
+                const keyboardLayout = document.getElementById('keyboard-layout');
+                const closeKeyboardBtn = document.getElementById('keyboard-close');
+                const minimizeBtn = document.getElementById('keyboard-minimize');
+                const clearBtn = document.getElementById('keyboard-clear');
+                const backspaceBtn = document.getElementById('keyboard-backspace');
+                const spaceBtn = document.getElementById('keyboard-space');
+                
+                // Definir las teclas del teclado
+                const keys = [
+                    '1', '2', '3', '4', '5', '6', '7', '8', '9', '0',
+                    'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P',
+                    'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'Ñ',
+                    'Z', 'X', 'C', 'V', 'B', 'N', 'M', '.', '-', '_'
+                ];
+                
+                // Generar las teclas dinámicamente
+                keyboardLayout.innerHTML = '';
+                keys.forEach(key => {
+                    const keyButton = document.createElement('button');
+                    keyButton.textContent = key;
+                    keyButton.className = 'keyboard-key p-2 bg-gray-100 rounded text-center hover:bg-gray-200 text-sm';
+                    keyButton.addEventListener('click', function() {
+                        if (activeInputElement) {
+                            // Obtener la posición actual del cursor
+                            const startPos = activeInputElement.selectionStart;
+                            const endPos = activeInputElement.selectionEnd;
+                            const currentValue = activeInputElement.value;
+                            
+                            // Insertar el carácter en la posición del cursor
+                            activeInputElement.value = currentValue.substring(0, startPos) + key + currentValue.substring(endPos);
+                            
+                            // Mover el cursor después del carácter insertado
+                            activeInputElement.selectionStart = startPos + 1;
+                            activeInputElement.selectionEnd = startPos + 1;
+                            
+                            // Disparar evento input para activar cualquier listener
+                            const event = new Event('input', { bubbles: true });
+                            activeInputElement.dispatchEvent(event);
+                            
+                            // Mantener el foco en el campo de entrada
+                            activeInputElement.focus();
+                        }
+                    });
+                    keyboardLayout.appendChild(keyButton);
+                });
+                
+                // Manejar el botón de cerrar
+                closeKeyboardBtn.addEventListener('click', function() {
+                    hideVirtualKeyboard();
+                });
+                
+                // Manejar el botón de minimizar
+                minimizeBtn.addEventListener('click', function() {
+                    virtualKeyboard.classList.toggle('keyboard-minimized');
+                    if (virtualKeyboard.classList.contains('keyboard-minimized')) {
+                        keyboardLayout.classList.add('hidden');
+                        document.querySelector('#virtual-keyboard > div:last-child').classList.add('hidden');
+                    } else {
+                        keyboardLayout.classList.remove('hidden');
+                        document.querySelector('#virtual-keyboard > div:last-child').classList.remove('hidden');
+                    }
+                });
+                
+                // Manejar el botón de borrar
+                clearBtn.addEventListener('click', function() {
+                    if (activeInputElement) {
+                        activeInputElement.value = '';
+                        // Disparar evento input
+                        const event = new Event('input', { bubbles: true });
+                        activeInputElement.dispatchEvent(event);
+                        activeInputElement.focus();
+                    }
+                });
+                
+                // Manejar el botón de retroceso (backspace)
+                backspaceBtn.addEventListener('click', function() {
+                    if (activeInputElement) {
+                        const startPos = activeInputElement.selectionStart;
+                        const endPos = activeInputElement.selectionEnd;
+                        const currentValue = activeInputElement.value;
+                        
+                        if (startPos === endPos) {
+                            // Si no hay selección, eliminar el carácter anterior
+                            if (startPos > 0) {
+                                activeInputElement.value = currentValue.substring(0, startPos - 1) + currentValue.substring(endPos);
+                                activeInputElement.selectionStart = startPos - 1;
+                                activeInputElement.selectionEnd = startPos - 1;
+                            }
+                        } else {
+                            // Si hay selección, eliminar la selección
+                            activeInputElement.value = currentValue.substring(0, startPos) + currentValue.substring(endPos);
+                            activeInputElement.selectionStart = startPos;
+                            activeInputElement.selectionEnd = startPos;
+                        }
+                        
+                        // Disparar evento input
+                        const event = new Event('input', { bubbles: true });
+                        activeInputElement.dispatchEvent(event);
+                        activeInputElement.focus();
+                    }
+                });
+                
+                // Manejar el botón de espacio
+                spaceBtn.addEventListener('click', function() {
+                    if (activeInputElement) {
+                        const startPos = activeInputElement.selectionStart;
+                        const endPos = activeInputElement.selectionEnd;
+                        const currentValue = activeInputElement.value;
+                        
+                        activeInputElement.value = currentValue.substring(0, startPos) + ' ' + currentValue.substring(endPos);
+                        activeInputElement.selectionStart = startPos + 1;
+                        activeInputElement.selectionEnd = startPos + 1;
+                        
+                        // Disparar evento input
+                        const event = new Event('input', { bubbles: true });
+                        activeInputElement.dispatchEvent(event);
+                        activeInputElement.focus();
+                    }
+                });
+                
+                // Hacer que el teclado sea arrastrable
+                makeDraggable(virtualKeyboard);
+            }
+            
+            // Hacer que un elemento sea arrastrable
+            function makeDraggable(element) {
+                const header = element.querySelector('div:first-child');
+                let isDragging = false;
+                let offsetX, offsetY;
+                
+                header.addEventListener('mousedown', function(e) {
+                    isDragging = true;
+                    offsetX = e.clientX - element.getBoundingClientRect().left;
+                    offsetY = e.clientY - element.getBoundingClientRect().top;
+                    element.style.transition = 'none';
+                });
+                
+                document.addEventListener('mousemove', function(e) {
+                    if (isDragging) {
+                        element.style.position = 'fixed';
+                        element.style.left = (e.clientX - offsetX) + 'px';
+                        element.style.top = (e.clientY - offsetY) + 'px';
+                        element.style.bottom = 'auto';
+                        element.style.right = 'auto';
+                    }
+                });
+                
+                document.addEventListener('mouseup', function() {
+                    isDragging = false;
+                });
+            }
+            
+            // Mostrar el teclado virtual
+            function showVirtualKeyboard(inputElement) {
+                const virtualKeyboard = document.getElementById('virtual-keyboard');
+                if (virtualKeyboard) {
+                    activeInputElement = inputElement;
+                    virtualKeyboard.classList.remove('hidden');
+                    virtualKeyboard.classList.remove('keyboard-minimized');
+                    document.getElementById('keyboard-layout').classList.remove('hidden');
+                    document.querySelector('#virtual-keyboard > div:last-child').classList.remove('hidden');
+                }
+            }
+            
+            // Ocultar el teclado virtual
+            function hideVirtualKeyboard() {
+                const virtualKeyboard = document.getElementById('virtual-keyboard');
+                if (virtualKeyboard) {
+                    virtualKeyboard.classList.add('hidden');
+                    activeInputElement = null;
+                }
+            }
+            
+            // Inicializar el teclado virtual cuando se carga la página
+            initializeVirtualKeyboard();
+            
+            // Agregar evento click a todos los campos de entrada para mostrar el teclado
+            document.addEventListener('click', function(e) {
+                if (e.target.tagName === 'INPUT' && e.target.type === 'text') {
+                    showVirtualKeyboard(e.target);
+                } else if (!document.getElementById('virtual-keyboard').contains(e.target)) {
+                    // Si se hace clic fuera del teclado y no en un campo de entrada, ocultar el teclado
+                    // hideVirtualKeyboard(); // Comentado para que no se cierre al hacer clic en otra parte
+                }
+            });
+            
+            // Agregar estilos CSS para el teclado minimizado
+            const style = document.createElement('style');
+            style.textContent = `
+                .keyboard-minimized {
+                    height: 40px;
+                    overflow: hidden;
+                }
+            `;
+            document.head.appendChild(style);
+            
             // Función para filtrar tarjetas en la columna de pendientes
             function filterPendientesCards(searchText) {
                 const pendientesColumn = document.getElementById('col-pendiente');
@@ -4368,5 +4587,28 @@ async function updateOrderStatus(orderId, newStatus) {
         // *** Fin de DOMContentLoaded ***
         });
     </script>
+    
+    <!-- Teclado Virtual Flotante -->
+    <div id="virtual-keyboard" class="hidden fixed bottom-0 left-0 right-0 bg-gray-800 bg-opacity-90 p-2 shadow-lg z-50">
+        <div class="flex justify-between items-center mb-2">
+            <button id="keyboard-minimize" class="text-white bg-gray-700 hover:bg-gray-600 rounded px-2 py-1">
+                <i class="fas fa-minus"></i>
+            </button>
+            <span class="text-white text-sm">Teclado Virtual</span>
+            <button id="keyboard-close" class="text-white bg-red-600 hover:bg-red-700 rounded px-2 py-1">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div id="keyboard-layout" class="grid grid-cols-10 gap-1 mb-2">
+            <!-- Las teclas se generarán dinámicamente con JavaScript -->
+        </div>
+        <div class="flex justify-between">
+            <button id="keyboard-backspace" class="px-3 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600 text-sm">
+                <i class="fas fa-backspace"></i>
+            </button>
+            <button id="keyboard-space" class="px-3 py-2 bg-gray-600 text-white rounded hover:bg-gray-500 flex-grow mx-1 text-sm">Espacio</button>
+            <button id="keyboard-clear" class="px-3 py-2 bg-red-500 text-white rounded hover:bg-red-600 text-sm">Borrar</button>
+        </div>
+    </div>
 </body>
 </html>

@@ -38,64 +38,83 @@ class ProductionLineController extends Controller
      * @return string
      */
     private function getActionButtons($line)
-    {
-        // Generación de URLs
-        $editUrl        = route('productionlines.edit', $line->id);
-        $sensorListUrl  = route('sensors.index', $line->id);
-        $deleteUrl      = route('productionlines.destroy', $line->id);
-        $ordersUrl      = "/production-order-kanban?token={$line->token}";
-        $processesUrl   = route('productionlines.processes.index', $line->id);
-        $liveViewUrl    = "/live-production/live.html?token={$line->token}";
-        $liveMachineUrl = "/live-production/machine.html?token={$line->token}";
-        $csrfToken      = csrf_token();
+{
+    // Generación de URLs
+    $editUrl        = route('productionlines.edit', $line->id);
+    $sensorListUrl  = route('sensors.index', $line->id);
+    $deleteUrl      = route('productionlines.destroy', $line->id);
+    $ordersUrl      = "/production-order-kanban?token={$line->token}";
+    $processesUrl   = route('productionlines.processes.index', $line->id);
+    $liveViewUrl    = "/live-production/live.html?token={$line->token}";
+    $liveMachineUrl = "/live-production/machine.html?token={$line->token}";
+    $csrfToken      = csrf_token();
     
-        // Botones con traducción y con íconos, usando el helper de Laravel __()
-        $editBtn = "<a href='{$editUrl}' class='btn btn-sm btn-primary' title='" . __('buttons.edit') . "'>
-                        <i class='fa fa-edit'></i> " . __('buttons.edit') . "
-                    </a>";
+    // Array para almacenar los botones que se mostrarán
+    $buttons = [];
+    
+    // Botón de sensores - requiere permiso productionline-create
+    if (auth()->user()->can('productionline-create')) {
         $sensorBtn = "<a href='{$sensorListUrl}' class='btn btn-sm btn-info' title='Sensors'>
             <i class='fa fa-microchip'></i> " . __('Sensors') . "
         </a>";
-
+        $buttons[] = $sensorBtn;
+    }
+    
+    // Botón de procesos - requiere permiso productionline-orders
+    if (auth()->user()->can('productionline-orders')) {
         $processesBtn = "<a href='{$processesUrl}' class='btn btn-sm btn-primary' title='Processes'>
             <i class='fa fa-cogs'></i> " . __('Processes') . "
         </a>";
-
+        $buttons[] = $processesBtn;
+    }
+    
+    // Botón de órdenes - requiere permiso productionline-orders
+    if (auth()->user()->can('productionline-orders')) {
         $ordersBtn = "<a href='{$ordersUrl}' class='btn btn-sm btn-secondary' title='Production Orders'>
             <i class='fa fa-list'></i> " . __('Orders') . "
         </a>";
-
-        // Se añade target="_blank" para que abra en nueva ventana
-        $liveViewBtn = "<a href='{$liveViewUrl}' target='_blank' rel='noopener noreferrer' class='btn btn-sm btn-secondary' title='" . __('buttons.live_view') . "'>
-                        <i class='fa fa-tv'></i> " . __('buttons.live_view') . "
-                      </a>";
-        $liveMachineBtn = "<a href='{$liveMachineUrl}' target='_blank' rel='noopener noreferrer' class='btn btn-sm btn-success' title='" . __('buttons.live_machine') . "'>
-                        <i class='fa fa-cogs'></i> " . __('buttons.live_machine') . "
-                      </a>";
+        $buttons[] = $ordersBtn;
+    }
     
+    // Botón de vista en vivo - requiere permiso productionline-live-view
+    if (auth()->user()->can('productionline-live-view')) {
+        $liveViewBtn = "<a href='{$liveViewUrl}' target='_blank' rel='noopener noreferrer' class='btn btn-sm btn-secondary' title='" . __('buttons.live_view') . "'>
+            <i class='fa fa-tv'></i> " . __('buttons.live_view') . "
+        </a>";
+        $buttons[] = $liveViewBtn;
+    }
+    
+    // Botón de máquina en vivo - requiere permiso live-machine
+    if (auth()->user()->can('productionline-live-machine')) {
+        $liveMachineBtn = "<a href='{$liveMachineUrl}' target='_blank' rel='noopener noreferrer' class='btn btn-sm btn-success' title='" . __('buttons.live_machine') . "'>
+            <i class='fa fa-cogs'></i> " . __('buttons.live_machine') . "
+        </a>";
+        $buttons[] = $liveMachineBtn;
+    }
+    
+    // Botón de editar - requiere permiso productionline-edit
+    if (auth()->user()->can('productionline-edit')) {
+        $editBtn = "<a href='{$editUrl}' class='btn btn-sm btn-primary' title='" . __('buttons.edit') . "'>
+            <i class='fa fa-edit'></i> " . __('buttons.edit') . "
+        </a>";
+        $buttons[] = $editBtn;
+    }
+    
+    // Botón de eliminar - requiere permiso productionline-delete
+    if (auth()->user()->can('productionline-delete')) {
         $deleteForm = "
             <form action='{$deleteUrl}' method='POST' style='display:inline; margin:0;'>
                 <input type='hidden' name='_token' value='{$csrfToken}'>
                 <input type='hidden' name='_method' value='DELETE'>
-                <button type='submit' class='btn btn-sm btn-danger' title='" . __('buttons.delete') . "' onclick='return confirm(\"" . __('buttons.delete_confirm') . "?\")'>
-                    <i class='fa fa-trash'></i> " . __('buttons.delete') . "
+                <button type='submit' class='btn btn-sm btn-danger' title='" . __('buttons.delete') . "' onclick='return confirm(\"" . __('buttons.delete_confirm') . "?\")'>\n                    <i class='fa fa-trash'></i> " . __('buttons.delete') . "
                 </button>
             </form>";
-    
-        // Combina todos los botones en una sola cadena HTML
-        return implode(' ', [
-            $sensorBtn,
-            $processesBtn, // Botón de procesos añadido aquí
-            $ordersBtn,
-            $liveViewBtn,
-            $liveMachineBtn,
-            $editBtn,
-            $deleteForm,
-        ]);
+        $buttons[] = $deleteForm;
     }
     
-    
-    
+    // Combina todos los botones en una sola cadena HTML
+    return implode(' ', $buttons);
+}
 
     public function edit($id)
     {

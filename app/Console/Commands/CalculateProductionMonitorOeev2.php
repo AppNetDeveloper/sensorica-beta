@@ -340,7 +340,7 @@ class CalculateProductionMonitorOeev2 extends Command
             $unitsMadeRealEnd = $unitsPending * $secondsPerUnitReal;
             
             // Calcular el slow time
-            $unitsDelayedSForSlowTime = ($orderTimeActivitySeconds - $downTime - $productionStopTime) / $secondsPerUnitTheoretical;
+            $unitsDelayedSForSlowTime = $secondsPerUnitTheoretical > 0 ? ($orderTimeActivitySeconds - $downTime - $productionStopTime) / $secondsPerUnitTheoretical : 0;
             //$this->info("[" . Carbon::now()->toDateTimeString() . "] Unidades retrasadas para slow time: $unitsDelayedSForSlowTime");
             $unitsDelayedSlowTime = $unitsDelayedSForSlowTime - ($unitsMadeReal * $secondsPerUnitTheoretical);
             //$this->info("[" . Carbon::now()->toDateTimeString() . "] Tiempo retrasado para slow time: $unitsDelayedSlowTime");

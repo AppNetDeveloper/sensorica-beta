@@ -53,8 +53,8 @@ class CustomerController extends Controller
                     $buttons[] = $editButton;
                 }
 
-                // Botón de líneas de producción (solo con permiso productionline-edit)
-                if (auth()->user()->can('productionline-edit')) {
+                // Botón de líneas de producción (solo con permiso productionline-show)
+                if (auth()->user()->can('productionline-show')) {
                     $linesButton = "<a href='{$productionLinesUrl}' class='btn btn-sm btn-secondary me-1' data-bs-toggle='tooltip' title='" . __('Production Lines') . "'><i class='fas fa-sitemap'></i></a>";
                     $buttons[] = $linesButton;
                 }

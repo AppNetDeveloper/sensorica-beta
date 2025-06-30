@@ -10,9 +10,11 @@
 @section('content')
     <div class="row">
         <div class="mb-3">
+            @can('productionline-create')
             <a href="{{ route('productionlines.create', ['customer_id' => $customer_id]) }}" class="btn btn-primary">
                 {{ __('Añadir Nueva Línea') }}
             </a>
+            @endcan
         </div>
         <div class="col-lg-12">
             <div class="card">

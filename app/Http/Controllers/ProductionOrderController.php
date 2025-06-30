@@ -78,6 +78,7 @@ class ProductionOrderController extends Controller
                     }
                     // <--- CAMBIO CLAVE: Guardar el estado original ANTES de actualizar
                     $originalStatus = $order->status;
+                    $originalproduction_line_id = $order->production_line_id;
                     $newStatus = (int)$orderData['status'];
                     
                     // Registrar el estado actual antes de la actualización
@@ -109,19 +110,23 @@ class ProductionOrderController extends Controller
                         Log::info("$logPrefix El estado ha cambiado de {$originalStatus} a {$newStatus}. Se evaluará el envío de MQTT.");
                         
                         $action = match ($newStatus) {
-                            1 => 0, // Corresponde a "Iniciar"
-                            2 => 1, // Corresponde a "Finalizar"
+                            1 => 0,  // EN CURSO -> acción 0 (siempre)
+                            2 => $originalStatus == 1 ? 1 : null,   // FINALIZADA -> acción 1 (solo si viene de EN CURSO)
+                            3 => $originalStatus == 1 ? 0 : null,  // Si viene de EN CURSO a INCIDENCIA, enviar acción 0
+                            4 => $originalStatus == 1 ? 0 : null,  // Si viene de EN CURSO a INCIDENCIA, enviar acción 0
                             default => null,
                         };
 
-                        // Si el nuevo estado es 1 o 2, procedemos con MQTT
+                        // Si hay una acción MQTT definida (estados 1, 2, 3 desde estado 1, etc.), procedemos
                         if ($action !== null) {
-                            $lockKey = 'mqtt_lock_for_order_' . $order->id;
-                            if (Cache::add($lockKey, true, 5)) { // Bloqueo de 5 segundos para evitar duplicados
-                                Log::info("$logPrefix Bloqueo de caché adquirido para [{$lockKey}]. Procesando envío MQTT.");
+                            // Debug para verificar que se está procesando correctamente
+                            Log::debug("$logPrefix Procesando acción MQTT: {$action} para cambio de estado {$originalStatus} -> {$newStatus}");
+
+                                Log::info("$logPrefix Procesando envío MQTT para orden {$order->id}.");
                                 try {
                                     // Usamos el production_line_id con el que se acaba de actualizar la orden
-                                    $productionLineIdForMqtt = $orderData['production_line_id'];
+                                    // Si no está en $orderData, usamos el de la orden (importante para incidencias)
+                                    $productionLineIdForMqtt = $orderData['production_line_id'] ?? $originalproduction_line_id;
 
                                     if ($productionLineIdForMqtt) {
                                         $barcoder = Barcode::where('production_line_id', $productionLineIdForMqtt)->first();
@@ -136,13 +141,24 @@ class ProductionOrderController extends Controller
                                                 "opeId"     => $barcoder->ope_id ?? "",
                                             ]);
 
-                                            $this->publishMqttMessage($topic, $messagePayload);
-                                            Log::info("$logPrefix Mensaje MQTT enviado a tópico [{$topic}]");
 
                                             // Si la orden se ha finalizado (status 2), activar la siguiente
-                                            if ($newStatus === 2) {
-                                                $this->activateNextOrder($order, $barcoder);
-                                                Log::info("$logPrefix Llamada a activateNextOrder ejecutada.");
+                                            if ($newStatus === 2 || $newStatus === 3 || $newStatus === 4 || $newStatus === 5) {
+                                                $lockKey = 'mqtt_lock_for_order_' . $order->order_id . '_line_' . $order->production_line_id;
+                                                if (Cache::add($lockKey, true, 5)) { // Bloqueo de 5 segundos para evitar duplicados
+                                                    $this->activateNextOrder($productionLineIdForMqtt, $barcoder);
+                                                    Log::info("$logPrefix Llamada a activateNextOrder ejecutada.");
+                                                } else {
+                                                    Log::info("$logPrefix Envío MQTT omitido para orden {$order->id} porque ya hay un proceso en curso (bloqueo de caché activo).");
+                                                }
+                                            }else{
+                                                $lockKey = 'mqtt_lock_for_order_' . $order->order_id . '_line_' . $order->production_line_id;
+                                                if (Cache::add($lockKey, true, 5)) { // Bloqueo de 5 segundos para evitar duplicados
+                                                    $this->publishMqttMessage($topic, $messagePayload);
+                                                    Log::info("$logPrefix Mensaje MQTT enviado a tópico [{$topic}]");
+                                                } else {
+                                                    Log::info("$logPrefix Envío MQTT omitido para orden {$order->id} porque ya hay un proceso en curso (bloqueo de caché activo).");
+                                                }
                                             }
                                         } else {
                                             Log::warning("$logPrefix No se encontró Barcoder o topic MQTT para la línea de producción ID: {$productionLineIdForMqtt}. No se envió el mensaje.");
@@ -156,9 +172,6 @@ class ProductionOrderController extends Controller
                                         'exception' => $e->getTraceAsString()
                                     ]);
                                 }
-                            } else {
-                                Log::info("$logPrefix Envío MQTT omitido para orden {$order->id} porque ya hay un proceso en curso (bloqueo de caché activo).");
-                            }
                         }
                     } // Fin de la lógica MQTT
 
@@ -246,17 +259,18 @@ class ProductionOrderController extends Controller
             Log::debug("Tiempo de ejecución: " . round($executionTime, 3) . " segundos");
         }
     }
-    private function activateNextOrder(ProductionOrder $finishedOrder, $barcoder)
+    private function activateNextOrder($prodductionLineId, $barcoder)
     {
-        // ¡CORREGIDO! Usamos el modelo ProductionOrder, no 'self'.
-        $nextOrderInLine = ProductionOrder::where('production_line_id', $finishedOrder->production_line_id)
-                    ->where('orden', '>', $finishedOrder->orden)
+        Log::info("Llamada a activateNextOrder ejecutada.");
+        // ¡CORREGIDO! Usamos el modelo ProductionOrder, no 'self'. y donde pone where status = 0 
+        $nextOrderInLine = ProductionOrder::where('production_line_id', $prodductionLineId)
+                    //->where('orden', '>', $finishedOrder->orden)
                     ->where('status', 0)
                     ->orderBy('orden', 'asc')
                     ->first();
 
         if ($nextOrderInLine) {
-            Log::info("Orden [{$finishedOrder->id}] finalizada. Lógica para activar la siguiente orden [{$nextOrderInLine->id}] se ejecutaría aquí.");
+            Log::info("Orden para la línea [{$prodductionLineId}] finalizada. Lógica para activar la siguiente orden [{$nextOrderInLine->id}] se ejecutaría aquí.");
             $topic = $barcoder->mqtt_topic_barcodes . '/prod_order_mac';
             $messagePayload = json_encode([
                 "action"    => 0, 
@@ -269,7 +283,7 @@ class ProductionOrderController extends Controller
             sleep(0.5);
             $this->publishMqttMessage($topic, $messagePayload);
         } else {
-            Log::info("Orden [{$finishedOrder->id}] finalizada. No hay más órdenes en la cola para la línea [{$finishedOrder->production_line_id}].");
+            Log::info("No hay más órdenes en la cola para la línea [{$prodductionLineId}].");
         }
     }
         /**

@@ -111,19 +111,36 @@ class CheckOrdersFromApi extends Command
                                 $this->logLine("✓ El order_id {$orderId} EXISTE en la base de datos (ID: {$existingOrder->id})", 'info');
                                 $this->logLine("📝 Registrando orden existente en logs...");
 
-                                
-                                // Verificar si necesitamos actualizar el campo in_stock
-                                if ($existingOrder->in_stock == 0) {
-                                    $this->logLine("🔍 Verificando si el pedido está en stock en la API...");
+                                // Verificar si la orden ya está finalizada
+                                if ($existingOrder->finished_at) {
+                                    $this->logLine("⏭️ La orden ya está finalizada (finished_at: {$existingOrder->finished_at}). Omitiendo verificaciones de stock y fecha de entrega.", 'info');
+                                } else {
+                                    // Verificar si necesitamos actualizar el campo in_stock
+                                    if ($existingOrder->in_stock == 0) {
+                                        $this->logLine("🔍 Verificando si el pedido está en stock en la API...");
+                                        
+                                        // Buscar el campo in_stock en los datos mapeados (viene de la API)
+                                        $inStockFromApi = $mappedData['in_stock'] ?? null;
+                                        
+                                        if ($inStockFromApi === 'Si' || $inStockFromApi === true) {
+                                            $this->logLine("🔄 Actualizando in_stock a 1 para el pedido {$orderId}", 'info');
+                                            $existingOrder->in_stock = 1;
+                                            $existingOrder->save();
+                                            $this->logLine("✅ Campo in_stock actualizado correctamente", 'info');
+                                        }
+                                    }
                                     
-                                    // Buscar el campo in_stock en los datos mapeados (viene de la API)
-                                    $inStockFromApi = $mappedData['in_stock'] ?? null;
-                                    
-                                    if ($inStockFromApi === 'Si' || $inStockFromApi === true) {
-                                        $this->logLine("🔄 Actualizando in_stock a 1 para el pedido {$orderId}", 'info');
-                                        $existingOrder->in_stock = 1;
-                                        $existingOrder->save();
-                                        $this->logLine("✅ Campo in_stock actualizado correctamente", 'info');
+                                    // Verificar si necesitamos actualizar la fecha de entrega
+                                    if (isset($mappedData['delivery_date']) && $mappedData['delivery_date']) {
+                                        $deliveryDateFromApi = $mappedData['delivery_date'];
+                                        $currentDeliveryDate = $existingOrder->delivery_date ? $existingOrder->delivery_date->format('Y-m-d') : null;
+                                        
+                                        if ($deliveryDateFromApi != $currentDeliveryDate) {
+                                            $this->logLine("🔄 Actualizando delivery_date de '{$currentDeliveryDate}' a '{$deliveryDateFromApi}' para el pedido {$orderId}", 'info');
+                                            $existingOrder->delivery_date = $deliveryDateFromApi;
+                                            $existingOrder->save();
+                                            $this->logLine("✅ Campo delivery_date actualizado correctamente", 'info');
+                                        }
                                     }
                                 }
                                 
