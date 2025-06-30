@@ -822,10 +822,19 @@
             const processDescription = '{{ $process->description }}';
 
             let urgencyIconHtml = '';
+            let stockIconHtml = '';
+            
+            // Triángulo rojo para órdenes urgentes
             if (isOrderUrgent(order)) {
                 card.classList.add('urgent');
                 const titleText = translations.urgentOrder;
                 urgencyIconHtml = `<span class="ms-2" title="${titleText}"><i class="fas fa-exclamation-triangle text-danger"></i></span>`;
+            }
+            
+            // Triángulo azul para órdenes sin stock
+            if (order.has_stock === 0) {
+                const stockTitleText = 'Sin stock de materiales';
+                stockIconHtml = `<span class="ms-2" title="${stockTitleText}"><i class="fas fa-exclamation-triangle text-primary"></i></span>`;
             }
 
             const groupNumber = order.grupo_numero || 0;
@@ -885,7 +894,7 @@
             card.innerHTML = `
                 <div class="kanban-card-header" onclick="this.parentElement.classList.toggle('collapsed')">
                     <div class="me-2" style="flex-grow: 1;">
-                        <div class="fw-bold text-sm d-flex align-items-center">#${order.order_id}${urgencyIconHtml} ${groupBadgeHtml}</div>
+                        <div class="fw-bold text-sm d-flex align-items-center">#${order.order_id}${urgencyIconHtml}${stockIconHtml} ${groupBadgeHtml}</div>
                         <div class="text-xs fw-bold text-muted mt-1">${order.customerId || translations.noCustomer}</div>
                         ${processDescription ? `<div class="text-xs text-muted mt-1">${processDescription}</div>` : ''}
                     </div>
@@ -903,7 +912,7 @@
                          <div class="d-flex align-items-center flex-wrap">
                             <span class="d-flex align-items-center me-3"><i class="fas fa-box text-muted me-1"></i><span class="text-xs">${order.box || 0}</span></span>
                             <span class="d-flex align-items-center me-3"><i class="fas fa-cubes text-muted me-1"></i><span class="text-xs">${order.units || 0}</span></span>
-                             <div class="d-flex flex-column">
+                             <div class="d-flex flex-column me-2">
                                 <span class="d-flex align-items-center"><i class="far fa-clock text-muted me-1" title="Tiempo teórico"></i><span class="text-xs">${order.theoretical_time || 'N/A'} </span></span>
                              </div>
                              <div class="d-flex flex-column">
@@ -1067,18 +1076,16 @@
                 showConfirmButton: false,
                 html: `
                     <div class="d-flex flex-column gap-2 my-4">
-                        <button id="viewJsonBtn" class="btn btn-primary w-100">{{ __('View Data') }}</button>
+                        <button id="viewIncidentsBtn" class="btn btn-danger w-100">{{ __('View Incidents') }}</button>
                         <button id="viewOriginalOrderBtn" class="btn btn-info w-100" ${isOriginalOrderDisabled ? 'disabled' : ''}>
                             {{ __('View Original Order') }}
                         </button>
                     </div>`,
                 didOpen: () => {
                     const popup = Swal.getPopup();
-                    popup.querySelector('#viewJsonBtn').addEventListener('click', () => {
-                        Swal.fire({ 
-                            title: "{{ __('Order Data') }}", 
-                            html: `<pre class="text-start text-sm p-4 bg-light rounded" style="max-height: 400px; overflow-y: auto;">${JSON.stringify(order, null, 2)}</pre>` 
-                        });
+                    popup.querySelector('#viewIncidentsBtn').addEventListener('click', () => {
+                        window.location.href = `/customers/${customerId}/production-order-incidents`;
+                        Swal.close();
                     });
                     
                     if (!isOriginalOrderDisabled) {

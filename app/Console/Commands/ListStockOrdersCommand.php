@@ -53,16 +53,25 @@ class ListStockOrdersCommand extends Command
 
         try {
             // Inicia una consulta Eloquent para obtener las órdenes.
-            $orders = OriginalOrder::where('in_stock', 1) // Condición: la orden debe estar en stock.
-                ->whereNull('finished_at') // Condición: la orden no debe estar finalizada en su totalidad.
-                // Se elimina ->where('processed', 0) para incluir órdenes parcialmente procesadas y buscar su siguiente tarea.
-                ->with([
-                    'customer', // Carga ansiosa (Eager Loading) de la relación con el cliente para evitar N+1 queries.
-                    'orderProcesses.process', // Carga la relación 'orderProcesses' y, anidada, la relación 'process' de cada uno.
-                    'orderProcesses.articles' // Carga la relación 'articles' de cada 'orderProcess'.
+            $query = OriginalOrder::where('processed', 0) // Solo órdenes no procesadas
+                ->whereNull('finished_at'); // Solo órdenes no finalizadas
+        
+            // Si no se deben procesar órdenes fuera de stock, filtrar solo las en stock
+            if (!config('app.process_orders_out_of_stock', false)) {
+                $query->where('in_stock', 1);
+                $this->logInfo('Filtrando solo órdenes en stock (in_stock = 1)');
+            } else {
+                $this->logInfo('Procesando TODAS las órdenes, incluyendo fuera de stock');
+            }
+        
+            // Obtener las órdenes ordenadas por fecha de entrega
+            $orders = $query->with([
+                    'customer',
+                    'orderProcesses.process',
+                    'orderProcesses.articles'
                 ])
-                ->orderBy('delivery_date', 'asc') // Ordena los resultados por fecha de entrega ascendente.
-                ->get(); // Ejecuta la consulta y obtiene una colección de resultados.
+                ->orderBy('delivery_date', 'asc')
+                ->get();
 
             // Cuenta el número de órdenes encontradas.
             $count = $orders->count();
@@ -207,6 +216,7 @@ class ListStockOrdersCommand extends Command
             'grupo_numero' => $orderProcess->grupo_numero,
             'processes_to_do' => implode(', ', $toDoDescriptionsList), // Usa la nueva lista de pendientes.
             'processes_done' => implode(', ', $doneDescriptionsList), // Usa la nueva lista de realizados.
+            'stock' => $order->in_stock,
             'refer' => [
                 '_id' => "",
                 'company_name' => $order->customer ? $order->customer->name : 'N/A',

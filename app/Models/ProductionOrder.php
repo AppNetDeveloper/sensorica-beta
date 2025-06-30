@@ -27,6 +27,7 @@ class ProductionOrder extends Model
      * @var array
      */
     protected $fillable = [
+        'has_stock',
         'production_line_id',
         'original_production_line_id',
         'barcoder_id',

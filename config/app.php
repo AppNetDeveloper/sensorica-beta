@@ -247,4 +247,19 @@ return [
 
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Configuración de Procesamiento de Órdenes
+    |--------------------------------------------------------------------------
+    |
+    | Esta configuración controla el comportamiento del procesamiento de órdenes
+    |
+    | process_orders_out_of_stock - Si es true, se procesarán todas las órdenes,
+    | incluyendo las que no tienen stock (in_stock = 0).
+    | Si es false, solo se procesarán las órdenes con stock (in_stock = 1).
+    |
+    */
+    
+    'process_orders_out_of_stock' => env('PROCESS_ORDERS_OUT_OF_STOCK', false),
+
 ];

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\Customer;
 
 class ProductionOrderIncident extends Model
 {
@@ -11,6 +12,7 @@ class ProductionOrderIncident extends Model
     
     protected $fillable = [
         'production_order_id',
+        'customer_id',
         'reason',
         'notes',
         'created_by'
@@ -35,5 +37,13 @@ class ProductionOrderIncident extends Model
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * Relación con el cliente
+     */
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class);
     }
 }

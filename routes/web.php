@@ -34,6 +34,7 @@ use App\Http\Controllers\RoleManageController;
 use App\Http\Controllers\PermissionManageController;
 use App\Http\Controllers\ScadaOrderController;
 use App\Http\Controllers\ProductionOrderController;
+use App\Http\Controllers\ProductionOrderIncidentController;
 use App\Http\Controllers\ServerController;
 use App\Http\Controllers\ShiftManagementController;
 use App\Http\Controllers\OperatorPostController;
@@ -99,6 +100,16 @@ Route::prefix('customers')->name('customers.')->group(function () {
         Route::get('order-kanban/{process}', [CustomerController::class, 'showOrderKanban'])
             ->name('order-kanban')
             ->where('process', '[0-9]+');
+            
+        // Rutas para las incidencias de órdenes de producción
+        Route::get('production-order-incidents', [ProductionOrderIncidentController::class, 'index'])
+            ->name('production-order-incidents.index');
+            
+        Route::get('production-order-incidents/{incident}', [ProductionOrderIncidentController::class, 'show'])
+            ->name('production-order-incidents.show');
+            
+        Route::delete('production-order-incidents/{incident}', [ProductionOrderIncidentController::class, 'destroy'])
+            ->name('production-order-incidents.destroy');
     });
 });
 

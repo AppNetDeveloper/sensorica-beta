@@ -64,6 +64,11 @@ class CustomerController extends Controller
                     $originalOrdersUrl = route('customers.original-orders.index', $customer->id);
                     $originalOrdersButton = "<a href='{$originalOrdersUrl}' class='btn btn-sm btn-dark me-1' data-bs-toggle='tooltip' title='" . __('Original Orders') . "'><i class='fas fa-clipboard-list'></i></a>";
                     $buttons[] = $originalOrdersButton;
+                    
+                    // Botón de Incidencias de Órdenes de Producción (con el mismo permiso que pedidos originales)
+                    $incidentsUrl = route('customers.production-order-incidents.index', $customer->id);
+                    $incidentsButton = "<a href='{$incidentsUrl}' class='btn btn-sm btn-danger me-1' data-bs-toggle='tooltip' title='" . __('Production Order Incidents') . "'><i class='fas fa-exclamation-triangle'></i></a>";
+                    $buttons[] = $incidentsButton;
                 }
 
                 // Botón de estadísticas de peso
@@ -242,8 +247,9 @@ class CustomerController extends Controller
                     'customerId' => $order->customerId ?? 'Sin Cliente',
                     'original_order_id' => $order->original_order_id ?? 'Sin Orden Original',
                     'articles_descriptions' => $articlesDescriptions,
-                    //en lugar de 0 por defecto aqui 'orden' => (int)($order->orden ?? '0') ponemos que sea por production_line_id el orden mas grande que existe y le damos +1
-                    'orden' => $order->production_line_id ? ProductionOrder::where('production_line_id', $order->production_line_id)->max('orden') + 1 : 0,
+                //en lugar de 0 por defecto aqui 'orden' => (int)($order->orden ?? '0') ponemos que sea por production_line_id el orden mas grande que existe y le damos +1
+                'orden' => $order->production_line_id ? ProductionOrder::where('production_line_id', $order->production_line_id)->max('orden') + 1 : 0,
+                'has_stock' => $order->has_stock ?? 1, // Añadimos el campo has_stock, por defecto 1 si no existe
                 ];
             });
         

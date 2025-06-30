@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\ProductionOrder;
 use App\Models\ProductionOrderIncident;
+use App\Models\Customer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -45,6 +46,17 @@ class ProductionOrderIncidentController extends Controller
 
         // Verificar que la orden existe
         $order = ProductionOrder::findOrFail($orderId);
+        
+        // Obtener el cliente a través de la línea de producción
+        $productionLine = $order->productionLine;
+        if (!$productionLine) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se encontró la línea de producción asociada a esta orden'
+            ], 404);
+        }
+        
+        $customerId = $productionLine->customer_id;
 
         // Obtener el ID del operador del cuerpo de la solicitud o usar 1 como valor por defecto
         $operatorId = $request->input('operator_id', 1);
@@ -53,7 +65,8 @@ class ProductionOrderIncidentController extends Controller
             'production_order_id' => $order->id,
             'reason' => $validated['reason'],
             'notes' => $validated['notes'] ?? null,
-            'created_by' => $operatorId
+            'created_by' => $operatorId,
+            'customer_id' => $customerId
         ]);
         
         $incident->save();

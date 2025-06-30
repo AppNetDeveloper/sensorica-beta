@@ -234,17 +234,22 @@ class MqttSubscriberLocal extends Command
                 $existingOrder->save();
             }
 
+            // Determinar el valor de has_stock basado en el campo 'stock' del JSON
+            $hasStock = 1; // Valor por defecto
+            if (isset($messageData['stock'])) {
+                $stockValue = $messageData['stock'];
+                // Si el valor es 0 o 1, lo usamos; de lo contrario, usamos 1
+                $hasStock = ($stockValue === 0 || $stockValue === 1) ? (int)$stockValue : 1;
+            }
+            
             // Prepare data for update or create
             $orderData = [
                 'order_id'                  => $messageData['orderId'],
                 'barcoder_id'               => $barcoderId,
                 'production_line_id'        => null, // Set production_line_id to null for default topic
-                // *** CAMBIO CLAVE AQUÍ: Asigna el array directamente, no lo decodifiques de nuevo ***
                 'json'                      => $messageData,
                 'status'                    => '0',
-                // Asegúrate de que 'orden' sea un campo que realmente quieres auto-incrementar así,
-                // o que sea un campo con un valor predeterminado si es un valor de ordenamiento.
-                // Podría haber condiciones de carrera si muchos procesos intentan crear al mismo tiempo.
+                'has_stock'                 => $hasStock, // Añadido el campo has_stock
                 'orden'                     => ProductionOrder::max('orden') + 1,
                 'theoretical_time'          => isset($messageData['theoretical_time']) ? floatval($messageData['theoretical_time']) : null,
                 'process_category'          => $messageData['process_category'] ?? null,

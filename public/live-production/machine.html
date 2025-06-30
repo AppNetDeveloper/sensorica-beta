@@ -2714,43 +2714,79 @@ async function updateOrderStatus(orderId, newStatus) {
                     return longPressTriggered;
                 },
                 accepts: function (el, target, source, sibling) {
-                     if (target.id === 'col-en-curso') {
-                         if (source.id === 'col-en-curso') return true;
-                         const cardsInTarget = target.querySelectorAll('.kanban-card:not(.gu-transit)').length;
-                         if (cardsInTarget > 0) {
-                               if (typeof Swal === 'function') {
-                                   // Configurar opciones para el mensaje de alerta
-                                   const swalOptions = {
-                                       icon: 'warning', 
-                                       title: 'Movimiento no permitido',
-                                       text: 'Solo puede haber una tarea en la columna "En Curso".',
-                                       toast: true, 
-                                       position: 'top-end', 
-                                       showConfirmButton: false,
-                                       timer: 3000, 
-                                       timerProgressBar: true
-                                   };
-                                   
-                                   // Si estamos en modo pantalla completa, ajustar el contenedor
-                                   if (isFullScreen && document.getElementById('kanban-board')) {
-                                       swalOptions.target = document.getElementById('kanban-board');
-                                       swalOptions.customClass = {
-                                           container: 'swal2-in-fullscreen',
-                                           popup: 'swal2-in-fullscreen-popup'
-                                       };
-                                   }
-                                   
-                                   // Mostrar el mensaje
-                                   Swal.fire(swalOptions);
-                              } else {
-                                   alert('Solo puede haber una tarea en la columna "En Curso".');
-                              }
-                              console.log("Drop rejected: 'En Curso' column already has a card.");
-                              return false;
-                         }
-                     }
-                     return true;
-                 }
+                    // Restricción: Si viene de la columna Finalizadas, solo puede ir a Incidencias
+                    if (source.id === 'col-finalizadas') {
+                        if (target.id !== 'col-incidencias') {
+                            if (typeof Swal === 'function') {
+                                // Configurar opciones para el mensaje de alerta
+                                const swalOptions = {
+                                    icon: 'warning', 
+                                    title: 'Movimiento no permitido',
+                                    text: 'Las tareas finalizadas solo pueden moverse a Incidencias.',
+                                    toast: true, 
+                                    position: 'top-end', 
+                                    showConfirmButton: false,
+                                    timer: 3000, 
+                                    timerProgressBar: true
+                                };
+                                
+                                // Si estamos en modo pantalla completa, ajustar el contenedor
+                                if (isFullScreen && document.getElementById('kanban-board')) {
+                                    swalOptions.target = document.getElementById('kanban-board');
+                                    swalOptions.customClass = {
+                                        container: 'swal2-in-fullscreen',
+                                        popup: 'swal2-in-fullscreen-popup'
+                                    };
+                                }
+                                
+                                // Mostrar el mensaje
+                                Swal.fire(swalOptions);
+                            } else {
+                                alert('Las tareas finalizadas solo pueden moverse a Incidencias.');
+                            }
+                            console.log("Drop rejected: Task from 'Finalizadas' can only go to 'Incidencias'.");
+                            return false;
+                        }
+                    }
+                    
+                    // Restricción existente: Solo una tarea en En Curso
+                    if (target.id === 'col-en-curso') {
+                        if (source.id === 'col-en-curso') return true;
+                        const cardsInTarget = target.querySelectorAll('.kanban-card:not(.gu-transit)').length;
+                        if (cardsInTarget > 0) {
+                            if (typeof Swal === 'function') {
+                                // Configurar opciones para el mensaje de alerta
+                                const swalOptions = {
+                                    icon: 'warning', 
+                                    title: 'Movimiento no permitido',
+                                    text: 'Solo puede haber una tarea en la columna "En Curso".',
+                                    toast: true, 
+                                    position: 'top-end', 
+                                    showConfirmButton: false,
+                                    timer: 3000, 
+                                    timerProgressBar: true
+                                };
+                                
+                                // Si estamos en modo pantalla completa, ajustar el contenedor
+                                if (isFullScreen && document.getElementById('kanban-board')) {
+                                    swalOptions.target = document.getElementById('kanban-board');
+                                    swalOptions.customClass = {
+                                        container: 'swal2-in-fullscreen',
+                                        popup: 'swal2-in-fullscreen-popup'
+                                    };
+                                }
+                                
+                                // Mostrar el mensaje
+                                Swal.fire(swalOptions);
+                            } else {
+                                alert('Solo puede haber una tarea en la columna "En Curso".');
+                            }
+                            console.log("Drop rejected: 'En Curso' column already has a card.");
+                            return false;
+                        }
+                    }
+                    return true;
+                }
             });
 
             if (!drake) { console.error("Error: Falló la inicialización de Dragula."); return; }
@@ -3076,6 +3112,17 @@ async function updateOrderStatus(orderId, newStatus) {
                 console.log("Dragula event: drop");
                 const cardId = el.dataset.cardId;
                 const targetColumnId = target.id;
+                const sourceColumnId = source.id;
+                
+                // Si la tarjeta se mueve desde la columna "En curso" a cualquier otra columna,
+                // limpiar el contenedor de artículos
+                if (sourceColumnId === 'col-en-curso' && targetColumnId !== 'col-en-curso') {
+                    console.log('Limpiando artículos de la tarjeta:', cardId);
+                    const articlesContainer = el.querySelector(`.articles-container-${cardId}`);
+                    if (articlesContainer) {
+                        articlesContainer.innerHTML = '';
+                    }
+                }
                 
                 // Si el destino es la columna de incidencias, mostrar el modal
                 if (targetColumnId === 'col-incidencias') {
