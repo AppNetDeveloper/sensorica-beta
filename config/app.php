@@ -262,4 +262,20 @@ return [
     
     'process_orders_out_of_stock' => env('PROCESS_ORDERS_OUT_OF_STOCK', false),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Configuración de Creación de Tareas
+    |--------------------------------------------------------------------------
+    |
+    | Esta configuración controla cómo se crean las tareas de procesos
+    |
+    | create_all_processorders - Si es true, se crearán TODAS las tareas pendientes
+    | de cada grupo, sin importar si hay tareas en curso.
+    | Si es false (por defecto), solo se creará la siguiente tarea pendiente
+    | de cada grupo y solo si no hay tareas en curso en ese grupo.
+    |
+    */
+    
+    'create_all_processorders' => env('CREATE_ALL_PROCESSORDERS', false),
+
 ];

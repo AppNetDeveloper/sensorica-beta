@@ -51,10 +51,21 @@ class ListStockOrdersCommand extends Command
         // Registra un mensaje informativo al inicio de la ejecución.
         $this->logInfo('Iniciando la búsqueda de órdenes en stock...');
 
+        // Verificar si debemos crear todas las tareas o limitar a una por grupo
+        $createAllProcessOrders = config('app.create_all_processorders', false);
+        $this->logInfo('Modo de creación: ' . ($createAllProcessOrders ? 'TODAS las tareas pendientes' : 'Solo UNA tarea por grupo'));
+
         try {
-            // Inicia una consulta Eloquent para obtener las órdenes.
-            $query = OriginalOrder::where('processed', 0) // Solo órdenes no procesadas
+            // Si CREATE_ALL_PROCESSORDERS es true, procesamos todas las órdenes (incluso las ya procesadas)
+            if (config('app.create_all_processorders', false)) {
+                $this->logInfo('Procesando todas las órdenes');
+                $query = OriginalOrder::whereNull('finished_at'); // Solo órdenes no finalizadas
+            } else {
+                $this->logInfo('Solo órdenes no procesadas');
+                $query = OriginalOrder::where('processed', 0) // Solo órdenes no procesadas
                 ->whereNull('finished_at'); // Solo órdenes no finalizadas
+            }
+            
         
             // Si no se deben procesar órdenes fuera de stock, filtrar solo las en stock
             if (!config('app.process_orders_out_of_stock', false)) {
@@ -313,10 +324,13 @@ class ListStockOrdersCommand extends Command
                 });
 
                 // 5. Si ya hay una tarea en curso para este grupo, no hacemos nada y pasamos al siguiente grupo.
-                if ($isTaskInProgress) {
+               // if ($isTaskInProgress) {
+                if ($isTaskInProgress && !config('app.create_all_processorders', false)) {
                     // Opcional: registrar que se está esperando para depuración.
                     $this->info("Grupo {$grupoNumero}: Hay una tarea en progreso. Esperando a que finalice.");
                     continue; // Pasa al siguiente grupo_numero.
+                }else{
+                    $this->info("Grupo {$grupoNumero}: No hay una tarea en progreso. Iniciando la siguiente tarea. O todas las tareas pendientes.");
                 }
 
                 // 6. Si no hay nada en curso, buscamos la siguiente tarea para iniciar.
@@ -325,16 +339,24 @@ class ListStockOrdersCommand extends Command
 
                 // 7. Si hay procesos pendientes para iniciar en este grupo...
                 if ($pendingProcesses->isNotEmpty()) {
-                    // ...los ordenamos por secuencia y tomamos el primero (el de menor secuencia).
-                    $nextProcessToExecute = $pendingProcesses
-                        ->sortBy(function ($orderProcess) {
-                            return $orderProcess->process->sequence ?? 999; // Ordena por la secuencia del proceso relacionado.
-                        })
-                        ->first(); // Obtiene el de la secuencia más baja de los pendientes.
+                    // Ordenamos los procesos por secuencia
+                    $sortedPendingProcesses = $pendingProcesses->sortBy(function ($orderProcess) {
+                        return $orderProcess->process->sequence ?? 999; // Ordena por la secuencia del proceso relacionado.
+                    });
                     
-                    // 8. Añade el proceso encontrado a nuestra colección final para procesarlo.
-                    if ($nextProcessToExecute) {
-                        $processesToExecute->push($nextProcessToExecute);
+                    // Si CREATE_ALL_PROCESSORDERS está activado, añadimos todos los procesos pendientes
+                    if (config('app.create_all_processorders', false)) {
+                        foreach ($sortedPendingProcesses as $pendingProcess) {
+                            $processesToExecute->push($pendingProcess);
+                        }
+                        $this->info("Grupo {$grupoNumero}: Añadiendo TODAS las tareas pendientes ({$sortedPendingProcesses->count()}).");
+                    } else {
+                        // Comportamiento original: solo añadimos el primero (menor secuencia)
+                        $nextProcessToExecute = $sortedPendingProcesses->first();
+                        if ($nextProcessToExecute) {
+                            $processesToExecute->push($nextProcessToExecute);
+                            $this->info("Grupo {$grupoNumero}: Añadiendo solo la siguiente tarea pendiente (secuencia más baja).");
+                        }
                     }
                 }
             }

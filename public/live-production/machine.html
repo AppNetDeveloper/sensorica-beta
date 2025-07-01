@@ -463,9 +463,12 @@
         </div>
         
         <!-- Botón flotante de refresco en la parte inferior -->
-        <div class="fixed bottom-4 right-4 z-50">
-            <button id="refresh-button" class="bg-transparent hover:bg-gray-100 text-gray-800 p-2 rounded-full shadow-sm transition-all duration-150" title="Refrescar Datos">
+        <div class="fixed bottom-4 right-4 z-50 flex flex-col space-y-2">
+            <button id="refresh-button" class="bg-transparent hover:bg-gray-100 text-gray-800 p-2 rounded-full shadow-sm transition-all duration-150" title="Refrescar Datos (API)">
                 <i class="fas fa-sync-alt"></i>
+            </button>
+            <button id="force-refresh-button" class="bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-sm transition-all duration-150" title="Forzar Recarga Completa (Página)">
+                <i class="fas fa-bolt"></i>
             </button>
         </div>
         <div id="kanban-board" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mb-4">
@@ -2415,27 +2418,18 @@ async function updateOrderStatus(orderId, newStatus) {
                             }
                         }
                     });
-                    
+
                     // Actualizar el contador de la columna sin animaciones
                     const counter = targetColumn.querySelector('.column-counter');
                     if (counter) {
                         counter.textContent = ordersByColumn[status].length;
                     }
-                    
-                    // Si es la columna de pendientes y hay una búsqueda activa, volver a aplicar el filtro
-                    if (status === '0' && targetColumn.id === 'col-pendiente') {
-                        const searchInput = document.getElementById('search-pendientes');
-                        if (searchInput && searchInput.value.trim() !== '') {
-                            filterPendientesCards(searchInput.value.trim().toLowerCase());
-                        }
-                    }
-                }
-                
+                } // Cierra el bucle for...in
+
                 console.log("Production orders processed and Kanban board updated.");
-            }
+            } // Cierra la función processProductionOrders
 
-
-            function fetchProductionOrders(token, page = 1) {
+        function fetchProductionOrders(token, page = 1) {
                 if (isSelectOpen || isProcessingLogin) {
                     console.log(`Production orders refresh SKIPPED (Select open: ${isSelectOpen}, Processing login: ${isProcessingLogin})`);
                     if (!productionOrdersTimeoutId) {
@@ -4330,6 +4324,11 @@ async function updateOrderStatus(orderId, newStatus) {
                 const clearBtn = document.getElementById('keyboard-clear');
                 const backspaceBtn = document.getElementById('keyboard-backspace');
                 const spaceBtn = document.getElementById('keyboard-space');
+
+                // Prevenir que los botones tomen el foco. Esencial para la compatibilidad con Select2.
+                [closeKeyboardBtn, minimizeBtn, clearBtn, backspaceBtn, spaceBtn].forEach(btn => {
+                    if(btn) btn.setAttribute('tabindex', '-1');
+                });
                 
                 // Definir las teclas del teclado
                 const keys = [
@@ -4345,103 +4344,90 @@ async function updateOrderStatus(orderId, newStatus) {
                     const keyButton = document.createElement('button');
                     keyButton.textContent = key;
                     keyButton.className = 'keyboard-key p-2 bg-gray-100 rounded text-center hover:bg-gray-200 text-sm';
-                    keyButton.addEventListener('click', function() {
-                        if (activeInputElement) {
-                            // Obtener la posición actual del cursor
-                            const startPos = activeInputElement.selectionStart;
-                            const endPos = activeInputElement.selectionEnd;
-                            const currentValue = activeInputElement.value;
-                            
-                            // Insertar el carácter en la posición del cursor
-                            activeInputElement.value = currentValue.substring(0, startPos) + key + currentValue.substring(endPos);
-                            
-                            // Mover el cursor después del carácter insertado
-                            activeInputElement.selectionStart = startPos + 1;
-                            activeInputElement.selectionEnd = startPos + 1;
-                            
-                            // Disparar evento input para activar cualquier listener
-                            const event = new Event('input', { bubbles: true });
-                            activeInputElement.dispatchEvent(event);
-                            
-                            // Mantener el foco en el campo de entrada
-                            activeInputElement.focus();
-                        }
+                    keyButton.setAttribute('tabindex', '-1');
+                    keyButton.addEventListener('mousedown', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (!activeInputElement) return;
+                        activeInputElement.focus();
+                        const startPos = activeInputElement.selectionStart;
+                        const endPos = activeInputElement.selectionEnd;
+                        const val = activeInputElement.value;
+                        activeInputElement.value = val.substring(0, startPos) + key + val.substring(endPos);
+                        activeInputElement.selectionStart = activeInputElement.selectionEnd = startPos + 1;
+                        $(activeInputElement).trigger('input').trigger('keyup');
+        
+        // Caso especial para el campo de búsqueda de tarjetas pendientes
+        if (activeInputElement.id === 'search-pendientes') {
+            filterPendientesCards(activeInputElement.value.trim().toLowerCase());
+        }
                     });
                     keyboardLayout.appendChild(keyButton);
                 });
-                
-                // Manejar el botón de cerrar
-                closeKeyboardBtn.addEventListener('click', function() {
-                    hideVirtualKeyboard();
-                });
-                
-                // Manejar el botón de minimizar
-                minimizeBtn.addEventListener('click', function() {
+
+                // --- MANEJADORES DE BOTONES DE ACCIÓN (CON PREVENTDEFAULT Y STOPPROPAGATION) ---
+
+                closeKeyboardBtn.addEventListener('mousedown', e => { e.preventDefault(); e.stopPropagation(); hideVirtualKeyboard(); });
+
+                minimizeBtn.addEventListener('mousedown', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
                     virtualKeyboard.classList.toggle('keyboard-minimized');
-                    if (virtualKeyboard.classList.contains('keyboard-minimized')) {
-                        keyboardLayout.classList.add('hidden');
-                        document.querySelector('#virtual-keyboard > div:last-child').classList.add('hidden');
+                    keyboardLayout.classList.toggle('hidden');
+                    document.querySelector('#virtual-keyboard > div:last-child').classList.toggle('hidden');
+                });
+
+                clearBtn.addEventListener('mousedown', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (!activeInputElement) return;
+                    activeInputElement.focus();
+                    activeInputElement.value = '';
+                    $(activeInputElement).trigger('input').trigger('keyup');
+        
+        // Caso especial para el campo de búsqueda de tarjetas pendientes
+        if (activeInputElement.id === 'search-pendientes') {
+            filterPendientesCards(activeInputElement.value.trim().toLowerCase());
+        }
+                });
+
+                backspaceBtn.addEventListener('mousedown', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (!activeInputElement) return;
+                    activeInputElement.focus();
+                    const startPos = activeInputElement.selectionStart;
+                    const endPos = activeInputElement.selectionEnd;
+                    if (startPos === endPos && startPos > 0) {
+                        activeInputElement.value = activeInputElement.value.substring(0, startPos - 1) + activeInputElement.value.substring(endPos);
+                        activeInputElement.selectionStart = activeInputElement.selectionEnd = startPos - 1;
                     } else {
-                        keyboardLayout.classList.remove('hidden');
-                        document.querySelector('#virtual-keyboard > div:last-child').classList.remove('hidden');
+                        activeInputElement.value = activeInputElement.value.substring(0, startPos) + activeInputElement.value.substring(endPos);
+                        activeInputElement.selectionStart = activeInputElement.selectionEnd = startPos;
                     }
+                    $(activeInputElement).trigger('input').trigger('keyup');
+        
+        // Caso especial para el campo de búsqueda de tarjetas pendientes
+        if (activeInputElement.id === 'search-pendientes') {
+            filterPendientesCards(activeInputElement.value.trim().toLowerCase());
+        }
                 });
-                
-                // Manejar el botón de borrar
-                clearBtn.addEventListener('click', function() {
-                    if (activeInputElement) {
-                        activeInputElement.value = '';
-                        // Disparar evento input
-                        const event = new Event('input', { bubbles: true });
-                        activeInputElement.dispatchEvent(event);
-                        activeInputElement.focus();
-                    }
-                });
-                
-                // Manejar el botón de retroceso (backspace)
-                backspaceBtn.addEventListener('click', function() {
-                    if (activeInputElement) {
-                        const startPos = activeInputElement.selectionStart;
-                        const endPos = activeInputElement.selectionEnd;
-                        const currentValue = activeInputElement.value;
-                        
-                        if (startPos === endPos) {
-                            // Si no hay selección, eliminar el carácter anterior
-                            if (startPos > 0) {
-                                activeInputElement.value = currentValue.substring(0, startPos - 1) + currentValue.substring(endPos);
-                                activeInputElement.selectionStart = startPos - 1;
-                                activeInputElement.selectionEnd = startPos - 1;
-                            }
-                        } else {
-                            // Si hay selección, eliminar la selección
-                            activeInputElement.value = currentValue.substring(0, startPos) + currentValue.substring(endPos);
-                            activeInputElement.selectionStart = startPos;
-                            activeInputElement.selectionEnd = startPos;
-                        }
-                        
-                        // Disparar evento input
-                        const event = new Event('input', { bubbles: true });
-                        activeInputElement.dispatchEvent(event);
-                        activeInputElement.focus();
-                    }
-                });
-                
-                // Manejar el botón de espacio
-                spaceBtn.addEventListener('click', function() {
-                    if (activeInputElement) {
-                        const startPos = activeInputElement.selectionStart;
-                        const endPos = activeInputElement.selectionEnd;
-                        const currentValue = activeInputElement.value;
-                        
-                        activeInputElement.value = currentValue.substring(0, startPos) + ' ' + currentValue.substring(endPos);
-                        activeInputElement.selectionStart = startPos + 1;
-                        activeInputElement.selectionEnd = startPos + 1;
-                        
-                        // Disparar evento input
-                        const event = new Event('input', { bubbles: true });
-                        activeInputElement.dispatchEvent(event);
-                        activeInputElement.focus();
-                    }
+
+                spaceBtn.addEventListener('mousedown', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (!activeInputElement) return;
+                    activeInputElement.focus();
+                    const startPos = activeInputElement.selectionStart;
+                    const endPos = activeInputElement.selectionEnd;
+                    activeInputElement.value = activeInputElement.value.substring(0, startPos) + ' ' + activeInputElement.value.substring(endPos);
+                    activeInputElement.selectionStart = activeInputElement.selectionEnd = startPos + 1;
+                    $(activeInputElement).trigger('input').trigger('keyup');
+        
+        // Caso especial para el campo de búsqueda de tarjetas pendientes
+        if (activeInputElement.id === 'search-pendientes') {
+            filterPendientesCards(activeInputElement.value.trim().toLowerCase());
+        }
                 });
                 
                 // Hacer que el teclado sea arrastrable
@@ -4482,6 +4468,7 @@ async function updateOrderStatus(orderId, newStatus) {
                 if (virtualKeyboard) {
                     activeInputElement = inputElement;
                     virtualKeyboard.classList.remove('hidden');
+                    // Asegurarse de que no esté minimizado al mostrarse
                     virtualKeyboard.classList.remove('keyboard-minimized');
                     document.getElementById('keyboard-layout').classList.remove('hidden');
                     document.querySelector('#virtual-keyboard > div:last-child').classList.remove('hidden');
@@ -4685,12 +4672,58 @@ async function updateOrderStatus(orderId, newStatus) {
                     }
                 }
             }
+            // Asignar eventos para mostrar el teclado virtual
+            const inputsForKeyboard = ['search-pendientes', 'incidentNotes', 'orderIncidentNotes'];
+            inputsForKeyboard.forEach(id => {
+                const inputElement = document.getElementById(id);
+                if (inputElement) {
+                    inputElement.addEventListener('focus', () => {
+                        showVirtualKeyboard(inputElement);
+                    });
+                }
+            });
+
+            // Evento para el botón de forzar recarga
+            const forceRefreshButton = document.getElementById('force-refresh-button');
+            // Evento para mostrar el teclado virtual en el campo de búsqueda de Select2 (Operarios)
+            $('#worker-select').on('select2:open', () => {
+                // Usamos un pequeño timeout para asegurar que el campo de búsqueda se haya renderizado
+                setTimeout(() => {
+                    const searchField = document.querySelector('.select2-search__field');
+                    if (searchField) {
+                        // Corregido: Pasar el elemento de input a la función showVirtualKeyboard
+                        searchField.addEventListener('focus', () => showVirtualKeyboard(searchField));
+                        // Forzar el foco para que el teclado aparezca inmediatamente al abrir
+                        searchField.focus(); 
+                    }
+                }, 50); // 50ms es usualmente suficiente
+            });
+
+            if (forceRefreshButton) {
+                forceRefreshButton.addEventListener('click', function() {
+                    Swal.fire({
+                        title: '¿Forzar recarga completa?',
+                        text: "Esto recargará la página. Se perderá cualquier cambio no guardado.",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#3085d6',
+                        confirmButtonText: 'Sí, recargar',
+                        cancelButtonText: 'Cancelar'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            location.reload();
+                        }
+                    });
+                });
+            }
+
         // *** Fin de DOMContentLoaded ***
         });
     </script>
     
     <!-- Teclado Virtual Flotante -->
-    <div id="virtual-keyboard" class="hidden fixed bottom-0 left-0 right-0 bg-gray-800 bg-opacity-90 p-2 shadow-lg z-50">
+        <div id="virtual-keyboard" class="fixed bg-gray-300 p-2 shadow-lg rounded-lg z-[99999] hidden" style="width: 700px; top: 40%; left: 50%; transform: translate(-50%, -50%);">
         <div class="flex justify-between items-center mb-2">
             <button id="keyboard-minimize" class="text-white bg-gray-700 hover:bg-gray-600 rounded px-2 py-1">
                 <i class="fas fa-minus"></i>

@@ -79,6 +79,7 @@
         .kanban-column { flex: 0 0 340px; background-color: var(--column-bg); border-radius: 12px; min-width: 340px; display: flex; flex-direction: column; border: 1px solid var(--column-border); box-shadow: 0 1px 4px rgba(0,0,0,0.05); max-height: 100%; overflow: hidden; }
         .kanban-column.drag-over { border-color: var(--primary-color); }
         .column-header { padding: 0.75rem 1rem; position: sticky; top: 0; background-color: var(--header-bg); z-index: 10; border-bottom: 1px solid var(--column-border); display: flex; align-items: center; justify-content: space-between; }
+        .column-search-container { padding: 0 0.75rem; background-color: var(--header-bg); position: sticky; top: 50px; z-index: 9; border-bottom: 1px solid var(--column-border); }
         .column-title { font-weight: 600; color: var(--header-text); margin: 0; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .column-cards { padding: 0.75rem; overflow-y: auto; flex-grow: 1; display: flex; flex-direction: column; gap: 8px; min-height: 100px; }
         .column-cards::-webkit-scrollbar { width: 6px; }
@@ -353,9 +354,18 @@
             const searchTerm = searchInput.value.trim().toLowerCase();
             
             let ordersToDisplay = searchTerm ? masterOrderList.filter(order => {
-                return (String(order.order_id || '').toLowerCase().includes(searchTerm) ||
-                        String(order.json?.descrip || '').toLowerCase().includes(searchTerm) ||
-                        String(order.customerId || '').toLowerCase().includes(searchTerm));
+                // Búsqueda en campos básicos
+                const orderIdMatch = String(order.order_id || '').toLowerCase().includes(searchTerm);
+                const descripMatch = String(order.json?.descrip || '').toLowerCase().includes(searchTerm);
+                const customerMatch = String(order.customerId || '').toLowerCase().includes(searchTerm);
+                const processesMatch = String(order.processes_to_do || '').toLowerCase().includes(searchTerm);
+                
+                // Búsqueda en descripciones de artículos
+                const articlesMatch = order.articles?.some(article => 
+                    String(article.description || '').toLowerCase().includes(searchTerm)
+                );
+                
+                return orderIdMatch || descripMatch || customerMatch || processesMatch || articlesMatch;
             }) : [...masterOrderList];
 
             if (shouldSort) {
@@ -390,6 +400,13 @@
             });
             
             renderBoard();
+            
+            // Actualizar estadísticas de la columna de pendientes después de renderizar
+            const pendingColumn = document.getElementById('pending_assignment');
+            if (pendingColumn) {
+                updateColumnStats(pendingColumn);
+            }
+            
             if (callback) callback();
         }
 
@@ -768,6 +785,20 @@
                 </div>
             `;
             
+            // Preparar campo de búsqueda específico para la columna Pendientes Asignación
+            let searchFieldHtml = '';
+            if (column.id === 'pending_assignment') {
+                searchFieldHtml = `
+                    <div class="column-search-container mt-2">
+                        <div class="position-relative">
+                            <i class="fas fa-search position-absolute top-50 start-0 translate-middle-y ms-2 text-gray-400"></i>
+                            <input type="text" class="form-control form-control-sm ps-4 pending-search-input" 
+                                placeholder="{{ __('Buscar en pendientes...') }}">
+                        </div>
+                    </div>
+                `;
+            }
+            
             let innerHTML;
             if (column.type === 'final_states') {
                 innerHTML = `<div class="column-header">
@@ -795,6 +826,7 @@
                                 <h3 class="column-title">${column.name}</h3>
                                 ${headerStatsHtml}
                              </div>
+                             ${searchFieldHtml}
                              <div class="column-cards"></div>`;
                 columnElement.innerHTML = innerHTML;
                 columnElement.querySelector('.column-cards').addEventListener('dragover', dragOver);
@@ -1098,6 +1130,51 @@
             });
         }
 
+                // Función para actualizar los contadores de tarjetas y el placeholder del campo de búsqueda
+        function updateColumnStats(columnElement) {
+            if (!columnElement) return;
+            
+            // Contar tarjetas visibles (no ocultas)
+            const cards = columnElement.querySelectorAll('.kanban-card');
+            const visibleCards = Array.from(cards).filter(card => card.style.display !== 'none');
+            const visibleCount = visibleCards.length;
+            
+            // Actualizar el contador de tarjetas
+            const cardCountBadge = columnElement.querySelector('.card-count-badge');
+            if (cardCountBadge) {
+                cardCountBadge.textContent = visibleCount;
+            }
+            
+            // Calcular tiempo total de las tarjetas visibles
+            let totalSeconds = 0;
+            visibleCards.forEach(card => {
+                const orderId = card.dataset.id;
+                const order = masterOrderList.find(o => o.id == orderId);
+                if (order) {
+                    totalSeconds += parseTimeToSeconds(order.theoretical_time);
+                }
+            });
+            
+            // Actualizar el badge de tiempo total
+            const timeSumBadge = columnElement.querySelector('.time-sum-badge');
+            if (timeSumBadge) {
+                timeSumBadge.innerHTML = `<i class="far fa-clock"></i> ${formatSecondsToTime(totalSeconds)}`;
+            }
+            
+            // Si es la columna de pendientes, actualizar también el placeholder del campo de búsqueda
+            if (columnElement.id === 'pending_assignment') {
+                const searchInput = columnElement.querySelector('.pending-search-input');
+                if (searchInput) {
+                    const totalCards = cards.length;
+                    if (visibleCount < totalCards) {
+                        searchInput.placeholder = `Mostrando ${visibleCount} de ${totalCards} tarjetas...`;
+                    } else {
+                        searchInput.placeholder = `Buscar en ${totalCards} tarjetas...`;
+                    }
+                }
+            }
+        }
+        
         function toggleFullscreen() {
             const element = document.getElementById('kanbanContainer');
             if (!document.fullscreenElement) {
@@ -1115,6 +1192,40 @@
         document.getElementById('autoOrganizeBtn').addEventListener('click', autoOrganizeWithAI);
         
         searchInput.addEventListener('input', () => setTimeout(() => distributeAndRender(true), 300));
+        
+        // Evento para el campo de búsqueda específico de pendientes
+        document.addEventListener('input', function(event) {
+            if (event.target.classList.contains('pending-search-input')) {
+                setTimeout(() => {
+                    const pendingSearchValue = event.target.value.toLowerCase().trim();
+                    const pendingColumn = document.getElementById('pending_assignment');
+                    if (pendingColumn) {
+                        const cards = pendingColumn.querySelectorAll('.kanban-card');
+                        cards.forEach(card => {
+                            const orderId = card.dataset.id;
+                            const order = masterOrderList.find(o => o.id == orderId);
+                            if (order) {
+                                const orderIdMatch = order.order_id?.toString().toLowerCase().includes(pendingSearchValue);
+                                const customerMatch = order.customer?.toLowerCase().includes(pendingSearchValue);
+                                const descripMatch = order.descrip?.toLowerCase().includes(pendingSearchValue);
+                                const processesMatch = order.processes_to_do?.toLowerCase().includes(pendingSearchValue);
+                                const articlesMatch = order.articles?.some(article => 
+                                    article.description?.toLowerCase().includes(pendingSearchValue));
+                                
+                                if (pendingSearchValue === '' || orderIdMatch || customerMatch || descripMatch || processesMatch || articlesMatch) {
+                                    card.style.display = '';
+                                } else {
+                                    card.style.display = 'none';
+                                }
+                            }
+                        });
+                        
+                        // Actualizar contadores de la columna
+                        updateColumnStats(pendingColumn);
+                    }
+                }, 300);
+            }
+        });
         
         kanbanBoard.addEventListener('click', function(event) {
             const menuButton = event.target.closest('.card-menu');

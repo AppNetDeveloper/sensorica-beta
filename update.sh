@@ -161,6 +161,7 @@ declare -A ENV_VARS=(
     ["RFID_MONITOR_URL"]=""
     ["REDIS_PREFIX"]=""
     ["PROCESS_ORDERS_OUT_OF_STOCK"]="false"
+    ["CREATE_ALL_PROCESSORDERS"]="false"
 
 
 )
