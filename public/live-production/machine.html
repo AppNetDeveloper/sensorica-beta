@@ -798,7 +798,7 @@
         </div>
     </div>
     
-    <div id="floating-operator-panel" class="floating-panel" style="width: 180px;">
+    <div id="floating-operator-panel" class="floating-panel" style="width: 180px; margin-top: 50px;">
         <div id="floating-panel-header" class="floating-panel-header text-center border-b border-gray-200 py-2">
             <h3 class="text-sm font-medium">Operario / Turno</h3>
         </div>
@@ -1848,8 +1848,61 @@
                         if (token && !isSelectOpen && !isProcessingLogin) {
                             orderStatsTimeoutId = setTimeout(() => fetchOrderStats(token), REFRESH_INTERVAL_MS);
                         } else {
+            
+
                             console.log("Order stats refresh loop paused.");
                         }
+                    });
+            }
+
+            // --- Función para obtener información de la línea de producción ---
+            function fetchProductionLineInfo(token) {
+                if (!token) {
+                    console.warn("Token no encontrado para production-line-info.");
+                    return;
+                }
+
+                const infoEndpoint = `/api/production-line-info?token=${token}`;
+                const infoApiUrl = `${API_BASE_URL}${infoEndpoint}`;
+                
+                fetch(infoApiUrl)
+                    .then(response => {
+                        if (!response.ok) {
+                            if (response.status === 404) {
+                                console.log("Información de línea de producción no encontrada (404).");
+                                return null;
+                            }
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data && data.production_line && data.production_line.name) {
+                            console.log("Información de línea de producción:", data.production_line.name);
+                            
+                            // Crear o actualizar el elemento para mostrar el nombre de la línea
+                            let lineNameElement = document.getElementById('production-line-name');
+                            if (!lineNameElement) {
+                                lineNameElement = document.createElement('div');
+                                lineNameElement.id = 'production-line-name';
+                                lineNameElement.className = 'fixed top-4 left-4 z-50 bg-white p-2 rounded-lg shadow-md text-sm';
+                                
+                                const nameContent = document.createElement('div');
+                                nameContent.className = 'flex items-center';
+                                nameContent.innerHTML = `<i class="fas fa-industry mr-2 text-blue-600"></i><span>${data.production_line.name}</span>`;
+                                
+                                lineNameElement.appendChild(nameContent);
+                                document.body.appendChild(lineNameElement);
+                            } else {
+                                const nameSpan = lineNameElement.querySelector('span');
+                                if (nameSpan) {
+                                    nameSpan.textContent = data.production_line.name;
+                                }
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Error al obtener información de línea de producción:", error);
                     });
             }
 
@@ -2461,6 +2514,7 @@ async function updateOrderStatus(orderId, newStatus) {
             fetchLastShiftHistory(productionLineToken);
             fetchOrderStats(productionLineToken);
             fetchProductionOrders(productionLineToken);
+            fetchProductionLineInfo(productionLineToken); // Obtener y mostrar el nombre de la línea de producción
 
 
             // --- Manejar selección manual de operario ---

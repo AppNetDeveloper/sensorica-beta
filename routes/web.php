@@ -45,9 +45,13 @@ use App\Http\Controllers\ServerMonitorController;
 use App\Http\Controllers\TelegramController;
 use App\Http\Controllers\RfidBlockedController;
 use App\Http\Controllers\IaPromptAdminController;
+use App\Http\Controllers\Api\ProductionLineInfoController;
 
 // Rutas para el Kanban Board
 Route::post('production-orders/update-batch', [ProductionOrderController::class, 'updateBatch'])->name('production-orders.update-batch')->middleware(['auth', 'XSS']);
+
+// API para obtener información de la línea de producción y hora del servidor
+Route::get('api/production-line-info', [ProductionLineInfoController::class, 'getInfo'])->name('api.production-line-info');
 
 
 /*
