@@ -97,6 +97,35 @@ class OriginalOrder extends Model
     }
     
     /**
+     * Actualiza el estado de stock de la orden basado en sus procesos
+     * - Si algún proceso tiene in_stock = 0, la orden tendrá in_stock = 0
+     * - Si todos los procesos tienen in_stock = 1, la orden tendrá in_stock = 1
+     * - Si no hay procesos, se mantiene el estado actual
+     * 
+     * @return bool True si el estado cambió, False en caso contrario
+     */
+    public function updateInStockStatus(): bool
+    {
+        // Si no hay procesos, no hacemos nada
+        if ($this->orderProcesses()->count() === 0) {
+            return false;
+        }
+        
+        // Verificar si hay al menos un proceso sin stock
+        $hasOutOfStock = $this->orderProcesses()->where('in_stock', 0)->exists();
+        $newInStockValue = $hasOutOfStock ? 0 : 1;
+        
+        // Solo actualizamos si el valor cambió
+        if ($this->in_stock !== $newInStockValue) {
+            $this->in_stock = $newInStockValue;
+            $this->save();
+            return true;
+        }
+        
+        return false;
+    }
+    
+    /**
      * Actualiza el estado de finalización y se guarda a sí mismo de forma segura.
      * Este método es público para ser llamado desde el evento del modelo pivot.
      */

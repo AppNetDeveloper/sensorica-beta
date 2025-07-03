@@ -746,5 +746,12 @@
     "Processes de la Línia de Producció": "Processes of the Production Line",
     "Processos de la Línia de Producció": "Processes of the Production Line",
     "Order Organizer": "AiXmart Kanban",
-    "Organize Orders": "AiXmart Kanban"
+    "Organize Orders": "AiXmart Kanban",
+    "Estado actual: Pending": "Current Status: Pending",
+    "Sin asignar": "Unassigned",
+    "Asignada a máquina": "Assigned to machine",
+    "En fabricación": "In production",
+    "Con incidencia": "With issue",
+    "Pendiente": "Pending",
+    "Finalizado": "Completed"
 }

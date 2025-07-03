@@ -35,8 +35,26 @@ class ProductionOrderController extends Controller
 
             // Bucle para limpiar los datos ANTES de validar
             foreach ($orders as $key => $orderData) {
-                if (isset($orderData['production_line_id']) && $orderData['production_line_id'] === '') {
-                    $orders[$key]['production_line_id'] = null;
+                // Manejar production_line_id: convertir a null si está vacío, no es numérico o es 0
+                if (isset($orderData['production_line_id'])) {
+                    $value = $orderData['production_line_id'];
+                    if ($value === '' || $value === '0' || trim($value) === '' || !is_numeric($value)) {
+                        $orders[$key]['production_line_id'] = null;
+                    } else {
+                        // Asegurar que sea un entero válido
+                        $orders[$key]['production_line_id'] = (int)$value;
+                    }
+                }
+                
+                // Asegurar que otros campos numéricos sean enteros
+                if (isset($orderData['id'])) {
+                    $orders[$key]['id'] = (int)$orderData['id'];
+                }
+                if (isset($orderData['orden'])) {
+                    $orders[$key]['orden'] = (int)$orderData['orden'];
+                }
+                if (isset($orderData['status'])) {
+                    $orders[$key]['status'] = (int)$orderData['status'];
                 }
             }
         
@@ -46,7 +64,16 @@ class ProductionOrderController extends Controller
             $validated = $request->validate([
                 'orders' => 'required|array|min:1',
                 'orders.*.id' => 'required|integer|exists:production_orders,id',
-                'orders.*.production_line_id' => 'nullable|integer|exists:production_lines,id',
+                'orders.*.production_line_id' => [
+                    'nullable',
+                    'integer',
+                    function ($attribute, $value, $fail) {
+                        // Solo validar contra la base de datos si no es null
+                        if ($value !== null && !\App\Models\ProductionLine::where('id', $value)->exists()) {
+                            $fail('La línea de producción seleccionada no existe.');
+                        }
+                    },
+                ],
                 'orders.*.orden' => 'required|integer|min:0',
                 'orders.*.status' => 'required|integer|min:0|max:5',
             ]);

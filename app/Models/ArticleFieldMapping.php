@@ -13,11 +13,13 @@ class ArticleFieldMapping extends Model
         'customer_id',
         'source_field',
         'target_field',
-        'transformation',
+        'transformations',
+        'is_required'
     ];
 
     protected $casts = [
-        'transformation' => 'array',
+        'transformations' => 'array',
+        'is_required' => 'boolean'
     ];
 
     /**
@@ -29,43 +31,62 @@ class ArticleFieldMapping extends Model
     }
 
     /**
-     * Aplica la transformación al valor si existe
+     * Aplica las transformaciones al valor
+     */
+    public function applyTransformations($value)
+    {
+        return $this->applyTransformation($value);
+    }
+    
+    /**
+     * Aplica las transformaciones al valor (método original)
      */
     public function applyTransformation($value)
     {
-        if (!$this->transformation) {
+        if (empty($this->transformations)) {
             return $value;
         }
 
-        $transformation = $this->transformation;
-
-        // Aplicar multiplicador si existe
-        if (isset($transformation['multiplier'])) {
-            $value = floatval($value) * floatval($transformation['multiplier']);
-        }
-
-        // Aplicar prefijo si existe
-        if (isset($transformation['prefix'])) {
-            $value = $transformation['prefix'] . $value;
-        }
-
-        // Aplicar sufijo si existe
-        if (isset($transformation['suffix'])) {
-            $value = $value . $transformation['suffix'];
-        }
-
-        // Aplicar formato si existe
-        if (isset($transformation['format'])) {
-            switch ($transformation['format']) {
+        foreach ($this->transformations as $transformation) {
+            switch ($transformation) {
+                case 'trim':
+                    $value = trim($value);
+                    break;
                 case 'uppercase':
                     $value = strtoupper($value);
                     break;
                 case 'lowercase':
                     $value = strtolower($value);
                     break;
-                case 'trim':
-                    $value = trim($value);
+                case 'number':
+                    $value = (float) $value;
                     break;
+                case 'to_boolean':
+                    // Convertir varios formatos de "sí" a booleano 1/0
+                    $trueValues = ['yes', 'y', 'true', '1', 'ok', 'si', 'sí', 'Si'];
+                    $value = in_array(strtolower(trim($value)), $trueValues) ? 1 : 0;
+                    break;
+                case 'date':
+                    // Si es un string, intentamos convertirlo a timestamp
+                    if (is_string($value)) {
+                        // Intentar convertir el string a timestamp
+                        $timestamp = strtotime($value);
+                        if ($timestamp !== false) {
+                            $value = date('Y-m-d', $timestamp);
+                        }
+                    } 
+                    // Si ya es un entero (timestamp), lo formateamos directamente
+                    else if (is_numeric($value)) {
+                        $value = date('Y-m-d', (int)$value);
+                    }
+                    break;
+                case 'to_float':
+                    $value = (float) $value;
+                    break;
+                case 'to_integer':
+                    $value = (int) $value;
+                    break;
+                // Agregar más transformaciones según sea necesario
             }
         }
 

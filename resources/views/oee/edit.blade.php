@@ -1,9 +1,36 @@
 @extends('layouts.admin')
 @section('title', 'Editar Monitor OEE')
+
+{{-- Migas de pan (breadcrumb) --}}
+@section('breadcrumb')
+    <ul class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ route('home') }}">{{ __('Dashboard') }}</a></li>
+        <li class="breadcrumb-item">
+            <a href="{{ route('customers.index') }}">{{ __('Customers') }}</a>
+        </li>
+        <li class="breadcrumb-item">
+            <a href="{{ route('productionlines.index', ['customer_id' => $customer_id]) }}">
+                {{ __('Production Lines') }}
+            </a>
+        </li>
+        <li class="breadcrumb-item">
+            <a href="{{ route('sensors.index', ['id' => $production_line_id]) }}">
+                {{ __('Sensors') }}
+            </a>
+        </li>
+        <li class="breadcrumb-item">
+            <a href="{{ route('oee.index', ['production_line_id' => $production_line_id]) }}">
+                {{ __('Monitor OEE') }}
+            </a>
+        </li>
+        <li class="breadcrumb-item">{{ __('Editar') }}</li>
+    </ul>
+@endsection
+
 @section('content')
 <div class="container">
     <h1>Editar Monitor OEE</h1>
-    <form action="{{ route('oee.update', $monitorOee->id) }}" method="POST">
+    <form action="{{ route('oee.update', ['oee' => $monitorOee->id, 'production_line_id' => $production_line_id]) }}" method="POST">
         @csrf
         @method('PUT')
 

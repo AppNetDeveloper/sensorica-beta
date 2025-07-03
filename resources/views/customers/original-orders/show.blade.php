@@ -126,6 +126,7 @@
                                         <th>@lang('Time')</th>
                                         <th>@lang('Created')</th>
                                         <th>@lang('Finished At')</th>
+                                        <th>@lang('Stock Status')</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -156,7 +157,16 @@
                                             <td>{{ $process->name }}</td>
                                             <td class="text-center">{{ $process->sequence }}</td>
                                             <td class="text-center">{{ number_format($process->factor_correccion, 2) }}</td>
-                                            <td class="text-center">{{ $pivot->time ? number_format($pivot->time, 2) . 'Seg' : '-' }}</td>
+                                            <!---<td class="text-center">{{ $pivot->time ? number_format($pivot->time, 2) . 'Seg' : '-' }}</td> tenemos que ponerlo como viene en segundos que lo formateamos a formato 00:00:00 -->
+                                            <td class="text-center">{{ $pivot->time
+                                                ? sprintf(
+                                                    "%02d:%02d:%02d",
+                                                    floor($pivot->time / 3600), // Horas
+                                                    floor(($pivot->time / 60) % 60), // Minutos
+                                                    $pivot->time % 60 // Segundos
+                                                )
+                                                : '-'
+                                            }}</td>
                                             <td class="text-center">
                                                 @if($pivot->created)
                                                     <span class="badge bg-success">@lang('Yes')</span>
@@ -165,23 +175,64 @@
                                                 @endif
                                             </td>
                                             <td class="text-center">
-                                                @if($pivot->finished)
-                                                    <span class="badge bg-success">{{ $pivot->finished_at ? $pivot->finished_at->format('Y-m-d H:i') : __('Finished') }}</span>
+                                                @php
+                                                    $productionOrder = $pivot->productionOrders->first();
+                                                    $status = $productionOrder ? $productionOrder->status : null;
+                                                    $productionLineId = $productionOrder ? $productionOrder->production_line_id : null;
+                                                    
+                                                    if ($pivot->finished) {
+                                                        $statusText = $pivot->finished_at ? $pivot->finished_at->format('Y-m-d H:i') : __('Finalizado');
+                                                        $badgeClass = 'bg-success';
+                                                    } else {
+                                                        if ($status === 0) {
+                                                            if (is_null($productionLineId)) {
+                                                                $statusText = __('Sin asignar');
+                                                                $badgeClass = 'bg-secondary';
+                                                            } else {
+                                                                $statusText = __('Asignada a máquina');
+                                                                $badgeClass = 'bg-info';
+                                                            }
+                                                        } elseif ($status === 1) {
+                                                            $statusText = __('En fabricación');
+                                                            $badgeClass = 'bg-primary';
+                                                        } elseif ($status > 2) {
+                                                            $statusText = __('Con incidencia');
+                                                            $badgeClass = 'bg-danger';
+                                                        } else {
+                                                            $statusText = __('Pendiente');
+                                                            $badgeClass = 'bg-warning';
+                                                        }
+                                                    }
+                                                @endphp
+                                                <span class="badge {{ $badgeClass }}">
+                                                    @if($pivot->finished)
+                                                        {{ $statusText }}
+                                                    @else
+                                                        @lang('Estado actual:') {{ $statusText }}
+                                                    @endif
+                                                </span>
+                                            </td>
+                                            <td class="text-center">
+                                                @if($pivot->in_stock === 0)
+                                                    <span class="badge bg-danger">@lang('Sin Stock')</span>
+                                                @elseif($pivot->in_stock === 1)
+                                                    <span class="badge bg-success">@lang('Con Stock')</span>
                                                 @else
-                                                    <span class="badge bg-warning">@lang('Pending')</span>
+                                                    <span class="badge bg-secondary">@lang('No Especificado')</span>
                                                 @endif
                                             </td>
                                         </tr>
                                         @if($articles->isNotEmpty())
                                             <tr class="articles-row">
-                                                <td colspan="7" class="p-3 bg-light" style="border-top: 1px solid #e9ecef;">
+                                                <td colspan="8" class="p-3 bg-light" style="border-top: 1px solid #e9ecef;">
                                                     <h6 class="mb-3 font-weight-bold"><i class="fas fa-cubes text-secondary mr-2"></i>@lang('Related Articles')</h6>
                                                     <table class="table table-sm table-hover mb-0 bg-white rounded">
                                                         <thead class="thead-light">
                                                             <tr>
-                                                                <th style="width: 30%;">@lang('Article Code')</th>
-                                                                <th style="width: 50%;">@lang('Description')</th>
-                                                                <th style="width: 20%;">@lang('Group')</th>
+                                                                <th style="width: 25%;">@lang('Article Code')</th>
+                                                                <th style="width: 45%;">@lang('Description')</th>
+                                                                <th style="width: 15%;">@lang('Group')</th>
+                                                                <th style="width: 15%;">@lang('Stock Status')</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody>
@@ -190,6 +241,15 @@
                                                                     <td>{{ $article->codigo_articulo }}</td>
                                                                     <td>{{ $article->descripcion_articulo }}</td>
                                                                     <td>{{ $article->grupo_articulo }}</td>
+                                                                    <td class="text-center">
+                                                                        @if($article->in_stock === 0)
+                                                                            <span class="badge bg-danger">@lang('Sin Stock')</span>
+                                                                        @elseif($article->in_stock === 1)
+                                                                            <span class="badge bg-success">@lang('Con Stock')</span>
+                                                                        @else
+                                                                            <span class="badge bg-secondary">@lang('No Especificado')</span>
+                                                                        @endif
+                                                                    </td>
                                                                 </tr>
                                                             @endforeach
                                                         </tbody>
@@ -199,7 +259,7 @@
                                         @endif
                                     @empty
                                         <tr>
-                                            <td colspan="7" class="text-center">@lang('No processes associated with this order.')</td>
+                                            <td colspan="8" class="text-center">@lang('No processes associated with this order.')</td>
                                         </tr>
                                     @endforelse
                                 </tbody>

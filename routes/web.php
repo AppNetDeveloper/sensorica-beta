@@ -22,6 +22,7 @@ use App\Http\Controllers\PrinterController;
 use App\Http\Controllers\ModbusController;
 use Arcanedev\LogViewer\Facades\LogViewer;
 use App\Http\Controllers\MonitorOeeController;
+use App\Http\Controllers\SensorTransformationController;
 use App\Http\Controllers\LogController;
 use App\Http\Controllers\WhatsAppController;
 use App\Http\Controllers\RfidController;
@@ -286,6 +287,7 @@ Route::get('/modbuses/liststats/weight', [ModbusController::class, 'listStats'])
 
 // Ruta para eliminar el Modbus
 Route::resource('oee', MonitorOeeController::class);
+Route::resource('sensor-transformations', SensorTransformationController::class);
 
 Route::get('logs', [LogController::class, 'view'])->name('logs.view');
 

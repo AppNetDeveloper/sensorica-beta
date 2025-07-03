@@ -3,11 +3,22 @@
 {{-- Título de la página --}}
 @section('title', __('Monitor OEE'))
 
-{{-- Migas de pan (breadcrumb) si las usas --}}
+{{-- Migas de pan (breadcrumb) --}}
 @section('breadcrumb')
     <ul class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ route('home') }}">{{ __('Dashboard') }}</a></li>
         <li class="breadcrumb-item">
-            <a href="{{ route('home') }}">{{ __('Dashboard') }}</a>
+            <a href="{{ route('customers.index') }}">{{ __('Customers') }}</a>
+        </li>
+        <li class="breadcrumb-item">
+            <a href="{{ route('productionlines.index', ['customer_id' => $customer_id]) }}">
+                {{ __('Production Lines') }}
+            </a>
+        </li>
+        <li class="breadcrumb-item">
+            <a href="{{ route('sensors.index', ['id' => $production_line_id]) }}">
+                {{ __('Sensors') }}
+            </a>
         </li>
         <li class="breadcrumb-item">{{ __('Monitor OEE') }}</li>
     </ul>
@@ -65,11 +76,11 @@
                                             <td>{{ $monitorOee->topic_oee }}</td>
                                             <td>{{ $monitorOee->time_start_shift }}</td>
                                             <td>
-                                                <a href="{{ route('oee.edit', $monitorOee->id) }}"
+                                                <a href="{{ route('oee.edit', ['oee' => $monitorOee->id, 'production_line_id' => $production_line_id]) }}"
                                                    class="btn btn-sm btn-primary">
                                                     {{ __('Editar') }}
                                                 </a>
-                                                <form action="{{ route('oee.destroy', $monitorOee->id) }}"
+                                                <form action="{{ route('oee.destroy', ['oee' => $monitorOee->id, 'production_line_id' => $production_line_id]) }}"
                                                       method="POST"
                                                       style="display:inline;">
                                                     @csrf

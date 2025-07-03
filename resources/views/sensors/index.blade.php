@@ -167,6 +167,22 @@
                     </div>
                     {{-- Fin card Monitor OEE --}}
 
+                    {{-- Card Transformación de Sensores --}}
+                    <div class="col">
+                        <div class="card h-100">
+                            <img src="/necesarios/sensor-transform.webp" class="card-img-top img-card" alt="Transformación de Sensores" onerror="this.src='/necesarios/default.webp'">
+                            <div class="card-body">
+                                <h5 class="card-title">Transformación de Sensores Altura</h5>
+                                <p class="card-text">Administrar transformaciones de mediciones de sensores. A valores 1 y 0</p>
+                                <a href="{{ route('sensor-transformations.index', ['production_line_id' => request()->route('id')]) }}"
+                                   class="btn btn-primary">
+                                   Ver más
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {{-- Fin card Transformación de Sensores --}}
+
                 </div>{{-- row --}}
             </div>{{-- card-body --}}
         </div>{{-- card --}}

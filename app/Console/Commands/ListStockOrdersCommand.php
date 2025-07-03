@@ -227,7 +227,7 @@ class ListStockOrdersCommand extends Command
             'grupo_numero' => $orderProcess->grupo_numero,
             'processes_to_do' => implode(', ', $toDoDescriptionsList), // Usa la nueva lista de pendientes.
             'processes_done' => implode(', ', $doneDescriptionsList), // Usa la nueva lista de realizados.
-            'stock' => $order->in_stock,
+            'stock' => $orderProcess->in_stock,
             'refer' => [
                 '_id' => "",
                 'company_name' => $order->customer ? $order->customer->name : 'N/A',

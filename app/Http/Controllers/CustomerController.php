@@ -348,7 +348,8 @@ class CustomerController extends Controller
             $articleStandardFields = [
                 'codigo_articulo' => 'Código de Artículo (Requerido)',
                 'descripcion_articulo' => 'Descripción del Artículo',
-                'grupo_articulo' => 'Grupo del Artículo'
+                'grupo_articulo' => 'Grupo del Artículo',
+                'in_stock' => 'En Stock (1/0)'
             ];
             
             return view('customers.edit', compact(
@@ -696,7 +697,8 @@ class CustomerController extends Controller
         $articleStandardFields = [
             'codigo_articulo' => 'Código de Artículo (Requerido)',
             'descripcion_articulo' => 'Descripción del Artículo',
-            'grupo_articulo' => 'Grupo del Artículo'
+            'grupo_articulo' => 'Grupo del Artículo',
+            'in_stock' => 'En Stock (1/0)'
         ];
         
         // Opciones de transformaciones disponibles

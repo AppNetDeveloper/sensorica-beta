@@ -614,21 +614,80 @@ class SystemController extends Controller
             $process = Process::fromShellCommandline($command);
             $process->run();
 
-            if (!$process->isSuccessful()) {
-                throw new ProcessFailedException($process);
+            // Incluso si hay procesos en estado de error, supervisorctl devuelve un código de salida 0 (exitoso)
+            // Por lo tanto, siempre procesamos la salida, independientemente del código de salida
+            $output = trim($process->getOutput());
+            
+            // Si no hay salida, consideramos que hay un problema con supervisor
+            if (empty($output)) {
+                Log::warning("Supervisor no devuelve datos. Posible problema con el servicio.");
+                return response()->json([
+                    'status' => 'warning',
+                    'message' => 'Supervisor no devuelve datos. Posible problema con el servicio.',
+                    'supervisor_status' => [],
+                    'processes' => [],
+                    'has_failed_processes' => false
+                ]);
             }
-
-            $output = explode("\n", trim($process->getOutput()));
-
+            
+            // Dividir la salida en líneas
+            $outputLines = explode("\n", $output);
+            
+            // Procesar cada línea para extraer información estructurada
+            $processes = [];
+            $hasFailedProcesses = false;
+            
+            foreach ($outputLines as $line) {
+                if (empty(trim($line))) continue;
+                
+                // Patrón típico: nombre_proceso                  RUNNING   pid 12345, uptime 0:01:23
+                // O en caso de error: nombre_proceso                  FATAL     Exited too quickly (process log may have details)
+                $pattern = '/^(\S+)\s+(\w+)\s+(.*)$/'; // Nombre, estado, detalles
+                
+                if (preg_match($pattern, $line, $matches)) {
+                    $processName = $matches[1];
+                    $status = $matches[2];
+                    $details = $matches[3];
+                    
+                    // Determinar si el proceso está en estado de error
+                    $isError = in_array(strtoupper($status), ['FATAL', 'BACKOFF', 'EXITED', 'STOPPED', 'UNKNOWN']);
+                    
+                    if ($isError) {
+                        $hasFailedProcesses = true;
+                    }
+                    
+                    $processes[] = [
+                        'name' => $processName,
+                        'status' => $status,
+                        'details' => $details,
+                        'is_error' => $isError
+                    ];
+                } else {
+                    // Si la línea no coincide con el patrón esperado, la agregamos como está
+                    $processes[] = [
+                        'name' => 'unknown',
+                        'status' => 'UNKNOWN',
+                        'details' => $line,
+                        'is_error' => true
+                    ];
+                    $hasFailedProcesses = true;
+                }
+            }
+            
             return response()->json([
-                'status' => 'success',
-                'supervisor_status' => $output,
+                'status' => $hasFailedProcesses ? 'warning' : 'success',
+                'supervisor_status' => $outputLines, // Mantener la compatibilidad con el formato anterior
+                'processes' => $processes,           // Nuevo formato estructurado
+                'has_failed_processes' => $hasFailedProcesses
             ]);
         } catch (\Exception $e) {
             Log::error("Error al obtener estado de Supervisor: " . $e->getMessage());
             return response()->json([
                 'status' => 'error',
                 'message' => $e->getMessage(),
+                'supervisor_status' => [],
+                'processes' => [],
+                'has_failed_processes' => false
             ], 500);
         }
     }
@@ -828,24 +887,121 @@ class SystemController extends Controller
         }
 
         try {
+            // Registrar inicio de la actualización
+            Log::info("Iniciando proceso de actualización de la aplicación");
+            
+            // Verificar si el script existe
+            if (!file_exists('/var/www/html/update.sh')) {
+                Log::error("El script de actualización no existe en la ruta especificada");
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'El script de actualización no existe en la ruta especificada.',
+                    'details' => null,
+                    'output' => null
+                ], 500);
+            }
+            
+            // Verificar permisos del script
+            if (!is_executable('/var/www/html/update.sh')) {
+                Log::warning("El script de actualización no tiene permisos de ejecución");
+                // Intentar corregir los permisos
+                $chmodProcess = Process::fromShellCommandline('sudo chmod +x /var/www/html/update.sh');
+                $chmodProcess->run();
+                
+                if (!$chmodProcess->isSuccessful()) {
+                    Log::error("No se pudieron establecer permisos de ejecución en el script");
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'No se pudieron establecer permisos de ejecución en el script de actualización.',
+                        'details' => $chmodProcess->getErrorOutput(),
+                        'output' => null
+                    ], 500);
+                }
+            }
+            
+            // Ejecutar el script con un timeout extendido
             $command = 'sudo /var/www/html/update.sh';
             $process = Process::fromShellCommandline($command);
-            $process->setTimeout(600); // Configurar tiempo máximo para el script
-            $process->run();
+            $process->setTimeout(900); // 15 minutos para permitir actualizaciones más largas
+            
+            // Capturar la salida en tiempo real para logging
+            $output = [];
+            $capturedOutput = '';
+            
+            $process->run(function ($type, $buffer) use (&$output, &$capturedOutput) {
+                $lines = explode("\n", $buffer);
+                foreach ($lines as $line) {
+                    if (!empty(trim($line))) {
+                        if ($type === Process::ERR) {
+                            Log::warning("[UPDATE-STDERR] " . $line);
+                        } else {
+                            Log::info("[UPDATE-STDOUT] " . $line);
+                        }
+                        $output[] = $line;
+                        $capturedOutput .= $line . "\n";
+                    }
+                }
+            });
 
+            // Analizar el resultado
             if (!$process->isSuccessful()) {
-                throw new ProcessFailedException($process);
+                $errorMsg = "Error al ejecutar el script de actualización. Código de salida: " . $process->getExitCode();
+                Log::error($errorMsg);
+                Log::error("Error detallado: " . $process->getErrorOutput());
+                
+                return response()->json([
+                    'status' => 'error',
+                    'message' => $errorMsg,
+                    'exit_code' => $process->getExitCode(),
+                    'details' => $process->getErrorOutput(),
+                    'output' => $output
+                ], 500);
             }
 
+            // Verificar si hay mensajes de error en la salida aunque el script haya terminado con éxito
+            $errorKeywords = ['error', 'exception', 'failed', 'fatal', 'cannot', 'unable to'];
+            $hasErrorInOutput = false;
+            $errorLines = [];
+            
+            foreach ($output as $line) {
+                foreach ($errorKeywords as $keyword) {
+                    if (stripos($line, $keyword) !== false) {
+                        $hasErrorInOutput = true;
+                        $errorLines[] = $line;
+                        break;
+                    }
+                }
+            }
+            
+            if ($hasErrorInOutput) {
+                Log::warning("El script de actualización se completó con código de éxito pero contiene mensajes de error", [
+                    'error_lines' => $errorLines
+                ]);
+                
+                return response()->json([
+                    'status' => 'warning',
+                    'message' => 'La actualización se completó con advertencias.',
+                    'warnings' => $errorLines,
+                    'output' => $output
+                ]);
+            }
+
+            // Todo salió bien
+            Log::info("Script de actualización ejecutado correctamente");
             return response()->json([
                 'status' => 'success',
                 'message' => 'Script de actualización ejecutado correctamente.',
+                'output' => $output
             ]);
         } catch (\Exception $e) {
-            Log::error("Error al ejecutar el script de actualización: " . $e->getMessage());
+            Log::error("Excepción al ejecutar el script de actualización: " . $e->getMessage(), [
+                'exception' => $e->getTraceAsString()
+            ]);
             return response()->json([
                 'status' => 'error',
-                'message' => $e->getMessage(),
+                'message' => 'Error en el proceso de actualización: ' . $e->getMessage(),
+                'details' => $e->getTraceAsString(),
+                'output' => isset($output) ? $output : null
             ], 500);
         }
     }

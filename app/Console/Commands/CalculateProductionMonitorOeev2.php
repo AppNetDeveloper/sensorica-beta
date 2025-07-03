@@ -385,7 +385,27 @@ class CalculateProductionMonitorOeev2 extends Command
                 $currentOrder->units_made_theoretical = $unitsMadeTheoretical;
                 $currentOrder->units_delayed = $unitsDelayed;
                 $currentOrder->slow_time = $slowTime;
-                $currentOrder->theoretical_end_time = $unitsMadeTheoreticalEnd;
+                // Si el production_order asociado tiene theoretical_time, lo usamos en lugar del calculado
+                $productionOrder = \App\Models\ProductionOrder::where('order_id', $currentOrder->order_id)->first();
+                if ($productionOrder && $productionOrder->theoretical_time && $productionOrder->theoretical_time > 0) {
+                    // Solo actualizamos si ya tenemos un valor establecido y es mayor que 0
+                    if ($currentOrder->theoretical_end_time > 0) {
+                        // Restamos un segundo en cada iteración para crear un contador hacia atrás
+                        $currentOrder->theoretical_end_time = max(0, $currentOrder->theoretical_end_time - 1);
+                        $currentOrder->fast_time = max(0, $currentOrder->theoretical_end_time - 1);
+                        
+                        $this->info("[" . Carbon::now()->toDateTimeString() . "] Tiempo teórico restante: {$currentOrder->theoretical_end_time} segundos");
+                    } else{
+                        // Incrementamos el out_time actual del currentOrder
+                        $currentOrder->out_time = ($currentOrder->out_time ?? 0) + 1;
+                        $this->info("[" . Carbon::now()->toDateTimeString() . "] Tiempo extra: {$currentOrder->out_time} segundos");
+                    }
+                    // Si es 0, lo dejamos en 0 (no hacemos nada)
+                    // No establecemos el valor inicial aquí, ya que mencionas que otro proceso lo hace
+                } else {
+                    // Si no hay theoretical_time en production_orders, usamos el cálculo normal
+                    $currentOrder->theoretical_end_time = $unitsMadeTheoreticalEnd;
+                }
                 $currentOrder->real_end_time = $unitsMadeRealEnd;
                 $currentOrder->oee_sensors = $oee;
                 $currentOrder->oee = $totalOee;
@@ -513,23 +533,49 @@ class CalculateProductionMonitorOeev2 extends Command
     }
 
 
-    private function sendProductionDownTimeToMQTT($monitor,$downTime)
+    private function sendProductionDownTimeToMQTT($monitor, $downTime)
     {
-        //formateamos $downtime a 00:00.00
-        $formattedDownTime = date('H:i:s', strtotime($downTime));
-             // Calculamos la diferencia en segundos entre la hora actual y el inicio del turno
-        $diff = $this-> calcDiffInSecondsFromTwoDates($monitor->time_start_shift,Carbon::now());
-
-        // Calculamos el porcentaje de inactividad (downtime)
-        $downtime_percentage = ($downTime / $diff) * 100;
-
-        // Determinamos el status basado en el porcentaje de inactividad
-        if ($downtime_percentage >= 40) {
-            $status = 0; // Downtime mayor o igual a 40%
-        } elseif ($downtime_percentage >= 20) {
-            $status = 1; // Downtime mayor o igual a 20% y menor que 40%
-        } else {
-            $status = 2; // Downtime menor que 20%
+        try {
+            // Formateamos $downtime a 00:00.00
+            $formattedDownTime = date('H:i:s', strtotime($downTime));
+            
+            // Calculamos la diferencia en segundos entre la hora actual y el inicio del turno
+            $diff = $this->calcDiffInSecondsFromTwoDates($monitor->time_start_shift, Carbon::now());
+            
+            // Verificamos que $diff sea mayor que cero para evitar división por cero
+            if ($diff <= 0) {
+                Log::warning('División por cero evitada en sendProductionDownTimeToMQTT. Usando valor predeterminado para diff.', [
+                    'monitor_id' => $monitor->id,
+                    'time_start_shift' => $monitor->time_start_shift,
+                    'current_time' => Carbon::now()->toDateTimeString()
+                ]);
+                $diff = 1; // Valor predeterminado para evitar división por cero
+            }
+            
+            // Aseguramos que $downTime sea un número válido
+            $downTime = is_numeric($downTime) ? (float)$downTime : 0;
+            
+            // Calculamos el porcentaje de inactividad (downtime)
+            $downtime_percentage = ($downTime / $diff) * 100;
+            
+            // Limitamos el porcentaje a un máximo de 100%
+            $downtime_percentage = min($downtime_percentage, 100);
+            
+            // Determinamos el status basado en el porcentaje de inactividad
+            if ($downtime_percentage >= 40) {
+                $status = 0; // Downtime mayor o igual a 40%
+            } elseif ($downtime_percentage >= 20) {
+                $status = 1; // Downtime mayor o igual a 20% y menor que 40%
+            } else {
+                $status = 2; // Downtime menor que 20%
+            }
+        } catch (\Exception $e) {
+            Log::error('Error en sendProductionDownTimeToMQTT: ' . $e->getMessage(), [
+                'monitor_id' => $monitor->id,
+                'exception' => $e->getTraceAsString()
+            ]);
+            $formattedDownTime = '00:00:00';
+            $status = 2; // Valor predeterminado en caso de error
         }
 
         // Creamos el JSON con el downtime acumulado y el status correspondiente
@@ -592,12 +638,67 @@ class CalculateProductionMonitorOeev2 extends Command
     }
 
     private function calcDiffInSecondsFromTwoDates($time1, $time2) {
-        $diff = $time2->diffInSeconds(Carbon::parse($time1));
-        return $diff;
+        try {
+            // Verificar si alguno de los tiempos es nulo
+            if ($time1 === null || $time2 === null) {
+                Log::warning('calcDiffInSecondsFromTwoDates: Uno de los tiempos es nulo', [
+                    'time1' => $time1,
+                    'time2' => $time2
+                ]);
+                return 100; // Valor predeterminado seguro
+            }
+            
+            // Convertir a objetos Carbon si no lo son ya
+            if (!($time1 instanceof Carbon)) {
+                try {
+                    $time1 = Carbon::parse($time1);
+                } catch (\Exception $e) {
+                    Log::warning('calcDiffInSecondsFromTwoDates: Error al parsear time1', [
+                        'time1' => $time1,
+                        'error' => $e->getMessage()
+                    ]);
+                    return 100;
+                }
+            }
+            
+            if (!($time2 instanceof Carbon)) {
+                try {
+                    $time2 = Carbon::parse($time2);
+                } catch (\Exception $e) {
+                    Log::warning('calcDiffInSecondsFromTwoDates: Error al parsear time2', [
+                        'time2' => $time2,
+                        'error' => $e->getMessage()
+                    ]);
+                    return 100;
+                }
+            }
+            
+            // Calcular la diferencia en segundos
+            $diff = $time2->diffInSeconds($time1);
+            
+            // Verificar que la diferencia sea positiva y mayor que cero
+            if ($diff <= 0) {
+                Log::warning('calcDiffInSecondsFromTwoDates: Diferencia de tiempo negativa o cero', [
+                    'time1' => $time1->toDateTimeString(),
+                    'time2' => $time2->toDateTimeString(),
+                    'diff' => $diff
+                ]);
+                return 100; // Valor predeterminado seguro
+            }
+            
+            return $diff;
+        } catch (\Exception $e) {
+            Log::error('Error en calcDiffInSecondsFromTwoDates: ' . $e->getMessage(), [
+                'time1' => $time1,
+                'time2' => $time2,
+                'exception' => $e->getTraceAsString()
+            ]);
+            return 100; // Valor predeterminado seguro en caso de error
+        }
     }
     private function publishMqttMessage($topic, $message)
     {
-
+ 
 
         try {
             // Preparar los datos a almacenar, agregando la fecha y hora

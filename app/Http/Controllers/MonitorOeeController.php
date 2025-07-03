@@ -15,10 +15,14 @@ class MonitorOeeController extends Controller
     {
         $production_line_id = $request->input('production_line_id');
         
+        // Obtener la línea de producción para conseguir el customer_id
+        $productionLine = ProductionLine::findOrFail($production_line_id);
+        $customer_id = $productionLine->customer_id;
+        
         // Obtener los monitores OEE asociados a la línea de producción
         $monitorOees = MonitorOee::where('production_line_id', $production_line_id)->get();
     
-        return view('oee.index', compact('monitorOees', 'production_line_id'));
+        return view('oee.index', compact('monitorOees', 'production_line_id', 'customer_id'));
     }
     
     
@@ -29,10 +33,11 @@ class MonitorOeeController extends Controller
     public function create(Request $request)
     {
         $production_line_id = $request->production_line_id;
-        $productionLines = ProductionLine::all();
+        // Obtener solo la línea de producción específica en lugar de todas
+        $productionLine = ProductionLine::findOrFail($production_line_id);
+        $customer_id = $productionLine->customer_id;
         
-        // Cambia la referencia de 'monitoroees.create' a 'oee.create'
-        return view('oee.create', compact('production_line_id', 'productionLines'));
+        return view('oee.create', compact('production_line_id', 'productionLine', 'customer_id'));
     }
     
 
@@ -52,18 +57,25 @@ class MonitorOeeController extends Controller
         ]);
 
         MonitorOee::create($request->all());
-
-        return redirect()->route('oee.index')->with('success', 'Monitor OEE creado exitosamente.');
+        
+        // Mantener el production_line_id en la redirección
+        $production_line_id = $request->input('production_line_id');
+        return redirect()->route('oee.index', ['production_line_id' => $production_line_id])->with('success', 'Monitor OEE creado exitosamente.');
     }
 
     /**
      * Muestra el formulario para editar un Monitor OEE existente.
      */
-    public function edit($id)
+    public function edit(Request $request, $id)
     {
         $monitorOee = MonitorOee::findOrFail($id);
-        $productionLines = ProductionLine::all();
-        return view('oee.edit', compact('monitorOee', 'productionLines'));
+        $production_line_id = $request->input('production_line_id', $monitorOee->production_line_id);
+        
+        // Obtener la línea de producción para conseguir el customer_id
+        $productionLine = ProductionLine::findOrFail($production_line_id);
+        $customer_id = $productionLine->customer_id;
+        
+        return view('oee.edit', compact('monitorOee', 'productionLine', 'production_line_id', 'customer_id'));
     }
 
     /**
@@ -83,8 +95,10 @@ class MonitorOeeController extends Controller
 
         $monitorOee = MonitorOee::findOrFail($id);
         $monitorOee->update($request->all());
-
-        return redirect()->route('oee.index')->with('success', 'Monitor OEE editado exitosamente.');
+        
+        // Mantener el production_line_id en la redirección
+        $production_line_id = $request->input('production_line_id');
+        return redirect()->route('oee.index', ['production_line_id' => $production_line_id])->with('success', 'Monitor OEE editado exitosamente.');
     }
 
     /**
@@ -93,8 +107,10 @@ class MonitorOeeController extends Controller
     public function destroy($id)
     {
         $monitorOee = MonitorOee::findOrFail($id);
+        // Guardar el production_line_id antes de eliminar
+        $production_line_id = $monitorOee->production_line_id;
         $monitorOee->delete();
 
-        return redirect()->route('oee.index')->with('success', 'Monitor OEE destruido exitosamente.');
+        return redirect()->route('oee.index', ['production_line_id' => $production_line_id])->with('success', 'Monitor OEE destruido exitosamente.');
     }
 }

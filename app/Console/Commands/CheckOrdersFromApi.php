@@ -23,6 +23,43 @@ class CheckOrdersFromApi extends Command
 
     public function handle()
     {
+        // Verificar si ya hay una instancia en ejecución usando un archivo de bloqueo
+        $lockFile = storage_path('app/orders_check.lock');
+        
+        if (file_exists($lockFile)) {
+            $lockTime = file_get_contents($lockFile);
+            $lockAge = time() - (int)$lockTime;
+            
+            // Si el bloqueo tiene menos de 30 minutos, consideramos que otra instancia está en ejecución
+            if ($lockAge < 1800) {
+                $this->error('🔒 Ya existe una instancia del comando en ejecución desde hace ' . round($lockAge/60) . ' minutos');
+                $this->line('Si crees que es un error, elimina manualmente el archivo: ' . $lockFile);
+                return 1; // Salir con código de error
+            } else {
+                // El bloqueo es viejo (más de 30 minutos), probablemente un proceso que falló
+                $this->error('⚠️ Se encontró un bloqueo antiguo (> 30 min). Eliminando automáticamente.');
+                // Eliminar el archivo de bloqueo antiguo
+                if (@unlink($lockFile)) {
+                    $this->line('🗑️ Bloqueo antiguo eliminado. Continuando con la ejecución.');
+                } else {
+                    $this->error('❌ No se pudo eliminar el archivo de bloqueo antiguo. Verifica los permisos.');
+                    $this->line('Intenta eliminar manualmente: ' . $lockFile);
+                    return 1; // Salir con código de error si no se puede eliminar el bloqueo
+                }
+                // Continuamos y crearemos un nuevo bloqueo
+            }
+        }
+        
+        // Crear archivo de bloqueo con timestamp actual
+        file_put_contents($lockFile, time());
+        
+        // Registrar función para eliminar el bloqueo al finalizar (incluso si hay errores)
+        register_shutdown_function(function() use ($lockFile) {
+            if (file_exists($lockFile)) {
+                @unlink($lockFile);
+            }
+        });
+        
         $this->logInfo('=== Iniciando verificación de pedidos desde API ===');
         $this->logLine('📊 Conectando a la base de datos...');
         
@@ -116,18 +153,32 @@ class CheckOrdersFromApi extends Command
                                     $this->logLine("⏭️ La orden ya está finalizada (finished_at: {$existingOrder->finished_at}). Omitiendo verificaciones de stock y fecha de entrega.", 'info');
                                 } else {
                                     // Verificar si necesitamos actualizar el campo in_stock
-                                    if ($existingOrder->in_stock == 0) {
-                                        $this->logLine("🔍 Verificando si el pedido está en stock en la API...");
+                                    // Buscar el campo in_stock en los datos mapeados (viene de la API)
+                                    if (isset($mappedData['in_stock'])) {
+                                        $inStockFromApi = $mappedData['in_stock'];
+                                        $this->logLine("🔍 Verificando estado de stock en la API: {$inStockFromApi}");
                                         
-                                        // Buscar el campo in_stock en los datos mapeados (viene de la API)
-                                        $inStockFromApi = $mappedData['in_stock'] ?? null;
+                                        // Convertir a entero para comparación consistente
+                                        if (is_string($inStockFromApi)) {
+                                            // Si es string, convertir valores comunes a booleano
+                                            $trueValues = ['yes', 'y', 'true', '1', 'ok', 'si', 'sí', 'Si'];
+                                            $inStockFromApi = in_array(strtolower(trim($inStockFromApi)), $trueValues) ? 1 : 0;
+                                        } else {
+                                            // Si no es string, convertir a entero (0 o 1)
+                                            $inStockFromApi = $inStockFromApi ? 1 : 0;
+                                        }
                                         
-                                        if ($inStockFromApi === 'Si' || $inStockFromApi === true) {
-                                            $this->logLine("🔄 Actualizando in_stock a 1 para el pedido {$orderId}", 'info');
-                                            $existingOrder->in_stock = 1;
+                                        // Comparar con el valor actual
+                                        if ($existingOrder->in_stock != $inStockFromApi) {
+                                            $this->logLine("🔄 Actualizando in_stock de {$existingOrder->in_stock} a {$inStockFromApi} para el pedido {$orderId}", 'info');
+                                            $existingOrder->in_stock = $inStockFromApi;
                                             $existingOrder->save();
                                             $this->logLine("✅ Campo in_stock actualizado correctamente", 'info');
+                                        } else {
+                                            $this->logLine("✓ Estado de stock sin cambios: {$existingOrder->in_stock}", 'info');
                                         }
+                                    } else {
+                                        $this->logLine("ℹ️ No se encontró información de stock en la API", 'info');
                                     }
                                     
                                     // Verificar si necesitamos actualizar la fecha de entrega
@@ -144,6 +195,89 @@ class CheckOrdersFromApi extends Command
                                     }
                                 }
                                 
+                                // Verificar y actualizar el stock de los artículos existentes
+                                $this->logLine("🔍 Verificando stock de artículos para la orden {$orderId}...");
+                                
+                                // Pequeño sleep para distribuir la carga en el servidor
+                                usleep(100000); // 100ms de pausa entre verificaciones de órdenes
+                                
+                                try {
+                                    // Obtener los detalles de la orden desde la API
+                                    $detailUrl = str_replace('{order_id}', $orderId, $customer->order_detail_url);
+                                    $this->logLine("  🌐 Obteniendo detalles de la orden desde: {$detailUrl}");
+                                    
+                                    // Sleep adicional antes de cada llamada HTTP a la API
+                                    usleep(100000); // 100ms de pausa antes de cada llamada HTTP
+                                    
+                                    $response = Http::timeout(30)->get($detailUrl);
+                                    
+                                    if (!$response->successful()) {
+                                        $this->logError("  ❌ Error al obtener detalles del pedido {$orderId}: HTTP {$response->status()}");
+                                        continue;
+                                    }
+                                    
+                                    $orderDetails = $response->json();
+                                    
+                                    if ($orderDetails && isset($orderDetails['grupos'])) {
+                                        $this->logLine("✅ Detalles de orden obtenidos correctamente");
+                                        $totalArticulosActualizados = 0;
+                                        
+                                        // Recorrer los grupos y artículos
+                                        foreach ($orderDetails['grupos'] as $grupo) {
+                                            if (isset($grupo['articulos'])) {
+                                                foreach ($grupo['articulos'] as $articulo) {
+                                                    try {
+                                                        // Verificar que el artículo tiene código
+                                                        if (!isset($articulo['CodigoArticulo'])) {
+                                                            continue;
+                                                        }
+                                                        
+                                                        // Mapear los datos del artículo
+                                                        $articleData = $this->mapArticleData($customer, $articulo);
+                                                        
+                                                        if ($articleData) {
+                                                            // Si no existe in_stock en los datos, asumimos que está en stock (1)
+                                                            if (!isset($articleData['in_stock'])) {
+                                                                $articleData['in_stock'] = 1;
+                                                                $this->logLine("ℹ️ No se encontró información de stock para el artículo {$articleData['codigo_articulo']}, asumiendo en stock (1)");
+                                                            }
+                                                            
+                                                            // Buscar el artículo en la base de datos
+                                                            $existingArticle = OriginalOrderArticle::where('codigo_articulo', $articleData['codigo_articulo'])
+                                                                ->whereHas('originalOrderProcess', function($query) use ($existingOrder) {
+                                                                    $query->where('original_order_id', $existingOrder->id);
+                                                                })
+                                                                ->first();
+                                                            
+                                                            if ($existingArticle && $existingArticle->in_stock !== $articleData['in_stock']) {
+                                                                $this->logLine("🔄 Actualizando stock del artículo {$articleData['codigo_articulo']} de {$existingArticle->in_stock} a {$articleData['in_stock']}");
+                                                                $existingArticle->in_stock = $articleData['in_stock'];
+                                                                $existingArticle->save();
+                                                                $totalArticulosActualizados++;
+                                                            }
+                                                        }
+                                                    } catch (\Exception $e) {
+                                                        $this->logError("❌ Error al procesar artículo: " . $e->getMessage());
+                                                        // Continuamos con el siguiente artículo
+                                                        continue;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        
+                                        if ($totalArticulosActualizados > 0) {
+                                            $this->logLine("✅ Se actualizó el stock de {$totalArticulosActualizados} artículos", 'info');
+                                        } else {
+                                            $this->logLine("ℹ️ No se encontraron cambios en el stock de los artículos", 'info');
+                                        }
+                                    } else {
+                                        $this->logLine("⚠️ No se pudieron obtener detalles de la orden para verificar stock de artículos", 'warning');
+                                    }
+                                } catch (\Exception $e) {
+                                    $this->logError("❌ Error al verificar stock de artículos: " . $e->getMessage());
+                                    // Continuamos con el resto del proceso
+                                }
+                                
                                 // Actualizar los detalles del pedido, no reprocesar procesos
                                 $this->logLine("🔄 Actualizando detalles de la orden existente...");
                                 $this->processOrderDetails($customer, $existingOrder, $orderId);
@@ -154,6 +288,9 @@ class CheckOrdersFromApi extends Command
                                 $this->logLine("✗ El order_id {$orderId} NO EXISTE en la base de datos", 'comment');
                                 $this->logLine("→ Procesando y creando nuevo pedido...", 'info');
                                 $this->logLine("📝 Registrando nueva orden en logs...");
+                                
+                                // Pequeño sleep para distribuir la carga en el servidor durante la creación
+                                usleep(100000); // 100ms de pausa entre creaciones de órdenes
                                 
                                 try {
                                     // Agregar customer_id a los datos mapeados
@@ -231,8 +368,47 @@ class CheckOrdersFromApi extends Command
         $this->line('💡 Para revisar errores específicos, consulta los logs del sistema');
         $this->newLine();
         $this->line('🎉 Comando CheckOrdersFromApi finalizado correctamente');
+        
+        // ================================================================
+        // LIMPIEZA DE ÓRDENES SIN PROCESOS
+        // ================================================================
+        $this->newLine();
+        $this->info('🧽 Iniciando limpieza de órdenes sin procesos asociados...');
+        
+        try {
+            // Buscar órdenes sin procesos asociados y que no estén procesadas
+            $ordersWithoutProcesses = OriginalOrder::where('processed', 0)
+                ->whereDoesntHave('processes')
+                ->get();
+            $count = $ordersWithoutProcesses->count();
+            $this->logLine("Consulta optimizada: solo revisando órdenes con processed=0");
+            
+            if ($count > 0) {
+                $this->line("🗑️ Encontradas {$count} órdenes sin procesos asociados");
+                
+                // Registrar en logs antes de eliminar
+                $orderIds = $ordersWithoutProcesses->pluck('order_id')->toArray();
+                $this->logLine("Eliminando órdenes sin procesos: " . implode(', ', $orderIds));
+                
+                // Eliminar las órdenes
+                foreach ($ordersWithoutProcesses as $order) {
+                    $this->logLine("  🗑️ Eliminando orden {$order->order_id} (ID: {$order->id})");
+                    $order->delete();
+                }
+                
+                $this->info("✅ Se eliminaron {$count} órdenes sin procesos asociados");
+            } else {
+                $this->line("ℹ️ No se encontraron órdenes sin procesos asociados");
+            }
+        } catch (\Exception $e) {
+            $this->error("❌ Error al limpiar órdenes sin procesos: " . $e->getMessage());
+            Log::error('Error al limpiar órdenes sin procesos', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+        }
 
-                // ================================================================
+        // ================================================================
         // INICIO DE LA MODIFICACIÓN: Llamar al segundo comando
         // ================================================================
         $this->newLine();
@@ -255,6 +431,46 @@ class CheckOrdersFromApi extends Command
         }
         // ================================================================
         // FIN DE LA MODIFICACIÓN
+        // ================================================================
+        // ================================================================
+        // Eliminar el archivo de bloqueo al finalizar (complementa el registro de shutdown_function)
+        $this->line('🔓 Eliminando archivo de bloqueo...');
+        try{
+            if (file_exists($lockFile)) {
+                unlink($lockFile);
+                $this->line('✅ Archivo de bloqueo eliminado con éxito.');
+            } else {
+                $this->line('ℹ️ El archivo de bloqueo ya no existe.');
+            }
+        }catch(\Exception $e){
+            $this->error('❌ Ocurrió un error al eliminar el archivo .lock.');
+            $this->error($e->getMessage());
+            Log::error("Fallo al eliminar el archivo .lock desde orders:check: " . $e->getMessage());
+            
+            // Intento alternativo: usar otros métodos para eliminar el archivo
+            try{
+                // Intentar con system para usar comandos del sistema
+                system("rm -f {$lockFile}");
+                
+                // Verificar si el archivo fue eliminado
+                if (!file_exists($lockFile)) {
+                    $this->line('✅ Archivo de bloqueo eliminado con éxito usando comando del sistema.');
+                } else {
+                    // Último recurso: cambiar permisos y luego eliminar
+                    @chmod($lockFile, 0777); // Dar todos los permisos
+                    if (@unlink($lockFile)) {
+                        $this->line('✅ Archivo de bloqueo eliminado con éxito después de cambiar permisos.');
+                    } else {
+                        $this->error('❌ No se pudo eliminar el archivo de bloqueo.');
+                        Log::error("No se pudo eliminar el archivo de bloqueo después de múltiples intentos.");
+                    }
+                }
+            }catch(\Exception $e2){
+                $this->error('❌ Error en el intento alternativo de eliminación.');
+                $this->error($e2->getMessage());
+                Log::error("Segundo fallo al gestionar el archivo .lock: " . $e2->getMessage());
+            }
+        }
         // ================================================================
         
         return 0;
@@ -838,7 +1054,7 @@ class CheckOrdersFromApi extends Command
                 return false;
             }
             
-            $this->logLine("        🔍 Verificando si el artículo ya existe en este grupo...");
+            $this->logLine("        🔍 Verificando si el artículo ya existe en este proceso...");
             
             // Construir la consulta para verificar duplicados
             $query = OriginalOrderArticle::where('original_order_process_id', $processId)
@@ -853,14 +1069,35 @@ class CheckOrdersFromApi extends Command
             }
             
             $existingArticle = $query->first();
-            
+                
             if ($existingArticle) {
                 $grupoInfo = isset($articleData['grupo_articulo']) ? " en grupo: {$articleData['grupo_articulo']}" : "";
                 $this->logLine("        → Artículo {$articleData['codigo_articulo']}{$grupoInfo} ya existe en este proceso (ID: {$existingArticle->id})");
-                return false;
+                
+                // Verificar si necesitamos actualizar el campo in_stock
+                if (isset($articleData['in_stock']) && $existingArticle->in_stock !== $articleData['in_stock']) {
+                    try {
+                        $this->logLine("        🔄 Actualizando estado de stock del artículo de {$existingArticle->in_stock} a {$articleData['in_stock']}");
+                        $existingArticle->in_stock = $articleData['in_stock'];
+                        $existingArticle->save();
+                        $this->logLine("        ✅ Estado de stock del artículo actualizado correctamente");
+                        return true; // Retornamos true porque hemos actualizado el artículo
+                    } catch (\Exception $e) {
+                        $this->logError("        ❌ Error al actualizar el stock del artículo: " . $e->getMessage());
+                        return false;
+                    }
+                }
+                
+                return false; // No se actualizó nada
             }
             
             $this->logLine("        💾 Creando nuevo artículo...");
+            
+            // Si no existe in_stock en los datos, asumimos que está en stock (1)
+            if (!isset($articleData['in_stock'])) {
+                $articleData['in_stock'] = 1;
+                $this->logLine("        ℹ️ No se encontró información de stock para el artículo, asumiendo en stock (1)");
+            }
             
             // Crear el artículo con manejo de errores detallado
             try {
@@ -869,11 +1106,14 @@ class CheckOrdersFromApi extends Command
                     'codigo_articulo' => $articleData['codigo_articulo'],
                     'descripcion_articulo' => $articleData['descripcion_articulo'] ?? '',
                     'grupo_articulo' => $articleData['grupo_articulo'] ?? '',
+                    'in_stock' => $articleData['in_stock'] ?? 1, // Ya hemos asegurado que existe este valor
                 ]);
                 
                 if (!$article->save()) {
                     $this->logError("        ❌ Error al guardar el artículo");
-                    $this->logLine("        📝 Errores: " . json_encode($article->getErrors()));
+                    if (method_exists($article, 'getErrors')) {
+                        $this->logLine("        📝 Errores: " . json_encode($article->getErrors()));
+                    }
                     return false;
                 }
                 

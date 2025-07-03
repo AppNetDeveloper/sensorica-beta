@@ -50,6 +50,21 @@ class OrderFieldMapping extends Model
                 case 'lowercase':
                     $value = strtolower($value);
                     break;
+                //anadimos date que formate la fecha que se recibe en diferentes formatos
+                case 'date':
+                    // Si es un string, intentamos convertirlo a timestamp
+                    if (is_string($value)) {
+                        // Intentar convertir el string a timestamp
+                        $timestamp = strtotime($value);
+                        if ($timestamp !== false) {
+                            $value = date('Y-m-d', $timestamp);
+                        }
+                    } 
+                    // Si ya es un entero (timestamp), lo formateamos directamente
+                    else if (is_numeric($value)) {
+                        $value = date('Y-m-d', (int)$value);
+                    }
+                    break;
                 // Agregar más transformaciones según sea necesario
             }
         }

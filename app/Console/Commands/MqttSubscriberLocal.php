@@ -213,25 +213,25 @@ class MqttSubscriberLocal extends Command
             if (!$barcoderId) {
                 throw new \Exception("No se pudo encontrar un código de barras por defecto");
             }
-            // 1. Busca si ya existe una orden con el mismo order_id.
+            // Modificar el orderId con process_category y grupo_numero si existen
+            $originalOrderId = $messageData['orderId'];
+            
+            // Si tenemos processCategory y grupo_numero, los usamos para modificar el orderId
+            if (isset($messageData['process_category']) && isset($messageData['grupo_numero'])) {
+                $messageData['orderId'] = $originalOrderId . '-' . $messageData['process_category'] . '-' . $messageData['grupo_numero'];
+                $this->info("[" . $timestamp . "] Modified orderId with category and group: " . $messageData['orderId']);
+            }
+            
+            // 1. Busca si ya existe una orden con el mismo order_id (ya modificado si aplica).
             $existingOrder = ProductionOrder::where('order_id', $messageData['orderId'])->first();
 
-            // 2. Si existe, modifica la orden anterior para "archivarla".
+            // 2. Si existe un duplicado, modificamos el messageData['orderId'] agregando un timestamp numérico
             if ($existingOrder) {
-                // Genera un nuevo ID para la orden antigua añadiendo la fecha y hora.
-                // Formato: 'orderIdOriginal-AñoMesDía-HoraMinutoSegundo'
-                $processCategory = $existingOrder->process_category ?: date('Ymd');
-                $grupoNumero = $existingOrder->grupo_numero ?: date('His');
+                // Añadimos un timestamp numérico sin pausas ni caracteres especiales para garantizar unicidad
+                $numericTimestamp = date('YmdHis'); // Formato: AñoMesDíaHoraMinutoSegundo (14 dígitos)
+                $messageData['orderId'] = $messageData['orderId'] . '-' . $numericTimestamp;
                 
-                $newIdForOldOrder = $existingOrder->order_id . '-' . $processCategory . '-' . $grupoNumero;
-                $this->info("[" . $timestamp . "] Archived existing order: " . $existingOrder->order_id);
-                // Actualiza el order_id de la orden existente.
-                $existingOrder->order_id = $newIdForOldOrder;
-
-                // Opcional: Puedes marcarla de alguna otra forma si tienes un campo de estado.
-                // $existingOrder->status = 'archivado';
-
-                $existingOrder->save();
+                $this->info("[" . $timestamp . "] Found duplicate order, modified orderId to: " . $messageData['orderId']);
             }
 
             // Determinar el valor de has_stock basado en el campo 'stock' del JSON

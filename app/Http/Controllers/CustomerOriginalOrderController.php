@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use App\Models\OriginalOrderProcess;
 use App\Models\OriginalOrderArticle;
 use Illuminate\Support\Facades\DB;
+use App\Models\ProductionOrder;
 
 class CustomerOriginalOrderController extends Controller
 {
@@ -91,10 +92,17 @@ class CustomerOriginalOrderController extends Controller
 
     public function show(Customer $customer, OriginalOrder $originalOrder)
     {
-        // Cargar procesos con todos los campos pivot explícitamente
+        // Cargar procesos con todos los campos pivot
         $originalOrder->load(['processes' => function($query) {
-            $query->withPivot('id', 'time', 'created', 'finished', 'finished_at');
+            $query->withPivot('id', 'time', 'created', 'finished', 'finished_at', 'in_stock');
         }]);
+        
+        // Cargar productionOrders para cada proceso
+        $originalOrder->processes->each(function($process) {
+            $process->pivot->load(['productionOrders' => function($query) {
+                $query->select('id', 'original_order_process_id', 'status', 'production_line_id');
+            }]);
+        });
         
         // Depurar los procesos cargados
         \Log::info('Procesos cargados para la orden ' . $originalOrder->id . ':');
