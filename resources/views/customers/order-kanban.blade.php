@@ -869,9 +869,7 @@
                 stockIconHtml = `<span class="ms-2" title="${stockTitleText}"><i class="fas fa-exclamation-triangle text-primary"></i></span>`;
             }
 
-            const groupNumber = order.grupo_numero || 0;
-            const groupColors = ['#6b7280', '#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
-            const groupBadgeHtml = groupNumber > 0 ? `<span class="group-badge" style="background-color: ${groupColors[groupNumber-1] || '#6b7280'}" title="Grupo ${groupNumber}">${groupNumber}</span>` : '';
+            // Grupo eliminado - ya no es necesario
             
             const countProcesses = (processString) => {
                 if (!processString || typeof processString !== 'string') return 0;
@@ -926,7 +924,7 @@
             card.innerHTML = `
                 <div class="kanban-card-header" onclick="this.parentElement.classList.toggle('collapsed')">
                     <div class="me-2" style="flex-grow: 1;">
-                        <div class="fw-bold text-sm d-flex align-items-center">#${order.order_id}${urgencyIconHtml}${stockIconHtml} ${groupBadgeHtml}</div>
+                        <div class="fw-bold text-sm d-flex align-items-center">#${order.order_id}${urgencyIconHtml}${stockIconHtml}</div>
                         <div class="text-xs fw-bold text-muted mt-1">${order.customerId || translations.noCustomer}</div>
                         ${processDescription ? `<div class="text-xs text-muted mt-1">${processDescription}</div>` : ''}
                     </div>

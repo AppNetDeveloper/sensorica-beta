@@ -55,6 +55,14 @@
         <div class="form-group">
             <label for="json_api">{{ __('JSON API') }}</label>
             <textarea name="json_api" class="form-control" rows="3">{{ $sensor->json_api }}</textarea>
+            <small class="form-text text-muted">
+                {{ __('Ejemplos de configuración:') }}<br>
+                <strong>value</strong> - {{ __('Extrae el campo "value" (por defecto)') }}<br>
+                <strong>medida</strong> - {{ __('Extrae el campo "medida" del JSON') }}<br>
+                <strong>sensorDatas[0].value</strong> - {{ __('Extrae el campo "value" del primer elemento del array "sensorDatas"') }}<br>
+                <strong>sensorDatas[?(@.flag=="REG137")].value</strong> - {{ __('Extrae el campo "value" del elemento con flag="REG137"') }}<br>
+                <strong>datos.temperatura</strong> - {{ __('Extrae el campo anidado "temperatura" dentro del objeto "datos"') }}
+            </small>
         </div>
 
         <div class="form-group">

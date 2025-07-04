@@ -386,6 +386,33 @@
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
         }
         
+        /* Estilos para el menú desplegable de las tarjetas */
+        .card-menu-container {
+            position: relative;
+        }
+        
+        .card-menu {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            border: 1px solid #e5e7eb;
+            z-index: 50;
+        }
+        
+        .card-menu button:hover {
+            background-color: #f3f4f6;
+        }
+        
+        /* Animación para tarjetas recién movidas */
+        @keyframes highlightCard {
+            0% { transform: scale(1); box-shadow: 0 0 0 rgba(59, 130, 246, 0); }
+            50% { transform: scale(1.03); box-shadow: 0 0 15px rgba(59, 130, 246, 0.5); }
+            100% { transform: scale(1); box-shadow: 0 0 0 rgba(59, 130, 246, 0); }
+        }
+        
+        .card-just-moved {
+            animation: highlightCard 0.8s ease;
+            z-index: 10;
+        }
+        
         .search-input:focus {
             border-color: #3b82f6;
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
@@ -2123,9 +2150,19 @@
                             <span class="font-bold text-xs text-gray-800" style="letter-spacing: -0.3px;">${order.order_id || 'N/A'}</span>
                             ${isUrgent ? '<i class="fas fa-bolt text-orange-500 ml-1" title="Urgente"></i>' : ''}
                         </div>
-                        <button class="card-menu-btn text-gray-500 hover:text-gray-700 p-1" data-order-id="${order.id}">
-                            <i class="fas fa-ellipsis-v"></i>
-                        </button>
+                        <div class="relative card-menu-container">
+                            <button class="card-menu-btn text-gray-500 hover:text-gray-700 p-1" data-order-id="${order.id}">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            <div class="card-menu hidden absolute right-0 top-full mt-1 bg-white shadow-lg rounded-md z-50 w-32 py-1">
+                                <button class="card-menu-incident w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 flex items-center">
+                                    <i class="fas fa-exclamation-triangle text-yellow-500 mr-2"></i> Incidencias
+                                </button>
+                                <button class="card-menu-top w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 flex items-center">
+                                    <i class="fas fa-arrow-up text-blue-500 mr-2"></i> Primera
+                                </button>
+                            </div>
+                        </div>
                     </div>
                     <div class="mb-1 text-xs text-gray-600 font-medium flex items-center">
                         <i class="fas fa-user-tie text-blue-500 mr-1" title="Cliente"></i>
@@ -2141,18 +2178,71 @@
                         <span><i class="fas fa-truck-loading text-green-600 mr-1" title="Fecha de entrega"></i>${order.delivery_date ? formatDate(order.delivery_date) : 'Sin fecha'}</span>
                     </div>`;
                 
-                // Agregar evento de click para el botón de menú (después de crear el HTML)
+                // Agregar eventos para el menú desplegable
                 const menuBtn = card.querySelector('.card-menu-btn');
-                if (menuBtn) {
+                const menuContainer = card.querySelector('.card-menu-container');
+                const menu = card.querySelector('.card-menu');
+                const incidentBtn = card.querySelector('.card-menu-incident');
+                const topBtn = card.querySelector('.card-menu-top');
+                
+                if (menuBtn && menu) {
+                    // Cerrar todos los menús abiertos al hacer clic en cualquier parte
+                    document.addEventListener('click', function(event) {
+                        const allMenus = document.querySelectorAll('.card-menu');
+                        allMenus.forEach(m => m.classList.add('hidden'));
+                    });
+                    
+                    // Mostrar/ocultar el menú al hacer clic en los 3 puntos
                     menuBtn.addEventListener('click', (e) => {
                         e.stopPropagation();
+                        
                         // Verificar si hay un operario seleccionado
                         if (!currentWorker) {
                             showWorkerRequiredAlert();
                             return;
                         }
-                        showOrderDetails(order.id);
+                        
+                        // Cerrar todos los demás menús primero
+                        const allMenus = document.querySelectorAll('.card-menu');
+                        allMenus.forEach(m => {
+                            if (m !== menu) m.classList.add('hidden');
+                        });
+                        
+                        // Mostrar/ocultar este menú
+                        menu.classList.toggle('hidden');
                     });
+                    
+                    // Evitar que los clics dentro del menú lo cierren
+                    menu.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                    });
+                    
+                    // Opción 1: Incidencias - Abrir el modal de incidencias
+                    if (incidentBtn) {
+                        incidentBtn.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            menu.classList.add('hidden'); // Ocultar el menú
+                            showOrderDetails(order.id); // Usar la función existente para mostrar incidencias
+                        });
+                    }
+                    
+                    // Opción 2: Primera - Mover la tarjeta al principio de su columna
+                    if (topBtn) {
+                        topBtn.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            menu.classList.add('hidden'); // Ocultar el menú
+                            
+                            // Obtener la tarjeta actual (el elemento padre del botón)
+                            const currentCard = e.currentTarget.closest('.kanban-card');
+                            if (!currentCard) {
+                                console.error('No se pudo encontrar la tarjeta desde el botón');
+                                return;
+                            }
+                            
+                            // Mover la tarjeta al principio de su columna
+                            moveCardToTop(currentCard, order.id);
+                        });
+                    }
                 }
                 // Agregar evento de doble click solo para tarjetas "en curso" (status 1)
                 console.log('Estado de la orden:', order.id, 'Status:', order.status);
@@ -4505,6 +4595,167 @@ async function updateOrderStatus(orderId, newStatus) {
                 }
             `;
             document.head.appendChild(style);
+            
+            // Función para mover una tarjeta al principio de su columna
+            function moveCardToTop(cardElement, orderId) {
+                try {
+                    // Obtener la columna actual de la tarjeta
+                    const kanbanColumn = cardElement.closest('.kanban-column');
+                    if (!kanbanColumn) {
+                        console.error('No se pudo encontrar la columna kanban de la tarjeta');
+                        return;
+                    }
+                    
+                    // Obtener el ID de la columna
+                    const columnId = kanbanColumn.id;
+                    console.log('Moviendo tarjeta', orderId, 'al principio de la columna', columnId);
+                    
+                    // Las tarjetas se añaden directamente a la columna después del título y posibles elementos de búsqueda
+                    // Encontrar la primera tarjeta en la columna para insertar antes de ella
+                    const firstCard = kanbanColumn.querySelector('.kanban-card');
+                    
+                    // Guardar una referencia al padre actual antes de eliminar
+                    const parent = cardElement.parentNode;
+                    
+                    // Eliminar la tarjeta de su posición actual
+                    cardElement.remove();
+                    
+                    if (firstCard && firstCard !== cardElement) {
+                        // Si hay otra tarjeta, insertar antes de ella
+                        kanbanColumn.insertBefore(cardElement, firstCard);
+                        console.log('Tarjeta insertada antes de la primera tarjeta existente');
+                    } else if (parent) {
+                        // Si no hay otras tarjetas o la única es esta misma, añadirla al final de la columna
+                        kanbanColumn.appendChild(cardElement);
+                        console.log('Tarjeta añadida al final de la columna (era la única)');
+                    } else {
+                        console.error('No se pudo determinar dónde insertar la tarjeta');
+                        return;
+                    }
+                    
+                    // Actualizar el orden en el backend
+                    updateCardOrder(columnId);
+                    
+                    // Mostrar notificación
+                    Swal.fire({
+                        title: 'Tarjeta movida',
+                        text: 'La tarjeta ha sido movida a la primera posición',
+                        icon: 'success',
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 3000
+                    });
+                    
+                    // Resaltar la tarjeta con una animación
+                    cardElement.classList.add('card-just-moved');
+                    setTimeout(() => {
+                        cardElement.classList.remove('card-just-moved');
+                    }, 800);
+                    
+                } catch (error) {
+                    console.error('Error al mover la tarjeta:', error);
+                }
+            }
+            
+            // Función para actualizar el orden de las tarjetas y persistir en el backend
+            async function updateCardOrder(columnId) {
+                try {
+                    const column = document.getElementById(columnId);
+                    if (!column) return;
+                    
+                    const cards = Array.from(column.querySelectorAll('.kanban-card'));
+                    if (cards.length === 0) return;
+                    
+                    // Actualizar el atributo data-order-sort de cada tarjeta para reflejar su nueva posición
+                    cards.forEach((card, index) => {
+                        card.dataset.orderSort = index;
+                        
+                        // También actualizamos visualmente el orden si hay algún elemento que lo muestre
+                        const orderDisplay = card.querySelector('.order-position');
+                        if (orderDisplay) {
+                            orderDisplay.textContent = index + 1; // +1 para mostrar orden desde 1, no desde 0
+                        }
+                    });
+                    
+                    console.log(`Orden actualizado localmente en columna ${columnId}. ${cards.length} tarjetas reordenadas.`);
+                    
+                    // Obtener el ID de la primera tarjeta (la que movimos)
+                    const firstCardId = cards[0]?.dataset.cardId;
+                    if (!firstCardId) {
+                        throw new Error('No se pudo obtener el ID de la primera tarjeta');
+                    }
+                    
+                    // Obtener el estado actual de la tarjeta para mantenerlo
+                    const currentStatus = parseInt(cards[0]?.dataset.status || '0');
+                    
+                    console.log('📤 Enviando actualización al backend para la tarjeta ID:', firstCardId);
+                    console.log('Estado actual de la tarjeta:', currentStatus);
+                    
+                    // Obtener el token de la línea de producción
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const productionLineToken = urlParams.get('token');
+                    
+                    if (!productionLineToken) {
+                        throw new Error('No se encontró el token de la línea de producción');
+                    }
+                    
+                    // Crear el objeto de datos para la petición
+                    const requestData = {
+                        token: productionLineToken,
+                        status: currentStatus,
+                        orden: 0,  // Posición 0 para mover al principio
+                        force_reorder: true,
+                        move_to_top: true
+                    };
+                    
+                    console.log('📤 ENVIANDO AL BACKEND:', {
+                        url: `${API_BASE_URL}/api/production-orders/${firstCardId}`,
+                        method: 'PATCH',
+                        data: requestData
+                    });
+                    
+                    // Hacer la petición directamente al endpoint de actualización
+                    const updateResponse = await fetch(`${API_BASE_URL}/api/production-orders/${firstCardId}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                        },
+                        body: JSON.stringify(requestData)
+                    });
+                    
+                    const responseData = await updateResponse.json().catch(() => ({}));
+                    
+                    console.log('📥 RESPUESTA DEL BACKEND:', {
+                        status: updateResponse.status,
+                        statusText: updateResponse.statusText,
+                        data: responseData
+                    });
+                    
+                    if (updateResponse.ok) {
+                        console.log('✅ Posición actualizada en el backend correctamente');
+                        
+                        // Forzar un refresco completo del Kanban para asegurar que todo esté sincronizado
+                        if (typeof fetchProductionOrders === 'function') {
+                            console.log('🔄 Refrescando datos del Kanban...');
+                            fetchProductionOrders(productionLineToken);
+                        }
+                        
+                        return true;
+                    } else {
+                        console.warn('⚠️ No se pudo actualizar la posición en el backend:', responseData.message || 'Error desconocido');
+                        return false;
+                    }
+                    
+                } catch (error) {
+                    console.error('Error al actualizar la posición en el backend:', error);
+                    // No mostramos alerta para no interrumpir la experiencia del usuario
+                    // ya que la tarjeta ya se movió visualmente
+                    return false;
+                }
+            }
             
             // Función para filtrar tarjetas en la columna de pendientes
             function filterPendientesCards(searchText) {

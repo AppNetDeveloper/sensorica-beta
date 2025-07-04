@@ -81,7 +81,7 @@ async function connectToDatabase() {
 async function getAllTopics() {
   try {
     const [rows] = await dbConnection.execute(
-      'SELECT id, mqtt_topic_sensor, sensor_type, invers_sensors FROM sensors WHERE mqtt_topic_sensor IS NOT NULL AND mqtt_topic_sensor != ""'
+      'SELECT id, mqtt_topic_sensor, sensor_type, invers_sensors, json_api FROM sensors WHERE mqtt_topic_sensor IS NOT NULL AND mqtt_topic_sensor != ""'
     );
     return rows;
   } catch (error) {
@@ -106,7 +106,8 @@ async function subscribeToTopics() {
     sensorsCache[row.mqtt_topic_sensor] = {
       id: row.id,
       sensor_type: row.sensor_type,
-      invers_sensors: row.invers_sensors
+      invers_sensors: row.invers_sensors,
+      json_api: row.json_api
     };
   });
 
@@ -164,31 +165,85 @@ async function callApiWithRetries(dataToSend, maxRetries = 5, initialDelay = 500
   }
   
 
+// Función para extraer valores usando rutas JSON
+function extractValueFromJson(jsonData, path) {
+  if (!path) return jsonData.value; // Valor por defecto si no se especifica ruta
+  
+  try {
+    // Para rutas simples (sin filtros)
+    if (!path.includes('[?') && !path.includes('.*')) {
+      return getNestedValue(jsonData, path);
+    }
+    
+    // Para rutas con filtros por flag
+    if (path.includes('[?(@.flag==')) {
+      const match = path.match(/\[\?\(@\.flag=="([^"]+)"\)\]\.([\w]+)/);
+      if (match && match.length === 3) {
+        const flagToFind = match[1];
+        const fieldToExtract = match[2];
+        
+        // Extraer la parte antes del filtro
+        const arrayPath = path.split('[?')[0];
+        const array = getNestedValue(jsonData, arrayPath);
+        
+        if (Array.isArray(array)) {
+          const item = array.find(item => item.flag === flagToFind);
+          return item ? item[fieldToExtract] : null;
+        }
+      }
+    }
+    
+    // Si no se pudo extraer con las reglas anteriores, intentar con valor por defecto
+    return jsonData.value || null;
+  } catch (error) {
+    console.error(`[${getCurrentTimestamp()}] ❌ Error extracting value using path ${path}: ${error.message}`);
+    return null;
+  }
+}
+
+// Función auxiliar para obtener valores anidados en un objeto
+function getNestedValue(obj, path) {
+  // Soporta rutas como "data.readings[0].temperature"
+  const keys = path.replace(/\[(\d+)\]/g, '.$1').split('.');
+  let result = obj;
+  
+  for (const key of keys) {
+    if (result === null || result === undefined) return null;
+    result = result[key];
+  }
+  
+  return result;
+}
+
 async function processCallApi(topic, data) {
   try {
-    // Se asume que el mensaje es un JSON con { value: número }
     const parsed = JSON.parse(data);
     const sensorConfig = sensorsCache[topic];
     if (!sensorConfig) {
       console.error(`[${getCurrentTimestamp()}] ❌ No se encontró configuración en el cache para el tópico ${topic}`);
       return;
     }
-    //si el invers_sensors es 1, se invierte el valor pero lo ponemos en un nuevo objeto
-    if (sensorConfig.invers_sensors === 1) {
-      newValue = -parsed.value;
-      //console.log(`[${getCurrentTimestamp()}] ℹ️ Sensor ID ${sensorConfig.id} con invers_sensors=1, valor original: ${parsed.value}, nuevo valor: ${newValue}`);
-    }else{
-      newValue = parsed.value;
-     // console.log(`[${getCurrentTimestamp()}] ℹ️ Sensor ID ${sensorConfig.id} con invers_sensors=0, valor original: ${parsed.value}`);
+    
+    // Extraer el valor usando la ruta configurada o 'value' por defecto
+    const extractedValue = extractValueFromJson(parsed, sensorConfig.json_api);
+    
+    // Si no se pudo extraer un valor, registrar error y salir
+    if (extractedValue === null || extractedValue === undefined) {
+      console.error(`[${getCurrentTimestamp()}] ❌ No se pudo extraer valor usando la ruta ${sensorConfig.json_api || 'value'} para el tópico ${topic}`);
+      return;
     }
+    
+    // Aplicar inversión si es necesario
+    let newValue = sensorConfig.invers_sensors === 1 ? -extractedValue : extractedValue;
 
     // Si sensor_type es 0 y el value es 0, se omite el procesamiento
     if (sensorConfig.sensor_type === 0 && newValue === 0) {
       //console.log(`[${getCurrentTimestamp()}] ℹ️ Sensor ID ${sensorConfig.id} con sensor_type=0 y value=0, se omite el procesamiento.`);
       return;
     }
+    
     const dataToSend = {
-      value: parsed.value,
+      value: newValue,
       id: sensorConfig.id
     };
 
