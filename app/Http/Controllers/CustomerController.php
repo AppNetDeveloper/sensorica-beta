@@ -160,6 +160,9 @@ class CustomerController extends Controller
      */
     public function showOrderKanban(Customer $customer, \App\Models\Process $process)
     {
+        // Guardar el proceso y cliente actuales en la sesión para que getKanbanData pueda acceder a ellos
+        session(['current_process_id' => $process->id]);
+        session(['current_customer_id' => $customer->id]);
         // Verificar que el proceso pertenece al cliente y obtener las líneas de producción
         $productionLines = $customer->productionLines()
             ->whereHas('processes', function($query) use ($process) {
@@ -292,6 +295,119 @@ class CustomerController extends Controller
             'processOrders' => $processOrders
         ]);
     }
+    /**
+     * Obtiene los datos del Kanban para actualización mediante AJAX
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getKanbanData()
+    {
+        // Recuperar el customer actual de la sesión
+        $customerId = session('current_customer_id');
+        $customer = \App\Models\Customer::findOrFail($customerId);
+        // Recuperar el proceso actual de la sesión
+        $processId = session('current_process_id');
+        $process = \App\Models\Process::findOrFail($processId);
+        
+        // Obtener todas las órdenes para este proceso específico
+        // Para status 0 y 1 (pendientes y en progreso) mostramos todas
+        // Para status 2, 3, 4 y 5 (completadas, pausadas, canceladas e incidencias) solo mostramos las de los últimos 3 días
+        $query = \App\Models\ProductionOrder::where('process_category', $process->description); // Filtrar por la categoría del proceso actual
+
+        // Aplicamos el filtro de 3 días solo para órdenes con status 2, 3, 4 y 5
+        $query->where(function($q) {
+            $threeDaysAgo = now()->subDays(3)->startOfDay();
+            
+            // Status 0 y 1 (pendientes y en progreso) - mostrar todas
+            $q->whereIn('status', [0, 1]);
+            
+            // Status 2, 3, 4 y 5 (completadas, pausadas, canceladas e incidencias) - solo últimos 3 días
+            $q->orWhere(function($subq) use ($threeDaysAgo) {
+                $subq->whereIn('status', [2, 3, 4, 5])
+                     ->where('updated_at', '>=', $threeDaysAgo);
+            });
+        });
+
+        $processOrders = $query->orderBy('orden', 'asc')->get()
+                ->map(function($order){
+                    // Determinar el estado y color según el código de status
+                    $statusName = 'pending';
+                    $statusColor = '#6b7280'; // Gris por defecto
+                    
+                    switch ($order->status) {
+                        case 0:
+                            $statusName = 'pending'; // Pendiente
+                            $statusColor = '#6b7280'; // Gris
+                            break;
+                        case 1:
+                            $statusName = 'in_progress'; // En proceso
+                            $statusColor = '#3b82f6'; // Azul
+                            break;
+                        case 2:
+                            $statusName = 'completed'; // Finalizado
+                            $statusColor = '#10b981'; // Verde
+                            break;
+                        case 3:
+                            $statusName = 'paused'; // Pausado
+                            $statusColor = '#f59e0b'; // Amarillo/ámbar
+                            break;
+                        case 4:
+                            $statusName = 'cancelled'; // Cancelado
+                            $statusColor = '#6b7280'; // Gris oscuro
+                            break;
+                        case 5:
+                            $statusName = 'incidents'; // Con incidencia
+                            $statusColor = '#ef4444'; // Rojo
+                            break;
+                    }
+                    
+                    // 1. Preparamos la variable con el valor por defecto
+                    $tiempoTeoricoFormateado = 'Sin Tiempo Teórico';
+
+                    // 2. Si existe el tiempo teórico en segundos, lo convertimos
+                    if (isset($order->theoretical_time)) {
+                        $tiempoTeoricoFormateado = self::convertirSegundosA_H_M_S($order->theoretical_time);
+                    }
+                    
+                    // Obtener las descripciones de artículos asociados al proceso
+                    $articlesDescriptions = [];
+                    if ($order->original_order_process_id) {
+                        $articles = \App\Models\OriginalOrderArticle::where('original_order_process_id', $order->original_order_process_id)
+                            ->pluck('descripcion_articulo')
+                            ->filter() // Filtrar valores nulos o vacíos
+                            ->toArray();
+                        $articlesDescriptions = $articles;
+                    }
+                    
+                    return [
+                        'id' => $order->id,
+                        'order_id' => $order->order_id,
+                        'status' => $statusName,
+                        'status_code' => $order->status,
+                        'productionLineId' => $order->production_line_id,
+                        'box' => $order->box ?? 0,
+                        'units' => $order->units ?? 0,
+                        'created_at' => $order->created_at,
+                        'delivery_date' => $order->delivery_date,
+                        'json' => $order->json ?? [],
+                        'statusColor' => $statusColor,
+                        'grupo_numero' => $order->grupo_numero ?? '0',
+                        'processes_to_do' => $order->processes_to_do ?? 'Sin Procesos',
+                        'processes_done' => $order->processes_done ?? '',
+                        'theoretical_time' => $tiempoTeoricoFormateado,
+                        'customerId' => $order->customerId ?? 'Sin Cliente',
+                        'original_order_id' => $order->original_order_id ?? 'Sin Orden Original',
+                        'articles_descriptions' => $articlesDescriptions,
+                        'orden' => $order->orden ?? 0,
+                        'has_stock' => $order->has_stock ?? 1
+                    ];
+                });
+
+        return response()->json([
+            'processOrders' => $processOrders
+        ]);
+    }
+    
     /**
      * Convierte un número total de segundos a formato HH:MM:SS.
      *

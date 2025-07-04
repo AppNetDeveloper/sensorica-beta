@@ -106,6 +106,8 @@ Route::prefix('customers')->name('customers.')->group(function () {
             ->name('order-kanban')
             ->where('process', '[0-9]+');
             
+
+            
         // Rutas para las incidencias de órdenes de producción
         Route::get('production-order-incidents', [ProductionOrderIncidentController::class, 'index'])
             ->name('production-order-incidents.index');
@@ -118,7 +120,10 @@ Route::prefix('customers')->name('customers.')->group(function () {
     });
 });
 
-// Rutas para colores RFID
+// Ruta para obtener datos del Kanban mediante AJAX (para actualización automática)
+Route::get('kanban-data', [CustomerController::class, 'getKanbanData'])
+    ->name('kanban.data');
+
 // Rutas para colores RFID
 Route::get('production-lines/{production_line_id}/rfid/colors', [RfidColorController::class, 'index'])
     ->name('rfid.colors.index');

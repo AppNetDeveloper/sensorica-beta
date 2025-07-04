@@ -19,25 +19,22 @@
             <a href="{{ route('customers.order-organizer', $customer) }}" class="btn btn-secondary me-2" id="backToProcessesBtn">
                 <i class="ti ti-arrow-left me-1"></i> {{ __('Back to Processes') }}
             </a>
-            <div class="position-relative" style="max-width: 400px;">
+        </div>
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+            <div class="position-relative" style="width: 300px;">
                 <i class="fas fa-search position-absolute top-50 start-0 translate-middle-y ms-3 text-gray-400"></i>
                 <input type="text" id="searchInput" placeholder="{{ __('Search by order ID or customer...') }}"
                        class="form-control ps-5" style="width: 100%;">
             </div>
-        </div>
-        <div class="d-flex align-items-center gap-2 flex-wrap">
             <button id="autoOrganizeBtn" class="btn btn-light" title="{{ __('Organizar con IA') }}">
                 ✨
-            </button>
-            <button id="saveChangesBtn" class="btn btn-primary" title="{{ __('Save Changes') }}">
-                <i class="fas fa-save me-1"></i> {{ __('Guardar') }}
-            </button>
-            <button id="refreshBtn" class="btn btn-info" title="{{ __('Refresh Data') }}">
-                <i class="fas fa-sync-alt"></i>
             </button>
             <button id="fullscreenBtn" class="btn btn-light" title="{{ __('Fullscreen') }}">
                 <i class="fas fa-expand-arrows-alt text-primary"></i>
             </button>
+            <!-- Botones ocultos para mantener la funcionalidad de autoguardado y actualización automática -->
+            <button id="saveChangesBtn" class="d-none"></button>
+            <button id="refreshBtn" class="d-none"></button>
         </div>
     </div>
 </div>
@@ -758,6 +755,9 @@
                 document.querySelectorAll('.final-state-section').forEach(section => {
                     updateAccumulatedTimes(section);
                 });
+                
+                // Autoguardado: guardar cambios automáticamente después de cada drop
+                document.getElementById('saveChangesBtn').click();
             });
         }
 
@@ -792,8 +792,8 @@
                     <div class="column-search-container mt-2">
                         <div class="position-relative">
                             <i class="fas fa-search position-absolute top-50 start-0 translate-middle-y ms-2 text-gray-400"></i>
-                            <input type="text" class="form-control form-control-sm ps-4 pending-search-input" 
-                                placeholder="{{ __('Buscar en pendientes...') }}">
+                            <input type="text" class="form-control ps-4 pending-search-input" 
+                                style="height: 38px;" placeholder="{{ __('Buscar en pendientes...') }}">
                         </div>
                     </div>
                 `;
@@ -927,6 +927,10 @@
                         <div class="fw-bold text-sm d-flex align-items-center">#${order.order_id}${urgencyIconHtml}${stockIconHtml}</div>
                         <div class="text-xs fw-bold text-muted mt-1">${order.customerId || translations.noCustomer}</div>
                         ${processDescription ? `<div class="text-xs text-muted mt-1">${processDescription}</div>` : ''}
+                        <div class="d-flex justify-content-between align-items-center mt-1">
+                            <div class="text-xs text-muted"><i class="far fa-calendar-alt me-1"></i>${createdAtFormatted}</div>
+                            ${deliveryDateFormatted ? `<div class="text-xs text-danger fw-bold ms-2"><i class="fas fa-truck me-1"></i>${deliveryDateFormatted}</div>` : ''}
+                        </div>
                     </div>
                     <div class="d-flex flex-column align-items-end">
                         <span class="card-menu" role="button" data-order-id="${order.id}"><i class="fas fa-ellipsis-h"></i></span>
@@ -950,10 +954,7 @@
                              </div>
                          </div>
                     </div>
-                    <div class="d-flex justify-content-between align-items-center mt-2">
-                        <div class="text-xs text-muted"><i class="far fa-calendar-alt me-1"></i>${createdAtFormatted}</div>
-                        ${deliveryDateFormatted ? `<div class="text-xs text-danger fw-bold"><i class="fas fa-truck me-1"></i>${deliveryDateFormatted}</div>` : ''}
-                    </div>
+
                 </div>
                 <div class="kanban-card-footer">
                     <span class="text-xs fw-medium">${translations.unassigned}</span>
@@ -1184,10 +1185,110 @@
         
         // --- 6. INICIALIZACIÓN Y EVENT LISTENERS ---
         
+        // Función para refrescar los datos del Kanban sin recargar la página
+        async function refreshKanbanData() {
+            try {
+                // Solo refrescar si no hay cambios pendientes
+                if (hasUnsavedChanges) return;
+                
+                console.log('🔄 Actualizando datos del Kanban...');
+                
+                // Obtener datos actualizados del servidor
+                const response = await fetch('{{ route("kanban.data") }}');
+                
+                if (!response.ok) {
+                    throw new Error('Error al obtener datos actualizados');
+                }
+                
+                const data = await response.json();
+                
+                // Actualizar masterOrderList con los nuevos datos
+                // Preservar los elementos que estamos editando actualmente
+                if (data.processOrders && Array.isArray(data.processOrders)) {
+                    // Crear un mapa de órdenes actuales para referencia rápida
+                    const currentOrdersMap = {};
+                    
+                    // Guardar el estado de expansión de las tarjetas actuales
+                    const expandedCardIds = new Set();
+                    document.querySelectorAll('.kanban-card:not(.collapsed)').forEach(card => {
+                        expandedCardIds.add(parseInt(card.dataset.id));
+                    });
+                    
+                    // Guardar las posiciones de scroll de todas las columnas
+                    const scrollPositions = {};
+                    document.querySelectorAll('.kanban-column').forEach(column => {
+                        const columnId = column.dataset.id || column.dataset.state || column.id;
+                        if (columnId) {
+                            const cardsContainer = column.querySelector('.column-cards');
+                            if (cardsContainer) {
+                                // Solo guardar la posición exacta de scroll
+                                scrollPositions[columnId] = {
+                                    scrollTop: cardsContainer.scrollTop,
+                                    scrollLeft: cardsContainer.scrollLeft
+                                };
+                            }
+                        }
+                    });
+                    
+                    masterOrderList.forEach(order => {
+                        currentOrdersMap[order.id] = order;
+                    });
+                    
+                    // Reemplazar masterOrderList con los nuevos datos
+                    masterOrderList = data.processOrders;
+                    
+                    // Restaurar el estado de las órdenes que estaban siendo editadas
+                    if (draggedCard) {
+                        const draggedId = parseInt(draggedCard.dataset.id);
+                        const draggedOrder = masterOrderList.find(o => o.id === draggedId);
+                        if (draggedOrder && currentOrdersMap[draggedId]) {
+                            // Mantener el estado actual de la orden que se está arrastrando
+                            Object.assign(draggedOrder, currentOrdersMap[draggedId]);
+                        }
+                    }
+                    
+                    // Renderizar el tablero con los datos actualizados
+                    distributeAndRender(true, () => {
+                        // Restaurar el estado de expansión de las tarjetas
+                        if (expandedCardIds.size > 0) {
+                            document.querySelectorAll('.kanban-card').forEach(card => {
+                                const cardId = parseInt(card.dataset.id);
+                                if (expandedCardIds.has(cardId)) {
+                                    card.classList.remove('collapsed');
+                                }
+                            });
+                        }
+                        
+                        // Restaurar las posiciones de scroll de las columnas con un enfoque simple
+                        setTimeout(() => {
+                            document.querySelectorAll('.kanban-column').forEach(column => {
+                                const columnId = column.dataset.id || column.dataset.state || column.id;
+                                if (columnId && scrollPositions[columnId]) {
+                                    const cardsContainer = column.querySelector('.column-cards');
+                                    if (cardsContainer) {
+                                        // Restaurar la posición exacta de scroll sin animaciones
+                                        cardsContainer.scrollTop = scrollPositions[columnId].scrollTop;
+                                        cardsContainer.scrollLeft = scrollPositions[columnId].scrollLeft;
+                                    }
+                                }
+                            });
+                        }, 150); // Aumentar el retraso para asegurar que el DOM se ha actualizado completamente
+                    });
+                    console.log('✅ Datos del Kanban actualizados correctamente');
+                }
+            } catch (error) {
+                console.error('Error al actualizar datos del Kanban:', error);
+                // No mostrar toast de error para no molestar al usuario con mensajes constantes
+            }
+        }
+        
         document.getElementById('saveChangesBtn').addEventListener('click', saveKanbanChanges);
-        document.getElementById('refreshBtn').addEventListener('click', () => window.location.reload());
+        document.getElementById('refreshBtn').addEventListener('click', refreshKanbanData);
         document.getElementById('fullscreenBtn').addEventListener('click', toggleFullscreen);
         document.getElementById('autoOrganizeBtn').addEventListener('click', autoOrganizeWithAI);
+        
+        // Actualización automática cada 3 segundos
+        setInterval(refreshKanbanData, 3000);
         
         searchInput.addEventListener('input', () => setTimeout(() => distributeAndRender(true), 300));
         
