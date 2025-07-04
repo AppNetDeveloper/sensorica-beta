@@ -26,9 +26,7 @@
                 <input type="text" id="searchInput" placeholder="{{ __('Search by order ID or customer...') }}"
                        class="form-control ps-5" style="width: 100%;">
             </div>
-            <button id="autoOrganizeBtn" class="btn btn-light" title="{{ __('Organizar con IA') }}">
-                ✨
-            </button>
+            <!-- Botón de IA eliminado -->
             <button id="fullscreenBtn" class="btn btn-light" title="{{ __('Fullscreen') }}">
                 <i class="fas fa-expand-arrows-alt text-primary"></i>
             </button>
@@ -218,132 +216,7 @@
             return diffDays <= 5;
         }
 
-        async function autoOrganizeWithAI() {
-            const apiKey = "AIzaSyDt4KWXISfHgcDCLX2IJIXXf2rY0NjxVvo";
-            const autoOrganizeBtn = document.getElementById('autoOrganizeBtn');
-            autoOrganizeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-            autoOrganizeBtn.disabled = true;
-
-            try {
-                const workableOrders = masterOrderList
-                    .filter(order => !['completed', 'paused', 'cancelled'].includes(order.status))
-                    .map(order => ({
-                        id: order.id,
-                        delivery_date: order.delivery_date,
-                        theoretical_time: parseFloat(order.theoretical_time) || 1,
-                        is_urgent: isOrderUrgent(order)
-                    }));
-                
-                const productionLines = Object.values(columns)
-                    .filter(c => c.type === 'production')
-                    .map(c => ({ id: c.productionLineId, name: c.name }));
-
-                if (workableOrders.length === 0 || productionLines.length === 0) {
-                    showToast(translations.noOrdersToOrganize, 'info');
-                    return;
-                }
-
-                const prompt = `
-                    Eres un experto en planificación de producción. Tu tarea es organizar las siguientes órdenes de producción de la manera más eficiente posible, asignándolas a las líneas de producción disponibles.
-                    Reglas de Priorización y Balanceo:
-                    1.  **Balanceo de Carga:** El objetivo principal es balancear la carga de trabajo total (suma de 'theoretical_time') entre todas las líneas de producción de la forma más equitativa posible.
-                    2.  **Urgencia:** Las órdenes marcadas como 'is_urgent: true' tienen la máxima prioridad y deben ser procesadas antes que las no urgentes.
-                    3.  **Fecha de Entrega:** Dentro de cada grupo (urgentes y no urgentes), las órdenes con la 'delivery_date' más cercana en el tiempo deben ir primero.
-                    4.  **Tiempo Teórico:** Si todo lo demás es igual, las órdenes con mayor 'theoretical_time' van primero.
-                    5.  **Se tiene que usar los id reales de production_line_id no se tienen que inventar estos id .
-                    6.  **Se tiene que usar los id reales de order_id no se tienen que inventar estos id . Ademas no olvidar de ninguno
-                    Líneas de Producción Disponibles: ${JSON.stringify(productionLines)}
-                    Órdenes a Organizar: ${JSON.stringify(workableOrders)}
-                    Tu respuesta DEBE ser únicamente un objeto JSON con una clave "assignments" que contenga un array. CADA ORDEN de la lista 'Órdenes a Organizar' debe tener su correspondiente entrada en el array "assignments". No dejes ninguna orden sin asignar. Cada elemento del array debe ser un objeto con "order_id" (número) y "assigned_line_id" (número). No incluyas explicaciones ni texto adicional.
-                `;
-
-                console.log("--- PROMPT ENVIADO A GEMINI ---", prompt);
-
-                const payload = {
-                    contents: [{ role: "user", parts: [{ text: prompt }] }],
-                    generationConfig: {
-                        responseMimeType: "application/json",
-                        responseSchema: {
-                            type: "OBJECT",
-                            properties: {
-                                "assignments": {
-                                    type: "ARRAY",
-                                    items: {
-                                        type: "OBJECT",
-                                        properties: {
-                                            "order_id": { "type": "NUMBER" },
-                                            "assigned_line_id": { "type": "NUMBER" }
-                                        },
-                                        required: ["order_id", "assigned_line_id"]
-                                    }
-                                }
-                            },
-                            required: ["assignments"]
-                        }
-                    }
-                };
-
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!response.ok) {
-                    const errorBody = await response.json();
-                    throw new Error(`Error de la API de Gemini: ${errorBody.error?.message || response.statusText}`);
-                }
-                
-                const result = await response.json();
-                console.log("--- RESPUESTA RECIBIDA DE GEMINI (RAW) ---", result);
-
-                 // Espera sin bloquear la página
-                await wait(20000); // Espera 20 segundos
-
-                const jsonText = result.candidates[0].content.parts[0].text;
-                const parsedResult = JSON.parse(jsonText);
-                
-                if (!parsedResult.assignments || parsedResult.assignments.length < workableOrders.length) {
-                    console.warn("La IA no ha asignado todas las órdenes. Las no asignadas quedarán en pendientes.");
-                }
-
-                hasUnsavedChanges = true;
-                const assignedLineIds = new Set();
-                
-                masterOrderList.forEach(order => {
-                    if (!['completed', 'paused', 'cancelled'].includes(order.status)) {
-                        order.productionLineId = null;
-                        order.status = 'pending';
-                    }
-                });
-
-                parsedResult.assignments.forEach(assignment => {
-                    const order = masterOrderList.find(o => o.id === assignment.order_id);
-                    if (order) {
-                        order.productionLineId = assignment.assigned_line_id;
-                        if (!assignedLineIds.has(assignment.assigned_line_id)) {
-                            order.status = 'in_progress';
-                            assignedLineIds.add(assignment.assigned_line_id);
-                        } else {
-                            order.status = 'pending';
-                        }
-                    }
-                });
-                
-                masterOrderList.forEach((order, index) => order.orden = index);
-                
-                distributeAndRender(false, () => recalculatePositions());
-                showToast(translations.organizingWithAISuccess, 'success');
-
-            } catch (error) {
-                console.error('Error al organizar con IA:', error);
-                showToast(`${translations.organizingWithAIError} ${error.message}`, 'error');
-            } finally {
-                autoOrganizeBtn.innerHTML = '✨';
-                autoOrganizeBtn.disabled = false;
-            }
-        }
+        // Función de organización con IA eliminada
 
         // --- 2. LÓGICA PRINCIPAL DE RENDERIZADO ---
 
@@ -1285,7 +1158,7 @@
         document.getElementById('saveChangesBtn').addEventListener('click', saveKanbanChanges);
         document.getElementById('refreshBtn').addEventListener('click', refreshKanbanData);
         document.getElementById('fullscreenBtn').addEventListener('click', toggleFullscreen);
-        document.getElementById('autoOrganizeBtn').addEventListener('click', autoOrganizeWithAI);
+        // Event listener para botón de IA eliminado
         
         // Actualización automática cada 3 segundos
         setInterval(refreshKanbanData, 3000);
