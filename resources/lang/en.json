@@ -753,5 +753,16 @@
     "En fabricación": "In production",
     "Con incidencia": "With issue",
     "Pendiente": "Pending",
-    "Finalizado": "Completed"
+    "Finalizado": "Finished",
+    "REASON": "REASON",
+    "Reason": "Reason",
+    "Production Order Incidents": "Production Order Incidents",
+    "Incidencia activa": "Active Incident",
+    "Incidencia finalizada": "Finished Incident",
+    "Incident Details": "Incident Details",
+    "Incident Information": "Incident Information",
+    "Created By": "Created By",
+    "Incident Status": "Incident Status",
+    "Has Stock": "Has Stock",
+    "Notes": "Notes"
 }

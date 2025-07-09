@@ -701,5 +701,16 @@
     "Edit Order": "Editați comanda",
     "Create New Order": "Creați o comandă nouă",
     "Finished": "Finalizat",
-    "Mark as Finished": "Marcați ca finalizat"
+    "Mark as Finished": "Marcați ca finalizat",
+    "REASON": "MOTIV",
+    "Reason": "Motiv",
+    "Production Order Incidents": "Incidente Comandă de Producție",
+    "Incidencia activa": "Incident activ",
+    "Incidencia finalizada": "Incident finalizat",
+    "Incident Details": "Detalii incident",
+    "Incident Information": "Informații incident",
+    "Created By": "Creat de",
+    "Incident Status": "Stare incident",
+    "Has Stock": "Are stoc",
+    "Notes": "Note"
 }

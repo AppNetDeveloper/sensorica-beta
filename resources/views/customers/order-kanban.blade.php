@@ -1087,6 +1087,9 @@
                         expandedCardIds.add(parseInt(card.dataset.id));
                     });
                     
+                    // Ya no necesitamos guardar el valor aquí, usamos la variable global lastPendingSearchValue
+                    console.log('🔍 Usando valor de búsqueda global:', lastPendingSearchValue);
+                    
                     // Guardar las posiciones de scroll de todas las columnas
                     const scrollPositions = {};
                     document.querySelectorAll('.kanban-column').forEach(column => {
@@ -1122,6 +1125,19 @@
                     
                     // Renderizar el tablero con los datos actualizados
                     distributeAndRender(true, () => {
+                        // Restaurar el campo de búsqueda de pendientes
+                        const pendingSearchInput = document.querySelector('.pending-search-input');
+                        if (pendingSearchInput && lastPendingSearchValue) {
+                            pendingSearchInput.value = lastPendingSearchValue;
+                            // Si tenía el foco antes de la actualización, restaurarlo
+                            if (wasPendingSearchFocused) {
+                                pendingSearchInput.focus();
+                            }
+                            
+                            // Aplicar el filtro de búsqueda inmediatamente
+                            applyPendingSearch(lastPendingSearchValue);
+                        }
+                        
                         // Restaurar el estado de expansión de las tarjetas
                         if (expandedCardIds.size > 0) {
                             document.querySelectorAll('.kanban-card').forEach(card => {
@@ -1130,6 +1146,42 @@
                                     card.classList.remove('collapsed');
                                 }
                             });
+                        }
+                        
+                        // Restaurar el valor del campo de búsqueda en la columna de pendientes
+                        const newPendingSearchInput = document.querySelector('.pending-search-input');
+                        if (newPendingSearchInput) {
+                            console.log('🔄 Restaurando valor de búsqueda global:', lastPendingSearchValue);
+                            // Siempre restaurar el valor, incluso si está vacío
+                            newPendingSearchInput.value = lastPendingSearchValue;
+                            
+                            // Aplicar el filtro nuevamente si hay un valor de búsqueda
+                            const pendingColumn = document.getElementById('pending_assignment');
+                            if (pendingColumn) {
+                                const cards = pendingColumn.querySelectorAll('.kanban-card');
+                                cards.forEach(card => {
+                                    const orderId = card.dataset.id;
+                                    const order = masterOrderList.find(o => o.id == orderId);
+                                    if (order) {
+                                        const searchValue = lastPendingSearchValue.toLowerCase();
+                                        const orderIdMatch = order.order_id?.toString().toLowerCase().includes(searchValue);
+                                        const customerMatch = order.customer?.toLowerCase().includes(searchValue);
+                                        const descripMatch = order.descrip?.toLowerCase().includes(searchValue);
+                                        const processesMatch = order.processes_to_do?.toLowerCase().includes(searchValue);
+                                        const articlesMatch = order.articles?.some(article => 
+                                            article.description?.toLowerCase().includes(searchValue));
+                                        
+                                        if (lastPendingSearchValue === '' || orderIdMatch || customerMatch || descripMatch || processesMatch || articlesMatch) {
+                                            card.style.display = '';
+                                        } else {
+                                            card.style.display = 'none';
+                                        }
+                                    }
+                                });
+                                
+                                // Actualizar contadores de la columna
+                                updateColumnStats(pendingColumn);
+                            }
                         }
                         
                         // Restaurar las posiciones de scroll de las columnas con un enfoque simple
@@ -1160,41 +1212,79 @@
         document.getElementById('fullscreenBtn').addEventListener('click', toggleFullscreen);
         // Event listener para botón de IA eliminado
         
-        // Actualización automática cada 3 segundos
-        setInterval(refreshKanbanData, 3000);
+        // Variables globales para almacenar el valor y estado del campo de búsqueda de pendientes
+        let lastPendingSearchValue = '';
+        let wasPendingSearchFocused = false;
+        
+        // Función para guardar el valor de búsqueda actual y el estado del foco
+        function savePendingSearchValue() {
+            const pendingSearchInput = document.querySelector('.pending-search-input');
+            if (pendingSearchInput) {
+                lastPendingSearchValue = pendingSearchInput.value;
+                // Guardar si el campo tenía el foco
+                wasPendingSearchFocused = (document.activeElement === pendingSearchInput);
+                console.log('🔍 Valor de búsqueda guardado globalmente:', lastPendingSearchValue, 'Tenía foco:', wasPendingSearchFocused);
+            }
+        }
+        
+        // Actualización automática cada 20 segundos
+        setInterval(() => {
+            savePendingSearchValue();
+            refreshKanbanData();
+            
+            // Restaurar el foco si el campo lo tenía antes de la actualización
+            setTimeout(() => {
+                if (wasPendingSearchFocused) {
+                    const pendingSearchInput = document.querySelector('.pending-search-input');
+                    if (pendingSearchInput) {
+                        pendingSearchInput.focus();
+                    }
+                }
+            }, 100); // Pequeño retraso para asegurar que el DOM está actualizado
+        }, 20000);
         
         searchInput.addEventListener('input', () => setTimeout(() => distributeAndRender(true), 300));
+        
+        // Función para aplicar el filtro de búsqueda en la columna de pendientes
+        function applyPendingSearch(searchValue) {
+            const pendingSearchValue = searchValue.toLowerCase().trim();
+            const pendingColumn = document.getElementById('pending_assignment');
+            if (pendingColumn) {
+                const cards = pendingColumn.querySelectorAll('.kanban-card');
+                cards.forEach(card => {
+                    const orderId = card.dataset.id;
+                    const order = masterOrderList.find(o => o.id == orderId);
+                    if (order) {
+                        const orderIdMatch = order.order_id?.toString().toLowerCase().includes(pendingSearchValue);
+                        const customerMatch = order.customer?.toLowerCase().includes(pendingSearchValue);
+                        const descripMatch = order.descrip?.toLowerCase().includes(pendingSearchValue);
+                        const processesMatch = order.processes_to_do?.toLowerCase().includes(pendingSearchValue);
+                        const articlesMatch = order.articles?.some(article => 
+                            article.description?.toLowerCase().includes(pendingSearchValue));
+                        
+                        if (pendingSearchValue === '' || orderIdMatch || customerMatch || descripMatch || processesMatch || articlesMatch) {
+                            card.style.display = '';
+                        } else {
+                            card.style.display = 'none';
+                        }
+                    }
+                });
+                
+                // Actualizar contadores de la columna
+                updateColumnStats(pendingColumn);
+            }
+        }
         
         // Evento para el campo de búsqueda específico de pendientes
         document.addEventListener('input', function(event) {
             if (event.target.classList.contains('pending-search-input')) {
+                // Actualizar la variable global inmediatamente
+                lastPendingSearchValue = event.target.value;
+                console.log('🔍 Valor de búsqueda actualizado por input:', lastPendingSearchValue);
+                
+                // Aplicar el filtro con un pequeño retraso para evitar demasiadas actualizaciones
                 setTimeout(() => {
-                    const pendingSearchValue = event.target.value.toLowerCase().trim();
-                    const pendingColumn = document.getElementById('pending_assignment');
-                    if (pendingColumn) {
-                        const cards = pendingColumn.querySelectorAll('.kanban-card');
-                        cards.forEach(card => {
-                            const orderId = card.dataset.id;
-                            const order = masterOrderList.find(o => o.id == orderId);
-                            if (order) {
-                                const orderIdMatch = order.order_id?.toString().toLowerCase().includes(pendingSearchValue);
-                                const customerMatch = order.customer?.toLowerCase().includes(pendingSearchValue);
-                                const descripMatch = order.descrip?.toLowerCase().includes(pendingSearchValue);
-                                const processesMatch = order.processes_to_do?.toLowerCase().includes(pendingSearchValue);
-                                const articlesMatch = order.articles?.some(article => 
-                                    article.description?.toLowerCase().includes(pendingSearchValue));
-                                
-                                if (pendingSearchValue === '' || orderIdMatch || customerMatch || descripMatch || processesMatch || articlesMatch) {
-                                    card.style.display = '';
-                                } else {
-                                    card.style.display = 'none';
-                                }
-                            }
-                        });
-                        
-                        // Actualizar contadores de la columna
-                        updateColumnStats(pendingColumn);
-                    }
+                    applyPendingSearch(lastPendingSearchValue);
                 }, 300);
             }
         });

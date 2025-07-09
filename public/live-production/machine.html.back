@@ -475,12 +475,11 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+      @font-face { font-family: 'LucideIcons'; src: url('https://cdn.jsdelivr.net/npm/lucide-static@latest/font/lucide.ttf') format('truetype'); }
       .lucide { font-family: 'LucideIcons'; font-style: normal; font-weight: normal; font-variant: normal; text-rendering: auto; line-height: 1; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; display: inline-block; vertical-align: middle; }
     </style>
 </head>
 <body class="bg-gray-200 p-8">
-    <!-- Modal para mostrar detalles de la orden (ahora usado para artículos) -->
-    <!-- Este modal se usa para mostrar los artículos de la orden, no las incidencias -->
     <div class="container mx-auto bg-white p-6 rounded-lg shadow-md">
 
         <!-- Botón flotante de pantalla completa -->
@@ -1939,40 +1938,15 @@
 
             // --- NUEVO: Funciones para cargar y procesar Órdenes de Producción ---
             
-            // Función para mostrar los detalles de una orden y sus incidencias
+            // Función para mostrar los detalles de una orden
             async function showOrderDetails(orderId) {
-                console.log('Mostrando detalles de orden e incidencias para ID:', orderId);
-                
                 const modal = document.getElementById('orderDetailsModal');
                 const content = document.getElementById('orderDetailsContent');
                 const incidentsList = document.getElementById('incidentsList');
                 const noIncidentsMessage = document.getElementById('noIncidentsMessage');
-                const incidentsSection = document.querySelector('#orderDetailsModal .mt-6.border-t');
                 
-                // Verificar que todos los elementos necesarios existen
-                if (!modal || !content || !incidentsList || !noIncidentsMessage) {
-                    console.error('No se encontraron todos los elementos necesarios para mostrar el modal de incidencias');
-                    console.log('Modal:', modal);
-                    console.log('Content:', content);
-                    console.log('IncidentsList:', incidentsList);
-                    console.log('NoIncidentsMessage:', noIncidentsMessage);
-                    return;
-                }
-                
-                // Asegurarse de que la sección de incidencias sea visible
-                if (incidentsSection) incidentsSection.style.display = '';
-                
-                // Establecer el ID de la orden en el formulario de incidencias si existe
-                const orderIncidentOrderIdElement = document.getElementById('orderIncidentOrderId');
-                if (orderIncidentOrderIdElement) {
-                    orderIncidentOrderIdElement.value = orderId;
-                }
-                
-                // Actualizar el título del modal para mostrar que son incidencias
-                const modalTitle = document.querySelector('#orderDetailsModal h3');
-                if (modalTitle) {
-                    modalTitle.textContent = `Incidencias de la Orden #${orderId}`;
-                }
+                // Establecer el ID de la orden en el formulario de incidencias
+                document.getElementById('orderIncidentOrderId').value = orderId;
                 
                 // Mostrar indicador de carga
                 content.innerHTML = `
@@ -1986,42 +1960,32 @@
                 modal.classList.remove('hidden');
                 
                 try {
-                    // Obtener el token de la URL para las llamadas a la API
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const token = urlParams.get('token');
-                    
                     // Obtener detalles de la orden
-                    const orderResponse = await fetch(`${API_BASE_URL}/api/production-orders/${orderId}?token=${token}`);
+                    const orderResponse = await fetch(`${API_BASE_URL}/api/production-orders/${orderId}`);
                     if (!orderResponse.ok) throw new Error('Error al cargar los detalles de la orden');
                     const orderData = await orderResponse.json();
                     
                     // Obtener incidencias de la orden
-                    const incidentsResponse = await fetch(`${API_BASE_URL}/api/production-orders/${orderId}/incidents?token=${token}`);
-                    const incidentsData = await incidentsResponse.ok ? await incidentsResponse.json() : { data: [] };
+                    const incidentsResponse = await fetch(`${API_BASE_URL}/api/production-orders/${orderId}/incidents`);
+                    const incidentsData = await incidentsResponse.ok ? await incidentsResponse.json() : [];
                     
-                    console.log('Datos de la orden:', orderData);
-                    console.log('Datos de incidencias:', incidentsData);
-                    
-                    // Mostrar detalles mínimos de la orden (solo como referencia)
+                    // Mostrar detalles de la orden
                     content.innerHTML = `
-                        <div class="p-4 bg-gray-50 rounded-lg mb-4">
-                            <div class="flex justify-between items-center">
-                                <div>
-                                    <span class="font-medium text-lg">${orderData.order_id || 'Sin referencia'}</span>
-                                    <span class="ml-2 px-2 py-1 text-xs rounded bg-gray-200">${getStatusText(orderData.status) || 'Sin estado'}</span>
-                                </div>
-                                <button id="viewFullOrderDetails" class="text-blue-600 hover:text-blue-800 text-sm flex items-center">
-                                    <i class="fas fa-info-circle mr-1"></i> Ver detalles completos
-                                </button>
+                        <div class="space-y-2">
+                            <div class="flex justify-between">
+                                <span class="font-medium">Orden #${orderData.id || 'N/A'}</span>
+                                <span class="text-gray-600">${orderData.status || 'Sin estado'}</span>
                             </div>
-                            <div class="text-sm text-gray-600 mt-1">${(orderData.json && orderData.json.refer && orderData.json.refer.descrip) || 'Sin descripción'}</div>
+                            <div class="text-lg font-semibold">${orderData.order_id || 'Sin referencia'}</div>
+                            <div class="text-gray-600">${(orderData.json && orderData.json.refer && orderData.json.refer.descrip) || 'Sin descripción'}</div>
+
                         </div>`;
                     
                     // Mostrar incidencias
                     if (incidentsData.data && incidentsData.data.length > 0) {
                         noIncidentsMessage.classList.add('hidden');
                         incidentsList.innerHTML = incidentsData.data.map(incident => `
-                            <div class="border-l-4 border-red-500 pl-3 py-2 bg-gray-50 rounded mb-3">
+                            <div class="border-l-4 border-red-500 pl-3 py-2 bg-gray-50 rounded">
                                 <div class="flex justify-between items-start">
                                     <span class="font-medium">${incident.reason || 'Sin motivo'}</span>
                                     <span class="text-xs text-gray-500">${formatDate(incident.created_at)}</span>
@@ -2034,28 +1998,11 @@
                         noIncidentsMessage.classList.remove('hidden');
                         incidentsList.innerHTML = '';
                     }
-                    
-                    // Agregar evento para ver detalles completos
-                    const viewFullOrderDetailsBtn = document.getElementById('viewFullOrderDetails');
-                    if (viewFullOrderDetailsBtn) {
-                        viewFullOrderDetailsBtn.addEventListener('click', () => {
-                            // Cerrar este modal y abrir el modal de detalles completos
-                            modal.classList.add('hidden');
-                            // Buscar la orden en el array de órdenes
-                            const order = kanbanOrders.find(o => o.id == orderId);
-                            if (order) {
-                                showOrderDetailsModal(order);
-                            } else {
-                                console.error('No se encontró la orden con ID:', orderId);
-                            }
-                        });
-                    }
                 } catch (error) {
                     console.error('Error al cargar los detalles:', error);
                     content.innerHTML = `
                         <div class="text-red-500">
                             Error al cargar los detalles de la orden. Intente nuevamente.
-                            <div class="text-sm mt-2">${error.message}</div>
                         </div>`;
                 }
             }
@@ -2214,9 +2161,6 @@
                                 <button class="card-menu-top w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 flex items-center">
                                     <i class="fas fa-arrow-up text-blue-500 mr-2"></i> Primera
                                 </button>
-                                <button class="card-menu-details w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 flex items-center">
-                                    <i class="fas fa-info-circle text-indigo-500 mr-2"></i> Orden detalles
-                                </button>
                             </div>
                         </div>
                     </div>
@@ -2240,7 +2184,6 @@
                 const menu = card.querySelector('.card-menu');
                 const incidentBtn = card.querySelector('.card-menu-incident');
                 const topBtn = card.querySelector('.card-menu-top');
-                const detailsBtn = card.querySelector('.card-menu-details');
                 
                 if (menuBtn && menu) {
                     // Cerrar todos los menús abiertos al hacer clic en cualquier parte
@@ -2279,8 +2222,7 @@
                         incidentBtn.addEventListener('click', (e) => {
                             e.stopPropagation();
                             menu.classList.add('hidden'); // Ocultar el menú
-                            // Mostrar el listado de incidencias existentes para esta orden
-                            showOrderDetails(order.id);
+                            showOrderDetails(order.id); // Usar la función existente para mostrar incidencias
                         });
                     }
                     
@@ -2299,17 +2241,6 @@
                             
                             // Mover la tarjeta al principio de su columna
                             moveCardToTop(currentCard, order.id);
-                        });
-                    }
-                    
-                    // Opción 3: Orden detalles - Mostrar detalles de la orden en un modal
-                    if (detailsBtn) {
-                        detailsBtn.addEventListener('click', (e) => {
-                            e.stopPropagation();
-                            menu.classList.add('hidden'); // Ocultar el menú
-                            
-                            // Mostrar el modal con los detalles de la orden
-                            showOrderDetailsModal(order);
                         });
                     }
                 }
@@ -2414,150 +2345,6 @@ async function getOrderArticles(orderId) {
     } catch (error) {
         console.error('Error al obtener artículos:', error);
         return [];
-    }
-}
-
-// Función para mostrar el modal con los detalles de la orden
-async function showOrderDetailsModal(order) {
-    console.log('Mostrando detalles de orden para ID:', order.id);
-    
-    // Referencias a elementos del DOM
-    const modal = document.getElementById('orderDetailsModal');
-    const modalTitle = document.querySelector('#orderDetailsModal h3');
-    const modalContent = document.getElementById('orderDetailsContent');
-    
-    // Ocultar la sección de incidencias para no interferir
-    const incidentsSection = document.querySelector('#orderDetailsModal .mt-6.border-t');
-    const incidentsList = document.getElementById('incidentsList');
-    const noIncidentsMessage = document.getElementById('noIncidentsMessage');
-    
-    if (incidentsSection) incidentsSection.style.display = 'none';
-    
-    if (!modal || !modalTitle || !modalContent) {
-        console.error('No se encontraron los elementos del modal');
-        return;
-    }
-    
-    // Actualizar el título del modal
-    modalTitle.textContent = `Detalles de la Orden: ${order.order_id || order.id}`;
-    
-    // Mostrar indicador de carga
-    modalContent.innerHTML = `
-        <div class="flex justify-center items-center py-8">
-            <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-        </div>
-    `;
-    
-    // Mostrar el modal
-    modal.classList.remove('hidden');
-    
-    try {
-        // Obtener los artículos asociados a la orden
-        const articles = await getOrderArticles(order.id);
-        
-        // Crear el contenido del modal
-        let contentHTML = `
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <!-- Información básica de la orden -->
-                <div class="bg-gray-50 p-4 rounded-lg">
-                    <h4 class="text-md font-semibold text-gray-800 mb-3">Información de la Orden</h4>
-                    <div class="space-y-2">
-                        <div class="flex justify-between">
-                            <span class="text-sm text-gray-600">ID:</span>
-                            <span class="text-sm font-medium">${order.order_id || 'N/A'}</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-sm text-gray-600">Cliente:</span>
-                            <span class="text-sm font-medium">${(order.json && order.json.refer && order.json.refer.customerId) ? order.json.refer.customerId : 'N/A'}</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-sm text-gray-600">Estado:</span>
-                            <span class="text-sm font-medium">${getStatusText(order.status)}</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-sm text-gray-600">Tiempo teórico:</span>
-                            <span class="text-sm font-medium">${order.theoretical_time ? formatSeconds(order.theoretical_time) : 'No disponible'}</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-sm text-gray-600">Fecha de creación:</span>
-                            <span class="text-sm font-medium">${formatDate(order.created_at)}</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-sm text-gray-600">Fecha de entrega:</span>
-                            <span class="text-sm font-medium">${order.delivery_date ? formatDate(order.delivery_date) : 'Sin fecha'}</span>
-                        </div>
-                        ${order.json && order.json.urgent ? 
-                            `<div class="mt-2 flex items-center">
-                                <i class="fas fa-bolt text-orange-500 mr-2"></i>
-                                <span class="text-sm font-medium text-orange-500">Orden urgente</span>
-                            </div>` : ''}
-                    </div>
-                </div>
-                
-                <!-- Artículos asociados -->
-                <div class="bg-blue-50 p-4 rounded-lg">
-                    <h4 class="text-md font-semibold text-blue-800 mb-3">Artículos en Producción</h4>
-                    ${articles && articles.length > 0 ? 
-                        `<div class="space-y-2">
-                            ${articles.map(article => `
-                                <div class="bg-white p-2 rounded border border-blue-100">
-                                    <div class="font-medium text-sm">${article.codigo_articulo || 'N/A'}</div>
-                                    <div class="text-sm text-gray-600">${article.descripcion_articulo || 'Sin descripción'}</div>
-                                    ${article.grupo_articulo ? `<div class="text-xs text-gray-500">Grupo: ${article.grupo_articulo}</div>` : ''}
-                                </div>
-                            `).join('')}
-                        </div>` : 
-                        `<div class="text-sm text-gray-500 italic">No hay artículos asociados a esta orden</div>`
-                    }
-                </div>
-            </div>
-            
-            <div class="mt-4 bg-gray-50 p-4 rounded-lg">
-                <h4 class="text-md font-semibold text-gray-800 mb-2">Descripción</h4>
-                <div class="text-sm text-gray-700">${order.descrip || 'Sin descripción'}</div>
-            </div>
-            
-            <!-- Botones de acción -->
-            <div class="mt-6 flex justify-end">
-                <button type="button" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300" id="closeModalBtn">
-                    Cerrar
-                </button>
-            </div>
-        `;
-        
-        // Actualizar el contenido del modal
-        modalContent.innerHTML = contentHTML;
-        
-        // Añadir evento al botón de cerrar dentro del modal
-        const closeModalBtn = document.getElementById('closeModalBtn');
-        if (closeModalBtn) {
-            closeModalBtn.addEventListener('click', () => {
-                modal.classList.add('hidden');
-                // Restaurar la visibilidad de la sección de incidencias
-                if (incidentsSection) incidentsSection.style.display = '';
-            });
-        }
-        
-    } catch (error) {
-        console.error('Error al cargar los detalles de la orden:', error);
-        modalContent.innerHTML = `
-            <div class="bg-red-50 p-4 rounded-lg text-center">
-                <i class="fas fa-exclamation-circle text-red-500 text-xl mb-2"></i>
-                <p class="text-red-600">Error al cargar los detalles de la orden</p>
-                <p class="text-sm text-gray-500 mt-2">${error.message || 'Intente nuevamente más tarde'}</p>
-                <button type="button" class="mt-4 px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300" id="closeErrorBtn">
-                    Cerrar
-                </button>
-            </div>
-        `;
-        
-        // Añadir evento al botón de cerrar error
-        const closeErrorBtn = document.getElementById('closeErrorBtn');
-        if (closeErrorBtn) {
-            closeErrorBtn.addEventListener('click', () => {
-                modal.classList.add('hidden');
-            });
-        }
     }
 }
 
@@ -2676,9 +2463,7 @@ async function updateOrderStatus(orderId, newStatus) {
                         const existingCardInThisColumn = currentCards.find(card => card.dataset.cardId === order.id.toString());
                         
                         if (existingCardInThisColumn) {
-                            // Si la tarjeta ya está en esta columna, actualizamos su atributo de orden
-                            // para que luego podamos ordenarlas correctamente
-                            existingCardInThisColumn.dataset.orderSort = order.orden || 0;
+                            // Si la tarjeta ya está en esta columna, mantenerla tal cual
                             cardsToKeep.push(existingCardInThisColumn);
                         } else {
                             // Comprobar si existe en otra columna
@@ -2687,14 +2472,12 @@ async function updateOrderStatus(orderId, newStatus) {
                             if (existingOrder && existingOrder.column !== targetColumn) {
                                 // Si está en otra columna, moverla a esta columna
                                 const card = createKanbanCardHTML(order);
-                                card.dataset.orderSort = order.orden || 0;
                                 cardsToKeep.push(card);
                                 // Eliminar de existingOrdersMap para que no se use de nuevo
                                 delete existingOrdersMap[order.id];
                             } else if (!existingOrder) {
                                 // Si es completamente nueva, crearla
                                 const card = createKanbanCardHTML(order);
-                                card.dataset.orderSort = order.orden || 0;
                                 cardsToKeep.push(card);
                             }
                         }
@@ -2705,23 +2488,14 @@ async function updateOrderStatus(orderId, newStatus) {
                         card.style.display = 'none';
                     });
                     
-                    // Ordenar las tarjetas según el atributo data-order-sort antes de añadirlas
-                    cardsToKeep.sort((a, b) => {
-                        const orderA = parseInt(a.dataset.orderSort || '0', 10);
-                        const orderB = parseInt(b.dataset.orderSort || '0', 10);
-                        return orderA - orderB;
-                    });
-                    
-                    // Añadir las tarjetas en el orden correcto
+                    // Añadir las tarjetas nuevas al final
                     cardsToKeep.forEach(card => {
                         if (!card.parentNode) {
                             // Solo añadir si no está ya en el DOM
                             targetColumn.appendChild(card);
                         } else {
-                            // Si ya está en el DOM, asegurarse de que sea visible y en la posición correcta
+                            // Si ya está en el DOM, asegurarse de que sea visible
                             card.style.display = '';
-                            // Mover la tarjeta a su posición correcta en el DOM
-                            targetColumn.appendChild(card);
                         }
                     });
                     
@@ -5220,7 +4994,5 @@ async function updateOrderStatus(orderId, newStatus) {
             <button id="keyboard-clear" class="px-3 py-2 bg-red-500 text-white rounded hover:bg-red-600 text-sm">Borrar</button>
         </div>
     </div>
-    
-    <!-- La funcionalidad del modal de detalles de orden está integrada en este archivo -->
 </body>
 </html>

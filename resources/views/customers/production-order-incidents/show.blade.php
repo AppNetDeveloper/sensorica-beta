@@ -89,6 +89,16 @@
                                     </td>
                                 </tr>
                                 <tr>
+                                    <th class="bg-light">@lang('Incident Status')</th>
+                                    <td>
+                                        @if($incident->productionOrder->status == 3)
+                                            <span class="badge bg-danger">@lang('Incidencia activa')</span>
+                                        @else
+                                            <span class="badge bg-secondary">@lang('Incidencia finalizada')</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                                <tr>
                                     <th class="bg-light">@lang('Has Stock')</th>
                                     <td>
                                         @if($incident->productionOrder->has_stock)

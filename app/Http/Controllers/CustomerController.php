@@ -180,21 +180,36 @@ class CustomerController extends Controller
     // Para status 2, 3, 4 y 5 (completadas, pausadas, canceladas e incidencias) solo mostramos las de los últimos 3 días
     $query = \App\Models\ProductionOrder::where('process_category', $process->description); // Filtrar por la categoría del proceso actual
     
-    // Aplicamos el filtro de 3 días solo para órdenes con status 2, 3, 4 y 5
+    // Aplicamos filtros por status
     $query->where(function($q) {
-        $threeDaysAgo = now()->subDays(3)->startOfDay();
+        $fiveDaysAgo = now()->subDays(5)->startOfDay();
         
         // Status 0 y 1 (pendientes y en progreso) - mostrar todas
         $q->whereIn('status', [0, 1]);
         
-        // Status 2, 3, 4 y 5 (completadas, pausadas, canceladas e incidencias) - solo últimos 3 días
-        $q->orWhere(function($subq) use ($threeDaysAgo) {
-            $subq->whereIn('status', [2, 3, 4, 5])
-                 ->where('updated_at', '>=', $threeDaysAgo);
+        // Status 3, 4 y 5 (incidencias, pausadas, canceladas) - solo últimos 5 días
+        $q->orWhere(function($subq) use ($fiveDaysAgo) {
+            $subq->whereIn('status', [3, 4, 5])
+                 ->where('updated_at', '>=', $fiveDaysAgo);
         });
     });
+
+    // Ejecutamos la primera consulta para obtener órdenes con status 0, 1, 3, 4, 5
+    $mainOrders = $query->get();
+
+    // Consulta separada para status 2 (finalizadas) - últimos 5 días con límite de 100 tarjetas
+    $status2Query = \App\Models\ProductionOrder::where('process_category', $process->description)
+        ->where('status', 2)
+        ->where('updated_at', '>=', now()->subDays(5)->startOfDay())
+        ->orderBy('orden', 'asc')
+        ->limit(100)
+        ->get();
+
+    // Unimos los resultados
+    $processOrders = $mainOrders->merge($status2Query);
     
-    $processOrders = $query->orderBy('orden', 'asc')->get()
+    // Ordenamos los resultados combinados
+    $processOrders = $processOrders->sortBy('orden')->values()
             ->map(function($order){
                 // Determinar el estado y color según el código de status
                 $statusName = 'pending';
@@ -311,24 +326,39 @@ class CustomerController extends Controller
         
         // Obtener todas las órdenes para este proceso específico
         // Para status 0 y 1 (pendientes y en progreso) mostramos todas
-        // Para status 2, 3, 4 y 5 (completadas, pausadas, canceladas e incidencias) solo mostramos las de los últimos 3 días
+        // Para status 2, 3, 4 y 5 (completadas, pausadas, canceladas e incidencias) solo mostramos las de los últimos 5 días
         $query = \App\Models\ProductionOrder::where('process_category', $process->description); // Filtrar por la categoría del proceso actual
 
-        // Aplicamos el filtro de 3 días solo para órdenes con status 2, 3, 4 y 5
+        // Aplicamos filtros por status
         $query->where(function($q) {
-            $threeDaysAgo = now()->subDays(3)->startOfDay();
+            $fiveDaysAgo = now()->subDays(5)->startOfDay();
             
             // Status 0 y 1 (pendientes y en progreso) - mostrar todas
             $q->whereIn('status', [0, 1]);
             
-            // Status 2, 3, 4 y 5 (completadas, pausadas, canceladas e incidencias) - solo últimos 3 días
-            $q->orWhere(function($subq) use ($threeDaysAgo) {
-                $subq->whereIn('status', [2, 3, 4, 5])
-                     ->where('updated_at', '>=', $threeDaysAgo);
+            // Status 3, 4 y 5 (incidencias, pausadas, canceladas) - solo últimos 5 días
+            $q->orWhere(function($subq) use ($fiveDaysAgo) {
+                $subq->whereIn('status', [3, 4, 5])
+                     ->where('updated_at', '>=', $fiveDaysAgo);
             });
         });
 
-        $processOrders = $query->orderBy('orden', 'asc')->get()
+        // Ejecutamos la primera consulta para obtener órdenes con status 0, 1, 3, 4, 5
+        $mainOrders = $query->get();
+        
+        // Consulta separada para status 2 (finalizadas) - últimos 5 días con límite de 100 tarjetas
+        $status2Query = \App\Models\ProductionOrder::where('process_category', $process->description)
+            ->where('status', 2)
+            ->where('updated_at', '>=', now()->subDays(5)->startOfDay())
+            ->orderBy('orden', 'asc')
+            ->limit(100)
+            ->get();
+
+        // Unimos los resultados
+        $processOrders = $mainOrders->merge($status2Query);
+        
+        // Ordenamos los resultados combinados
+        $processOrders = $processOrders->sortBy('orden')->values()
                 ->map(function($order){
                     // Determinar el estado y color según el código de status
                     $statusName = 'pending';

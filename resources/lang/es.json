@@ -791,5 +791,16 @@
     "En fabricación": "En fabricación",
     "Con incidencia": "Con incidencia",
     "Pendiente": "Pendiente",
-    "Finalizado": "Finalizado"
+    "Finalizado": "Finalizado",
+    "REASON": "MOTIVO",
+    "Reason": "Motivo",
+    "Production Order Incidents": "Incidencias de Órdenes de Producción",
+    "Incidencia activa": "Incidencia activa",
+    "Incidencia finalizada": "Incidencia finalizada",
+    "Incident Details": "Detalles de la Incidencia",
+    "Incident Information": "Información de la Incidencia",
+    "Created By": "Creado Por",
+    "Incident Status": "Estado de la Incidencia",
+    "Has Stock": "Tiene Stock",
+    "Notes": "Notas"
 }

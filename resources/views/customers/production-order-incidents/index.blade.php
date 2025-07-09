@@ -46,6 +46,7 @@
                                     <th>#</th>
                                     <th class="text-uppercase">@lang('ORDER ID')</th>
                                     <th class="text-uppercase">@lang('REASON')</th>
+                                    <th class="text-uppercase">@lang('STATUS')</th>
                                     <th class="text-uppercase">@lang('CREATED BY')</th>
                                     <th class="text-uppercase">@lang('CREATED AT')</th>
                                     <th class="text-uppercase">@lang('ACTIONS')</th>
@@ -59,6 +60,13 @@
                                             #{{ $incident->productionOrder->order_id }}
                                         </td>
                                         <td>{{ Str::limit($incident->reason, 50) }}</td>
+                                        <td>
+                                            @if($incident->productionOrder->status == 3)
+                                                <span class="badge bg-danger">@lang('Incidencia activa')</span>
+                                            @else
+                                                <span class="badge bg-secondary">@lang('Incidencia finalizada')</span>
+                                            @endif
+                                        </td>
                                         <td>{{ $incident->createdBy ? $incident->createdBy->name : 'Sistema' }}</td>
                                         <td>{{ $incident->created_at->format('Y-m-d H:i') }}</td>
                                         <td>

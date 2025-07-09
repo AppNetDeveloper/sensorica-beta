@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\ProductionLine;
 use App\Models\ProductionOrder;
-use App\Models\ProductionLine; // Importar el modelo de líneas de producción
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log; // Asegúrate de importar la clase Log
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB; // Importar Facade DB para la consulta
 use Illuminate\Support\Facades\Cache;
 
@@ -185,45 +185,100 @@ class ProductionOrderController extends Controller
             ], 400);
         }
 
-        //sacamos de production_orders el ultimos registro por production_line_id 
-        $lastOrders = ProductionOrder::where('production_line_id', $productionLine->id)->orderBy('id', 'desc')->take(1)->get();
-
-        $today = now()->format('Y-m-d');
-
-        // Obtener solo las órdenes necesarias para el tablero Kanban
-        $orders = ProductionOrder::whereIn('status', ['0', '1', '2', '3', '4', '5'])
-            ->where(function($query) use ($productionLine, $today, $lastOrders) {
-                // Caso 1: Órdenes de esta línea que no son status 2 ni 3
-                $query->where(function($q) use ($productionLine) {
-                    $q->where('production_line_id', $productionLine->id)
-                      ->where('status', '!=', 3)
-                      ->where('status', '!=', 2);
-                })
-                // Caso 2: Órdenes con status 3 pero solo de la misma categoría de proceso
-                ->orWhere(function($q) use ($productionLine, $lastOrders) {
-                    // Verificar si hay órdenes previas para esta línea
-                    if ($lastOrders->isNotEmpty()) {
-                        $q->where('status', 3)
-                          ->where('process_category', $lastOrders->first()->process_category);
-                    } else {
-                        // Si no hay órdenes previas, solo mostrar las incidencias de esta línea
-                        $q->where('status', 3)
-                          ->where('production_line_id', $productionLine->id);
-                    }
-                })
-                // Caso 3: Órdenes finalizadas (status 2) solo de hoy
-                ->orWhere(function($q) use ($productionLine, $today) {
-                    $q->where('production_line_id', $productionLine->id)
-                      ->where('status', 2)
-                      ->whereDate('updated_at', $today);
-                });
-            })
+        // 1. Órdenes activas (status 0, 1)
+        $activeOrders = ProductionOrder::where('production_line_id', $productionLine->id)
+            ->whereIn('status', ['0', '1'])
             ->orderBy('orden', 'asc')
             ->get();
 
+        // 2. Órdenes finalizadas (status 2) solo de las últimas 8 horas
+        $eightHoursAgo = now()->subHours(8);
+        $finishedOrders = ProductionOrder::where('production_line_id', $productionLine->id)
+            ->where('status', 2)
+            ->where('updated_at', '>=', $eightHoursAgo)
+            ->orderBy('orden', 'asc')
+            ->limit(30)
+            ->get();
+
+        // Obtener el process_id asociado a la línea de producción desde production_line_process
+        $productionLineProcess = DB::table('production_line_process')
+            ->where('production_line_id', $productionLine->id)
+            ->first();
+            
+        // Inicializar variable para process_category
+        $processCategory = null;
+        
+        if ($productionLineProcess && isset($productionLineProcess->process_id)) {
+            // Obtener la descripción/categoría del proceso desde la tabla processes
+            $process = DB::table('processes')
+                ->where('id', $productionLineProcess->process_id)
+                ->first();
+                
+            if ($process && isset($process->description)) {
+                $processCategory = $process->description;
+            }
+        }
+        
+        // Si no se pudo obtener el process_category desde production_line_process,
+        // intentar obtenerlo desde la última orden (método anterior)
+        if (!$processCategory) {
+            $lastOrder = ProductionOrder::where('production_line_id', $productionLine->id)
+                ->orderBy('id', 'desc')
+                ->first();
+                
+            if ($lastOrder && isset($lastOrder->process_category)) {
+                $processCategory = $lastOrder->process_category;
+            }
+        }
+        
+        // Log para depuración
+        Log::info('Process Category para incidencias:', [
+            'production_line_id' => $productionLine->id,
+            'process_category' => $processCategory
+        ]);
+        
+        // 3. Incidencias SIEMPRE (status 3)
+        // Si tenemos process_category, filtramos por él, sino traemos todas las incidencias
+        $incidentOrdersQuery = ProductionOrder::where('status', 3);
+        
+        if ($processCategory) {
+            $incidentOrdersQuery->where('process_category', $processCategory);
+        }
+        
+        $incidentOrders = $incidentOrdersQuery->orderBy('orden', 'asc')->get();
+    
+        // Log detallado para diagnóstico de incidencias
+        Log::info('Diagnóstico de incidencias:', [
+            'production_line_id' => $productionLine->id,
+            'production_line_name' => $productionLine->name ?? 'N/A',
+            'incidencias_count' => $incidentOrders->count(),
+            'incidencias' => $incidentOrders->toArray()
+        ]);
+
+        // Asegurarnos de que todas las colecciones son válidas
+        if (!$activeOrders) $activeOrders = collect();
+        if (!$finishedOrders) $finishedOrders = collect();
+        if (!$incidentOrders) $incidentOrders = collect();
+        
+        // Combinar todas las órdenes y ordenar por el campo orden
+        $orders = collect();
+        $orders = $orders->concat($activeOrders)->concat($finishedOrders)->concat($incidentOrders);
+        $orders = $orders->sortBy('orden')->values();
+
+        // Añadir información de diagnóstico en la respuesta
         return response()->json([
             'success' => true,
-            'data' => $orders
+            'data' => $orders,
+            'debug' => [
+                'production_line_id' => $productionLine->id,
+                'production_line_name' => $productionLine->name ?? 'N/A',
+                'active_orders_count' => $activeOrders->count(),
+                'finished_orders_count' => $finishedOrders->count(),
+                'incident_orders_count' => $incidentOrders->count(),
+                'total_orders_count' => $orders->count(),
+                'timestamp' => now()->format('Y-m-d H:i:s'),
+                'timezone' => config('app.timezone')
+            ]
         ]);
     }
 
