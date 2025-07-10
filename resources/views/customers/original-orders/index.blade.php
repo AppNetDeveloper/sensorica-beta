@@ -22,6 +22,10 @@
                 <div class="card-header bg-primary text-white">
                     <div class="d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">@lang('Original Orders') - {{ $customer->name }}</h5>
+                        <div id="update-time-container" class="text-center text-white">
+                            <small>@lang('Última actualización'): <span id="last-update-time"></span></small>
+                            <span id="update-indicator" class="ms-2 badge bg-info" style="display: none;">@lang("Actualizado")</span>
+                        </div>
                         @can('original-order-create')
                         <a href="{{ route('customers.original-orders.create', $customer->id) }}" class="btn btn-light btn-sm">
                             <i class="fas fa-plus"></i> @lang('New Order')
@@ -48,65 +52,58 @@
                                     <th>#</th>
                                     <th class="text-uppercase">@lang('ORDER ID')</th>
                                     <th class="text-uppercase">@lang('CLIENT NUMBER')</th>
-                                    <th class="text-uppercase">@lang('PROCESSED')</th>
+                                    <th class="text-uppercase">@lang('PROCESSES')</th>
                                     <th class="text-uppercase">@lang('FINISHED AT')</th>
                                     <th class="text-uppercase">@lang('CREATED AT')</th>
                                     <th class="text-uppercase">@lang('ACTIONS')</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach($originalOrders as $index => $order)
-                                    @if($order)
-                                     <tr>
-                                         <td>{{ $index + 1 }}</td>
-                                         <td>{{ $order->order_id }}</td>
-                                         <td>{{ $order->client_number }}</td>
-                                         <td>
-                                             @if($order->processed)
-                                                 <span class="badge bg-success">@lang('Yes')</span>
-                                             @else
-                                                 <span class="badge bg-warning">@lang('No')</span>
-                                             @endif
-                                         </td>
-                                         <td>
-                                             @if($order->finished_at)
-                                                 <span class="badge bg-success">{{ $order->finished_at->format('Y-m-d H:i') }}</span>
-                                             @else
-                                                 <span class="badge bg-info">@lang('Pending')</span>
-                                             @endif
-                                         </td>
-                                         <td>{{ $order->created_at->format('Y-m-d H:i') }}</td>
-                                         <td>
-                                             <div class="btn-group" role="group">
-                                                 <a href="{{ route('customers.original-orders.show', [$customer->id, $order->id]) }}" 
-                                                    class="btn btn-sm btn-info" data-bs-toggle="tooltip" title="@lang('View')">
-                                                     <i class="fas fa-eye"></i>
-                                                 </a>
-                                                 @can('original-order-edit')
-                                                 <a href="{{ route('customers.original-orders.edit', [$customer->id, $order->id]) }}" 
-                                                    class="btn btn-sm btn-primary" data-bs-toggle="tooltip" title="@lang('Edit')">
-                                                     <i class="fas fa-edit"></i>
-                                                 </a>
-                                                 @endcan
-                                                 @can('original-order-delete')
-                                                 <form action="{{ route('customers.original-orders.destroy', [$customer->id, $order->id]) }}" 
-                                                       method="POST" style="display: inline-block;">
-                                                     @csrf
-                                                     @method('DELETE')
-                                                     <button type="submit" class="btn btn-sm btn-danger" 
-                                                             data-bs-toggle="tooltip" title="@lang('Delete')" 
-                                                             onclick="return confirm('@lang('Are you sure you want to delete this order?')')">
-                                                         <i class="fas fa-trash"></i>
-                                                     </button>
-                                                 </form>
-                                                 @endcan
-                                             </div>
-                                         </td>
-                                     </tr>
-                                    @endif
-                                @endforeach
+                                <!-- Los datos se cargarán dinámicamente desde el servidor -->
                             </tbody>
                         </table>
+                    </div>
+                    
+                    <!-- Leyenda de colores para los procesos -->
+                    <div class="card-footer bg-light p-3 mt-3">
+                        <h5>@lang('Leyenda de estados de procesos')</h5>
+                        <p class="text-muted mb-2">@lang('Formato de tarjeta: Código de proceso (número de grupo)')</p>
+                        <div class="d-flex flex-wrap gap-3">
+                            <div>
+                                <span class="badge bg-success me-1">COR (1)</span> @lang('Proceso finalizado')
+                            </div>
+                            <div>
+                                <span class="badge bg-primary me-1">COR (2)</span> @lang('En fabricación')
+                            </div>
+                            <div>
+                                <span class="badge bg-info me-1">COR (3)</span> @lang('Asignado a máquina')
+                            </div>
+                            <div>
+                                <span class="badge bg-danger me-1">COR (4)</span> @lang('Con incidencia')
+                            </div>
+                            <div>
+                                <span class="badge bg-warning me-1">COR (5)</span> @lang('Pendiente')
+                            </div>
+                            <div>
+                                <span class="badge bg-secondary me-1">COR (6)</span> @lang('Sin asignar')
+                            </div>
+                        </div>
+                        
+                        <h5 class="mt-3">@lang('Leyenda de estados de pedidos')</h5>
+                        <div class="d-flex flex-wrap gap-3">
+                            <div>
+                                <span class="badge bg-success me-1">@lang('Fecha')</span> @lang('Pedido finalizado')
+                            </div>
+                            <div>
+                                <span class="badge bg-primary me-1">@lang('Pedido Iniciado')</span> @lang('Al menos un proceso asignado a máquina')
+                            </div>
+                            <div>
+                                <span class="badge bg-info me-1">@lang('Pendiente de iniciar')</span> @lang('Con órdenes asignadas pero no iniciadas')
+                            </div>
+                            <div>
+                                <span class="badge bg-secondary me-1">@lang('Pendiente de asignación')</span> @lang('Sin órdenes de producción asignadas')
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -165,42 +162,87 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         $(document).ready(function() {
-            const table = $('#original-orders-table').DataTable({
-                responsive: true,
-                scrollX: true,
-                language: {
-                    search: "{{ __('Search:') }}",
-                    lengthMenu: "{{ __('Show _MENU_ entries') }}",
-                    info: "{{ __('Showing _START_ to _END_ of _TOTAL_ entries') }}",
-                    infoEmpty: "{{ __('Showing 0 to 0 of 0 entries') }}",
-                    infoFiltered: "{{ __('(filtered from _MAX_ total entries)') }}",
-                    paginate: {
-                        first: "{{ __('First') }}",
-                        last: "{{ __('Last') }}",
-                        next: "{{ __('Next') }}",
-                        previous: "{{ __('Previous') }}"
-                    },
-                    emptyTable: "{{ __('No data available in table') }}",
-                    zeroRecords: "{{ __('No matching records found') }}"
-                },
-                order: [[0, 'asc']],
-                columnDefs: [
-                    { orderable: true, targets: [0, 1, 2, 3, 4, 5] }, // Incluye la nueva columna 'Finished At'
-                    { orderable: false, targets: [6], searchable: false } // 'Actions' ahora es el target 6
-                ],
-                dom: '<"row"<"col-sm-12 col-md-6"B><"col-sm-12 col-md-6"f>>rtip',
-                buttons: [
-                    {
-                        extend: 'pageLength',
-                        className: 'btn btn-secondary'
-                    }
-                ],
-                lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "{{ __('All') }}"]],
-                pageLength: 10
-            });
-            table.on('draw', function() {
+            
+            // Inicializar tooltips
+            function initTooltips() {
                 $('[data-bs-toggle="tooltip"]').tooltip();
-            });
+            }
+            
+            // Variable para almacenar la instancia de DataTable
+            let dataTable;
+            
+            // Función para inicializar DataTables
+            function initDataTable() {
+                dataTable = $('#original-orders-table').DataTable({
+                    processing: true,
+                    serverSide: true,
+                    responsive: true,
+                    ajax: '{{ route("customers.original-orders.index", $customer) }}',
+                    columns: [
+                        {data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false},
+                        {data: 'order_id', name: 'order_id'},
+                        {data: 'client_number', name: 'client_number'},
+                        {data: 'processes', name: 'processes', orderable: false, searchable: false},
+                        {data: 'finished_at', name: 'finished_at'},
+                        {data: 'created_at', name: 'created_at'},
+                        {data: 'actions', name: 'actions', orderable: false, searchable: false},
+                    ],
+                    order: [[1, 'desc']],
+                    language: {
+                        url: '//cdn.datatables.net/plug-ins/1.10.25/i18n/Spanish.json'
+                    },
+                    dom: '<"row"<"col-sm-12 col-md-6"B><"col-sm-12 col-md-6"f>>rtip',
+                    buttons: [
+                        {
+                            extend: 'pageLength',
+                            className: 'btn btn-secondary'
+                        }
+                    ],
+                    lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+                    pageLength: 10,
+                    drawCallback: function() {
+                        // Inicializar tooltips para los badges y botones
+                        setTimeout(function() {
+                            $('[data-bs-toggle="tooltip"]').tooltip();
+                        }, 100);
+                    }
+                });
+            }
+            
+            // Inicializar DataTable
+            initDataTable();
+            initTooltips();
+            
+            // Establecer la hora inicial
+            $('#last-update-time').text(new Date().toLocaleTimeString());
+            
+            // Función para actualizar la tabla manteniendo el estado actual
+            function refreshTableKeepingState() {
+                // Guardar el estado actual
+                const currentPage = dataTable.page();
+                const currentSearch = dataTable.search();
+                const currentOrder = dataTable.order();
+                const currentLength = dataTable.page.len();
+                
+                // Recargar los datos
+                dataTable.ajax.reload(function() {
+                    // Restaurar el estado después de recargar
+                    dataTable.page(currentPage).draw('page');
+                    if (currentSearch) {
+                        dataTable.search(currentSearch).draw('page');
+                    }
+                    dataTable.order(currentOrder).draw('page');
+                    dataTable.page.len(currentLength).draw('page');
+                    
+                    // Mostrar indicador de actualización
+                    const timestamp = new Date().toLocaleTimeString();
+                    $('#last-update-time').text(timestamp);
+                    $('#update-indicator').fadeIn().delay(1000).fadeOut();
+                }, false); // false significa que no se resetea la paginación
+            }
+            
+            // Configurar actualización automática cada minuto
+            setInterval(refreshTableKeepingState, 60000); // 60000 ms = 1 minuto
         });
     </script>
 @endpush

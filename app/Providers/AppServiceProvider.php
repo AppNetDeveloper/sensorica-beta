@@ -5,6 +5,8 @@ namespace App\Providers;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
 use App\Services\MqttService;
+use App\Models\ProductionOrder;
+use App\Observers\ProductionOrderObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -30,5 +32,8 @@ class AppServiceProvider extends ServiceProvider
     public function boot()
     {
         // Schema::defaultStringLength(191);
+        
+        // Registrar el observer para ProductionOrder
+        ProductionOrder::observe(ProductionOrderObserver::class);
     }
 }

@@ -191,10 +191,16 @@
                                                             } else {
                                                                 $statusText = __('Asignada a máquina');
                                                                 $badgeClass = 'bg-info';
+                                                                
+                                                                // Guardar el tiempo acumulado si existe
+                                                                $accumulatedTime = $productionOrder->accumulated_time ?? null;
                                                             }
                                                         } elseif ($status === 1) {
                                                             $statusText = __('En fabricación');
                                                             $badgeClass = 'bg-primary';
+                                                            
+                                                            // Guardar el tiempo acumulado si existe
+                                                            $accumulatedTime = $productionOrder->accumulated_time ?? null;
                                                         } elseif ($status > 2) {
                                                             $statusText = __('Con incidencia');
                                                             $badgeClass = 'bg-danger';
@@ -211,6 +217,26 @@
                                                         @lang('Estado actual:') {{ $statusText }}
                                                     @endif
                                                 </span>
+                                                
+                                                @if(($status === 1 || ($status === 0 && !is_null($productionLineId))))
+                                                    <div class="mt-1">
+                                                        <span class="badge bg-info" title="@lang('Tiempo acumulado de fabricación')">
+                                                            <i class="fas fa-hourglass-half"></i> 
+                                                            @if($productionOrder && !is_null($productionOrder->accumulated_time))
+                                                                @php
+                                                                    $seconds = (int)$productionOrder->accumulated_time;
+                                                                    $hours = floor($seconds / 3600);
+                                                                    $minutes = floor(($seconds % 3600) / 60);
+                                                                    $secs = $seconds % 60;
+                                                                    $formattedTime = sprintf("%02d:%02d:%02d", $hours, $minutes, $secs);
+                                                                @endphp
+                                                                {{ $formattedTime }}
+                                                            @else
+                                                                @lang('Sin tiempo acumulado')
+                                                            @endif
+                                                        </span>
+                                                    </div>
+                                                @endif
                                             </td>
                                             <td class="text-center">
                                                 @if($pivot->in_stock === 0)

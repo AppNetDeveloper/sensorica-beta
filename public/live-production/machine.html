@@ -1793,26 +1793,31 @@
                     
                     // Procesar tiempo hasta finalización
                     const theoreticalEndTimeSec = parseFloat(statsData.theoretical_end_time) || 0;
-                    const theoreticalEndTimeMs = theoreticalEndTimeSec * 1000;
+                    const outTimeSec = parseFloat(statsData.out_time) || 0;
                     const tiempoElement = $('#tiempo-hasta-finalizacion');
-                    
-                    // Formatear y mostrar el tiempo
-                    tiempoElement.text(formatDuration(theoreticalEndTimeMs));
-                    
-                    // Aplicar efectos visuales según el tiempo restante
-                    const CINCO_MINUTOS_MS = 5 * 60 * 1000; // 5 minutos en milisegundos
                     
                     // Remover clases anteriores
                     tiempoElement.removeClass('tiempo-warning tiempo-danger');
                     $('#floating-tiempo-panel').removeClass('panel-danger');
                     
-                    if (theoreticalEndTimeMs <= 0) {
-                        // Tiempo agotado o negativo: mostrar en rojo
+                    if (theoreticalEndTimeSec <= 0) {
+                        // Tiempo agotado: mostrar out_time en formato negativo y en rojo
+                        const outTimeMs = outTimeSec * 1000;
+                        tiempoElement.text('-' + formatDuration(outTimeMs));
                         tiempoElement.addClass('tiempo-danger');
                         $('#floating-tiempo-panel').addClass('panel-danger');
-                    } else if (theoreticalEndTimeMs <= CINCO_MINUTOS_MS) {
-                        // Menos de 5 minutos: efecto de parpadeo con color ámbar
-                        tiempoElement.addClass('tiempo-warning');
+                    } else {
+                        // Tiempo normal: mostrar theoretical_end_time
+                        const theoreticalEndTimeMs = theoreticalEndTimeSec * 1000;
+                        tiempoElement.text(formatDuration(theoreticalEndTimeMs));
+                        
+                        // Aplicar efectos visuales según el tiempo restante
+                        const CINCO_MINUTOS_MS = 5 * 60 * 1000; // 5 minutos en milisegundos
+                        
+                        if (theoreticalEndTimeMs <= CINCO_MINUTOS_MS) {
+                            // Menos de 5 minutos: efecto de parpadeo con color ámbar
+                            tiempoElement.addClass('tiempo-warning');
+                        }
                     }
 
                     if (statsData.oee !== null && statsData.oee !== undefined) {
@@ -3605,6 +3610,7 @@ async function updateOrderStatus(orderId, newStatus) {
                     headers: {
                         'Content-Type': 'application/json',
                         'Accept': 'application/json',
+                        'Authorization': `Bearer ${productionLineToken}` // Añadir token de autorización
                     },
                     body: JSON.stringify(payload)
                 })

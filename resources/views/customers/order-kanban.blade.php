@@ -414,8 +414,33 @@
             // Limpiar placeholders existentes
             document.querySelectorAll('.placeholder').forEach(p => p.remove());
             
-            // Crear y mostrar placeholder Y cachear posición
-            const afterElement = getDragAfterElement(targetCardsContainer, event.clientY);
+            // Verificar si hay una tarjeta "en curso" en esta columna y si estamos arrastrando sobre ella
+            const hasInProgressCard = targetCardsContainer.querySelector('.kanban-card[data-status="1"]');
+            const draggingOverInProgress = event.target.closest('.kanban-card[data-status="1"]') !== null;
+            
+            let afterElement;
+            
+            // Si estamos arrastrando sobre una tarjeta EN CURSO o hay una EN CURSO en la columna
+            // y la tarjeta arrastrada no es la misma tarjeta en curso
+            if ((draggingOverInProgress || hasInProgressCard) && draggedCard && draggedCard.dataset.status !== '1') {
+                console.log('🛡️ Protección activada: Arrastrando sobre/cerca de tarjeta EN CURSO');
+                
+                // Obtener todas las tarjetas en la columna
+                const allCards = Array.from(targetCardsContainer.querySelectorAll('.kanban-card'));
+                
+                if (allCards.length > 0) {
+                    // Forzar a que se coloque después de la última tarjeta (posición final + 1)
+                    afterElement = allCards[allCards.length - 1];
+                    console.log('📌 Forzando posición al FINAL ABSOLUTO (última + 1)');
+                } else {
+                    // Si no hay tarjetas, colocar al principio
+                    afterElement = null;
+                    console.log('📌 No hay tarjetas en la columna, colocando al principio');
+                }
+            } else {
+                // Comportamiento normal - calcular posición basada en el cursor
+                afterElement = getDragAfterElement(targetCardsContainer, event.clientY);
+            }
             
             // 🎯 CACHEAR la posición detectada para usar en drop
             cachedDropPosition = {
@@ -569,8 +594,28 @@
             let afterElement = null;
             let afterElementId = null;
             
-            // Usar posición cacheada si está disponible
-            if (cachedDropPosition && cachedDropPosition.afterElementId) {
+            // Verificar si hay una tarjeta "en curso" en la columna destino
+            const hasInProgressCard = targetCardsContainer.querySelector('.kanban-card[data-status="1"]');
+            
+            // Si hay una tarjeta en curso y la tarjeta arrastrada no es la misma tarjeta en curso
+            if (hasInProgressCard && draggedCard && draggedCard.dataset.status !== '1') {
+                console.log('🛡️ DROP - Protección activada: Hay una tarjeta EN CURSO en esta columna');
+                
+                // Obtener todas las tarjetas en la columna
+                const allCards = Array.from(targetCardsContainer.querySelectorAll('.kanban-card'));
+                
+                if (allCards.length > 0) {
+                    // Forzar a que se coloque después de la última tarjeta (posición final + 1)
+                    const lastCard = allCards[allCards.length - 1];
+                    afterElementId = parseInt(lastCard.dataset.id);
+                    console.log('📌 DROP - Forzando posición al FINAL ABSOLUTO (después de ID:', afterElementId, ')');
+                } else {
+                    // Si no hay tarjetas, colocar al principio
+                    afterElementId = null;
+                    console.log('📌 DROP - No hay tarjetas en la columna, colocando al principio');
+                }
+            } else if (cachedDropPosition && cachedDropPosition.afterElementId) {
+                // Usar posición cacheada si está disponible y no hay protección activa
                 afterElementId = cachedDropPosition.afterElementId;
                 console.log('✅ Usando afterElement cacheado:', afterElementId);
             } else {
@@ -581,36 +626,100 @@
             const oldMasterIndex = masterOrderList.findIndex(o => o.id === cardId);
             if (oldMasterIndex > -1) masterOrderList.splice(oldMasterIndex, 1);
             
-            if (afterElementId) {
-                // Insertar ANTES del afterElement
-                const newMasterIndex = masterOrderList.findIndex(o => o.id === afterElementId);
-                console.log('Insertando en índice:', newMasterIndex, 'antes de tarjeta:', afterElementId);
-                if (newMasterIndex > -1) {
-                    masterOrderList.splice(newMasterIndex, 0, orderObj);
-                } else {
-                    // Si no encuentra el afterElement en masterOrderList, agregar al final
-                    console.log('No se encontró afterElement en masterOrderList, agregando al final');
+            // Verificar si la tarjeta arrastrada es "en curso"
+            const isInProgressCard = draggedCard && draggedCard.dataset.status === '1';
+            
+            // CASO ESPECIAL: Si hay una tarjeta en curso y la tarjeta arrastrada NO es la tarjeta en curso
+            if (hasInProgressCard && !isInProgressCard) {
+                console.log('🚨 PROTECCIÓN ESPECIAL: Forzando posición al final absoluto');
+                
+                // 1. Identificar todas las tarjetas de esta línea de producción
+                const lineId = orderObj.productionLineId;
+                const cardsInSameLine = masterOrderList.filter(o => o.productionLineId === lineId);
+                
+                // 2. Encontrar la tarjeta en curso (debe estar primera)
+                const inProgressCard = cardsInSameLine.find(o => o.status === 'in_progress');
+                
+                if (inProgressCard) {
+                    console.log('📍 Tarjeta EN CURSO encontrada:', inProgressCard.id);
+                    
+                    // 3. Agregar la tarjeta arrastrada al final absoluto
                     masterOrderList.push(orderObj);
+                    console.log('📌 INSERTADA AL FINAL ABSOLUTO');
+                } else {
+                    // Si por alguna razón no hay tarjeta en curso (no debería pasar), usar lógica normal
+                    if (afterElementId) {
+                        const newMasterIndex = masterOrderList.findIndex(o => o.id === afterElementId);
+                        if (newMasterIndex > -1) {
+                            masterOrderList.splice(newMasterIndex, 0, orderObj);
+                        } else {
+                            masterOrderList.push(orderObj);
+                        }
+                    } else {
+                        masterOrderList.push(orderObj);
+                    }
                 }
             } else {
-                // No hay afterElement, insertar al final
-                console.log('No hay afterElement, insertando al final');
-                masterOrderList.push(orderObj);
+                // CASO NORMAL: Usar lógica estándar de posicionamiento
+                if (afterElementId) {
+                    // Insertar ANTES del afterElement
+                    const newMasterIndex = masterOrderList.findIndex(o => o.id === afterElementId);
+                    console.log('Insertando en índice:', newMasterIndex, 'antes de tarjeta:', afterElementId);
+                    if (newMasterIndex > -1) {
+                        masterOrderList.splice(newMasterIndex, 0, orderObj);
+                    } else {
+                        // Si no encuentra el afterElement en masterOrderList, agregar al final
+                        console.log('No se encontró afterElement en masterOrderList, agregando al final');
+                        masterOrderList.push(orderObj);
+                    }
+                } else {
+                    // No hay afterElement, insertar al final
+                    console.log('No hay afterElement, insertando al final');
+                    masterOrderList.push(orderObj);
+                }
             }
             
             // Lógica especial para columnas de producción
             if (targetIsProduction) {
                 const targetItems = masterOrderList.filter(o => o.productionLineId === columnData.productionLineId);
+                
+                // 1. Manejar tarjeta EN CURSO (siempre al inicio)
                 const inProgressItem = targetItems.find(o => o.status === 'in_progress');
                 if (inProgressItem) {
+                    console.log('🔄 Reordenando: Moviendo tarjeta EN CURSO al inicio de la columna');
+                    
+                    // Eliminar la tarjeta en curso de su posición actual
                     const itemIndex = masterOrderList.findIndex(o => o.id === inProgressItem.id);
                     if (itemIndex > -1) masterOrderList.splice(itemIndex, 1);
 
+                    // Insertar al inicio del grupo
                     const firstIndexOfGroup = masterOrderList.findIndex(o => o.productionLineId === columnData.productionLineId);
                     if (firstIndexOfGroup > -1) {
                         masterOrderList.splice(firstIndexOfGroup, 0, inProgressItem);
+                        console.log('✅ Tarjeta EN CURSO colocada al INICIO del grupo');
                     } else {
-                         masterOrderList.push(inProgressItem);
+                        masterOrderList.push(inProgressItem);
+                        console.log('⚠️ No se encontró el grupo, agregando tarjeta EN CURSO al final');
+                    }
+                    
+                    // 2. Si la tarjeta que acabamos de arrastrar NO es EN CURSO, asegurarnos que esté al final
+                    if (orderObj.id !== inProgressItem.id && orderObj.status !== 'in_progress') {
+                        console.log('🛡️ PROTECCIÓN UNIFICADA: Verificando posición de tarjeta arrastrada');
+                        
+                        // Buscar la posición actual de la tarjeta arrastrada
+                        const draggedIndex = masterOrderList.findIndex(o => o.id === orderObj.id);
+                        
+                        // Si está en una posición incorrecta (antes que la tarjeta EN CURSO), moverla al final
+                        if (draggedIndex !== -1 && draggedIndex <= itemIndex) {
+                            console.log('⚠️ Tarjeta arrastrada en posición incorrecta, moviendo al final');
+                            
+                            // Eliminar de su posición actual
+                            masterOrderList.splice(draggedIndex, 1);
+                            
+                            // Agregar al final absoluto
+                            masterOrderList.push(orderObj);
+                            console.log('📌 Tarjeta reubicada al FINAL ABSOLUTO');
+                        }
                     }
                 }
             }
@@ -927,11 +1036,13 @@
             const statusMap = { 'pending': 0, 'in_progress': 1, 'completed': 2, 'cancelled': 4, 'paused': 3 };
             
             masterOrderList.forEach((order, index) => {
+
                 updatedOrders.push({
                     id: order.id,
                     production_line_id: order.productionLineId ? order.productionLineId : null,
                     orden: index,
                     status: statusMap[order.status] !== undefined ? statusMap[order.status] : 0
+                    // Ya no enviamos accumulated_time, se calcula automáticamente con el comando artisan
                 });
             });
 
@@ -1340,14 +1451,26 @@
         }, true);
 
         function recalculatePositions() {
+            console.log('📊 RECALCULANDO POSICIONES basado en masterOrderList');
+            
+            // Primero, asignar posiciones basadas en el masterOrderList
+            masterOrderList.forEach((order, index) => {
+                order.orden = index;
+                console.log(`📌 Orden ${order.id}: posición ${index}`);
+            });
+            
+            // Luego, actualizar el DOM para reflejar el orden del masterOrderList
             const cards = kanbanBoard.querySelectorAll('.kanban-card');
-            cards.forEach((card, index) => {
+            cards.forEach((card) => {
                 const orderId = parseInt(card.dataset.id);
                 const order = masterOrderList.find(o => o.id === orderId);
                 if (order) {
-                    order.orden = index;
+                    // Actualizar atributo data-orden en el DOM
+                    card.dataset.orden = order.orden;
                 }
             });
+            
+            console.log('✅ Posiciones recalculadas correctamente');
         }
 
         distributeAndRender(true, () => {

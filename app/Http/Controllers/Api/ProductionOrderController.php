@@ -395,11 +395,43 @@ class ProductionOrderController extends Controller
         // Caso 1: La orden pertenece a esta línea
         if ($order->production_line_id === $productionLine->id) {
             $canModify = true;
+            Log::info("Orden ID {$id}: Permiso concedido - La orden pertenece a esta línea de producción");
         } 
-        // Caso 2: Es una incidencia y tiene el mismo process_category que la última orden de esta línea
-        elseif ($order->status == 3 && $lastOrders->isNotEmpty()) {
-            if ($order->process_category == $lastOrders->first()->process_category) {
+        // Caso 2: Es una incidencia y tiene el mismo process_category que la línea
+        elseif ($order->status == 3) {
+            // Obtener el process_id asociado a la línea de producción desde production_line_process
+            $productionLineProcess = DB::table('production_line_process')
+                ->where('production_line_id', $productionLine->id)
+                ->first();
+            
+            // Inicializar variable para process_category
+            $processCategory = null;
+            
+            if ($productionLineProcess && isset($productionLineProcess->process_id)) {
+                // Obtener la descripción/categoría del proceso desde la tabla processes
+                $process = DB::table('processes')
+                    ->where('id', $productionLineProcess->process_id)
+                    ->first();
+                    
+                if ($process && isset($process->description)) {
+                    $processCategory = $process->description;
+                }
+            }
+            
+            Log::info("Orden ID {$id}: Verificando incidencia - Process category de orden: {$order->process_category}, Process category de línea: {$processCategory}");
+            
+            if ($order->process_category == $processCategory) {
                 $canModify = true;
+                Log::info("Orden ID {$id}: Permiso concedido - Es una incidencia con el mismo process_category");
+            }
+        }
+        
+        // Caso 3: Si la línea no tiene órdenes previas, permitir modificación
+        if (!$canModify) {
+            $hasOrders = ProductionOrder::where('production_line_id', $productionLine->id)->exists();
+            if (!$hasOrders) {
+                $canModify = true;
+                Log::info("Orden ID {$id}: Permiso concedido - La línea no tiene órdenes previas");
             }
         }
         

@@ -39,6 +39,7 @@ class ProductionOrder extends Model
         'units',
         'orden', // Manufacturing order
         'theoretical_time', // Theoretical process time
+        'accumulated_time', // Accumulated time from cards above
         'process_category', // Process category
         'delivery_date',
         'customerId', // Customer ID
@@ -46,7 +47,8 @@ class ProductionOrder extends Model
         'original_order_process_id', // Reference to original order process
         'grupo_numero', // Group number
         'processes_to_do', // Number of processes to do
-        'processes_done' // Number of processes completed
+        'processes_done', // Number of processes completed
+        'is_priority' // Indica si la orden es prioritaria/importante según el encargado
     ];
     
     /**
@@ -77,6 +79,7 @@ class ProductionOrder extends Model
         'delivery_date' => 'datetime',
         'status' => 'integer', // Es importante mantener el cast a integer
         'theoretical_time' => 'float', // Si lo guardas como float
+        'is_priority' => 'boolean' // Convertir a booleano
     ];
 
     /**

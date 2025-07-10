@@ -35,7 +35,7 @@ class Kernel extends ConsoleKernel
         Commands\TcpClientlocal::class,
         Commands\ClearOldRecords::class,
         Commands\CheckHostMonitor::class,
-        
+        Commands\UpdateAccumulatedTimes::class,
     ];
 
     /**
@@ -47,6 +47,7 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule)
     {
         // $schedule->command('inspire')->hourly();
+        $schedule->command('production:update-accumulated-times')->everyMinute();
     }
 
     /**

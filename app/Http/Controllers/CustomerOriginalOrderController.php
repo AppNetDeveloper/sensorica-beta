@@ -21,10 +21,261 @@ class CustomerOriginalOrderController extends Controller
         $this->middleware('permission:original-order-delete', ['only' => ['destroy']]);
     }
 
-    public function index(Customer $customer)
+    public function index(Request $request, Customer $customer)
     {
-        $originalOrders = $customer->originalOrders()->latest()->get();
-        return view('customers.original-orders.index', compact('customer', 'originalOrders'));
+        // Si es una solicitud AJAX (desde DataTables)
+        if ($request->ajax()) {
+            // Log para depuración
+            \Log::info('DataTables request', [
+                'all' => $request->all(),
+                'search' => $request->input('search'),
+                'search.value' => $request->input('search.value'),
+                'length' => $request->input('length'),
+                'start' => $request->input('start'),
+                'order' => $request->input('order'),
+            ]);
+            // Obtener parámetros de búsqueda y paginación
+            $search = $request->input('search.value', ''); // Corregido: search.value es el parámetro correcto
+            $perPage = $request->input('length', 10);
+            $start = $request->input('start', 0);
+            $orderColumnIndex = $request->input('order.0.column', 0);
+            $orderDir = $request->input('order.0.dir', 'asc');
+            
+            // Mapear columnas de la tabla a campos de la base de datos
+            $columns = [
+                0 => 'id',
+                1 => 'order_id',
+                2 => 'client_number',
+                3 => 'processed',
+                4 => 'finished_at',
+                5 => 'created_at'
+            ];
+            
+            // Iniciar la consulta con una carga más simple de relaciones
+            $query = $customer->originalOrders()->with([
+                'processes' => function($query) {
+                    $query->withPivot('id', 'finished', 'finished_at', 'grupo_numero');
+                    $query->orderBy('sequence', 'asc');
+                }
+            ]);
+            
+            // Obtener el total de registros sin filtrar
+            $recordsTotal = $query->count();
+            
+            // Aplicar búsqueda si se proporciona
+            if (!empty($search)) {
+                $searchTerm = '%' . $search . '%';
+                $query->where(function($q) use ($searchTerm) {
+                    $q->where('order_id', 'like', $searchTerm)
+                      ->orWhere('client_number', 'like', $searchTerm);
+                });
+            }
+            
+            // Obtener el total de registros filtrados
+            $recordsFiltered = $query->count();
+            
+            // Aplicar ordenamiento
+            $orderColumn = isset($columns[$orderColumnIndex]) ? $columns[$orderColumnIndex] : 'id';
+            $query->orderBy($orderColumn, $orderDir);
+            
+            // Aplicar paginación
+            $orders = $query->skip($start)->take($perPage)->get();
+            
+            // Preparar los datos para DataTables
+            $data = [];
+            
+            // Recolectar todos los IDs de procesos para cargar sus órdenes de producción de una vez
+            $processIds = collect();
+            foreach ($orders as $order) {
+                foreach ($order->processes as $process) {
+                    $processIds->push($process->pivot->id);
+                }
+            }
+            
+            // Cargar todas las órdenes de producción para todos los procesos de una vez
+            $allProductionOrders = \App\Models\ProductionOrder::whereIn('original_order_process_id', $processIds->toArray())
+                ->select('id', 'original_order_process_id', 'production_line_id', 'status', 'accumulated_time')
+                ->get()
+                ->groupBy('original_order_process_id');
+            
+            foreach ($orders as $index => $order) {
+                // Generar HTML para los procesos - versión optimizada
+                $processesHtml = '';
+                foreach ($order->processes as $process) {
+                    $pivot = $process->pivot;
+                    
+                    // Verificar si hay alguna orden de producción asignada o finalizada para este proceso
+                    $hasAssignedOrders = isset($allProductionOrders[$pivot->id]) && $allProductionOrders[$pivot->id]->isNotEmpty();
+                    
+                    // Determinar la clase y título del badge según el estado original
+                    if ($pivot->finished) {
+                        $badgeClass = 'bg-success';
+                        $statusTitle = $pivot->finished_at ? __('Finalizado') . ': ' . $pivot->finished_at->format('Y-m-d H:i') : __('Finalizado');
+                    } else {
+                        // Verificar si hay órdenes de producción y su estado
+                        if ($hasAssignedOrders) {
+                            $productionOrder = $allProductionOrders[$pivot->id]->first();
+                            $status = $productionOrder ? $productionOrder->status : null;
+                            $productionLineId = $productionOrder ? $productionOrder->production_line_id : null;
+                            
+                            if ($status === 0) {
+                                if (is_null($productionLineId)) {
+                                    $badgeClass = 'bg-secondary';
+                                    $statusTitle = __('Sin asignar');
+                                } else {
+                                    $badgeClass = 'bg-info';
+                                    // Añadir tiempo acumulado si existe
+                                    $accumulatedTime = $productionOrder->accumulated_time ?? null;
+                                    $statusTitle = __('Asignada a máquina');
+                                    if ($accumulatedTime) {
+                                        // Formatear el tiempo acumulado de segundos a HH:MM:SS
+                                        $hours = floor($accumulatedTime / 3600);
+                                        $minutes = floor(($accumulatedTime % 3600) / 60);
+                                        $seconds = $accumulatedTime % 60;
+                                        $formattedTime = sprintf('%02d:%02d:%02d', $hours, $minutes, $seconds);
+                                        $statusTitle .= ' - ' . __('Tiempo acumulado') . ': ' . $formattedTime;
+                                    }
+                                }
+                            } elseif ($status === 1) {
+                                $badgeClass = 'bg-primary';
+                                // Añadir tiempo acumulado si existe
+                                $accumulatedTime = $productionOrder->accumulated_time ?? null;
+                                $statusTitle = __('En fabricación');
+                                if ($accumulatedTime) {
+                                    // Formatear el tiempo acumulado de segundos a HH:MM:SS
+                                    $hours = floor($accumulatedTime / 3600);
+                                    $minutes = floor(($accumulatedTime % 3600) / 60);
+                                    $seconds = $accumulatedTime % 60;
+                                    $formattedTime = sprintf('%02d:%02d:%02d', $hours, $minutes, $seconds);
+                                    $statusTitle .= ' - ' . __('Tiempo acumulado') . ': ' . $formattedTime;
+                                }
+                            } elseif ($status > 2) {
+                                $badgeClass = 'bg-danger';
+                                $statusTitle = __('Con incidencia');
+                            } else {
+                                $badgeClass = 'bg-warning';
+                                $statusTitle = __('Pendiente');
+                            }
+                        } else {
+                            $badgeClass = 'bg-secondary';
+                            $statusTitle = __('Sin asignar');
+                        }
+                    }
+                    
+                    // Crear el badge HTML con grupo_numero en formato (número)
+                    $grupoNumero = $pivot->grupo_numero ? ' (' . $pivot->grupo_numero . ')' : '';
+                    $processesHtml .= '<span class="badge ' . $badgeClass . ' me-1 mb-1" title="' . $statusTitle . '" data-bs-toggle="tooltip">' . $process->code . $grupoNumero . '</span>';
+                }
+                
+                // Determinar el estado de la orden para la columna finished_at
+                $finishedAtHtml = '';
+                if ($order->finished_at) {
+                    $finishedAtHtml = '<span class="badge bg-success">' . $order->finished_at->format('Y-m-d H:i') . '</span>';
+                } else {
+                    // Verificar el estado de los procesos para determinar el estado general de la orden
+                    $hasAnyAssignedToMachine = false; // Procesos con órdenes asignadas a máquina
+                    $hasAnyAssignedProcess = false;  // Procesos con órdenes asignadas pero no a máquina
+                    
+                    foreach ($order->processes as $process) {
+                        $pivot = $process->pivot;
+                        if (isset($allProductionOrders[$pivot->id]) && $allProductionOrders[$pivot->id]->isNotEmpty()) {
+                            $productionOrders = $allProductionOrders[$pivot->id];
+                            
+                            // Verificar si hay alguna orden de producción asignada a máquina
+                            foreach ($productionOrders as $po) {
+                                if ($po->production_line_id) {
+                                    $hasAnyAssignedToMachine = true;
+                                    break 2; // Salir de ambos bucles
+                                } else {
+                                    $hasAnyAssignedProcess = true; // Al menos tiene asignaciones sin máquina
+                                }
+                            }
+                        }
+                    }
+                    
+                    if ($hasAnyAssignedToMachine) {
+                        $finishedAtHtml = '<span class="badge bg-primary">' . __('Pedido Iniciado') . '</span>';
+                    } elseif ($hasAnyAssignedProcess) {
+                        $finishedAtHtml = '<span class="badge bg-info">' . __('Pendiente de iniciar') . '</span>';
+                    } else {
+                        $finishedAtHtml = '<span class="badge bg-secondary">' . __('Pendiente de asignación') . '</span>';
+                    }
+                }
+                
+                $data[] = [
+                    'DT_RowIndex' => $start + $index + 1,
+                    'order_id' => $order->order_id,
+                    'client_number' => $order->client_number,
+                    'processes' => $processesHtml,
+                    'finished_at' => $finishedAtHtml,
+                    'created_at' => $order->created_at->format('Y-m-d H:i'),
+                    'actions' => view('customers.original-orders.partials.actions', ['customer' => $customer, 'order' => $order])->render()
+                ];
+            }
+            
+            // Preparar la respuesta para DataTables
+            $response = [
+                'draw' => intval($request->input('draw')),
+                'recordsTotal' => $recordsTotal,
+                'recordsFiltered' => $recordsFiltered,
+                'data' => $data
+            ];
+            
+            // Log para depurar la respuesta
+            \Log::info('DataTables response structure:', [
+                'draw' => $response['draw'],
+                'recordsTotal' => $response['recordsTotal'],
+                'recordsFiltered' => $response['recordsFiltered'],
+                'data_count' => count($response['data']),
+                'first_item' => !empty($response['data']) ? json_encode($response['data'][0]) : 'No data'
+            ]);
+            
+            try {
+                // Intentar codificar a JSON para detectar errores
+                $jsonResponse = json_encode($response);
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    \Log::error('JSON encoding error: ' . json_last_error_msg());
+                    // Si hay error de codificación, intentar identificar el problema
+                    foreach ($data as $index => $item) {
+                        $itemJson = json_encode($item);
+                        if (json_last_error() !== JSON_ERROR_NONE) {
+                            \Log::error('Error en item #' . $index . ': ' . json_last_error_msg());
+                            // Intentar identificar qué campo causa el problema
+                            foreach ($item as $key => $value) {
+                                $fieldJson = json_encode($value);
+                                if (json_last_error() !== JSON_ERROR_NONE) {
+                                    \Log::error('Campo problemático: ' . $key . ' - Error: ' . json_last_error_msg());
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Devolver una respuesta simplificada en caso de error
+                    return response()->json([
+                        'draw' => intval($request->input('draw')),
+                        'recordsTotal' => $recordsTotal,
+                        'recordsFiltered' => $recordsFiltered,
+                        'data' => [],
+                        'error' => 'Error en la codificación JSON: ' . json_last_error_msg()
+                    ]);
+                }
+                
+                return response()->json($response);
+            } catch (\Exception $e) {
+                \Log::error('Exception en la respuesta JSON: ' . $e->getMessage());
+                return response()->json([
+                    'draw' => intval($request->input('draw')),
+                    'recordsTotal' => $recordsTotal,
+                    'recordsFiltered' => $recordsFiltered,
+                    'data' => [],
+                    'error' => 'Error en el servidor: ' . $e->getMessage()
+                ]);
+            }
+        }
+        
+        // Para solicitudes normales, devolver la vista
+        // No necesitamos cargar órdenes aquí ya que se cargarán vía AJAX
+        return view('customers.original-orders.index', compact('customer'));
     }
 
     public function create(Customer $customer)
@@ -100,7 +351,7 @@ class CustomerOriginalOrderController extends Controller
         // Cargar productionOrders para cada proceso
         $originalOrder->processes->each(function($process) {
             $process->pivot->load(['productionOrders' => function($query) {
-                $query->select('id', 'original_order_process_id', 'status', 'production_line_id');
+                $query->select('id', 'original_order_process_id', 'status', 'production_line_id', 'accumulated_time');
             }]);
         });
         
