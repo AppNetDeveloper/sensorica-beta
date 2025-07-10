@@ -50,6 +50,7 @@ use App\Http\Controllers\Api\ProductionLineInfoController;
 
 // Rutas para el Kanban Board
 Route::post('production-orders/update-batch', [ProductionOrderController::class, 'updateBatch'])->name('production-orders.update-batch')->middleware(['auth', 'XSS']);
+Route::post('production-orders/toggle-priority', [ProductionOrderController::class, 'togglePriority'])->name('production-orders.toggle-priority')->middleware(['auth', 'XSS']);
 
 // API para obtener información de la línea de producción y hora del servidor
 Route::get('api/production-line-info', [ProductionLineInfoController::class, 'getInfo'])->name('api.production-line-info');

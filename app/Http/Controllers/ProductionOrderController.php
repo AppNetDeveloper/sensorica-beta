@@ -361,4 +361,42 @@ class ProductionOrderController extends Controller
         }
     }
 
+    /**
+     * Cambia el estado de prioridad de una orden de producción
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function togglePriority(Request $request)
+    {
+        try {
+            // Validar la solicitud
+            $validated = $request->validate([
+                'order_id' => 'required|integer|exists:production_orders,id',
+            ]);
+            
+            $orderId = $validated['order_id'];
+            
+            // Obtener la orden de producción
+            $order = ProductionOrder::findOrFail($orderId);
+            
+            // Cambiar el estado de prioridad (invertir el valor actual)
+            $order->is_priority = !$order->is_priority;
+            $order->save();
+            
+            return response()->json([
+                'success' => true,
+                'is_priority' => $order->is_priority,
+                'message' => $order->is_priority ? 'Orden marcada como prioritaria' : 'Prioridad eliminada de la orden'
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Error al cambiar prioridad de orden: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'No se pudo cambiar el estado de prioridad de la orden'
+            ], 500);
+        }
+    }
 }

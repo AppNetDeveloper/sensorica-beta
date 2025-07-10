@@ -14,6 +14,9 @@ use App\Services\OrderTimeService;
 use App\Models\ProductList;
 use App\Models\OptimalProductionTime;
 use App\Models\OptimalSensorTime;
+use App\Models\ProductionOrder;
+use App\Models\ProductionLine;
+use App\Models\SensorCount;
 
 class CalculateProductionMonitorOeev2 extends Command
 {
@@ -224,6 +227,13 @@ class CalculateProductionMonitorOeev2 extends Command
                 throw new \Exception("Orden actual no válida");
             }
             
+            //sacamos con un try  $productionOrder = ProductionOrder::where('order_id', $currentOrder->order_id)->first();
+            try {
+                $productionOrder = ProductionOrder::where('order_id', $currentOrder->order_id)->first();
+            } catch (\Exception $e) {
+                $this->error("Error al obtener el production_order: " . $e->getMessage());
+                $productionOrder = null;
+            }
             // Inicializar variables con valores por defecto
             $oee = $oeeModbus = $oeeRfid = $unitsMadeTheoretical = 0;
             $secondsPerUnitReal = $secondsPerUnitTheoretical = 0;
@@ -344,7 +354,11 @@ class CalculateProductionMonitorOeev2 extends Command
             //$this->info("[" . Carbon::now()->toDateTimeString() . "] Unidades retrasadas para slow time: $unitsDelayedSForSlowTime");
             $unitsDelayedSlowTime = $unitsDelayedSForSlowTime - ($unitsMadeReal * $secondsPerUnitTheoretical);
             //$this->info("[" . Carbon::now()->toDateTimeString() . "] Tiempo retrasado para slow time: $unitsDelayedSlowTime");
+
+
             $slowTime = $unitsDelayed * $secondsPerUnitTheoretical;
+
+            
 
 
             //log slowtime
@@ -373,7 +387,7 @@ class CalculateProductionMonitorOeev2 extends Command
             $this->info("[" . Carbon::now()->toDateTimeString() . "] OEE Total calculado: {$totalOee}% (OEE: {$oee}%, Modbus: {$oeeModbus}%, RFID: {$oeeRfid}%)");
             // Actualizar la orden si existe
             if ($currentOrder) {
-                $slowTimeDif = $slowTime - $currentOrder->slow_time;
+                
 
                 // Asegurarse de que $unitsMadeTheoretical sea un valor numérico válido
                 $unitsMadeTheoretical = is_numeric($unitsMadeTheoretical) ? $unitsMadeTheoretical : 0;
@@ -384,9 +398,51 @@ class CalculateProductionMonitorOeev2 extends Command
                 $currentOrder->seconds_per_unit_theoretical = $secondsPerUnitTheoretical;
                 $currentOrder->units_made_theoretical = $unitsMadeTheoretical;
                 $currentOrder->units_delayed = $unitsDelayed;
-                $currentOrder->slow_time = $slowTime;
-                // Si el production_order asociado tiene theoretical_time, lo usamos en lugar del calculado
-                $productionOrder = \App\Models\ProductionOrder::where('order_id', $currentOrder->order_id)->first();
+
+                if ($productionOrder && $productionOrder->theoretical_time && $productionOrder->theoretical_time > 0) {
+                    try {
+                        // Usar eager loading para reducir consultas a la base de datos
+                        $sensor = Sensor::where('production_line_id', $productionOrder->production_line_id)
+                            ->where('sensor_type', 0)
+                            ->first();
+                            
+                        if ($sensor) {
+                            $sensorCount = SensorCount::where('sensor_id', $sensor->id)
+                                ->latest()
+                                ->first();
+                                
+                            if ($sensorCount) {
+                                $timeSinceLastCount = Carbon::parse($sensorCount->created_at)->diffInSeconds(now());
+                                $optimalTime = $sensor->optimal_production_time;
+                                $maxSlowTime = $optimalTime * $sensor->reduced_speed_time_multiplier;
+                                
+                                // Verificar si estamos en el rango de "slow time"
+                                if ($timeSinceLastCount > $optimalTime && $timeSinceLastCount < $maxSlowTime) {
+                                    $currentOrder->slow_time = $slowTime + 1;
+                                    $slowTimeDif = $slowTime - $shiftHistory->slow_time + 1;
+                                    $this->info("Incrementando slow_time por inactividad del sensor ({$timeSinceLastCount}s)");
+                                } else {
+                                    $this->info("No se incrementa slow_time por inactividad del sensor ({$timeSinceLastCount}s)");
+                                    //$currentOrder->slow_time = $slowTime;
+                                }
+                            } else {
+                                $this->warn("No se encontraron registros para el sensor ID {$sensor->id}");
+                                //$currentOrder->slow_time = $slowTime;
+                            }
+                        } else {
+                            $this->warn("No se encontró sensor de tipo 0 para la línea de producción {$productionOrder->production_line_id}");
+                            //$currentOrder->slow_time = $slowTime;
+                        }
+                    } catch (\Exception $e) {
+                        $this->error("Error al calcular slow_time: " . $e->getMessage());
+                        //$currentOrder->slow_time = $slowTime;
+                    }
+                } else {
+                    $currentOrder->slow_time = $slowTime;
+                    $slowTimeDif = $slowTime - $currentOrder->slow_time;
+                }
+                
+
                 if ($productionOrder && $productionOrder->theoretical_time && $productionOrder->theoretical_time > 0) {
                     // Solo actualizamos si ya tenemos un valor establecido y es mayor que 0
                     if ($currentOrder->theoretical_end_time > 0) {
@@ -416,8 +472,15 @@ class CalculateProductionMonitorOeev2 extends Command
             }
  
             if($shiftHistory){
+                $this->info("Incrementando on_time por actividad del sensor");
                 $shiftHistory->on_time = $shiftHistory->on_time + 1;
                 //$shiftHistory->oee = $totalOee;
+                //mostrar en log el slowtimedif
+                if($slowTimeDif){
+                    $this->info("Incrementando slow_time por actividad del sensor: {$slowTimeDif}");
+                }else{
+                    $this->info("No se incrementa slow_time por actividad del sensor");
+                }
                 $shiftHistory->slow_time += $slowTimeDif;
 
                 // 3. Lectura de tiempos
@@ -432,7 +495,7 @@ class CalculateProductionMonitorOeev2 extends Command
                 if ($P > 0) {
                     $oeePercent = round(($productive / $P) * 100, 2);  // 2 decimales
                 } else {
-                    $oeePercent = 0;
+                    $oeePercent = 100;
                 }
 
                 // 6. Guardar en el modelo

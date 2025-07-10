@@ -15,7 +15,7 @@ use App\Models\OrderStat;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use App\Models\ShiftHistory; // Asegúrate de que la ruta del modelo sea la correcta
-
+ 
 class SensorController extends Controller
 {
         /**

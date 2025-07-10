@@ -7,6 +7,7 @@ use App\Models\Barcode;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\DB;
 
 class SensorController extends Controller
 {
@@ -60,7 +61,17 @@ class SensorController extends Controller
             return redirect()->back()->withErrors($validator)->withInput();
         }
 
-        $sensor = Sensor::create(array_merge($request->all(), ['production_line_id' => $production_line_id]));
+        $data = $request->all();
+    
+    // Convertir json_api a formato JSON válido si existe
+    if (isset($data['json_api']) && !empty($data['json_api'])) {
+        // Si el valor no es ya un JSON válido, lo convertimos a JSON
+        if (!is_null($data['json_api']) && $data['json_api'][0] !== '{' && $data['json_api'][0] !== '[' && $data['json_api'][0] !== '"') {
+            $data['json_api'] = json_encode($data['json_api']);
+        }
+    }
+    
+    $sensor = Sensor::create(array_merge($data, ['production_line_id' => $production_line_id]));
 
         return redirect()->route('smartsensors.index', $production_line_id)
                          ->with('success', 'Sensor creado exitosamente.');
@@ -107,7 +118,17 @@ class SensorController extends Controller
         }
 
         $sensor = Sensor::findOrFail($sensor_id);
-        $sensor->update($request->all());
+        $data = $request->all();
+    
+    // Convertir json_api a formato JSON válido si existe
+    if (isset($data['json_api']) && !empty($data['json_api'])) {
+        // Si el valor no es ya un JSON válido, lo convertimos a JSON
+        if (!is_null($data['json_api']) && $data['json_api'][0] !== '{' && $data['json_api'][0] !== '[' && $data['json_api'][0] !== '"') {
+            $data['json_api'] = json_encode($data['json_api']);
+        }
+    }
+    
+    $sensor->update($data);
 
         return redirect()->route('smartsensors.index', $sensor->production_line_id)
                          ->with('success', 'Sensor actualizado exitosamente.');

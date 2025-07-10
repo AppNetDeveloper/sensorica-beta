@@ -2,6 +2,7 @@ require('dotenv').config({ path: '../.env' });
 const mqtt = require('mqtt');
 const mysql = require('mysql2/promise');
 const axios = require('axios');  // Usamos axios para las solicitudes HTTP
+const https = require('https');  // Importamos https para configurar el agente
 const { promisify } = require('util');
 const setIntervalAsync = promisify(setInterval);
 
@@ -44,8 +45,9 @@ function connectMQTT() {
 
     // Procesamiento inmediato de cada mensaje recibido
     mqttClient.on('message', async (topic, message) => {
-     // console.log(`[${getCurrentTimestamp()}] ✅ Mensaje recibido: Tópico: ${topic} | Datos: ${message.toString()}`);
-      await processCallApi(topic, message.toString());
+      const messageData = message.toString();
+      console.log(`[${getCurrentTimestamp()}] 📥 RECIBIDO - Tópico: ${topic} | Datos: ${messageData}`);
+      await processCallApi(topic, messageData);
     });
   });
 
@@ -144,10 +146,20 @@ async function subscribeToTopics() {
 async function callApiWithRetries(dataToSend, maxRetries = 5, initialDelay = 5000) {
     let attempt = 0;
     let delay = initialDelay;
+    
+    // Crear un agente HTTPS que no verifique certificados
+    const httpsAgent = new https.Agent({
+      rejectUnauthorized: false
+    });
+    
+    console.log(`[${getCurrentTimestamp()}] 🔒 Configurando llamada API con verificación SSL desactivada`);
   
     while (attempt < maxRetries) {
       try {
-        const response = await axios.post(`${apiBaseUrl}/api/sensor-insert`, dataToSend);
+        // Usar el agente HTTPS para desactivar la verificación de certificados
+        const response = await axios.post(`${apiBaseUrl}/api/sensor-insert`, dataToSend, {
+          httpsAgent: httpsAgent
+        });
         return response;
       } catch (error) {
         attempt++;
@@ -167,23 +179,53 @@ async function callApiWithRetries(dataToSend, maxRetries = 5, initialDelay = 500
 
 // Función para extraer valores usando rutas JSON
 function extractValueFromJson(jsonData, path) {
-  if (!path) return jsonData.value; // Valor por defecto si no se especifica ruta
+  console.log(`[${getCurrentTimestamp()}] 🔍 EXTRACCIÓN - Iniciando extracción con path: ${path || 'No definido'}`);
+  
+  if (!path) {
+    console.log(`[${getCurrentTimestamp()}] ℹ️ EXTRACCIÓN - Path no definido, usando valor por defecto 'value': ${jsonData.value}`);
+    return jsonData.value; // Valor por defecto si no se especifica ruta
+  }
   
   try {
+    // Si path es un string JSON, intentar parsearlo
+    let jsonPath = path;
+    let pathSource = 'original';
+    
+    if (typeof path === 'string') {
+      try {
+        // Intentar parsear por si es un JSON string
+        const parsed = JSON.parse(path);
+        console.log(`[${getCurrentTimestamp()}] 🔄 EXTRACCIÓN - Path parseado como JSON: ${JSON.stringify(parsed)}`);
+        
+        if (typeof parsed === 'string') {
+          jsonPath = parsed; // Usar el string dentro del JSON
+          pathSource = 'parsed_json_string';
+          console.log(`[${getCurrentTimestamp()}] 📝 EXTRACCIÓN - Usando string dentro del JSON: ${jsonPath}`);
+        }
+      } catch (e) {
+        // Si no es un JSON válido, usar el path tal cual
+        console.log(`[${getCurrentTimestamp()}] ℹ️ EXTRACCIÓN - Path no es JSON válido, usando tal cual: ${path}`);
+        jsonPath = path;
+        pathSource = 'raw_string';
+      }
+    }
+    
+    console.log(`[${getCurrentTimestamp()}] 🔎 EXTRACCIÓN - Ejecutando JSONPath: ${jsonPath} (fuente: ${pathSource})`);
+    
     // Para rutas simples (sin filtros)
-    if (!path.includes('[?') && !path.includes('.*')) {
-      return getNestedValue(jsonData, path);
+    if (!jsonPath.includes('[?') && !jsonPath.includes('.*')) {
+      return getNestedValue(jsonData, jsonPath);
     }
     
     // Para rutas con filtros por flag
-    if (path.includes('[?(@.flag==')) {
-      const match = path.match(/\[\?\(@\.flag=="([^"]+)"\)\]\.([\w]+)/);
+    if (jsonPath.includes('[?(@.flag==')) {
+      const match = jsonPath.match(/\[\?\(@\.flag=="([^"]+)"\)\]\.(\w+)/);
       if (match && match.length === 3) {
         const flagToFind = match[1];
         const fieldToExtract = match[2];
         
         // Extraer la parte antes del filtro
-        const arrayPath = path.split('[?')[0];
+        const arrayPath = jsonPath.split('[?')[0];
         const array = getNestedValue(jsonData, arrayPath);
         
         if (Array.isArray(array)) {
@@ -217,15 +259,21 @@ function getNestedValue(obj, path) {
 
 async function processCallApi(topic, data) {
   try {
+    console.log(`[${getCurrentTimestamp()}] 🔍 PROCESANDO - Tópico: ${topic}`);
     const parsed = JSON.parse(data);
+    console.log(`[${getCurrentTimestamp()}] 📚 JSON PARSEADO: ${JSON.stringify(parsed, null, 2)}`);
+    
     const sensorConfig = sensorsCache[topic];
     if (!sensorConfig) {
       console.error(`[${getCurrentTimestamp()}] ❌ No se encontró configuración en el cache para el tópico ${topic}`);
       return;
     }
     
+    console.log(`[${getCurrentTimestamp()}] 📍 CONFIG SENSOR - ID: ${sensorConfig.id}, json_api: ${sensorConfig.json_api || 'No configurado'}`);
+    
     // Extraer el valor usando la ruta configurada o 'value' por defecto
     const extractedValue = extractValueFromJson(parsed, sensorConfig.json_api);
+    console.log(`[${getCurrentTimestamp()}] 🔎 VALOR EXTRAÍDO: ${extractedValue} usando ruta: ${sensorConfig.json_api || 'value'}`);
     
     // Si no se pudo extraer un valor, registrar error y salir
     if (extractedValue === null || extractedValue === undefined) {
@@ -235,10 +283,13 @@ async function processCallApi(topic, data) {
     
     // Aplicar inversión si es necesario
     let newValue = sensorConfig.invers_sensors === 1 ? -extractedValue : extractedValue;
+    if (sensorConfig.invers_sensors === 1) {
+      console.log(`[${getCurrentTimestamp()}] 🔄 VALOR INVERTIDO: ${extractedValue} → ${newValue}`);
+    }
 
     // Si sensor_type es 0 y el value es 0, se omite el procesamiento
     if (sensorConfig.sensor_type === 0 && newValue === 0) {
-      //console.log(`[${getCurrentTimestamp()}] ℹ️ Sensor ID ${sensorConfig.id} con sensor_type=0 y value=0, se omite el procesamiento.`);
+      console.log(`[${getCurrentTimestamp()}] ℹ️ Sensor ID ${sensorConfig.id} con sensor_type=0 y value=0, se omite el procesamiento.`);
       return;
     }
     
@@ -252,6 +303,9 @@ async function processCallApi(topic, data) {
       apiUrl = apiUrl.slice(0, -1);
     }
     apiUrl += '/api/sensor-insert';
+    
+    console.log(`[${getCurrentTimestamp()}] 📬 ENVIANDO A API - URL: ${apiUrl}`);
+    console.log(`[${getCurrentTimestamp()}] 📢 DATOS A ENVIAR: ${JSON.stringify(dataToSend, null, 2)}`);
 
     // Llamada inmediata a la API
    // axios.post(apiUrl, dataToSend)
@@ -263,8 +317,14 @@ async function processCallApi(topic, data) {
      // });
 
      //llamada api con cola de 5 intentos si falla 1
-     const response = await callApiWithRetries(dataToSend);
-     console.log(`[${getCurrentTimestamp()}] ✅ Respuesta de la API para el Sensor ID ${sensorConfig.id} y tópico ${topic}: ${JSON.stringify(response.data, null, 2)}`);
+     try {
+       const response = await callApiWithRetries(dataToSend);
+       console.log(`[${getCurrentTimestamp()}] ✅ RESPUESTA API - Sensor ID ${sensorConfig.id}, Tópico ${topic}:`);
+       console.log(`[${getCurrentTimestamp()}] 📡 DATOS RECIBIDOS: ${JSON.stringify(response.data, null, 2)}`);
+     } catch (error) {
+       console.error(`[${getCurrentTimestamp()}] ❌ ERROR API FINAL - Sensor ID ${sensorConfig.id}, Tópico ${topic}: ${error.message}`);
+       throw error; // Re-lanzar para que se maneje en el catch externo
+     }
   } catch (error) {
     console.error(`[${getCurrentTimestamp()}] ❌ Error al procesar los datos del Sensor para el tópico ${topic}: ${error.message}`);
   }

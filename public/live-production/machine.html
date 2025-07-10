@@ -391,6 +391,15 @@
             position: relative;
         }
         
+        .kanban-card:hover {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        
+        /* Estilo para órdenes prioritarias */
+        .kanban-card.priority-order {
+            border: 1px solid #ffc107;
+        }
+        
         .card-menu {
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
             border: 1px solid #e5e7eb;
@@ -2194,17 +2203,25 @@
 
                 const card = document.createElement('div');
                 card.className = 'kanban-card cursor-pointer';
+                
+                // Añadir clase para tarjetas prioritarias
+                if (order.is_priority === true || order.is_priority === 1) {
+                    card.classList.add('priority-order');
+                }
+                
                 card.dataset.cardId = order.id;
                 card.dataset.orderSort = order.orden || 0;
                 
-                // Determinar si hay unidades y si es urgente
+                // Determinar si hay unidades, si es urgente y si es prioritaria
                 const hasUnits = order.units && order.units > 0;
                 const isUrgent = order.json && order.json.urgent;
+                const isPriority = order.is_priority === true || order.is_priority === 1;
                 
                 card.innerHTML = `
                     <div class="flex justify-between items-center mb-1">
                         <div class="flex items-center">
                             ${statusIcon}
+                            ${isPriority ? '<i class="fas fa-exclamation-triangle text-yellow-500 mr-1" title="Prioritaria"></i>' : ''}
                             <span class="font-bold text-xs text-gray-800" style="letter-spacing: -0.3px;">${order.order_id || 'N/A'}</span>
                             ${isUrgent ? '<i class="fas fa-bolt text-orange-500 ml-1" title="Urgente"></i>' : ''}
                         </div>

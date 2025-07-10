@@ -109,6 +109,8 @@
 
         .kanban-card { background-color: var(--card-bg); color: var(--card-text); border-radius: 10px; border: 1px solid var(--card-border); border-left: 5px solid; box-shadow: var(--card-shadow); flex-shrink: 0; overflow: hidden; width: 100%; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); cursor: grab; }
         .kanban-card.urgent { border: 1px solid var(--danger-color); box-shadow: 0 0 10px rgba(239, 68, 68, 0.2); }
+        /* Estilo para órdenes prioritarias - solo un borde sutil */
+        .kanban-card.priority-order { border: 1px solid #ffc107; }
         .kanban-card.collapsed .kanban-card-body,
         .kanban-card.collapsed .kanban-card-footer,
         .kanban-card.collapsed .kanban-card-body .process-list,
@@ -239,7 +241,10 @@
             }) : [...masterOrderList];
 
             if (shouldSort) {
-                ordersToDisplay.sort((a, b) => (a.orden || 0) - (b.orden || 0));
+                // Ordenar solo por el campo orden, sin considerar prioridad
+                ordersToDisplay.sort((a, b) => {
+                    return (a.orden || 0) - (b.orden || 0);
+                });
             }
 
             Object.values(columns).forEach(column => {
@@ -823,7 +828,13 @@
 
         function createCardElement(order) {
             const card = document.createElement('div');
+            // Clase base para todas las tarjetas
             card.className = 'kanban-card collapsed';
+            
+            // Añadir clase para tarjetas prioritarias
+            if (order.is_priority === true || order.is_priority === 1) {
+                card.classList.add('priority-order');
+            }
             card.dataset.id = order.id;
             card.draggable = true;
             card.addEventListener('dragstart', handleDragStart);
@@ -837,6 +848,7 @@
 
             let urgencyIconHtml = '';
             let stockIconHtml = '';
+            let priorityIconHtml = '';
             
             // Triángulo rojo para órdenes urgentes
             if (isOrderUrgent(order)) {
@@ -849,6 +861,12 @@
             if (order.has_stock === 0) {
                 const stockTitleText = 'Sin stock de materiales';
                 stockIconHtml = `<span class="ms-2" title="${stockTitleText}"><i class="fas fa-exclamation-triangle text-primary"></i></span>`;
+            }
+            
+            // Triángulo amarillo para órdenes prioritarias
+            if (order.is_priority === true || order.is_priority === 1) {
+                const priorityTitleText = 'Orden prioritaria';
+                priorityIconHtml = `<span class="ms-2" title="${priorityTitleText}"><i class="fas fa-exclamation-triangle text-warning"></i></span>`;
             }
 
             // Grupo eliminado - ya no es necesario
@@ -906,7 +924,7 @@
             card.innerHTML = `
                 <div class="kanban-card-header" onclick="this.parentElement.classList.toggle('collapsed')">
                     <div class="me-2" style="flex-grow: 1;">
-                        <div class="fw-bold text-sm d-flex align-items-center">#${order.order_id}${urgencyIconHtml}${stockIconHtml}</div>
+                        <div class="fw-bold text-sm d-flex align-items-center">#${order.order_id}${urgencyIconHtml}${stockIconHtml}${priorityIconHtml}</div>
                         <div class="text-xs fw-bold text-muted mt-1">${order.customerId || translations.noCustomer}</div>
                         ${processDescription ? `<div class="text-xs text-muted mt-1">${processDescription}</div>` : ''}
                         <div class="d-flex justify-content-between align-items-center mt-1">
@@ -1084,6 +1102,11 @@
 
             const originalOrderUrl = order.original_order_id ? `/customers/${customerId}/original-orders/${order.original_order_id}` : '#';
             const isOriginalOrderDisabled = !order.original_order_id;
+            
+            // Determinar si la orden es prioritaria
+            const isPriority = order.is_priority === true || order.is_priority === 1;
+            const priorityBtnText = isPriority ? '{{ __('Quitar prioridad') }}' : '{{ __('Marcar como prioritaria') }}';
+            const priorityBtnClass = isPriority ? 'btn-secondary' : 'btn-warning';
 
             Swal.fire({
                 title: `{{ __('Order') }} #${order.order_id}`,
@@ -1091,6 +1114,9 @@
                 showConfirmButton: false,
                 html: `
                     <div class="d-flex flex-column gap-2 my-4">
+                        <button id="togglePriorityBtn" class="btn ${priorityBtnClass} w-100">
+                            <i class="fas ${isPriority ? 'fa-star' : 'fa-star'} me-2"></i>${priorityBtnText}
+                        </button>
                         <button id="viewIncidentsBtn" class="btn btn-danger w-100">{{ __('View Incidents') }}</button>
                         <button id="viewOriginalOrderBtn" class="btn btn-info w-100" ${isOriginalOrderDisabled ? 'disabled' : ''}>
                             {{ __('View Original Order') }}
@@ -1098,6 +1124,80 @@
                     </div>`,
                 didOpen: () => {
                     const popup = Swal.getPopup();
+                    
+                    // Evento para marcar/desmarcar como prioritaria
+                    popup.querySelector('#togglePriorityBtn').addEventListener('click', () => {
+                        // Mostrar indicador de carga
+                        const btn = popup.querySelector('#togglePriorityBtn');
+                        const originalText = btn.innerHTML;
+                        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Actualizando...';
+                        btn.disabled = true;
+                        
+                        // Llamar al backend para actualizar el estado de prioridad
+                        fetch('{{ route("production-orders.toggle-priority") }}', {
+                            method: 'POST',
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                            },
+                            body: JSON.stringify({ order_id: orderId })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                // Actualizar el estado en la lista maestra
+                                const orderIndex = masterOrderList.findIndex(o => o.id == orderId);
+                                if (orderIndex !== -1) {
+                                    masterOrderList[orderIndex].is_priority = data.is_priority;
+                                    
+                                    // Actualizar la tarjeta en el DOM
+                                    const card = document.querySelector(`.kanban-card[data-id="${orderId}"]`);
+                                    if (card) {
+                                        if (data.is_priority) {
+                                            card.classList.add('priority-order');
+                                        } else {
+                                            card.classList.remove('priority-order');
+                                        }
+                                    }
+                                }
+                                
+                                // Cerrar el popup
+                                Swal.close();
+                                
+                                // Mostrar mensaje de éxito
+                                const message = data.is_priority ? 'Orden marcada como prioritaria' : 'Prioridad eliminada de la orden';
+                                Swal.fire({
+                                    title: 'Éxito',
+                                    text: message,
+                                    icon: 'success',
+                                    timer: 1500,
+                                    showConfirmButton: false
+                                });
+                            } else {
+                                // Restaurar el botón y mostrar error
+                                btn.innerHTML = originalText;
+                                btn.disabled = false;
+                                
+                                Swal.fire({
+                                    title: 'Error',
+                                    text: data.message || 'No se pudo actualizar la prioridad',
+                                    icon: 'error'
+                                });
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            btn.innerHTML = originalText;
+                            btn.disabled = false;
+                            
+                            Swal.fire({
+                                title: 'Error',
+                                text: 'Ocurrió un error al procesar la solicitud',
+                                icon: 'error'
+                            });
+                        });
+                    });
+                    
                     popup.querySelector('#viewIncidentsBtn').addEventListener('click', () => {
                         window.location.href = `/customers/${customerId}/production-order-incidents`;
                         Swal.close();

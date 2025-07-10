@@ -283,6 +283,7 @@ class CustomerController extends Controller
                 //en lugar de 0 por defecto aqui 'orden' => (int)($order->orden ?? '0') ponemos que sea por production_line_id el orden mas grande que existe y le damos +1
                 'orden' => $order->production_line_id ? ProductionOrder::where('production_line_id', $order->production_line_id)->max('orden') + 1 : 0,
                 'has_stock' => $order->has_stock ?? 1, // Añadimos el campo has_stock, por defecto 1 si no existe
+                'is_priority' => $order->is_priority ?? false
                 ];
             });
         
@@ -429,7 +430,8 @@ class CustomerController extends Controller
                         'original_order_id' => $order->original_order_id ?? 'Sin Orden Original',
                         'articles_descriptions' => $articlesDescriptions,
                         'orden' => $order->orden ?? 0,
-                        'has_stock' => $order->has_stock ?? 1
+                        'has_stock' => $order->has_stock ?? 1,
+                        'is_priority' => $order->is_priority ?? false
                     ];
                 });
 
