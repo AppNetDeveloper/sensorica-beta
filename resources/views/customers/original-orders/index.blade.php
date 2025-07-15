@@ -19,18 +19,25 @@
     <div class="row mt-3 mx-0">
         <div class="col-12 px-0">
             <div class="card border-0 shadow" style="width: 100%;">
-                <div class="card-header bg-primary text-white">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">@lang('Original Orders') - {{ $customer->name }}</h5>
-                        <div id="update-time-container" class="text-center text-white">
-                            <small>@lang('Última actualización'): <span id="last-update-time"></span></small>
-                            <span id="update-indicator" class="ms-2 badge bg-info" style="display: none;">@lang("Actualizado")</span>
-                        </div>
+                <div class="card-header bg-transparent">
+                    <div class="d-flex justify-content-end align-items-center">
                         @can('original-order-create')
-                        <a href="{{ route('customers.original-orders.create', $customer->id) }}" class="btn btn-light btn-sm">
+                        <a href="{{ route('customers.original-orders.create', $customer->id) }}" class="btn btn-outline-primary btn-sm">
                             <i class="fas fa-plus"></i> @lang('New Order')
                         </a>
                         @endcan
+                    </div>
+                </div>
+                
+                <!-- Notificación flotante simple de actualización -->
+                <div class="position-fixed top-0 end-0 p-3" style="z-index: 9999">
+                    <div id="update-time-toast" class="toast align-items-center text-white bg-info border-0" role="alert" aria-live="polite" aria-atomic="true">
+                        <div class="d-flex">
+                            <div class="toast-body">
+                                <i class="fas fa-sync-alt me-2 fa-spin"></i> @lang('Actualizando...')
+                            </div>
+                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                        </div>
                     </div>
                 </div>
                 <div class="card-body">
@@ -53,7 +60,7 @@
                                     <th class="text-uppercase">@lang('ORDER ID')</th>
                                     <th class="text-uppercase">@lang('CLIENT NUMBER')</th>
                                     <th class="text-uppercase">@lang('PROCESSES')</th>
-                                    <th class="text-uppercase">@lang('FINISHED AT')</th>
+                                    <th class="text-uppercase">@lang('ORIGINAL ORDER STATUS')</th>
                                     <th class="text-uppercase">@lang('CREATED AT')</th>
                                     <th class="text-uppercase">@lang('ACTIONS')</th>
                                 </tr>
@@ -81,9 +88,7 @@
                             <div>
                                 <span class="badge bg-danger me-1">COR (4)</span> @lang('Con incidencia')
                             </div>
-                            <div>
-                                <span class="badge bg-warning me-1">COR (5)</span> @lang('Pendiente')
-                            </div>
+
                             <div>
                                 <span class="badge bg-secondary me-1">COR (6)</span> @lang('Sin asignar')
                             </div>
@@ -213,8 +218,11 @@
             initDataTable();
             initTooltips();
             
-            // Establecer la hora inicial
-            $('#last-update-time').text(new Date().toLocaleTimeString());
+            // Inicializar el toast de actualización
+            const updateTimeToast = new bootstrap.Toast(document.getElementById('update-time-toast'), {
+                autohide: true,
+                delay: 2000  // Solo mostrar por 2 segundos
+            });
             
             // Función para actualizar la tabla manteniendo el estado actual
             function refreshTableKeepingState() {
@@ -234,10 +242,8 @@
                     dataTable.order(currentOrder).draw('page');
                     dataTable.page.len(currentLength).draw('page');
                     
-                    // Mostrar indicador de actualización
-                    const timestamp = new Date().toLocaleTimeString();
-                    $('#last-update-time').text(timestamp);
-                    $('#update-indicator').fadeIn().delay(1000).fadeOut();
+                    // Mostrar el toast de actualización
+                    updateTimeToast.show();
                 }, false); // false significa que no se resetea la paginación
             }
             

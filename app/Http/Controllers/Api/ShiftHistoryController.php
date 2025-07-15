@@ -231,46 +231,32 @@ class ShiftHistoryController extends Controller
         if (!$shiftHistory) {
             return response()->json(['message' => 'No se encontró historial de turnos para esta línea de producción'], 404);
         }
-    
-        // 2) Compruebo si es 'shift start'
-        $isShiftStart = $shiftHistory->type === 'shift' && $shiftHistory->action === 'start';
-    
-        // 3) Si no, busco el último 'shift start' para calcular pausas
-        if (! $isShiftStart) {
-            $shiftStart = ShiftHistory::where('production_line_id', $productionLine->id)
-                ->where('type', 'shift')
-                ->where('action', 'start')
-                ->orderBy('created_at', 'desc')
-                ->first();
-    
-            if (! $shiftStart) {
-                return response()->json([
-                    'message' => 'No se encontró un registro de inicio de turno (shift start) previo para calcular pausas.'
-                ], 404);
-            }
-    
-            $shiftStartDate = $shiftStart->created_at;
-            $totalPause     = $this->calculateTotalPauseDuration(
-                $productionLine->id,
-                $shiftStartDate,
-                now()
-            );
-            $onTime=$shiftStart->on_time;
-            $downTime=$shiftStart->down_time;
-            $oee=$shiftStart->oee;
-            $slowTime=$shiftStart->slow_time;
-            $prepareTime= $shiftStart->prepair_time;
-    
-        } else {
-            $shiftStartDate = $shiftHistory->created_at;
-            $totalPause = 0;
-            $onTime= 0;
-            $downTime=0;
-            $oee=0;
-            $slowTime=0;
-            $prepareTime=0;
-            
+    //start
+        $shiftStart = ShiftHistory::where('production_line_id', $productionLine->id)
+        ->where('type', 'shift')
+        ->where('action', 'start')
+        ->orderBy('created_at', 'desc')
+        ->first();
+
+        if (! $shiftStart) {
+            return response()->json([
+                'message' => 'No se encontró un registro de inicio de turno (shift start) previo para calcular pausas.'
+            ], 404);
         }
+
+        $shiftStartDate = $shiftStart->created_at;
+        $totalPause     = $this->calculateTotalPauseDuration(
+            $productionLine->id,
+            $shiftStartDate,
+            now()
+        );
+        $onTime=$shiftStart->on_time;
+        $downTime=$shiftStart->down_time;
+        $oee=$shiftStart->oee;
+        $slowTime=$shiftStart->slow_time;
+        $prepareTime= $shiftStart->prepair_time;
+        $productionStopsTime = $shiftStart->production_stops_time;
+        //fin
     
         // 4) Transformo el modelo a array y sobreescribo shift_list si es null
         $data = $shiftHistory->toArray();
@@ -293,6 +279,7 @@ class ShiftHistoryController extends Controller
             'oee'=> $oee,
             'slow_time'=> $slowTime,
             'prepare_time'=> $prepareTime,
+            'production_stops_time'=> $productionStopsTime,
         ]);
     }
     

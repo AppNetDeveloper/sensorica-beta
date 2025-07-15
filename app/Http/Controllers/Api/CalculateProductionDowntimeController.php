@@ -120,9 +120,12 @@ class CalculateProductionDowntimeController extends Controller
     
     private function downTimeLine($productionLineId)
     {
+
+        //log para ver que estamos aqui
+        \Log::info("Procesando downTimeLine para la línea de producción {$productionLineId}");
+        
         // Obtener únicamente los sensores non 0 de la línea recibida
-        $sensorsNotType0 = Sensor::where('event', 'start')
-                                  ->where('sensor_type', '>', 0)
+        $sensorsNotType0 = Sensor::where('sensor_type', '>', 0)
                                   ->where('production_line_id', $productionLineId)
                                   ->get();
     
@@ -135,8 +138,12 @@ class CalculateProductionDowntimeController extends Controller
             // Si existe un registro y su end_time es NULL, se considera que el sensor está en downtime abierto
             if ($lastDowntime && $lastDowntime->end_time === null) {
                 $atLeastOneStopped = true;
+                \Log::info("Sensor {$sensor->name} está en downtime abierto.");
                 break;
+            }else{
+                \Log::info("Sensor {$sensor->name} no está en downtime abierto.");
             }
+
         }
         
         // Obtener el último registro de OrderStats para la línea de producción
@@ -281,6 +288,16 @@ class CalculateProductionDowntimeController extends Controller
     }
     private function incrementDowntime($sensor, $downtimeTime)
     {
+
+        //primero para solcionar lo de que el tiempo se queda en slowtime cuando pasa a downtime  tenemos qeue analizar 
+        //si se crea registro nuevo o no  , esta parte ya esta , pero antes de todo tenemos que conectarnos 
+        //con al sensor y y extraemos los dos valors 	optimal_production_time y reduced_speed_time_multiplier
+
+        $optimalTime = $sensor->optimal_production_time ?? 30;
+        $multiplier = $sensor->reduced_speed_time_multiplier ?? 1;
+        $maxTime = $optimalTime * $multiplier; //tiempo maximo que se puede tener en slowtime
+        $timeToSume=$maxTime - $optimalTime; //tiempo que se suma al registro de downtime
+
         $downtime = DowntimeSensor::where('sensor_id', $sensor->id)
             ->whereNull('end_time')
             ->first();
@@ -293,13 +310,19 @@ class CalculateProductionDowntimeController extends Controller
         } else {
             DowntimeSensor::create([
                 'sensor_id' => $sensor->id,
-                'start_time' => Carbon::now(),
-                'count_time' => $downtimeTime,
+                //al start_time es carbon now - $timeToSume que es segundos . 
+                'start_time' => Carbon::now()->subSeconds($timeToSume),
+                'count_time' => $downtimeTime + $timeToSume,
                 'end_time' => null,
             ]);
             \Log::info("New downtime record created for sensor: {$sensor->name}.");
-        }
 
+            //ahora en sensors sumamos a downtime_count
+            $sensor->downtime_count += $timeToSume;
+            $sensor->save();
+            \Log::info("Downtime count for sensor {$sensor->name} incremented to {$sensor->downtime_count}.");
+        }
+        //sequimos manteniendo esta parte es critica
         $sensor->downtime_count += $intervalInSeconds;
         $sensor->save();
         \Log::info("Downtime count for sensor {$sensor->name} incremented to {$sensor->downtime_count}.");

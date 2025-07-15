@@ -548,11 +548,13 @@
                         <span style="background-color: #f9fafb; padding: 5px; border-radius: 5px;" class="text-gray-600 font-medium">ORDEN EN CURSO</span>
                     </div>
                      <div class="flex justify-between py-0.5">
-                         <span class="text-gray-600">TIEMPO EN PARADA / FALTA MATERIAL</span>
-                         <span id="tiempo-parada-val" class="font-mono font-medium text-gray-800 data-value">00:00:00</span> </div>
-                    <div class="flex justify-between py-0.5">
-                         <span class="text-gray-600">TIEMPO EN PARADA</span>
-                         <span id="tiempo-parada-noidentificada-val" class="font-mono font-medium text-gray-800 data-value">00:00:00</span> </div> 
+                         <span class="text-gray-600">TIEMPO PARADA / FALTA MATERIAL</span>
+                         <span id="tiempo-parada-material-val" class="font-mono font-medium text-gray-800 data-value">00:00:00</span>
+                     </div>
+                     <div class="flex justify-between py-0.5">
+                         <span class="text-gray-600">TIEMPO PARADA (OTRAS)</span>
+                         <span id="tiempo-parada-otras-val" class="font-mono font-medium text-gray-800 data-value">00:00:00</span>
+                     </div> 
                      <div class="flex justify-between py-0.5">
                          <span class="text-gray-600">TIEMPO PREPARACION</span>
                          <span id="tiempo-preparacion-val" class="font-mono font-medium text-gray-800 data-value">00:00:00</span> </div>
@@ -988,6 +990,7 @@
 
             // Spans para Tiempos / Maquina
             const tiempoParadaMaquinaVal = $('#tiempo-parada-maquina-val');
+            const tiempoParadaMaquinaNoidentificadaVal = $('#tiempo-parada-maquina-noidentificada-val');
             const tiempoLentoMaquinaVal = $('#tiempo-lento-maquina-val');
             const tiempoPreparacionMaquinaVal = $('#tiempo-preparacion-maquina-val');
 
@@ -1544,6 +1547,7 @@
                     let machineDownTimeSec = 0;
                     let machineSlowTimeSec = 0;
                     let machinePrepTimeSec = 0;
+                    let machineProdStopsTimeSec = 0;
 
                     let previousState = {...currentShiftState};
 
@@ -1562,11 +1566,13 @@
                                 machineDownTimeSec = parseFloat(shiftData.data.down_time) || 0;
                                 machineSlowTimeSec = parseFloat(shiftData.data.slow_time) || 0;
                                 machinePrepTimeSec = parseFloat(shiftData.data.prepair_time) || 0;
+                                machineProdStopsTimeSec = parseFloat(shiftData.data.production_stops_time) || 0;
                             } else {
                                 oeeMaquinaPercent = parseFloat(shiftData.oee) || parseFloat(shiftData.data.oee) || 0;
                                 machineDownTimeSec = parseFloat(shiftData.down_time) || parseFloat(shiftData.data.down_time) || 0;
                                 machineSlowTimeSec = parseFloat(shiftData.slow_time) || parseFloat(shiftData.data.slow_time) || 0;
                                 machinePrepTimeSec = parseFloat(shiftData.prepare_time) || parseFloat(shiftData.data.prepair_time) || 0;
+                                machineProdStopsTimeSec = parseFloat(shiftData.production_stops_time) || parseFloat(shiftData.data.production_stops_time) || 0;
                             }
                         } else if (shiftData === null || !shiftData.data) {
                            type = 'shift'; action = 'end';
@@ -1574,6 +1580,7 @@
                            machineDownTimeSec = parseFloat(shiftData.down_time) || 0;
                            machineSlowTimeSec = parseFloat(shiftData.slow_time) || 0;
                            machinePrepTimeSec = parseFloat(shiftData.prepare_time) || 0;
+                           machineProdStopsTimeSec = parseFloat(shiftData.production_stops_time) || 0;
                            console.log("No shiftData.data or shiftData is null, using root values or defaulting.");
                         }
                     } else {
@@ -1584,7 +1591,8 @@
                     oeeMaquinaPercent = Math.max(0, Math.min(100, oeeMaquinaPercent));
                     updateProgress(oeeMaquinaIndicator, oeeMaquinaValue, oeeMaquinaPercent);
 
-                    tiempoParadaMaquinaVal.text(formatDuration(machineDownTimeSec * 1000));
+                    tiempoParadaMaquinaVal.text(formatDuration(machineProdStopsTimeSec * 1000));
+                    tiempoParadaMaquinaNoidentificadaVal.text(formatDuration(machineDownTimeSec * 1000));
                     tiempoLentoMaquinaVal.text(formatDuration(machineSlowTimeSec * 1000));
                     tiempoPreparacionMaquinaVal.text(formatDuration(machinePrepTimeSec * 1000));
 
@@ -1783,10 +1791,12 @@
 
                 try {
                     const downTimeSec = parseFloat(statsData.down_time) || 0;
+                    const downTimeMs = downTimeSec * 1000;
+                    $('#tiempo-parada-otras-val').text(formatDuration(downTimeMs));
+
                     const prodStopTimeSec = parseFloat(statsData.production_stops_time) || 0;
-                    const totalStopTimeSec = downTimeSec + prodStopTimeSec;
-                    const totalStopTimeMs = totalStopTimeSec * 1000;
-                    tiempoParadaVal.text(formatDuration(totalStopTimeMs));
+                    const prodStopTimeMs = prodStopTimeSec * 1000;
+                    $('#tiempo-parada-material-val').text(formatDuration(prodStopTimeMs));
 
                     const slowTimeSec = parseFloat(statsData.slow_time) || 0;
                     const slowTimeMs = slowTimeSec * 1000;

@@ -17,6 +17,7 @@ use App\Models\OptimalSensorTime;
 use App\Models\ProductionOrder;
 use App\Models\ProductionLine;
 use App\Models\SensorCount;
+use App\Models\DowntimeSensor;
 
 class CalculateProductionMonitorOeev2 extends Command
 {
@@ -387,7 +388,8 @@ class CalculateProductionMonitorOeev2 extends Command
             $this->info("[" . Carbon::now()->toDateTimeString() . "] OEE Total calculado: {$totalOee}% (OEE: {$oee}%, Modbus: {$oeeModbus}%, RFID: {$oeeRfid}%)");
             // Actualizar la orden si existe
             if ($currentOrder) {
-                
+                // Inicializar $slowTimeDif para evitar errores de variable indefinida
+                $slowTimeDif = 0;
 
                 // Asegurarse de que $unitsMadeTheoretical sea un valor numérico válido
                 $unitsMadeTheoretical = is_numeric($unitsMadeTheoretical) ? $unitsMadeTheoretical : 0;
@@ -415,31 +417,91 @@ class CalculateProductionMonitorOeev2 extends Command
                                 $timeSinceLastCount = Carbon::parse($sensorCount->created_at)->diffInSeconds(now());
                                 $optimalTime = $sensor->optimal_production_time;
                                 $maxSlowTime = $optimalTime * $sensor->reduced_speed_time_multiplier;
+                                $realMaxSlowtime = $maxSlowTime - $optimalTime;
                                 
                                 // Verificar si estamos en el rango de "slow time"
                                 if ($timeSinceLastCount > $optimalTime && $timeSinceLastCount < $maxSlowTime) {
-                                    $currentOrder->slow_time = $slowTime + 1;
-                                    $slowTimeDif = $slowTime - $shiftHistory->slow_time + 1;
+                                    $currentOrder->slow_time = $currentOrder->slow_time + 1;
+                                    $slowTimeDif = 1;
                                     $this->info("Incrementando slow_time por inactividad del sensor ({$timeSinceLastCount}s)");
                                 } else {
-                                    $this->info("No se incrementa slow_time por inactividad del sensor ({$timeSinceLastCount}s)");
-                                    //$currentOrder->slow_time = $slowTime;
+                                    if ($timeSinceLastCount >= $maxSlowTime) {
+                                        //sacamos todos los sensores de la linea de production y buscamos por sensor_id en downtime_sensors  por created_at = now si uno de los sensores tiene linea que aparece 
+                                        //si cumple en doentime_sensors , semnifica que tenemos downtime abierto en este momento y pasamos el slowtime anterior 
+                                        // y pasamos el $maxSlowTime de slowtime , haciendo slow_time actual - $maxSlowTime y sumamos a down_time = $maxSlowTime 
+                                           // Verificar si se acaba de crear un registro de downtime para este sensor
+                                        // Obtener todos los sensores de la línea de producción
+                                        $sensorsAll = Sensor::where('production_line_id', $productionOrder->production_line_id)->get();
+
+                                        // Buscar si algún sensor tiene un downtime reciente
+                                        $recentDowntime = null;
+                                        $downtimeSensor = null;
+
+                                        foreach ($sensorsAll as $lineSensor) {
+                                            $tempDowntime = DowntimeSensor::where('sensor_id', $lineSensor->id)
+                                                ->whereNull('end_time')
+                                                ->whereRaw('TIMESTAMPDIFF(SECOND, created_at, NOW()) BETWEEN 0 AND 1')->first();
+                                                
+                                            if ($tempDowntime) {
+                                                //buscamos por su sensor_id en sensores si el sensor es sensor_type 0 o mayor 
+                                                $sensor = Sensor::where('id', $tempDowntime->sensor_id)->first();
+                                                if ($sensor->sensor_type == 0) {
+                                                    if($shiftHistory->slow_time >= $realMaxSlowtime){
+                                                        $shiftHistory->slow_time = $shiftHistory->slow_time - $realMaxSlowtime;
+                                                        $shiftHistory->down_time = $shiftHistory->down_time + $realMaxSlowtime;
+                                                        $shiftHistory->save();
+                                                    }
+                                                    $this->info("Se actualizó slow_time y down_time para la línea de producción {$productionOrder->production_line_id}");
+                                                    //ahora hacemos lo mismo con currentorder
+                                                    if($currentOrder->slow_time >= $realMaxSlowtime){
+                                                        $currentOrder->slow_time = $currentOrder->slow_time - $realMaxSlowtime;
+                                                        $currentOrder->down_time = $currentOrder->down_time + $realMaxSlowtime;
+                                                        $currentOrder->save();
+                                                    }
+                                                    $this->info("Se actualizó slow_time y down_time para la orden {$productionOrder->id}");
+                                                }else{
+                                                    if($shiftHistory->slow_time >= $realMaxSlowtime){
+                                                        $shiftHistory->slow_time = $shiftHistory->slow_time - $realMaxSlowtime;
+                                                        $shiftHistory->production_stops_time = $shiftHistory->production_stops_time + $realMaxSlowtime;
+                                                        $shiftHistory->save();
+                                                        $this->info("Se actualizó production_stops_time para la línea de producción {$productionOrder->production_line_id}");
+                                                    }
+                                                    if($currentOrder->slow_time >= $realMaxSlowtime){
+                                                        $currentOrder->slow_time = $currentOrder->slow_time - $realMaxSlowtime;
+                                                        $currentOrder->production_stops_time = $currentOrder->production_stops_time + $realMaxSlowtime;
+                                                        $currentOrder->save();
+                                                        $this->info("Se actualizó production_stops_time para la orden {$productionOrder->id}");
+                                                    }
+                                                }
+                                                
+                                            }
+                                        }
+                                       
+                                    }else{
+                                        $this->info("No se incrementa slow_time por inactividad del sensor ({$timeSinceLastCount}s)");
+                                        $slowTimeDif = 0;
+                                        //$currentOrder->slow_time = $slowTime;
+                                    }
+
                                 }
                             } else {
                                 $this->warn("No se encontraron registros para el sensor ID {$sensor->id}");
+                                $slowTimeDif = 0;
                                 //$currentOrder->slow_time = $slowTime;
                             }
                         } else {
                             $this->warn("No se encontró sensor de tipo 0 para la línea de producción {$productionOrder->production_line_id}");
+                            $slowTimeDif = 0;
                             //$currentOrder->slow_time = $slowTime;
                         }
                     } catch (\Exception $e) {
                         $this->error("Error al calcular slow_time: " . $e->getMessage());
+                        $slowTimeDif = 0;
                         //$currentOrder->slow_time = $slowTime;
                     }
                 } else {
-                    $currentOrder->slow_time = $slowTime;
                     $slowTimeDif = $slowTime - $currentOrder->slow_time;
+                    $currentOrder->slow_time = $slowTime;
                 }
                 
 
@@ -456,6 +518,23 @@ class CalculateProductionMonitorOeev2 extends Command
                         $currentOrder->out_time = ($currentOrder->out_time ?? 0) + 1;
                         $this->info("[" . Carbon::now()->toDateTimeString() . "] Tiempo extra: {$currentOrder->out_time} segundos");
                     }
+
+                    // 3. Lectura de tiempos
+                    $P2 = $currentOrder->on_time;      // Tiempo planificado (s)
+                    $D2 = $currentOrder->down_time + $currentOrder->production_stops_time;    // Tiempo de paradas (s)
+                    $S2 = $currentOrder->slow_time;    // Tiempo lento (s)
+
+                    // 4. Cálculo del tiempo productivo (no negativo)
+                    $productiveOEE = max($P2 - $D2 - $S2, 0);
+
+                    // 5. Cálculo del OEE en porcentaje
+                    if ($P2 > 0) {
+                        $oeePercentOEE = round(($productiveOEE / $P2) * 100, 2);  // 2 decimales
+                    } else {
+                        $oeePercentOEE = 100;
+                    }
+                    $totalOee = $oeePercentOEE;
+                    
                     // Si es 0, lo dejamos en 0 (no hacemos nada)
                     // No establecemos el valor inicial aquí, ya que mencionas que otro proceso lo hace
                 } else {
@@ -476,16 +555,13 @@ class CalculateProductionMonitorOeev2 extends Command
                 $shiftHistory->on_time = $shiftHistory->on_time + 1;
                 //$shiftHistory->oee = $totalOee;
                 //mostrar en log el slowtimedif
-                if($slowTimeDif){
-                    $this->info("Incrementando slow_time por actividad del sensor: {$slowTimeDif}");
-                }else{
-                    $this->info("No se incrementa slow_time por actividad del sensor");
-                }
-                $shiftHistory->slow_time += $slowTimeDif;
+
+                    $shiftHistory->slow_time = $shiftHistory->slow_time + $slowTimeDif; // Incrementamos en 1 segundo fijo
+
 
                 // 3. Lectura de tiempos
                 $P = $shiftHistory->on_time;      // Tiempo planificado (s)
-                $D = $shiftHistory->down_time;    // Tiempo de paradas (s)
+                $D = $shiftHistory->down_time + $shiftHistory->production_stops_time;    // Tiempo de paradas (s)
                 $S = $shiftHistory->slow_time;    // Tiempo lento (s)
 
                 // 4. Cálculo del tiempo productivo (no negativo)
@@ -501,6 +577,9 @@ class CalculateProductionMonitorOeev2 extends Command
                 // 6. Guardar en el modelo
                 $shiftHistory->oee = $oeePercent;  // valor entre 0 y 100
                 
+                // Log de depuración para slow_time
+                Log::info("[DEBUG] Saving ShiftHistory for Line: {$shiftHistory->production_line_id}. Values: on_time={$shiftHistory->on_time}, down_time={$shiftHistory->down_time}, slow_time={$shiftHistory->slow_time}, prod_stops_time={$shiftHistory->production_stops_time}");
+
                 $shiftHistory->save();
             }
 

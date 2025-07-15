@@ -179,10 +179,10 @@ class SensorController extends Controller
         // Procesar el valor del sensor
         $value = $validated['value'];
 
-        // Invertir el valor si corresponde
-        if ($sensor->invers_sensors) {
-            $value = 1 - $value;
-        }
+        // Ya no invertimos el valor aquí porque ya se invierte en el cliente MQTT
+    // if ($sensor->invers_sensors) {
+    //     $value = 1 - $value;
+    // }
 
 
 

@@ -164,7 +164,7 @@ class CustomerOriginalOrderController extends Controller
                     
                     // Crear el badge HTML con grupo_numero en formato (número)
                     $grupoNumero = $pivot->grupo_numero ? ' (' . $pivot->grupo_numero . ')' : '';
-                    $processesHtml .= '<span class="badge ' . $badgeClass . ' me-1 mb-1" title="' . $statusTitle . '" data-bs-toggle="tooltip">' . $process->code . $grupoNumero . '</span>';
+                    $processesHtml .= '<span class="badge ' . $badgeClass . ' me-1 mb-1" title="' . $statusTitle . '" data-bs-toggle="tooltip">' . $process->description . $grupoNumero . '</span>';
                 }
                 
                 // Determinar el estado de la orden para la columna finished_at

@@ -201,7 +201,7 @@ class CustomerController extends Controller
     $status2Query = \App\Models\ProductionOrder::where('process_category', $process->description)
         ->where('status', 2)
         ->where('updated_at', '>=', now()->subDays(5)->startOfDay())
-        ->orderBy('orden', 'asc')
+        ->orderBy('orden', 'desc')
         ->limit(100)
         ->get();
 
@@ -351,7 +351,7 @@ class CustomerController extends Controller
         $status2Query = \App\Models\ProductionOrder::where('process_category', $process->description)
             ->where('status', 2)
             ->where('updated_at', '>=', now()->subDays(5)->startOfDay())
-            ->orderBy('orden', 'asc')
+            ->orderBy('orden', 'desc')
             ->limit(100)
             ->get();
 

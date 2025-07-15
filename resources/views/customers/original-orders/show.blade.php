@@ -115,6 +115,7 @@
 
                     <div class="mt-4">
                         <h4>@lang('Associated Processes')</h4>
+                        <br>
                         <div class="table-responsive">
                             <table class="table table-bordered table-striped">
                                 <thead class="bg-light">
@@ -125,7 +126,7 @@
                                         <th>@lang('Correction Factor')</th>
                                         <th>@lang('Time')</th>
                                         <th>@lang('Created')</th>
-                                        <th>@lang('Finished At')</th>
+                                        <th>@lang('Process Status')</th>
                                         <th>@lang('Stock Status')</th>
                                     </tr>
                                 </thead>
@@ -251,7 +252,7 @@
                                         @if($articles->isNotEmpty())
                                             <tr class="articles-row">
                                                 <td colspan="8" class="p-3 bg-light" style="border-top: 1px solid #e9ecef;">
-                                                    <h6 class="mb-3 font-weight-bold"><i class="fas fa-cubes text-secondary mr-2"></i>@lang('Related Articles')</h6>
+                                                    <h6 class="mb-3 font-weight-bold"><i class="fas fa-cubes text-secondary mr-2"></i> @lang('Related Articles')</h6>
                                                     <table class="table table-sm table-hover mb-0 bg-white rounded">
                                                         <thead class="thead-light">
                                                             <tr>

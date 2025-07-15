@@ -180,10 +180,16 @@ async function callApiWithRetries(dataToSend, maxRetries = 5, initialDelay = 500
 // Función para extraer valores usando rutas JSON
 function extractValueFromJson(jsonData, path) {
   console.log(`[${getCurrentTimestamp()}] 🔍 EXTRACCIÓN - Iniciando extracción con path: ${path || 'No definido'}`);
+  console.log(`[${getCurrentTimestamp()}] 📦 DATOS JSON: ${JSON.stringify(jsonData)}`);
+  
+  // Caso especial para el formato simple {"value": X}
+  if (jsonData && jsonData.value !== undefined) {
+    console.log(`[${getCurrentTimestamp()}] 🎯 FORMATO SIMPLE DETECTADO - Valor encontrado directamente: ${jsonData.value}`);
+  }
   
   if (!path) {
     console.log(`[${getCurrentTimestamp()}] ℹ️ EXTRACCIÓN - Path no definido, usando valor por defecto 'value': ${jsonData.value}`);
-    return jsonData.value; // Valor por defecto si no se especifica ruta
+    return jsonData.value !== undefined ? Number(jsonData.value) : null; // Convertir a número si es posible
   }
   
   try {
@@ -236,7 +242,7 @@ function extractValueFromJson(jsonData, path) {
     }
     
     // Si no se pudo extraer con las reglas anteriores, intentar con valor por defecto
-    return jsonData.value || null;
+    return jsonData.value !== undefined ? Number(jsonData.value) : null;
   } catch (error) {
     console.error(`[${getCurrentTimestamp()}] ❌ Error extracting value using path ${path}: ${error.message}`);
     return null;
@@ -281,10 +287,25 @@ async function processCallApi(topic, data) {
       return;
     }
     
+    // Convertir a número si es posible
+    const numericValue = Number(extractedValue);
+    console.log(`[${getCurrentTimestamp()}] 🔢 VALOR NUMÉRICO: ${numericValue} (tipo: ${typeof numericValue})`);
+    
     // Aplicar inversión si es necesario
-    let newValue = sensorConfig.invers_sensors === 1 ? -extractedValue : extractedValue;
+    let newValue;
     if (sensorConfig.invers_sensors === 1) {
+      // Para valores binarios (0 o 1), usamos 1 - valor
+      if (numericValue === 0 || numericValue === 1) {
+        newValue = 1 - numericValue;
+        console.log(`[${getCurrentTimestamp()}] 🔄 INVERSIÓN BINARIA: ${numericValue} → ${newValue}`);
+      } else {
+        // Para otros tipos de valores, mantenemos la inversión original
+        newValue = -numericValue;
+        console.log(`[${getCurrentTimestamp()}] 🔄 INVERSIÓN NUMÉRICA: ${numericValue} → ${newValue}`);
+      }
       console.log(`[${getCurrentTimestamp()}] 🔄 VALOR INVERTIDO: ${extractedValue} → ${newValue}`);
+    } else {
+      newValue = extractedValue;
     }
 
     // Si sensor_type es 0 y el value es 0, se omite el procesamiento
