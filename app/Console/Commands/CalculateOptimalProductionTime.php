@@ -14,6 +14,7 @@ use App\Models\ShiftHistory;
 use App\Models\RfidDetail;
 use App\Services\OrderTimeService;
 use App\Models\OptimalSensorTime;
+use App\Models\ProductionOrder;
 
 
 /**
@@ -79,11 +80,33 @@ class CalculateOptimalProductionTime extends Command
                     ($sensor->shift_type === 'shift' && $sensor->event === 'start') ||
                     ($sensor->shift_type === 'stop' && $sensor->event === 'end')
                 ) {
+                    //sacamos de sensor el production_line_id
+                    $productionLineId = $sensor->production_line_id;
+                    //ahora buscamos en order_stats por production_line_id donde status=1 pero ponemos con un try
+                    try {
+                        $orderStat = ProductionOrder::where('production_line_id', $productionLineId)->where('status', 1)->first();
+                        if ($orderStat) {
+                            //sacamos el 	theoretical_time
+                            $theoreticalTime = $orderStat->theoretical_time;
+                        }
+                    } catch (\Exception $e) {
+                        $theoreticalTime = 0;
+                        $this->error("Error al obtener order_stat: " . $e->getMessage());
+                    }
+    
                     // Ejecutar lógica según sensor_type
                     if ((int)$sensor->sensor_type === 0) {
-                        $this->processSensorType0($sensor, $minTime, $maxTime);
+                        if ($theoreticalTime <= 0 || $theoreticalTime === null) {
+                            $this->processSensorType0($sensor, $minTime, $maxTime);
+                        } else {
+                            $this->error("El theoretical_time es 0 Me salto el calculo");
+                        }
                     } else {
-                        $this->processSensorOtherTypes($sensor);
+                        if ($theoreticalTime <= 0 || $theoreticalTime === null) {
+                            $this->processSensorOtherTypes($sensor);
+                        } else {
+                            $this->error("El theoretical_time es 0 Me salto el calculo");
+                        }
                     }
                 } else {
                     // Registrar información en log si no se cumplen condiciones específicas

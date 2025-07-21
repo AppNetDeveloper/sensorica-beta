@@ -30,7 +30,7 @@
                                     <td>{{ $originalOrder->order_id }}</td>
                                 </tr>
                                 <tr>
-                                    <th class="bg-light">@lang('Client Number')</th>
+                                    <th class="bg-light">@lang('Client Name')</th>
                                     <td>{{ $originalOrder->client_number }}</td>
                                 </tr>
                                 <tr>

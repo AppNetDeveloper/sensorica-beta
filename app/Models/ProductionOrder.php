@@ -48,7 +48,8 @@ class ProductionOrder extends Model
         'grupo_numero', // Group number
         'processes_to_do', // Number of processes to do
         'processes_done', // Number of processes completed
-        'is_priority' // Indica si la orden es prioritaria/importante según el encargado
+        'is_priority', // Indica si la orden es prioritaria/importante según el encargado
+        'finished_at' // Marca cuándo se terminó la orden
     ];
     
     /**
@@ -79,7 +80,8 @@ class ProductionOrder extends Model
         'delivery_date' => 'datetime',
         'status' => 'integer', // Es importante mantener el cast a integer
         'theoretical_time' => 'float', // Si lo guardas como float
-        'is_priority' => 'boolean' // Convertir a booleano
+        'is_priority' => 'boolean', // Convertir a booleano
+        'finished_at' => 'datetime', // Nullable por defecto
     ];
 
     /**
@@ -149,6 +151,12 @@ class ProductionOrder extends Model
         // --- Evento `saving` ---
         // Se ejecuta ANTES de guardar (crear o actualizar). Ideal para modificar datos que se van a guardar.
         static::saving(function ($model) {
+            // Si el status ha cambiado a 2 (finalizada) y no estaba en 2 antes
+            if ($model->isDirty('status') && $model->status == 2 && $model->getOriginal('status') != 2) {
+                if (empty($model->finished_at)) {
+                    $model->finished_at = now();
+                }
+            }
             // Comprobamos si el 'production_line_id' ha cambiado.
             if ($model->isDirty('production_line_id')) {
                 // Buscar el barcoder asociado a esta nueva línea de producción

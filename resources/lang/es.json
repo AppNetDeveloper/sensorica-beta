@@ -664,6 +664,7 @@
     "Cancel": "Cancelar",
     "No processes found.": "No se encontraron procesos.",
     "Production Lines": "Líneas de Producción",
+    "Lineas": "Líneas",
     "No production lines associated.": "No hay líneas de producción asociadas.",
     "Add to Production Line": "Agregar a Línea de Producción",
     "Remove from Production Line": "Quitar de Línea de Producción",
@@ -804,6 +805,7 @@
     "Processes de la Línia de Producció": "Procesos de la Línea de Producción",
     "Processos de la Línia de Producció": "Procesos de la Línea de Producción",
     "Order Organizer": "AiXmart Kanban",
+    "Kanban": "Kanban",
     "Organize Orders": "AiXmart Kanban",
     "Codi": "Código",
     "Estado actual: Pending": "Estado actual: Pendiente",
@@ -811,7 +813,7 @@
     "Finalizado": "Finalizado",
     "REASON": "MOTIVO",
     "Reason": "Motivo",
-    "Production Order Incidents": "Incidencias de Órdenes de Producción",
+    "Production Order Incidents": "Incidencias de Órdenes",
     "Incidencia activa": "Incidencia activa",
     "Incidencia finalizada": "Incidencia finalizada",
     "Incident Details": "Detalles de la Incidencia",
@@ -835,5 +837,9 @@
     "Article Code": "Código de Artículo",
     "Original Order Status": "Estado del Pedido",
     "ORIGINAL ORDER STATUS": "Estado del Pedido",
-    "Stock Status": "Estado del Stock"
+    "Stock Status": "Estado del Stock",
+    "Client Name": "Nombre del Cliente",
+    "Delivery Date": "Fecha de Entrega",
+    "Tiempo acumulado": "Tiempo de Espera Planificado",
+    "Línies de Producció": "Líneas de Producción"
 }

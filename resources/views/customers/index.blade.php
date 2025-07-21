@@ -24,7 +24,7 @@
                     <div class="table-responsive mt-4">
                         <div class="container-fluid">
                             {{-- Añade la clase 'dt-responsive' y 'nowrap' para el correcto funcionamiento de DataTables Responsive --}}
-                            <table class="table table-bordered data-table dt-responsive nowrap" style="width:100%">
+                            <table class="table table-bordered data-table dt-responsive nowrap" style="width:100%" data-buttons-container=".dt-buttons">
                                 <thead>
                                     <tr>
                                         <th>ID</th>
@@ -109,23 +109,25 @@
                         name: 'action', 
                         orderable: false, 
                         searchable: false,
-                        className: 'text-center',
-                        width: '150px'
+                        className: 'text-center'
                     }
                 ],
                 columnDefs: [
                     { responsivePriority: 1, targets: 1 }, // Prioridad 1 para el Nombre
                     { responsivePriority: 2, targets: -1 }, // Prioridad 2 para la última columna (Acciones)
+                    { responsivePriority: 3, targets: 0 }, // Prioridad 3 para ID
+                    { responsivePriority: 4, targets: 2 }, // Prioridad 4 para Fecha
                     {
                         targets: -1, // Última columna (Acción)
                         render: function (data, type, full, meta) {
                             // Devuelve el HTML que viene del servidor para las acciones
-                            return data;
+                            return '<div class="d-flex flex-wrap justify-content-center gap-1">' + data + '</div>';
                         }
                     },
-                    { width: '10%', targets: 0 }, // Ancho para ID
-                    { width: '40%', targets: 1 }, // Ancho para Nombre
-                    { width: '20%', targets: 2 }  // Ancho para Fecha de creación
+                    { width: '5%', targets: 0 }, // Ancho para ID
+                    { width: '20%', targets: 1 }, // Ancho para Nombre
+                    { width: '15%', targets: 2 }, // Ancho para Fecha de creación
+                    { width: '60%', targets: 3 }  // Ancho para Actions
                 ],
                 language: {
                     url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json" // URL para español

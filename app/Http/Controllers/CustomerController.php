@@ -40,51 +40,57 @@ class CustomerController extends Controller
                 // Inicializar botones
                 $buttons = [];
                 
-                // Botón del organizador de órdenes (solo con permiso productionline-orders)
-                if (auth()->user()->can('productionline-orders')) {
+                // Botón del organizador de órdenes (solo con permiso productionline-kanban)
+                if (auth()->user()->can('productionline-kanban')) {
                     $orderOrganizerUrl = route('customers.order-organizer', $customer->id);
-                    $orderOrganizerButton = "<a href='{$orderOrganizerUrl}' class='btn btn-sm btn-primary me-1' data-bs-toggle='tooltip' title='" . __('Order Organizer') . "'><i class='fas fa-tasks'></i></a>";
+                    $orderOrganizerButton = "<a href='{$orderOrganizerUrl}' class='btn btn-sm btn-primary me-1' data-bs-toggle='tooltip' title='" . __('Order Organizer') . "'><i class='fas fa-tasks'> </i>" . __('Kanban') . "</a>";
                     $buttons[] = $orderOrganizerButton;
                 }
 
                 // Botón de editar (solo con permiso productionline-edit)
                 if (auth()->user()->can('productionline-edit')) {
-                    $editButton = "<a href='{$editUrl}' class='btn btn-sm btn-info me-1' data-bs-toggle='tooltip' title='" . __('Edit') . "'><i class='fas fa-edit'></i></a>";
+                    $editButton = "<a href='{$editUrl}' class='btn btn-sm btn-info me-1' data-bs-toggle='tooltip' title='" . __('Edit') . "'><i class='fas fa-edit'> </i>" . __('Edit') . "</a>";
                     $buttons[] = $editButton;
                 }
 
                 // Botón de líneas de producción (solo con permiso productionline-show)
                 if (auth()->user()->can('productionline-show')) {
-                    $linesButton = "<a href='{$productionLinesUrl}' class='btn btn-sm btn-secondary me-1' data-bs-toggle='tooltip' title='" . __('Production Lines') . "'><i class='fas fa-sitemap'></i></a>";
+                    $linesButton = "<a href='{$productionLinesUrl}' class='btn btn-sm btn-secondary me-1' data-bs-toggle='tooltip' title='" . __('Production Lines') . "'><i class='fas fa-sitemap'></i>" . __('Lineas') . "</a>";
                     $buttons[] = $linesButton;
                 }
 
                 // Botón de Órdenes Originales (solo con permiso productionline-orders)
                 if (auth()->user()->can('productionline-orders')) {
                     $originalOrdersUrl = route('customers.original-orders.index', $customer->id);
-                    $originalOrdersButton = "<a href='{$originalOrdersUrl}' class='btn btn-sm btn-dark me-1' data-bs-toggle='tooltip' title='" . __('Original Orders') . "'><i class='fas fa-clipboard-list'></i></a>";
+                    $originalOrdersButton = "<a href='{$originalOrdersUrl}' class='btn btn-sm btn-dark me-1' data-bs-toggle='tooltip' title='" . __('Original Orders') . "'><i class='fas fa-clipboard-list'></i> " . __('Pedidos') . "</a>";
                     $buttons[] = $originalOrdersButton;
-                    
-                    // Botón de Incidencias de Órdenes de Producción (con el mismo permiso que pedidos originales)
+                }                
+                
+                // Botón de Incidencias de Órdenes de Producción (solo con permiso productionline-incidents)
+                if (auth()->user()->can('productionline-incidents')) {
                     $incidentsUrl = route('customers.production-order-incidents.index', $customer->id);
-                    $incidentsButton = "<a href='{$incidentsUrl}' class='btn btn-sm btn-danger me-1' data-bs-toggle='tooltip' title='" . __('Production Order Incidents') . "'><i class='fas fa-exclamation-triangle'></i></a>";
+                    $incidentsButton = "<a href='{$incidentsUrl}' class='btn btn-sm btn-danger me-1' data-bs-toggle='tooltip' title='" . __('Production Order Incidents') . "'><i class='fas fa-exclamation-triangle'></i> " . __('Incidencias') . "</a>";
                     $buttons[] = $incidentsButton;
                 }
 
-                // Botón de estadísticas de peso
-                $weightStatsButton = "<a href='{$liveViewUrl}' class='btn btn-sm btn-success me-1' data-bs-toggle='tooltip' title='" . __('Weight Stats') . "' target='_blank'><i class='fas fa-weight-hanging'></i></a>";
-                $buttons[] = $weightStatsButton;
+                // Botón de estadísticas de peso (solo con permiso productionline-weight-stats)
+                if (auth()->user()->can('productionline-weight-stats')) {
+                    $weightStatsButton = "<a href='{$liveViewUrl}' class='btn btn-sm btn-success me-1' data-bs-toggle='tooltip' title='" . __('Weight Stats') . "' target='_blank'><i class='fas fa-weight-hanging'></i> " . __('Weight Stats') . "</a>";
+                    $buttons[] = $weightStatsButton;
+                }
                 
-                // Botón de estadísticas de producción
-                $productionStatsButton = "<a href='{$liveViewUrlProd}' class='btn btn-sm btn-warning me-1' data-bs-toggle='tooltip' title='" . __('Production Stats') . "' target='_blank'><i class='fas fa-chart-line'></i></a>";
-                $buttons[] = $productionStatsButton;
+                // Botón de estadísticas de producción (solo con permiso productionline-production-stats)
+                if (auth()->user()->can('productionline-production-stats')) {
+                    $productionStatsButton = "<a href='{$liveViewUrlProd}' class='btn btn-sm btn-warning me-1' data-bs-toggle='tooltip' title='" . __('Production Stats') . "' target='_blank'><i class='fas fa-chart-line'></i> " . __('Production Stats') . "</a>";
+                    $buttons[] = $productionStatsButton;
+                }
 
                 // Botón de eliminar (solo con permiso productionline-delete)
                 if (auth()->user()->can('productionline-delete')) {
                     $deleteForm = "<form action='{$deleteUrl}' method='POST' style='display:inline;' onsubmit='return confirm(\"" . __('Are you sure?') . "\");'>
                                     <input type='hidden' name='_token' value='{$csrfToken}'>
                                     <input type='hidden' name='_method' value='DELETE'>
-                                    <button type='submit' class='btn btn-sm btn-danger me-1' data-bs-toggle='tooltip' title='" . __('Delete') . "'><i class='fas fa-trash'></i></button>
+                                    <button type='submit' class='btn btn-sm btn-danger me-1' data-bs-toggle='tooltip' title='" . __('Delete') . "'><i class='fas fa-trash'></i> " . __('Delete') . "</button>
                                    </form>";
                     $buttons[] = $deleteForm;
                 }
@@ -200,7 +206,7 @@ class CustomerController extends Controller
     // Consulta separada para status 2 (finalizadas) - últimos 5 días con límite de 100 tarjetas
     $status2Query = \App\Models\ProductionOrder::where('process_category', $process->description)
         ->where('status', 2)
-        ->where('updated_at', '>=', now()->subDays(5)->startOfDay())
+        ->where('finished_at', '>=', now()->subDays(5)->startOfDay())
         ->orderBy('orden', 'desc')
         ->limit(100)
         ->get();
@@ -283,7 +289,8 @@ class CustomerController extends Controller
                 //en lugar de 0 por defecto aqui 'orden' => (int)($order->orden ?? '0') ponemos que sea por production_line_id el orden mas grande que existe y le damos +1
                 'orden' => $order->production_line_id ? ProductionOrder::where('production_line_id', $order->production_line_id)->max('orden') + 1 : 0,
                 'has_stock' => $order->has_stock ?? 1, // Añadimos el campo has_stock, por defecto 1 si no existe
-                'is_priority' => $order->is_priority ?? false
+                'is_priority' => $order->is_priority ?? false,
+                'accumulated_time' => $order->accumulated_time ?? 0,
                 ];
             });
         
@@ -350,7 +357,7 @@ class CustomerController extends Controller
         // Consulta separada para status 2 (finalizadas) - últimos 5 días con límite de 100 tarjetas
         $status2Query = \App\Models\ProductionOrder::where('process_category', $process->description)
             ->where('status', 2)
-            ->where('updated_at', '>=', now()->subDays(5)->startOfDay())
+            ->where('finished_at', '>=', now()->subDays(5)->startOfDay())
             ->orderBy('orden', 'desc')
             ->limit(100)
             ->get();
@@ -431,7 +438,8 @@ class CustomerController extends Controller
                         'articles_descriptions' => $articlesDescriptions,
                         'orden' => $order->orden ?? 0,
                         'has_stock' => $order->has_stock ?? 1,
-                        'is_priority' => $order->is_priority ?? false
+                        'is_priority' => $order->is_priority ?? false,
+                        'accumulated_time' => $order->accumulated_time ?? 0,    
                     ];
                 });
 

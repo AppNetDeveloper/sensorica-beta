@@ -75,7 +75,8 @@ class MonitorOeeController extends Controller
         $productionLine = ProductionLine::findOrFail($production_line_id);
         $customer_id = $productionLine->customer_id;
         
-        return view('oee.edit', compact('monitorOee', 'productionLine', 'production_line_id', 'customer_id'));
+        $productionLines = collect([$productionLine]);
+    return view('oee.edit', compact('monitorOee', 'productionLine', 'production_line_id', 'customer_id', 'productionLines'));
     }
 
     /**

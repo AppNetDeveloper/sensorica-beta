@@ -365,7 +365,6 @@ sudo chown -R www-data:www-data /var/www/html/storage
 
 chmod +x /var/www/html/update.sh
 
-php artisan db:seed --class=IaPromptsTableSeeder
-php artisan db:seed --class=OriginalOrderPermissionsTableSeeder
+php artisan db:seed --class=DatabaseSeeder
 
 echo "Proceso completado con éxito."

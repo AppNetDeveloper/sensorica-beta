@@ -363,7 +363,7 @@ class MqttSubscriberLocalMac extends Command
         // Registrar los valores procesados
         $this->logInfo("Valores procesados desde ProductionOrder: quantity={$quantity}, uds={$uds}, envase={$envase}");
 
-        if ($orderId && $quantity && $uds && $envase) {
+        if ($orderId !== null && $quantity !== null && $uds !== null && $envase !== null) {
             // Actualizar barcodes con el nuevo campo `envase`
             $barcode->update(['ope_id' => $envase]);
             $this->logInfo("Envase actualizado en ope_id para barcode ID: {$barcode->id}");
@@ -388,7 +388,7 @@ class MqttSubscriberLocalMac extends Command
     }
     private function processProductList($referId, $envase, $boxKg)
     {
-        if (!$referId || !$envase) {
+        if ($referId === null || $referId === '' || $envase === null || $envase === '') {
             $this->logError("Faltan datos para procesar product_lists: referId={$referId}, envase={$envase}");
             return null;
         }
@@ -439,17 +439,17 @@ class MqttSubscriberLocalMac extends Command
 
         // 1. Buscar la ProductionOrder usando el ID para obtener el theoretical_time
         $productionOrder = ProductionOrder::find($productionOrderId);
-        $theoreticalEndTime = 0; // Valor por defecto ahora es 0
+        $theoreticalEndTime = null; // Valor por defecto ahora es null
 
         if ($productionOrder) {
             // 2. Usar el operador ternario para asignar el valor.
-            // Si 'theoretical_time' no está vacío y no es nulo, se usa su valor. Si no, se usa 0.
-            $theoreticalEndTime = !empty($productionOrder->theoretical_time) ? $productionOrder->theoretical_time : 0;
+        // Si 'theoretical_time' no es nulo, se usa su valor. Si no, se usa null.
+        $theoreticalEndTime = $productionOrder->theoretical_time !== null ? $productionOrder->theoretical_time : null;
             
             $this->logInfo("Theoretical end time '{$theoreticalEndTime}' obtenido/procesado para ProductionOrder ID: {$productionOrderId}");
         } else {
-            // Si la orden no se encuentra, $theoreticalEndTime ya es 0 por el valor por defecto.
-            $this->logError("No se pudo encontrar la ProductionOrder con ID: {$productionOrderId}. Se usará 0 como theoretical_time.");
+            // Si la orden no se encuentra, $theoreticalEndTime ya es null por el valor por defecto.
+            $this->logError("No se pudo encontrar la ProductionOrder con ID: {$productionOrderId}. Se usará null como theoretical_time.");
         }
 
         // --- FIN DE LA MODIFICACIÓN ---

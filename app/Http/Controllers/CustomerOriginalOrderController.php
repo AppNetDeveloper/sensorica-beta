@@ -10,6 +10,8 @@ use App\Models\OriginalOrderProcess;
 use App\Models\OriginalOrderArticle;
 use Illuminate\Support\Facades\DB;
 use App\Models\ProductionOrder;
+use Symfony\Component\Process\Process as SymfonyProcess;
+use Illuminate\Support\Facades\Log;
 
 class CustomerOriginalOrderController extends Controller
 {
@@ -19,6 +21,53 @@ class CustomerOriginalOrderController extends Controller
         $this->middleware('permission:original-order-create', ['only' => ['create', 'store']]);
         $this->middleware('permission:original-order-edit', ['only' => ['edit', 'update']]);
         $this->middleware('permission:original-order-delete', ['only' => ['destroy']]);
+    }
+
+    public function import(Request $request, Customer $customer)
+    {
+        $this->authorize('original-order-create');
+
+        $lockFile = storage_path('app/orders_check.lock');
+
+        if (file_exists($lockFile)) {
+            $lockTime = file_get_contents($lockFile);
+            $lockAge = time() - (int)$lockTime;
+
+            // Si el bloqueo tiene menos de 30 minutos, consideramos que otra instancia está en ejecución
+            if ($lockAge < 1800) {
+                $minutes = round($lockAge / 60);
+                return response()->json([
+                    'success' => false,
+                    'message' => __('Ya hay una importación en curso desde hace {minutes} min. Por favor, inténtelo de nuevo más tarde.', ['minutes' => $minutes])
+                ], 429); // HTTP 429: Too Many Requests
+            }
+        }
+
+        // Ejecutamos el comando directamente en segundo plano
+        try {
+            // Registramos el inicio de la importación
+            Log::info("Iniciando importación manual de pedidos para todos los clientes.");
+            
+            // Ejecutamos el comando artisan en segundo plano sin esperar respuesta
+            // usando shell_exec con nohup para garantizar que siga ejecutándose
+            $artisanPath = base_path('artisan');
+            $logFile = storage_path('logs/orders-import-manual.log');
+            $command = "nohup php {$artisanPath} orders:check > {$logFile} 2>&1 &";
+            shell_exec($command);
+            
+            Log::info("Comando de importación iniciado en segundo plano: {$command}");
+        } catch (\Exception $e) {
+            Log::error("Error al ejecutar el comando de importación en segundo plano: " . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => __('Error al iniciar la importación: ') . $e->getMessage()
+            ], 500);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => __('La importación de pedidos se ha puesto en cola. Los datos se actualizarán en breve.')
+        ]);
     }
 
     public function index(Request $request, Customer $customer)
@@ -172,33 +221,60 @@ class CustomerOriginalOrderController extends Controller
                 if ($order->finished_at) {
                     $finishedAtHtml = '<span class="badge bg-success">' . $order->finished_at->format('Y-m-d H:i') . '</span>';
                 } else {
-                    // Verificar el estado de los procesos para determinar el estado general de la orden
-                    $hasAnyAssignedToMachine = false; // Procesos con órdenes asignadas a máquina
-                    $hasAnyAssignedProcess = false;  // Procesos con órdenes asignadas pero no a máquina
-                    
+                    // Nueva lógica de estado del pedido con separación de 'Iniciado' y 'Asignado'
+                    $hasProcessInFabricationOrFinished = false; // Azul fuerte
+                    $hasProcessAssignedOnly = false; // Azul intermedio
+                    $hasProcessPlannedOnly = false; // Celeste
+                    $allProcessesUnplanned = true; // Gris
+
+                    // Lógica de estado jerárquica basada en la lógica de los badges de proceso
+                    $statusLevel = 0; // 0: Crear, 1: Planificar, 2: Asignado, 3: Iniciado/Finalizado
+
                     foreach ($order->processes as $process) {
                         $pivot = $process->pivot;
-                        if (isset($allProductionOrders[$pivot->id]) && $allProductionOrders[$pivot->id]->isNotEmpty()) {
-                            $productionOrders = $allProductionOrders[$pivot->id];
-                            
-                            // Verificar si hay alguna orden de producción asignada a máquina
-                            foreach ($productionOrders as $po) {
-                                if ($po->production_line_id) {
-                                    $hasAnyAssignedToMachine = true;
-                                    break 2; // Salir de ambos bucles
-                                } else {
-                                    $hasAnyAssignedProcess = true; // Al menos tiene asignaciones sin máquina
+
+                        // Nivel 3: Proceso finalizado (prioridad máxima)
+                        if ($pivot->finished) {
+                            $statusLevel = 3;
+                            break; // Encontramos el estado más alto, no es necesario seguir
+                        }
+
+                        $hasProductionOrder = isset($allProductionOrders[$pivot->id]) && $allProductionOrders[$pivot->id]->isNotEmpty();
+                        if ($hasProductionOrder) {
+                            $isAssigned = false;
+                            $isPlanned = false;
+
+                            foreach ($allProductionOrders[$pivot->id] as $po) {
+                                // Nivel 3: En fabricación (status === 1)
+                                if (isset($po->status) && $po->status === 1) {
+                                    $statusLevel = 3;
+                                    break 2; // Salir de ambos bucles, máxima prioridad encontrada
                                 }
+                                // Nivel 2: Asignado a máquina
+                                if ($po->production_line_id) {
+                                    $isAssigned = true;
+                                }
+                                $isPlanned = true;
+                            }
+
+                            if ($isAssigned) {
+                                $statusLevel = max($statusLevel, 2);
+                            } elseif ($isPlanned) {
+                                // Nivel 1: Planificado pero no asignado
+                                $statusLevel = max($statusLevel, 1);
                             }
                         }
                     }
-                    
-                    if ($hasAnyAssignedToMachine) {
+
+                    // Asignar el badge según el nivel de estado final
+                    if ($statusLevel == 3) {
                         $finishedAtHtml = '<span class="badge bg-primary">' . __('Pedido Iniciado') . '</span>';
-                    } elseif ($hasAnyAssignedProcess) {
-                        $finishedAtHtml = '<span class="badge bg-info">' . __('Pendiente de iniciar') . '</span>';
+                    } elseif ($statusLevel == 2) {
+                        $finishedAtHtml = '<span class="badge bg-info">' . __('Asignado a máquina') . '</span>';
+                    } elseif ($statusLevel == 1) {
+                        $finishedAtHtml = '<span class="badge bg-secondary">' . __('Pendiente Planificar') . '</span>';
                     } else {
-                        $finishedAtHtml = '<span class="badge bg-secondary">' . __('Pendiente de asignación') . '</span>';
+                        $finishedAtHtml = '<span class="badge bg-danger">' . __('Pendiente Crear') . '</span>';
                     }
                 }
                 

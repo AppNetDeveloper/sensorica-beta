@@ -46,7 +46,7 @@ class DatabaseSeeder extends Seeder
             'process-show', 'process-create', 'process-edit', 'process-delete',
             'productionline-process-view', 'productionline-process-create', 'productionline-process-edit', 'productionline-process-delete',
             'productionline-show', 'productionline-create', 'productionline-edit', 'productionline-delete',
-            'productionline-sensors', 'productionline-orders', 'productionline-live-view', 'productionline-live-machine',
+            'productionline-sensors', 'productionline-orders', 'productionline-kanban', 'productionline-incidents', 'productionline-weight-stats', 'productionline-production-stats', 'productionline-live-view', 'productionline-live-machine',
         ];
         
 

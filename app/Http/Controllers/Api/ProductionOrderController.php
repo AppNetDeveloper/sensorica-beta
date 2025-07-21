@@ -508,7 +508,7 @@ class ProductionOrderController extends Controller
                         3 => $previousStatus == 1 ? 0 : null,  // Si viene de EN CURSO a INCIDENCIA, enviar acción 0
                         default => null,
                     };
-                
+                 
                     if ($action !== null) {
                         $barcoder = \App\Models\Barcode::where('production_line_id', $order->production_line_id)->first();
                         if ($barcoder && !empty($barcoder->mqtt_topic_barcodes)) {

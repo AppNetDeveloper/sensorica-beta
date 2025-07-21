@@ -23,7 +23,7 @@ let mqttClient;
 let isMqttConnected = false;
 let dbConnection;
 let subscribedTopics = [];  // Array de tópicos a los que estamos suscritos
-let sensorsCache = {};      // Objeto: { mqtt_topic_sensor: { id, sensor_type } }
+let sensorsCache = {};      // Objeto: { mqtt_topic_sensor: [{ id, sensor_type, invers_sensors, json_api }, ...] }
 
 // Función para obtener la fecha y hora actual
 function getCurrentTimestamp() {
@@ -104,14 +104,29 @@ async function subscribeToTopics() {
   sensorsCache = {};  // Reinicia el cache
 
   topicsData.forEach(row => {
-    newTopics.push(row.mqtt_topic_sensor);
-    sensorsCache[row.mqtt_topic_sensor] = {
+    // Añadir tópico a la lista de suscripción si no existe ya
+    if (!newTopics.includes(row.mqtt_topic_sensor)) {
+      newTopics.push(row.mqtt_topic_sensor);
+    }
+    
+    // Inicializar el array para este tópico si no existe
+    if (!sensorsCache[row.mqtt_topic_sensor]) {
+      sensorsCache[row.mqtt_topic_sensor] = [];
+    }
+    
+    // Añadir la configuración del sensor al array de este tópico
+    sensorsCache[row.mqtt_topic_sensor].push({
       id: row.id,
       sensor_type: row.sensor_type,
       invers_sensors: row.invers_sensors,
       json_api: row.json_api
-    };
+    });
   });
+  
+  // Log para depuración
+  for (const topic in sensorsCache) {
+    console.log(`[${getCurrentTimestamp()}] 🔍 Tópico ${topic} tiene ${sensorsCache[topic].length} sensor(es) configurado(s)`);
+  }
 
   // Suscribirse a nuevos tópicos
   newTopics.forEach(topic => {
@@ -269,83 +284,80 @@ async function processCallApi(topic, data) {
     const parsed = JSON.parse(data);
     console.log(`[${getCurrentTimestamp()}] 📚 JSON PARSEADO: ${JSON.stringify(parsed, null, 2)}`);
     
-    const sensorConfig = sensorsCache[topic];
-    if (!sensorConfig) {
+    const sensorConfigs = sensorsCache[topic];
+    if (!sensorConfigs || sensorConfigs.length === 0) {
       console.error(`[${getCurrentTimestamp()}] ❌ No se encontró configuración en el cache para el tópico ${topic}`);
       return;
     }
     
-    console.log(`[${getCurrentTimestamp()}] 📍 CONFIG SENSOR - ID: ${sensorConfig.id}, json_api: ${sensorConfig.json_api || 'No configurado'}`);
+    console.log(`[${getCurrentTimestamp()}] 📍 PROCESANDO ${sensorConfigs.length} SENSOR(ES) para el tópico ${topic}`);
     
-    // Extraer el valor usando la ruta configurada o 'value' por defecto
-    const extractedValue = extractValueFromJson(parsed, sensorConfig.json_api);
-    console.log(`[${getCurrentTimestamp()}] 🔎 VALOR EXTRAÍDO: ${extractedValue} usando ruta: ${sensorConfig.json_api || 'value'}`);
-    
-    // Si no se pudo extraer un valor, registrar error y salir
-    if (extractedValue === null || extractedValue === undefined) {
-      console.error(`[${getCurrentTimestamp()}] ❌ No se pudo extraer valor usando la ruta ${sensorConfig.json_api || 'value'} para el tópico ${topic}`);
-      return;
-    }
-    
-    // Convertir a número si es posible
-    const numericValue = Number(extractedValue);
-    console.log(`[${getCurrentTimestamp()}] 🔢 VALOR NUMÉRICO: ${numericValue} (tipo: ${typeof numericValue})`);
-    
-    // Aplicar inversión si es necesario
-    let newValue;
-    if (sensorConfig.invers_sensors === 1) {
-      // Para valores binarios (0 o 1), usamos 1 - valor
-      if (numericValue === 0 || numericValue === 1) {
-        newValue = 1 - numericValue;
-        console.log(`[${getCurrentTimestamp()}] 🔄 INVERSIÓN BINARIA: ${numericValue} → ${newValue}`);
-      } else {
-        // Para otros tipos de valores, mantenemos la inversión original
-        newValue = -numericValue;
-        console.log(`[${getCurrentTimestamp()}] 🔄 INVERSIÓN NUMÉRICA: ${numericValue} → ${newValue}`);
+    // Procesar cada sensor configurado para este tópico
+    for (const sensorConfig of sensorConfigs) {
+      console.log(`[${getCurrentTimestamp()}] 🔄 Procesando Sensor ID: ${sensorConfig.id}, json_api: ${sensorConfig.json_api || 'No configurado'}`);
+      
+      // Extraer el valor usando la ruta configurada o 'value' por defecto
+      const extractedValue = extractValueFromJson(parsed, sensorConfig.json_api);
+      console.log(`[${getCurrentTimestamp()}] 🔎 VALOR EXTRAÍDO: ${extractedValue} usando ruta: ${sensorConfig.json_api || 'value'}`);
+      
+      // Si no se pudo extraer un valor, registrar error y continuar con el siguiente sensor
+      if (extractedValue === null || extractedValue === undefined) {
+        console.error(`[${getCurrentTimestamp()}] ❌ No se pudo extraer valor usando la ruta ${sensorConfig.json_api || 'value'} para el Sensor ID ${sensorConfig.id}`);
+        continue;
       }
-      console.log(`[${getCurrentTimestamp()}] 🔄 VALOR INVERTIDO: ${extractedValue} → ${newValue}`);
-    } else {
-      newValue = extractedValue;
+      
+      // Convertir a número si es posible
+      const numericValue = Number(extractedValue);
+      console.log(`[${getCurrentTimestamp()}] 🔢 VALOR NUMÉRICO: ${numericValue} (tipo: ${typeof numericValue})`);
+      
+      // Aplicar inversión si es necesario
+      let newValue;
+      if (sensorConfig.invers_sensors === 1) {
+        // Para valores binarios (0 o 1), usamos 1 - valor
+        if (numericValue === 0 || numericValue === 1) {
+          newValue = 1 - numericValue;
+          console.log(`[${getCurrentTimestamp()}] 🔄 INVERSIÓN BINARIA: ${numericValue} → ${newValue}`);
+        } else {
+          // Para otros tipos de valores, mantenemos la inversión original
+          newValue = -numericValue;
+          console.log(`[${getCurrentTimestamp()}] 🔄 INVERSIÓN NUMÉRICA: ${numericValue} → ${newValue}`);
+        }
+        console.log(`[${getCurrentTimestamp()}] 🔄 VALOR INVERTIDO: ${extractedValue} → ${newValue}`);
+      } else {
+        newValue = extractedValue;
+      }
+
+      // Si sensor_type es 0 y el value es 0, se omite el procesamiento para este sensor
+      // Si sensor_type es 0 y el valor es 0 (numérico o string), se omite el procesamiento
+      if (sensorConfig.sensor_type === 0 && Number(newValue) === 0) {
+        console.log(`[${getCurrentTimestamp()}] ℹ️ Sensor ID ${sensorConfig.id} con sensor_type=0 y value=0, se omite el procesamiento.`);
+        continue;
+      }
+      
+      const dataToSend = {
+        value: newValue,
+        id: sensorConfig.id
+      };
+
+      let apiUrl = process.env.LOCAL_SERVER;
+      if (apiUrl.endsWith('/')) {
+        apiUrl = apiUrl.slice(0, -1);
+      }
+      apiUrl += '/api/sensor-insert';
+      
+      console.log(`[${getCurrentTimestamp()}] 📬 ENVIANDO A API - URL: ${apiUrl}`);
+      console.log(`[${getCurrentTimestamp()}] 📢 DATOS A ENVIAR: ${JSON.stringify(dataToSend, null, 2)}`);
+
+      // Llamada API con cola de 5 intentos si falla 1
+      try {
+        const response = await callApiWithRetries(dataToSend);
+        console.log(`[${getCurrentTimestamp()}] ✅ RESPUESTA API - Sensor ID ${sensorConfig.id}, Tópico ${topic}:`);
+        console.log(`[${getCurrentTimestamp()}] 📡 DATOS RECIBIDOS: ${JSON.stringify(response.data, null, 2)}`);
+      } catch (error) {
+        console.error(`[${getCurrentTimestamp()}] ❌ ERROR API FINAL - Sensor ID ${sensorConfig.id}, Tópico ${topic}: ${error.message}`);
+        // Continuamos con el siguiente sensor en caso de error
+      }
     }
-
-    // Si sensor_type es 0 y el value es 0, se omite el procesamiento
-    if (sensorConfig.sensor_type === 0 && newValue === 0) {
-      console.log(`[${getCurrentTimestamp()}] ℹ️ Sensor ID ${sensorConfig.id} con sensor_type=0 y value=0, se omite el procesamiento.`);
-      return;
-    }
-    
-    const dataToSend = {
-      value: newValue,
-      id: sensorConfig.id
-    };
-
-    let apiUrl = process.env.LOCAL_SERVER;
-    if (apiUrl.endsWith('/')) {
-      apiUrl = apiUrl.slice(0, -1);
-    }
-    apiUrl += '/api/sensor-insert';
-    
-    console.log(`[${getCurrentTimestamp()}] 📬 ENVIANDO A API - URL: ${apiUrl}`);
-    console.log(`[${getCurrentTimestamp()}] 📢 DATOS A ENVIAR: ${JSON.stringify(dataToSend, null, 2)}`);
-
-    // Llamada inmediata a la API
-   // axios.post(apiUrl, dataToSend)
-    //  .then(response => {
-    //    console.log(`[${getCurrentTimestamp()}] ✅ Respuesta de la API para el Sensor ID ${sensorConfig.id}: ${JSON.stringify(response.data, null, 2)}`);
-    //  })
-    //  .catch(error => {
-    //    console.error(`[${getCurrentTimestamp()}] ❌ Error al procesar los datos del Sensor ID ${sensorConfig.id}: ${error.message}`);
-     // });
-
-     //llamada api con cola de 5 intentos si falla 1
-     try {
-       const response = await callApiWithRetries(dataToSend);
-       console.log(`[${getCurrentTimestamp()}] ✅ RESPUESTA API - Sensor ID ${sensorConfig.id}, Tópico ${topic}:`);
-       console.log(`[${getCurrentTimestamp()}] 📡 DATOS RECIBIDOS: ${JSON.stringify(response.data, null, 2)}`);
-     } catch (error) {
-       console.error(`[${getCurrentTimestamp()}] ❌ ERROR API FINAL - Sensor ID ${sensorConfig.id}, Tópico ${topic}: ${error.message}`);
-       throw error; // Re-lanzar para que se maneje en el catch externo
-     }
   } catch (error) {
     console.error(`[${getCurrentTimestamp()}] ❌ Error al procesar los datos del Sensor para el tópico ${topic}: ${error.message}`);
   }

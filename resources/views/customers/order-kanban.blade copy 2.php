@@ -357,52 +357,6 @@
             return result.element;
         }
 
-        function throttle(callback, delay) {
-            let timeoutId;
-            let lastArgs;
-            let lastThis;
-            let lastCallTime = 0;
-
-            function throttled() {
-                lastArgs = arguments;
-                lastThis = this;
-                const now = Date.now();
-
-                if (now - lastCallTime >= delay) {
-                    lastCallTime = now;
-                    callback.apply(lastThis, lastArgs);
-                } else {
-                    clearTimeout(timeoutId);
-                    timeoutId = setTimeout(() => {
-                        lastCallTime = Date.now();
-                        callback.apply(lastThis, lastArgs);
-                    }, delay - (now - lastCallTime));
-                }
-            }
-
-            throttled.cancel = () => {
-                clearTimeout(timeoutId);
-            };
-
-            return throttled;
-        }
-
-        function handleThrottledDragOver(event) {
-            const container = event.target.closest('.column-cards');
-            if (!container) {
-                const columnEl = event.target.closest('.kanban-column');
-                if (columnEl) {
-                    const cardsContainer = columnEl.querySelector('.column-cards');
-                    if (cardsContainer) {
-                        processDragOver(event, cardsContainer);
-                    }
-                }
-                return;
-            } else {
-                processDragOver(event, container);
-            }
-        }
-
         function handleDragStart(event) {
             console.log('🚀 HANDLE DRAG START');
             draggedCard = event.target.closest('.kanban-card');
@@ -430,12 +384,6 @@
         }
 
         function dragOver(event) {
-            event.preventDefault(); // Esencial para permitir el evento 'drop'
-        }
-
-        const throttledProcessDragOver = throttle(processDragOver, 100);
-
-        function processDragOver(event) {
             console.log('🔄 DRAG OVER - Target:', event.target.tagName, event.target.className);
             event.preventDefault();
             if (!draggedCard) {
@@ -852,19 +800,12 @@
                                      </div>`).join('')}
                              </div>`;
                 columnElement.innerHTML = innerHTML;
-                const cardsContainer = columnElement.querySelector('.column-cards');
-
-                // Listeners en el contenedor de tarjetas
-                if (cardsContainer) {
-                    cardsContainer.addEventListener('dragover', dragOver);
-                    cardsContainer.addEventListener('dragover', throttledProcessDragOver);
-                    cardsContainer.addEventListener('dragleave', resetDropZones);
-                    cardsContainer.addEventListener('drop', drop);
-                }
-
-                // Listeners en toda la columna para un área de drop más grande
+                columnElement.querySelectorAll('.column-cards').forEach(el => {
+                    el.addEventListener('dragover', dragOver);
+                    el.addEventListener('dragleave', resetDropZones);
+                    el.addEventListener('drop', drop);
+                });
                 columnElement.addEventListener('dragover', dragOver);
-                columnElement.addEventListener('dragover', throttledProcessDragOver);
                 columnElement.addEventListener('dragleave', resetDropZones);
                 columnElement.addEventListener('drop', drop);
             } else {
@@ -875,19 +816,10 @@
                              ${searchFieldHtml}
                              <div class="column-cards"></div>`;
                 columnElement.innerHTML = innerHTML;
-                const cardsContainer = columnElement.querySelector('.column-cards');
-
-                // Listeners en el contenedor de tarjetas
-                if (cardsContainer) {
-                    cardsContainer.addEventListener('dragover', dragOver);
-                    cardsContainer.addEventListener('dragover', throttledProcessDragOver);
-                    cardsContainer.addEventListener('dragleave', resetDropZones);
-                    cardsContainer.addEventListener('drop', drop);
-                }
-
-                // Listeners en toda la columna para un área de drop más grande
+                columnElement.querySelector('.column-cards').addEventListener('dragover', dragOver);
+                columnElement.querySelector('.column-cards').addEventListener('dragleave', resetDropZones);
+                columnElement.querySelector('.column-cards').addEventListener('drop', drop);
                 columnElement.addEventListener('dragover', dragOver);
-                columnElement.addEventListener('dragover', throttledProcessDragOver);
                 columnElement.addEventListener('dragleave', resetDropZones);
                 columnElement.addEventListener('drop', drop);
             }

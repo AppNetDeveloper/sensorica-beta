@@ -47,7 +47,7 @@ $settings = Utility::settings();
 
                 @role('admin')
                     <li class="dash-item dash-hasmenu {{ request()->is('settings*') ? 'active' : '' }}">
-                        <a class="dash-link" href="{{ route('settings.index') }}">
+                        <a class="dash-link" title="{{ __('Settings') }}" href="{{ route('settings.index') }}">
                             <span class="dash-micon"><i class="ti ti-settings"></i></span>
                             <span class="dash-mtext custom-weight">{{ __('Settings') }}</span>
                         </a>
@@ -55,7 +55,7 @@ $settings = Utility::settings();
                 @endrole
                 @role('admin')
                     <li class="dash-item dash-hasmenu {{ request()->is('ia_prompts*') ? 'active' : '' }}">
-                        <a class="dash-link" href="{{ route('ia_prompts.index') }}">
+                        <a class="dash-link" title="{{ __('IA') }}" href="{{ route('ia_prompts.index') }}">
                             <span class="dash-micon"><i class="fa-solid fa-vial-virus"></i></span>
                             <span class="dash-mtext custom-weight">{{ __('IA') }}</span>
                         </a>
@@ -113,7 +113,7 @@ $settings = Utility::settings();
                 <!-- Gestión de usuarios, roles y permisos según permisos del usuario -->
                 @can('manage-user')
                     <li class="dash-item dash-hasmenu {{ request()->is('users*') ? 'active' : '' }}">
-                        <a class="dash-link" href="{{ route('users.index') }}">
+                        <a class="dash-link" title="{{ __('Users') }}" href="{{ route('users.index') }}">
                             <span class="dash-micon"><i class="ti ti-user"></i></span>
                             <span class="dash-mtext custom-weight">{{ __('Users') }}</span>
                         </a>
@@ -122,7 +122,7 @@ $settings = Utility::settings();
                 
                 @can('manage-role')
                     <li class="dash-item dash-hasmenu {{ request()->is('roles*') ? 'active' : '' }}">
-                        <a class="dash-link" href="{{ route('manage-role.index') }}">
+                        <a class="dash-link" title="{{ __('Roles') }}" href="{{ route('manage-role.index') }}">
                             <span class="dash-micon"><i class="ti ti-briefcase"></i></span>
                             <span class="dash-mtext custom-weight">{{ __('Roles') }}</span>
                         </a>
@@ -210,6 +210,73 @@ $settings = Utility::settings();
                     
                 @include('layouts.menu')
             </ul>
+            
+            <!-- Botón minimizador del sidebar con icono de comprimir/descomprimir -->
+            <div id="sidebar-minimizer" class="dash-sidebar-minimizer" aria-label="Minimizar sidebar">
+                <img src="{{ asset('assets/images/comprimir.png') }}" alt="Comprimir/Descomprimir" class="sidebar-logo-icon" />
+            </div>
+            
+            <!-- Script inline para manejar el clic en el botón minimizador y generar tooltips automáticamente -->
+            <script>
+                // Eliminar cualquier event listener previo para evitar duplicados
+                document.removeEventListener('click', window.sidebarClickHandler);
+                
+                // Función para alternar el estado del sidebar y guardarlo en localStorage
+                function toggleSidebar(event) {
+                    if (event) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                    }
+                    
+                    // Toggle de la clase en el body
+                    document.body.classList.toggle('dash-minimenu');
+                    
+                    // Guardar el estado en localStorage
+                    if (document.body.classList.contains('dash-minimenu')) {
+                        localStorage.setItem('dashSidebarState', 'minimized');
+                    } else {
+                        localStorage.setItem('dashSidebarState', 'expanded');
+                    }
+                    
+                    // Cambiar el icono según el estado
+                    updateMinimizeIcon();
+                }
+                
+                // Función para actualizar la imagen según el estado (ya no necesitamos cambiar el icono)
+                function updateMinimizeIcon() {
+                    // Ya no necesitamos cambiar el icono, la imagen de comprimir/descomprimir es suficiente
+                    // La rotación de la imagen se maneja con CSS cuando el sidebar está minimizado
+                }
+                
+                // Asignar el event listener directamente al botón
+                const minimizer = document.getElementById('sidebar-minimizer');
+                if (minimizer) {
+                    // Eliminar cualquier event listener previo
+                    minimizer.removeEventListener('click', toggleSidebar);
+                    // Añadir el nuevo event listener
+                    minimizer.addEventListener('click', toggleSidebar);
+                }
+                
+                // Generar tooltips automáticamente para todos los enlaces del menú
+                document.querySelectorAll('.dash-sidebar .dash-link').forEach(function(link) {
+                    // Si no tiene ya un atributo title, añadirlo basado en el texto del menú
+                    if (!link.hasAttribute('title')) {
+                        const menuText = link.querySelector('.dash-mtext');
+                        if (menuText) {
+                            link.setAttribute('title', menuText.textContent.trim());
+                        }
+                    }
+                });
+                
+                // Cargar el estado guardado inmediatamente
+                (function() {
+                    const savedState = localStorage.getItem('dashSidebarState');
+                    if (savedState === 'minimized') {
+                        document.body.classList.add('dash-minimenu');
+                        updateMinimizeIcon();
+                    }
+                })();
+            </script>
         </div>
     </div>
 </nav>

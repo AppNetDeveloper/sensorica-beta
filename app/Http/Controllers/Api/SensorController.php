@@ -15,6 +15,7 @@ use App\Models\OrderStat;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use App\Models\ShiftHistory; // Asegúrate de que la ruta del modelo sea la correcta
+use App\Models\ProductionOrder;
  
 class SensorController extends Controller
 {
@@ -211,7 +212,7 @@ class SensorController extends Controller
          $barcode = Barcode::find($config->barcoder_id);
         
          if (!$barcode || !$barcode->order_notice) {
-             Log::warning("No se encontró el registro del barcode o el campo order_notice está vacío.");
+             Log::warning("Api SensorController: No se encontró el registro del barcode o el campo order_notice está vacío.");
              return;
          }
 
@@ -224,7 +225,7 @@ class SensorController extends Controller
                 $this->process1Model($config, $value, $barcode);
                 break;
             default:
-            // Log::info("Valo no permitido: {$config->name} (ID: {$config->id}) // Tópico: {$config->mqtt_topic_sensor} // Valor: {$value}"); // Muestra el mensaje en la consola
+            // //Log::info("Valo no permitido: {$config->name} (ID: {$config->id}) // Tópico: {$config->mqtt_topic_sensor} // Valor: {$value}"); // Muestra el mensaje en la consola
                 break;
         }
     }
@@ -261,16 +262,85 @@ class SensorController extends Controller
     {
         
         $orderId = $config->orderId;
+        //comprobamos que el $orderId no sea null
+        $productionLineId=$config->production_line_id;
+        try {
+            $orderIdPO=ProductionOrder::where('production_line_id', $productionLineId)->where('status', '1')->first()->order_id;
+            if ($orderIdPO) {
+                if (!$orderId) {
+                    $config->orderId=$orderIdPO;
+                    $config->save();
+                    //Log::info("Api SensorController: Se actualizó el ID de pedido para el sensor ID {$config->id}: {$orderIdPO}");
+
+                }
+
+                if ($orderIdPO != $orderId) {
+                    $config->orderId=$orderIdPO;
+                    $config->save();
+                    $orderId = $orderIdPO;
+                    Log::warning("Api SensorController: El ID de pedido no coincide con el de ProductionOrder. Se a actualizado");
+
+                }
+            }
+        } catch (\Throwable $th) {
+            Log::error("Error al obtener el ID de pedido para la línea de producción: " . $th->getMessage());
+        }
+        
+        
+
         $productName = $config->productName;
 
-        if (!$orderId || !$productName) {
-            Log::warning("No se encontró el ID de pedido o el nombre del producto.");
-            //return;
+        if (!$productName) {
+            Log::warning("Api SensorController: No se encontró el ID de pedido o el nombre del producto.");
+            //ponemos un product name default 1
+            $productName = 1;
         }
     
         //vaerificamos si el sensor es sensor_type 0 o superior
             // Proteger con una transacción si el sensor_type < 1 (o según tu regla)
         if ($config->sensor_type < 1) {
+            
+            try {
+                Log::alert("Estoy aqui test sensor_type < 1 try $config->name");
+                // Buscar ProductionOrder en curso (status=1)
+                $orderEnCurso = ProductionOrder::where('production_line_id', $productionLineId)
+                    ->where('status', 1)
+                    ->first();
+                $orderIdPO = $orderEnCurso ? $orderEnCurso->order_id : null;
+                Log::alert("Estoy aqui test sensor_type < 1 try :$orderIdPO");
+                // Si no hay orden en curso
+                if (!$orderIdPO) {
+                    Log::warning("Api SensorController: No se encontró el ID de pedido para la línea de producción.");
+                    $nextOrderInLine = ProductionOrder::where('production_line_id', $productionLineId)
+                        ->where('status', 0)
+                        ->orderBy('orden', 'asc')
+                        ->first();
+
+                    if (!$nextOrderInLine) {
+                        Log::warning("No hay siguiente orden pendiente en la línea $productionLineId");
+                        // Opcional: puedes lanzar una excepción aquí si es crítico
+                    } else {
+                        $barcoder = \App\Models\Barcode::where('production_line_id', $productionLineId)->first();
+                        if ($barcoder && !empty($barcoder->mqtt_topic_barcodes)) {
+                            $topic = $barcoder->mqtt_topic_barcodes . '/prod_order_mac';
+                            $messagePayload = json_encode([
+                                "action"    => 0,
+                                "orderId"   => $nextOrderInLine->order_id,
+                                "quantity"  => 0,
+                                "machineId" => $barcoder->machine_id ?? "",
+                                "opeId"     => $barcoder->ope_id ?? "",
+                            ]);
+                            $this->publishMqttMessage($topic, $messagePayload);
+                            Log::info("Mensaje MQTT enviado para orden pendiente: orderId={$nextOrderInLine->order_id}");
+                        } else {
+                            Log::warning("Barcoder/Topic no encontrado para orden en línea $productionLineId");
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::error("Error en SensorController al gestionar orden de producción: " . $e->getMessage(), ['exception' => $e]);
+            }
+            
             DB::transaction(function () use ($orderId) {
                 // Leemos el registro con lockForUpdate, para que otra transacción
                 // no pueda leer valores obsoletos de la misma fila
@@ -310,7 +380,7 @@ class SensorController extends Controller
                     // Guardamos los cambios
                     $orderStats->save();
                 } else {
-                    Log::warning("No se encontró un registro de OrderStat para order_id: {$orderId}");
+                    Log::warning("Api SensorController: No se encontró un registro de OrderStat para order_id: {$orderId}");
                 }
             });
         }
@@ -321,9 +391,9 @@ class SensorController extends Controller
             $config->increment($modelConfig['total']);
             $config->increment($modelConfig['order']);
             $config->increment($modelConfig['week']);
-            Log::info("Contadores incrementados correctamente para el modelo.");
+            //Log::info("Api SensorController: Contadores incrementados correctamente para el modelo.");
         } catch (\Exception $e) {
-            Log::error("Error al incrementar los contadores: " . $e->getMessage());
+            Log::error("Api SensorController: Error al incrementar los contadores: " . $e->getMessage());
             return;
         }
     
@@ -336,9 +406,9 @@ class SensorController extends Controller
             $time_1 = $previousEntry1 ? now()->diffInRealSeconds($previousEntry1->created_at) : 300;
             
 
-            Log::debug("Tiempos calculados: {$modelConfig['time_0']}: $time_0, {$modelConfig['time_1']}: $time_1");
+            Log::debug("Api SensorController: Tiempos calculados: {$modelConfig['time_0']}: $time_0, {$modelConfig['time_1']}: $time_1");
         } catch (\Exception $e) {
-            Log::error("Error al calcular los tiempos: " . $e->getMessage());
+            Log::error("Api SensorController: Error al calcular los tiempos: " . $e->getMessage());
             return;
         }
 
@@ -359,9 +429,9 @@ class SensorController extends Controller
                 $modelConfig['time_1'] => $time_1,
             ]);
     
-            Log::info("Registro insertado correctamente en sensor_counts.");
+            //Log::info("Api SensorController: Registro insertado correctamente en sensor_counts.");
         } catch (\Exception $e) {
-            Log::error("Error al insertar en sensor_counts: " . $e->getMessage());
+            Log::error("Api SensorController: Error al insertar en sensor_counts: " . $e->getMessage());
         }
 
                 // Añadimos la lógica para buscar en operator_post y actualizar en operators
@@ -381,16 +451,16 @@ class SensorController extends Controller
                             $operator->increment('count_shift');
                             $operator->increment('count_order');
         
-                            Log::info("Operador actualizado: count_shift y count_order incrementados para el Operator ID: {$operatorId}");
+                            //Log::info("Api SensorController: Operador actualizado: count_shift y count_order incrementados para el Operator ID: {$operatorId}");
                         } else {
-                            Log::info("No se encontró el operador con ID: {$operatorId}");
+                            //Log::info("Api SensorController: No se encontró el operador con ID: {$operatorId}");
                         }
                     } else {
-                        Log::info("No se encontró ningún registro en operator_post con updated_at NULL y modbus_id: {$config->id}");
+                        //Log::info("Api SensorController: No se encontró ningún registro en operator_post con updated_at NULL y modbus_id: {$config->id}");
                     }
                 } catch (\Exception $e) {
                     // Log de errores al intentar actualizar los datos
-                    Log::info("Error al procesar datos de operator_post y operators para el Modbus ID: {$config->id}");
+                    //Log::info("Api SensorController: Error al procesar datos de operator_post y operators para el Modbus ID: {$config->id}");
                 }
     
         // Determinar la función a ejecutar basada en el modelo
@@ -442,7 +512,7 @@ class SensorController extends Controller
         // Determinar el estado basado en tiempos
         $optimalTime = $config->optimal_production_time;
         $reducedSpeedMultiplier = $config->reduced_speed_time_multiplier;
-        Log::debug("Calculando estado para el sensor {$config->name} (ID: {$config->id}) con lastTime: $lastTime, optimalTime: $optimalTime, reducedSpeedMultiplier: $reducedSpeedMultiplier");
+        Log::debug("Api SensorController: Calculando estado para el sensor {$config->name} (ID: {$config->id}) con lastTime: $lastTime, optimalTime: $optimalTime, reducedSpeedMultiplier: $reducedSpeedMultiplier");
         $status = $this->determineStatus($lastTime, $optimalTime, $reducedSpeedMultiplier);
     
         // Crear mensajes JSON y publicar a MQTT
@@ -471,29 +541,29 @@ class SensorController extends Controller
         $this->publishMqttMessage($config->mqtt_topic_1 . '/infinite_counter', $processedMessageTotal);
         $this->publishMqttMessage($config->mqtt_topic_1, $processedMessage);
     
-        //Log::info("Mensaje MQTT procesado y enviado al tópico {$config->mqtt_topic_1}: {$processedMessage}");
+        ////Log::info("Mensaje MQTT procesado y enviado al tópico {$config->mqtt_topic_1}: {$processedMessage}");
     }
     
     private function determineStatus($lastTime, $optimalTime, $reducedSpeedMultiplier)
     {
-        Log::debug("Tiempos: lastTime: $lastTime, optimalTime: $optimalTime, reducedSpeedMultiplier: $reducedSpeedMultiplier");
+        Log::debug("Api SensorController: Tiempos: lastTime: $lastTime, optimalTime: $optimalTime, reducedSpeedMultiplier: $reducedSpeedMultiplier");
         // Determinar el estado según los tiempos
         if (!is_numeric($lastTime)) {
-            Log::warning("Tiempos no numéricos: lastTime: $lastTime, optimalTime: $optimalTime, reducedSpeedMultiplier: $reducedSpeedMultiplier");
+            Log::warning("Api SensorController: Tiempos no numéricos: lastTime: $lastTime, optimalTime: $optimalTime, reducedSpeedMultiplier: $reducedSpeedMultiplier");
             return 3; // Sin datos 
         }
     
         if ($lastTime <= $optimalTime) {
-            Log::info("Buen estado: lastTime: $lastTime, optimalTime: $optimalTime, reducedSpeedMultiplier: $reducedSpeedMultiplier");
+            //Log::info("Api SensorController: Buen estado: lastTime: $lastTime, optimalTime: $optimalTime, reducedSpeedMultiplier: $reducedSpeedMultiplier");
             return 2; // Buen estado
         }
     
         if ($lastTime <= $optimalTime * $reducedSpeedMultiplier) {
-            Log::info("Velocidad reducida: lastTime: $lastTime, optimalTime: $optimalTime, reducedSpeedMultiplier: $reducedSpeedMultiplier");
+            //Log::info("Api SensorController: Velocidad reducida: lastTime: $lastTime, optimalTime: $optimalTime, reducedSpeedMultiplier: $reducedSpeedMultiplier");
             return 1; // Velocidad reducida
         }
     
-        Log::info("Parada: lastTime: $lastTime, optimalTime: $optimalTime, reducedSpeedMultiplier: $reducedSpeedMultiplier");
+        //Log::info("Api SensorController: Parada: lastTime: $lastTime, optimalTime: $optimalTime, reducedSpeedMultiplier: $reducedSpeedMultiplier");
         return 0; // Parada
     }
     
@@ -522,7 +592,7 @@ class SensorController extends Controller
                 mkdir(dirname($fileName1), 0755, true);
             }
             file_put_contents($fileName1, $jsonData . PHP_EOL);
-            //Log::info("Mensaje almacenado en archivo (server1): {$fileName1}");
+            ////Log::info("Mensaje almacenado en archivo (server1): {$fileName1}");
         
             // Guardar en servidor 2
             $fileName2 = storage_path("app/mqtt/server2/{$sanitizedTopic}_{$uniqueId}.json");
@@ -530,9 +600,9 @@ class SensorController extends Controller
                 mkdir(dirname($fileName2), 0755, true);
             }
             file_put_contents($fileName2, $jsonData . PHP_EOL);
-            //Log::info("Mensaje almacenado en archivo (server2): {$fileName2}");
+            ////Log::info("Mensaje almacenado en archivo (server2): {$fileName2}");
         } catch (\Exception $e) {
-            Log::error("Error storing message in file: " . $e->getMessage());
+            Log::error("Api SensorController: Error storing message in file: " . $e->getMessage());
         }
     }
 }

@@ -47,16 +47,39 @@
             display: grid;
             place-items: center;
             background: conic-gradient(
-                #4ade80 calc(var(--progress-percent, 0) * 1%),
+                var(--progress-color, #4ade80) calc(var(--progress-percent, 0) * 1%),
                 #e5e7eb 0
             );
             position: relative;
             font-size: 2.5rem;
             font-weight: 700;
-            color: #16a34a;
+            color: var(--progress-text-color, #16a34a);
             transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
             margin: 0 auto;
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Estilos para los diferentes estados del OEE */
+        .progress-circle.oee-warning {
+            --progress-color: #f59e0b; /* Amarillo */
+            --progress-text-color: #b45309;
+            animation: oeeWarningPulse 2s infinite;
+        }
+        
+        .progress-circle.oee-danger {
+            --progress-color: #dc2626; /* Rojo */
+            --progress-text-color: #991b1b;
+            animation: oeeDangerPulse 1.5s infinite;
+        }
+        
+        @keyframes oeeWarningPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        @keyframes oeeDangerPulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.05); }
         }
 
         .progress-circle::before {
@@ -501,6 +524,9 @@
         
         <!-- Botón flotante de refresco en la parte inferior -->
         <div class="fixed bottom-4 right-4 z-50 flex flex-col space-y-2">
+            <button id="whatsapp-button" class="bg-green-500 hover:bg-green-600 text-white p-2 rounded-full shadow-sm transition-all duration-150" title="Notificaciones en tiempo real de la máquina">
+                <i class="fab fa-whatsapp"></i>
+            </button>
             <button id="refresh-button" class="bg-transparent hover:bg-gray-100 text-gray-800 p-2 rounded-full shadow-sm transition-all duration-150" title="Refrescar Datos (API)">
                 <i class="fas fa-sync-alt"></i>
             </button>
@@ -624,13 +650,13 @@
             <div class="flex justify-between text-sm text-gray-500 mb-1">
                 <span id="shift-start-time-label" class="font-mono font-medium text-gray-800">HORA INICIO</span> <span id="shift-end-time-label" class="font-mono font-medium text-gray-800">HORA FIN</span>
             </div>
-            <div id="progress-bar-container" class="w-full bg-gray-200 rounded-full h-4 overflow-hidden flex">
-                 <div id="shift-delay-bar" class="progress-bar-segment" style="width: 0%; background-color: #8B0000;"></div>
-                 <div id="shift-pause-bar" class="progress-bar-segment" style="width: 0%; background-color: #CC3333;"></div>
-                 <div id="shift-slow-bar" class="progress-bar-segment" style="width: 0%; background-color: #FFCC00;"></div>
-                 <div id="shift-button-pause-bar" class="progress-bar-segment" style="width: 0%; background-color: #AAAAAA;"></div>
-                 <div id="shift-late-bar" class="progress-bar-segment" style="width: 0%; background-color: #FFCC00;"></div>
-                 <div id="shift-progress-bar" class="progress-bar-segment bg-green-500" style="width: 0%;"></div>
+             <div id="progress-bar-container" class="w-full bg-gray-200 rounded-full h-4 overflow-hidden flex">
+                  <div id="shift-delay-bar" class="progress-bar-segment" style="width: 0%; background-color: #000000;"></div>
+                  <div id="shift-prep-bar" class="progress-bar-segment" style="width: 0%; background-color: #8B0000;"></div>
+                  <div id="shift-slow-bar" class="progress-bar-segment" style="width: 0%; background-color: #FFCC00;"></div>
+                  <div id="shift-pause-bar" class="progress-bar-segment" style="width: 0%; background-color: #AAAAAA;"></div>
+                  <div id="shift-late-bar" class="progress-bar-segment" style="width: 0%; background-color: #CC3333;"></div>
+                  <div id="shift-progress-bar" class="progress-bar-segment bg-green-500" style="width: 0%;"></div>
             </div>
             <div class="flex justify-between text-sm mt-1.5">
                 <div class="flex justify-start space-x-2">
@@ -638,9 +664,12 @@
                 </div>
                 <span id="shift-info-text" class="font-mono font-medium text-gray-800">SIN DATOS</span>
             </div>
-            
-            <!-- Leyenda de colores para la barra de progreso -->
+                        <!-- Leyenda de colores para la barra de progreso -->
             <div class="flex flex-wrap gap-3 mt-1 text-xs">
+                <div class="flex items-center">
+                    <div class="w-3 h-3 mr-1" style="background-color: #000000;"></div>
+                    <span>RETRASO INICIO DE TURNO</span>
+                </div>
                 <div class="flex items-center">
                     <div class="w-3 h-3 mr-1" style="background-color: #8B0000;"></div>
                     <span>TIEMPO EN PARADA</span>
@@ -970,8 +999,8 @@
             const shiftEndTimeLabel = $('#shift-end-time-label');
             const progressBarContainer = $('#progress-bar-container');
             const shiftDelayBar = $('#shift-delay-bar');
+            const shiftPrepBar = $('#shift-prep-bar');
             const shiftPauseBar = $('#shift-pause-bar');
-            const shiftButtonPauseBar = $('#shift-button-pause-bar');
             const shiftSlowBar = $('#shift-slow-bar');
             const shiftLateBar = $('#shift-late-bar');
             const shiftProgressBar = $('#shift-progress-bar');
@@ -1320,8 +1349,25 @@
                 const clampedPercent = isNaN(numericPercent) ? 0 : Math.max(0, Math.min(100, numericPercent));
 
                 if (indicatorElement && valueElement) {
+                    // Establecer el porcentaje para el gradiente cónico
                     indicatorElement.style.setProperty('--progress-percent', clampedPercent);
                     valueElement.textContent = Math.round(clampedPercent);
+                    
+                    // Eliminar todas las clases de estado anteriores
+                    indicatorElement.classList.remove('oee-warning', 'oee-danger');
+                    
+                    // Aplicar clases según el rango de porcentaje
+                    if (clampedPercent >= 80) {
+                        // Verde (por defecto): 80-100%
+                        indicatorElement.style.setProperty('--progress-color', '#4ade80');
+                        indicatorElement.style.setProperty('--progress-text-color', '#16a34a');
+                    } else if (clampedPercent >= 60) {
+                        // Amarillo con parpadeo suave: 60-80%
+                        indicatorElement.classList.add('oee-warning');
+                    } else {
+                        // Rojo con parpadeo más intenso: 0-60%
+                        indicatorElement.classList.add('oee-danger');
+                    }
                 } else {
                     if (!indicatorElement) console.error("Elemento indicador del círculo de progreso no encontrado.");
                     if (!valueElement) console.error("Elemento de valor del círculo de progreso no encontrado.");
@@ -1419,8 +1465,8 @@
                  shiftEndTimeLabel.text("HORA FIN");
                  shiftInfoText.text("SIN DATOS");
                  shiftDelayBar.css('width', '0%').attr('title', '');
+                 shiftPrepBar.css('width', '0%').attr('title', '');
                  shiftPauseBar.css('width', '0%').attr('title', '');
-                 shiftButtonPauseBar.css('width', '0%').attr('title', '');
                  shiftSlowBar.css('width', '0%').attr('title', '');
                  shiftLateBar.css('width', '0%').attr('title', '');
                  shiftProgressBar.css('width', '0%').attr('title', '');
@@ -1734,8 +1780,8 @@
                                 console.log(`Progress Bar - Delay: ${delayPercentage.toFixed(2)}%, Machine Pause: ${pausePercentage.toFixed(2)}%, Button Pause: ${buttonPausePercentage.toFixed(2)}%, Machine Slow: ${slowPercentage.toFixed(2)}%, Machine Prep: ${prepPercentage.toFixed(2)}%, Productive: ${productivePercentage.toFixed(2)}%`);
 
                                 shiftDelayBar.css('width', `${delayPercentage}%`).attr('title', delayPercentage > 0 ? `Retraso inicio turno: ${formattedDelay}` : '');
-                                shiftPauseBar.css('width', `${pausePercentage}%`).attr('title', `Tiempo Parada (Maquina): ${formattedPause}`);
-                                shiftButtonPauseBar.css('width', `${buttonPausePercentage}%`).attr('title', `Tiempo Pausa (Turno): ${formattedButtonPause}`);
+                                shiftPrepBar.css('width', `${pausePercentage}%`).attr('title', `Tiempo Parada (Maquina): ${formattedPause}`);
+                                shiftPauseBar.css('width', `${buttonPausePercentage}%`).attr('title', `Tiempo Pausa (Turno): ${formattedButtonPause}`);
                                 shiftSlowBar.css('width', `${slowPercentage}%`).attr('title', `Tiempo Lento (Maquina): ${formattedSlow}`);
                                 shiftLateBar.css('width', `${prepPercentage}%`).attr('title', `Tiempo Preparación (Maquina): ${formattedPrep}`);
                                 shiftProgressBar.css('width', `${productivePercentage}%`).attr('title', `Tiempo Productivo: ${formattedProductive}`);
@@ -5191,6 +5237,19 @@ async function updateOrderStatus(orderId, newStatus) {
                     });
                 }
             });
+
+            // Evento para el botón de WhatsApp
+            const whatsappButton = document.getElementById('whatsapp-button');
+            if (whatsappButton) {
+                whatsappButton.addEventListener('click', function() {
+                    Swal.fire({
+                        title: 'Notificaciones WhatsApp',
+                        text: 'Notificaciones en tiempo real de la máquina',
+                        icon: 'info',
+                        confirmButtonText: 'Entendido'
+                    });
+                });
+            }
 
             // Evento para el botón de forzar recarga
             const forceRefreshButton = document.getElementById('force-refresh-button');

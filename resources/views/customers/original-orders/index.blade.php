@@ -22,6 +22,9 @@
                 <div class="card-header bg-transparent">
                     <div class="d-flex justify-content-end align-items-center">
                         @can('original-order-create')
+                        <a href="#" id="import-orders-btn" class="btn btn-outline-success btn-sm me-2">
+                            <i class="fas fa-sync-alt"></i> @lang('Importar ahora')
+                        </a>
                         <a href="{{ route('customers.original-orders.create', $customer->id) }}" class="btn btn-outline-primary btn-sm">
                             <i class="fas fa-plus"></i> @lang('New Order')
                         </a>
@@ -100,13 +103,16 @@
                                 <span class="badge bg-success me-1">@lang('Fecha')</span> @lang('Pedido finalizado')
                             </div>
                             <div>
-                                <span class="badge bg-primary me-1">@lang('Pedido Iniciado')</span> @lang('Al menos un proceso asignado a máquina')
+                                <span class="badge bg-primary me-1">@lang('Pedido Iniciado')</span> @lang('Al menos un proceso iniciado o finalizado')
                             </div>
                             <div>
-                                <span class="badge bg-info me-1">@lang('Pendiente de iniciar')</span> @lang('Con órdenes asignadas pero no iniciadas')
+                                <span class="badge bg-info me-1">@lang('Asignado a máquina')</span> @lang('Al menos un proceso asignado')
                             </div>
                             <div>
-                                <span class="badge bg-secondary me-1">@lang('Pendiente de asignación')</span> @lang('Sin órdenes de producción asignadas')
+                                <span class="badge bg-secondary me-1">@lang('Pendiente Planificar')</span> @lang('Con todos los procesos pendientes de asignar')
+                            </div>
+                            <div>
+                                <span class="badge bg-danger me-1">@lang('Pendiente Crear')</span> @lang('Sin procesos creados (falta de stock)')
                             </div>
                         </div>
                     </div>
@@ -122,6 +128,14 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css">
     <style>
+        .badge.bg-cyan {
+            background-color: #17a2b8;
+            color: #fff;
+        }
+        /* Texto oscuro solo en la leyenda de estados de pedidos */
+        .d-flex.flex-wrap.gap-3 .badge.bg-cyan {
+            color: #212529;
+        }
         .table th, .table td {
             vertical-align: middle;
         }
@@ -154,6 +168,19 @@
             margin-right: 0;
             width: 100%;
         }
+        
+        /* Estilos para alinear la paginación a la derecha */
+        .dataTables_paginate {
+            float: right !important;
+            width: 100%;
+            text-align: right !important;
+        }
+        
+        /* Añadir espacio entre la información y la paginación */
+        .dataTables_info {
+            padding-top: 8px;
+            margin-bottom: 10px;
+        }
     </style>
 @endpush
 
@@ -170,6 +197,8 @@
             
             // Inicializar tooltips
             function initTooltips() {
+                // Destruir tooltips existentes antes de inicializar nuevos
+                $('[data-bs-toggle="tooltip"]').tooltip('dispose');
                 $('[data-bs-toggle="tooltip"]').tooltip();
             }
             
@@ -196,7 +225,7 @@
                     language: {
                         url: '//cdn.datatables.net/plug-ins/1.10.25/i18n/Spanish.json'
                     },
-                    dom: '<"row"<"col-sm-12 col-md-6"B><"col-sm-12 col-md-6"f>>rtip',
+                    dom: '<"row mb-3"<"col-sm-12 col-md-6"B><"col-sm-12 col-md-6"f>><"row"<"col-sm-12"tr>><"row mt-3"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7 text-end"p>>',
                     buttons: [
                         {
                             extend: 'pageLength',
@@ -208,6 +237,8 @@
                     drawCallback: function() {
                         // Inicializar tooltips para los badges y botones
                         setTimeout(function() {
+                            // Destruir tooltips existentes antes de inicializar nuevos
+                            $('[data-bs-toggle="tooltip"]').tooltip('dispose');
                             $('[data-bs-toggle="tooltip"]').tooltip();
                         }, 100);
                     }
@@ -226,6 +257,9 @@
             
             // Función para actualizar la tabla manteniendo el estado actual
             function refreshTableKeepingState() {
+                // Destruir todos los tooltips antes de actualizar la tabla
+                $('[data-bs-toggle="tooltip"]').tooltip('dispose');
+                
                 // Guardar el estado actual
                 const currentPage = dataTable.page();
                 const currentSearch = dataTable.search();
@@ -247,8 +281,83 @@
                 }, false); // false significa que no se resetea la paginación
             }
             
+            // Función reutilizable para mostrar notificaciones (toasts)
+            function showToast(message, type = 'info') {
+                const toastEl = document.getElementById('update-time-toast');
+                const toast = new bootstrap.Toast(toastEl);
+                const toastBody = $('#update-time-toast .toast-body');
+                const toastContainer = $('#update-time-toast');
+
+                // Resetear clases de color y añadir la nueva
+                toastContainer.removeClass('bg-info bg-success bg-danger');
+                let icon = '';
+                let colorClass = '';
+
+                switch (type) {
+                    case 'success':
+                        icon = '<i class="fas fa-check-circle me-2"></i>';
+                        colorClass = 'bg-success';
+                        break;
+                    case 'error':
+                        icon = '<i class="fas fa-times-circle me-2"></i>';
+                        colorClass = 'bg-danger';
+                        break;
+                    default: // info
+                        icon = '<i class="fas fa-info-circle me-2"></i>';
+                        colorClass = 'bg-info';
+                        break;
+                }
+                
+                toastContainer.addClass(colorClass);
+                toastEl.querySelector('.toast-body').innerHTML = icon + message;
+                toast.show();
+            }
+
             // Configurar actualización automática cada minuto
             setInterval(refreshTableKeepingState, 60000); // 60000 ms = 1 minuto
+
+            // Manejar clic en el botón de importar
+            $('#import-orders-btn').on('click', function(e) {
+                e.preventDefault();
+                const btn = $(this);
+                const originalHtml = btn.html();
+
+                // Deshabilitar botón y mostrar estado de carga
+                btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> @lang('Importando...')');
+
+                $.ajax({
+                    url: '{{ route("customers.original-orders.import", $customer) }}',
+                    type: 'POST',
+                    data: {
+                        _token: '{{ csrf_token() }}'
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            showToast(response.message, 'success');
+                            setTimeout(refreshTableKeepingState, 2000);
+                        } else {
+                            // Esto puede ocurrir si el servidor responde con 200 OK pero success: false
+                            showToast(response.message || '@lang('Ocurrió un error durante la importación.')', 'error');
+                        }
+                    },
+                    error: function(xhr) {
+                        // Esto se dispara para respuestas de error HTTP (ej. 429, 500)
+                        console.error('Error en la petición de importación:', xhr);
+                        const errorMsg = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : '@lang('No se pudo iniciar la importación.')';
+                        showToast(errorMsg, 'error');
+                    },
+                    complete: function() {
+                        // Restaurar botón
+                        btn.prop('disabled', false).html(originalHtml);
+                        // Restaurar el toast de actualización a su estado original después de un tiempo
+                        setTimeout(() => {
+                            toastContainer = $('#update-time-toast');
+                            toastContainer.removeClass('bg-success bg-danger').addClass('bg-info');
+                            toastContainer.find('.toast-body').html('<i class="fas fa-sync-alt me-2 fa-spin"></i> @lang('Actualizando...')');
+                        }, 5000);
+                    }
+                });
+            });
         });
     </script>
 @endpush
