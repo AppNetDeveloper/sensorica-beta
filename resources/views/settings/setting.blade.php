@@ -15,7 +15,7 @@
     $timezones = config('timezones');
     $logo = asset(Storage::url('uploads/logo/'));
     // Definir color primario
-    $color = isset($settings['color']) && $settings['color'] != "" ? $settings['color'] : 'theme-1';
+    $color = isset($settings['color']) && $settings['color'] != "" ? $settings['color'] : 'theme-2';
     // Definir modo oscuro
     $dark_mode = isset($settings['dark_mode']) && $settings['dark_mode'] != "" ? $settings['dark_mode'] : "";
     // Si $mail_config no está definido, se asigna un arreglo con los valores actuales

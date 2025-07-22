@@ -60,16 +60,16 @@ class ProductionLineController extends Controller
         $buttons[] = $sensorBtn;
     }
     
-    // Botón de procesos - requiere permiso productionline-orders
-    if (auth()->user()->can('productionline-orders')) {
+    // Botón de procesos - requiere permiso productionline-processes
+    if (auth()->user()->can('productionline-processes')) {
         $processesBtn = "<a href='{$processesUrl}' class='btn btn-sm btn-primary' title='Processes'>
             <i class='fa fa-cogs'></i> " . __('Processes') . "
         </a>";
         $buttons[] = $processesBtn;
     }
     
-    // Botón de órdenes - requiere permiso productionline-orders
-    if (auth()->user()->can('productionline-orders')) {
+    // Botón de órdenes - requiere permiso productionline-orders-kanban
+    if (auth()->user()->can('productionline-orders-kanban')) {
         $ordersBtn = "<a href='{$ordersUrl}' class='btn btn-sm btn-secondary' title='Production Orders'>
             <i class='fa fa-list'></i> " . __('Orders') . "
         </a>";

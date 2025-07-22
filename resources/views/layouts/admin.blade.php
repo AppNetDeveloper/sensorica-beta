@@ -9,11 +9,11 @@ if(isset($settings['color']))
     if ($primary_color!="") {
         $color = $primary_color;
     } else {
-        $color = 'theme-1';
+        $color = 'theme-2';
     }
 }
 else{
-    $color = 'theme-1';
+    $color = 'theme-2';
 }
 
 if(isset($settings['dark_mode']))
