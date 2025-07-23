@@ -20,15 +20,27 @@
         <div class="col-12 px-0">
             <div class="card border-0 shadow" style="width: 100%;">
                 <div class="card-header bg-transparent">
-                    <div class="d-flex justify-content-end align-items-center">
-                        @can('original-order-create')
-                        <a href="#" id="import-orders-btn" class="btn btn-outline-success btn-sm me-2">
-                            <i class="fas fa-sync-alt"></i> @lang('Importar ahora')
-                        </a>
-                        <a href="{{ route('customers.original-orders.create', $customer->id) }}" class="btn btn-outline-primary btn-sm">
-                            <i class="fas fa-plus"></i> @lang('New Order')
-                        </a>
-                        @endcan
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="filter-container">
+                            <select id="order-status-filter" class="form-select form-select-sm">
+                                <option value="all" selected>@lang('Todo')</option>
+                                <option value="finished">@lang('Solo finalizados')</option>
+                                <option value="in-progress">@lang('En curso')</option>
+                            </select>
+                        </div>
+                        <div>
+                            @can('original-order-create')
+                            <a href="#" id="import-orders-btn" class="btn btn-outline-success btn-sm me-2">
+                                <i class="fas fa-sync-alt"></i> @lang('Importar ahora')
+                            </a>
+                            <a href="#" id="create-cards-btn" class="btn btn-outline-info btn-sm me-2">
+                                <i class="fas fa-id-card"></i> @lang('Crear Tarjetas')
+                            </a>
+                            <a href="{{ route('customers.original-orders.create', $customer->id) }}" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-plus"></i> @lang('New Order')
+                            </a>
+                            @endcan
+                        </div>
                     </div>
                 </div>
                 
@@ -211,7 +223,13 @@
                     processing: true,
                     serverSide: true,
                     responsive: true,
-                    ajax: '{{ route("customers.original-orders.index", $customer) }}',
+                    ajax: {
+                        url: '{{ route("customers.original-orders.index", $customer) }}',
+                        data: function(d) {
+                            // Añadir el parámetro de filtro de estado
+                            d.status_filter = window.orderStatusFilter || 'all';
+                        }
+                    },
                     columns: [
                         {data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false},
                         {data: 'order_id', name: 'order_id'},
@@ -248,6 +266,18 @@
             // Inicializar DataTable
             initDataTable();
             initTooltips();
+            
+            // Filtro por estado de pedido (server-side)
+            $('#order-status-filter').on('change', function() {
+                // Obtener el valor seleccionado
+                const filterValue = $(this).val();
+                
+                // Almacenar el valor del filtro en una variable global para que DataTables lo use
+                window.orderStatusFilter = filterValue;
+                
+                // Volver a cargar la tabla para aplicar el filtro
+                dataTable.ajax.reload();
+            });
             
             // Inicializar el toast de actualización
             const updateTimeToast = new bootstrap.Toast(document.getElementById('update-time-toast'), {
@@ -323,7 +353,7 @@
                 const originalHtml = btn.html();
 
                 // Deshabilitar botón y mostrar estado de carga
-                btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> @lang('Importando...')');
+                btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> @lang("Importando...")');
 
                 $.ajax({
                     url: '{{ route("customers.original-orders.import", $customer) }}',
@@ -337,13 +367,13 @@
                             setTimeout(refreshTableKeepingState, 2000);
                         } else {
                             // Esto puede ocurrir si el servidor responde con 200 OK pero success: false
-                            showToast(response.message || '@lang('Ocurrió un error durante la importación.')', 'error');
+                            showToast(response.message || '@lang("Ocurrió un error durante la importación.")', 'error');
                         }
                     },
                     error: function(xhr) {
                         // Esto se dispara para respuestas de error HTTP (ej. 429, 500)
                         console.error('Error en la petición de importación:', xhr);
-                        const errorMsg = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : '@lang('No se pudo iniciar la importación.')';
+                        const errorMsg = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : '@lang("No se pudo iniciar la importación.")';
                         showToast(errorMsg, 'error');
                     },
                     complete: function() {
@@ -353,7 +383,48 @@
                         setTimeout(() => {
                             toastContainer = $('#update-time-toast');
                             toastContainer.removeClass('bg-success bg-danger').addClass('bg-info');
-                            toastContainer.find('.toast-body').html('<i class="fas fa-sync-alt me-2 fa-spin"></i> @lang('Actualizando...')');
+                            toastContainer.find('.toast-body').html('<i class="fas fa-sync-alt me-2 fa-spin"></i> @lang("Actualizando...")');
+                        }, 5000);
+                    }
+                });
+            });
+            
+            // Manejar clic en el botón de crear tarjetas
+            $('#create-cards-btn').on('click', function(e) {
+                e.preventDefault();
+                const btn = $(this);
+                const originalHtml = btn.html();
+
+                // Deshabilitar botón y mostrar estado de carga
+                btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> @lang("Creando tarjetas...")');
+
+                $.ajax({
+                    url: '{{ route("customers.original-orders.create-cards", $customer) }}',
+                    type: 'POST',
+                    data: {
+                        _token: '{{ csrf_token() }}'
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            showToast(response.message, 'success');
+                            setTimeout(refreshTableKeepingState, 2000);
+                        } else {
+                            showToast(response.message || '@lang("Ocurrió un error al crear las tarjetas.")', 'error');
+                        }
+                    },
+                    error: function(xhr) {
+                        console.error('Error en la petición de crear tarjetas:', xhr);
+                        const errorMsg = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : '@lang("No se pudieron crear las tarjetas.")';
+                        showToast(errorMsg, 'error');
+                    },
+                    complete: function() {
+                        // Restaurar botón
+                        btn.prop('disabled', false).html(originalHtml);
+                        // Restaurar el toast de actualización a su estado original después de un tiempo
+                        setTimeout(() => {
+                            toastContainer = $('#update-time-toast');
+                            toastContainer.removeClass('bg-success bg-danger').addClass('bg-info');
+                            toastContainer.find('.toast-body').html('<i class="fas fa-sync-alt me-2 fa-spin"></i> @lang("Actualizando...")');
                         }, 5000);
                     }
                 });

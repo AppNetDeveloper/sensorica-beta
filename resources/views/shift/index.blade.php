@@ -178,7 +178,24 @@
                                 <option value="end">{{ __('Fin') }}</option>
                             </select>
                         </div>
-                        <div class="col-md-3 d-flex align-items-end">
+                        <div class="col-md-3">
+                            <label for="historyOperatorFilter" class="form-label">{{ __('Usuario') }}</label>
+                            <select id="historyOperatorFilter" class="form-select">
+                                <option value="">{{ __('Todos los usuarios') }}</option>
+                                @foreach ($operators as $operator)
+                                    <option value="{{ $operator->id }}">{{ $operator->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3 row">
+                        <div class="col-md-9">
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                <input type="text" id="historySearchInput" class="form-control" placeholder="{{ __('Buscar...') }}">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
                             <button id="resetHistoryFilters" class="btn btn-outline-secondary w-100">
                                 <i class="fas fa-undo me-1"></i> {{ __('Restablecer') }}
                             </button>
@@ -311,6 +328,23 @@
 @push('style')
     {{-- Token CSRF para peticiones AJAX --}}
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <style>
+        /* Estilo para indicador de carga en la tabla */
+        table.loading {
+            position: relative;
+            opacity: 0.6;
+        }
+        table.loading:after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.7) url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDQiIGhlaWdodD0iNDQiIHZpZXdCb3g9IjAgMCA0NCA0NCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiBzdHJva2U9IiM2NjY2NjYiPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgc3Ryb2tlLXdpZHRoPSIyIj48Y2lyY2xlIGN4PSIyMiIgY3k9IjIyIiByPSIxIj48YW5pbWF0ZSBhdHRyaWJ1dGVOYW1lPSJyIiBiZWdpbj0iMHMiIGR1cj0iMS44cyIgdmFsdWVzPSIxOyAyMCIgY2FsY01vZGU9InNwbGluZSIga2V5VGltZXM9IjA7IDEiIGtleVNwbGluZXM9IjAuMTY1LCAwLjg0LCAwLjQ0LCAxIiByZXBlYXRDb3VudD0iaW5kZWZpbml0ZSIvPjxhbmltYXRlIGF0dHJpYnV0ZU5hbWU9InN0cm9rZS1vcGFjaXR5IiBiZWdpbj0iMHMiIGR1cj0iMS44cyIgdmFsdWVzPSIxOyAwIiBjYWxjTW9kZT0ic3BsaW5lIiBrZXlUaW1lcz0iMDsgMSIga2V5U3BsaW5lcz0iMC4zLCAwLjYxLCAwLjM1NSwgMSIgcmVwZWF0Q291bnQ9ImluZGVmaW5pdGUiLz48L2NpcmNsZT48Y2lyY2xlIGN4PSIyMiIgY3k9IjIyIiByPSIxIj48YW5pbWF0ZSBhdHRyaWJ1dGVOYW1lPSJyIiBiZWdpbj0iLTAuOXMiIGR1cj0iMS44cyIgdmFsdWVzPSIxOyAyMCIgY2FsY01vZGU9InNwbGluZSIga2V5VGltZXM9IjA7IDEiIGtleVNwbGluZXM9IjAuMTY1LCAwLjg0LCAwLjQ0LCAxIiByZXBlYXRDb3VudD0iaW5kZWZpbml0ZSIvPjxhbmltYXRlIGF0dHJpYnV0ZU5hbWU9InN0cm9rZS1vcGFjaXR5IiBiZWdpbj0iLTAuOXMiIGR1cj0iMS44cyIgdmFsdWVzPSIxOyAwIiBjYWxjTW9kZT0ic3BsaW5lIiBrZXlUaW1lcz0iMDsgMSIga2V5U3BsaW5lcz0iMC4zLCAwLjYxLCAwLjM1NSwgMSIgcmVwZWF0Q291bnQ9ImluZGVmaW5pdGUiLz48L2NpcmNsZT48L2c+PC9zdmc+') no-repeat center center;
+            z-index: 1;
+        }
+    </style>
     {{-- DataTables CSS --}}
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
     {{-- DataTables Responsive CSS --}}
@@ -913,7 +947,7 @@
             }
             
             // Inicializar DataTable
-            const table = $('#shiftHistoryTable').DataTable({
+            return $('#shiftHistoryTable').DataTable({
                 processing: true,
                 serverSide: true,
                 responsive: true,
@@ -927,6 +961,15 @@
                         d.production_line_id = $('#historyProductionLineFilter').val() || '';
                         d.type = $('#historyTypeFilter').val() || '';
                         d.action = $('#historyActionFilter').val() || '';
+                        d.operator_id = $('#historyOperatorFilter').val() || '';
+                        
+                        // Usar el valor del campo de búsqueda personalizado
+                        if ($('#historySearchInput').val()) {
+                            d.search = {
+                                value: $('#historySearchInput').val(),
+                                regex: false
+                            };
+                        }
                         
                         // Log the request data for debugging
                         console.log('Enviando parámetros al servidor:', JSON.stringify({
@@ -937,7 +980,8 @@
                             order: d.order,
                             production_line_id: d.production_line_id,
                             type: d.type,
-                            action: d.action
+                            action: d.action,
+                            operator_id: d.operator_id
                         }, null, 2));
                         
                         return d;
@@ -1054,8 +1098,8 @@
                 displayStart: 0,
                 autoWidth: false,
                 
-                // Configuración de búsqueda
-                searching: true,
+                // Configuración de búsqueda - Deshabilitamos la búsqueda nativa para usar nuestro campo personalizado
+                searching: false,
                 
                 // Configuración de ordenación
                 order: [[0, 'desc']],
@@ -1110,29 +1154,67 @@
                 // Inicializar la tabla de historial
                 historyTable = initializeHistoryTable();
                 
-                // Configurar eventos de filtrado
-                $('#historyProductionLineFilter, #historyTypeFilter, #historyActionFilter').on('change', function() {
+                // Configurar eventos de filtrado - Usar directamente la tabla del DOM para evitar problemas con la variable global
+                $('#historyProductionLineFilter, #historyTypeFilter, #historyActionFilter, #historyOperatorFilter').on('change', function() {
                     console.log('Filtro cambiado, recargando tabla...');
-                    if (historyTable) {
-                        historyTable.ajax.reload();
-                    }
+                    
+                    // Obtener la instancia actual de DataTable
+                    const table = $('#shiftHistoryTable').DataTable();
+                    
+                    // Agregar clase de carga
+                    $('#shiftHistoryTable').addClass('loading');
+                    
+                    // Recargar datos
+                    table.ajax.reload(function() {
+                        // Quitar clase de carga cuando termine
+                        $('#shiftHistoryTable').removeClass('loading');
+                    });
+                });
+                
+                // Manejar la búsqueda global con un pequeño retraso para evitar muchas peticiones
+                let searchTimeout;
+                $('#historySearchInput').on('keyup', function() {
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(function() {
+                        console.log('Búsqueda global, recargando tabla...');
+                        
+                        // Obtener la instancia actual de DataTable
+                        const table = $('#shiftHistoryTable').DataTable();
+                        
+                        // Agregar clase de carga
+                        $('#shiftHistoryTable').addClass('loading');
+                        
+                        // Recargar datos
+                        table.ajax.reload(function() {
+                            // Quitar clase de carga cuando termine
+                            $('#shiftHistoryTable').removeClass('loading');
+                        });
+                    }, 500); // Esperar 500ms después de que el usuario deje de escribir
                 });
                 
                 // Restablecer filtros
                 $('#resetHistoryFilters').on('click', function() {
-                    $('#historyProductionLineFilter, #historyTypeFilter, #historyActionFilter').val('');
-                    if (historyTable) {
-                        historyTable.ajax.reload();
-                    }
+                    $('#historyProductionLineFilter, #historyTypeFilter, #historyActionFilter, #historyOperatorFilter').val('');
+                    $('#historySearchInput').val(''); // Limpiar campo de búsqueda global
+                    
+                    // Mostrar indicador de carga
+                    $('#shiftHistoryTable').addClass('loading');
+                    
+                    // Usar la instancia actual de la tabla
+                    $('#shiftHistoryTable').DataTable().ajax.reload(function() {
+                        // Callback cuando termina la carga
+                        $('#shiftHistoryTable').removeClass('loading');
+                    });
                 });
                 
                 // Actualizar automáticamente la tabla cada 30 segundos
                 setInterval(function() {
                     try {
+                        // Usar directamente la tabla del DOM para evitar problemas con la variable global
                         const table = $('#shiftHistoryTable').DataTable();
                         if (table) {
                             console.log('Actualizando tabla automáticamente...');
-                            table.ajax.reload(null, false);
+                            table.ajax.reload(null, false); // false para mantener la página actual
                         } else {
                             console.log('No se pudo obtener la instancia de DataTable');
                         }

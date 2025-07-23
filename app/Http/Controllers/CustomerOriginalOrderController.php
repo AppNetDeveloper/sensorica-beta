@@ -89,6 +89,7 @@ class CustomerOriginalOrderController extends Controller
             $start = $request->input('start', 0);
             $orderColumnIndex = $request->input('order.0.column', 0);
             $orderDir = $request->input('order.0.dir', 'asc');
+            $statusFilter = $request->input('status_filter', 'all'); // Nuevo parámetro para filtrar por estado
             
             // Mapear columnas de la tabla a campos de la base de datos
             $columns = [
@@ -110,6 +111,17 @@ class CustomerOriginalOrderController extends Controller
             
             // Obtener el total de registros sin filtrar
             $recordsTotal = $query->count();
+            
+            // Aplicar filtro por estado
+            if ($statusFilter !== 'all') {
+                if ($statusFilter === 'finished') {
+                    // Filtrar solo pedidos finalizados (con fecha de finalización)
+                    $query->whereNotNull('finished_at');
+                } elseif ($statusFilter === 'in-progress') {
+                    // Filtrar pedidos en curso (sin fecha de finalización)
+                    $query->whereNull('finished_at');
+                }
+            }
             
             // Aplicar búsqueda si se proporciona
             if (!empty($search)) {
@@ -634,5 +646,33 @@ class CustomerOriginalOrderController extends Controller
     
         return redirect()->route('customers.original-orders.index', $customer->id)
             ->with('success', 'Orden original y sus dependencias borradas con éxito');
+    }
+    
+    /**
+     * Ejecuta el comando Artisan orders:list-stock para crear tarjetas
+     *
+     * @param Customer $customer
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function createCards(Customer $customer)
+    {
+        try {
+            // Ejecutar el comando Artisan
+            $exitCode = \Artisan::call('orders:list-stock');
+            
+            // Obtener la salida del comando
+            $output = \Artisan::output();
+            
+            return response()->json([
+                'success' => true,
+                'message' => __('Tarjetas creadas correctamente'),
+                'output' => $output
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => __('Error al crear tarjetas: ') . $e->getMessage()
+            ], 500);
+        }
     }
 }

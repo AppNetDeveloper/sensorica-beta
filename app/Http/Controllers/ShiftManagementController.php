@@ -25,7 +25,10 @@ class ShiftManagementController extends Controller
             ->orderBy('name', 'asc')
             ->get();
             
-        return view('shift.index', compact('productionLines'));
+        // Obtener todos los operadores para el filtro
+        $operators = \App\Models\Operator::orderBy('name', 'asc')->get();
+            
+        return view('shift.index', compact('productionLines', 'operators'));
     }
     
 

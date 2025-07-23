@@ -90,6 +90,7 @@ Route::resource('customers', CustomerController::class)->except(['edit', 'update
 
 // Customer Original Orders
 Route::post('customers/{customer}/original-orders/import', [CustomerOriginalOrderController::class, 'import'])->name('customers.original-orders.import');
+Route::post('customers/{customer}/original-orders/create-cards', [CustomerOriginalOrderController::class, 'createCards'])->name('customers.original-orders.create-cards');
 Route::resource('customers.original-orders', CustomerOriginalOrderController::class)->except(['edit', 'update']);
 
 // Ruta para obtener el HTML de una fila de mapeo de campos

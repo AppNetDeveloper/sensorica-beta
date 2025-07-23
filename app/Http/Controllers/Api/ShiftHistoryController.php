@@ -67,6 +67,35 @@ class ShiftHistoryController extends Controller
                 $query->where('action', $request->action);
                 \Log::debug('Applied action filter:', ['value' => $request->action]);
             }
+            
+            // Filtro de operador/usuario
+            if ($request->filled('operator_id')) {
+                $query->where('operator_id', $request->operator_id);
+                \Log::debug('Applied operator_id filter:', ['value' => $request->operator_id]);
+            }
+            
+            // Búsqueda global
+            if ($request->filled('search') && !empty($request->search['value'])) {
+                $searchValue = $request->search['value'];
+                \Log::debug('Applied global search:', ['value' => $searchValue]);
+                
+                $query->where(function($q) use ($searchValue) {
+                    // Buscar en campos directos de la tabla
+                    $q->where('id', 'like', "%{$searchValue}%")
+                      ->orWhere('type', 'like', "%{$searchValue}%")
+                      ->orWhere('action', 'like', "%{$searchValue}%")
+                      ->orWhere('created_at', 'like', "%{$searchValue}%");
+                    
+                    // Buscar en relaciones
+                    $q->orWhereHas('productionLine', function($q2) use ($searchValue) {
+                        $q2->where('name', 'like', "%{$searchValue}%");
+                    });
+                    
+                    $q->orWhereHas('operator', function($q2) use ($searchValue) {
+                        $q2->where('name', 'like', "%{$searchValue}%");
+                    });
+                });
+            }
 
             // Obtener el total de registros sin paginación
             $totalRecords = $query->count();

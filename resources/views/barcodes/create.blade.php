@@ -12,6 +12,18 @@
     </ul>
 @endsection
 
+@php
+    // Importar la clase Str
+    use Illuminate\Support\Str;
+    
+    // Generar token aleatorio único para MQTT topic
+    $randomToken = Str::random(20);
+    $mqttTopic = "c/barcoder/{$randomToken}";
+    
+    // Generar ID de máquina aleatorio
+    $machineId = 'M' . rand(1000, 9999) . Str::random(5);
+@endphp
+
 @section('content')
     <div class="row">
         <div class="col-lg-12">
@@ -30,27 +42,32 @@
 
                         <div class="form-group">
                             <label for="mqtt_topic_barcodes">{{ __('MQTT Topic Barcodes') }}</label>
-                            <input type="text" class="form-control" id="mqtt_topic_barcodes" name="mqtt_topic_barcodes" required>
+                            <input type="text" class="form-control" id="mqtt_topic_barcodes" name="mqtt_topic_barcodes" value="{{ $mqttTopic }}" required>
+                            <small class="form-text text-muted">Generado automáticamente en formato c/barcoder/{token}</small>
                         </div>
 
                         <div class="form-group">
                             <label for="machine_id">{{ __('Machine ID') }}</label>
-                            <input type="text" class="form-control" id="machine_id" name="machine_id">
+                            <input type="text" class="form-control" id="machine_id" name="machine_id" value="{{ $machineId }}">
+                            <small class="form-text text-muted">Generado automáticamente</small>
                         </div>
 
                         <div class="form-group">
                             <label for="ope_id">{{ __('OPE ID') }}</label>
-                            <input type="text" class="form-control" id="ope_id" name="ope_id">
+                            <input type="text" class="form-control" id="ope_id" name="ope_id" value="Envasado">
+                            <small class="form-text text-muted">Valor predeterminado</small>
                         </div>
 
                         <div class="form-group">
                             <label for="order_notice">{{ __('Order Notice') }}</label>
-                            <textarea class="form-control" id="order_notice" name="order_notice"></textarea>
+                            <textarea class="form-control" id="order_notice" name="order_notice">{}</textarea>
+                            <small class="form-text text-muted">Valor predeterminado</small>
                         </div>
 
                         <div class="form-group">
                             <label for="last_barcode">{{ __('Last Barcode') }}</label>
-                            <input type="text" class="form-control" id="last_barcode" name="last_barcode">
+                            <input type="text" class="form-control" id="last_barcode" name="last_barcode" value="FINALIZADO">
+                            <small class="form-text text-muted">Valor predeterminado</small>
                         </div>
 
                         <div class="form-group">
@@ -85,7 +102,8 @@
 
                         <div class="form-group">
                             <label for="conexion_type">{{ __('Conexion Type') }}</label>
-                            <input type="text" class="form-control" id="conexion_type" name="conexion_type">
+                            <input type="text" class="form-control" id="conexion_type" name="conexion_type" value="1">
+                            <small class="form-text text-muted">Valor predeterminado</small>
                         </div>
 
                         <div class="form-group">
