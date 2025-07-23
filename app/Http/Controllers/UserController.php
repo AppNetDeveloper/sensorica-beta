@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Arr;
 use Spatie\Permission\Models\Role;
 use App\Facades\UtilityFacades;
 use Illuminate\Support\Facades\File;
@@ -14,27 +15,192 @@ use Illuminate\Support\Facades\File;
 class UserController extends Controller
 {
     /**
-     * Muestra la vista principal de "Gestión de Usuarios" (con DataTables + AJAX).
-     * Ya no hacemos $table->render('users.index').
+     * Muestra la vista principal de "Gestión de Usuarios".
      */
     public function index()
     {
-        // Puedes devolver la misma Blade "users.index" que
-        // hayas modificado para usar DataTables + AJAX.
-        return view('users.index');
+        // Verificar si el usuario actual tiene rol de admin
+        $isAdmin = Auth::user()->hasRole('admin');
+        
+        // Obtener usuarios con sus roles
+        $usersQuery = User::with('roles');
+        
+        // Si no es admin, filtrar para no mostrar usuarios con rol admin
+        if (!$isAdmin) {
+            // Excluir usuarios con rol admin
+            $adminRoleId = Role::where('name', 'admin')->first()->id;
+            $usersQuery->whereDoesntHave('roles', function($query) use ($adminRoleId) {
+                $query->where('id', $adminRoleId);
+            });
+        }
+        
+        $users = $usersQuery->get();
+        return view('users.index', compact('users'));
     }
 
     /**
-     * Listar todos los usuarios en formato JSON para DataTables (AJAX).
-     * GET /users/list-all/json
+     * Mostrar el formulario para crear un nuevo usuario.
+     *
+     * @return \Illuminate\Http\Response
      */
-    public function listAllJson()
+    public function create()
     {
-        // Ajusta los campos a los que realmente tiene tu tabla:
-        // Por ejemplo, si tienes 'phone', inclúyelo.
-        $users = User::select('id', 'name', 'email', 'phone')->get();
+        // Obtener todos los roles disponibles
+        $allRoles = Role::pluck('name', 'name')->all();
+        
+        // Verificar si el usuario actual tiene rol de admin
+        $isAdmin = Auth::user()->hasRole('admin');
+        
+        // Si no es admin, filtrar el rol de admin de la lista
+        if (!$isAdmin) {
+            $allRoles = array_filter($allRoles, function($roleName) {
+                return strtolower($roleName) !== 'admin';
+            });
+        }
+        
+        $roles = $allRoles;
+        return view('users.create', compact('roles'));
+    }
+    
+    /**
+     * Almacenar un nuevo usuario en la base de datos.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function store(Request $request)
+    {
+        $this->validate($request, [
+            'name' => 'required',
+            'email' => 'required|email|unique:users,email',
+            'password' => 'required|same:confirm-password',
+            'roles' => 'required'
+        ]);
+    
+        $input = $request->all();
+        $input['password'] = Hash::make($input['password']);
+    
+        $user = User::create($input);
+        $user->assignRole($request->input('roles'));
+    
+        return redirect()->route('users.index')
+                        ->with('success', 'Usuario creado exitosamente');
+    }
+    
+    /**
+     * Mostrar el formulario para editar un usuario específico.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function edit($id)
+    {
+        $user = User::with('roles')->find($id);
+        
+        // Verificar si el usuario actual tiene rol de admin
+        $isAdmin = Auth::user()->hasRole('admin');
+        
+        // Si no es admin y está intentando editar un usuario admin, denegar acceso
+        if (!$isAdmin && $user->hasRole('admin')) {
+            return redirect()->route('users.index')
+                ->with('error', 'No tienes permiso para editar este usuario.');
+        }
+        
+        // Obtener todos los roles disponibles
+        $allRoles = Role::pluck('name', 'name')->all();
+        
+        // Si no es admin, filtrar el rol de admin de la lista
+        if (!$isAdmin) {
+            $allRoles = array_filter($allRoles, function($roleName) {
+                return strtolower($roleName) !== 'admin';
+            });
+        }
+        
+        $roles = $allRoles;
+        $userRole = $user->roles->pluck('name', 'name')->all();
+    
+        return view('users.edit', compact('user', 'roles', 'userRole'));
+    }
+    
+    /**
+     * Actualizar un usuario específico en la base de datos.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function update(Request $request, $id)
+    {
+        $this->validate($request, [
+            'name' => 'required',
+            'email' => 'required|email|unique:users,email,'.$id,
+            'password' => 'same:confirm-password',
+            'roles' => 'required'
+        ]);
+    
+        $input = $request->all();
+        if(!empty($input['password'])){ 
+            $input['password'] = Hash::make($input['password']);
+        }else{
+            $input = Arr::except($input, ['password']);
+        }
+    
+        $user = User::find($id);
+        $user->update($input);
+        DB::table('model_has_roles')->where('model_id',$id)->delete();
+    
+        $user->assignRole($request->input('roles'));
+    
+        return redirect()->route('users.index')
+                        ->with('success', 'Usuario actualizado exitosamente');
+    }
 
-        return response()->json($users);
+    /**
+     * Mostrar un usuario específico.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function show($id)
+    {
+        $user = User::with('roles')->find($id);
+        
+        // Verificar si el usuario actual tiene rol de admin
+        $isAdmin = Auth::user()->hasRole('admin');
+        
+        // Si no es admin y está intentando ver un usuario admin, denegar acceso
+        if (!$isAdmin && $user->hasRole('admin')) {
+            return redirect()->route('users.index')
+                ->with('error', 'No tienes permiso para ver este usuario.');
+        }
+        
+        return view('users.show', compact('user'));
+    }
+
+    /**
+     * Eliminar un usuario específico de la base de datos.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function destroy($id)
+    {
+        $user = User::with('roles')->find($id);
+        
+        // Verificar si el usuario actual tiene rol de admin
+        $isAdmin = Auth::user()->hasRole('admin');
+        
+        // Si no es admin y está intentando eliminar un usuario admin, denegar acceso
+        if (!$isAdmin && $user->hasRole('admin')) {
+            return redirect()->route('users.index')
+                ->with('error', 'No tienes permiso para eliminar este usuario.');
+        }
+        
+        DB::table('model_has_roles')->where('model_id', $id)->delete();
+        $user->delete();
+
+        return redirect()->route('users.index')
+                        ->with('success', 'Usuario eliminado exitosamente');
     }
 
     /**
@@ -101,124 +267,6 @@ class UserController extends Controller
         $user->delete();
 
         return response()->json(['success' => true]);
-    }
-
-
-    /******************************************************************
-    *               MÉTODOS OPCIONALES / HEREDADOS                    *
-    *     (Si ya no los necesitas, puedes eliminarlos o comentarlos)  *
-    ******************************************************************/
-
-    /**
-     * [OPCIONAL] Vista de crear usuario (antes se usaba con Yajra).
-     * Ya no es necesaria si haces todo vía AJAX en la misma vista.
-     */
-    public function create()
-    {
-        if (Auth::user()->can('create-user')) {
-            $roles = Role::pluck('name', 'name')->all();
-            return view('users.create', compact('roles'));
-        } else {
-            return redirect()->back()->with('error', 'Permission denied.');
-        }
-    }
-
-    /**
-     * [OPCIONAL] Guardar usuario (antes se usaba con el form normal).
-     * Reemplazado por storeOrUpdate() si vas 100% AJAX.
-     */
-    public function store(Request $request)
-    {
-        $this->validate($request, [
-            'name'     => 'required',
-            'email'    => 'required|email|unique:users,email',
-            'password' => 'required|same:confirm-password',
-            'roles'    => 'required'
-        ]);
-
-        $role_r = Role::findByName($request->roles);
-
-        $user = User::create([
-            'name'             => $request['name'],
-            'email'            => $request['email'],
-            'password'         => Hash::make($request['password']),
-            'confirm_password' => 'required|same:password',
-            'type'             => $role_r->name,
-            'created_by'       => Auth::user()->id,
-        ]);
-
-        $user->assignRole($role_r);
-
-        return redirect()->route('users.index')
-            ->with('success', __('User created successfully'));
-    }
-
-    /**
-     * [OPCIONAL] Mostrar un usuario (vía ID).
-     */
-    public function show($id)
-    {
-        // Usa findOrFail para lanzar 404 si no existe
-        $user = User::findOrFail($id);
-    
-        // Devuelve la vista con la variable $user
-        return view('users.show', compact('user'));
-    }
-    
-
-    /**
-     * [OPCIONAL] Vista de editar usuario (antes).
-     */
-    public function edit($id)
-    {
-        if (Auth::user()->can('edit-user')) {
-            $user = User::find($id);
-            $roles = Role::pluck('name', 'name')->all();
-            $userRole = $user->roles->pluck('name', 'name')->all();
-
-            return view('users.edit', compact('user', 'roles', 'userRole'));
-        } else {
-            return redirect()->back()->with('error', 'Permission denied.');
-        }
-    }
-
-    /**
-     * [OPCIONAL] Actualizar usuario (antes).
-     * Reemplazado por storeOrUpdate() si vas 100% AJAX.
-     */
-    public function update(Request $request, $id)
-    {
-        $this->validate($request, [
-            'name'  => 'required',
-            'email' => 'required|email|unique:users,email,' . $id,
-            'roles' => 'required'
-        ]);
-
-        $input = $request->all();
-        $user  = User::find($id);
-        $user->update($input);
-
-        DB::table('model_has_roles')->where('model_id', $id)->delete();
-        $user->assignRole($request->input('roles'));
-
-        return redirect()->route('users.index')
-            ->with('message', __('User updated successfully'));
-    }
-
-    /**
-     * [OPCIONAL] Eliminar usuario (antes) - se llamaba destroy($id).
-     * Reemplazado por delete($id) en AJAX. 
-     */
-    public function destroy($id)
-    {
-        if (Auth::user()->can('delete-user')) {
-            if ($id == 1) {
-                return redirect()->back()->with('error', 'Permission denied.');
-            } else {
-                DB::table("users")->delete($id);
-                return redirect()->route('users.index')->with('success', __('User delete successfully.'));
-            }
-        }
     }
 
     /**

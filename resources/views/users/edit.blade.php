@@ -31,6 +31,14 @@
                             {{ Form::label('email', __('Email'), ['class' => 'col-form-label']) }}
                             {!! Form::text('email', null, ['placeholder' => __('Email'), 'class' => 'form-control']) !!}
                         </div>
+                        <div class="form-group">
+                            {{ Form::label('password', __('Password'), ['class' => 'col-form-label']) }}
+                            {!! Form::password('password', ['placeholder' => __('Password (leave empty to keep current)'), 'class' => 'form-control']) !!}
+                        </div>
+                        <div class="form-group">
+                            {{ Form::label('confirm-password', __('Confirm Password'), ['class' => 'col-form-label']) }}
+                            {!! Form::password('confirm-password', ['placeholder' => __('Confirm Password'), 'class' => 'form-control']) !!}
+                        </div>
                         <div class="form-group ">
                             {{ Form::label('role', __('Role'), ['class' => 'col-form-label']) }}
                             {!! Form::select('roles', $roles, $userRole, ['class' => 'form-control', 'id' => 'choices-single-default','data-trigger']) !!}

@@ -111,7 +111,7 @@ $settings = Utility::settings();
 
                 
                 <!-- Gestión de usuarios, roles y permisos según permisos del usuario -->
-                @can('manage-user')
+                @can('show-user')
                     <li class="dash-item dash-hasmenu {{ request()->is('users*') ? 'active' : '' }}">
                         <a class="dash-link" title="{{ __('Users') }}" href="{{ route('users.index') }}">
                             <span class="dash-micon"><i class="ti ti-user"></i></span>

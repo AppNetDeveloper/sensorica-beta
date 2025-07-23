@@ -12,33 +12,70 @@
 @endsection
 
 @section('content')
-    <div class="row mt-3"><!-- Margen top de 1rem -->
+    <div class="row mt-3">
         <div class="col-lg-12">
-            {{-- Card principal sin borde y con sombra --}}
             <div class="card border-0 shadow">
-                <div class="card-header border-0">
-                    <h4 class="card-title">Gestión de Usuarios</h4>
+                <div class="card-header border-0 d-flex justify-content-between align-items-center">
+                    <h4 class="card-title mb-0">Gestión de Usuarios</h4>
+                    <div>
+                        <a href="{{ route('users.create') }}" class="btn btn-success">
+                            <i class="fas fa-plus-circle me-1"></i> Añadir Usuario
+                        </a>
+                    </div>
                 </div>
                 <div class="card-body">
-                    {{-- Botón (oculto) para subir Excel, si lo usas --}}
-                    <input type="file" id="excelFileInput" accept=".xlsx" style="display: none;" />
+                    @if ($message = Session::get('success'))
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <p class="mb-0">{{ $message }}</p>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    @endif
 
-                    {{-- Contenedor con scroll responsivo de Bootstrap --}}
-                    <div class="table-responsive" style="max-width: 98%; margin: 0 auto;">
-                        <table id="usersTable" class="display table table-striped table-bordered" style="width:100%">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-bordered">
                             <thead>
                                 <tr>
                                     <th>ID</th>
                                     <th>Nombre</th>
                                     <th>Email</th>
-                                    <th>Teléfono</th>   {{-- Quita esta columna si tu tabla no tiene "phone" --}}
-                                    <th>Contraseña</th>{{-- No la mostramos realmente, pero dejamos la col. --}}
-                                    <th>Acciones</th>
+                                    <th>Teléfono</th>
+                                    <th>Rol</th>
+                                    <th width="150px">Acciones</th>
                                 </tr>
                             </thead>
-                            <tbody></tbody>
+                            <tbody>
+                                @foreach ($users as $user)
+                                    <tr>
+                                        <td>{{ $user->id }}</td>
+                                        <td>{{ $user->name }}</td>
+                                        <td>{{ $user->email }}</td>
+                                        <td>{{ $user->phone ?? 'N/A' }}</td>
+                                        <td>
+                                            @if(!empty($user->getRoleNames()))
+                                                @foreach($user->getRoleNames() as $role)
+                                                    <span class="badge bg-primary">{{ $role }}</span>
+                                                @endforeach
+                                            @endif
+                                        </td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <a href="{{ route('users.edit', $user->id) }}" class="btn btn-sm btn-secondary">
+                                                    <i class="fas fa-edit"></i> Editar
+                                                </a>
+                                                <form action="{{ route('users.destroy', $user->id) }}" method="POST" class="d-inline" onsubmit="return confirm('¿Estás seguro de eliminar este usuario?')">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-sm btn-danger">
+                                                        <i class="fas fa-trash"></i> Eliminar
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
                         </table>
-                    </div> 
+                    </div>
                 </div>
             </div>
         </div>
@@ -46,289 +83,13 @@
 @endsection
 
 @push('style')
-    {{-- DataTables CSS --}}
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.4.1/css/responsive.dataTables.min.css">
-
     <style>
-        .dt-buttons {
-            margin-bottom: 1rem;
-        }
-        button {
+        .btn-group .btn {
             margin-right: 5px;
         }
+        .badge {
+            margin-right: 3px;
+        }
     </style>
-@endpush
-
-@push('scripts')
-    {{-- jQuery --}}
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
-    {{-- DataTables núcleo --}}
-    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-    {{-- Extensiones DataTables: Buttons, JSZip, etc. --}}
-    <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
-    {{-- Extensión Responsive de DataTables --}}
-    <script src="https://cdn.datatables.net/responsive/2.4.1/js/dataTables.responsive.min.js"></script>
-
-    {{-- SweetAlert2 para alertas --}}
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-    {{-- XLSX para leer Excel (opcional) --}}
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
-    {{-- Configuración general de AJAX para incluir CSRF Token (evitar error 419) --}}
-    <script>
-        $.ajaxSetup({
-            headers: {
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            }
-        });
-    </script>
-
-    <script>
-        // Ajusta estos endpoints según tus rutas
-        const listAllUrl       = 'users/list-all/json';
-        const storeOrUpdateUrl = 'users/store-or-update/ajax';
-
-        $(document).ready(function () {
-            const table = $('#usersTable').DataTable({
-                ajax: {
-                    url: listAllUrl,
-                    dataSrc: '',
-                    error: function (xhr) {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error al cargar datos',
-                            text: `Status: ${xhr.status}. Mensaje: ${xhr.responseJSON?.error || 'Error desconocido'}`
-                        });
-                    }
-                },
-                columns: [
-                    { data: 'id' },
-                    { data: 'name' },
-                    { data: 'email', defaultContent: '' },
-                    { data: 'phone', defaultContent: '' }, // Quita si no usas phone
-                    {
-                        data: null,
-                        defaultContent: '',
-                        render: () => ''  // No mostrar password
-                    },
-                    {
-                        data: null,
-                        render: function (data) {
-                            return `
-                                <button class="edit-btn btn btn-sm btn-secondary"
-                                        data-id="${data.id}"
-                                        data-name="${data.name}"
-                                        data-email="${data.email || ''}"
-                                        data-phone="${data.phone || ''}"
-                                        data-role="${data.role || ''}">
-                                    Editar
-                                </button>
-                                <button class="delete-btn btn btn-sm btn-danger"
-                                        data-id="${data.id}">
-                                    Eliminar
-                                </button>
-                            `;
-                        }
-                    }
-                ],
-                responsive: true,
-                scrollX: true,
-                dom: 'Bfrtip',
-                buttons: [
-                    {
-                        text: 'Añadir Usuario',
-                        className: 'btn btn-success',
-                        action: function () {
-                            $.ajax({
-                                url: '/roles/list', // Ruta para obtener los roles
-                                method: 'GET',
-                                success: function (roles) {
-                                    const rolesOptions = roles.map(role => `<option value="${role.id}">${role.name}</option>`).join('');
-                                    Swal.fire({
-                                        title: 'Añadir Usuario',
-                                        html: `
-                                            <input id="userId" class="swal2-input" placeholder="ID Usuario" readonly>
-                                            <input id="userName" class="swal2-input" placeholder="Nombre">
-                                            <input id="userEmail" class="swal2-input" placeholder="Email">
-                                            <input id="userPhone" class="swal2-input" placeholder="Teléfono (opcional)">
-                                            <input id="userPassword" type="password" class="swal2-input" placeholder="Contraseña">
-                                            <select id="userRole" class="swal2-input">
-                                                <option value="">Seleccionar rol</option>
-                                                ${rolesOptions}
-                                            </select>
-                                        `,
-                                        confirmButtonText: 'Guardar',
-                                        showCancelButton: true,
-                                        preConfirm: () => {
-                                            const id       = $('#userId').val() || null;
-                                            const name     = $('#userName').val();
-                                            const email    = $('#userEmail').val();
-                                            const phone    = $('#userPhone').val();
-                                            const password = $('#userPassword').val();
-                                            const role     = $('#userRole').val();
-
-                                            if (!name || !email || !password || !role) {
-                                                Swal.showValidationMessage('Nombre, Email, Contraseña y Rol son obligatorios.');
-                                                return false;
-                                            }
-                                            return {
-                                                id: (id ? parseInt(id) : null),
-                                                name,
-                                                email,
-                                                phone: phone || null,
-                                                password: password || null,
-                                                role
-                                            };
-                                        }
-                                    }).then((result) => {
-                                        if (result.isConfirmed) {
-                                            const payload = result.value;
-                                            $.ajax({
-                                                url: storeOrUpdateUrl,
-                                                method: 'POST',
-                                                contentType: 'application/json',
-                                                data: JSON.stringify(payload),
-                                                success: function () {
-                                                    Swal.fire('Usuario guardado correctamente', '', 'success');
-                                                    table.ajax.reload();
-                                                },
-                                                error: function (xhr) {
-                                                    Swal.fire({
-                                                        icon: 'error',
-                                                        title: 'Error al guardar',
-                                                        text: `Status: ${xhr.status}. ${xhr.responseJSON?.error || 'Error desconocido'}`
-                                                    });
-                                                }
-                                            });
-                                        }
-                                    });
-                                }
-                            });
-                        }
-                    },
-                    {
-                        extend: 'excelHtml5',
-                        text: 'Exportar a Excel',
-                        className: 'btn btn-success',
-                        title: null,
-                        exportOptions: {
-                            columns: [0,1,2,3] // Quita el index 4 (Contraseña) y 5 (Acciones)
-                        }
-                    }
-                ]
-            });
-
-            // Editar
-            $('#usersTable tbody').on('click', '.edit-btn', function () {
-                const currentId    = $(this).data('id');
-                const currentName  = $(this).data('name');
-                const currentEmail = $(this).data('email');
-                const currentPhone = $(this).data('phone');
-                const currentRole  = $(this).data('role');
-
-                $.ajax({
-                    url: '/roles/list', // Esta ruta debe devolver todos los roles
-                    method: 'GET',
-                    success: function (roles) {
-                        const rolesOptions = roles.map(role => `<option value="${role.id}" ${currentRole === role.id ? 'selected' : ''}>${role.name}</option>`).join('');
-                        Swal.fire({
-                            title: 'Editar Usuario',
-                            html: `
-                                <input id="userId" class="swal2-input" value="${currentId}" readonly>
-                                <input id="userName" class="swal2-input" value="${currentName}">
-                                <input id="userEmail" class="swal2-input" placeholder="Email" value="${currentEmail}">
-                                <input id="userPhone" class="swal2-input" placeholder="Teléfono" value="${currentPhone}">
-                                <input id="userPassword" type="password" class="swal2-input" placeholder="Nueva Contraseña (opcional)">
-                                <select id="userRole" class="swal2-input">
-                                    ${rolesOptions}
-                                </select>
-                            `,
-                            confirmButtonText: 'Actualizar',
-                            showCancelButton: true,
-                            preConfirm: () => {
-                                const id       = $('#userId').val();
-                                const name     = $('#userName').val();
-                                const email    = $('#userEmail').val();
-                                const phone    = $('#userPhone').val();
-                                const password = $('#userPassword').val();
-                                const role     = $('#userRole').val();
-
-                                if (!id || !name || !email || !role) {
-                                    Swal.showValidationMessage('ID, Nombre, Email y Rol son obligatorios.');
-                                    return false;
-                                }
-                                return { 
-                                    id: parseInt(id),
-                                    name,
-                                    email,
-                                    phone: phone || null,
-                                    password: password || null,
-                                    role
-                                };
-                            }
-                        }).then((result) => {
-                            if (result.isConfirmed) {
-                                const payload = result.value;
-                                $.ajax({
-                                    url: storeOrUpdateUrl,
-                                    method: 'POST',
-                                    contentType: 'application/json',
-                                    data: JSON.stringify(payload),
-                                    success: function () {
-                                        Swal.fire('Usuario actualizado', '', 'success');
-                                        table.ajax.reload();
-                                    },
-                                    error: function (xhr) {
-                                        Swal.fire({
-                                            icon: 'error',
-                                            title: 'Error al actualizar',
-                                            text: `Status: ${xhr.status}. ${xhr.responseJSON?.error || 'Error desconocido'}`
-                                        });
-                                    }
-                                });
-                            }
-                        });
-                    }
-                });
-            });
-
-            // Eliminar
-            $('#usersTable tbody').on('click', '.delete-btn', function () {
-                const id = $(this).data('id');
-                Swal.fire({
-                    title: '¿Estás seguro?',
-                    text: 'Esta acción no se puede deshacer.',
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonText: 'Sí, eliminar',
-                    cancelButtonText: 'Cancelar'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        $.ajax({
-                            url: '/users/delete/ajax/' + id,  // Ajusta a tu ruta real
-                            method: 'DELETE',
-                            success: function () {
-                                Swal.fire('Usuario eliminado', '', 'success');
-                                table.ajax.reload();
-                            },
-                            error: function (xhr) {
-                                Swal.fire({
-                                    icon: 'error',
-                                    title: 'Error al eliminar',
-                                    text: `Status: ${xhr.status}. ${xhr.responseJSON?.error || 'Error desconocido'}`
-                                });
-                            }
-                        });
-                    }
-                });
-            });
-        });
-    </script>
 @endpush
 
