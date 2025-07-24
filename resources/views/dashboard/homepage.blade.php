@@ -128,6 +128,179 @@
         </div>
         @endcan
 
+        <!-- Widget de trabajadores si tiene permiso -->
+        @can('workers-show')
+        <div class="col-xl-3 col-md-12">
+            <a href="{{ route('workers-admin.index') }}">
+                <div class="card comp-card">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <h6 class="m-b-0 text-muted">{{ __('Total Workers') }}</h6>
+                                <h3 class="m-b-5">{{ $operatorsCount }}</h3>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fa-regular fa-user bg-warning text-white d-block"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        @endcan
+
+        <!-- Widgets de turnos si tiene permiso -->
+        @can('shift-show')
+        <!-- Resumen de líneas de producción -->
+        <div class="col-xl-3 col-md-12">
+            <a href="{{ route('shift.index') }}">
+                <div class="card comp-card">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <h6 class="m-b-0 text-muted">{{ __('Production Lines') }}</h6>
+                                <h3 class="m-b-5">{{ $productionLineStats['total'] }}</h3>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fa-regular fa-clock bg-info text-white d-block"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Estado de líneas activas -->
+        <div class="col-xl-3 col-md-12">
+            <div class="card comp-card">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h6 class="m-b-0 text-muted">{{ __('Active Lines') }}</h6>
+                            <h3 class="m-b-5">{{ $productionLineStats['active'] }}</h3>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fa-solid fa-play bg-success text-white d-block"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Estado de líneas en pausa o paradas -->
+        <div class="col-xl-3 col-md-12">
+            <div class="card comp-card">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h6 class="m-b-0 text-muted">{{ __('Paused/Stopped') }}</h6>
+                            <h3 class="m-b-5">{{ $productionLineStats['paused'] + $productionLineStats['stopped'] }}</h3>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fa-solid fa-pause bg-warning text-white d-block"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Estado de líneas con incidencias -->
+        <div class="col-xl-3 col-md-12">
+            <div class="card comp-card">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h6 class="m-b-0 text-muted">{{ __('Incidents') }}</h6>
+                            <h3 class="m-b-5">{{ $productionLineStats['incident'] }}</h3>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fa-solid fa-triangle-exclamation bg-danger text-white d-block"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tabla resumen de líneas de producción -->
+        <div class="col-xl-12 col-md-12 mt-3">
+            <div class="card">
+                <div class="card-header">
+                    <h5>{{ __('Production Lines Status') }}</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>{{ __('Line') }}</th>
+                                    <th>{{ __('Status') }}</th>
+                                    <th>{{ __('Last Update') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($productionLines as $line)
+                                    <tr>
+                                        <td>{{ $line->name }}</td>
+                                        <td>
+                                            @if($line->lastShiftHistory)
+                                                @php
+                                                    $statusClass = '';
+                                                    $statusText = '';
+                                                    
+                                                    // Verificar si es un turno activo o reanudado
+                                                    if ($line->lastShiftHistory->action == 'start' || 
+                                                        ($line->lastShiftHistory->type === 'stop' && $line->lastShiftHistory->action === 'end')) {
+                                                        // Unificamos la visualización para turnos activos y reanudados
+                                                        $statusClass = 'badge bg-success';
+                                                        $statusText = __('Active');
+                                                    }
+                                                    // Resto de casos normales
+                                                    else {
+                                                        switch($line->lastShiftHistory->action) {
+                                                            case 'pause':
+                                                                $statusClass = 'badge bg-warning';
+                                                                $statusText = __('Paused');
+                                                                break;
+                                                            case 'stop':
+                                                                $statusClass = 'badge bg-secondary';
+                                                                $statusText = __('Stopped');
+                                                                break;
+                                                            case 'incident':
+                                                                $statusClass = 'badge bg-danger';
+                                                                $statusText = __('Incident');
+                                                                break;
+                                                            default:
+                                                                $statusClass = 'badge bg-light text-dark';
+                                                                $statusText = __('Unknown');
+                                                        }
+                                                    }
+                                                @endphp
+                                                <span class="{{ $statusClass }}">{{ $statusText }}</span>
+                                            @else
+                                                <span class="badge bg-light text-dark">{{ __('Inactive') }}</span>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if($line->lastShiftHistory)
+                                                {{ \Carbon\Carbon::parse($line->lastShiftHistory->created_at)->format('d/m/Y H:i') }}
+                                            @else
+                                                {{ __('Never') }}
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="3" class="text-center">{{ __('No production lines found') }}</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @endcan
+
         <!-- project-ticket end -->
 
         {{-- <div class="row"> --}}

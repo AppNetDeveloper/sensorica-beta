@@ -138,6 +138,57 @@
 
         :fullscreen #kanbanContainer { height: 100vh; padding: 1rem; }
         :fullscreen .kanban-board { align-items: stretch; }
+        
+        /* Estilos para el loader visual */
+        #kanban-loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            backdrop-filter: blur(2px);
+            transition: opacity 0.3s ease;
+        }
+        
+        #kanban-loader.fade-out {
+            opacity: 0;
+        }
+        
+        .loader-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid var(--primary-color-light);
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        .loader-text {
+            font-size: 1.2rem;
+            font-weight: 500;
+            color: var(--text-color);
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
         :fullscreen .kanban-column { height: 100%; }
         .cursor-pointer { cursor: pointer; }
     </style>
@@ -161,6 +212,7 @@
         let draggedCard = null;
         let cachedDropPosition = null; // Cachear posición detectada durante dragOver
         let cachedTargetContainer = null; // Cachear contenedor objetivo
+        let isRequestInProgress = false; // Variable para controlar si hay una solicitud en curso
         
         const translations = {
             noOrdersToOrganize: "{{ __('No hay órdenes o líneas de producción para organizar.') }}",
@@ -1114,6 +1166,18 @@
         // --- 5. GUARDADO DE DATOS Y OTROS EVENTOS ---
 
         function saveKanbanChanges() {
+            // Evitar múltiples solicitudes simultáneas
+            if (isRequestInProgress) {
+                console.log('⚠️ Ya hay una solicitud en curso. Esperando...');
+                return;
+            }
+            
+            // Marcar que hay una solicitud en curso
+            isRequestInProgress = true;
+            
+            // Mostrar loader visual en el tablero
+            showKanbanLoader();
+            
             const saveBtn = document.getElementById('saveChangesBtn');
             saveBtn.innerHTML = `<i class="fas fa-spinner fa-spin me-1"></i> ${translations.saving}`;
             saveBtn.disabled = true;
@@ -1156,9 +1220,57 @@
             .finally(() => {
                 saveBtn.innerHTML = `<i class="fas fa-save me-1"></i> {{ __('Guardar') }}`;
                 saveBtn.disabled = false;
+                
+                // Marcar que la solicitud ha terminado
+                isRequestInProgress = false;
+                
+                // Ocultar el loader visual
+                hideKanbanLoader();
+                
+                console.log('🔄 Solicitud completada');
             });
         }
 
+        // Función para mostrar un loader visual sobre el tablero Kanban
+        function showKanbanLoader() {
+            // Verificar si ya existe un loader
+            if (document.getElementById('kanban-loader')) return;
+            
+            // Crear el elemento del loader
+            const loader = document.createElement('div');
+            loader.id = 'kanban-loader';
+            loader.innerHTML = `
+                <div class="loader-content">
+                    <div class="spinner"></div>
+                    <div class="loader-text">${translations.saving || 'Guardando cambios...'}</div>
+                </div>
+            `;
+            
+            // Añadir el loader al contenedor del Kanban
+            const kanbanContainer = document.getElementById('kanbanContainer');
+            if (kanbanContainer) {
+                kanbanContainer.appendChild(loader);
+                console.log('💾 Loader visual mostrado');
+            }
+        }
+        
+        // Función para ocultar el loader visual
+        function hideKanbanLoader() {
+            const loader = document.getElementById('kanban-loader');
+            if (loader) {
+                // Agregar clase para animar la salida
+                loader.classList.add('fade-out');
+                
+                // Eliminar el loader después de la animación
+                setTimeout(() => {
+                    if (loader.parentNode) {
+                        loader.parentNode.removeChild(loader);
+                    }
+                    console.log('💾 Loader visual ocultado');
+                }, 300);
+            }
+        }
+        
         function showToast(message, type = 'success') {
             const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, timerProgressBar: true });
             Toast.fire({ icon: type, title: message });
@@ -1506,8 +1618,14 @@
             }
         }
         
-        // Actualización automática cada 20 segundos
+        // Actualización automática cada 10 segundos
         setInterval(() => {
+            // No actualizar si hay una operación de drag & drop en curso
+            if (draggedCard) {
+                console.log('🔄 Actualización automática pausada: operación de drag & drop en curso');
+                return;
+            }
+            
             savePendingSearchValue();
             refreshKanbanData();
             
