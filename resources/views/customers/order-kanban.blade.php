@@ -964,6 +964,7 @@
             
             const createdAtFormatted = new Date(order.created_at).toLocaleDateString();
             const deliveryDateFormatted = order.delivery_date ? new Date(order.delivery_date).toLocaleDateString() : '';
+            const fechaPedidoErpFormatted = order.fecha_pedido_erp ? new Date(order.fecha_pedido_erp).toLocaleDateString() : '';
             const processDescription = '{{ $process->description }}';
 
             let urgencyIconHtml = '';
@@ -1048,8 +1049,13 @@
                         <div class="text-xs fw-bold text-muted mt-1">${order.customerId || translations.noCustomer}</div>
                         ${processDescription ? `<div class="text-xs text-muted mt-1">${processDescription}</div>` : ''}
                         <div class="d-flex justify-content-between align-items-center mt-1">
-                            <div class="text-xs text-muted"><i class="far fa-calendar-alt me-1"></i>${createdAtFormatted}</div>
-                            ${deliveryDateFormatted ? `<div class="text-xs text-danger fw-bold ms-2"><i class="fas fa-truck me-1"></i>${deliveryDateFormatted}</div>` : ''}
+                            <div class="text-xs text-muted"><i class="far fa-calendar-alt me-1" title="Fecha de creación tarjeta"></i>${createdAtFormatted}</div>
+                            ${deliveryDateFormatted ? `<div class="text-xs text-danger fw-bold ms-2"><i class="fas fa-truck me-1" title="Fecha de entrega en instalación cliente"></i>${deliveryDateFormatted}</div>` : ''}
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mt-1">
+                            <div class="text-xs text-muted">
+                                <i class="fas fa-calendar-check me-1" title="Fecha creación pedido en ERP"></i>${fechaPedidoErpFormatted ? fechaPedidoErpFormatted : 'Sin fecha ERP'}
+                            </div>
                         </div>
                     </div>
                     <div class="d-flex flex-column align-items-end">

@@ -578,7 +578,7 @@ class CalculateProductionMonitorOeev2 extends Command
                 $shiftHistory->oee = $oeePercent;  // valor entre 0 y 100
                 
                 // Log de depuración para slow_time
-                Log::info("[DEBUG] Saving ShiftHistory for Line: {$shiftHistory->production_line_id}. Values: on_time={$shiftHistory->on_time}, down_time={$shiftHistory->down_time}, slow_time={$shiftHistory->slow_time}, prod_stops_time={$shiftHistory->production_stops_time}");
+                $this->info("[DEBUG] Saving ShiftHistory for Line: {$shiftHistory->production_line_id}. Values: on_time={$shiftHistory->on_time}, down_time={$shiftHistory->down_time}, slow_time={$shiftHistory->slow_time}, prod_stops_time={$shiftHistory->production_stops_time}");
 
                 $shiftHistory->save();
             }
@@ -867,11 +867,11 @@ class CalculateProductionMonitorOeev2 extends Command
             //Log::info("Mensaje almacenado en archivo (server1): {$fileName1}");
         
             // Guardar en servidor 2
-            $fileName2 = storage_path("app/mqtt/server2/{$sanitizedTopic}_{$uniqueId}.json");
-            if (!file_exists(dirname($fileName2))) {
-                mkdir(dirname($fileName2), 0755, true);
-            }
-            file_put_contents($fileName2, $jsonData . PHP_EOL);
+            //$fileName2 = storage_path("app/mqtt/server2/{$sanitizedTopic}_{$uniqueId}.json");
+            //if (!file_exists(dirname($fileName2))) {
+            //    mkdir(dirname($fileName2), 0755, true);
+            //}
+            //file_put_contents($fileName2, $jsonData . PHP_EOL);
             //Log::info("Mensaje almacenado en archivo (server2): {$fileName2}");
         } catch (\Exception $e) {
             Log::error("Error storing message in file: " . $e->getMessage());

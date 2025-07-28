@@ -162,7 +162,7 @@ class ScadaController extends Controller
         $this->publishMqttMessage($topic, $message);
 
         // Log para el mensaje MQTT
-        Log::info(date('Y-m-d H:i:s') . ' Message sent to MQTT topic: ' . $topic . ' with value: ' . $material->name . ' and time: ' . date('Y-m-d H:i:s'));
+        // Log::info(date('Y-m-d H:i:s') . ' Message sent to MQTT topic: ' . $topic . ' with value: ' . $material->name . ' and time: ' . date('Y-m-d H:i:s'));
 
         // Devolver una respuesta de éxito
         return response()->json(['message' => 'Material updated successfully'], 200);
@@ -194,13 +194,14 @@ class ScadaController extends Controller
             file_put_contents($fileName1, $jsonData . PHP_EOL);
             //Log::info("Mensaje almacenado en archivo (server1): {$fileName1}");
         
-            // Guardar en servidor 2
-            $fileName2 = storage_path("app/mqtt/server2/{$sanitizedTopic}_{$uniqueId}.json");
-            if (!file_exists(dirname($fileName2))) {
-                mkdir(dirname($fileName2), 0755, true);
-            }
-            file_put_contents($fileName2, $jsonData . PHP_EOL);
-            //Log::info("Mensaje almacenado en archivo (server2): {$fileName2}");
+            // Comentado para reducir logs y carga del sistema
+            // // Guardar en servidor 2
+            // $fileName2 = storage_path("app/mqtt/server2/{$sanitizedTopic}_{$uniqueId}.json");
+            // if (!file_exists(dirname($fileName2))) {
+            //     mkdir(dirname($fileName2), 0755, true);
+            // }
+            // file_put_contents($fileName2, $jsonData . PHP_EOL);
+            // //Log::info("Mensaje almacenado en archivo (server2): {$fileName2}");
         } catch (\Exception $e) {
             Log::error("Error storing message in file: " . $e->getMessage());
         }

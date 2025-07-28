@@ -68,6 +68,16 @@
                                     <td>{{ $originalOrder->created_at->format('Y-m-d H:i') }}</td>
                                 </tr>
                                 <tr>
+                                    <th class="bg-light">@lang('Fecha Pedido ERP')</th>
+                                    <td>
+                                        @if($originalOrder->fecha_pedido_erp)
+                                            {{ $originalOrder->fecha_pedido_erp->format('Y-m-d H:i') }}
+                                        @else
+                                            <span class="text-muted">@lang('Sin fecha ERP')</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                                <tr>
                                     <th class="bg-light">@lang('Updated At')</th>
                                     <td>{{ $originalOrder->updated_at->format('Y-m-d H:i') }}</td>
                                 </tr>

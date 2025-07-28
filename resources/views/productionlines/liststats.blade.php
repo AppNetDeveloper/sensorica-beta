@@ -93,9 +93,10 @@
                 <div class="row g-3">
                     <div class="col-md-4">
                         <label for="modbusSelect" class="form-label">Línea de Producción</label>
-                        <select id="modbusSelect" class="form-select">
+                        <select id="modbusSelect" class="form-select" multiple>
                             <option value="">Cargando...</option>
                         </select>
+                        <div class="form-text">Mantén presionada la tecla Ctrl (o Cmd en Mac) para seleccionar múltiples líneas</div>
                     </div>
                     <div class="col-md-3">
                         <label for="startDate" class="form-label">Fecha Inicio</label>
@@ -208,7 +209,6 @@
                     <table id="controlWeightTable" class="table table-hover table-striped" style="width:100%">
                         <thead>
                             <tr>
-                                <th>ID</th>
                                 <th>Línea</th>
                                 <th>Orden</th>
                                 <th>Caja</th>
@@ -218,6 +218,11 @@
                                 <th>OEE</th>
                                 <th>Estado</th>
                                 <th>Actualizado</th>
+                                <th>T. Activo</th>
+                                <th>T. Rápido</th>
+                                <th>T. Lento</th>
+                                <th>T. Fuera</th>
+                                <th>T. Preparación</th>
                                 <th>Acciones</th>
                             </tr>
                         </thead>
@@ -265,6 +270,10 @@
                                     <div class="mb-3">
                                         <label class="fw-bold">UPM Teórico:</label>
                                         <span id="modal-upm-theoretical"></span>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="fw-bold">Tiempo Activo:</label>
+                                        <span id="modal-on-time"></span>
                                     </div>
                                     <div class="mb-3">
                                         <label class="fw-bold">Estado:</label>
@@ -323,6 +332,16 @@
         const token = new URLSearchParams(window.location.search).get('token');
         console.log("Token obtenido:", token);
 
+        // Función para formatear segundos a HH:MM:SS
+        function formatTime(seconds) {
+            if (seconds === null || seconds === undefined || isNaN(seconds)) return '-';
+            seconds = parseInt(seconds);
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
         async function fetchProductionLines() {
             try {
                 console.log("Intentando obtener líneas de producción...");
@@ -341,9 +360,17 @@
             }
         }
 
-        async function fetchOrderStats(lineToken, startDate, endDate) {
+        async function fetchOrderStats(lineTokens, startDate, endDate) {
             try {
-                const url = `/api/order-stats-all?token=${lineToken}&start_date=${startDate}&end_date=${endDate}`;
+                const tokensArray = Array.isArray(lineTokens) ? lineTokens : [lineTokens];
+                const filteredTokens = tokensArray.filter(token => token && token.trim() !== '');
+                
+                if (filteredTokens.length === 0) {
+                    throw new Error('No hay tokens válidos seleccionados');
+                }
+                
+                const tokenParam = filteredTokens.join(',');
+                const url = `/api/order-stats-all?token=${tokenParam}&start_date=${startDate}&end_date=${endDate}`;
                 console.log("URL de datos de estadísticas:", url);
 
                 const response = await fetch(url);
@@ -362,7 +389,12 @@
                     units_per_minute_theoretical: parseFloat(item.units_per_minute_theoretical) || 0,
                     oee: parseFloat(item.oee) || 0,
                     status: item.status || 'unknown',
-                    updated_at: item.updated_at || null
+                    updated_at: item.updated_at || null,
+                    on_time: item.on_time || null,
+                    fast_time: item.fast_time || null,
+                    slow_time: item.slow_time || null,
+                    out_time: item.out_time || null,
+                    prepair_time: item.prepair_time || null
                 }));
                 
                 // Actualizar los KPIs
@@ -376,7 +408,6 @@
                     data: processedData,
                     destroy: true,
                     columns: [
-                        { data: 'id', title: 'ID' },
                         { data: 'production_line_name', title: 'Línea' },
                         { data: 'order_id', title: 'Orden' },
                         { data: 'box', title: 'Caja' },
@@ -431,6 +462,41 @@
                                 return data ? new Date(data).toLocaleString() : '-';
                             }
                         },
+                        { 
+                            data: 'on_time', 
+                            title: 'T. Activo',
+                            render: function(data) {
+                                return formatTime(data);
+                            }
+                        },
+                        { 
+                            data: 'fast_time', 
+                            title: 'T. Rápido',
+                            render: function(data) {
+                                return formatTime(data);
+                            }
+                        },
+                        { 
+                            data: 'slow_time', 
+                            title: 'T. Lento',
+                            render: function(data) {
+                                return formatTime(data);
+                            }
+                        },
+                        { 
+                            data: 'out_time', 
+                            title: 'T. Fuera',
+                            render: function(data) {
+                                return formatTime(data);
+                            }
+                        },
+                        { 
+                            data: 'prepair_time', 
+                            title: 'T. Preparación',
+                            render: function(data) {
+                                return formatTime(data);
+                            }
+                        },
                         {
                             data: null,
                             title: 'Acciones',
@@ -445,7 +511,7 @@
                             }
                         }
                     ],
-                    order: [[0, 'desc']],
+                    order: [[1, 'desc']], // Ordenar por Orden (ahora es la segunda columna)
                     paging: true,
                     pageLength: 10,
                     lengthChange: true,
@@ -527,7 +593,8 @@
 
         // Función para mostrar detalles en el modal
         function showDetailsModal(row) {
-            console.log("Mostrando detalles de la fila:", row);
+            console.log('Mostrando detalles de la fila:', row);
+            console.log('OEE de la fila:', row.oee);
             
             // Actualizar datos en el modal
             $('#modal-line-name').text(row.production_line_name);
@@ -536,17 +603,29 @@
             $('#modal-upm-real').text(row.units_per_minute_real.toFixed(2));
             $('#modal-upm-theoretical').text(row.units_per_minute_theoretical.toFixed(2));
             
+            // Mostrar el tiempo activo (on_time)
+            $('#modal-on-time').text(row.on_time !== null && row.on_time !== undefined ? formatTime(row.on_time) : '-');
+            
             // Actualizar estado
             const statusMap = {
                 'active': { text: 'Activo', class: 'bg-success' },
-                'inactive': { text: 'Inactivo', class: 'bg-danger' },
                 'paused': { text: 'Pausado', class: 'bg-warning' },
-                'maintenance': { text: 'Mantenimiento', class: 'bg-info' },
-                'unknown': { text: 'Desconocido', class: 'bg-secondary' }
+                'error': { text: 'Error', class: 'bg-danger' },
+                'completed': { text: 'Completado', class: 'bg-primary' }
+            };
+            const status = statusMap[row.status] || { text: 'Desconocido', class: 'bg-secondary' };
+            $('#modal-status').text(status.text).addClass(status.class);
+            
+            // Asegurar que el OEE se pase correctamente al gráfico
+            const oeeData = {
+                oee: row.oee,
+                units_per_minute_real: row.units_per_minute_real,
+                units_per_minute_theoretical: row.units_per_minute_theoretical,
+                ...row
             };
             
-            const status = statusMap[row.status] || statusMap.unknown;
-            $('#modal-status').text(status.text).removeClass().addClass(`badge ${status.class}`);
+            // Crear gráfica de OEE
+            createOEEChart(oeeData);
             
             // Actualizar fecha
             $('#modal-updated-at').text(row.updated_at ? new Date(row.updated_at).toLocaleString() : '-');
@@ -601,8 +680,17 @@
             }
             
             // Calcular OEE como porcentaje
-            const oeeValue = parseFloat(row.oee);
-            const oeePercentage = oeeValue > 1 ? oeeValue : oeeValue * 100;
+            console.log('Datos de OEE recibidos:', row.oee, typeof row.oee);
+            
+            // Usar el valor de OEE directamente desde la API sin cálculos
+            let oeePercentage = 0;
+            if (row.oee !== null && row.oee !== undefined && !isNaN(row.oee)) {
+                oeePercentage = parseFloat(row.oee);
+            } else {
+                oeePercentage = 0;
+            }
+            
+            console.log('OEE directo desde API:', oeePercentage);
             
             // Crear nueva gráfica
             window.oeeChartInstance = new Chart(ctx, {
@@ -646,11 +734,11 @@
                 }
             });
             
-            // Añadir texto en el centro del gráfico
+            // Añadir texto en el centro del gráfico usando el valor actual del gráfico
             Chart.register({
                 id: 'doughnutCenterText',
                 afterDraw: function(chart) {
-                    if (chart.config.type === 'doughnut') {
+                    if (chart.config.type === 'doughnut' && chart.data.datasets[0]) {
                         const width = chart.width;
                         const height = chart.height;
                         const ctx = chart.ctx;
@@ -660,7 +748,9 @@
                         ctx.font = fontSize + "em sans-serif";
                         ctx.textBaseline = "middle";
                         
-                        const text = `${oeePercentage.toFixed(2)}%`;
+                        // Obtener el valor OEE del dataset actual
+                        const oeeValue = chart.data.datasets[0].data[0] || 0;
+                        const text = `${oeeValue.toFixed(2)}%`;
                         const textX = Math.round((width - ctx.measureText(text).width) / 2);
                         const textY = height / 2;
                         
@@ -676,19 +766,19 @@
             fetchProductionLines();
 
             $('#fetchData').click(() => {
-                const lineToken = $('#modbusSelect').val();
+                const selectedLines = $('#modbusSelect').val();
                 const startDate = $('#startDate').val();
                 const endDate = $('#endDate').val();
-                console.log("Parámetros seleccionados:", { lineToken, startDate, endDate });
+                console.log("Parámetros seleccionados:", { selectedLines, startDate, endDate });
 
-                if (lineToken && startDate && endDate) {
+                if (selectedLines && selectedLines.length > 0 && startDate && endDate) {
                     // Mostrar indicador de carga
                     $('#connectionStatus').html('<i class="fas fa-sync fa-spin me-1"></i> Cargando...');
                     $('#connectionStatus').removeClass('bg-success bg-danger').addClass('bg-warning');
                     
-                    fetchOrderStats(lineToken, startDate, endDate);
+                    fetchOrderStats(selectedLines, startDate, endDate);
                 } else {
-                    alert("Por favor, completa todos los campos.");
+                    alert("Por favor, selecciona al menos una línea de producción y completa todos los campos.");
                 }
             });
             

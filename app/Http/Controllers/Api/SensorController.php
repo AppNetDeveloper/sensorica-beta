@@ -301,13 +301,13 @@ class SensorController extends Controller
         if ($config->sensor_type < 1) {
             
             try {
-                Log::alert("Estoy aqui test sensor_type < 1 try $config->name");
+                //Log::alert("Estoy aqui test sensor_type < 1 try $config->name");
                 // Buscar ProductionOrder en curso (status=1)
                 $orderEnCurso = ProductionOrder::where('production_line_id', $productionLineId)
                     ->where('status', 1)
                     ->first();
                 $orderIdPO = $orderEnCurso ? $orderEnCurso->order_id : null;
-                Log::alert("Estoy aqui test sensor_type < 1 try :$orderIdPO");
+                //Log::alert("Estoy aqui test sensor_type < 1 try :$orderIdPO");
                 // Si no hay orden en curso
                 if (!$orderIdPO) {
                     Log::warning("Api SensorController: No se encontró el ID de pedido para la línea de producción.");
@@ -331,7 +331,7 @@ class SensorController extends Controller
                                 "opeId"     => $barcoder->ope_id ?? "",
                             ]);
                             $this->publishMqttMessage($topic, $messagePayload);
-                            Log::info("Mensaje MQTT enviado para orden pendiente: orderId={$nextOrderInLine->order_id}");
+                            //Log::info("Mensaje MQTT enviado para orden pendiente: orderId={$nextOrderInLine->order_id}");
                         } else {
                             Log::warning("Barcoder/Topic no encontrado para orden en línea $productionLineId");
                         }
@@ -406,7 +406,7 @@ class SensorController extends Controller
             $time_1 = $previousEntry1 ? now()->diffInRealSeconds($previousEntry1->created_at) : 300;
             
 
-            Log::debug("Api SensorController: Tiempos calculados: {$modelConfig['time_0']}: $time_0, {$modelConfig['time_1']}: $time_1");
+            //Log::debug("Api SensorController: Tiempos calculados: {$modelConfig['time_0']}: $time_0, {$modelConfig['time_1']}: $time_1");
         } catch (\Exception $e) {
             Log::error("Api SensorController: Error al calcular los tiempos: " . $e->getMessage());
             return;
@@ -512,7 +512,7 @@ class SensorController extends Controller
         // Determinar el estado basado en tiempos
         $optimalTime = $config->optimal_production_time;
         $reducedSpeedMultiplier = $config->reduced_speed_time_multiplier;
-        Log::debug("Api SensorController: Calculando estado para el sensor {$config->name} (ID: {$config->id}) con lastTime: $lastTime, optimalTime: $optimalTime, reducedSpeedMultiplier: $reducedSpeedMultiplier");
+        //Log::debug("Api SensorController: Calculando estado para el sensor {$config->name} (ID: {$config->id}) con lastTime: $lastTime, optimalTime: $optimalTime, reducedSpeedMultiplier: $reducedSpeedMultiplier");
         $status = $this->determineStatus($lastTime, $optimalTime, $reducedSpeedMultiplier);
     
         // Crear mensajes JSON y publicar a MQTT
@@ -546,7 +546,7 @@ class SensorController extends Controller
     
     private function determineStatus($lastTime, $optimalTime, $reducedSpeedMultiplier)
     {
-        Log::debug("Api SensorController: Tiempos: lastTime: $lastTime, optimalTime: $optimalTime, reducedSpeedMultiplier: $reducedSpeedMultiplier");
+        //Log::debug("Api SensorController: Tiempos: lastTime: $lastTime, optimalTime: $optimalTime, reducedSpeedMultiplier: $reducedSpeedMultiplier");
         // Determinar el estado según los tiempos
         if (!is_numeric($lastTime)) {
             Log::warning("Api SensorController: Tiempos no numéricos: lastTime: $lastTime, optimalTime: $optimalTime, reducedSpeedMultiplier: $reducedSpeedMultiplier");
@@ -594,13 +594,14 @@ class SensorController extends Controller
             file_put_contents($fileName1, $jsonData . PHP_EOL);
             ////Log::info("Mensaje almacenado en archivo (server1): {$fileName1}");
         
-            // Guardar en servidor 2
-            $fileName2 = storage_path("app/mqtt/server2/{$sanitizedTopic}_{$uniqueId}.json");
-            if (!file_exists(dirname($fileName2))) {
-                mkdir(dirname($fileName2), 0755, true);
-            }
-            file_put_contents($fileName2, $jsonData . PHP_EOL);
-            ////Log::info("Mensaje almacenado en archivo (server2): {$fileName2}");
+            // Comentado para reducir logs y carga del sistema
+            // // Guardar en servidor 2
+            // $fileName2 = storage_path("app/mqtt/server2/{$sanitizedTopic}_{$uniqueId}.json");
+            // if (!file_exists(dirname($fileName2))) {
+            //     mkdir(dirname($fileName2), 0755, true);
+            // }
+            // file_put_contents($fileName2, $jsonData . PHP_EOL);
+            // ////Log::info("Mensaje almacenado en archivo (server2): {$fileName2}");
         } catch (\Exception $e) {
             Log::error("Api SensorController: Error storing message in file: " . $e->getMessage());
         }

@@ -193,6 +193,21 @@ class CheckOrdersFromApi extends Command
                                             $this->logLine("✅ Campo delivery_date actualizado correctamente", 'info');
                                         }
                                     }
+                                    
+                                    // Verificar si necesitamos actualizar la fecha de pedido ERP
+                                    if (isset($mappedData['fecha_pedido_erp'])) {
+                                        $fechaPedidoErpFromApi = $mappedData['fecha_pedido_erp'];
+                                        $currentFechaPedidoErp = $existingOrder->fecha_pedido_erp ? $existingOrder->fecha_pedido_erp->format('Y-m-d') : null;
+                                        
+                                        if ($fechaPedidoErpFromApi != $currentFechaPedidoErp) {
+                                            $this->logLine("🔄 Actualizando fecha_pedido_erp de '{$currentFechaPedidoErp}' a '{$fechaPedidoErpFromApi}' para el pedido {$orderId}", 'info');
+                                            $existingOrder->fecha_pedido_erp = $fechaPedidoErpFromApi;
+                                            $existingOrder->save();
+                                            $this->logLine("✅ Campo fecha_pedido_erp actualizado correctamente", 'info');
+                                        }
+                                    } else {
+                                        $this->logLine("ℹ️ No se encontró información de fecha_pedido_erp en la API para el pedido {$orderId}", 'info');
+                                    }
                                 }
                                 
                                 // Verificar y actualizar el stock de los artículos existentes
@@ -301,6 +316,15 @@ class CheckOrdersFromApi extends Command
                                     if (empty($mappedData['order_id'])) {
                                         $this->logWarning("  ⚠️ No se puede crear el pedido: falta order_id");
                                         continue;
+                                    }
+                                    
+                                    // Verificar el campo fecha_pedido_erp
+                                    if (!isset($mappedData['fecha_pedido_erp'])) {
+                                        $this->logLine("  ℹ️ No se encontró información de fecha_pedido_erp en la API para el pedido {$orderId}, se establecerá como null", 'info');
+                                        // Asegurarnos de que el campo sea null explícitamente
+                                        $mappedData['fecha_pedido_erp'] = null;
+                                    } else {
+                                        $this->logLine("  ✅ Campo fecha_pedido_erp encontrado: '{$mappedData['fecha_pedido_erp']}'", 'info');
                                     }
                                     
                                     // Crear el nuevo pedido en la base de datos

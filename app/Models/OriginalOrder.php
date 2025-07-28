@@ -19,6 +19,7 @@ class OriginalOrder extends Model
         'finished_at',
         'delivery_date',
         'in_stock',
+        'fecha_pedido_erp',
     ];
 
     protected $casts = [
@@ -31,7 +32,8 @@ class OriginalOrder extends Model
         'created_at',
         'updated_at',
         'finished_at',
-        'delivery_date'
+        'delivery_date',
+        'fecha_pedido_erp'
     ];
 
     /**

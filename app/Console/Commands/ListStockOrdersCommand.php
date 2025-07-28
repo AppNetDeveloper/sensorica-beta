@@ -157,12 +157,13 @@ class ListStockOrdersCommand extends Command
             // Escribe el contenido JSON en el archivo.
             file_put_contents($fileName1, $jsonData . PHP_EOL);
 
-            // Repite el proceso para un segundo "servidor" (simulando redundancia).
-            $fileName2 = storage_path("app/mqtt/server2/{$sanitizedTopic}_{$uniqueId}.json");
-            if (!file_exists(dirname($fileName2))) {
-                mkdir(dirname($fileName2), 0755, true);
-            }
-            file_put_contents($fileName2, $jsonData . PHP_EOL);
+            // Comentado para reducir logs y carga del sistema
+            // // Repite el proceso para un segundo "servidor" (simulando redundancia).
+            // $fileName2 = storage_path("app/mqtt/server2/{$sanitizedTopic}_{$uniqueId}.json");
+            // if (!file_exists(dirname($fileName2))) {
+            //     mkdir(dirname($fileName2), 0755, true);
+            // }
+            // file_put_contents($fileName2, $jsonData . PHP_EOL);
 
         } catch (\Exception $e) {
             // Si hay un error al escribir el archivo, lo registra en el log de Laravel y en el log del comando.
@@ -228,6 +229,7 @@ class ListStockOrdersCommand extends Command
             'processes_to_do' => implode(', ', $toDoDescriptionsList), // Usa la nueva lista de pendientes.
             'processes_done' => implode(', ', $doneDescriptionsList), // Usa la nueva lista de realizados.
             'stock' => $orderProcess->in_stock,
+            'erp_date' => $order->fecha_pedido_erp,
             'refer' => [
                 '_id' => "",
                 'company_name' => $order->customer ? $order->customer->name : 'N/A',

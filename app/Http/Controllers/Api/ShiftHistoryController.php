@@ -34,7 +34,7 @@ class ShiftHistoryController extends Controller
     public function index(Request $request)
     {
         try {
-            \Log::info('ShiftHistoryController@index - Iniciando consulta', $request->all());
+            // \Log::info('ShiftHistoryController@index - Iniciando consulta', $request->all());
             
             // Obtener parámetros de DataTables
             $draw = $request->get('draw');
@@ -123,13 +123,13 @@ class ShiftHistoryController extends Controller
             \Log::debug('SQL Query: ' . $query->toSql());
             \Log::debug('Query Bindings: ' . json_encode($query->getBindings()));
             
-            \Log::info('ShiftHistoryController@index - Resultados encontrados', [
-                'total' => $totalRecords,
-                'filtered' => $totalRecords,
-                'per_page' => $rowperpage,
-                'current_page' => $currentPage,
-                'items_count' => $history->count()
-            ]);
+            // \Log::info('ShiftHistoryController@index - Resultados encontrados', [
+            //     'total' => $totalRecords,
+            //     'filtered' => $totalRecords,
+            //     'per_page' => $rowperpage,
+            //     'current_page' => $currentPage,
+            //     'items_count' => $history->count()
+            // ]);
             
             // Debug: Log first item if exists
             if ($history->isNotEmpty()) {

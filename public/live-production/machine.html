@@ -2308,8 +2308,11 @@
                     </div>
                     <div class="articles-container-${order.id}"></div>
                     <div class="flex justify-between items-center text-xs text-gray-500">
-                        <span><i class="far fa-calendar-alt mr-1" title="Fecha de creación"></i>${formatDate(order.created_at)}</span>
-                        <span><i class="fas fa-truck-loading text-green-600 mr-1" title="Fecha de entrega"></i>${order.delivery_date ? formatDate(order.delivery_date) : 'Sin fecha'}</span>
+                        <span><i class="far fa-calendar-alt mr-1" title="Fecha de creación tarjeta"></i>${formatDate(order.created_at)}</span>
+                        <span><i class="fas fa-truck-loading text-green-600 mr-1" title="Fecha de entrega en instalación cliente"></i>${order.delivery_date ? formatDate(order.delivery_date) : 'Sin fecha'}</span>
+                    </div>
+                    <div class="mt-1 text-xs text-gray-500">
+                        <span><i class="fas fa-calendar-check text-blue-500 mr-1" title="Fecha creación pedido en ERP"></i>${order.fecha_pedido_erp ? formatDate(order.fecha_pedido_erp) : 'Sin fecha ERP'}</span>
                     </div>`;
                 
                 // Agregar eventos para el menú desplegable

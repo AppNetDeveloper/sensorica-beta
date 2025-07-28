@@ -310,13 +310,13 @@ class CustomerOriginalOrderController extends Controller
             ];
             
             // Log para depurar la respuesta
-            \Log::info('DataTables response structure:', [
-                'draw' => $response['draw'],
-                'recordsTotal' => $response['recordsTotal'],
-                'recordsFiltered' => $response['recordsFiltered'],
-                'data_count' => count($response['data']),
-                'first_item' => !empty($response['data']) ? json_encode($response['data'][0]) : 'No data'
-            ]);
+            //\Log::info('DataTables response structure:', [
+            //    'draw' => $response['draw'],
+            //    'recordsTotal' => $response['recordsTotal'],
+            //    'recordsFiltered' => $response['recordsFiltered'],
+            //    'data_count' => count($response['data']),
+            //    'first_item' => !empty($response['data']) ? json_encode($response['data'][0]) : 'No data'
+            //]);
             
             try {
                 // Intentar codificar a JSON para detectar errores

@@ -163,7 +163,8 @@ class ProductionOrderController extends Controller
      *             @OA\Property(property="data", type="array", @OA\Items(
      *                 @OA\Property(property="id", type="integer"),
      *                 @OA\Property(property="status", type="string"),
-     *                 @OA\Property(property="updated_at", type="string", format="date-time")
+     *                 @OA\Property(property="updated_at", type="string", format="date-time"),
+     *                 @OA\Property(property="fecha_pedido_erp", type="string", format="date-time", nullable=true)
      *             ))
      *         )
      *     )
@@ -232,10 +233,10 @@ class ProductionOrderController extends Controller
         }
         
         // Log para depuración
-        Log::info('Process Category para incidencias:', [
-            'production_line_id' => $productionLine->id,
-            'process_category' => $processCategory
-        ]);
+        //Log::info('Process Category para incidencias:', [
+        //    'production_line_id' => $productionLine->id,
+        //    'process_category' => $processCategory
+        //]);
         
         // 3. Incidencias SIEMPRE (status 3)
         // Si tenemos process_category, filtramos por él, sino traemos todas las incidencias
@@ -248,12 +249,12 @@ class ProductionOrderController extends Controller
         $incidentOrders = $incidentOrdersQuery->orderBy('orden', 'asc')->get();
     
         // Log detallado para diagnóstico de incidencias
-        Log::info('Diagnóstico de incidencias:', [
-            'production_line_id' => $productionLine->id,
-            'production_line_name' => $productionLine->name ?? 'N/A',
-            'incidencias_count' => $incidentOrders->count(),
-            'incidencias' => $incidentOrders->toArray()
-        ]);
+        //Log::info('Diagnóstico de incidencias:', [
+        //    'production_line_id' => $productionLine->id,
+        //    'production_line_name' => $productionLine->name ?? 'N/A',
+        //    'incidencias_count' => $incidentOrders->count(),
+        //    'incidencias' => $incidentOrders->toArray()
+        //]);
 
         // Asegurarnos de que todas las colecciones son válidas
         if (!$activeOrders) $activeOrders = collect();
@@ -698,14 +699,15 @@ class ProductionOrderController extends Controller
             file_put_contents($fileName1, $jsonData . PHP_EOL);
             Log::info("Mensaje almacenado en archivo (server1): {$fileName1}");
         
-            // Guardar en servidor 2
-            $path2 = storage_path("app/mqtt/server2");
-            if (!file_exists($path2)) {
-                mkdir($path2, 0755, true);
-            }
-            $fileName2 = "{$path2}/{$sanitizedTopic}_{$uniqueId}.json";
-            file_put_contents($fileName2, $jsonData . PHP_EOL);
-            Log::info("Mensaje almacenado en archivo (server2): {$fileName2}");
+            // Comentado para reducir logs y carga del sistema
+            // // Guardar en servidor 2
+            // $path2 = storage_path("app/mqtt/server2");
+            // if (!file_exists($path2)) {
+            //     mkdir($path2, 0755, true);
+            // }
+            // $fileName2 = "{$path2}/{$sanitizedTopic}_{$uniqueId}.json";
+            // file_put_contents($fileName2, $jsonData . PHP_EOL);
+            // Log::info("Mensaje almacenado en archivo (server2): {$fileName2}");
 
         } catch (\Exception $e) {
             Log::error("Error storing message in file: " . $e->getMessage());

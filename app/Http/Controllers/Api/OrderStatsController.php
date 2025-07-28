@@ -162,52 +162,140 @@ class OrderStatsController extends Controller
      */
     public function getOrderStatsBetweenDates(Request $request)
     {
-        // Obtiene el token de la línea de producción desde la solicitud.
-        $token = $request->input('token');
+        // Log todos los parámetros recibidos para depuración
+        \Log::info('OrderStats - Parámetros recibidos:', $request->all());
+        
+        // Obtiene el token o tokens de la línea de producción desde la solicitud.
+        $tokenInput = $request->input('token');
+        \Log::info('OrderStats - Token input recibido:', ['token' => $tokenInput]);
     
-        if (!$token) {
+        if (!$tokenInput) {
+            \Log::warning('OrderStats - Token no proporcionado');
             return response()->json(['error' => 'Token is required'], 400);
         }
-    
-        // Encuentra la línea de producción por el token.
-        $productionLine = ProductionLine::where('token', $token)->first();
-    
-        if (!$productionLine) {
-            return response()->json(['error' => 'Production line not found'], 404);
+        
+        // Dividir los tokens si vienen separados por comas
+        $tokens = [];
+        if (is_array($tokenInput)) {
+            // Si ya viene como array (desde formularios con múltiple selección)
+            $tokens = $tokenInput;
+            \Log::info('OrderStats - Tokens recibidos como array:', $tokens);
+        } else {
+            // Si viene como string separado por comas
+            $tokens = explode(',', $tokenInput);
+            \Log::info('OrderStats - Tokens después de explode:', $tokens);
+            
+            // Si solo hay un token pero contiene comas internas (jQuery puede enviar así los valores)
+            if (count($tokens) === 1 && strpos($tokens[0], ',') !== false) {
+                $tokens = explode(',', $tokens[0]);
+                \Log::info('OrderStats - Tokens después de segundo explode:', $tokens);
+            }
         }
-    
+        
+        // Filtrar tokens vacíos
+        $tokens = array_filter($tokens, function($token) {
+            return !empty($token);
+        });
+        \Log::info('OrderStats - Tokens después de filtrar:', $tokens);
+        
         // Validar los datos de entrada y establecer fechas predeterminadas si no existen
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
+        \Log::info('OrderStats - Fechas recibidas:', ['start' => $startDate, 'end' => $endDate]);
     
         if (!$startDate || !$endDate) {
             $today = now()->format('Y-m-d');
             $startDate = $today . ' 00:00:00';
             $endDate = $today . ' 23:59:59';
+            \Log::info('OrderStats - Usando fechas predeterminadas:', ['start' => $startDate, 'end' => $endDate]);
         } else {
             // Formatear las fechas en caso de que no estén en el formato correcto
             $startDate = Carbon::parse($startDate)->format('Y-m-d H:i:s');
             $endDate = Carbon::parse($endDate)->format('Y-m-d H:i:s');
+            \Log::info('OrderStats - Fechas formateadas:', ['start' => $startDate, 'end' => $endDate]);
         }
-    
-        $productionLineId = $productionLine->id;
-    
-        // Consultar las estadísticas de pedidos entre las fechas especificadas
-        $orderStats = OrderStat::where('production_line_id', $productionLineId)
+        
+        // Encontrar todas las líneas de producción por los tokens
+        \Log::info('OrderStats - Buscando líneas de producción con tokens:', $tokens);
+        $productionLines = ProductionLine::whereIn('token', $tokens)->get();
+        \Log::info('OrderStats - Líneas encontradas:', ['count' => $productionLines->count()]);
+        
+        if ($productionLines->isEmpty()) {
+            \Log::warning('OrderStats - No se encontraron líneas de producción para los tokens proporcionados');
+            return response()->json(['error' => 'No production lines found for the provided tokens: ' . implode(',', $tokens)], 404);
+        }
+        
+        $productionLineIds = $productionLines->pluck('id')->toArray();
+        $productionLineNames = $productionLines->pluck('name', 'id')->toArray();
+        \Log::info('OrderStats - IDs de líneas encontradas:', $productionLineIds);
+        
+        // Consultar las estadísticas de pedidos entre las fechas especificadas para todas las líneas seleccionadas
+        \Log::info('OrderStats - Consultando estadísticas con parámetros:', [
+            'production_line_ids' => $productionLineIds,
+            'start_date' => $startDate,
+            'end_date' => $endDate
+        ]);
+        
+        $orderStats = OrderStat::whereIn('production_line_id', $productionLineIds)
             ->whereBetween('created_at', [$startDate, $endDate])
             ->orderBy('created_at', 'desc')
             ->get();
+        
+        \Log::info('OrderStats - Estadísticas encontradas:', ['count' => $orderStats->count()]);
     
         if ($orderStats->isEmpty()) {
-            return response()->json(['error' => 'No order stats found for the specified dates'], 404);
+            \Log::warning('OrderStats - No se encontraron estadísticas para las fechas y líneas especificadas');
+            return response()->json(['error' => 'No order stats found for the specified dates and production lines'], 404);
         }
     
-        $productionLineName = $productionLine->name;
-        $response = $orderStats->map(function ($orderStat) use ($productionLineName) {
+        $response = $orderStats->map(function ($orderStat) use ($productionLineNames) {
             $orderStatArray = $orderStat->toArray();
-            $orderStatArray['production_line_name'] = $productionLineName;
+            $orderStatArray['production_line_name'] = $productionLineNames[$orderStat->production_line_id] ?? 'Unknown';
+            
+            // Buscar la orden de producción correspondiente para obtener el estado
+            $orderId = $orderStat->order_id;
+            $productionOrder = \App\Models\ProductionOrder::where('order_id', $orderId)->first();
+            
+            // Determinar el estado basado en finished_at y status
+            if ($productionOrder) {
+                \Log::info('OrderStats - Orden encontrada:', [
+                    'order_id' => $orderId,
+                    'finished_at' => $productionOrder->finished_at,
+                    'status' => $productionOrder->status
+                ]);
+                
+                if ($productionOrder->finished_at) {
+                    $orderStatArray['status'] = 'completed'; // Finalizada (tiene fecha de finalización)
+                } else {
+                    // Mapear el status numérico a un string para la UI
+                    switch ($productionOrder->status) {
+                        case 0:
+                            $orderStatArray['status'] = 'pending'; // Pendiente
+                            break;
+                        case 1:
+                            $orderStatArray['status'] = 'in_progress'; // Tarjeta en curso
+                            break;
+                        case 2:
+                            $orderStatArray['status'] = 'completed'; // Finalizada
+                            break;
+                        case 3:
+                        case 4:
+                        case 5:
+                            $orderStatArray['status'] = 'error'; // En incidencia
+                            break;
+                        default:
+                            $orderStatArray['status'] = 'unknown'; // Desconocido
+                    }
+                }
+            } else {
+                \Log::warning('OrderStats - No se encontró la orden de producción:', ['order_id' => $orderId]);
+                $orderStatArray['status'] = 'unknown'; // No se encontró la orden
+            }
+            
             return $orderStatArray;
         });
+        
+        \Log::info('OrderStats - Respuesta generada con éxito:', ['count' => count($response)]);
     
         return response()->json($response, 200);
     }

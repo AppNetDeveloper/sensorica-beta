@@ -82,10 +82,10 @@ class CalculateProductionDowntimeController extends Controller
             }
 
             if ($allStopped) {
-                \Log::info("Todos los sensores de la línea de producción {$productionLineId} tienen el downtime abierto (end_time=NULL) y están parados.");
+                //\Log::info("Todos los sensores de la línea de producción {$productionLineId} tienen el downtime abierto (end_time=NULL) y están parados.");
                 $this->downTimeLine($productionLineId);
             }else{
-                \Log::info("Línea de producción {$productionLineId} tiene al menos un sensor activo de conteo.");
+                //\Log::info("Línea de producción {$productionLineId} tiene al menos un sensor activo de conteo.");
             }
         }
         //FIN MONITOR DOWNTIME LINEA
@@ -106,7 +106,7 @@ class CalculateProductionDowntimeController extends Controller
                 })
                 ->get();
                 foreach ($sensorsNotType0 as $sensor) {
-                    \Log::info("Procesando sensor nonType 0: {$sensor->name} (ID: {$sensor->id})");
+                    //\Log::info("Procesando sensor nonType 0: {$sensor->name} (ID: {$sensor->id})");
                 $this->handleGenericDowntimeLogic($sensor);
                 }
         } catch (\Exception $e) {
@@ -122,7 +122,7 @@ class CalculateProductionDowntimeController extends Controller
     {
 
         //log para ver que estamos aqui
-        \Log::info("Procesando downTimeLine para la línea de producción {$productionLineId}");
+        //\Log::info("Procesando downTimeLine para la línea de producción {$productionLineId}");
         
         // Obtener únicamente los sensores non 0 de la línea recibida
         $sensorsNotType0 = Sensor::where('sensor_type', '>', 0)
@@ -138,10 +138,10 @@ class CalculateProductionDowntimeController extends Controller
             // Si existe un registro y su end_time es NULL, se considera que el sensor está en downtime abierto
             if ($lastDowntime && $lastDowntime->end_time === null) {
                 $atLeastOneStopped = true;
-                \Log::info("Sensor {$sensor->name} está en downtime abierto.");
+                //\Log::info("Sensor {$sensor->name} está en downtime abierto.");
                 break;
             }else{
-                \Log::info("Sensor {$sensor->name} no está en downtime abierto.");
+                //\Log::info("Sensor {$sensor->name} no está en downtime abierto.");
             }
 
         }
@@ -306,7 +306,7 @@ class CalculateProductionDowntimeController extends Controller
         if ($downtime) {
             $downtime->count_time += $intervalInSeconds;
             $downtime->save();
-            \Log::info("Updated downtime for sensor: {$sensor->name}. Incremented count_time by {$downtimeTime} seconds.");
+            //\Log::info("Updated downtime for sensor: {$sensor->name}. Incremented count_time by {$downtimeTime} seconds.");
         } else {
             DowntimeSensor::create([
                 'sensor_id' => $sensor->id,
@@ -315,17 +315,17 @@ class CalculateProductionDowntimeController extends Controller
                 'count_time' => $downtimeTime + $timeToSume,
                 'end_time' => null,
             ]);
-            \Log::info("New downtime record created for sensor: {$sensor->name}.");
+            //\Log::info("New downtime record created for sensor: {$sensor->name}.");
 
             //ahora en sensors sumamos a downtime_count
             $sensor->downtime_count += $timeToSume;
             $sensor->save();
-            \Log::info("Downtime count for sensor {$sensor->name} incremented to {$sensor->downtime_count}.");
+            //\Log::info("Downtime count for sensor {$sensor->name} incremented to {$sensor->downtime_count}.");
         }
         //sequimos manteniendo esta parte es critica
         $sensor->downtime_count += $intervalInSeconds;
         $sensor->save();
-        \Log::info("Downtime count for sensor {$sensor->name} incremented to {$sensor->downtime_count}.");
+        //\Log::info("Downtime count for sensor {$sensor->name} incremented to {$sensor->downtime_count}");
     }
 
     private function closeDowntime($sensor)
@@ -337,7 +337,7 @@ class CalculateProductionDowntimeController extends Controller
         if ($downtime) {
             $downtime->end_time = Carbon::now();
             $downtime->save();
-            \Log::info("Downtime for sensor {$sensor->name} ended.");
+            //\Log::info("Downtime for sensor {$sensor->name} ended.");
         }
     }
 
@@ -393,13 +393,14 @@ class CalculateProductionDowntimeController extends Controller
             file_put_contents($fileName1, $jsonData . PHP_EOL);
             //Log::info("Mensaje almacenado en archivo (server1): {$fileName1}");
         
-            // Guardar en servidor 2
-            $fileName2 = storage_path("app/mqtt/server2/{$sanitizedTopic}_{$uniqueId}.json");
-            if (!file_exists(dirname($fileName2))) {
-                mkdir(dirname($fileName2), 0755, true);
-            }
-            file_put_contents($fileName2, $jsonData . PHP_EOL);
-            //Log::info("Mensaje almacenado en archivo (server2): {$fileName2}");
+            // Comentado para reducir logs y carga del sistema
+            // // Guardar en servidor 2
+            // $fileName2 = storage_path("app/mqtt/server2/{$sanitizedTopic}_{$uniqueId}.json");
+            // if (!file_exists(dirname($fileName2))) {
+            //     mkdir(dirname($fileName2), 0755, true);
+            // }
+            // file_put_contents($fileName2, $jsonData . PHP_EOL);
+            // //Log::info("Mensaje almacenado en archivo (server2): {$fileName2}");
         } catch (\Exception $e) {
             Log::error("Error storing message in file: " . $e->getMessage());
         }

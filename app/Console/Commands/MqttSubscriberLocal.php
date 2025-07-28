@@ -254,6 +254,7 @@ class MqttSubscriberLocal extends Command
                 'theoretical_time'          => isset($messageData['theoretical_time']) ? floatval($messageData['theoretical_time']) : null,
                 'process_category'          => $messageData['process_category'] ?? null,
                 'delivery_date'             => isset($messageData['delivery_date']) ? Carbon::parse($messageData['delivery_date']) : null,
+                'fecha_pedido_erp'          => isset($messageData['erp_date']) ? Carbon::parse($messageData['erp_date']) : null,
                 'customerId'                => $messageData['refer']['customerId'] ?? 'Sin Cliente',
                 'original_order_id'         => $messageData['original_order_id'] ?? null,
                 'grupo_numero'              => $messageData['grupo_numero'] ?? null,

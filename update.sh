@@ -257,6 +257,7 @@ CRON_ENTRY5="*/10 * * * * find /var/www/html/storage/app/mqtt/server1 -type f -m
 CRON_ENTRY6="40 0 * * * python3 /var/www/html/python/entrenar_produccion.py >> /var/www/html/storage/logs/entrena_produccion.log 2>&1"
 CRON_ENTRY7="30 3 * * * /usr/bin/php /var/www/html/artisan db:replicate-nightly >> /var/www/html/storage/logs/db_replicate.log 2>&1"
 CRON_ENTRY8="0 * * * * /bin/bash /var/www/html/scripts/clean_lock_files.sh >> /var/www/html/storage/logs/clean_locks.log 2>&1"
+CRON_ENTRY9="0 2 * * * /var/www/html/scripts/clean_logs.sh >> /var/www/html/storage/logs/clean_logs.log 2>&1"
 
 # Obtiene la lista de cron actual
 CURRENT_CRON=$(crontab -l 2>/dev/null)
@@ -282,6 +283,7 @@ add_cron_entry "$CRON_ENTRY5"
 add_cron_entry "$CRON_ENTRY6"
 add_cron_entry "$CRON_ENTRY7"
 add_cron_entry "$CRON_ENTRY8"
+add_cron_entry "$CRON_ENTRY9"
 
 # Instala la nueva lista de cron
 echo "$CURRENT_CRON" | crontab -

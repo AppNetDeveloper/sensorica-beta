@@ -121,7 +121,7 @@ class ModbusProcessController extends Controller
     
     private function makeZero($config, $value)
     {
-        Log::info("Making zero for Modbus ID: {$config->id}, current value: {$value}");
+        // Log::info("Making zero for Modbus ID: {$config->id}, current value: {$value}");
         $topic= $config->mqtt_topic_modbus;
         // Generar el nuevo tópico cambiando 'peso' por 'zero'
         $topicParts = explode('/', $topic);
@@ -139,7 +139,7 @@ class ModbusProcessController extends Controller
         // Publicar el mensaje MQTT
         $this->publishMqttMessage($topicZero, $messageZero);
         
-        Log::info("Zero command sent for Modbus ID: {$config->id} on topic: {$topicZero}");
+        // Log::info("Zero command sent for Modbus ID: {$config->id} on topic: {$topicZero}");
     }
 
     public function processWeightModel($config, $value, $data)
@@ -236,7 +236,7 @@ class ModbusProcessController extends Controller
                     'last_rep' => 0
                 ]);
 
-                Log::info("Valores reseteados: max_kg, last_kg, demension y last_rep a 0.");
+                // Log::info("Valores reseteados: max_kg, last_kg, demension y last_rep a 0.");
 
                 // No llamamos a processWeightData si se cumple la condición
                 return;
@@ -249,7 +249,7 @@ class ModbusProcessController extends Controller
     public function processHeightModel($config, $value, $data)
     {
         // Lógica para procesar datos de altura
-        Log::info("Procesando modelo de altura. Valor: {$value}"); 
+        // Log::info("Procesando modelo de altura. Valor: {$value}"); 
 
         // Obtener valores relevantes de la configuración
         $dimensionDefault = $config->dimension_default;
@@ -261,18 +261,18 @@ class ModbusProcessController extends Controller
         // Calcular el valor actual
         $currentValue = $dimensionDefault - $value + $offsetMeter;
 
-        Log::info("Valor actual calculado: {$currentValue} y dimension maxima anterior : {$dimensionMax}, ID: {$config->id}");
+        // Log::info("Valor actual calculado: {$currentValue} y dimension maxima anterior : {$dimensionMax}, ID: {$config->id}");
 
         // Verificar si el valor actual es mayor que el máximo registrado
         if ($currentValue > $dimensionMax) {
-            Log::info("Actualizando dimension_max: Valor actual {$currentValue} es mayor que dimension_max anterior {$dimensionMax}, ID: {$config->id}");
+            // Log::info("Actualizando dimension_max: Valor actual {$currentValue} es mayor que dimension_max anterior {$dimensionMax}, ID: {$config->id}");
             $config->dimension_max = $currentValue;
             $config->save();
 
-            Log::info("Nuevo dimension_max guardado en modbuses: {$currentValue}");
+            // Log::info("Nuevo dimension_max guardado en modbuses: {$currentValue}");
 
         } else {
-            Log::info("No se actualiza dimension_max: Valor actual {$currentValue} no es mayor que dimension_max {$dimensionMax}, ID: {$config->id}");
+            // Log::info("No se actualiza dimension_max: Valor actual {$currentValue} no es mayor que dimension_max {$dimensionMax}, ID: {$config->id}");
         }
 
                     // Actualizar dimension en otros registros de Modbuses donde dimension_id = $config->id
@@ -284,7 +284,7 @@ class ModbusProcessController extends Controller
                 
 
 
-        Log::info("dimension_max actualizado en otros registros de Modbuses donde dimension_id = {$config->id}");
+        // Log::info("dimension_max actualizado en otros registros de Modbuses donde dimension_id = {$config->id}");
 
         if (($value + $dimensionOffset) > ($dimensionDefault - $dimensionVariation) && $dimensionMax > ($dimensionOffset + $dimensionVariation)) {
              // Guardar el valor máximo actual antes de reiniciar
@@ -293,12 +293,12 @@ class ModbusProcessController extends Controller
         $controlHeight->height_value = $dimensionMax;
         $controlHeight->save();
 
-        Log::info("Nuevo registro en control_heights guardado con dimension_max. Valor: {$dimensionMax}, ID: {$config->id}");
+        // Log::info("Nuevo registro en control_heights guardado con dimension_max. Valor: {$dimensionMax}, ID: {$config->id}");
 
         // Reiniciar dimension_max a 0
         $config->dimension_max = 0;
         $config->save();
-        Log::info("Nuevo registro en control_heights guardado con currentValue. Valor: {$currentValue}, ID: {$config->id}  Y dimension_max reiniciado a 0 en modbuses");
+        // Log::info("Nuevo registro en control_heights guardado con currentValue. Valor: {$currentValue}, ID: {$config->id}  Y dimension_max reiniciado a 0 en modbuses");
         }
 
     }
@@ -328,38 +328,38 @@ class ModbusProcessController extends Controller
     $newBoxNumberUnlimited = intval($config->rec_box_unlimited);    
         // Lógica de control de peso y repeticiones
         if ($value >= $minKg) { // Si el valor actual es mayor o igual al mínimo
-            Log::info("Valor actual ({$value} kg) es mayor o igual al mínimo ({$minKg} kg)"); // Logging detallado
+            // Log::info("Valor actual ({$value} kg) es mayor o igual al mínimo ({$minKg} kg)"); // Logging detallado
             //hacermos este if para que contorize bien desde inicio si no el lastkg es 0 y lo ve como un valor mall hasta la segunda validacion
             if($lastKg <= 0){
                 $lastKg = $value; // Actualizar el último valor a la nueva medida
             }
             if (abs($value - $lastKg) <= $variacionNumber) { // Si la variación está dentro del rango permitido
-                Log::info("Valor estable dentro del rango de variación.");
+                // Log::info("Valor estable dentro del rango de variación.");
                 $lastRep++; // Incrementar el contador de repeticiones
                 //original era asi , solo validaba mas grande 
                 //if ($lastRep >= $repNumber && $value >= $minKg && $value > $maxKg) { 
                 if ($lastRep >= $repNumber && $value >= $minKg) { // Si se alcanza el número de repeticiones requerido, pero el valor es mas grande que minimo permitido y que el valor es mas grande que maxKG
-                    Log::info("Número de repeticiones alcanzado. Nuevo máximo: {$value} kg");
+                    // Log::info("Número de repeticiones alcanzado. Nuevo máximo: {$value} kg");
                     $maxKg = $value; // Actualizar el valor máximo
                     $lastRep = 0; // Reiniciar el contador de repeticiones
                 }
             } else {
-                Log::info("Valor fuera del rango de variación. Reiniciando repeticiones. El valor actual es:{$value} kg, el valor minimo: {$minKg} kg");
+                // Log::info("Valor fuera del rango de variación. Reiniciando repeticiones. El valor actual es:{$value} kg, el valor minimo: {$minKg} kg");
                 $lastRep = 0; // Reiniciar el contador de repeticiones si la variación está fuera del rango permitido
             }
 
             $lastKg = $value; // Actualizar el último valor con el valor actual
         } elseif ($maxKg > $minKg && $value < $minKg) { // Si el valor es menor que el mínimo y $maxKg no es nulo
-            Log::info("Valor por debajo del mínimo. Enviando mensaje de control de peso: {$maxKg} kg");
+            // Log::info("Valor por debajo del mínimo. Enviando mensaje de control de peso: {$maxKg} kg");
 
 
 
             // Verificar si el JSON tiene el campo 'check' y usarlo para asignar a maxKg
             if (isset($data['check'])) {
                 $maxKg = $data['check'] / $config->conversion_factor;;
-                Log::info("Se ha obtenido el valor de 'check' desde el JSON: {$maxKg}");
+                // Log::info("Se ha obtenido el valor de 'check' desde el JSON: {$maxKg}");
             } else {
-                Log::info("No se encontró el campo 'check' en los datos recibidos.El valor actual es:{$value} kg");
+                // Log::info("No se encontró el campo 'check' en los datos recibidos.El valor actual es:{$value} kg");
             }
             
             // Incrementar el recuento de cajas en rec_box
@@ -463,11 +463,11 @@ class ModbusProcessController extends Controller
                             'last_final_barcoder'   => null,
                             'supplier_order_id'     => $supplierOrder->id,
                         ]);
-                        Log::info("Datos guardados en control_weight, Modbus ID: {$config->id}");
+                        // Log::info("Datos guardados en control_weight, Modbus ID: {$config->id}");
                         
                         // Asignar el id del control_weight recién creado en supplier_orders
                         $supplierOrder->update(['control_weight_id' => $controlWeight->id]);
-                        Log::info("Se asignó control_weight_id {$controlWeight->id} en supplier_orders (ID: {$supplierOrder->id}).");
+                        // Log::info("Se asignó control_weight_id {$controlWeight->id} en supplier_orders (ID: {$supplierOrder->id}).");
                     } else {
                         $controlWeight = ControlWeight::create([
                             'modbus_id'             => $config->id,
@@ -479,14 +479,14 @@ class ModbusProcessController extends Controller
                             'last_final_barcoder'   => null,
                             'supplier_order_id'     => null,
                         ]);
-                        Log::info("Datos guardados en control_weight, Modbus ID: {$config->id}");
-                        Log::info("No se encontró una línea en supplier_orders sin control_weight_id para el Modbus ID: {$config->id}");
+                        // Log::info("Datos guardados en control_weight, Modbus ID: {$config->id}");
+                        // Log::info("No se encontró una línea en supplier_orders sin control_weight_id para el Modbus ID: {$config->id}");
                     }
                 } catch (\Exception $e) {
                     Log::error("Error al guardar datos en control_weight, Modbus ID: {$config->id}: " . $e->getMessage());
                 }
             } else {
-                Log::info("El Modbus ID: {$config->id} no está configurado como báscula de recepción de material.");
+                // Log::info("El Modbus ID: {$config->id} no está configurado como báscula de recepción de material.");
                 try {
                     $controlWeight = ControlWeight::create([
                         'modbus_id'             => $config->id,
@@ -521,16 +521,16 @@ class ModbusProcessController extends Controller
                     $operator->increment('count_shift');
                     $operator->increment('count_order');
 
-                    Log::info("Operador actualizado: count_shift y count_order incrementados para el Operator ID: {$operatorId}");
+                    // Log::info("Operador actualizado: count_shift y count_order incrementados para el Operator ID: {$operatorId}");
                 } else {
-                    Log::info("No se encontró el operador con ID: {$operatorId}");
+                    // Log::info("No se encontró el operador con ID: {$operatorId}");
                 }
             } else {
-                Log::info("No se encontró ningún registro en operator_post con updated_at NULL y modbus_id: {$config->id}");
+                // Log::info("No se encontró ningún registro en operator_post con updated_at NULL y modbus_id: {$config->id}");
             }
         } catch (\Exception $e) {
             // Log de errores al intentar actualizar los datos
-            Log::info("Error al procesar datos de operator_post y operators para el Modbus ID: {$config->id}");
+            Log::error("Error al procesar datos de operator_post y operators para el Modbus ID: {$config->id}");
         }
 
             $totalKgShift=$maxKg + $totalKgShift;
@@ -571,20 +571,20 @@ class ModbusProcessController extends Controller
                 if ($apiQueue->value == 0) {
                     $apiQueue->used = true;
                     $apiQueue->save();
-                    Log::info("No llamo a la API externa por que el valor es 0, el Modbus ID: {$config->id}");
+                    // Log::info("No llamo a la API externa por que el valor es 0, el Modbus ID: {$config->id}");
                 } else {
                     $this->callExternalApi($apiQueue, $config, $newBoxNumber, $finalMaxKg, $finalDimensionFinal, $uniqueBarcoder);
-                    Log::info("Llamada a la API externa para el Modbus ID: {$config->id} FINALIZADA");
+                    // Log::info("Llamada a la API externa para el Modbus ID: {$config->id} FINALIZADA");
                 }
             }else{
-                Log::info("No hay llamada a la API externa para el Modbus ID: {$config->id}");
+                // Log::info("No hay llamada a la API externa para el Modbus ID: {$config->id}");
             }
 
             //llamar a la impresora local para imprimir si es un bulto anonimo para habilitar bultos anonimos tenemos que anadir una impresora a la modbus si impresora no existe no se imprime, el printer_id tiene que no estar null con 0 o vacio
             if (!is_null($config->printer_id) && trim($config->printer_id)) {
                 $this->printLabel($config, $uniqueBarcoder);
             } else {
-                Log::info('No hay configuración para imprimir una etiqueta.');
+                // Log::info('No hay configuración para imprimir una etiqueta.');
             }
         }
 
@@ -600,7 +600,7 @@ class ModbusProcessController extends Controller
             'total_kg_shift' => $totalKgShift
         ]);
         
-        Log::info("Datos actualizados y reseteado a 0, el Modbus ID: {$config->id}");
+        // Log::info("Datos actualizados y reseteado a 0, el Modbus ID: {$config->id}");
         $this->OrderStat($config, $newBoxNumberShift, $newBoxNumber, $totalKgShift, $totalKgOrder, $lastKg);
 
     }
@@ -626,9 +626,9 @@ class ModbusProcessController extends Controller
                 // Actualizar los valores en la entrada de order_stats
                 $orderStats->update($weightUpdates);
     
-                Log::info("Valores actualizados en order_stats para production_line_id: {$config->production_line_id}, model_type: {$config->model_type}");
+                // Log::info("Valores actualizados en order_stats para production_line_id: {$config->production_line_id}, model_type: {$config->model_type}");
             } else {
-                Log::info("No se encontró un registro en order_stats para production_line_id: {$config->production_line_id}");
+                // Log::info("No se encontró un registro en order_stats para production_line_id: {$config->production_line_id}");
             }
         } catch (\Exception $e) {
             Log::error("Error al actualizar order_stats: " . $e->getMessage());
@@ -660,7 +660,7 @@ class ModbusProcessController extends Controller
                     ->content($base64Image)
                     ->send();
 
-                Log::info('Etiqueta impresa correctamente.');
+                // Log::info('Etiqueta impresa correctamente.');
             } catch (\Exception $e) {
                 Log::error('Error al imprimir la etiqueta: ' . $e->getMessage());
                 // Opcional: Mostrar mensaje de error al usuario
@@ -680,7 +680,7 @@ class ModbusProcessController extends Controller
 
     private function callExternalApi($apiQueue, $config, $newBoxNumber, $maxKg, $dimensionFinal, $uniqueBarcoder)
     {
-        Log::info("Llamada a la API externa para el Modbus ID: {$config->id}");
+        // Log::info("Llamada a la API externa para el Modbus ID: {$config->id}");
     
         $apiQueue->used = true;
         $apiQueue->control_weight = $maxKg;

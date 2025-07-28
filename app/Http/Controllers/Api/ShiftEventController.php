@@ -138,12 +138,12 @@ class ShiftEventController extends Controller
             \Log::info("Message stored in file (server1): {$fileName1}");
 
             // Guardar en servidor 2
-            $fileName2 = storage_path("app/mqtt/server2/{$sanitizedTopic}_{$uniqueId}.json");
-            if (!file_exists(dirname($fileName2))) {
-                mkdir(dirname($fileName2), 0755, true);
-            }
-            file_put_contents($fileName2, $jsonData . PHP_EOL);
-            \Log::info("Message stored in file (server2): {$fileName2}");
+            //$fileName2 = storage_path("app/mqtt/server2/{$sanitizedTopic}_{$uniqueId}.json");
+            //if (!file_exists(dirname($fileName2))) {
+            //    mkdir(dirname($fileName2), 0755, true);
+            //}
+            //file_put_contents($fileName2, $jsonData . PHP_EOL);
+            //\Log::info("Message stored in file (server2): {$fileName2}");
         } catch (\Exception $e) {
             \Log::error("Error storing message in file: " . $e->getMessage());
         }
