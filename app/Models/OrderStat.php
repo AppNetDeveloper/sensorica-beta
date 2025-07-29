@@ -14,52 +14,52 @@ class OrderStat extends Model
 
     // Permite la asignación masiva de estos campos.
     protected $fillable = [
-        'product_list_id',
-        'production_line_id',
-        'order_id',
-        'box',
-        'units_box',
-        'units',
-        'units_per_minute_real',
-        'units_per_minute_theoretical',
-        'units_made_real',
-        'seconds_per_unit_real',
-        'seconds_per_unit_theoretical',
-        'units_made_real',
-        'units_made_theoretical',
-        'sensor_stops_count',
-        'sensor_stops_time',
-        'production_stops_time',
-        'units_made',
-        'units_pending',
-        'units_delayed',
-        'slow_time',
-        'fast_time',
-        'out_time',
-        'theoretical_end_time',
-        'real_end_time',
-        'oee',
-        'oee_sensors',
-        'oee_modbus',
-        'oee_rfid',
-        'weights_0_shiftNumber',
-        'weights_0_shiftKg',
-        'weights_0_orderNumber',
-        'weights_0_orderKg',
-        'weights_1_shiftNumber',
-        'weights_1_shiftKg',
-        'weights_1_orderNumber',
-        'weights_1_orderKg',
-        'weights_2_shiftNumber',
-        'weights_2_shiftKg',
-        'weights_2_orderNumber',
-        'weights_2_orderKg',
-        'weights_3_shiftNumber',
-        'weights_3_shiftKg',
-        'weights_3_orderNumber',
-        'weights_3_orderKg',
-        'down_time',
-        'prepair_time'
+        'product_list_id', //Id de la product_list 
+        'production_line_id', //Id de la linea de produccion
+        'order_id', //Id de la orden de produccion
+        'box', //Numero de caja
+        'units_box', //Unidades por caja
+        'units', //Unidades totales
+        'units_per_minute_real', //Unidades por minuto real
+        'units_per_minute_theoretical', //Unidades por minuto teorico
+        'units_made_real', //Unidades hechas real
+        'seconds_per_unit_real', //Segundos por unidad real
+        'seconds_per_unit_theoretical', //Segundos por unidad teorico
+        'units_made_real', //Unidades hechas real
+        'units_made_theoretical', //Unidades hechas teorico
+        'sensor_stops_count', //Contador de paros de sensor
+        'sensor_stops_time', //Tiempo de paros de sensor
+        'production_stops_time', //Tiempo de paros de produccion
+        'units_made', //Unidades hechas
+        'units_pending', //Unidades pendientes
+        'units_delayed', //Unidades retrasadas
+        'slow_time', //Tiempo lento
+        'fast_time', //Tiempo rapido
+        'out_time', //Tiempo fuera del tiempo de production previsto
+        'theoretical_end_time', //Tiempo teorico de finalizacion
+        'real_end_time', //Tiempo real de finalizacion
+        'oee', //OEE
+        'oee_sensors', //OEE de sensores
+        'oee_modbus', //OEE de modbus
+        'oee_rfid', //OEE de rfid
+        'weights_0_shiftNumber', //Numero de turno
+        'weights_0_shiftKg', //Kg de turno
+        'weights_0_orderNumber', //Numero de orden
+        'weights_0_orderKg', //Kg de orden
+        'weights_1_shiftNumber', //Numero de turno
+        'weights_1_shiftKg', //Kg de turno
+        'weights_1_orderNumber', //Numero de orden
+        'weights_1_orderKg', //Kg de orden
+        'weights_2_shiftNumber', //Numero de turno
+        'weights_2_shiftKg', //Kg de turno
+        'weights_2_orderNumber', //Numero de orden
+        'weights_2_orderKg', //Kg de orden
+        'weights_3_shiftNumber', //Numero de turno
+        'weights_3_shiftKg', //Kg de turno
+        'weights_3_orderNumber', //Numero de orden
+        'weights_3_orderKg', //Kg de orden
+        'down_time', //Tiempo de paro
+        'prepair_time' //Tiempo de reparacion
     ];
 
     // Asegúrate de que se gestionen las marcas de tiempo automáticamente.

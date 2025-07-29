@@ -91,24 +91,29 @@
             </div>
             <div class="card-body">
                 <div class="row g-3">
-                    <div class="col-md-4">
-                        <label for="modbusSelect" class="form-label">Línea de Producción</label>
-                        <select id="modbusSelect" class="form-select" multiple>
-                            <option value="">Cargando...</option>
+                    <div class="col-md-3">
+                        <label class="form-label">Líneas de Producción</label>
+                        <select id="modbusSelect" class="form-select select2-multiple" multiple="multiple" style="width: 100%;">
+                            <!-- Opciones dinámicas -->
                         </select>
-                        <div class="form-text">Mantén presionada la tecla Ctrl (o Cmd en Mac) para seleccionar múltiples líneas</div>
                     </div>
-                    <div class="col-md-3">
-                        <label for="startDate" class="form-label">Fecha Inicio</label>
-                        <input type="datetime-local" id="startDate" class="form-control">
+                    <div class="col-md-2">
+                        <label class="form-label">Fecha Inicio</label>
+                        <input type="datetime-local" class="form-control" id="startDate">
                     </div>
-                    <div class="col-md-3">
-                        <label for="endDate" class="form-label">Fecha Fin</label>
-                        <input type="datetime-local" id="endDate" class="form-control">
+                    <div class="col-md-2">
+                        <label class="form-label">Fecha Fin</label>
+                        <input type="datetime-local" class="form-control" id="endDate">
                     </div>
-                    <div class="col-md-2 d-flex align-items-end">
-                        <button id="fetchData" class="btn btn-primary w-100">
+                    <div class="col-md-3 d-flex align-items-end gap-2">
+                        <button type="button" class="btn btn-primary flex-fill" id="fetchData">
                             <i class="fas fa-search me-2"></i>Buscar
+                        </button>
+                        <button type="button" class="btn btn-outline-info" id="refreshData" title="Refrescar datos">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                        <button type="button" class="btn btn-secondary" id="resetFilters" title="Restablecer filtros">
+                            <i class="fas fa-undo"></i>
                         </button>
                     </div>
                 </div>
@@ -211,17 +216,16 @@
                             <tr>
                                 <th>Línea</th>
                                 <th>Orden</th>
-                                <th>Caja</th>
-                                <th>Unidades</th>
-                                <th>UPM Real</th>
-                                <th>UPM Teórico</th>
                                 <th>OEE</th>
                                 <th>Estado</th>
-                                <th>Actualizado</th>
+                                <th>Iniciado</th>
+                                <th>Última actualización</th>
+                                <th>Parada falta material</th>
+                                <th>Paradas no justificadas</th>
                                 <th>T. Activo</th>
-                                <th>T. Rápido</th>
+                                <th>T. Ganado</th>
                                 <th>T. Lento</th>
-                                <th>T. Fuera</th>
+                                <th>T. de más</th>
                                 <th>T. Preparación</th>
                                 <th>Acciones</th>
                             </tr>
@@ -258,6 +262,10 @@
                                     <div class="mb-3">
                                         <label class="fw-bold">Orden:</label>
                                         <span id="modal-order-id"></span>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="fw-bold">Caja:</label>
+                                        <span id="modal-box"></span>
                                     </div>
                                     <div class="mb-3">
                                         <label class="fw-bold">Unidades:</label>
@@ -371,7 +379,11 @@
                 
                 const tokenParam = filteredTokens.join(',');
                 const url = `/api/order-stats-all?token=${tokenParam}&start_date=${startDate}&end_date=${endDate}`;
-                console.log("URL de datos de estadísticas:", url);
+                const fullUrl = window.location.origin + url;
+                console.log("URL COMPLETA de la API:", fullUrl);
+                console.log("==================================================");
+                console.log("COPIABLE:", fullUrl);
+                console.log("==================================================");
 
                 const response = await fetch(url);
                 if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
@@ -379,26 +391,35 @@
                 console.log("Datos de estadísticas recibidos:", data);
 
                 // Procesar los datos para asegurar que tienen la estructura correcta
-                const processedData = data.map(item => ({
-                    id: item.id || '-',
-                    production_line_name: item.production_line_name || '-',
-                    order_id: item.order_id || '-',
-                    box: item.box || '-',
-                    units: parseInt(item.units) || 0,
-                    units_per_minute_real: parseFloat(item.units_per_minute_real) || 0,
-                    units_per_minute_theoretical: parseFloat(item.units_per_minute_theoretical) || 0,
-                    oee: parseFloat(item.oee) || 0,
-                    status: item.status || 'unknown',
-                    updated_at: item.updated_at || null,
-                    on_time: item.on_time || null,
-                    fast_time: item.fast_time || null,
-                    slow_time: item.slow_time || null,
-                    out_time: item.out_time || null,
-                    prepair_time: item.prepair_time || null
-                }));
+                const processedData = data.map(item => {
+                    console.log('Procesando item:', item.id, 'down_time:', item.down_time, 'production_stops_time:', item.production_stops_time);
+                    return {
+                        id: item.id || '-',
+                        production_line_name: item.production_line_name || '-',
+                        order_id: item.order_id || '-',
+                        box: item.box || '-',
+                        units: parseInt(item.units) || 0,
+                        units_per_minute_real: parseFloat(item.units_per_minute_real) || 0,
+                        units_per_minute_theoretical: parseFloat(item.units_per_minute_theoretical) || 0,
+                        oee: parseFloat(item.oee) || 0,
+                        status: item.status || 'unknown',
+                        created_at: item.created_at || null,
+                        updated_at: item.updated_at || null,
+                        down_time: item.down_time !== undefined ? parseFloat(item.down_time) : 0,
+                        production_stops_time: item.production_stops_time !== undefined ? parseFloat(item.production_stops_time) : 0,
+                        on_time: item.on_time || null,
+                        fast_time: item.fast_time || null,
+                        slow_time: item.slow_time || null,
+                        out_time: item.out_time || null,
+                        prepair_time: item.prepair_time || null
+                    }});
                 
                 // Actualizar los KPIs
                 updateKPIs(processedData);
+                
+                // Limpiar cualquier estado de carga previo
+                $('#loadingIndicator').hide();
+                $('#controlWeightTable').show();
                 
                 const table = $('#controlWeightTable').DataTable({
                     dom: 'frtip',
@@ -408,108 +429,62 @@
                     data: processedData,
                     destroy: true,
                     columns: [
-                        { data: 'production_line_name', title: 'Línea' },
-                        { data: 'order_id', title: 'Orden' },
-                        { data: 'box', title: 'Caja' },
-                        { data: 'units', title: 'Unidades' },
-                        { 
-                            data: 'units_per_minute_real', 
-                            title: 'UPM Real',
-                            render: function(data) {
-                                return data.toFixed(2);
-                            }
-                        },
-                        { 
-                            data: 'units_per_minute_theoretical', 
-                            title: 'UPM Teórico',
-                            render: function(data) {
-                                return data.toFixed(2);
-                            }
-                        },
-                        { 
-                            data: 'oee', 
-                            title: 'OEE',
-                            render: function(data) {
-                                // El OEE ya viene como porcentaje (ej: 94.24)
-                                const oeeValue = parseFloat(data);
-                                // Verificar si el valor ya es un porcentaje (>1) o decimal (<1)
-                                const percentage = oeeValue > 1 ? oeeValue.toFixed(2) : (oeeValue * 100).toFixed(2);
-                                let colorClass = 'text-danger';
-                                if (percentage >= 80) colorClass = 'text-success';
-                                else if (percentage >= 60) colorClass = 'text-warning';
-                                return `<span class="${colorClass}">${percentage}%</span>`;
-                            }
-                        },
-                        { 
-                            data: 'status', 
-                            title: 'Estado',
-                            render: function(data) {
-                                const statusMap = {
-                                    'in_progress': '<span class="badge bg-warning">En Progreso</span>',
-                                    'completed': '<span class="badge bg-success">Completado</span>',
-                                    'paused': '<span class="badge bg-secondary">Pausado</span>',
-                                    'error': '<span class="badge bg-danger">Error</span>',
-                                    'pending': '<span class="badge bg-info">Pendiente</span>',
-                                    'unknown': '<span class="badge bg-light text-dark">Desconocido</span>'
-                                };
-                                return statusMap[data] || statusMap['unknown'];
-                            }
-                        },
-                        { 
-                            data: 'updated_at', 
-                            title: 'Actualizado',
-                            render: function(data) {
-                                return data ? new Date(data).toLocaleString() : '-';
-                            }
-                        },
-                        { 
-                            data: 'on_time', 
-                            title: 'T. Activo',
-                            render: function(data) {
-                                return formatTime(data);
-                            }
-                        },
-                        { 
-                            data: 'fast_time', 
-                            title: 'T. Rápido',
-                            render: function(data) {
-                                return formatTime(data);
-                            }
-                        },
-                        { 
-                            data: 'slow_time', 
-                            title: 'T. Lento',
-                            render: function(data) {
-                                return formatTime(data);
-                            }
-                        },
-                        { 
-                            data: 'out_time', 
-                            title: 'T. Fuera',
-                            render: function(data) {
-                                return formatTime(data);
-                            }
-                        },
-                        { 
-                            data: 'prepair_time', 
-                            title: 'T. Preparación',
-                            render: function(data) {
-                                return formatTime(data);
-                            }
-                        },
-                        {
-                            data: null,
-                            title: 'Acciones',
-                            orderable: false,
-                            className: 'text-center',
-                            render: function(data, type, row) {
-                                return `
-                                    <button class="btn btn-sm btn-info btn-view" data-id="${row.id}" title="Ver detalles" onclick="showDetailsModal(${JSON.stringify(row).replace(/"/g, '&quot;')})">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                `;
-                            }
-                        }
+                        { data: 'production_line_name', title: 'Línea', className: 'text-truncate', createdCell: function(td, cellData, rowData) {
+                            $(td).attr('title', `Línea: ${cellData}`);
+                        }},
+                        { data: 'order_id', title: 'Orden', className: 'text-truncate', createdCell: function(td, cellData, rowData) {
+                            $(td).attr('title', `Orden: ${cellData}`);
+                        }},
+                        { data: 'oee', title: 'OEE', render: data => `${data.toFixed(2)}%`, createdCell: function(td, cellData, rowData) {
+                            const color = cellData >= 80 ? 'text-success' : cellData >= 60 ? 'text-warning' : 'text-danger';
+                            $(td).html(`<span class="${color} fw-bold">${cellData.toFixed(2)}%</span>`);
+                            $(td).attr('title', `OEE: ${cellData.toFixed(2)}%\nEstado: ${cellData >= 80 ? 'Excelente' : cellData >= 60 ? 'Aceptable' : 'Necesita mejora'}`);
+                        }},
+                        { data: 'status', title: 'Estado', render: data => {
+                            const statusMap = {
+                                'active': '<span class="badge bg-success">Activo</span>',
+                                'paused': '<span class="badge bg-warning">Pausado</span>',
+                                'error': '<span class="badge bg-danger">Error</span>',
+                                'completed': '<span class="badge bg-primary">Completado</span>'
+                            };
+                            return statusMap[data] || '<span class="badge bg-secondary">Desconocido</span>';
+                        }, createdCell: function(td, cellData, rowData) {
+                            $(td).attr('title', `Estado actual: ${cellData}`);
+                        }},
+                        { data: 'created_at', title: 'Iniciado', render: data => new Date(data).toLocaleString(), createdCell: function(td, cellData, rowData) {
+                            $(td).attr('title', `Inicio: ${new Date(data).toLocaleString()}`);
+                        }},
+                        { data: 'updated_at', title: 'Última actualización', render: data => data ? new Date(data).toLocaleString() : '-', createdCell: function(td, cellData, rowData) {
+                            $(td).attr('title', `Última actualización: ${data ? new Date(data).toLocaleString() : '-'}`);
+                        }},
+                        { data: 'down_time', title: 'Parada falta material', render: data => formatTime(data), createdCell: function(td, cellData, rowData) {
+                            $(td).attr('title', `Parada falta material: ${formatTime(cellData)}`);
+                        }},
+                        { data: 'production_stops_time', title: 'Paradas no justificadas', render: data => formatTime(data), createdCell: function(td, cellData, rowData) {
+                            $(td).attr('title', `Paradas no justificadas: ${formatTime(cellData)}`);
+                        }},
+                        { data: 'on_time', title: 'T. Activo', render: data => formatTime(data), createdCell: function(td, cellData, rowData) {
+                            $(td).attr('title', `Tiempo activo: ${formatTime(cellData)}`);
+                        }},
+                        { data: 'fast_time', title: 'T. Ganado', render: data => formatTime(data), createdCell: function(td, cellData, rowData) {
+                            $(td).attr('title', `Tiempo ganado: ${formatTime(cellData)}`);
+                        }},
+                        { data: 'slow_time', title: 'T. Lento', render: data => formatTime(data), createdCell: function(td, cellData, rowData) {
+                            $(td).attr('title', `Tiempo en velocidad lenta: ${formatTime(cellData)}`);
+                        }},
+                        { data: 'out_time', title: 'T. de más', render: data => formatTime(data), createdCell: function(td, cellData, rowData) {
+                            $(td).attr('title', `Tiempo de más: ${formatTime(cellData)}`);
+                        }},
+                        { data: 'prepair_time', title: 'T. Preparación', render: data => formatTime(data), createdCell: function(td, cellData, rowData) {
+                            $(td).attr('title', `Tiempo de preparación: ${formatTime(cellData)}`);
+                        }},
+                        { data: null, title: 'Acciones', orderable: false, render: function(data, type, row) {
+                            return `<button class="btn btn-sm btn-primary" onclick="showDetailsModal(${JSON.stringify(row).replace(/"/g, '&quot;')})">
+                                <i class="fas fa-eye"></i> Ver
+                            </button>`;
+                        }, createdCell: function(td, cellData, rowData) {
+                            $(td).attr('title', 'Ver detalles completos');
+                        }}
                     ],
                     order: [[1, 'desc']], // Ordenar por Orden (ahora es la segunda columna)
                     paging: true,
@@ -764,6 +739,23 @@
         $(document).ready(() => {
             initializeDates();
             fetchProductionLines();
+            setupDateFilters();
+
+            // Botón de refrescar datos
+            $('#refreshData').click(function() {
+                const selectedLines = $('#modbusSelect').val();
+                const startDate = $('#startDate').val();
+                const endDate = $('#endDate').val();
+                if (selectedLines && selectedLines.length > 0 && startDate && endDate) {
+                    $('#loadingIndicator').show();
+                    $('#controlWeightTable').hide();
+                    $(this).find('i').addClass('fa-spin');
+                    fetchOrderStats(selectedLines, startDate, endDate);
+                    setTimeout(() => { $(this).find('i').removeClass('fa-spin'); }, 1200);
+                } else {
+                    alert('Por favor selecciona líneas y fechas válidas.');
+                }
+            });
 
             $('#fetchData').click(() => {
                 const selectedLines = $('#modbusSelect').val();
@@ -773,29 +765,40 @@
 
                 if (selectedLines && selectedLines.length > 0 && startDate && endDate) {
                     // Mostrar indicador de carga
-                    $('#connectionStatus').html('<i class="fas fa-sync fa-spin me-1"></i> Cargando...');
-                    $('#connectionStatus').removeClass('bg-success bg-danger').addClass('bg-warning');
+                    $('#loadingIndicator').show();
+                    $('#controlWeightTable').hide();
                     
                     fetchOrderStats(selectedLines, startDate, endDate);
                 } else {
-                    alert("Por favor, selecciona al menos una línea de producción y completa todos los campos.");
+                    alert('Por favor selecciona líneas y fechas válidas.');
                 }
             });
-            
+
+            // Resetear filtros
+            $('#resetFilters').click(() => {
+                initializeDates();
+                $('#modbusSelect').val([]).trigger('change');
+            });
+
             // Configurar eventos para los botones de exportación
             $('#exportExcel').on('click', () => exportData('excel'));
             $('#exportPDF').on('click', () => exportData('pdf'));
             $('#printTable').on('click', () => exportData('print'));
         });
-        
+
+        // Función para configurar filtros de fecha
+        function setupDateFilters() {
+            // Configuración nativa para el select múltiple
+            $('#modbusSelect').attr('title', 'Selecciona líneas de producción...');
+        }    
+
         // Función para exportar datos
         function exportData(type) {
             const table = $('#controlWeightTable').DataTable();
             if (!table) {
                 alert('No hay datos para exportar');
                 return;
-            }
-            
+            }          
             switch (type) {
                 case 'excel':
                     // Exportar a Excel usando SheetJS (XLSX)
