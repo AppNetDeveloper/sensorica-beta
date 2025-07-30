@@ -121,10 +121,22 @@
             </div>
             <div class="card-body">
                 <div class="row g-3">
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label class="form-label">Líneas de Producción</label>
                         <select id="modbusSelect" class="form-select select2-multiple" multiple style="width: 100%;">
                             <!-- Opciones dinámicas -->
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Empleado</label>
+                        <select class="form-select" disabled>
+                            <option>Todos</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Artículo</label>
+                        <select class="form-select" disabled>
+                            <option>Todos</option>
                         </select>
                     </div>
                     <div class="col-md-2">
@@ -135,12 +147,9 @@
                         <label class="form-label">Fecha Fin</label>
                         <input type="datetime-local" class="form-control" id="endDate">
                     </div>
-                    <div class="col-md-3 d-flex align-items-end gap-2">
-                        <button type="button" class="btn btn-primary flex-fill" id="fetchData">
-                            <i class="fas fa-search me-2"></i>Buscar
-                        </button>
-                        <button type="button" class="btn btn-outline-info" id="refreshData" title="Refrescar datos">
-                            <i class="fas fa-sync-alt"></i>
+                    <div class="col-md-2 d-flex align-items-end gap-2">
+                        <button type="button" class="btn btn-primary" id="fetchData" title="Buscar">
+                            <i class="fas fa-search"></i>
                         </button>
                         <button type="button" class="btn btn-secondary" id="resetFilters" title="Restablecer filtros">
                             <i class="fas fa-undo"></i>
@@ -380,8 +389,10 @@
                                 <div class="card-header bg-light">
                                     <h6 class="mb-0">OEE</h6>
                                 </div>
-                                <div class="card-body">
-                                    <canvas id="oeeChart" height="200"></canvas>
+                                <div class="card-body p-0 text-center">
+                                    <div style="height: 402px; padding: 15px; display: flex; justify-content: center; align-items: center;">
+                                        <canvas id="oeeChart" style="max-width: 100%;"></canvas>
+                                    </div>
                                 </div>
                             </div>
                             
@@ -835,6 +846,22 @@
             $('#modal-production-stops-time').text(row.production_stops_time !== null && row.production_stops_time !== undefined ? formatTime(row.production_stops_time) : '-');
             $('#modal-prepair-time').text(row.prepair_time !== null && row.prepair_time !== undefined ? formatTime(row.prepair_time) : '-');
             
+            // Función auxiliar para verificar si un valor tiene datos reales
+            const hasRealData = (value) => {
+                return value !== null && value !== undefined && value !== '' && value !== '-' && value !== 0 && value !== '0';
+            };
+            
+            // Verificar si hay datos en básculas
+            const hasMainScaleData = (
+                hasRealData(row.weights_0_shiftNumber) ||
+                hasRealData(row.weights_0_shiftKg) ||
+                hasRealData(row.weights_0_orderNumber) ||
+                hasRealData(row.weights_0_orderKg)
+            );
+            
+            // Variable para verificar si hay datos en básculas de rechazo
+            let hasRejectionScaleData = false;
+            
             // Actualizar datos de báscula final de línea (weights_0)
             $('#modal-weights-0-shift-number').text(row.weights_0_shiftNumber !== null && row.weights_0_shiftNumber !== undefined ? row.weights_0_shiftNumber : '-');
             $('#modal-weights-0-shift-kg').text(row.weights_0_shiftKg !== null && row.weights_0_shiftKg !== undefined ? row.weights_0_shiftKg : '-');
@@ -852,8 +879,9 @@
                 const orderNumber = row[`weights_${i}_orderNumber`];
                 const orderKg = row[`weights_${i}_orderKg`];
                 
-                // Solo mostrar si hay al menos un valor no nulo
-                if (shiftNumber !== null || shiftKg !== null || orderNumber !== null || orderKg !== null) {
+                // Solo mostrar si hay al menos un valor real
+                if (hasRealData(shiftNumber) || hasRealData(shiftKg) || hasRealData(orderNumber) || hasRealData(orderKg)) {
+                    hasRejectionScaleData = true;
                     const weightHtml = `
                         <div class="mb-3">
                             <h6 class="text-secondary">Báscula ${i}</h6>
@@ -886,6 +914,14 @@
             // Si no hay básculas de rechazo, mostrar mensaje
             if (rejectionWeightsContainer.children().length === 0) {
                 rejectionWeightsContainer.html('<p class="text-muted">No hay datos de básculas de rechazo</p>');
+            }
+            
+            // Ocultar o mostrar la sección completa de básculas según si hay datos
+            const scaleCard = $('.card:has(.card-header:contains("Básculas"))');
+            if (!hasMainScaleData && !hasRejectionScaleData) {
+                scaleCard.hide();
+            } else {
+                scaleCard.show();
             }
             
             // Actualizar estado
