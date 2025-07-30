@@ -157,11 +157,11 @@
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
-                                <h6 class="text-muted mb-2">Total Unidades</h6>
-                                <h3 class="mb-0" id="totalUnits">0</h3>
+                                <h6 class="text-muted mb-2">Teórico Total</h6>
+                                <h3 class="mb-0" id="totalTheoretical">00:00:00</h3>
                             </div>
                             <div class="bg-warning bg-opacity-10 p-3 rounded">
-                                <i class="fas fa-boxes text-warning"></i>
+                                <i class="fas fa-balance-scale text-warning"></i>
                             </div>
                         </div>
                     </div>
@@ -653,15 +653,35 @@
                 $('#avgOEE').removeClass('text-success text-warning').addClass('text-danger');
             }
             
-            // Total de unidades
-            let totalUnits = 0;
+            // Calcular suma teórica neta (tiempo ganado vs. tiempo de más)
+            let totalFastTime = 0;
+            let totalOutTime = 0;
+            
             data.forEach(item => {
-                if (item.units && !isNaN(item.units)) {
-                    totalUnits += parseInt(item.units);
+                if (item.fast_time && !isNaN(item.fast_time)) {
+                    totalFastTime += parseInt(item.fast_time);
+                }
+                if (item.out_time && !isNaN(item.out_time)) {
+                    totalOutTime += parseInt(item.out_time);
                 }
             });
             
-            $('#totalUnits').text(totalUnits.toLocaleString());
+            // Calcular la diferencia neta
+            let netTheoreticalTime = 0;
+            let isPositive = false;
+            
+            if (totalFastTime >= totalOutTime) {
+                netTheoreticalTime = totalFastTime - totalOutTime;
+                isPositive = true;
+                $('#totalTheoretical').removeClass('text-danger').addClass('text-success');
+            } else {
+                netTheoreticalTime = totalOutTime - totalFastTime;
+                isPositive = false;
+                $('#totalTheoretical').removeClass('text-success').addClass('text-danger');
+            }
+            
+            // Mostrar el resultado formateado
+            $('#totalTheoretical').text(formatTime(netTheoreticalTime));
             
             // Actualizar estado de conexión
             $('#connectionStatus').html('<i class="fas fa-circle me-1"></i> Conectado');

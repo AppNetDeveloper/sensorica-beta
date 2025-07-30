@@ -12,7 +12,7 @@
                     </li>
                     <li class="mb-2">
                         <span class="badge bg-success">Teórico</span>
-                        <span class="ms-2">Tiempo ganado (terminado antes)</span>
+                        <span class="ms-2">Tiempo ganado  o Tiempo de mas </span>
                     </li>
                 </ul>
             </div>
