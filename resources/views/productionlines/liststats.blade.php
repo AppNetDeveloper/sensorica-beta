@@ -597,10 +597,10 @@
                         { data: 'order_id', title: 'Orden', className: 'text-truncate', createdCell: function(td, cellData, rowData) {
                             $(td).attr('title', `Orden: ${cellData}`);
                         }},
-                        { data: 'oee', title: 'OEE', render: data => `${data.toFixed(2)}%`, createdCell: function(td, cellData, rowData) {
+                        { data: 'oee', title: 'OEE', render: data => `${Math.round(data)}%`, createdCell: function(td, cellData, rowData) {
                             const color = cellData >= 80 ? 'text-success' : cellData >= 60 ? 'text-warning' : 'text-danger';
-                            $(td).html(`<span class="${color} fw-bold">${cellData.toFixed(2)}%</span>`);
-                            $(td).attr('title', `OEE: ${cellData.toFixed(2)}%\nEstado: ${cellData >= 80 ? 'Excelente' : cellData >= 60 ? 'Aceptable' : 'Necesita mejora'}`);
+                            $(td).html(`<span class="${color} fw-bold">${Math.round(cellData)}%</span>`);
+                            $(td).attr('title', `OEE: ${Math.round(cellData)}%\nEstado: ${cellData >= 80 ? 'Excelente' : cellData >= 60 ? 'Aceptable' : 'Necesita mejora'}`);
                         }},
                         { data: 'status', title: 'Estado', render: data => {
                             const statusMap = {
@@ -705,7 +705,7 @@
             });
             
             const avgOEE = validOEECount > 0 ? totalOEE / validOEECount : 0;
-            $('#avgOEE').text(`${avgOEE.toFixed(2)}%`);
+            $('#avgOEE').text(`${Math.round(avgOEE)}%`);
             
             // Cambiar color según el valor
             if (avgOEE >= 80) {
@@ -988,14 +988,14 @@
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
-                                    return `${context.label}: ${context.raw.toFixed(2)}%`;
+                                    return `${context.label}: ${Math.round(context.raw)}%`;
                                 }
                             }
                         }
                     },
                     elements: {
                         center: {
-                            text: `${oeePercentage.toFixed(2)}%`,
+                            text: `${Math.round(oeePercentage)}%`,
                             color: '#000',
                             fontStyle: 'Arial',
                             sidePadding: 20,
@@ -1022,7 +1022,7 @@
                         
                         // Obtener el valor OEE del dataset actual
                         const oeeValue = chart.data.datasets[0].data[0] || 0;
-                        const text = `${oeeValue.toFixed(2)}%`;
+                        const text = `${Math.round(oeeValue)}%`;
                         const textX = Math.round((width - ctx.measureText(text).width) / 2);
                         const textY = height / 2;
                         
@@ -1148,7 +1148,7 @@
                         row.push(rowData.units_per_minute_theoretical ? rowData.units_per_minute_theoretical.toFixed(2) : '-');
                         
                         // OEE
-                        row.push(rowData.oee ? rowData.oee.toFixed(2) + '%' : '-');
+                        row.push(rowData.oee ? Math.round(rowData.oee) + '%' : '-');
                         
                         // Estado
                         const statusMap = {
@@ -1204,7 +1204,7 @@
                         row[pdfHeaders[4].dataKey] = rowData.units ? rowData.units.toLocaleString() : '-';
                         row[pdfHeaders[5].dataKey] = rowData.units_per_minute_real ? rowData.units_per_minute_real.toFixed(2) : '-';
                         row[pdfHeaders[6].dataKey] = rowData.units_per_minute_theoretical ? rowData.units_per_minute_theoretical.toFixed(2) : '-';
-                        row[pdfHeaders[7].dataKey] = rowData.oee ? rowData.oee.toFixed(2) + '%' : '-';
+                        row[pdfHeaders[7].dataKey] = rowData.oee ? Math.round(rowData.oee) + '%' : '-';
                         
                         // Estado
                         const statusMap = {
@@ -1283,7 +1283,7 @@
                         tableHtml += '<td>' + (rowData.units_per_minute_theoretical ? rowData.units_per_minute_theoretical.toFixed(2) : '-') + '</td>';
                         
                         // OEE
-                        tableHtml += '<td>' + (rowData.oee ? rowData.oee.toFixed(2) + '%' : '-') + '</td>';
+                        tableHtml += '<td>' + (rowData.oee ? Math.round(rowData.oee) + '%' : '-') + '</td>';
                         
                         // Estado
                         const statusMap = {
