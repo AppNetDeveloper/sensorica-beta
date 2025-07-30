@@ -237,6 +237,8 @@
                 </div>
             </div>
         </div>
+        
+        @include('productionlines.status-legend')
     </div>
     
     <!-- Modal para detalles de línea de producción -->
@@ -250,7 +252,7 @@
                 <div class="modal-body">
                     <div class="row">
                         <div class="col-md-6">
-                            <div class="card">
+                            <div class="card mb-3">
                                 <div class="card-header bg-light">
                                     <h6 class="mb-0">Información General</h6>
                                 </div>
@@ -280,12 +282,12 @@
                                         <span id="modal-upm-theoretical"></span>
                                     </div>
                                     <div class="mb-3">
-                                        <label class="fw-bold">Tiempo Activo:</label>
-                                        <span id="modal-on-time"></span>
-                                    </div>
-                                    <div class="mb-3">
                                         <label class="fw-bold">Estado:</label>
                                         <span id="modal-status" class="badge"></span>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="fw-bold">Tiempo de inicio:</label>
+                                        <span id="modal-created-at"></span>
                                     </div>
                                     <div class="mb-3">
                                         <label class="fw-bold">Última actualización:</label>
@@ -293,14 +295,97 @@
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="col-md-6">
+                            
                             <div class="card">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">Básculas</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-2">
+                                        <h6 class="text-primary">Báscula Final de Línea</h6>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <label class="fw-bold">Nº en Turno:</label>
+                                                <span id="modal-weights-0-shift-number"></span>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="fw-bold">Kg en Turno:</label>
+                                                <span id="modal-weights-0-shift-kg"></span>
+                                            </div>
+                                        </div>
+                                        <div class="row mt-2">
+                                            <div class="col-md-6">
+                                                <label class="fw-bold">Nº en Orden:</label>
+                                                <span id="modal-weights-0-order-number"></span>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="fw-bold">Kg en Orden:</label>
+                                                <span id="modal-weights-0-order-kg"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <hr>
+                                    
+                                    <div class="mb-2">
+                                        <h6 class="text-danger">Básculas de Rechazo</h6>
+                                        <div id="weights-rejection-container">
+                                            <!-- Aquí se insertarán dinámicamente las básculas de rechazo -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="card mb-3">
                                 <div class="card-header bg-light">
                                     <h6 class="mb-0">OEE</h6>
                                 </div>
                                 <div class="card-body">
                                     <canvas id="oeeChart" height="200"></canvas>
+                                </div>
+                            </div>
+                            
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">Tiempos de Producción</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-2">
+                                                <label class="fw-bold">Tiempo de producción:</label>
+                                                <span id="modal-on-time"></span>
+                                            </div>
+                                            <div class="mb-2">
+                                                <label class="fw-bold">Tiempo Ganado:</label>
+                                                <span id="modal-fast-time"></span>
+                                            </div>
+                                            <div class="mb-2">
+                                                <label class="fw-bold">Tiempo Lento:</label>
+                                                <span id="modal-slow-time"></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-2">
+                                                <label class="fw-bold">Tiempo de Más:</label>
+                                                <span id="modal-out-time"></span>
+                                            </div>
+                                            <div class="mb-2">
+                                                <label class="fw-bold">Parada Falta Material:</label>
+                                                <span id="modal-down-time"></span>
+                                            </div>
+                                            <div class="mb-2">
+                                                <label class="fw-bold">Paradas No Justificadas:</label>
+                                                <span id="modal-production-stops-time"></span>
+                                            </div>
+                                            <div class="mb-2">
+                                                <label class="fw-bold">Tiempo Preparación:</label>
+                                                <span id="modal-prepair-time"></span>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -422,7 +507,7 @@
                 $('#controlWeightTable').show();
                 
                 const table = $('#controlWeightTable').DataTable({
-                    dom: 'frtip',
+                    dom: 'lfrtip',
                     buttons: [],
                     scrollX: true,
                     responsive: true,
@@ -444,8 +529,9 @@
                             const statusMap = {
                                 'active': '<span class="badge bg-success">Activo</span>',
                                 'paused': '<span class="badge bg-warning">Pausado</span>',
-                                'error': '<span class="badge bg-danger">Error</span>',
-                                'completed': '<span class="badge bg-primary">Completado</span>'
+                                'error': '<span class="badge bg-danger">Incidencia</span>',
+                                'completed': '<span class="badge bg-primary">Completado</span>',
+                                'in_progress': '<span class="badge bg-info">En Progreso</span>'
                             };
                             return statusMap[data] || '<span class="badge bg-secondary">Desconocido</span>';
                         }, createdCell: function(td, cellData, rowData) {
@@ -456,12 +542,6 @@
                         }},
                         { data: 'updated_at', title: 'Última actualización', render: data => data ? new Date(data).toLocaleString() : '-', createdCell: function(td, cellData, rowData) {
                             $(td).attr('title', `Última actualización: ${data ? new Date(data).toLocaleString() : '-'}`);
-                        }},
-                        { data: 'down_time', title: 'Parada falta material', render: data => formatTime(data), createdCell: function(td, cellData, rowData) {
-                            $(td).attr('title', `Parada falta material: ${formatTime(cellData)}`);
-                        }},
-                        { data: 'production_stops_time', title: 'Paradas no justificadas', render: data => formatTime(data), createdCell: function(td, cellData, rowData) {
-                            $(td).attr('title', `Paradas no justificadas: ${formatTime(cellData)}`);
                         }},
                         { data: 'on_time', title: 'T. Activo', render: data => formatTime(data), createdCell: function(td, cellData, rowData) {
                             $(td).attr('title', `Tiempo activo: ${formatTime(cellData)}`);
@@ -477,6 +557,12 @@
                         }},
                         { data: 'prepair_time', title: 'T. Preparación', render: data => formatTime(data), createdCell: function(td, cellData, rowData) {
                             $(td).attr('title', `Tiempo de preparación: ${formatTime(cellData)}`);
+                        }},
+                        { data: 'production_stops_time', title: 'Paradas', render: data => formatTime(data), createdCell: function(td, cellData, rowData) {
+                            $(td).attr('title', `Paradas no justificadas: ${formatTime(cellData)}`);
+                        }},
+                        { data: 'down_time', title: 'Falta material', render: data => formatTime(data), createdCell: function(td, cellData, rowData) {
+                            $(td).attr('title', `Parada falta material: ${formatTime(cellData)}`);
                         }},
                         { data: null, title: 'Acciones', orderable: false, render: function(data, type, row) {
                             return `<button class="btn btn-sm btn-primary" onclick="showDetailsModal(${JSON.stringify(row).replace(/"/g, '&quot;')})">
@@ -571,25 +657,86 @@
             console.log('Mostrando detalles de la fila:', row);
             console.log('OEE de la fila:', row.oee);
             
-            // Actualizar datos en el modal
-            $('#modal-line-name').text(row.production_line_name);
-            $('#modal-order-id').text(row.order_id);
-            $('#modal-units').text(row.units.toLocaleString());
-            $('#modal-upm-real').text(row.units_per_minute_real.toFixed(2));
-            $('#modal-upm-theoretical').text(row.units_per_minute_theoretical.toFixed(2));
+            // Actualizar datos generales en el modal
+            $('#modal-line-name').text(row.production_line_name || '-');
+            $('#modal-order-id').text(row.order_id || '-');
+            $('#modal-box').text(row.box || '-');
+            $('#modal-units').text(row.units ? row.units.toLocaleString() : '0');
+            $('#modal-upm-real').text(row.units_per_minute_real ? parseFloat(row.units_per_minute_real).toFixed(2) : '0.00');
+            $('#modal-upm-theoretical').text(row.units_per_minute_theoretical ? parseFloat(row.units_per_minute_theoretical).toFixed(2) : '0.00');
             
-            // Mostrar el tiempo activo (on_time)
+            // Actualizar tiempos de producción
             $('#modal-on-time').text(row.on_time !== null && row.on_time !== undefined ? formatTime(row.on_time) : '-');
+            $('#modal-fast-time').text(row.fast_time !== null && row.fast_time !== undefined ? formatTime(row.fast_time) : '-');
+            $('#modal-slow-time').text(row.slow_time !== null && row.slow_time !== undefined ? formatTime(row.slow_time) : '-');
+            $('#modal-out-time').text(row.out_time !== null && row.out_time !== undefined ? formatTime(row.out_time) : '-');
+            $('#modal-down-time').text(row.down_time !== null && row.down_time !== undefined ? formatTime(row.down_time) : '-');
+            $('#modal-production-stops-time').text(row.production_stops_time !== null && row.production_stops_time !== undefined ? formatTime(row.production_stops_time) : '-');
+            $('#modal-prepair-time').text(row.prepair_time !== null && row.prepair_time !== undefined ? formatTime(row.prepair_time) : '-');
+            
+            // Actualizar datos de báscula final de línea (weights_0)
+            $('#modal-weights-0-shift-number').text(row.weights_0_shiftNumber !== null && row.weights_0_shiftNumber !== undefined ? row.weights_0_shiftNumber : '-');
+            $('#modal-weights-0-shift-kg').text(row.weights_0_shiftKg !== null && row.weights_0_shiftKg !== undefined ? row.weights_0_shiftKg : '-');
+            $('#modal-weights-0-order-number').text(row.weights_0_orderNumber !== null && row.weights_0_orderNumber !== undefined ? row.weights_0_orderNumber : '-');
+            $('#modal-weights-0-order-kg').text(row.weights_0_orderKg !== null && row.weights_0_orderKg !== undefined ? row.weights_0_orderKg : '-');
+            
+            // Actualizar básculas de rechazo (weights_1, weights_2, weights_3)
+            const rejectionWeightsContainer = $('#weights-rejection-container');
+            rejectionWeightsContainer.empty(); // Limpiar contenedor
+            
+            // Comprobar y mostrar básculas de rechazo (1-3)
+            for (let i = 1; i <= 3; i++) {
+                const shiftNumber = row[`weights_${i}_shiftNumber`];
+                const shiftKg = row[`weights_${i}_shiftKg`];
+                const orderNumber = row[`weights_${i}_orderNumber`];
+                const orderKg = row[`weights_${i}_orderKg`];
+                
+                // Solo mostrar si hay al menos un valor no nulo
+                if (shiftNumber !== null || shiftKg !== null || orderNumber !== null || orderKg !== null) {
+                    const weightHtml = `
+                        <div class="mb-3">
+                            <h6 class="text-secondary">Báscula ${i}</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label class="fw-bold">Nº en Turno:</label>
+                                    <span>${shiftNumber !== null && shiftNumber !== undefined ? shiftNumber : '-'}</span>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="fw-bold">Kg en Turno:</label>
+                                    <span>${shiftKg !== null && shiftKg !== undefined ? shiftKg : '-'}</span>
+                                </div>
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-md-6">
+                                    <label class="fw-bold">Nº en Orden:</label>
+                                    <span>${orderNumber !== null && orderNumber !== undefined ? orderNumber : '-'}</span>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="fw-bold">Kg en Orden:</label>
+                                    <span>${orderKg !== null && orderKg !== undefined ? orderKg : '-'}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    rejectionWeightsContainer.append(weightHtml);
+                }
+            }
+            
+            // Si no hay básculas de rechazo, mostrar mensaje
+            if (rejectionWeightsContainer.children().length === 0) {
+                rejectionWeightsContainer.html('<p class="text-muted">No hay datos de básculas de rechazo</p>');
+            }
             
             // Actualizar estado
             const statusMap = {
                 'active': { text: 'Activo', class: 'bg-success' },
                 'paused': { text: 'Pausado', class: 'bg-warning' },
-                'error': { text: 'Error', class: 'bg-danger' },
-                'completed': { text: 'Completado', class: 'bg-primary' }
+                'error': { text: 'Incidencia', class: 'bg-danger' },
+                'completed': { text: 'Completado', class: 'bg-primary' },
+                'in_progress': { text: 'En Progreso', class: 'bg-info' }
             };
             const status = statusMap[row.status] || { text: 'Desconocido', class: 'bg-secondary' };
-            $('#modal-status').text(status.text).addClass(status.class);
+            $('#modal-status').text(status.text).removeClass().addClass('badge ' + status.class);
             
             // Asegurar que el OEE se pase correctamente al gráfico
             const oeeData = {
@@ -602,7 +749,8 @@
             // Crear gráfica de OEE
             createOEEChart(oeeData);
             
-            // Actualizar fecha
+            // Actualizar fechas
+            $('#modal-created-at').text(row.created_at ? new Date(row.created_at).toLocaleString() : '-');
             $('#modal-updated-at').text(row.updated_at ? new Date(row.updated_at).toLocaleString() : '-');
             
             // Mostrar el modal usando jQuery (compatible con la versión de Bootstrap del sistema)
