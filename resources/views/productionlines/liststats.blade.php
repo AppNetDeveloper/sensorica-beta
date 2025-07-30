@@ -283,7 +283,7 @@
     
     <!-- Modal para detalles de línea de producción -->
     <div class="modal fade" id="detailsModal" tabindex="-1" aria-labelledby="detailsModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog" style="max-width: 80%; width: 80%;">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="detailsModalLabel">Detalles de Línea de Producción</h5>
