@@ -296,43 +296,47 @@
                                 <div class="card-header bg-light">
                                     <h6 class="mb-0">Información General</h6>
                                 </div>
-                                <div class="card-body">
-                                    <div class="mb-3">
-                                        <label class="fw-bold">Línea:</label>
-                                        <span id="modal-line-name"></span>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="fw-bold">Orden:</label>
-                                        <span id="modal-order-id"></span>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="fw-bold">Caja:</label>
-                                        <span id="modal-box"></span>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="fw-bold">Unidades:</label>
-                                        <span id="modal-units"></span>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="fw-bold">UPM Real:</label>
-                                        <span id="modal-upm-real"></span>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="fw-bold">UPM Teórico:</label>
-                                        <span id="modal-upm-theoretical"></span>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="fw-bold">Estado:</label>
-                                        <span id="modal-status" class="badge"></span>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="fw-bold">Tiempo de inicio:</label>
-                                        <span id="modal-created-at"></span>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="fw-bold">Última actualización:</label>
-                                        <span id="modal-updated-at"></span>
-                                    </div>
+                                <div class="card-body p-0">
+                                    <table class="table table-striped table-hover mb-0">
+                                        <tbody>
+                                            <tr>
+                                                <td class="fw-bold" width="40%">Línea</td>
+                                                <td id="modal-line-name"></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="fw-bold">Orden</td>
+                                                <td id="modal-order-id"></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="fw-bold">Caja</td>
+                                                <td id="modal-box"></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="fw-bold">Unidades</td>
+                                                <td id="modal-units"></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="fw-bold">UPM Real</td>
+                                                <td id="modal-upm-real"></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="fw-bold">UPM Teórico</td>
+                                                <td id="modal-upm-theoretical"></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="fw-bold">Estado</td>
+                                                <td><span id="modal-status" class="badge"></span></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="fw-bold">Tiempo de inicio</td>
+                                                <td id="modal-created-at"></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="fw-bold">Última actualización</td>
+                                                <td id="modal-updated-at"></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                             
@@ -340,38 +344,32 @@
                                 <div class="card-header bg-light">
                                     <h6 class="mb-0">Básculas</h6>
                                 </div>
-                                <div class="card-body">
-                                    <div class="mb-2">
-                                        <h6 class="text-primary">Báscula Final de Línea</h6>
-                                        <div class="row">
-                                            <div class="col-md-6">
-                                                <label class="fw-bold">Nº en Turno:</label>
-                                                <span id="modal-weights-0-shift-number"></span>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <label class="fw-bold">Kg en Turno:</label>
-                                                <span id="modal-weights-0-shift-kg"></span>
-                                            </div>
-                                        </div>
-                                        <div class="row mt-2">
-                                            <div class="col-md-6">
-                                                <label class="fw-bold">Nº en Orden:</label>
-                                                <span id="modal-weights-0-order-number"></span>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <label class="fw-bold">Kg en Orden:</label>
-                                                <span id="modal-weights-0-order-kg"></span>
-                                            </div>
-                                        </div>
-                                    </div>
+                                <div class="card-body p-0">
+                                    <h6 class="text-primary p-2 mb-0 bg-light border-bottom">Báscula Final de Línea</h6>
+                                    <table class="table table-striped table-hover mb-0">
+                                        <tbody>
+                                            <tr>
+                                                <td class="fw-bold" width="50%">Nº en Turno</td>
+                                                <td id="modal-weights-0-shift-number"></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="fw-bold">Kg en Turno</td>
+                                                <td id="modal-weights-0-shift-kg"></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="fw-bold">Nº en Orden</td>
+                                                <td id="modal-weights-0-order-number"></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="fw-bold">Kg en Orden</td>
+                                                <td id="modal-weights-0-order-kg"></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
                                     
-                                    <hr>
-                                    
-                                    <div class="mb-2">
-                                        <h6 class="text-danger">Básculas de Rechazo</h6>
-                                        <div id="weights-rejection-container">
-                                            <!-- Aquí se insertarán dinámicamente las básculas de rechazo -->
-                                        </div>
+                                    <h6 class="text-danger p-2 mb-0 bg-light border-bottom border-top">Básculas de Rechazo</h6>
+                                    <div id="weights-rejection-container" class="p-2">
+                                        <!-- Aquí se insertarán dinámicamente las básculas de rechazo -->
                                     </div>
                                 </div>
                             </div>
@@ -391,41 +389,39 @@
                                 <div class="card-header bg-light">
                                     <h6 class="mb-0">Tiempos de Producción</h6>
                                 </div>
-                                <div class="card-body">
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="mb-2">
-                                                <label class="fw-bold">Tiempo de producción:</label>
-                                                <span id="modal-on-time"></span>
-                                            </div>
-                                            <div class="mb-2">
-                                                <label class="fw-bold">Tiempo Ganado:</label>
-                                                <span id="modal-fast-time"></span>
-                                            </div>
-                                            <div class="mb-2">
-                                                <label class="fw-bold">Tiempo Lento:</label>
-                                                <span id="modal-slow-time"></span>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="mb-2">
-                                                <label class="fw-bold">Tiempo de Más:</label>
-                                                <span id="modal-out-time"></span>
-                                            </div>
-                                            <div class="mb-2">
-                                                <label class="fw-bold">Parada Falta Material:</label>
-                                                <span id="modal-down-time"></span>
-                                            </div>
-                                            <div class="mb-2">
-                                                <label class="fw-bold">Paradas No Justificadas:</label>
-                                                <span id="modal-production-stops-time"></span>
-                                            </div>
-                                            <div class="mb-2">
-                                                <label class="fw-bold">Tiempo Preparación:</label>
-                                                <span id="modal-prepair-time"></span>
-                                            </div>
-                                        </div>
-                                    </div>
+                                <div class="card-body p-0">
+                                    <table class="table table-striped table-hover mb-0">
+                                        <tbody>
+                                            <tr>
+                                                <td class="fw-bold" width="50%">Tiempo de producción</td>
+                                                <td id="modal-on-time"></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="fw-bold">Tiempo Ganado</td>
+                                                <td id="modal-fast-time"></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="fw-bold">Tiempo Lento</td>
+                                                <td id="modal-slow-time"></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="fw-bold">Tiempo de Más</td>
+                                                <td id="modal-out-time"></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="fw-bold">Parada Falta Material</td>
+                                                <td id="modal-down-time"></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="fw-bold">Paradas No Justificadas</td>
+                                                <td id="modal-production-stops-time"></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="fw-bold">Tiempo Preparación</td>
+                                                <td id="modal-prepair-time"></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>
