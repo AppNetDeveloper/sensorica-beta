@@ -93,7 +93,7 @@
                 <div class="row g-3">
                     <div class="col-md-3">
                         <label class="form-label">Líneas de Producción</label>
-                        <select id="modbusSelect" class="form-select select2-multiple" multiple="multiple" style="width: 100%;">
+                        <select id="modbusSelect" class="form-select select2-multiple" multiple style="width: 100%;">
                             <!-- Opciones dinámicas -->
                         </select>
                     </div>
@@ -123,21 +123,6 @@
         <!-- Tarjetas de Resumen -->
         <div class="row mb-4">
             <div class="col-md-3">
-                <div class="card border-start border-primary border-3 h-100">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <h6 class="text-muted mb-2">Total Registros</h6>
-                                <h3 class="mb-0" id="totalRecords">0</h3>
-                            </div>
-                            <div class="bg-primary bg-opacity-10 p-3 rounded">
-                                <i class="fas fa-database text-primary"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
                 <div class="card border-start border-success border-3 h-100">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center">
@@ -147,6 +132,21 @@
                             </div>
                             <div class="bg-success bg-opacity-10 p-3 rounded">
                                 <i class="fas fa-chart-line text-success"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-start border-primary border-3 h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="text-muted mb-2">Total Duración</h6>
+                                <h3 class="mb-0" id="totalDuration">00:00:00</h3>
+                            </div>
+                            <div class="bg-primary bg-opacity-10 p-3 rounded">
+                                <i class="fas fa-clock text-primary"></i>
                             </div>
                         </div>
                     </div>
@@ -222,7 +222,7 @@
                                 <th>Última actualización</th>
                                 <th>Parada falta material</th>
                                 <th>Paradas no justificadas</th>
-                                <th>T. Activo</th>
+                                <th>DURACION</th>
                                 <th>T. Ganado</th>
                                 <th>T. Lento</th>
                                 <th>T. de más</th>
@@ -239,6 +239,8 @@
         </div>
         
         @include('productionlines.status-legend')
+        
+        @include('productionlines.time-legend')
     </div>
     
     <!-- Modal para detalles de línea de producción -->
@@ -403,9 +405,41 @@
   {{-- DataTables CSS --}}
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
     <style>
         .dataTables_wrapper {
             overflow-x: auto;
+        }
+        
+        .select2-container--default .select2-selection--multiple {
+            border: 1px solid #ced4da;
+            border-radius: 0.25rem;
+        }
+        
+        .select2-container .select2-selection--multiple {
+            min-height: 38px;
+        }
+        
+        .select2-container--default.select2-container--focus .select2-selection--multiple {
+            border-color: #86b7fe;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+        
+        /* Ajustar color del texto en las opciones seleccionadas */
+        .select2-container--default .select2-selection--multiple .select2-selection__choice {
+            background-color: #e9ecef;
+            border: 1px solid #ced4da;
+            color: #212529;
+            font-weight: 500;
+        }
+        
+        .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+            color: #495057;
+        }
+        
+        .select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover {
+            color: #212529;
+            background-color: #dde2e6;
         }
     </style>
 @endpush
@@ -420,6 +454,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
     <script>
         const token = new URLSearchParams(window.location.search).get('token');
@@ -543,8 +578,8 @@
                         { data: 'updated_at', title: 'Última actualización', render: data => data ? new Date(data).toLocaleString() : '-', createdCell: function(td, cellData, rowData) {
                             $(td).attr('title', `Última actualización: ${data ? new Date(data).toLocaleString() : '-'}`);
                         }},
-                        { data: 'on_time', title: 'T. Activo', render: data => formatTime(data), createdCell: function(td, cellData, rowData) {
-                            $(td).attr('title', `Tiempo activo: ${formatTime(cellData)}`);
+                        { data: 'on_time', title: 'DURACIÓN', render: data => formatTime(data), createdCell: function(td, cellData, rowData) {
+                            $(td).attr('title', `Duración: ${formatTime(cellData)}`);
                         }},
                         { data: 'fast_time', title: 'T. Ganado', render: data => formatTime(data), createdCell: function(td, cellData, rowData) {
                             $(td).attr('title', `Tiempo ganado: ${formatTime(cellData)}`);
@@ -558,10 +593,10 @@
                         { data: 'prepair_time', title: 'T. Preparación', render: data => formatTime(data), createdCell: function(td, cellData, rowData) {
                             $(td).attr('title', `Tiempo de preparación: ${formatTime(cellData)}`);
                         }},
-                        { data: 'production_stops_time', title: 'Paradas', render: data => formatTime(data), createdCell: function(td, cellData, rowData) {
+                        { data: 'down_time', title: 'Paradas', render: data => formatTime(data), createdCell: function(td, cellData, rowData) {
                             $(td).attr('title', `Paradas no justificadas: ${formatTime(cellData)}`);
                         }},
-                        { data: 'down_time', title: 'Falta material', render: data => formatTime(data), createdCell: function(td, cellData, rowData) {
+                        { data: 'production_stops_time', title: 'Falta material', render: data => formatTime(data), createdCell: function(td, cellData, rowData) {
                             $(td).attr('title', `Parada falta material: ${formatTime(cellData)}`);
                         }},
                         { data: null, title: 'Acciones', orderable: false, render: function(data, type, row) {
@@ -593,9 +628,16 @@
 
         // Función para actualizar los KPIs
         function updateKPIs(data) {
-            // Total de registros
-            const totalRecords = data.length;
-            $('#totalRecords').text(totalRecords);
+            // Total de duración (suma de on_time)
+            let totalDurationSeconds = 0;
+            data.forEach(item => {
+                if (item.on_time && !isNaN(item.on_time)) {
+                    totalDurationSeconds += parseInt(item.on_time);
+                }
+            });
+            
+            // Formatear la duración total en formato HH:MM:SS
+            $('#totalDuration').text(formatTime(totalDurationSeconds));
             
             // Promedio de OEE
             let totalOEE = 0;
@@ -936,8 +978,20 @@
 
         // Función para configurar filtros de fecha
         function setupDateFilters() {
-            // Configuración nativa para el select múltiple
-            $('#modbusSelect').attr('title', 'Selecciona líneas de producción...');
+            // Configuración de Select2 para el select múltiple
+            $('#modbusSelect').select2({
+                placeholder: 'Selecciona líneas de producción...',
+                allowClear: true,
+                width: '100%',
+                language: {
+                    noResults: function() {
+                        return "No se encontraron resultados";
+                    },
+                    searching: function() {
+                        return "Buscando...";
+                    }
+                }
+            });
         }    
 
         // Función para exportar datos
