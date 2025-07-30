@@ -492,7 +492,15 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-    <script src="{{ asset('js/dashboard-animations.js') }}"></script>
+    <script src="{{ asset('js/dashboard-animations.js') }}?v={{ time() }}"></script>
+
+    <script>
+        $(document).ready(function() {
+            console.log('Document ready, checking for DashboardAnimations class...');
+            // La clase se inicializa automáticamente en el archivo JS
+        });
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
@@ -585,13 +593,20 @@
                 $('#loadingIndicator').hide();
                 $('#controlWeightTable').show();
                 
+                // Destruir la tabla existente de forma segura antes de reinicializar
+                if ($.fn.DataTable.isDataTable('#controlWeightTable')) {
+                    $('#controlWeightTable').DataTable().destroy();
+                }
+                // Limpiar el contenido HTML para evitar conflictos
+                $('#controlWeightTable').empty();
+
                 const table = $('#controlWeightTable').DataTable({
                     dom: 'lfrtip',
                     buttons: [],
                     scrollX: true,
                     responsive: true,
                     data: processedData,
-                    destroy: true,
+                    // 'destroy: true' ya no es necesario gracias al manejo manual
                     columns: [
                         { data: 'production_line_name', title: 'Línea', className: 'text-truncate', createdCell: function(td, cellData, rowData) {
                             $(td).attr('title', `Línea: ${cellData}`);
@@ -1123,16 +1138,7 @@
                     });
                     wsData.push(headers);
                     
-                    // Inicializar dashboard con animaciones
-            if (typeof DashboardAnimations !== 'undefined') {
-                const dashboard = new DashboardAnimations();
-                dashboard.loadLayout();
-                
-                // Actualizar KPIs con animaciones después de cargar datos
-                setTimeout(() => {
-                    dashboard.updateKPIs();
-                }, 1000);
-            }
+                    // No necesitamos inicializar animaciones durante la exportación
                     
                     // Datos
                     table.rows().every(function() {
@@ -1189,8 +1195,7 @@
                     
                 case 'pdf':
                     // Exportar a PDF usando jsPDF
-                    const { jsPDF } = window.jspdf;
-                    const doc = new jsPDF('l', 'mm', 'a4'); // Landscape para más columnas
+                    const doc = new window.jspdf.jsPDF({ orientation: 'landscape' });
                     
                     // Título del documento
                     doc.setFontSize(18);
