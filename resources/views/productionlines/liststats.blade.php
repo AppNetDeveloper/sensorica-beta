@@ -212,27 +212,7 @@
             <div class="card-body">
                 <div class="table-responsive">
                     <table id="controlWeightTable" class="table table-hover table-striped" style="width:100%">
-                        <thead>
-                            <tr>
-                                <th>Línea</th>
-                                <th>Orden</th>
-                                <th>OEE</th>
-                                <th>Estado</th>
-                                <th>Iniciado</th>
-                                <th>Última actualización</th>
-                                <th>Parada falta material</th>
-                                <th>Paradas no justificadas</th>
-                                <th>DURACION</th>
-                                <th>T. Ganado</th>
-                                <th>T. Lento</th>
-                                <th>T. de más</th>
-                                <th>T. Preparación</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!-- Datos dinámicos -->
-                        </tbody>
+                        <!-- La tabla se generará dinámicamente con DataTables -->
                     </table>
                 </div>
             </div>
@@ -581,14 +561,23 @@
                         { data: 'on_time', title: 'DURACIÓN', render: data => formatTime(data), createdCell: function(td, cellData, rowData) {
                             $(td).attr('title', `Duración: ${formatTime(cellData)}`);
                         }},
-                        { data: 'fast_time', title: 'T. Ganado', render: data => formatTime(data), createdCell: function(td, cellData, rowData) {
-                            $(td).attr('title', `Tiempo ganado: ${formatTime(cellData)}`);
+                        { data: null, title: 'Teórico', render: function(data, type, row) {
+                            if (row.fast_time && parseInt(row.fast_time) > 0) {
+                                return '<span class="badge bg-success">' + formatTime(row.fast_time) + '</span>';
+                            } else if (row.out_time && parseInt(row.out_time) > 0) {
+                                return '<span class="badge bg-danger">' + formatTime(row.out_time) + '</span>';
+                            } else {
+                                return '';
+                            }
+                        }, createdCell: function(td, cellData, rowData) {
+                            if (rowData.fast_time && parseInt(rowData.fast_time) > 0) {
+                                $(td).attr('title', `Tiempo ganado: ${formatTime(rowData.fast_time)}`);
+                            } else if (rowData.out_time && parseInt(rowData.out_time) > 0) {
+                                $(td).attr('title', `Tiempo de más: ${formatTime(rowData.out_time)}`);
+                            }
                         }},
-                        { data: 'slow_time', title: 'T. Lento', render: data => formatTime(data), createdCell: function(td, cellData, rowData) {
+                        { data: 'slow_time', title: 'Lento', render: data => formatTime(data), createdCell: function(td, cellData, rowData) {
                             $(td).attr('title', `Tiempo en velocidad lenta: ${formatTime(cellData)}`);
-                        }},
-                        { data: 'out_time', title: 'T. de más', render: data => formatTime(data), createdCell: function(td, cellData, rowData) {
-                            $(td).attr('title', `Tiempo de más: ${formatTime(cellData)}`);
                         }},
                         { data: 'prepair_time', title: 'T. Preparación', render: data => formatTime(data), createdCell: function(td, cellData, rowData) {
                             $(td).attr('title', `Tiempo de preparación: ${formatTime(cellData)}`);

@@ -11,20 +11,20 @@
                         <span class="ms-2">Tiempo que la tarjeta ha estado activa</span>
                     </li>
                     <li class="mb-2">
-                        <span class="badge bg-success">T. Ganado</span>
-                        <span class="ms-2">Tiempo que ha terminado antes de lo previsto</span>
+                        <span class="badge bg-success">Teórico</span>
+                        <span class="ms-2">Tiempo ganado (terminado antes)</span>
                     </li>
                 </ul>
             </div>
             <div class="col-md-4">
                 <ul class="list-unstyled mb-0">
                     <li class="mb-2">
-                        <span class="badge bg-warning">T. Lento</span>
-                        <span class="ms-2">Tiempo en velocidad lenta</span>
+                        <span class="badge bg-danger">Teórico</span>
+                        <span class="ms-2">Tiempo de más (excedido)</span>
                     </li>
                     <li class="mb-2">
-                        <span class="badge bg-info">T. De Más</span>
-                        <span class="ms-2">Tiempo extra sobre el tiempo previsto</span>
+                        <span class="badge bg-warning">Lento</span>
+                        <span class="ms-2">Tiempo en velocidad lenta</span>
                     </li>
                 </ul>
             </div>
