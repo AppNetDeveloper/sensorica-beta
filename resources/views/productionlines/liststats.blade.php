@@ -486,11 +486,13 @@
   {{-- DataTables JS --}}
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ asset('css/dashboard-animations.css') }}" rel="stylesheet">
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="{{ asset('js/dashboard-animations.js') }}"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
@@ -1120,6 +1122,17 @@
                         headers.push($(this).text().trim());
                     });
                     wsData.push(headers);
+                    
+                    // Inicializar dashboard con animaciones
+            if (typeof DashboardAnimations !== 'undefined') {
+                const dashboard = new DashboardAnimations();
+                dashboard.loadLayout();
+                
+                // Actualizar KPIs con animaciones después de cargar datos
+                setTimeout(() => {
+                    dashboard.updateKPIs();
+                }, 1000);
+            }
                     
                     // Datos
                     table.rows().every(function() {
