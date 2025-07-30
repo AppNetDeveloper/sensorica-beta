@@ -608,7 +608,8 @@
                                 'paused': '<span class="badge bg-warning">Pausado</span>',
                                 'error': '<span class="badge bg-danger">Incidencia</span>',
                                 'completed': '<span class="badge bg-primary">Completado</span>',
-                                'in_progress': '<span class="badge bg-info">En Progreso</span>'
+                                'in_progress': '<span class="badge bg-info">En Progreso</span>',
+                                'pending': '<span class="badge bg-secondary">Planificada</span>'
                             };
                             return statusMap[data] || '<span class="badge bg-secondary">Desconocido</span>';
                         }, createdCell: function(td, cellData, rowData) {
@@ -880,9 +881,10 @@
                 'paused': { text: 'Pausado', class: 'bg-warning' },
                 'error': { text: 'Incidencia', class: 'bg-danger' },
                 'completed': { text: 'Completado', class: 'bg-primary' },
-                'in_progress': { text: 'En Progreso', class: 'bg-info' }
+                'in_progress': { text: 'En Progreso', class: 'bg-info' },
+                'pending': { text: 'Planificada', class: 'bg-secondary' }
             };
-            const status = statusMap[row.status] || { text: 'Desconocido', class: 'bg-secondary' };
+            const status = statusMap[row.status] || { text: 'Iniciada Anterior', class: 'bg-secondary' };
             $('#modal-status').text(status.text).removeClass().addClass('badge ' + status.class);
             
             // Asegurar que el OEE se pase correctamente al gráfico
