@@ -31,7 +31,7 @@
             <div class="col-md-4">
                 <ul class="list-unstyled mb-0">
                     <li class="mb-2">
-                        <span class="badge bg-secondary">T. Preparación</span>
+                        <span class="badge bg-secondary">Preparación</span>
                         <span class="ms-2">Tiempo gastado en preparación</span>
                     </li>
                     <li class="mb-2">

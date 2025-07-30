@@ -64,6 +64,33 @@
         .table-hover tbody tr:hover {
             background-color: rgba(13, 110, 253, 0.05) !important;
         }
+        
+        /* Mejoras de espaciado para DataTable */
+        table.dataTable {
+            border-spacing: 0 8px !important;
+            border-collapse: separate !important;
+            margin-top: 15px !important;
+            margin-left: 10px !important;
+            margin-right: 10px !important;
+            width: calc(100% - 20px) !important;
+        }
+        
+        .dataTables_wrapper {
+            padding: 15px !important;
+        }
+        
+        table.dataTable thead th {
+            padding: 12px 10px;
+            border-bottom: 2px solid #dee2e6;
+            font-weight: 600;
+        }
+        
+        table.dataTable tbody td {
+            padding: 12px 10px;
+            vertical-align: middle;
+            border-top: 1px solid #f0f0f0;
+            border-bottom: 1px solid #f0f0f0;
+        }
         ::-webkit-scrollbar {
             height: 8px;
             width: 8px;
@@ -87,7 +114,10 @@
         <!-- Filtros -->
         <div class="card mb-4">
             <div class="card-header bg-light">
-                <h5 class="mb-0">Filtros de Búsqueda</h5>
+                <h6 class="mb-0">
+                    <i class="fas fa-table me-2 text-primary"></i>
+                    Datos de Producción
+                </h6>
             </div>
             <div class="card-body">
                 <div class="row g-3">
@@ -121,8 +151,8 @@
         </div>
 
         <!-- Tarjetas de Resumen -->
-        <div class="row mb-4">
-            <div class="col-md-3">
+        <div class="row g-3 mb-4">
+            <div class="col-sm-6 col-md-4 col-lg-3 col-xl-2">
                 <div class="card border-start border-success border-3 h-100">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center">
@@ -137,7 +167,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-sm-6 col-md-4 col-lg-3 col-xl-2">
                 <div class="card border-start border-primary border-3 h-100">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center">
@@ -152,7 +182,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-sm-6 col-md-4 col-lg-3 col-xl-2">
                 <div class="card border-start border-warning border-3 h-100">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center">
@@ -167,18 +197,46 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="card border-start border-info border-3 h-100">
+            <div class="col-sm-6 col-md-4 col-lg-3 col-xl-2">
+                <div class="card border-start border-secondary border-3 h-100">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
-                                <h6 class="text-muted mb-2">Estado</h6>
-                                <span class="badge bg-success" id="connectionStatus">
-                                    <i class="fas fa-circle me-1"></i> Conectado
-                                </span>
+                                <h6 class="text-muted mb-2">Total Preparación</h6>
+                                <h3 class="mb-0" id="totalPrepairTime">00:00:00</h3>
                             </div>
-                            <div class="bg-info bg-opacity-10 p-3 rounded">
-                                <i class="fas fa-sync-alt text-info"></i>
+                            <div class="bg-secondary bg-opacity-10 p-3 rounded">
+                                <i class="fas fa-tools text-secondary"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-md-4 col-lg-3 col-xl-2">
+                <div class="card border-start border-warning border-3 h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="text-muted mb-2">Tiempo Lento</h6>
+                                <h3 class="mb-0" id="totalSlowTime">00:00:00</h3>
+                            </div>
+                            <div class="bg-warning bg-opacity-10 p-3 rounded">
+                                <i class="fas fa-tachometer-alt text-warning"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-md-4 col-lg-3 col-xl-2">
+                <div class="card border-start border-danger border-3 h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="text-muted mb-2">Paradas / Falta Material</h6>
+                                <h3 class="mb-0" id="totalStopsTime">00:00:00</h3>
+                            </div>
+                            <div class="bg-danger bg-opacity-10 p-3 rounded">
+                                <i class="fas fa-hand-paper text-danger"></i>
                             </div>
                         </div>
                     </div>
@@ -190,9 +248,9 @@
         <div class="card">
             <div class="card-header bg-white py-3 border-bottom">
                 <div class="d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0">
-                        <i class="fas fa-table me-2 text-primary"></i>
-                        Datos de Producción
+                    <h6 Hideclass="mb-0">
+                        <i class="fas fa-table me-2 text-primary" hidden></i>
+                        
                     </h6>
                     <div class="d-flex">
                         <div class="btn-group" role="group">
@@ -460,6 +518,10 @@
 
                 const modbusSelect = $('#modbusSelect');
                 modbusSelect.empty();
+                
+                // Ordenar las líneas de producción alfabéticamente por nombre
+                data.sort((a, b) => a.name.localeCompare(b.name));
+                
                 data.forEach(line => {
                     modbusSelect.append(`<option value="${line.token}">${line.name}</option>`);
                 });
@@ -576,11 +638,11 @@
                                 $(td).attr('title', `Tiempo de más: ${formatTime(rowData.out_time)}`);
                             }
                         }},
+                        { data: 'prepair_time', title: 'Preparación', render: data => formatTime(data), createdCell: function(td, cellData, rowData) {
+                            $(td).attr('title', `Tiempo de preparación: ${formatTime(cellData)}`);
+                        }},
                         { data: 'slow_time', title: 'Lento', render: data => formatTime(data), createdCell: function(td, cellData, rowData) {
                             $(td).attr('title', `Tiempo en velocidad lenta: ${formatTime(cellData)}`);
-                        }},
-                        { data: 'prepair_time', title: 'T. Preparación', render: data => formatTime(data), createdCell: function(td, cellData, rowData) {
-                            $(td).attr('title', `Tiempo de preparación: ${formatTime(cellData)}`);
                         }},
                         { data: 'down_time', title: 'Paradas', render: data => formatTime(data), createdCell: function(td, cellData, rowData) {
                             $(td).attr('title', `Paradas no justificadas: ${formatTime(cellData)}`);
@@ -683,9 +745,43 @@
             // Mostrar el resultado formateado
             $('#totalTheoretical').text(formatTime(netTheoreticalTime));
             
-            // Actualizar estado de conexión
-            $('#connectionStatus').html('<i class="fas fa-circle me-1"></i> Conectado');
-            $('#connectionStatus').removeClass('bg-danger bg-warning').addClass('bg-success');
+            // Calcular suma total de tiempos de preparación
+            let totalPrepairTime = 0;
+            data.forEach(item => {
+                if (item.prepair_time && !isNaN(item.prepair_time)) {
+                    totalPrepairTime += parseInt(item.prepair_time);
+                }
+            });
+            
+            // Mostrar el total de tiempo de preparación
+            $('#totalPrepairTime').text(formatTime(totalPrepairTime));
+            
+            // Calcular suma total de tiempo lento
+            let totalSlowTime = 0;
+            data.forEach(item => {
+                if (item.slow_time && !isNaN(item.slow_time)) {
+                    totalSlowTime += parseInt(item.slow_time);
+                }
+            });
+            
+            // Mostrar el total de tiempo lento
+            $('#totalSlowTime').text(formatTime(totalSlowTime));
+            
+            // Calcular suma total de tiempos de paradas y falta de material
+            let totalStopsTime = 0;
+            data.forEach(item => {
+                // Sumar down_time (falta material)
+                if (item.down_time && !isNaN(item.down_time)) {
+                    totalStopsTime += parseInt(item.down_time);
+                }
+                // Sumar production_stops_time (paradas no justificadas)
+                if (item.production_stops_time && !isNaN(item.production_stops_time)) {
+                    totalStopsTime += parseInt(item.production_stops_time);
+                }
+            });
+            
+            // Mostrar el total de tiempos de paradas
+            $('#totalStopsTime').text(formatTime(totalStopsTime));
         }
 
         // Inicializar fechas por defecto
