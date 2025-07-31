@@ -119,7 +119,7 @@
                     Datos de Producción
                 </h6>
             </div>
-            <div class="card-body">
+            <div class="card-body py-2 px-3">
                 <div class="row g-3">
                     <div class="col-md-2">
                         <label class="form-label">Líneas de Producción</label>
@@ -161,91 +161,106 @@
 
         <!-- Tarjetas de Resumen -->
         <div class="row g-3 mb-4">
-            <div class="col-sm-6 col-md-4 col-lg-3 col-xl-2">
+            <div class="col-sm-6 col-md-4 col-lg-3 col-xl mb-3">
                 <div class="card border-start border-success border-3 h-100">
-                    <div class="card-body">
+                    <div class="card-body py-2 px-3">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
-                                <h6 class="text-muted mb-2">Promedio OEE</h6>
-                                <h3 class="mb-0" id="avgOEE">0%</h3>
+                                <h6 class="text-muted mb-1 small">Promedio OEE</h6>
+                                <h4 class="mb-0" id="avgOEE">0%</h4>
                             </div>
-                            <div class="bg-success bg-opacity-10 p-3 rounded">
+                            <div class="bg-success bg-opacity-10 p-2 rounded">
                                 <i class="fas fa-chart-line text-success"></i>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="col-sm-6 col-md-4 col-lg-3 col-xl-2">
+            <div class="col-sm-6 col-md-4 col-lg-3 col-xl mb-3">
                 <div class="card border-start border-primary border-3 h-100">
-                    <div class="card-body">
+                    <div class="card-body py-2 px-3">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
-                                <h6 class="text-muted mb-2">Total Duración</h6>
-                                <h3 class="mb-0" id="totalDuration">00:00:00</h3>
+                                <h6 class="text-muted mb-1 small">Total Duración</h6>
+                                <h4 class="mb-0" id="totalDuration">00:00:00</h4>
                             </div>
-                            <div class="bg-primary bg-opacity-10 p-3 rounded">
+                            <div class="bg-primary bg-opacity-10 p-2 rounded">
                                 <i class="fas fa-clock text-primary"></i>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="col-sm-6 col-md-4 col-lg-3 col-xl-2">
+            <div class="col-sm-6 col-md-4 col-lg-3 col-xl mb-3">
                 <div class="card border-start border-warning border-3 h-100">
-                    <div class="card-body">
+                    <div class="card-body py-2 px-3">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
-                                <h6 class="text-muted mb-2">Teórico Total</h6>
-                                <h3 class="mb-0" id="totalTheoretical">00:00:00</h3>
+                                <h6 class="text-muted mb-1 small">Teórico Total</h6>
+                                <h4 class="mb-0" id="totalTheoretical">00:00:00</h4>
                             </div>
-                            <div class="bg-warning bg-opacity-10 p-3 rounded">
+                            <div class="bg-warning bg-opacity-10 p-2 rounded">
                                 <i class="fas fa-balance-scale text-warning"></i>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="col-sm-6 col-md-4 col-lg-3 col-xl-2">
+            <div class="col-sm-6 col-md-4 col-lg-3 col-xl mb-3">
                 <div class="card border-start border-secondary border-3 h-100">
-                    <div class="card-body">
+                    <div class="card-body py-2 px-3">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
-                                <h6 class="text-muted mb-2">Total Preparación</h6>
-                                <h3 class="mb-0" id="totalPrepairTime">00:00:00</h3>
+                                <h6 class="text-muted mb-1 small">Total Preparación</h6>
+                                <h4 class="mb-0" id="totalPrepairTime">00:00:00</h4>
                             </div>
-                            <div class="bg-secondary bg-opacity-10 p-3 rounded">
+                            <div class="bg-secondary bg-opacity-10 p-2 rounded">
                                 <i class="fas fa-tools text-secondary"></i>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="col-sm-6 col-md-4 col-lg-3 col-xl-2">
+            <div class="col-sm-6 col-md-4 col-lg-3 col-xl mb-3">
                 <div class="card border-start border-warning border-3 h-100">
-                    <div class="card-body">
+                    <div class="card-body py-2 px-3">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
-                                <h6 class="text-muted mb-2">Tiempo Lento</h6>
-                                <h3 class="mb-0" id="totalSlowTime">00:00:00</h3>
+                                <h6 class="text-muted mb-1 small">Tiempo Lento</h6>
+                                <h4 class="mb-0" id="totalSlowTime">00:00:00</h4>
                             </div>
-                            <div class="bg-warning bg-opacity-10 p-3 rounded">
+                            <div class="bg-warning bg-opacity-10 p-2 rounded">
                                 <i class="fas fa-tachometer-alt text-warning"></i>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="col-sm-6 col-md-4 col-lg-3 col-xl-2">
+            <div class="col-sm-6 col-md-4 col-lg-3 col-xl mb-3">
                 <div class="card border-start border-danger border-3 h-100">
-                    <div class="card-body">
+                    <div class="card-body py-2 px-3">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
-                                <h6 class="text-muted mb-2">Paradas / Falta Material</h6>
-                                <h3 class="mb-0" id="totalStopsTime">00:00:00</h3>
+                                <h6 class="text-muted mb-1 small">Paradas</h6>
+                                <h4 class="mb-0" id="totalProductionStopsTime">00:00:00</h4>
                             </div>
-                            <div class="bg-danger bg-opacity-10 p-3 rounded">
+                            <div class="bg-danger bg-opacity-10 p-2 rounded">
                                 <i class="fas fa-hand-paper text-danger"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-md-4 col-lg-3 col-xl mb-3">
+                <div class="card border-start border-warning border-3 h-100">
+                    <div class="card-body py-2 px-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="text-muted mb-1 small">Falta Material</h6>
+                                <h4 class="mb-0" id="totalDownTime">00:00:00</h4>
+                            </div>
+                            <div class="bg-warning bg-opacity-10 p-2 rounded">
+                                <i class="fas fa-exclamation-triangle text-warning"></i>
                             </div>
                         </div>
                     </div>
@@ -276,7 +291,7 @@
                     </div>
                 </div>
             </div>
-            <div class="card-body">
+            <div class="card-body py-2 px-3">
                 <div class="table-responsive">
                     <table id="controlWeightTable" class="table table-hover table-striped" style="width:100%">
                         <!-- La tabla se generará dinámicamente con DataTables -->
@@ -742,18 +757,30 @@
             
             // Calcular suma teórica neta (tiempo ganado vs. tiempo de más)
             let totalFastTime = 0;
-            let totalOutTime = 0;
+            let totalOutTime = 0; // Tiempo de más
+            let totalDownTime = 0;
+            let totalProductionStopsTime = 0;
             
+            // Calcular por separado los tiempos de parada y falta material
             data.forEach(item => {
-                if (item.fast_time && !isNaN(item.fast_time)) {
-                    totalFastTime += parseInt(item.fast_time);
+                if (item.down_time) {
+                    totalDownTime += parseInt(item.down_time);
                 }
-                if (item.out_time && !isNaN(item.out_time)) {
+                if (item.production_stops_time) {
+                    totalProductionStopsTime += parseInt(item.production_stops_time);
+                }
+                if (item.out_time) {
                     totalOutTime += parseInt(item.out_time);
+                }
+                if (item.fast_time) {
+                    totalFastTime += parseInt(item.fast_time);
                 }
             });
             
-            // Calcular la diferencia neta
+            // Actualizar los valores en las tarjetas separadas
+            $('#totalDownTime').text(formatTime(totalDownTime));
+            $('#totalProductionStopsTime').text(formatTime(totalProductionStopsTime));
+            
             let netTheoreticalTime = 0;
             let isPositive = false;
             
@@ -792,21 +819,27 @@
             // Mostrar el total de tiempo lento
             $('#totalSlowTime').text(formatTime(totalSlowTime));
             
-            // Calcular suma total de tiempos de paradas y falta de material
-            let totalStopsTime = 0;
+            // Calcular suma total de tiempos de paradas y falta de material por separado
+            // Reutilizamos las variables ya declaradas anteriormente
+            
+            // Reiniciamos los contadores para asegurar cálculos correctos
+            totalDownTime = 0;
+            totalProductionStopsTime = 0;
+            
             data.forEach(item => {
-                // Sumar down_time (falta material)
+                // Calcular falta material (down_time)
                 if (item.down_time && !isNaN(item.down_time)) {
-                    totalStopsTime += parseInt(item.down_time);
+                    totalDownTime += parseInt(item.down_time);
                 }
-                // Sumar production_stops_time (paradas no justificadas)
+                // Calcular paradas no justificadas (production_stops_time)
                 if (item.production_stops_time && !isNaN(item.production_stops_time)) {
-                    totalStopsTime += parseInt(item.production_stops_time);
+                    totalProductionStopsTime += parseInt(item.production_stops_time);
                 }
             });
             
-            // Mostrar el total de tiempos de paradas
-            $('#totalStopsTime').text(formatTime(totalStopsTime));
+            // Mostrar los totales en tarjetas separadas
+            $('#totalDownTime').text(formatTime(totalDownTime));
+            $('#totalProductionStopsTime').text(formatTime(totalProductionStopsTime));
         }
 
         // Inicializar fechas por defecto

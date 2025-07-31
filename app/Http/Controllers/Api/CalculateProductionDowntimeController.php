@@ -168,11 +168,31 @@ class CalculateProductionDowntimeController extends Controller
                 $orderStat->save();
                 // --- FIN LÍNEA CAMBIADA ---
             } else {
-                Log::info("La línea de producción con ID {$productionLineId} está parada sin ningún sensor de tipo non 0 activo. Sumando {$intervalInSeconds}s a production_stops_time.");
-                // --- LÍNEA CAMBIADA ---
-                $orderStat->production_stops_time += $intervalInSeconds;
-                $orderStat->save();
-                // --- FIN LÍNEA CAMBIADA ---
+                try {
+                    // Verificar si hay sensores de tipo > 0 en esta línea
+                    $hasSensorsNotType0 = Sensor::where('sensor_type', '>', 0)
+                                               ->where('production_line_id', $productionLineId)
+                                               ->exists();
+                    
+                    Log::info("Verificando sensores tipo > 0 para línea {$productionLineId}: " . ($hasSensorsNotType0 ? 'Existen' : 'No existen'));
+                    
+                    if (!$hasSensorsNotType0) {
+                        // No hay sensores de tipo > 0, sumamos a down_time en lugar de production_stops_time
+                        Log::info("La línea de producción con ID {$productionLineId} no tiene sensores de tipo > 0. Sumando {$intervalInSeconds}s a down_time.");
+                        $orderStat->down_time += $intervalInSeconds;
+                    } else {
+                        // Hay sensores pero ninguno está parado, sumamos a production_stops_time
+                        Log::info("La línea de producción con ID {$productionLineId} está parada sin ningún sensor de tipo non 0 activo. Sumando {$intervalInSeconds}s a production_stops_time.");
+                        $orderStat->production_stops_time += $intervalInSeconds;
+                    }
+                    $orderStat->save();
+                } catch (\Exception $e) {
+                    Log::error("Error al verificar sensores tipo > 0 para línea {$productionLineId}: " . $e->getMessage());
+                    // En caso de error, mantener el comportamiento original
+                    Log::info("[FALLBACK] La línea de producción con ID {$productionLineId} está parada. Sumando {$intervalInSeconds}s a production_stops_time.");
+                    $orderStat->production_stops_time += $intervalInSeconds;
+                    $orderStat->save();
+                }
             }
         } else {
              Log::warning("No se encontró OrderStat para la línea de producción ID: {$productionLineId}");
@@ -186,11 +206,31 @@ class CalculateProductionDowntimeController extends Controller
                 $shiftHistory->save();
                 // --- FIN LÍNEA CAMBIADA ---
             } else {
-                Log::info("La línea de producción con ID {$productionLineId} está parada sin ningún sensor de tipo non 0 activo. Sumando {$intervalInSeconds}s a production_stops_time.");
-                // --- LÍNEA CAMBIADA ---
-                $shiftHistory->production_stops_time += $intervalInSeconds;
-                $shiftHistory->save();
-                // --- FIN LÍNEA CAMBIADA ---
+                try {
+                    // Verificar si hay sensores de tipo > 0 en esta línea
+                    $hasSensorsNotType0 = Sensor::where('sensor_type', '>', 0)
+                                               ->where('production_line_id', $productionLineId)
+                                               ->exists();
+                    
+                    Log::info("[ShiftHistory] Verificando sensores tipo > 0 para línea {$productionLineId}: " . ($hasSensorsNotType0 ? 'Existen' : 'No existen'));
+                    
+                    if (!$hasSensorsNotType0) {
+                        // No hay sensores de tipo > 0, sumamos a down_time en lugar de production_stops_time
+                        Log::info("[ShiftHistory] La línea de producción con ID {$productionLineId} no tiene sensores de tipo > 0. Sumando {$intervalInSeconds}s a down_time.");
+                        $shiftHistory->down_time += $intervalInSeconds;
+                    } else {
+                        // Hay sensores pero ninguno está parado, sumamos a production_stops_time
+                        Log::info("[ShiftHistory] La línea de producción con ID {$productionLineId} está parada sin ningún sensor de tipo non 0 activo. Sumando {$intervalInSeconds}s a production_stops_time.");
+                        $shiftHistory->production_stops_time += $intervalInSeconds;
+                    }
+                    $shiftHistory->save();
+                } catch (\Exception $e) {
+                    Log::error("[ShiftHistory] Error al verificar sensores tipo > 0 para línea {$productionLineId}: " . $e->getMessage());
+                    // En caso de error, mantener el comportamiento original
+                    Log::info("[ShiftHistory] [FALLBACK] La línea de producción con ID {$productionLineId} está parada. Sumando {$intervalInSeconds}s a production_stops_time.");
+                    $shiftHistory->production_stops_time += $intervalInSeconds;
+                    $shiftHistory->save();
+                }
             }
         } else {
              Log::warning("No se encontró Shift_history  para la línea de producción ID: {$productionLineId}");
