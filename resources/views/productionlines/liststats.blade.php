@@ -215,7 +215,7 @@
                                 <h4 class="mb-0" id="totalPrepairTime">00:00:00</h4>
                             </div>
                             <div class="bg-secondary bg-opacity-10 p-2 rounded">
-                                <i class="fas fa-tools text-secondary"></i>
+                                <i class="fas fa-hand-paper text-secondary"></i>
                             </div>
                         </div>
                     </div>
@@ -245,22 +245,22 @@
                                 <h4 class="mb-0" id="totalProductionStopsTime">00:00:00</h4>
                             </div>
                             <div class="bg-danger bg-opacity-10 p-2 rounded">
-                                <i class="fas fa-hand-paper text-danger"></i>
+                                <i class="fas fa-tools text-danger"></i>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="col-sm-6 col-md-4 col-lg-3 col-xl mb-3">
-                <div class="card border-start border-warning border-3 h-100">
+                <div class="card border-start border-danger border-3 h-100">
                     <div class="card-body py-2 px-3">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
                                 <h6 class="text-muted mb-1 small">Falta Material</h6>
                                 <h4 class="mb-0" id="totalDownTime">00:00:00</h4>
                             </div>
-                            <div class="bg-warning bg-opacity-10 p-2 rounded">
-                                <i class="fas fa-exclamation-triangle text-warning"></i>
+                            <div class="bg-danger bg-opacity-10 p-2 rounded" style="opacity: 0.8;">
+                                <i class="fas fa-exclamation-triangle text-danger" style="opacity: 0.8;"></i>
                             </div>
                         </div>
                     </div>
