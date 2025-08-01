@@ -182,6 +182,9 @@ Route::put('smartsensors/{sensor}', [SensorController::class, 'update'])->name('
 // Eliminar un sensor existente
 Route::delete('smartsensors/{sensor}', [SensorController::class, 'destroy'])->name('smartsensors.destroy');
 
+// Mostrar la vista en tiempo real de un sensor
+Route::get('smartsensors/{sensor}/live', [SensorController::class, 'liveView'])->name('smartsensors.live-view');
+
 
 
 

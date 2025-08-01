@@ -143,4 +143,16 @@ class SensorController extends Controller
         return redirect()->route('smartsensors.index', $production_line_id)
                          ->with('success', 'Sensor eliminado exitosamente.');
     }
+    
+    /**
+     * Muestra la vista en tiempo real del sensor.
+     *
+     * @param int $sensor_id
+     * @return \Illuminate\View\View
+     */
+    public function liveView($sensor_id)
+    {
+        $sensor = Sensor::findOrFail($sensor_id);
+        return view('smartsensors.live-view', compact('sensor'));
+    }
 }

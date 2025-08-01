@@ -61,10 +61,10 @@
                                                     {{ __('Eliminar') }}
                                                 </button>
                                             </form>
-                                            <button class="btn btn-sm btn-primary"
-                                                    onclick="showLiveSensor('{{ $sensor->token }}')">
-                                                {{ __('Live View') }}
-                                            </button>
+                                            <a href="{{ route('smartsensors.live-view', $sensor->id) }}" 
+                                               class="btn btn-sm btn-info">
+                                                <i class="fas fa-chart-line me-1"></i>{{ __('Live View') }}
+                                            </a>
                                         </td>
                                     </tr>
                                 @endforeach
