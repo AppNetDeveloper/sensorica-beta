@@ -155,4 +155,37 @@ class SensorController extends Controller
         $sensor = Sensor::findOrFail($sensor_id);
         return view('smartsensors.live-view', compact('sensor'));
     }
+
+    /**
+     * Muestra la vista de historial del sensor.
+     *
+     * @param int $sensor_id
+     * @return \Illuminate\View\View
+     */
+    public function historyView($sensor_id)
+    {
+        $sensor = Sensor::with('history')->findOrFail($sensor_id);
+        
+        // Obtenemos todos los registros para los cálculos y gráficos
+        $allHistory = $sensor->history()->orderBy('created_at', 'desc')->get();
+        
+        // Calculamos estadísticas
+        $stats = [
+            'total_production' => $allHistory->sum('count_order_1'),
+            'avg_production' => $allHistory->avg('count_order_1') ? round($allHistory->avg('count_order_1'), 2) : 0,
+            'total_downtime' => $allHistory->sum('downtime_count'),
+            'efficiency' => 0
+        ];
+        
+        // Calculamos la eficiencia (tiempo activo vs tiempo total)
+        if ($allHistory->count() > 0) {
+            $totalTime = $allHistory->count() * 3600; // Asumiendo registros por hora
+            $stats['efficiency'] = $totalTime > 0 ? 100 - ($stats['total_downtime'] / $totalTime * 100) : 0;
+        }
+        
+        // Para la paginación en la tabla
+        $history = $sensor->history()->orderBy('created_at', 'desc')->paginate(20);
+
+        return view('smartsensors.history', compact('sensor', 'history', 'stats', 'allHistory'));
+    }
 }

@@ -115,6 +115,14 @@ class Sensor extends Model
         // Ajusta 'productName' y 'client_id' si los nombres de las columnas son diferentes.
         return $this->belongsTo(ProductList::class, 'productName', 'client_id');
     }
+
+    /**
+     * Relación con el modelo SensorHistory.
+     */
+    public function history()
+    {
+        return $this->hasMany(SensorHistory::class);
+    }
     /**
      * Métodos del ciclo de vida del modelo para reiniciar Supervisor
      * cuando se actualizan ciertos campos.

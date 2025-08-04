@@ -22,9 +22,8 @@
                 <h4 class="card-title mb-0">{{ __('Live View') }} - {{ $sensor->name }}</h4>
                 <div>
                     <span class="badge bg-primary me-2" id="connection-status">Conectando...</span>
-                    <a href="{{ route('smartsensors.index', $sensor->production_line_id) }}" class="btn btn-secondary">
-                        {{ __('Volver') }}
-                    </a>
+                    <a href="{{ route('smartsensors.history', $sensor->id) }}" class="btn btn-info mr-2">{{ __('View History') }}</a>
+                    <a href="{{ route('smartsensors.index', $sensor->production_line_id) }}" class="btn btn-secondary">{{ __('Back') }}</a>
                 </div>
             </div>
             <div class="card-body">

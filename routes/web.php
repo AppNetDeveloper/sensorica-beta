@@ -185,6 +185,9 @@ Route::delete('smartsensors/{sensor}', [SensorController::class, 'destroy'])->na
 // Mostrar la vista en tiempo real de un sensor
 Route::get('smartsensors/{sensor}/live', [SensorController::class, 'liveView'])->name('smartsensors.live-view');
 
+// Mostrar la vista de historial de un sensor
+Route::get('smartsensors/{sensor}/history', [SensorController::class, 'historyView'])->name('smartsensors.history');
+
 
 
 
