@@ -45,6 +45,7 @@ use App\Http\Controllers\Api\IaPromptController; // Importa tu controlador
 use App\Http\Controllers\Api\BarcodeScansController;
 use App\Http\Controllers\Api\ProductionOrderArticlesController;
 use App\Http\Controllers\Api\ProductionLineController;
+use App\Http\Controllers\Api\LineAvailabilityController;
 
 
 
@@ -102,6 +103,11 @@ Route::match(['get', 'post'], '/barcode-info-by-customer/{customerToken}', [GetT
 
 // Ruta para obtener estados de líneas de producción
 Route::get('/production-lines/statuses/{customerId?}', [ProductionLineController::class, 'getStatuses'])->name('api.production-lines.statuses');
+
+// Rutas para la disponibilidad de líneas de producción
+Route::get('/production-lines/{id}/availability', [LineAvailabilityController::class, 'getAvailability']);
+Route::post('/production-lines/availability', [LineAvailabilityController::class, 'saveAvailability']);
+
 Route::match(['get', 'post'], '/sensors/{token}', [SensorController::class, 'getByToken']);
 Route::match(['get', 'post'], '/sensors', [SensorController::class, 'getAllSensors']);
 

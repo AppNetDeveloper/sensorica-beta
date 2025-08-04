@@ -1411,8 +1411,48 @@
                     
                     // Evento para el botón de planificación
                     popup.querySelector('#planningBtn').addEventListener('click', () => {
-                        // Por ahora solo cerramos el popup
+                        // Cerrar el popup actual
                         Swal.close();
+                        
+                        // Mostrar un nuevo Swal con indicador de carga
+                        Swal.fire({
+                            title: 'Cargando planificador...',
+                            html: '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Cargando...</span></div>',
+                            showConfirmButton: false,
+                            showCloseButton: true,
+                            allowOutsideClick: false
+                        });
+                        
+                        // Cargar el planificador mediante AJAX
+                        fetch(`/api/production-lines/${column.productionLineId}/availability`)
+                            .then(response => {
+                                if (!response.ok) {
+                                    throw new Error('Error al cargar el planificador');
+                                }
+                                return response.text();
+                            })
+                            .then(html => {
+                                // Mostrar el planificador en un nuevo Swal
+                                Swal.fire({
+                                    title: `Planificación para ${column.name}`,
+                                    html: html,
+                                    showConfirmButton: false,
+                                    showCloseButton: true,
+                                    width: '800px',
+                                    customClass: {
+                                        container: 'scheduler-swal-container',
+                                        popup: 'scheduler-swal-popup'
+                                    }
+                                });
+                            })
+                            .catch(error => {
+                                console.error('Error:', error);
+                                Swal.fire({
+                                    title: 'Error',
+                                    text: 'No se pudo cargar el planificador. Por favor, inténtelo de nuevo.',
+                                    icon: 'error'
+                                });
+                            });
                     });
                 }
             });
