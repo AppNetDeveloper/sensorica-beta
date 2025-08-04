@@ -106,6 +106,8 @@ Route::get('/production-lines/statuses/{customerId?}', [ProductionLineController
 
 // Rutas para la disponibilidad de líneas de producción
 Route::get('/production-lines/{id}/availability', [LineAvailabilityController::class, 'getAvailability']);
+Route::post('/production-lines/{id}/availability', [LineAvailabilityController::class, 'saveAvailability']);
+// Mantenemos la ruta anterior por compatibilidad
 Route::post('/production-lines/availability', [LineAvailabilityController::class, 'saveAvailability']);
 
 Route::match(['get', 'post'], '/sensors/{token}', [SensorController::class, 'getByToken']);

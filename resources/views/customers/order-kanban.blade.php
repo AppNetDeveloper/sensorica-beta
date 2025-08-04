@@ -9,6 +9,7 @@
     <li class="breadcrumb-item"><a href="{{ route('customers.index') }}">{{ __('Customers') }}</a></li>
     <li class="breadcrumb-item"><a href="{{ route('customers.show', $customer) }}">{{ $customer->name }}</a></li>
     <li class="breadcrumb-item">{{ __('Order Kanban') }}</li>
+
 @endsection
 
 @section('content')
@@ -41,6 +42,52 @@
 <div id="kanbanContainer" class="position-relative">
     <div class="kanban-board" role="list" aria-label="{{ __('Kanban Board') }}"></div>
 </div>
+<!-- Modal Bootstrap para el planificador de línea -->
+<div class="modal fade" id="schedulerModal" tabindex="-1" aria-labelledby="schedulerModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="schedulerModalLabel">Planificación de disponibilidad</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body" id="schedulerModalBody">
+        <div class="scheduler-container">
+            <div class="mb-4">
+                <h5>Planificación de disponibilidad para: <strong id="lineNameDisplay"></strong></h5>
+                <p class="text-muted">Configure los turnos disponibles para cada día de la semana</p>
+            </div>
+
+            <form id="schedulerForm" onsubmit="return false;" method="POST">
+                @csrf
+                <input type="hidden" id="productionLineId" name="production_line_id" value="">
+                <div class="scheduler-grid">
+                    <div class="row mb-3 fw-bold">
+                        <div class="col-3">Día</div>
+                        <div class="col-9">Turnos disponibles</div>
+                    </div>
+
+                    <div id="schedulerDaysContainer">
+                        <!-- Aquí se cargarán los días y turnos dinámicamente -->
+                        <div class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Cargando...</span>
+                            </div>
+                            <p class="mt-2">Cargando datos de disponibilidad...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end mt-4">
+                    <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="saveScheduler">Guardar</button>
+                </div>
+            </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 @endsection
 
 @push('style')
@@ -200,6 +247,38 @@
         }
         :fullscreen .kanban-column { height: 100%; }
         .cursor-pointer { cursor: pointer; }
+    /* Estilos para el scheduler */
+    .scheduler-container {
+        max-width: 100%;
+        padding: 0.5rem;
+    }
+    .shifts-container.disabled {
+        opacity: 0.6;
+        pointer-events: none;
+    }
+    .day-row {
+        padding: 0.8rem 0;
+        border-bottom: 1px solid #eee;
+    }
+    .day-row:last-child {
+        border-bottom: none;
+    }
+    .form-check {
+        margin-bottom: 0.5rem;
+        background-color: #f8f9fa;
+        padding: 0.5rem 1rem;
+        border-radius: 0.25rem;
+        border: 1px solid #e9ecef;
+    }
+    .form-check:hover {
+        background-color: #e9ecef;
+    }
+    .open-scheduler-btn {
+        color: #3b82f6;
+    }
+    .open-scheduler-btn:hover {
+        color: #2563eb;
+    }
     </style>
 @endpush
 
@@ -936,7 +1015,7 @@
                 <div class="column-header-stats">
                     <span class="card-count-badge" title="${translations.cardCountTitle}">0</span>
                     <span class="time-sum-badge ms-2" title="${translations.totalTimeTitle}"><i class="far fa-clock"></i> 00:00:00</span>
-                    <span class="column-menu-toggle ms-2" title="Opciones" data-column-id="${column.id}" style="cursor: pointer;"><i class="fas fa-ellipsis-v"></i></span>
+                    <span class="column-menu-toggle ms-2" title="Opciones" data-column-id="${column.id}" data-line-id="${column.productionLineId || ''}" data-line-name="${column.name}" style="cursor: pointer;"><i class="fas fa-ellipsis-v"></i></span>
                 </div>
             `;
             
@@ -1396,64 +1475,43 @@
         });
         
         function showColumnMenu(column) {
+            // Solo mostrar opción de planificación si es una línea de producción
+            const hasProductionLine = column.productionLineId && column.productionLineId !== '';
+            
             Swal.fire({
                 title: `Opciones para ${column.name}`,
                 showCloseButton: true,
                 showConfirmButton: false,
                 html: `
                     <div class="d-flex flex-column gap-2 my-4">
+                        ${hasProductionLine ? `
                         <button id="planningBtn" class="btn btn-primary w-100">
                             <i class="fas fa-calendar-alt me-2"></i>Planificación
                         </button>
+                        ` : ''}
                     </div>`,
                 didOpen: () => {
                     const popup = Swal.getPopup();
                     
-                    // Evento para el botón de planificación
-                    popup.querySelector('#planningBtn').addEventListener('click', () => {
-                        // Cerrar el popup actual
-                        Swal.close();
-                        
-                        // Mostrar un nuevo Swal con indicador de carga
-                        Swal.fire({
-                            title: 'Cargando planificador...',
-                            html: '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Cargando...</span></div>',
-                            showConfirmButton: false,
-                            showCloseButton: true,
-                            allowOutsideClick: false
+                    // Evento para el botón de planificación (solo si existe)
+                    if (hasProductionLine) {
+                        popup.querySelector('#planningBtn').addEventListener('click', () => {
+                            // Cerrar el popup actual
+                            Swal.close();
+                            
+                            // Actualizar el nombre de la línea en el modal
+                            document.getElementById('lineNameDisplay').textContent = column.name || 'Línea ' + column.productionLineId;
+                            
+                            // Establecer el ID de la línea en el formulario
+                            document.getElementById('productionLineId').value = column.productionLineId;
+                            
+                            // Cargar los datos de disponibilidad
+                            loadAvailabilityData(column.productionLineId);
+                            
+                            // Abrir el modal Bootstrap
+                            schedulerModal.show();
                         });
-                        
-                        // Cargar el planificador mediante AJAX
-                        fetch(`/api/production-lines/${column.productionLineId}/availability`)
-                            .then(response => {
-                                if (!response.ok) {
-                                    throw new Error('Error al cargar el planificador');
-                                }
-                                return response.text();
-                            })
-                            .then(html => {
-                                // Mostrar el planificador en un nuevo Swal
-                                Swal.fire({
-                                    title: `Planificación para ${column.name}`,
-                                    html: html,
-                                    showConfirmButton: false,
-                                    showCloseButton: true,
-                                    width: '800px',
-                                    customClass: {
-                                        container: 'scheduler-swal-container',
-                                        popup: 'scheduler-swal-popup'
-                                    }
-                                });
-                            })
-                            .catch(error => {
-                                console.error('Error:', error);
-                                Swal.fire({
-                                    title: 'Error',
-                                    text: 'No se pudo cargar el planificador. Por favor, inténtelo de nuevo.',
-                                    icon: 'error'
-                                });
-                            });
-                    });
+                    }
                 }
             });
         }
@@ -2075,6 +2133,282 @@
         //ponemos un wait que reciva ms desde otra parte
         function wait(ms) {
             return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        // --- SCHEDULER FUNCTIONALITY ---
+        
+        // Bootstrap modal instance
+        let schedulerModal;
+        
+        // Inicializar el modal Bootstrap inmediatamente
+        schedulerModal = new bootstrap.Modal(document.getElementById('schedulerModal'));
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM cargado, inicializando eventos del scheduler');
+            
+            // Evento para abrir el modal del scheduler
+            document.addEventListener('click', function(e) {
+                const btn = e.target.closest('.open-scheduler-btn');
+                if (btn) {
+                    const lineId = btn.getAttribute('data-line-id');
+                    const lineName = btn.getAttribute('data-line-name');
+                    
+                    if (!lineId) {
+                        console.error('Error: No se encontró el ID de línea');
+                        return;
+                    }
+                    
+                    // Actualizar el nombre de la línea en el modal
+                    document.getElementById('lineNameDisplay').textContent = lineName || 'Línea ' + lineId;
+                    
+                    // Establecer el ID de la línea en el formulario
+                    document.getElementById('productionLineId').value = lineId;
+                    
+                    // Cargar los datos de disponibilidad
+                    loadAvailabilityData(lineId);
+                    
+                    // Abrir el modal
+                    schedulerModal.show();
+                }
+            });
+        });
+        
+        // Evento para el botón de guardar del scheduler
+        document.getElementById('saveScheduler').addEventListener('click', function(e) {
+            // Prevenir cualquier comportamiento por defecto
+            e.preventDefault();
+            e.stopPropagation();
+            
+            console.log('Botón guardar clickeado');
+            
+            const productionLineId = document.getElementById('productionLineId').value;
+            if (!productionLineId) {
+                console.error('Error: No se encontró el ID de línea');
+                return;
+            }
+            
+            // Recopilar datos del formulario
+            const data = {
+                production_line_id: productionLineId,
+                customer_id: customerId, // Agregar el ID del cliente
+                days: {}
+            };
+            
+            // Procesar cada día y sus turnos seleccionados
+            document.querySelectorAll('.day-row').forEach(dayRow => {
+                const dayNum = dayRow.getAttribute('data-day');
+                const dayActive = dayRow.querySelector('.day-active').checked;
+                
+                if (dayActive) {
+                    // Obtener todos los turnos seleccionados para este día
+                    const selectedShifts = Array.from(dayRow.querySelectorAll('.shift-checkbox:checked'))
+                        .map(checkbox => checkbox.value);
+                    
+                    // Solo añadir días con turnos seleccionados
+                    if (selectedShifts.length > 0) {
+                        // Inicializar el array para este día si no existe
+                        if (!data.days[dayNum]) {
+                            data.days[dayNum] = [];
+                        }
+                        
+                        // Añadir los turnos seleccionados al día
+                        data.days[dayNum] = selectedShifts;
+                    }
+                }
+            });
+            
+            console.log('Datos a enviar:', data);
+            
+            // Enviar los datos al servidor usando fetch directamente sin depender del formulario
+            // Usar URL absoluta para evitar problemas con rutas relativas en producción
+            const baseUrl = window.location.origin;
+            // Modificamos la URL para incluir el ID de la línea en la ruta, siguiendo el mismo patrón que la carga
+            const lineIdForUrl = data.production_line_id;
+            fetch(`${baseUrl}/api/production-lines/${lineIdForUrl}/availability`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Respuesta del servidor:', data);
+                // Cerrar el modal del planificador primero, antes de mostrar cualquier mensaje
+                schedulerModal.hide();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                } else if (data.success) {
+                    // Mostrar mensaje de éxito
+                    Swal.fire({
+                        title: 'Guardado correctamente',
+                        text: data.message || 'La disponibilidad ha sido actualizada',
+                        icon: 'success',
+                        confirmButtonText: 'Aceptar'
+                    });
+                } else {
+                    // Mostrar mensaje de error
+                    Swal.fire({
+                        title: 'Error',
+                        text: data.message || 'Ha ocurrido un error al guardar la disponibilidad',
+                        icon: 'error',
+                        confirmButtonText: 'Aceptar'
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error al guardar la disponibilidad:', error);
+                Swal.fire({
+                    title: 'Error',
+                    text: 'Ha ocurrido un error al guardar la disponibilidad',
+                    icon: 'error',
+                    confirmButtonText: 'Aceptar'
+                });
+            });
+        });
+        
+        // Función para cargar los datos de disponibilidad
+        function loadAvailabilityData(lineId) {
+            // Mostrar spinner de carga
+            document.getElementById('schedulerDaysContainer').innerHTML = `
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                    <p class="mt-2">Cargando datos de disponibilidad...</p>
+                </div>
+            `;
+            const baseUrl = window.location.origin;
+            // Cargar los datos del servidor
+            fetch(`${baseUrl}/api/production-lines/${lineId}/availability`, {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                // Procesar la nueva estructura JSON
+                renderSchedulerDays(data.shifts, data.availability);
+            })
+            .catch(error => {
+                console.error('Error al cargar los datos de disponibilidad:', error);
+                document.getElementById('schedulerDaysContainer').innerHTML = `
+                    <div class="alert alert-danger">
+                        Error al cargar los datos de disponibilidad. Por favor, inténtelo de nuevo.
+                    </div>
+                `;
+            });
+        }
+        
+        // Función para renderizar los días y turnos en el scheduler
+        function renderSchedulerDays(shifts, availability) {
+            const days = {
+                1: 'Lunes',
+                2: 'Martes',
+                3: 'Miércoles',
+                4: 'Jueves',
+                5: 'Viernes',
+                6: 'Sábado',
+                7: 'Domingo'
+            };
+            
+            // Preparar la disponibilidad por día para fácil acceso
+            const availabilityByDay = {};
+            Object.keys(days).forEach(dayNum => {
+                availabilityByDay[dayNum] = [];
+            });
+            
+            // Organizar la disponibilidad por día
+            if (availability && Array.isArray(availability)) {
+                availability.forEach(item => {
+                    if (availabilityByDay[item.day_of_week]) {
+                        availabilityByDay[item.day_of_week].push(item.shift_list_id);
+                    }
+                });
+            }
+            
+            // Generar el HTML para cada día
+            let html = '';
+            
+            Object.entries(days).forEach(([dayNum, dayName]) => {
+                const dayHasShifts = availabilityByDay[dayNum].length > 0;
+                
+                html += `
+                    <div class="row mb-3 align-items-center day-row" data-day="${dayNum}">
+                        <div class="col-3">
+                            <div class="form-check">
+                                <input class="form-check-input day-active" type="checkbox" id="day${dayNum}" 
+                                       ${dayHasShifts ? 'checked' : ''}>
+                                <label class="form-check-label" for="day${dayNum}">
+                                    ${dayName}
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-9">
+                            <div class="shifts-container ${dayHasShifts ? '' : 'disabled'}">
+                `;
+                
+                if (shifts && shifts.length > 0) {
+                    html += '<div class="d-flex flex-wrap gap-3">';
+                    
+                    shifts.forEach(shift => {
+                        const isChecked = availabilityByDay[dayNum].includes(shift.id);
+                        html += `
+                            <div class="form-check shift-checkbox-wrapper">
+                                <input class="form-check-input shift-checkbox" 
+                                    type="checkbox" 
+                                    id="shift${dayNum}_${shift.id}" 
+                                    name="shifts[${dayNum}][]" 
+                                    value="${shift.id}"
+                                    ${isChecked ? 'checked' : ''}
+                                    >
+                                <label class="form-check-label" for="shift${dayNum}_${shift.id}">
+                                    ${shift.start} - ${shift.end}
+                                </label>
+                            </div>
+                        `;
+                    });
+                    
+                    html += '</div>';
+                } else {
+                    html += '<div class="text-muted">No hay turnos definidos</div>';
+                }
+                
+                html += `
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            // Actualizar el contenedor
+            document.getElementById('schedulerDaysContainer').innerHTML = html;
+            
+            // Añadir eventos a los checkboxes de días
+            document.querySelectorAll('.day-active').forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    const dayRow = this.closest('.day-row');
+                    const shiftsContainer = dayRow.querySelector('.shifts-container');
+                    
+                    if (this.checked) {
+                        shiftsContainer.classList.remove('disabled');
+                    } else {
+                        shiftsContainer.classList.add('disabled');
+                        // Desmarcar todos los turnos
+                        dayRow.querySelectorAll('.shift-checkbox').forEach(shiftCheckbox => {
+                            shiftCheckbox.checked = false;
+                        });
+                    }
+                });
+            });
         }
 
     });
