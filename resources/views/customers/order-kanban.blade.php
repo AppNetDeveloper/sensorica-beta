@@ -73,7 +73,16 @@
 
         .kanban-column { flex: 0 0 340px; background-color: var(--column-bg); border-radius: 12px; min-width: 340px; display: flex; flex-direction: column; border: 1px solid var(--column-border); box-shadow: 0 1px 4px rgba(0,0,0,0.05); max-height: 100%; overflow: hidden; }
         .kanban-column.drag-over { border-color: var(--primary-color); }
-        .column-header { padding: 0.75rem 1rem; position: sticky; top: 0; background-color: var(--header-bg); z-index: 10; border-bottom: 1px solid var(--column-border); display: flex; align-items: center; justify-content: space-between; }
+        .column-header { padding: 0.75rem 1rem; position: sticky; top: 0; background-color: var(--header-bg); z-index: 10; border-bottom: 1px solid var(--column-border); transition: all 0.3s ease; }
+        .column-header-running { border-top: 3px solid #28a745 !important; }
+        .column-header-paused { border-top: 3px solid #ffc107 !important; }
+        .column-header-stopped { border-top: 3px solid #6c757d !important; }
+        .line-status-indicator { display: inline-flex; align-items: center; font-size: 0.8rem; }
+        .line-status-indicator i { margin-right: 0.25rem; }
+        .line-status-running { color: #28a745; }
+        .line-status-paused { color: #ffc107; }
+        .line-status-stopped { color: #6c757d; }
+        .line-operator { display: inline-flex; font-size: 0.75rem; color: var(--text-muted); margin-left: 0.5rem; }
         .column-search-container { padding: 0 0.75rem; background-color: var(--header-bg); position: sticky; top: 50px; z-index: 9; border-bottom: 1px solid var(--column-border); }
         .column-title { font-weight: 600; color: var(--header-text); margin: 0; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .column-cards { padding: 0.75rem; overflow-y: auto; flex-grow: 1; display: flex; flex-direction: column; gap: 8px; min-height: 100px; }
@@ -201,6 +210,9 @@
     <script>
     document.addEventListener('DOMContentLoaded', function() {
         // --- 1. CONFIGURACIÓN INICIAL Y VARIABLES GLOBALES ---
+        
+        // Estado de las líneas de producción
+        let productionLineStatuses = {};
         
         const kanbanBoard = document.querySelector('.kanban-board');
         const searchInput = document.getElementById('searchInput');
@@ -869,10 +881,62 @@
             columnElement.className = 'kanban-column';
             columnElement.id = column.id;
             
+            // Obtener el estado de la línea si existe
+            let lineStatusHtml = '';
+            let headerStatusClass = '';
+            
+            // Solo aplicar a columnas que son líneas de producción (no a pendientes ni estados finales)
+            if (column.productionLineId && productionLineStatuses[column.productionLineId]) {
+                const lineStatus = productionLineStatuses[column.productionLineId];
+                let statusIcon = '';
+                let statusText = '';
+                let statusClass = '';
+                
+                if (lineStatus.type === 'shift' && lineStatus.action === 'start' || 
+                    lineStatus.type === 'stop' && lineStatus.action === 'end') {
+                    // Línea arrancada
+                    statusIcon = '<i class="fas fa-play-circle line-status-running"></i>';
+                    statusText = 'En funcionamiento';
+                    statusClass = 'line-status-running';
+                    headerStatusClass = 'column-header-running';
+                } else if (lineStatus.type === 'stop' && lineStatus.action === 'start') {
+                    // Línea en pausa
+                    statusIcon = '<i class="fas fa-pause-circle line-status-paused"></i>';
+                    statusText = 'En pausa';
+                    statusClass = 'line-status-paused';
+                    headerStatusClass = 'column-header-paused';
+                } else if (lineStatus.type === 'shift' && lineStatus.action === 'end') {
+                    // Línea parada
+                    statusIcon = '<i class="fas fa-stop-circle line-status-stopped"></i>';
+                    statusText = 'Detenida';
+                    statusClass = 'line-status-stopped';
+                    headerStatusClass = 'column-header-stopped';
+                }
+                
+                if (statusText) {
+                    // Estado de línea
+                    lineStatusHtml = `
+                        <div class="line-status-indicator ${statusClass}">
+                            ${statusIcon} <span>${statusText}</span>
+                        </div>
+                    `;
+                    
+                    // Añadir información del operario si está disponible
+                    if (lineStatus.operator_name) {
+                        lineStatusHtml += `
+                            <div class="line-operator">
+                                <i class="fas fa-user"></i> ${lineStatus.operator_name}
+                            </div>
+                        `;
+                    }
+                }
+            }
+            
             let headerStatsHtml = `
                 <div class="column-header-stats">
                     <span class="card-count-badge" title="${translations.cardCountTitle}">0</span>
-                    <span class="time-sum-badge" title="${translations.totalTimeTitle}"><i class="far fa-clock"></i> 00:00:00</span>
+                    <span class="time-sum-badge ms-2" title="${translations.totalTimeTitle}"><i class="far fa-clock"></i> 00:00:00</span>
+                    <span class="column-menu-toggle ms-2" title="Opciones" data-column-id="${column.id}" style="cursor: pointer;"><i class="fas fa-ellipsis-v"></i></span>
                 </div>
             `;
             
@@ -920,9 +984,12 @@
                 columnElement.addEventListener('dragleave', resetDropZones);
                 columnElement.addEventListener('drop', drop);
             } else {
-                innerHTML = `<div class="column-header" style="border-left: 4px solid ${column.color};">
-                                <h3 class="column-title">${column.name}</h3>
-                                ${headerStatsHtml}
+                innerHTML = `<div class="column-header ${headerStatusClass}" style="border-left: 4px solid ${column.color};">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <h3 class="column-title">${column.name}</h3>
+                                    ${headerStatsHtml}
+                                </div>
+                                ${lineStatusHtml}
                              </div>
                              ${searchFieldHtml}
                              <div class="column-cards"></div>`;
@@ -1169,7 +1236,193 @@
             });
         }
 
-        // --- 5. GUARDADO DE DATOS Y OTROS EVENTOS ---
+        // --- 5. OBTENER ESTADO DE LÍNEAS DE PRODUCCIÓN ---
+        
+        function fetchProductionLineStatuses() {
+            // Usar la URL base del sitio actual para evitar problemas con dominios
+            const baseUrl = window.location.origin;
+            // Incluir el token del cliente en la URL
+            fetch(`${baseUrl}/api/production-lines/statuses/${customerId}`, {
+                method: 'GET',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                credentials: 'same-origin'
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.statuses) {
+                        productionLineStatuses = {};
+                        
+                        // Convertir el array a un objeto para fácil acceso
+                        data.statuses.forEach(status => {
+                            productionLineStatuses[status.production_line_id] = {
+                                type: status.type,
+                                action: status.action,
+                                operator_name: status.operator_name,
+                                timestamp: status.created_at
+                            };
+                        });
+                        
+                        // Actualizar visualmente las columnas
+                        updateColumnHeaderStatuses();
+                        updateColumnStats()
+                    }
+                })
+                .catch(error => {
+                    console.error('Error al obtener estados de líneas:', error);
+                });
+        }
+        
+        function updateColumnHeaderStatuses() {
+            // Recorrer todas las columnas y actualizar su estado visual
+            Object.values(columns).forEach(column => {
+                if (!column.productionLineId) return;
+                
+                // Actualizar también las estadísticas de la columna
+                updateColumnStats(document.getElementById(column.id));
+                
+                const columnElement = document.getElementById(column.id);
+                if (!columnElement) return;
+                
+                const headerElement = columnElement.querySelector('.column-header');
+                if (!headerElement) return;
+                
+                // Eliminar clases de estado anteriores
+                headerElement.classList.remove('column-header-running', 'column-header-paused', 'column-header-stopped');
+                
+                // Añadir clase según el estado actual
+                const lineStatus = productionLineStatuses[column.productionLineId];
+                if (lineStatus) {
+                    if (lineStatus.type === 'shift' && lineStatus.action === 'start' || 
+                        lineStatus.type === 'stop' && lineStatus.action === 'end') {
+                        headerElement.classList.add('column-header-running');
+                    } else if (lineStatus.type === 'stop' && lineStatus.action === 'start') {
+                        headerElement.classList.add('column-header-paused');
+                    } else if (lineStatus.type === 'shift' && lineStatus.action === 'end') {
+                        headerElement.classList.add('column-header-stopped');
+                    }
+                }
+                
+                // Actualizar el contenido del indicador de estado
+                renderColumnStatusIndicator(column, columnElement);
+            });
+        }
+        
+        function renderColumnStatusIndicator(column, columnElement) {
+            if (!column.productionLineId) return;
+            
+            const lineStatus = productionLineStatuses[column.productionLineId];
+            if (!lineStatus) return;
+            
+            let statusIcon = '';
+            let statusText = '';
+            let statusClass = '';
+            
+            if (lineStatus.type === 'shift' && lineStatus.action === 'start' || 
+                lineStatus.type === 'stop' && lineStatus.action === 'end') {
+                statusIcon = '<i class="fas fa-play-circle line-status-running"></i>';
+                statusText = 'En funcionamiento';
+                statusClass = 'line-status-running';
+            } else if (lineStatus.type === 'stop' && lineStatus.action === 'start') {
+                statusIcon = '<i class="fas fa-pause-circle line-status-paused"></i>';
+                statusText = 'En pausa';
+                statusClass = 'line-status-paused';
+            } else if (lineStatus.type === 'shift' && lineStatus.action === 'end') {
+                statusIcon = '<i class="fas fa-stop-circle line-status-stopped"></i>';
+                statusText = 'Detenida';
+                statusClass = 'line-status-stopped';
+            }
+            
+            // Buscar o crear los elementos necesarios
+            let statusIndicator = columnElement.querySelector('.line-status-indicator');
+            let operatorElement = columnElement.querySelector('.line-operator');
+            
+            // Si no existe el contenedor de estado, crearlo
+            if (!statusIndicator && statusText) {
+                const statusContainer = columnElement.querySelector('.column-header');
+                if (statusContainer) {
+                    // Crear el contenedor de estado si no existe
+                    statusIndicator = document.createElement('div');
+                    statusIndicator.className = `line-status-indicator ${statusClass}`;
+                    statusContainer.appendChild(statusIndicator);
+                }
+            }
+            
+            // Actualizar el contenido del indicador de estado si existe
+            if (statusIndicator && statusText) {
+                // Actualizar la clase
+                statusIndicator.className = `line-status-indicator ${statusClass}`;
+                // Actualizar el contenido
+                statusIndicator.innerHTML = `${statusIcon} <span>${statusText}</span>`;
+            }
+            
+            // Si hay información del operario
+            if (lineStatus.operator_name) {
+                // Si no existe el elemento del operario, crearlo
+                if (!operatorElement) {
+                    const statusContainer = columnElement.querySelector('.column-header');
+                    if (statusContainer) {
+                        operatorElement = document.createElement('div');
+                        operatorElement.className = 'line-operator';
+                        statusContainer.appendChild(operatorElement);
+                    }
+                }
+                
+                // Actualizar el contenido del operario si existe
+                if (operatorElement) {
+                    operatorElement.innerHTML = `<i class="fas fa-user"></i> ${lineStatus.operator_name}`;
+                    operatorElement.style.display = '';
+                }
+            } else if (operatorElement) {
+                // Ocultar el elemento del operario si no hay información
+                operatorElement.style.display = 'none';
+            }
+        }
+        
+        // Manejar clics en el menú de tres puntos
+        document.addEventListener('click', function(event) {
+            const menuToggle = event.target.closest('.column-menu-toggle');
+            if (menuToggle) {
+                const columnId = menuToggle.dataset.columnId;
+                const column = columns[columnId];
+                
+                if (column) {
+                    showColumnMenu(column);
+                }
+            }
+        });
+        
+        function showColumnMenu(column) {
+            Swal.fire({
+                title: `Opciones para ${column.name}`,
+                showCloseButton: true,
+                showConfirmButton: false,
+                html: `
+                    <div class="d-flex flex-column gap-2 my-4">
+                        <button id="planningBtn" class="btn btn-primary w-100">
+                            <i class="fas fa-calendar-alt me-2"></i>Planificación
+                        </button>
+                    </div>`,
+                didOpen: () => {
+                    const popup = Swal.getPopup();
+                    
+                    // Evento para el botón de planificación
+                    popup.querySelector('#planningBtn').addEventListener('click', () => {
+                        // Por ahora solo cerramos el popup
+                        Swal.close();
+                    });
+                }
+            });
+        }
+        
+        // Obtener estados iniciales y configurar actualización periódica
+        fetchProductionLineStatuses();
+        setInterval(fetchProductionLineStatuses, 30000); // Actualizar cada 30 segundos
+        
+        // --- 6. GUARDADO DE DATOS Y OTROS EVENTOS ---
 
         function saveKanbanChanges() {
             // Evitar múltiples solicitudes simultáneas

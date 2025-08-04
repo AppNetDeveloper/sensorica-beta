@@ -44,6 +44,7 @@ use App\Http\Controllers\Api\RfidErrorPointController;
 use App\Http\Controllers\Api\IaPromptController; // Importa tu controlador
 use App\Http\Controllers\Api\BarcodeScansController;
 use App\Http\Controllers\Api\ProductionOrderArticlesController;
+use App\Http\Controllers\Api\ProductionLineController;
 
 
 
@@ -98,6 +99,9 @@ Route::post('/barcode-info', [ApiBarcoderController::class, 'getBarcodeInfo']);
 Route::match(['get', 'post'], '/production-lines/{customerToken}', [GetTokenController::class, 'getProductionLinesByCustomerToken']);
 Route::match(['get', 'post'], '/modbus-info/{token}', [GetTokenController::class, 'getModbusInfo']);
 Route::match(['get', 'post'], '/barcode-info-by-customer/{customerToken}', [GetTokenController::class, 'getBarcodeInfoByCustomer']);
+
+// Ruta para obtener estados de líneas de producción
+Route::get('/production-lines/statuses/{customerId?}', [ProductionLineController::class, 'getStatuses'])->name('api.production-lines.statuses');
 Route::match(['get', 'post'], '/sensors/{token}', [SensorController::class, 'getByToken']);
 Route::match(['get', 'post'], '/sensors', [SensorController::class, 'getAllSensors']);
 
