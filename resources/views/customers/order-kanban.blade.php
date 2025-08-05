@@ -44,7 +44,7 @@
 </div>
 <!-- Modal Bootstrap para el planificador de línea -->
 <div class="modal fade" id="schedulerModal" tabindex="-1" aria-labelledby="schedulerModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
+  <div class="modal-dialog" style="max-width: 70%; width: 70%;">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="schedulerModalLabel">Planificación de disponibilidad</h5>
@@ -120,16 +120,31 @@
 
         .kanban-column { flex: 0 0 340px; background-color: var(--column-bg); border-radius: 12px; min-width: 340px; display: flex; flex-direction: column; border: 1px solid var(--column-border); box-shadow: 0 1px 4px rgba(0,0,0,0.05); max-height: 100%; overflow: hidden; }
         .kanban-column.drag-over { border-color: var(--primary-color); }
-        .column-header { padding: 0.75rem 1rem; position: sticky; top: 0; background-color: var(--header-bg); z-index: 10; border-bottom: 1px solid var(--column-border); transition: all 0.3s ease; }
+        .column-header { padding: 0.75rem 1rem; position: sticky; top: 0; background-color: var(--header-bg); z-index: 10; border-bottom: 1px solid var(--column-border); transition: all 0.3s ease; min-height: 60px; }
         .column-header-running { border-top: 3px solid #28a745 !important; }
         .column-header-paused { border-top: 3px solid #ffc107 !important; }
         .column-header-stopped { border-top: 3px solid #6c757d !important; }
+        /* Estructura del header en dos líneas */
+        .header-line-1 { display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; }
+        .header-line-2 { display: flex; align-items: center; margin-top: 0.25rem; }
+        
+        /* Estilos para el indicador de estado */
         .line-status-indicator { display: inline-flex; align-items: center; font-size: 0.8rem; }
         .line-status-indicator i { margin-right: 0.25rem; }
         .line-status-running { color: #28a745; }
         .line-status-paused { color: #ffc107; }
         .line-status-stopped { color: #6c757d; }
-        .line-operator { display: inline-flex; font-size: 0.75rem; color: var(--text-muted); margin-left: 0.5rem; }
+        
+        /* Estilos para el operador */
+        .line-operator { display: inline-flex; align-items: center; font-size: 0.75rem; color: var(--text-muted); margin-left: auto; }
+        .line-operator i { margin-right: 0.25rem; }
+        
+        /* Estilos para el indicador de planificación */
+        .line-schedule { display: inline-flex; align-items: center; font-size: 0.75rem; }
+        .line-schedule i { margin-right: 0.25rem; }
+        .line-schedule-planned { color: #28a745; }
+        .line-schedule-unplanned { color: #ffc107; }
+        .line-schedule-offshift { color: #6c757d; }
         .column-search-container { padding: 0 0.75rem; background-color: var(--header-bg); position: sticky; top: 50px; z-index: 9; border-bottom: 1px solid var(--column-border); }
         .column-title { font-weight: 600; color: var(--header-text); margin: 0; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .column-cards { padding: 0.75rem; overflow-y: auto; flex-grow: 1; display: flex; flex-direction: column; gap: 8px; min-height: 100px; }
@@ -191,6 +206,66 @@
         .process-tag-done { background-color: #10b981; color: white; }
         .process-tag-pending { background-color: var(--warning-color); color: white; }
 
+        /* Solución avanzada anti-parpadeo para el header del Kanban */
+        .column-header {
+            will-change: contents;
+            transform: translateZ(0);
+            backface-visibility: hidden;
+            -webkit-font-smoothing: antialiased;
+            transition: background-color 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* Estructura fija para los elementos del header */
+        .header-line-1,
+        .header-line-2 {
+            position: relative;
+            min-height: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 4px;
+            margin-bottom: 4px;
+        }
+        
+        /* Evitar que los elementos ocultos causen reflow */
+        .line-status-indicator,
+        .line-operator,
+        .line-schedule {
+            transition: opacity 0.3s ease, transform 0.3s ease, color 0.3s ease;
+            opacity: 1;
+            transform: translateZ(0);
+            will-change: opacity, transform;
+        }
+        
+        /* Ocultar elementos sin causar reflow */
+        .line-status-indicator[style*="display: none"],
+        .line-operator[style*="display: none"],
+        .line-schedule[style*="display: none"] {
+            opacity: 0 !important;
+            position: absolute !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+            transform: translateY(-5px) !important;
+        }
+        
+        /* Asegurar que los elementos no cambien de tamaño */
+        .line-status-indicator i,
+        .line-operator i,
+        .line-schedule i {
+            display: inline-block;
+            width: 16px;
+            text-align: center;
+            margin-right: 4px;
+        }
+        
+        /* Transiciones para los estados de columna */
+        .column-header-running,
+        .column-header-paused,
+        .column-header-stopped {
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+        }
 
         :fullscreen #kanbanContainer { height: 100vh; padding: 1rem; }
         :fullscreen .kanban-board { align-items: stretch; }
@@ -1035,9 +1110,11 @@
             
             let innerHTML;
             if (column.type === 'final_states') {
-                innerHTML = `<div class="column-header">
-                                <h3 class="column-title">${column.name}</h3>
-                                ${headerStatsHtml}
+                innerHTML = `<div class="column-header" style="border-left: 4px solid ${column.color};">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <h3 class="column-title">${column.name}</h3>
+                                    ${headerStatsHtml}
+                                </div>
                              </div>
                              <div class="final-states-container">
                                  ${column.subStates.map(subState => `
@@ -1062,33 +1139,64 @@
                 columnElement.addEventListener('dragover', throttledProcessDragOver);
                 columnElement.addEventListener('dragleave', resetDropZones);
                 columnElement.addEventListener('drop', drop);
-            } else {
+            } else if (column.productionLineId) {
+                // Columnas de líneas de producción con información completa
                 innerHTML = `<div class="column-header ${headerStatusClass}" style="border-left: 4px solid ${column.color};">
                                 <div style="display: flex; justify-content: space-between; align-items: center;">
                                     <h3 class="column-title">${column.name}</h3>
                                     ${headerStatsHtml}
                                 </div>
-                                ${lineStatusHtml}
+                                <!-- Primera línea: estado de línea y operador (siempre presente) -->
+                                <div class="header-line-1">
+                                    <div class="line-status-indicator">
+                                        <i class="fas fa-circle"></i>
+                                        <span>Estado</span>
+                                    </div>
+                                    <div class="line-operator">
+                                        <i class="fas fa-user"></i>
+                                        <span></span>
+                                    </div>
+                                </div>
+                                <!-- Segunda línea: estado de planificación (siempre presente) -->
+                                <div class="header-line-2">
+                                    <div class="line-schedule">
+                                        <i class="fas fa-calendar"></i>
+                                        <span></span>
+                                    </div>
+                                </div>
                              </div>
                              ${searchFieldHtml}
                              <div class="column-cards"></div>`;
-                columnElement.innerHTML = innerHTML;
-                const cardsContainer = columnElement.querySelector('.column-cards');
-
-                // Listeners en el contenedor de tarjetas
-                if (cardsContainer) {
-                    cardsContainer.addEventListener('dragover', dragOver);
-                    cardsContainer.addEventListener('dragover', throttledProcessDragOver);
-                    cardsContainer.addEventListener('dragleave', resetDropZones);
-                    cardsContainer.addEventListener('drop', drop);
-                }
-
-                // Listeners en toda la columna para un área de drop más grande
-                columnElement.addEventListener('dragover', dragOver);
-                columnElement.addEventListener('dragover', throttledProcessDragOver);
-                columnElement.addEventListener('dragleave', resetDropZones);
-                columnElement.addEventListener('drop', drop);
+            } else {
+                // Columnas fijas como "Pendientes de asignar"
+                innerHTML = `<div class="column-header" style="border-left: 4px solid ${column.color};">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <h3 class="column-title">${column.name}</h3>
+                                    ${headerStatsHtml}
+                                </div>
+                             </div>
+                             ${searchFieldHtml}
+                             <div class="column-cards"></div>`;
             }
+            
+            // Aplicar el HTML a la columna
+            columnElement.innerHTML = innerHTML;
+            const cardsContainer = columnElement.querySelector('.column-cards');
+
+            // Listeners en el contenedor de tarjetas
+            if (cardsContainer) {
+                cardsContainer.addEventListener('dragover', dragOver);
+                cardsContainer.addEventListener('dragover', throttledProcessDragOver);
+                cardsContainer.addEventListener('dragleave', resetDropZones);
+                cardsContainer.addEventListener('drop', drop);
+            }
+
+            // Listeners en toda la columna para un área de drop más grande
+            columnElement.addEventListener('dragover', dragOver);
+            columnElement.addEventListener('dragover', throttledProcessDragOver);
+            columnElement.addEventListener('dragleave', resetDropZones);
+            columnElement.addEventListener('drop', drop);
+            
             return columnElement;
         }
 
@@ -1318,6 +1426,9 @@
         // --- 5. OBTENER ESTADO DE LÍNEAS DE PRODUCCIÓN ---
         
         function fetchProductionLineStatuses() {
+            // Almacenar el estado anterior para comparación
+            const previousStatuses = JSON.parse(JSON.stringify(productionLineStatuses || {}));
+            
             // Usar la URL base del sitio actual para evitar problemas con dominios
             const baseUrl = window.location.origin;
             // Incluir el token del cliente en la URL
@@ -1328,40 +1439,75 @@
                     'Content-Type': 'application/json',
                     'Accept': 'application/json'
                 },
-                credentials: 'same-origin'
+                credentials: 'same-origin',
+                cache: 'no-store' // Evitar caché para obtener datos frescos
             })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success && data.statuses) {
-                        productionLineStatuses = {};
+                        // Crear nuevo objeto de estados
+                        const newStatuses = {};
                         
                         // Convertir el array a un objeto para fácil acceso
                         data.statuses.forEach(status => {
-                            productionLineStatuses[status.production_line_id] = {
+                            newStatuses[status.production_line_id] = {
                                 type: status.type,
                                 action: status.action,
                                 operator_name: status.operator_name,
-                                timestamp: status.created_at
+                                timestamp: status.created_at,
+                                scheduled_status: status.scheduled_status || 'off_shift'
                             };
                         });
                         
-                        // Actualizar visualmente las columnas
+                        // Detectar si hay cambios reales antes de actualizar
+                        let hasChanges = false;
+                        
+                        // Comprobar si hay cambios en los estados
+                        Object.keys(newStatuses).forEach(lineId => {
+                            const newStatus = newStatuses[lineId];
+                            const oldStatus = previousStatuses[lineId];
+                            
+                            if (!oldStatus || 
+                                oldStatus.type !== newStatus.type ||
+                                oldStatus.action !== newStatus.action ||
+                                oldStatus.operator_name !== newStatus.operator_name ||
+                                oldStatus.scheduled_status !== newStatus.scheduled_status) {
+                                hasChanges = true;
+                            }
+                        });
+                        
+                        // Actualizar el objeto global solo si hay cambios
+                        productionLineStatuses = newStatuses;
+                        
+                        // Siempre actualizar visualmente después de refrescar los datos del Kanban
+                        // Esto garantiza que los headers siempre se muestren correctamente
+                        if (hasChanges) {
+                            console.log('📊 Actualizando estados de líneas (cambios detectados)');
+                        } else {
+                            console.log('📊 No hay cambios en los estados de líneas, pero actualizando headers igualmente');
+                        }
+                        
+                        // Forzar actualización de headers siempre
                         updateColumnHeaderStatuses();
-                        updateColumnStats()
+                        
+                        // Actualizar estadísticas sin reconstruir el DOM
+                        Object.values(columns).forEach(column => {
+                            if (!column.productionLineId) return;
+                            const columnElement = document.getElementById(column.id);
+                            if (columnElement) {
+                                updateColumnStats(columnElement, true);
+                            }
+                        });
                     }
                 })
                 .catch(error => {
-                    console.error('Error al obtener estados de líneas:', error);
+                    console.error('❌ Error al obtener estados de líneas:', error);
                 });
         }
         
         function updateColumnHeaderStatuses() {
-            // Recorrer todas las columnas y actualizar su estado visual
             Object.values(columns).forEach(column => {
                 if (!column.productionLineId) return;
-                
-                // Actualizar también las estadísticas de la columna
-                updateColumnStats(document.getElementById(column.id));
                 
                 const columnElement = document.getElementById(column.id);
                 if (!columnElement) return;
@@ -1369,24 +1515,50 @@
                 const headerElement = columnElement.querySelector('.column-header');
                 if (!headerElement) return;
                 
-                // Eliminar clases de estado anteriores
-                headerElement.classList.remove('column-header-running', 'column-header-paused', 'column-header-stopped');
+                // Agregar clase para transiciones suaves
+                if (!headerElement.classList.contains('smooth-transition')) {
+                    headerElement.classList.add('smooth-transition');
+                }
                 
-                // Añadir clase según el estado actual
-                const lineStatus = productionLineStatuses[column.productionLineId];
-                if (lineStatus) {
+                // Determinar la clase de estado que debería tener
+                let newHeaderClass = '';
+                if (column.productionLineId && productionLineStatuses[column.productionLineId]) {
+                    const lineStatus = productionLineStatuses[column.productionLineId];
+                    
                     if (lineStatus.type === 'shift' && lineStatus.action === 'start' || 
                         lineStatus.type === 'stop' && lineStatus.action === 'end') {
-                        headerElement.classList.add('column-header-running');
+                        newHeaderClass = 'column-header-running';
                     } else if (lineStatus.type === 'stop' && lineStatus.action === 'start') {
-                        headerElement.classList.add('column-header-paused');
+                        newHeaderClass = 'column-header-paused';
                     } else if (lineStatus.type === 'shift' && lineStatus.action === 'end') {
-                        headerElement.classList.add('column-header-stopped');
+                        newHeaderClass = 'column-header-stopped';
+                    }
+                }
+                
+                // Verificar si la clase actual es diferente a la nueva
+                const hasRunning = headerElement.classList.contains('column-header-running');
+                const hasPaused = headerElement.classList.contains('column-header-paused');
+                const hasStopped = headerElement.classList.contains('column-header-stopped');
+                
+                // Solo actualizar las clases si hay cambios
+                if ((newHeaderClass === 'column-header-running' && !hasRunning) ||
+                    (newHeaderClass === 'column-header-paused' && !hasPaused) ||
+                    (newHeaderClass === 'column-header-stopped' && !hasStopped)) {
+                    
+                    // Eliminar clases de estado anteriores
+                    headerElement.classList.remove('column-header-running', 'column-header-paused', 'column-header-stopped');
+                    
+                    // Añadir la nueva clase
+                    if (newHeaderClass) {
+                        headerElement.classList.add(newHeaderClass);
                     }
                 }
                 
                 // Actualizar el contenido del indicador de estado
                 renderColumnStatusIndicator(column, columnElement);
+                
+                // Actualizar estadísticas de la columna sin reconstruir el DOM
+                updateColumnStats(columnElement, true);
             });
         }
         
@@ -1394,72 +1566,117 @@
             if (!column.productionLineId) return;
             
             const lineStatus = productionLineStatuses[column.productionLineId];
-            if (!lineStatus) return;
-            
-            let statusIcon = '';
-            let statusText = '';
-            let statusClass = '';
-            
-            if (lineStatus.type === 'shift' && lineStatus.action === 'start' || 
-                lineStatus.type === 'stop' && lineStatus.action === 'end') {
-                statusIcon = '<i class="fas fa-play-circle line-status-running"></i>';
-                statusText = 'En funcionamiento';
-                statusClass = 'line-status-running';
-            } else if (lineStatus.type === 'stop' && lineStatus.action === 'start') {
-                statusIcon = '<i class="fas fa-pause-circle line-status-paused"></i>';
-                statusText = 'En pausa';
-                statusClass = 'line-status-paused';
-            } else if (lineStatus.type === 'shift' && lineStatus.action === 'end') {
-                statusIcon = '<i class="fas fa-stop-circle line-status-stopped"></i>';
-                statusText = 'Detenida';
-                statusClass = 'line-status-stopped';
+            if (!lineStatus) {
+                console.warn(`⚠️ No se encontró estado para la línea ${column.productionLineId}`);
+                return;
             }
             
-            // Buscar o crear los elementos necesarios
-            let statusIndicator = columnElement.querySelector('.line-status-indicator');
-            let operatorElement = columnElement.querySelector('.line-operator');
+            const statusContainer = columnElement.querySelector('.column-header');
+            if (!statusContainer) return;
             
-            // Si no existe el contenedor de estado, crearlo
-            if (!statusIndicator && statusText) {
-                const statusContainer = columnElement.querySelector('.column-header');
-                if (statusContainer) {
-                    // Crear el contenedor de estado si no existe
-                    statusIndicator = document.createElement('div');
+            // Obtener los contenedores de la primera y segunda línea
+            const headerLine1 = columnElement.querySelector('.header-line-1');
+            const headerLine2 = columnElement.querySelector('.header-line-2');
+            
+            if (!headerLine1 || !headerLine2) {
+                console.error('❌ No se encontraron los contenedores de líneas del header');
+                return;
+            }
+            
+            try {
+                // 1. Actualizar el indicador de estado (running, paused, stopped)
+                const statusIndicator = headerLine1.querySelector('.line-status-indicator');
+                if (statusIndicator) {
+                    let statusText = 'Detenida'; // Valor por defecto
+                    let statusClass = 'line-status-stopped';
+                    let iconType = 'stop';
+                    
+                    if (lineStatus.type === 'shift' && lineStatus.action === 'start' || 
+                        lineStatus.type === 'stop' && lineStatus.action === 'end') {
+                        statusText = 'En funcionamiento';
+                        statusClass = 'line-status-running';
+                        iconType = 'play';
+                    } else if (lineStatus.type === 'stop' && lineStatus.action === 'start') {
+                        statusText = 'En pausa';
+                        statusClass = 'line-status-paused';
+                        iconType = 'pause';
+                    }
+                    
+                    // Actualizar el icono sin cambiar la estructura DOM
+                    const iconElement = statusIndicator.querySelector('i');
+                    if (iconElement) {
+                        // Solo actualizar la clase si es diferente para evitar reflow
+                        const newIconClass = `fas fa-${iconType}-circle`;
+                        iconElement.className = newIconClass;
+                    }
+                    
+                    // Actualizar el texto
+                    const textElement = statusIndicator.querySelector('span');
+                    if (textElement) {
+                        textElement.textContent = statusText;
+                    }
+                    
+                    // Actualizar la clase
                     statusIndicator.className = `line-status-indicator ${statusClass}`;
-                    statusContainer.appendChild(statusIndicator);
                 }
-            }
-            
-            // Actualizar el contenido del indicador de estado si existe
-            if (statusIndicator && statusText) {
-                // Actualizar la clase
-                statusIndicator.className = `line-status-indicator ${statusClass}`;
-                // Actualizar el contenido
-                statusIndicator.innerHTML = `${statusIcon} <span>${statusText}</span>`;
-            }
-            
-            // Si hay información del operario
-            if (lineStatus.operator_name) {
-                // Si no existe el elemento del operario, crearlo
-                if (!operatorElement) {
-                    const statusContainer = columnElement.querySelector('.column-header');
-                    if (statusContainer) {
-                        operatorElement = document.createElement('div');
-                        operatorElement.className = 'line-operator';
-                        statusContainer.appendChild(operatorElement);
+                
+                // 2. Actualizar el elemento del operario
+                const operatorElement = headerLine1.querySelector('.line-operator');
+                if (operatorElement) {
+                    const textElement = operatorElement.querySelector('span');
+                    const operatorName = lineStatus.operator_name || '';
+                    
+                    if (textElement) {
+                        textElement.textContent = operatorName;
                     }
                 }
                 
-                // Actualizar el contenido del operario si existe
-                if (operatorElement) {
-                    operatorElement.innerHTML = `<i class="fas fa-user"></i> ${lineStatus.operator_name}`;
-                    operatorElement.style.display = '';
+                // 3. Actualizar el elemento de planificación
+                const scheduleElement = headerLine2.querySelector('.line-schedule');
+                if (scheduleElement) {
+                    let scheduleIcon = 'fa-calendar-minus';
+                    let scheduleText = 'Fuera de turno';
+                    let scheduleClass = 'line-schedule-offshift';
+                    
+                    switch(lineStatus.scheduled_status) {
+                        case 'scheduled':
+                            scheduleIcon = 'fa-calendar-check';
+                            scheduleText = 'Planificada';
+                            scheduleClass = 'line-schedule-planned';
+                            break;
+                        case 'unscheduled':
+                            scheduleIcon = 'fa-calendar-times';
+                            scheduleText = 'No planificada';
+                            scheduleClass = 'line-schedule-unplanned';
+                            break;
+                    }
+                    
+                    // Actualizar el icono
+                    const iconElement = scheduleElement.querySelector('i');
+                    if (iconElement) {
+                        iconElement.className = `fas ${scheduleIcon}`;
+                    }
+                    
+                    // Actualizar el texto
+                    const textElement = scheduleElement.querySelector('span');
+                    if (textElement) {
+                        textElement.textContent = scheduleText;
+                    }
+                    
+                    // Actualizar la clase
+                    scheduleElement.className = `line-schedule ${scheduleClass}`;
                 }
-            } else if (operatorElement) {
-                // Ocultar el elemento del operario si no hay información
-                operatorElement.style.display = 'none';
+                
+                // 4. Aplicar transiciones suaves para evitar parpadeo
+                statusContainer.classList.add('smooth-updates');
+                
+                // Registrar en consola para depuración
+                console.log(`📌 Actualizado header para línea ${column.productionLineId}: ${lineStatus.scheduled_status}`);
+            } catch (error) {
+                console.error(`❌ Error al actualizar header de línea ${column.productionLineId}:`, error);
             }
         }
+        
         
         // Manejar clics en el menú de tres puntos
         document.addEventListener('click', function(event) {
@@ -1751,7 +1968,7 @@
         }
 
                 // Función para actualizar los contadores de tarjetas y el placeholder del campo de búsqueda
-        function updateColumnStats(columnElement) {
+        function updateColumnStats(columnElement, preventReflow = false) {
             if (!columnElement) return;
             
             // Contar tarjetas visibles (no ocultas)
@@ -1759,9 +1976,9 @@
             const visibleCards = Array.from(cards).filter(card => card.style.display !== 'none');
             const visibleCount = visibleCards.length;
             
-            // Actualizar el contador de tarjetas
+            // Actualizar el contador de tarjetas solo si ha cambiado
             const cardCountBadge = columnElement.querySelector('.card-count-badge');
-            if (cardCountBadge) {
+            if (cardCountBadge && cardCountBadge.textContent !== String(visibleCount)) {
                 cardCountBadge.textContent = visibleCount;
             }
             
@@ -1775,10 +1992,31 @@
                 }
             });
             
-            // Actualizar el badge de tiempo total
+            // Formatear el tiempo total
+            const formattedTime = formatSecondsToTime(totalSeconds);
+            
+            // Actualizar el badge de tiempo total solo si ha cambiado
             const timeSumBadge = columnElement.querySelector('.time-sum-badge');
             if (timeSumBadge) {
-                timeSumBadge.innerHTML = `<i class="far fa-clock"></i> ${formatSecondsToTime(totalSeconds)}`;
+                const newTimeHtml = `<i class="far fa-clock"></i> ${formattedTime}`;
+                if (timeSumBadge.innerHTML !== newTimeHtml) {
+                    // Actualizar solo el texto del tiempo sin recrear el icono
+                    const timeTextNode = Array.from(timeSumBadge.childNodes).find(node => 
+                        node.nodeType === Node.TEXT_NODE || 
+                        (node.nodeType === Node.ELEMENT_NODE && node.tagName !== 'I'));
+                    
+                    if (timeTextNode) {
+                        // Si existe un nodo de texto, actualizarlo
+                        if (timeTextNode.nodeType === Node.TEXT_NODE) {
+                            timeTextNode.nodeValue = ` ${formattedTime}`;
+                        } else {
+                            timeTextNode.textContent = formattedTime;
+                        }
+                    } else {
+                        // Si no hay nodo de texto (primera carga), usar innerHTML
+                        timeSumBadge.innerHTML = newTimeHtml;
+                    }
+                }
             }
             
             // Si es la columna de pendientes, actualizar también el placeholder del campo de búsqueda
@@ -1786,11 +2024,21 @@
                 const searchInput = columnElement.querySelector('.pending-search-input');
                 if (searchInput) {
                     const totalCards = cards.length;
-                    if (visibleCount < totalCards) {
-                        searchInput.placeholder = `Mostrando ${visibleCount} de ${totalCards} tarjetas...`;
-                    } else {
-                        searchInput.placeholder = `Buscar en ${totalCards} tarjetas...`;
+                    const newPlaceholder = visibleCount < totalCards
+                        ? `Mostrando ${visibleCount} de ${totalCards} tarjetas...`
+                        : `Buscar en ${totalCards} tarjetas...`;
+                        
+                    if (searchInput.placeholder !== newPlaceholder) {
+                        searchInput.placeholder = newPlaceholder;
                     }
+                }
+            }
+            
+            // Aplicar clase para transiciones suaves al header si no la tiene
+            if (preventReflow) {
+                const headerElement = columnElement.querySelector('.column-header');
+                if (headerElement && !headerElement.classList.contains('smooth-updates')) {
+                    headerElement.classList.add('smooth-updates');
                 }
             }
         }
@@ -1872,6 +2120,9 @@
                     }
                     
                     // Renderizar el tablero con los datos actualizados
+                    // También actualizar los estados de las líneas de producción
+                    fetchProductionLineStatuses();
+                    
                     distributeAndRender(true, () => {
                         // Restaurar el campo de búsqueda de pendientes
                         const pendingSearchInput = document.querySelector('.pending-search-input');

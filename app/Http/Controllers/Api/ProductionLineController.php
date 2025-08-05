@@ -6,6 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\ProductionLine;
 use App\Models\ShiftHistory;
+use App\Models\LineAvailability;
+use App\Models\ShiftList;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -47,6 +50,74 @@ class ProductionLineController extends Controller
         // Obtener las líneas de producción asociadas al cliente
         $productionLines = ProductionLine::where('customer_id', $customer->id)->get();
         
+        // Obtener día de la semana actual (1-7, donde 1 es lunes y 7 es domingo)
+        $currentDayOfWeek = now()->dayOfWeek;
+        if ($currentDayOfWeek == 0) {
+            $currentDayOfWeek = 7; // Convertir domingo (0) a 7 para coincidir con el formato de la BD
+        }
+        
+        // Obtener hora actual
+        $currentTime = now();
+        
+        // Array para almacenar el estado de planificación de cada línea
+        $lineScheduledStatuses = [];
+        
+        // Para cada línea, determinar su estado de planificación
+        foreach ($productionLines as $line) {
+            // Buscar disponibilidades para esta línea en el día actual
+            $availabilities = LineAvailability::where('production_line_id', $line->id)
+                ->where('day_of_week', $currentDayOfWeek)
+                ->where('active', true)
+                ->get();
+            
+            if ($availabilities->isEmpty()) {
+                // Si no hay registros para este día, la línea no está planificada
+                $lineScheduledStatuses[$line->id] = 'unscheduled';
+                continue;
+            }
+            
+            // Verificar si alguno de los turnos asociados a las disponibilidades está activo ahora
+            $inShift = false;
+            foreach ($availabilities as $availability) {
+                $shift = ShiftList::find($availability->shift_list_id);
+                if (!$shift) continue;
+                
+                // Determinar si estamos dentro de este turno
+                $startTime = null;
+                $endTime = null;
+                
+                if (isset($shift->start_time) && isset($shift->end_time)) {
+                    $startTime = Carbon::parse($shift->start_time);
+                    $endTime = Carbon::parse($shift->end_time);
+                } else if (isset($shift->start) && isset($shift->end)) {
+                    $startTime = Carbon::parse($shift->start);
+                    $endTime = Carbon::parse($shift->end);
+                }
+                
+                if ($startTime && $endTime) {
+                    // Manejar turnos que cruzan la medianoche
+                    if ($startTime->greaterThan($endTime)) {
+                        if ($currentTime->greaterThanOrEqualTo($startTime) || $currentTime->lessThan($endTime)) {
+                            $inShift = true;
+                            break;
+                        }
+                    } else {
+                        if ($currentTime->greaterThanOrEqualTo($startTime) && $currentTime->lessThan($endTime)) {
+                            $inShift = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // Asignar el estado según si estamos en turno o no
+            if ($inShift) {
+                $lineScheduledStatuses[$line->id] = 'scheduled'; // Planificada
+            } else {
+                $lineScheduledStatuses[$line->id] = 'off_shift'; // Fuera de turno
+            }
+        }
+        
         $statuses = [];
         
         foreach ($productionLines as $line) {
@@ -63,6 +134,9 @@ class ProductionLineController extends Controller
                         $operatorName = $latestShift->operator->name;
                     }
                     
+                    // Obtener el estado de planificación calculado previamente
+                    $scheduledStatus = $lineScheduledStatuses[$line->id] ?? 'off_shift';
+
                     $statuses[] = [
                         'production_line_id' => $line->id,
                         'production_line_name' => $line->name,
@@ -70,7 +144,8 @@ class ProductionLineController extends Controller
                         'action' => $latestShift->action,
                         'operator_id' => $latestShift->operator_id,
                         'operator_name' => $operatorName,
-                        'created_at' => $latestShift->created_at->format('Y-m-d H:i:s')
+                        'created_at' => $latestShift->created_at->format('Y-m-d H:i:s'),
+                        'scheduled_status' => $scheduledStatus // Nuevo campo
                     ];
                 }
             }
