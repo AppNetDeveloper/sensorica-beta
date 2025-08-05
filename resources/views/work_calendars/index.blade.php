@@ -25,9 +25,14 @@
                 <div>
                     {{-- Botón para añadir día especial --}}
                     @can('workcalendar-create')
-                        <a href="{{ route('customers.work-calendars.create', ['customer' => $customer->id]) }}" class="btn btn-primary">
+                        <a href="{{ route('customers.work-calendars.create', ['customer' => $customer->id]) }}" class="btn btn-primary me-2">
                             <i class="fas fa-plus me-1"></i> {{ __('Add Special Day') }}
                         </a>
+                        
+                        {{-- Botón para configuración masiva --}}
+                        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#bulkUpdateModal">
+                            <i class="fas fa-calendar-alt me-1"></i> {{ __('Mass Configuration') }}
+                        </button>
                     @endcan
                 </div>
             </div>
@@ -278,6 +283,93 @@
 </style>
 @endpush
 
+{{-- Modal para configuración masiva --}}
+<div class="modal fade" id="bulkUpdateModal" tabindex="-1" aria-labelledby="bulkUpdateModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form action="{{ route('customers.work-calendars.bulk-update', $customer->id) }}" method="POST" id="bulkUpdateForm">
+                @csrf
+                <input type="hidden" name="year" value="{{ $year }}">
+                <input type="hidden" name="month" value="{{ $month }}">
+                
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="bulkUpdateModalLabel">{{ __('Mass Calendar Configuration') }}</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        {{ __('This will update all selected days in the current month. Any existing special configuration for these days will be overwritten.') }}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">{{ __('Select days to configure') }}</label>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="day_type" id="dayTypeWeekdays" value="weekdays" checked>
+                            <label class="form-check-label" for="dayTypeWeekdays">
+                                {{ __('Weekdays') }} ({{ __('Monday') }} - {{ __('Friday') }})
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="day_type" id="dayTypeWeekends" value="weekends">
+                            <label class="form-check-label" for="dayTypeWeekends">
+                                {{ __('Weekends') }} ({{ __('Saturday') }} - {{ __('Sunday') }})
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="day_type" id="dayTypeAll" value="all">
+                            <label class="form-check-label" for="dayTypeAll">
+                                {{ __('All days') }}
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="type" class="form-label fw-bold">{{ __('Day type') }}</label>
+                            <select class="form-select" id="type" name="type" required>
+                                <option value="workday">{{ __('Working Day') }}</option>
+                                <option value="holiday">{{ __('Holiday') }}</option>
+                                <option value="maintenance">{{ __('Maintenance') }}</option>
+                                <option value="vacation">{{ __('Vacation') }}</option>
+                                <option value="weekend">{{ __('Weekend') }}</option>
+                                <option value="special">{{ __('Special') }}</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="name" class="form-label fw-bold">{{ __('Name') }}</label>
+                            <input type="text" class="form-control" id="name" name="name" required>
+                            <div class="form-text">{{ __('Example: Regular Workday, National Holiday, etc.') }}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="is_working_day" name="is_working_day" value="1">
+                            <label class="form-check-label fw-bold" for="is_working_day">{{ __('Is Working Day?') }}</label>
+                        </div>
+                        <div class="form-text">{{ __('Toggle on if these are working days, off if they are non-working days') }}</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label fw-bold">{{ __('Description') }} ({{ __('optional') }})</label>
+                        <textarea class="form-control" id="description" name="description" rows="2"></textarea>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i> {{ __('Save Configuration') }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 @push('scripts')
 <script>
     $(function() {
@@ -286,6 +378,18 @@
         tooltipTriggerList.map(function (tooltipTriggerEl) {
             return new bootstrap.Tooltip(tooltipTriggerEl)
         });
+        
+        // Actualizar automáticamente el estado de is_working_day según el tipo seleccionado
+        $('#type').change(function() {
+            var type = $(this).val();
+            var workingDayTypes = ['workday', 'special'];
+            var isWorkingDay = workingDayTypes.includes(type);
+            
+            $('#is_working_day').prop('checked', isWorkingDay);
+        });
+        
+        // Inicializar con valores predeterminados
+        $('#type').trigger('change');
     });
 </script>
 @endpush
