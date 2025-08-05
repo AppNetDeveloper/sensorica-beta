@@ -72,6 +72,13 @@ class CustomerController extends Controller
                     $incidentsButton = "<a href='{$incidentsUrl}' class='btn btn-sm btn-danger me-1' data-bs-toggle='tooltip' title='" . __('Production Order Incidents') . "'><i class='fas fa-exclamation-triangle'></i> " . __('Incidencias') . "</a>";
                     $buttons[] = $incidentsButton;
                 }
+                
+                // Botón de Calendario Laboral (solo con permiso workcalendar-list)
+                if (auth()->user()->can('workcalendar-list')) {
+                    $workCalendarUrl = route('customers.work-calendars.index', $customer->id);
+                    $workCalendarButton = "<a href='{$workCalendarUrl}' class='btn btn-sm btn-info me-1' data-bs-toggle='tooltip' title='" . __('Work Calendar') . "'><i class='fas fa-calendar-alt'></i> " . __('Calendario') . "</a>";
+                    $buttons[] = $workCalendarButton;
+                }
 
                 // Botón de estadísticas de peso (solo con permiso productionline-weight-stats)
                 if (auth()->user()->can('productionline-weight-stats')) {

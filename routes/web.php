@@ -47,6 +47,7 @@ use App\Http\Controllers\TelegramController;
 use App\Http\Controllers\RfidBlockedController;
 use App\Http\Controllers\IaPromptAdminController;
 use App\Http\Controllers\Api\ProductionLineInfoController;
+use App\Http\Controllers\WorkCalendarController;
 
 // Rutas para el Kanban Board
 Route::post('production-orders/update-batch', [ProductionOrderController::class, 'updateBatch'])->name('production-orders.update-batch')->middleware(['auth', 'XSS']);
@@ -122,6 +123,28 @@ Route::prefix('customers')->name('customers.')->group(function () {
             
         Route::delete('production-order-incidents/{incident}', [ProductionOrderIncidentController::class, 'destroy'])
             ->name('production-order-incidents.destroy');
+            
+        // Rutas para el calendario laboral
+        Route::get('work-calendars', [WorkCalendarController::class, 'index'])
+            ->name('work-calendars.index');
+            
+        Route::get('work-calendars/create', [WorkCalendarController::class, 'create'])
+            ->name('work-calendars.create');
+            
+        Route::post('work-calendars', [WorkCalendarController::class, 'store'])
+            ->name('work-calendars.store');
+            
+        Route::get('work-calendars/{calendar}/edit', [WorkCalendarController::class, 'edit'])
+            ->name('work-calendars.edit');
+            
+        Route::put('work-calendars/{calendar}', [WorkCalendarController::class, 'update'])
+            ->name('work-calendars.update');
+            
+        Route::delete('work-calendars/{calendar}', [WorkCalendarController::class, 'destroy'])
+            ->name('work-calendars.destroy');
+            
+        Route::post('work-calendars/bulk-update', [WorkCalendarController::class, 'bulkUpdate'])
+            ->name('work-calendars.bulk-update');
     });
 });
 
