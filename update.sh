@@ -370,5 +370,5 @@ chmod +x /var/www/html/update.sh
 php artisan db:seed --class=DatabaseSeeder
 php artisan db:seed --class=ProductionLineProcessesPermissionSeeder
 php artisan db:seed --class=ProductionLineOrdersKanbanPermissionSeeder
-
+php artisan db:seed --class=WorkCalendarPermissionSeeder
 echo "Proceso completado con éxito."

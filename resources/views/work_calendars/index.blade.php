@@ -1,5 +1,34 @@
 @extends('layouts.admin')
 @section('title', __('Work Calendar') . ' - ' . $customer->name)
+
+@section('styles')
+<style>
+    /* Estilos para días laborables y no laborables */
+    .calendar-day.working-day {
+        background-color: rgba(40, 167, 69, 0.1); /* Verde claro para días laborables */
+        border-left: 3px solid #28a745;
+    }
+    
+    .calendar-day.non-working-day {
+        background-color: rgba(220, 53, 69, 0.1); /* Rojo claro para días no laborables */
+        border-left: 3px solid #dc3545;
+    }
+    
+    /* Indicador de estado del día */
+    .day-status {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        font-size: 0.7rem;
+    }
+    
+    .calendar-day {
+        position: relative;
+        min-height: 100px;
+    }
+</style>
+@endsection
+
 @section('breadcrumb')
     <ul class="breadcrumb">
         <li class="breadcrumb-item"><a href="{{ route('home') }}">{{ __('Dashboard') }}</a></li>
@@ -108,6 +137,13 @@
                                             <span class="day-number {{ $isToday ? 'badge bg-primary rounded-pill' : '' }}">
                                                 {{ $currentDay->day }}
                                             </span>
+                                            
+                                            <!-- Indicador de día laborable/no laborable -->
+                                            @if ($isCurrentMonth)
+                                                <span class="day-status badge {{ $isWorkingDay ? 'bg-success' : 'bg-danger' }}">
+                                                    {{ $isWorkingDay ? __('Working') : __('Non-Working') }}
+                                                </span>
+                                            @endif
                                             
                                             @if ($isCurrentMonth && $existsInDb && $dayId)
                                                 <div class="day-actions">
@@ -370,6 +406,9 @@
     </div>
 </div>
 
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 @push('scripts')
 <script>
     $(function() {
@@ -390,6 +429,106 @@
         
         // Inicializar con valores predeterminados
         $('#type').trigger('change');
+        
+        // Procesar el formulario de configuración masiva
+        $('#bulkUpdateForm').submit(function(e) {
+            e.preventDefault();
+            
+            var year = parseInt($('input[name="year"]').val());
+            var month = parseInt($('input[name="month"]').val());
+            var dayType = $('input[name="day_type"]:checked').val();
+            var type = $('#type').val();
+            var name = $('#name').val();
+            var isWorkingDay = $('#is_working_day').is(':checked') ? 1 : 0;
+            var description = $('#description').val();
+            
+            // Obtener todos los días del mes
+            var daysInMonth = new Date(year, month, 0).getDate();
+            var days = [];
+            
+            // Crear array de días según la selección
+            for (var day = 1; day <= daysInMonth; day++) {
+                var date = new Date(year, month - 1, day);
+                var dayOfWeek = date.getDay(); // 0 = domingo, 6 = sábado
+                
+                // Determinar si este día debe ser incluido según la selección
+                var include = false;
+                
+                if (dayType === 'all') {
+                    include = true;
+                } else if (dayType === 'weekdays' && dayOfWeek >= 1 && dayOfWeek <= 5) {
+                    include = true;
+                } else if (dayType === 'weekends' && (dayOfWeek === 0 || dayOfWeek === 6)) {
+                    include = true;
+                }
+                
+                if (include) {
+                    days.push({
+                        date: year + '-' + (month < 10 ? '0' + month : month) + '-' + (day < 10 ? '0' + day : day),
+                        type: type,
+                        name: name,
+                        is_working_day: isWorkingDay,
+                        description: description
+                    });
+                }
+            }
+            
+            // Cerrar el modal antes de enviar la solicitud
+            $('#bulkUpdateModal').modal('hide');
+            
+            // Enviar la solicitud AJAX con el array de días
+            $.ajax({
+                url: $(this).attr('action'),
+                method: 'POST',
+                data: {
+                    _token: $('input[name="_token"]').val(),
+                    days: days
+                },
+                success: function(response) {
+                    if (response.success) {
+                        // Mostrar mensaje de éxito
+                        Swal.fire({
+                            icon: 'success',
+                            title: '{{ __('Success') }}',
+                            text: response.message,
+                            confirmButtonText: '{{ __('OK') }}'
+                        }).then(() => {
+                            // Recargar la página para ver los cambios
+                            window.location.reload();
+                        });
+                    } else {
+                        // Mostrar mensaje de error
+                        Swal.fire({
+                            icon: 'error',
+                            title: '{{ __('Error') }}',
+                            text: response.message,
+                            confirmButtonText: '{{ __('OK') }}'
+                        });
+                    }
+                },
+                error: function(xhr) {
+                    var errors = xhr.responseJSON?.errors || {};
+                    var errorMessage = xhr.responseJSON?.message || '{{ __('An error occurred') }}';
+                    
+                    // Construir mensaje de error
+                    var errorHtml = '<ul>';
+                    for (var field in errors) {
+                        errors[field].forEach(function(message) {
+                            errorHtml += '<li>' + message + '</li>';
+                        });
+                    }
+                    errorHtml += '</ul>';
+                    
+                    // Mostrar mensaje de error
+                    Swal.fire({
+                        icon: 'error',
+                        title: '{{ __('Error') }}',
+                        html: errorMessage + errorHtml,
+                        confirmButtonText: '{{ __('OK') }}'
+                    });
+                }
+            });
+        });
     });
 </script>
 @endpush
