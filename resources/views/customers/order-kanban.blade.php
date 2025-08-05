@@ -408,7 +408,15 @@
         const columns = {
             'pending_assignment': { id: 'pending_assignment', name: `{{__('Pendientes Asignación')}}`, items: [], color: '#9ca3af', productionLineId: null, type: 'status' },
             ...productionLinesData.reduce((acc, line) => {
-                acc[`line_${line.id}`] = { id: `line_${line.id}`, name: line.name, items: [], color: '#3b82f6', productionLineId: line.id, type: 'production' };
+                acc[`line_${line.id}`] = { 
+                    id: `line_${line.id}`, 
+                    name: line.name, 
+                    items: [], 
+                    color: '#3b82f6', 
+                    productionLineId: line.id, 
+                    type: 'production',
+                    token: line.token // Añadimos el token de la línea de producción
+                };
                 return acc;
             }, {}),
             'final_states': { id: 'final_states', name: `{{__('Estados Finales')}}`, items: [], color: '#6b7280', productionLineId: null, type: 'final_states',
@@ -1090,7 +1098,7 @@
                 <div class="column-header-stats">
                     <span class="card-count-badge" title="${translations.cardCountTitle}">0</span>
                     <span class="time-sum-badge ms-2" title="${translations.totalTimeTitle}"><i class="far fa-clock"></i> 00:00:00</span>
-                    <span class="column-menu-toggle ms-2" title="Opciones" data-column-id="${column.id}" data-line-id="${column.productionLineId || ''}" data-line-name="${column.name}" style="cursor: pointer;"><i class="fas fa-ellipsis-v"></i></span>
+                    <span class="column-menu-toggle ms-2" title="Opciones" data-column-id="${column.id}" data-line-id="${column.productionLineId || ''}" data-line-name="${column.name}" data-line-token="${column.token || ''}" style="cursor: pointer;"><i class="fas fa-ellipsis-v"></i></span>
                 </div>
             `;
             
@@ -1683,17 +1691,33 @@
             const menuToggle = event.target.closest('.column-menu-toggle');
             if (menuToggle) {
                 const columnId = menuToggle.dataset.columnId;
+                const lineToken = menuToggle.dataset.lineToken;
+                console.log('Menu toggle clicked:', menuToggle.dataset);
+                console.log('Column ID:', columnId, 'Line Token:', lineToken);
+                
                 const column = columns[columnId];
                 
                 if (column) {
+                    // Asegurarnos de que el token esté disponible en el objeto column
+                    if (lineToken && (!column.token || column.token === '')) {
+                        column.token = lineToken;
+                        console.log('Token añadido al objeto column desde dataset:', lineToken);
+                    }
+                    
                     showColumnMenu(column);
                 }
             }
         });
         
         function showColumnMenu(column) {
-            // Solo mostrar opción de planificación si es una línea de producción
+            // Solo mostrar opciones si es una línea de producción
             const hasProductionLine = column.productionLineId && column.productionLineId !== '';
+            // Verificar si tiene token para mostrar el botón de vista en vivo
+            const hasToken = column.token && column.token !== '';
+            
+            // Depurar los datos de la columna
+            console.log('Datos de columna:', column);
+            console.log('Tiene token:', hasToken, 'Token:', column.token);
             
             Swal.fire({
                 title: `Opciones para ${column.name}`,
@@ -1704,6 +1728,21 @@
                         ${hasProductionLine ? `
                         <button id="planningBtn" class="btn btn-primary w-100">
                             <i class="fas fa-calendar-alt me-2"></i>Planificación
+                        </button>
+                        ` : ''}
+                        ${hasToken ? `
+                        <button id="liveViewBtn" class="btn btn-success w-100">
+                            <i class="fas fa-tv me-2"></i>Maquina en Vivo
+                        </button>
+                        ` : ''}
+                        ${hasToken ? `
+                        <button id="liveLineBtn" class="btn btn-info w-100">
+                            <i class="fas fa-industry me-2"></i>Línea en Vivo
+                        </button>
+                        ` : ''}
+                        ${hasProductionLine ? `
+                        <button id="processesBtn" class="btn btn-warning w-100">
+                            <i class="fas fa-cogs me-2"></i>Procesos Production Line
                         </button>
                         ` : ''}
                     </div>`,
@@ -1727,6 +1766,46 @@
                             
                             // Abrir el modal Bootstrap
                             schedulerModal.show();
+                        });
+                    }
+                    
+                    // Evento para el botón de vista en vivo (solo si existe token)
+                    if (hasToken) {
+                        popup.querySelector('#liveViewBtn').addEventListener('click', () => {
+                            // URL de la vista en vivo con el token
+                            const liveViewUrl = `/live-production/machine.html?token=${column.token}`;
+                            
+                            // Abrir en una nueva pestaña
+                            window.open(liveViewUrl, '_blank');
+                            
+                            // Cerrar el popup
+                            Swal.close();
+                        });
+                        
+                        // Evento para el botón de línea en vivo (solo si existe token)
+                        popup.querySelector('#liveLineBtn').addEventListener('click', () => {
+                            // URL externa de la línea en vivo con el token
+                            const liveLineUrl = `https://tablenova.aixmart.net/live-production/live.html?token=${column.token}`;
+                            
+                            // Abrir en una nueva pestaña
+                            window.open(liveLineUrl, '_blank');
+                            
+                            // Cerrar el popup
+                            Swal.close();
+                        });
+                    }
+                    
+                    // Evento para el botón de procesos (solo si existe línea de producción)
+                    if (hasProductionLine) {
+                        popup.querySelector('#processesBtn').addEventListener('click', () => {
+                            // URL de procesos de la línea de producción
+                            const processesUrl = `/productionlines/${column.productionLineId}/processes`;
+                            
+                            // Abrir en una nueva pestaña
+                            window.open(processesUrl, '_blank');
+                            
+                            // Cerrar el popup
+                            Swal.close();
                         });
                     }
                 }

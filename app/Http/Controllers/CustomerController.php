@@ -305,7 +305,8 @@ class CustomerController extends Controller
         $productionLinesData = $productionLines->map(function($line) {
             return [
                 'id' => $line->id,
-                'name' => $line->name
+                'name' => $line->name,
+                'token' => $line->token // Añadimos el token de la línea de producción
             ];
         })->toArray();
         
