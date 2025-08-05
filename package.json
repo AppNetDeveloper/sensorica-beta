@@ -35,7 +35,7 @@
     "datatables.net-buttons-bs4": "^1.7.1",
     "dotenv": "^16.6.1",
     "express": "^4.21.2",
-    "express-fileupload": "^1.5.1",
+    "express-fileupload": "^1.5.2",
     "https-agent": "^1.0.0",
     "mqtt": "^5.14.0",
     "multer": "^1.4.5-lts.2",
