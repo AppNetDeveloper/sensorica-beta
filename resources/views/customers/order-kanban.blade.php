@@ -1785,7 +1785,7 @@
                         // Evento para el botón de línea en vivo (solo si existe token)
                         popup.querySelector('#liveLineBtn').addEventListener('click', () => {
                             // URL externa de la línea en vivo con el token
-                            const liveLineUrl = `https://tablenova.aixmart.net/live-production/live.html?token=${column.token}`;
+                            const liveLineUrl = `/live-production/live.html?token=${column.token}`;
                             
                             // Abrir en una nueva pestaña
                             window.open(liveLineUrl, '_blank');
