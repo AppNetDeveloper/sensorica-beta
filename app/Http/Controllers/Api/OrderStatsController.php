@@ -229,17 +229,49 @@ class OrderStatsController extends Controller
         $productionLineNames = $productionLines->pluck('name', 'id')->toArray();
         \Log::info('OrderStats - IDs de líneas encontradas:', $productionLineIds);
         
+        // Obtener los operadores seleccionados si existen
+        $selectedOperators = $request->input('operators');
+        \Log::info('OrderStats - Operadores seleccionados:', ['operators' => $selectedOperators]);
+        
+        // Procesar los operadores seleccionados si vienen como string
+        $operatorIds = [];
+        if ($selectedOperators) {
+            if (is_array($selectedOperators)) {
+                $operatorIds = $selectedOperators;
+            } else {
+                $operatorIds = explode(',', $selectedOperators);
+            }
+            
+            // Filtrar IDs vacíos
+            $operatorIds = array_filter($operatorIds, function($id) {
+                return !empty($id);
+            });
+            
+            \Log::info('OrderStats - IDs de operadores procesados:', $operatorIds);
+        }
+        
         // Consultar las estadísticas de pedidos entre las fechas especificadas para todas las líneas seleccionadas
         \Log::info('OrderStats - Consultando estadísticas con parámetros:', [
             'production_line_ids' => $productionLineIds,
             'start_date' => $startDate,
-            'end_date' => $endDate
+            'end_date' => $endDate,
+            'operator_ids' => $operatorIds
         ]);
         
-        $orderStats = OrderStat::whereIn('production_line_id', $productionLineIds)
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->orderBy('created_at', 'desc')
-            ->get();
+        // Iniciar la consulta base
+        $query = OrderStat::with('operators')
+            ->whereIn('production_line_id', $productionLineIds)
+            ->whereBetween('created_at', [$startDate, $endDate]);
+            
+        // Si hay operadores seleccionados, filtrar por ellos
+        if (!empty($operatorIds)) {
+            $query->whereHas('operators', function($q) use ($operatorIds) {
+                $q->whereIn('operators.id', $operatorIds);
+            });
+        }
+        
+        // Ejecutar la consulta
+        $orderStats = $query->orderBy('created_at', 'desc')->get();
         
         \Log::info('OrderStats - Estadísticas encontradas:', ['count' => $orderStats->count()]);
     
@@ -251,6 +283,15 @@ class OrderStatsController extends Controller
         $response = $orderStats->map(function ($orderStat) use ($productionLineNames) {
             $orderStatArray = $orderStat->toArray();
             $orderStatArray['production_line_name'] = $productionLineNames[$orderStat->production_line_id] ?? 'Unknown';
+            
+            // Extraer los nombres de los operadores asociados
+            $operatorNames = [];
+            if (isset($orderStatArray['operators']) && !empty($orderStatArray['operators'])) {
+                foreach ($orderStatArray['operators'] as $operator) {
+                    $operatorNames[] = $operator['name'];
+                }
+            }
+            $orderStatArray['operator_names'] = $operatorNames;
             
             // Buscar la orden de producción correspondiente para obtener el estado
             $orderId = $orderStat->order_id;
