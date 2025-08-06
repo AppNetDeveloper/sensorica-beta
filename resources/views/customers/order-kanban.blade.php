@@ -1742,7 +1742,7 @@
                         ` : ''}
                         ${hasProductionLine ? `
                         <button id="processesBtn" class="btn btn-warning w-100">
-                            <i class="fas fa-cogs me-2"></i>Procesos Production Line
+                            <i class="fas fa-cogs me-2"></i>Procesos
                         </button>
                         ` : ''}
                     </div>`,
