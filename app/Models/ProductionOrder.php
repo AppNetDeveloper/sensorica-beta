@@ -50,7 +50,9 @@ class ProductionOrder extends Model
         'processes_done', // Number of processes completed
         'is_priority', // Indica si la orden es prioritaria/importante según el encargado
         'finished_at', // Marca cuándo se terminó la orden
-        'fecha_pedido_erp' // Fecha del pedido en el sistema ERP
+        'fecha_pedido_erp', // Fecha del pedido en el sistema ERP
+        'estimated_start_datetime', // Fecha y hora estimada de inicio
+        'estimated_end_datetime' // Fecha y hora estimada de finalización
     ];
     
     /**
@@ -84,6 +86,8 @@ class ProductionOrder extends Model
         'is_priority' => 'boolean', // Convertir a booleano
         'finished_at' => 'datetime', // Nullable por defecto
         'fecha_pedido_erp' => 'datetime', // Fecha del pedido en el sistema ERP
+        'estimated_start_datetime' => 'datetime', // Fecha y hora estimada de inicio
+        'estimated_end_datetime' => 'datetime', // Fecha y hora estimada de finalización
     ];
 
     /**

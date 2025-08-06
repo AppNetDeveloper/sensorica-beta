@@ -1507,4 +1507,78 @@ class SystemController extends Controller
             }
         }
     }      
+
+    /**
+     * @OA\Post(
+     *     path="/api/restart-mysql",
+     *     summary="Reiniciar el servicio MySQL/Percona",
+     *     tags={"Sistema"},
+     *     security={{"bearerAuth": {}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="token", type="string", description="Token de autorización")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="El servicio MySQL/Percona se está reiniciando.",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="status", type="string"),
+     *             @OA\Property(property="message", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Token de autorización inválido.",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="error", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Error al intentar reiniciar MySQL/Percona.",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="error", type="string")
+     *         )
+     *     )
+     * )
+     */
+    public function restartMysql(Request $request)
+    {
+        $validation = $this->validateToken($request);
+        if ($validation) {
+            return $validation;
+        }
+
+        try {
+            // Registrar en el log que se está reiniciando MySQL
+            Log::info('Reiniciando servicio MySQL/Percona por solicitud del usuario');
+            
+            // Comando para reiniciar MySQL/Percona
+            $command = 'sudo systemctl restart mysql';
+            $process = Process::fromShellCommandline($command);
+            $process->run();
+
+            if (!$process->isSuccessful()) {
+                Log::error('Error al reiniciar MySQL/Percona: ' . $process->getErrorOutput());
+                throw new ProcessFailedException($process);
+            }
+
+            Log::info('Servicio MySQL/Percona reiniciado correctamente');
+            return response()->json([
+                'status' => 'success',
+                'message' => 'El servicio MySQL/Percona se está reiniciando.',
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Excepción al reiniciar MySQL/Percona: ' . $e->getMessage());
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
 }

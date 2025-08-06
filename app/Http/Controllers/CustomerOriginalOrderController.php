@@ -439,7 +439,7 @@ class CustomerOriginalOrderController extends Controller
         // Cargar productionOrders para cada proceso
         $originalOrder->processes->each(function($process) {
             $process->pivot->load(['productionOrders' => function($query) {
-                $query->select('id', 'original_order_process_id', 'status', 'production_line_id', 'accumulated_time');
+                $query->select('id', 'original_order_process_id', 'status', 'production_line_id', 'accumulated_time', 'estimated_start_datetime', 'estimated_end_datetime');
             }]);
         });
         

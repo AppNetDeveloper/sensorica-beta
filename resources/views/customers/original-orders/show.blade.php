@@ -125,7 +125,26 @@
 
                     <div class="mt-4">
                         <h4>@lang('Associated Processes')</h4>
-                        <br>
+                        
+                        {{-- Leyenda visual para los iconos de tiempo y fechas estimadas --}}
+                        <div class="mb-3 p-3 border rounded bg-light">
+                            <h5 class="mb-2"><i class="fas fa-info-circle"></i> @lang('Leyenda de indicadores')</h5>
+                            <div class="d-flex flex-wrap gap-3">
+                                <div class="d-flex align-items-center">
+                                    <span class="badge bg-info me-2"><i class="fas fa-hourglass-half"></i></span>
+                                    <span>@lang('Tiempo acumulado de fabricación')</span>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <span class="badge bg-primary me-2"><i class="fas fa-hourglass-start"></i></span>
+                                    <span>@lang('Fecha estimada de inicio')</span>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <span class="badge bg-success me-2"><i class="fas fa-hourglass-end"></i></span>
+                                    <span>@lang('Fecha estimada de fin')</span>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <div class="table-responsive">
                             <table class="table table-bordered table-striped">
                                 <thead class="bg-light">
@@ -247,6 +266,25 @@
                                                             @endif
                                                         </span>
                                                     </div>
+                                                    
+                                                    {{-- Fechas estimadas de inicio y fin --}}
+                                                    @if($productionOrder && ($productionOrder->estimated_start_datetime || $productionOrder->estimated_end_datetime))
+                                                        <div class="mt-1 d-flex flex-wrap gap-1">
+                                                            @if($productionOrder->estimated_start_datetime)
+                                                                <span class="badge bg-primary" title="@lang('Fecha estimada de inicio')">
+                                                                    <i class="fas fa-hourglass-start"></i> 
+                                                                    {{ \Carbon\Carbon::parse($productionOrder->estimated_start_datetime)->format('d/m/Y H:i') }}
+                                                                </span>
+                                                            @endif
+                                                            
+                                                            @if($productionOrder->estimated_end_datetime)
+                                                                <span class="badge bg-success" title="@lang('Fecha estimada de fin')">
+                                                                    <i class="fas fa-hourglass-end"></i> 
+                                                                    {{ \Carbon\Carbon::parse($productionOrder->estimated_end_datetime)->format('d/m/Y H:i') }}
+                                                                </span>
+                                                            @endif
+                                                        </div>
+                                                    @endif
                                                 @endif
                                             </td>
                                             <td class="text-center">

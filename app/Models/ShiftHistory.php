@@ -67,4 +67,22 @@ class ShiftHistory extends Model
     {
         return $this->belongsTo(ShiftList::class, 'shift_list_id');
     }
+    
+    /**
+     * Obtiene las estadísticas de órdenes en las que ha trabajado este turno.
+     */
+    public function orderStats()
+    {
+        return $this->belongsToMany(OrderStat::class, 'order_stats_operators', 'shift_history_id', 'order_stat_id')
+                    ->withPivot('operator_id', 'time_spent', 'notes')
+                    ->withTimestamps();
+    }
+    
+    /**
+     * Obtiene las relaciones directas con la tabla order_stats_operators.
+     */
+    public function orderStatOperators()
+    {
+        return $this->hasMany(OrderStatOperator::class);
+    }
 }

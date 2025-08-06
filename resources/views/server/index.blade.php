@@ -27,6 +27,9 @@
                     <button id="restart-supervisor" class="btn btn-info mb-2">
                         <i class="fas fa-redo"></i> {{ __('Restart Supervisor') }}
                     </button>
+                    <button id="restart-mysql" class="btn btn-primary mb-2">
+                        <i class="fas fa-database"></i> {{ __('Reiniciar MySQL') }}
+                    </button>
                     <button id="start-supervisor" class="btn btn-success mb-2">
                         <i class="fas fa-play"></i> {{ __('Start Supervisor') }}
                     </button>
@@ -234,6 +237,13 @@
         document.getElementById('restart-485').addEventListener('click', async () => {
             await apiCall('/api/restart-485-Swift');
             alert('El servicio 485 se ha reiniciado con éxito.');
+        });
+        
+        document.getElementById('restart-mysql').addEventListener('click', async () => {
+            if (confirm('¿Está seguro de que desea reiniciar MySQL? Esto puede interrumpir temporalmente la conexión a la base de datos.')) {
+                await apiCall('/api/restart-mysql');
+                alert('MySQL se está reiniciando. Por favor, espere unos segundos.');
+            }
         });
 
         document.getElementById('update-app').addEventListener('click', async () => {

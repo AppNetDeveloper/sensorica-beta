@@ -581,7 +581,39 @@ class CalculateProductionMonitorOeev2 extends Command
                 $this->info("[DEBUG] Saving ShiftHistory for Line: {$shiftHistory->production_line_id}. Values: on_time={$shiftHistory->on_time}, down_time={$shiftHistory->down_time}, slow_time={$shiftHistory->slow_time}, prod_stops_time={$shiftHistory->production_stops_time}");
 
                 $shiftHistory->save();
+                
+                // Asociar operario con la orden actual si existe
+                if ($currentOrder && $shiftHistory->operator_id) {
+                    try {
+                        // Buscar si ya existe una relación entre esta orden, turno y operario
+                        $orderStatOperator = \App\Models\OrderStatOperator::where('order_stat_id', $currentOrder->id)
+                            ->where('shift_history_id', $shiftHistory->id)
+                            ->where('operator_id', $shiftHistory->operator_id)
+                            ->first();
+                            
+                        if ($orderStatOperator) {
+                            // Si existe, incrementar el tiempo en 1 segundo
+                            $orderStatOperator->time_spent = ($orderStatOperator->time_spent ?? 0) + 1;
+                            $orderStatOperator->save();
+                            $this->info("[OrderStatOperator] Actualizado tiempo para operario {$shiftHistory->operator_id} en orden {$currentOrder->id}: {$orderStatOperator->time_spent}s");
+                        } else {
+                            // Si no existe, crear una nueva relación
+                            $orderStatOperator = new \App\Models\OrderStatOperator([
+                                'order_stat_id' => $currentOrder->id,
+                                'shift_history_id' => $shiftHistory->id,
+                                'operator_id' => $shiftHistory->operator_id,
+                                'time_spent' => 1, // Iniciar con 1 segundo
+                                'notes' => 'Registro automático desde CalculateProductionMonitorOeev2'
+                            ]);
+                            $orderStatOperator->save();
+                            $this->info("[OrderStatOperator] Creada nueva relación para operario {$shiftHistory->operator_id} en orden {$currentOrder->id}");
+                        }
+                    } catch (\Exception $e) {
+                        $this->error("[OrderStatOperator] Error al asociar operario con orden: " . $e->getMessage());
+                    }
+                }
             }
+            
 
         // Calcular el status basado en la producción real vs teórica
         $status = $this->calculateStatus($unitsMadeTheoretical, $unitsMadeTheoreticalPerMinute);

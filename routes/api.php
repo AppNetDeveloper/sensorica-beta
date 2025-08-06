@@ -185,6 +185,7 @@ Route::prefix('bluetooth')->group(function () {
 
 Route::post('/reboot', [SystemController::class, 'rebootSystem']);
 Route::post('/poweroff', [SystemController::class, 'powerOffSystem']);
+Route::post('/restart-mysql', [SystemController::class, 'restartMysql']);
 Route::get('/server-stats', [SystemController::class, 'getServerStats']);
 Route::post('/restart-supervisor', [SystemController::class, 'restartSupervisor']);
 Route::post('/stop-supervisor', [SystemController::class, 'stopSupervisor']);

@@ -298,7 +298,9 @@ class CustomerController extends Controller
                 'has_stock' => $order->has_stock ?? 1, // Añadimos el campo has_stock, por defecto 1 si no existe
                 'is_priority' => $order->is_priority ?? false,
                 'accumulated_time' => $order->accumulated_time ?? 0,
-                'fecha_pedido_erp' => $order->fecha_pedido_erp,   
+                'fecha_pedido_erp' => $order->fecha_pedido_erp,  
+                'estimated_start_datetime' => $order->estimated_start_datetime,
+                'estimated_end_datetime' => $order->estimated_end_datetime,
                 ];
             });
         
@@ -449,7 +451,9 @@ class CustomerController extends Controller
                         'has_stock' => $order->has_stock ?? 1,
                         'is_priority' => $order->is_priority ?? false,
                         'accumulated_time' => $order->accumulated_time ?? 0,
-                        'fecha_pedido_erp' => $order->fecha_pedido_erp,    
+                        'fecha_pedido_erp' => $order->fecha_pedido_erp,
+                        'estimated_start_datetime' => $order->estimated_start_datetime,
+                        'estimated_end_datetime' => $order->estimated_end_datetime,
                     ];
                 });
 

@@ -33,8 +33,13 @@ class WorkCalendarController extends Controller
         $customer = Customer::findOrFail($customerId);
         
         // Obtener el mes y año actual o los proporcionados en la solicitud
-        $month = request('month', Carbon::now()->month);
-        $year = request('year', Carbon::now()->year);
+        $month = (int) request('month', Carbon::now()->month);
+        $year = (int) request('year', Carbon::now()->year);
+        
+        // Validar que el mes esté entre 1 y 12
+        if ($month < 1 || $month > 12) {
+            $month = Carbon::now()->month;
+        }
         
         // Crear fechas de inicio y fin del mes
         $startDate = Carbon::createFromDate($year, $month, 1)->startOfMonth();

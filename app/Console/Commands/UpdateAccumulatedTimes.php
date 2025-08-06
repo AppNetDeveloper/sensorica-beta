@@ -5,8 +5,14 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use App\Models\ProductionOrder;
 use App\Models\OriginalOrderProcess;
+use App\Models\WorkCalendar;
+use App\Models\LineAvailability;
+use App\Models\ShiftList;
+use App\Models\ShiftHistory;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\DB;
 
 class UpdateAccumulatedTimes extends Command
 {
@@ -72,6 +78,19 @@ class UpdateAccumulatedTimes extends Command
             // Usar la zona horaria de Madrid como se ha configurado en el resto de la aplicación
             $now = Carbon::now('Europe/Madrid');
             $updatedCount = 0;
+            
+            // Obtener el tiempo de pausa configurado (en minutos)
+            $breakTimeMinutes = Config::get('production.break_time_minutes', 30);
+            $breakTimeSeconds = $breakTimeMinutes * 60;
+            $this->info("Tiempo de pausa configurado: {$breakTimeMinutes} minutos ({$breakTimeSeconds} segundos)");
+            
+            // Obtener configuración para el cálculo de OEE histórico
+            $oeeHistoryDays = Config::get('production.oee_history_days', 30);
+            $oeeMinimumPercentage = Config::get('production.oee_minimum_percentage', 30);
+            $this->info("Configuración OEE: Usando {$oeeHistoryDays} días de historial, mínimo {$oeeMinimumPercentage}%");
+            
+            // Caché para almacenar el OEE promedio por línea de producción
+            $oeeAverageByLine = [];
             
             // Identificar las órdenes en fabricación (status=1) por línea de producción
             // para poder sumar su tiempo teórico al acumulado de las órdenes en espera
@@ -160,21 +179,445 @@ class UpdateAccumulatedTimes extends Command
                     
                     $accumulatedSeconds += $estimatedSeconds;
                     $this->info("    * Incrementando acumulado en {$estimatedSeconds} segundos para la siguiente orden");
+                    
+                    // Solo calculamos fechas estimadas para órdenes pendientes (status=0) con línea de producción asignada
+                    if ($order->status === 0 && $order->production_line_id) {
+                        $this->info("    * Calculando fechas estimadas para la orden ID: {$order->id}");
+                        
+                        // Obtener el OEE promedio para esta línea de producción
+                        try {
+                            if (!isset($oeeAverageByLine[$order->production_line_id])) {
+                                $oeeAverageByLine[$order->production_line_id] = $this->getAverageOEE($order->production_line_id, $oeeHistoryDays, $oeeMinimumPercentage);
+                            }
+                            
+                            $lineOEE = $oeeAverageByLine[$order->production_line_id];
+                            $this->info("    * OEE promedio para la línea: {$lineOEE}%");
+                        } catch (\Exception $e) {
+                            // Si hay error al obtener OEE, usar el mínimo por defecto
+                            $lineOEE = $oeeMinimumPercentage;
+                            $this->warn("    * Error al obtener OEE para la línea {$order->production_line_id}. Usando valor mínimo: {$lineOEE}%");
+                            Log::warning("Error al obtener OEE para la línea {$order->production_line_id}: {$e->getMessage()}");
+                        }
+                        
+                        try {
+                            // Paso 1: Obtener la línea de producción y su cliente asociado
+                            try {
+                                $productionLine = \App\Models\ProductionLine::find($order->production_line_id);
+                                if (!$productionLine || !$productionLine->customer_id) {
+                                    $this->warn("    * No se encontró la línea de producción o no tiene cliente asociado");
+                                    // Si no hay línea o cliente, ponemos fechas en null y continuamos
+                                    $order->estimated_start_datetime = null;
+                                    $order->estimated_end_datetime = null;
+                                    $order->save();
+                                    continue;
+                                }
+                                $customerId = $productionLine->customer_id;
+                                $this->info("    * Cliente ID asociado a la línea: {$customerId}");
+                            } catch (\Exception $e) {
+                                $this->error("    * Error al obtener la línea de producción: {$e->getMessage()}");
+                                Log::error("Error al obtener la línea de producción ID {$order->production_line_id}: {$e->getMessage()}");
+                                // Si hay error, ponemos fechas en null y continuamos
+                                $order->estimated_start_datetime = null;
+                                $order->estimated_end_datetime = null;
+                                $order->save();
+                                continue;
+                            }
+                            
+                            // Paso 2: Obtener la disponibilidad de la línea (días y turnos)
+                            try {
+                                $lineAvailability = LineAvailability::where('production_line_id', $order->production_line_id)
+                                    ->where('active', true)
+                                    ->get();
+                                
+                                if ($lineAvailability->isEmpty()) {
+                                    $this->warn("    * La línea no tiene configuración de disponibilidad activa");
+                                    // Si no hay disponibilidad, ponemos fechas en null y continuamos
+                                    $order->estimated_start_datetime = null;
+                                    $order->estimated_end_datetime = null;
+                                    $order->save();
+                                    continue;
+                                }
+                            } catch (\Exception $e) {
+                                $this->error("    * Error al obtener la disponibilidad de la línea: {$e->getMessage()}");
+                                Log::error("Error al obtener la disponibilidad de la línea ID {$order->production_line_id}: {$e->getMessage()}");
+                                // Si hay error, ponemos fechas en null y continuamos
+                                $order->estimated_start_datetime = null;
+                                $order->estimated_end_datetime = null;
+                                $order->save();
+                                continue;
+                            }
+                            
+                            // Paso 3: Obtener los turnos disponibles
+                            try {
+                                // Extraer los IDs de turnos únicos de la disponibilidad
+                                $shiftIds = $lineAvailability->pluck('shift_list_id')->unique()->filter();
+                                
+                                if ($shiftIds->isEmpty()) {
+                                    $this->warn("    * No se encontraron IDs de turnos en la configuración de disponibilidad");
+                                    // Si no hay IDs de turnos, ponemos fechas en null y continuamos
+                                    $order->estimated_start_datetime = null;
+                                    $order->estimated_end_datetime = null;
+                                    $order->save();
+                                    continue;
+                                }
+                                
+                                $shifts = ShiftList::whereIn('id', $shiftIds)->get();
+                                
+                                if ($shifts->isEmpty()) {
+                                    $this->warn("    * No se encontraron turnos para la línea");
+                                    // Si no hay turnos, ponemos fechas en null y continuamos
+                                    $order->estimated_start_datetime = null;
+                                    $order->estimated_end_datetime = null;
+                                    $order->save();
+                                    continue;
+                                }
+                            } catch (\Exception $e) {
+                                $this->error("    * Error al obtener los turnos de la línea: {$e->getMessage()}");
+                                Log::error("Error al obtener turnos para la línea ID {$order->production_line_id}: {$e->getMessage()}");
+                                // Si hay error, ponemos fechas en null y continuamos
+                                $order->estimated_start_datetime = null;
+                                $order->estimated_end_datetime = null;
+                                $order->save();
+                                continue;
+                            }
+                            
+                            // Paso 4: Calcular fecha estimada de inicio (ahora + tiempo acumulado)
+                            // Usamos la fecha actual como punto de partida
+                            $estimatedStartDate = $now->copy();
+                            
+                            // Si hay tiempo acumulado, lo añadimos
+                            if ($order->accumulated_time > 0) {
+                                try {
+                                    // Aplicamos el factor OEE al tiempo acumulado
+                                    $originalAccumulatedTime = $order->accumulated_time;
+                                    $adjustedAccumulatedTime = $this->adjustTimeByOEE($originalAccumulatedTime, $lineOEE);
+                                    $remainingSeconds = $adjustedAccumulatedTime;
+                                    
+                                    $this->info("    * Tiempo acumulado original: {$originalAccumulatedTime} segundos");
+                                    $this->info("    * Tiempo acumulado ajustado por OEE ({$lineOEE}%): {$adjustedAccumulatedTime} segundos");
+                                } catch (\Exception $e) {
+                                    $this->error("    * Error al ajustar el tiempo acumulado: {$e->getMessage()}");
+                                    Log::error("Error al ajustar tiempo acumulado para la orden ID {$order->id}: {$e->getMessage()}");
+                                    // Si hay error, usamos el tiempo original sin ajustar
+                                    $remainingSeconds = $order->accumulated_time;
+                                    $this->warn("    * Usando tiempo acumulado original sin ajustar: {$remainingSeconds} segundos");
+                                }
+                                
+                                // Iteramos día a día hasta distribuir todo el tiempo acumulado
+                                while ($remainingSeconds > 0) {
+                                    // Verificar si el día actual es laborable según el calendario
+                                    $currentDate = $estimatedStartDate->format('Y-m-d');
+                                    $isWorkingDay = true; // Por defecto asumimos que es día laborable
+                                    
+                                    // Verificar en el calendario del cliente
+                                    $calendarDay = WorkCalendar::where('customer_id', $customerId)
+                                        ->where('calendar_date', $currentDate)
+                                        ->first();
+                                    
+                                    if ($calendarDay) {
+                                        $isWorkingDay = $calendarDay->is_working_day;
+                                    }
+                                    
+                                    if (!$isWorkingDay) {
+                                        $this->info("    * El día {$currentDate} no es laborable, avanzando al siguiente");
+                                        $estimatedStartDate->addDay();
+                                        continue;
+                                    }
+                                    
+                                    // Verificar disponibilidad para el día de la semana actual (1=lunes, 7=domingo)
+                                    $dayOfWeek = $estimatedStartDate->dayOfWeek ?: 7; // Carbon usa 0 para domingo, lo convertimos a 7
+                                    
+                                    $dayAvailability = $lineAvailability->where('day_of_week', $dayOfWeek);
+                                    
+                                    if ($dayAvailability->isEmpty()) {
+                                        $this->info("    * No hay disponibilidad para el día {$dayOfWeek}, avanzando al siguiente");
+                                        $estimatedStartDate->addDay();
+                                        continue;
+                                    }
+                                    
+                                    // Procesar cada turno disponible para este día
+                                    $secondsProcessedToday = 0;
+                                    
+                                    foreach ($dayAvailability as $availability) {
+                                        $shift = $shifts->firstWhere('id', $availability->shift_list_id);
+                                        
+                                        if (!$shift) continue;
+                                        
+                                        // Obtener horas de inicio y fin del turno
+                                        $shiftStart = Carbon::createFromFormat('H:i:s', $shift->start, 'Europe/Madrid');
+                                        $shiftEnd = Carbon::createFromFormat('H:i:s', $shift->end, 'Europe/Madrid');
+                                        
+                                        // Ajustar al día actual
+                                        $shiftStart->setDate($estimatedStartDate->year, $estimatedStartDate->month, $estimatedStartDate->day);
+                                        $shiftEnd->setDate($estimatedStartDate->year, $estimatedStartDate->month, $estimatedStartDate->day);
+                                        
+                                        // Si el turno termina antes de empezar (cruza medianoche), añadir un día a la hora de fin
+                                        if ($shiftEnd <= $shiftStart) {
+                                            $shiftEnd->addDay();
+                                        }
+                                        
+                                        // Calcular duración del turno en segundos
+                                        $shiftDurationSeconds = $shiftEnd->diffInSeconds($shiftStart);
+                                        
+                                        // Descontar el tiempo de pausa si el turno es lo suficientemente largo
+                                        // Solo aplicamos la pausa si el turno dura más de 4 horas (14400 segundos)
+                                        if ($shiftDurationSeconds >= 4 * 3600) {
+                                            $shiftDurationSeconds -= $breakTimeSeconds;
+                                            $this->info("        * Descontando {$breakTimeMinutes} minutos de pausa del turno");
+                                        }
+                                        
+                                        // Si estamos en el día actual y la hora actual es posterior al inicio del turno,
+                                        // ajustar el tiempo disponible
+                                        if ($estimatedStartDate->format('Y-m-d') === $now->format('Y-m-d') && $now > $shiftStart) {
+                                            $shiftStart = $now->copy();
+                                            $shiftDurationSeconds = $shiftEnd->diffInSeconds($shiftStart);
+                                        }
+                                        
+                                        // Determinar cuántos segundos podemos procesar en este turno
+                                        $secondsToProcess = min($remainingSeconds, $shiftDurationSeconds);
+                                        
+                                        if ($secondsToProcess > 0) {
+                                            $remainingSeconds -= $secondsToProcess;
+                                            $secondsProcessedToday += $secondsToProcess;
+                                            
+                                            // Si hemos distribuido todo el tiempo, la fecha de inicio es el final de este turno
+                                            if ($remainingSeconds <= 0) {
+                                                $estimatedStartDate = $shiftStart->copy()->addSeconds($secondsToProcess);
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    
+                                    // Si no se procesó tiempo hoy o aún queda tiempo, avanzar al día siguiente
+                                    if ($secondsProcessedToday === 0 || $remainingSeconds > 0) {
+                                        $estimatedStartDate->addDay()->startOfDay();
+                                    }
+                                }
+                            }
+                            
+                            // Paso 5: Calcular fecha estimada de fin (fecha inicio + tiempo teórico)
+                            $estimatedEndDate = $estimatedStartDate->copy();
+                            
+                            try {
+                                // Aplicamos el factor OEE al tiempo teórico
+                                $originalTheoreticalSeconds = $estimatedSeconds;
+                                $adjustedTheoreticalSeconds = $this->adjustTimeByOEE($originalTheoreticalSeconds, $lineOEE);
+                                $remainingTheoreticalSeconds = $adjustedTheoreticalSeconds;
+                                
+                                $this->info("    * Tiempo teórico original: {$originalTheoreticalSeconds} segundos");
+                                $this->info("    * Tiempo teórico ajustado por OEE ({$lineOEE}%): {$adjustedTheoreticalSeconds} segundos");
+                            } catch (\Exception $e) {
+                                $this->error("    * Error al ajustar el tiempo teórico: {$e->getMessage()}");
+                                Log::error("Error al ajustar tiempo teórico para la orden ID {$order->id}: {$e->getMessage()}");
+                                // Si hay error, usamos el tiempo original sin ajustar
+                                $remainingTheoreticalSeconds = $originalTheoreticalSeconds;
+                                $this->warn("    * Usando tiempo teórico original sin ajustar: {$remainingTheoreticalSeconds} segundos");
+                            }
+                            
+                            if ($remainingTheoreticalSeconds > 0) {
+                                
+                                // Iteramos día a día hasta distribuir todo el tiempo teórico
+                                while ($remainingTheoreticalSeconds > 0) {
+                                    // Verificar si el día actual es laborable según el calendario
+                                    $currentDate = $estimatedEndDate->format('Y-m-d');
+                                    $isWorkingDay = true; // Por defecto asumimos que es día laborable
+                                    
+                                    // Verificar en el calendario del cliente
+                                    $calendarDay = WorkCalendar::where('customer_id', $customerId)
+                                        ->where('calendar_date', $currentDate)
+                                        ->first();
+                                    
+                                    if ($calendarDay) {
+                                        $isWorkingDay = $calendarDay->is_working_day;
+                                    }
+                                    
+                                    if (!$isWorkingDay) {
+                                        $estimatedEndDate->addDay();
+                                        continue;
+                                    }
+                                    
+                                    // Verificar disponibilidad para el día de la semana actual
+                                    $dayOfWeek = $estimatedEndDate->dayOfWeek ?: 7; // Carbon usa 0 para domingo, lo convertimos a 7
+                                    
+                                    $dayAvailability = $lineAvailability->where('day_of_week', $dayOfWeek);
+                                    
+                                    if ($dayAvailability->isEmpty()) {
+                                        $estimatedEndDate->addDay();
+                                        continue;
+                                    }
+                                    
+                                    // Procesar cada turno disponible para este día
+                                    $secondsProcessedToday = 0;
+                                    
+                                    foreach ($dayAvailability as $availability) {
+                                        $shift = $shifts->firstWhere('id', $availability->shift_list_id);
+                                        
+                                        if (!$shift) continue;
+                                        
+                                        // Obtener horas de inicio y fin del turno
+                                        $shiftStart = Carbon::createFromFormat('H:i:s', $shift->start, 'Europe/Madrid');
+                                        $shiftEnd = Carbon::createFromFormat('H:i:s', $shift->end, 'Europe/Madrid');
+                                        
+                                        // Ajustar al día actual
+                                        $shiftStart->setDate($estimatedEndDate->year, $estimatedEndDate->month, $estimatedEndDate->day);
+                                        $shiftEnd->setDate($estimatedEndDate->year, $estimatedEndDate->month, $estimatedEndDate->day);
+                                        
+                                        // Si el turno termina antes de empezar (cruza medianoche), añadir un día a la hora de fin
+                                        if ($shiftEnd <= $shiftStart) {
+                                            $shiftEnd->addDay();
+                                        }
+                                        
+                                        // Si estamos en el día de inicio y la hora de inicio es posterior al inicio del turno,
+                                        // ajustar el tiempo disponible
+                                        if ($estimatedEndDate->format('Y-m-d') === $estimatedStartDate->format('Y-m-d') && 
+                                            $estimatedStartDate > $shiftStart) {
+                                            $shiftStart = $estimatedStartDate->copy();
+                                        }
+                                        
+                                        // Calcular duración del turno en segundos
+                                        $shiftDurationSeconds = $shiftEnd->diffInSeconds($shiftStart);
+                                        
+                                        // Descontar el tiempo de pausa si el turno es lo suficientemente largo
+                                        // Solo aplicamos la pausa si el turno dura más de 4 horas (14400 segundos)
+                                        if ($shiftDurationSeconds >= 4 * 3600) {
+                                            $shiftDurationSeconds -= $breakTimeSeconds;
+                                            $this->info("        * Descontando {$breakTimeMinutes} minutos de pausa del turno");
+                                        }
+                                        
+                                        // Determinar cuántos segundos podemos procesar en este turno
+                                        $secondsToProcess = min($remainingTheoreticalSeconds, $shiftDurationSeconds);
+                                        
+                                        if ($secondsToProcess > 0) {
+                                            $remainingTheoreticalSeconds -= $secondsToProcess;
+                                            $secondsProcessedToday += $secondsToProcess;
+                                            
+                                            // Si hemos distribuido todo el tiempo, la fecha de fin es el final de este turno
+                                            if ($remainingTheoreticalSeconds <= 0) {
+                                                $estimatedEndDate = $shiftStart->copy()->addSeconds($secondsToProcess);
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    
+                                    // Si no se procesó tiempo hoy o aún queda tiempo, avanzar al día siguiente
+                                    if ($secondsProcessedToday === 0 || $remainingTheoreticalSeconds > 0) {
+                                        $estimatedEndDate->addDay()->startOfDay();
+                                    }
+                                }
+                            }
+                            
+                            // Paso 6: Guardar las fechas estimadas en la orden
+                            $order->estimated_start_datetime = $estimatedStartDate;
+                            $order->estimated_end_datetime = $estimatedEndDate;
+                            $order->save();
+                            
+                            $this->info("    * Fechas estimadas calculadas: Inicio: {$estimatedStartDate->format('Y-m-d H:i:s')}, Fin: {$estimatedEndDate->format('Y-m-d H:i:s')}");
+                            
+                        } catch (\Exception $e) {
+                            $this->error("    * Error al calcular fechas estimadas: {$e->getMessage()}");
+                            // En caso de error, ponemos fechas en null
+                            $order->estimated_start_datetime = null;
+                            $order->estimated_end_datetime = null;
+                            $order->save();
+                        }
+                    }
                 }
             }
             
             $this->info("Se actualizaron los tiempos acumulados de {$updatedCount} órdenes.");
-            Log::info("Comando production:update-accumulated-times ejecutado. Se actualizaron {$updatedCount} órdenes.");
-            
-            // Registrar la hora de la última ejecución
-            $now = Carbon::now('Europe/Madrid');
-            Log::info("Hora de finalización del comando: {$now->format('Y-m-d H:i:s')}");
-            
             return 0;
         } catch (\Exception $e) {
             $this->error("Error al actualizar los tiempos acumulados: {$e->getMessage()}");
-            Log::error("Error en production:update-accumulated-times: {$e->getMessage()}");
             return 1;
+        }
+    }
+    
+    /**
+     * Calcula el OEE promedio de una línea de producción basado en su historial reciente.
+     *
+     * @param int $productionLineId ID de la línea de producción
+     * @param int $days Número de días para el historial
+     * @param float $minimumPercentage Porcentaje mínimo de OEE a aplicar
+     * @return float Porcentaje de OEE (0-100)
+     */
+    protected function getAverageOEE($productionLineId, $days, $minimumPercentage)
+    {
+        try {
+            // Validar parámetros de entrada
+            if (!$productionLineId || !is_numeric($productionLineId)) {
+                Log::warning("ID de línea de producción inválido: {$productionLineId}");
+                return $minimumPercentage;
+            }
+            
+            $days = max(1, intval($days)); // Asegurar que days sea un entero positivo
+            $minimumPercentage = max(1, min(100, floatval($minimumPercentage))); // Limitar entre 1% y 100%
+            
+            // Calcular la fecha límite para el historial
+            $startDate = Carbon::now('Europe/Madrid')->subDays($days);
+            
+            // Obtener registros de OEE para la línea de producción
+            $oeeHistory = ShiftHistory::where('production_line_id', $productionLineId)
+                ->where('created_at', '>=', $startDate)
+                ->where('oee', '>', 0) // Solo considerar registros con OEE válido
+                ->select(DB::raw('AVG(oee * 100) as average_oee')) // Convertir a porcentaje
+                ->first();
+            
+            // Si hay registros, usar el promedio; si no, usar el mínimo
+            $averageOee = $oeeHistory && $oeeHistory->average_oee ? $oeeHistory->average_oee : $minimumPercentage;
+            
+            // Asegurar que no sea menor que el mínimo establecido
+            $averageOee = max($averageOee, $minimumPercentage);
+            
+            // Redondear a 2 decimales
+            return round($averageOee, 2);
+        } catch (\Exception $e) {
+            $this->error("Error al calcular OEE promedio: {$e->getMessage()}");
+            Log::error("Error al calcular OEE promedio para línea ID {$productionLineId}: {$e->getMessage()}");
+            // En caso de error, usar el mínimo
+            return $minimumPercentage;
+        }
+    }
+    
+    /**
+     * Ajusta un tiempo en segundos según el factor OEE.
+     *
+     * @param int $timeInSeconds Tiempo en segundos a ajustar
+     * @param float $oeePercentage Porcentaje de OEE (0-100)
+     * @return int Tiempo ajustado en segundos
+     */
+    protected function adjustTimeByOEE($timeInSeconds, $oeePercentage)
+    {
+        try {
+            // Validar parámetros de entrada
+            if (!is_numeric($timeInSeconds) || $timeInSeconds < 0) {
+                Log::warning("Tiempo en segundos inválido: {$timeInSeconds}");
+                return $timeInSeconds;
+            }
+            
+            if (!is_numeric($oeePercentage) || $oeePercentage <= 0) {
+                Log::warning("Porcentaje OEE inválido: {$oeePercentage}");
+                return $timeInSeconds;
+            }
+            
+            // Convertir a tipos adecuados
+            $timeInSeconds = intval($timeInSeconds);
+            $oeePercentage = floatval($oeePercentage);
+            
+            // Si el OEE es 100% o superior, no hay ajuste necesario
+            if ($oeePercentage >= 100) {
+                return $timeInSeconds;
+            }
+            
+            // Convertir OEE a factor decimal (ej: 70% -> 0.7) y limitar a un mínimo de 0.01
+            $oeeFactor = max(0.01, $oeePercentage / 100);
+            
+            // Ajustar el tiempo dividiendo por el factor OEE
+            // Ejemplo: 1 hora con OEE de 50% -> 1h / 0.5 = 2h
+            return ceil($timeInSeconds / $oeeFactor);
+        } catch (\Exception $e) {
+            Log::error("Error al ajustar tiempo por OEE: {$e->getMessage()}");
+            // En caso de error, devolver el tiempo original sin ajustar
+            return $timeInSeconds;
         }
     }
 }

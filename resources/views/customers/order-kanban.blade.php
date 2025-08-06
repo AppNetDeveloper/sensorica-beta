@@ -42,6 +42,83 @@
 <div id="kanbanContainer" class="position-relative">
     <div class="kanban-board" role="list" aria-label="{{ __('Kanban Board') }}"></div>
 </div>
+
+<!-- Leyenda visual para los iconos utilizados en las tarjetas -->
+<div class="container-fluid mt-4 mb-4">
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title mb-3"><i class="fas fa-info-circle"></i> @lang('Leyenda de indicadores')</h5>
+            
+            <!-- Indicadores de tiempo -->
+            <h6 class="mt-3 mb-2">@lang('Indicadores de tiempo')</h6>
+            <div class="d-flex flex-wrap gap-4 mb-3">
+                <div class="d-flex align-items-center">
+                    <span class="badge bg-info me-2"><i class="fas fa-hourglass-half"></i></span>
+                    <span>@lang('Tiempo acumulado de fabricación')</span>
+                </div>
+                <div class="d-flex align-items-center">
+                    <span class="badge bg-primary me-2"><i class="fas fa-hourglass-start"></i></span>
+                    <span>@lang('Fecha estimada de inicio')</span>
+                </div>
+                <div class="d-flex align-items-center">
+                    <span class="badge bg-success me-2"><i class="fas fa-hourglass-end"></i></span>
+                    <span>@lang('Fecha estimada de fin')</span>
+                </div>
+                <div class="d-flex align-items-center">
+                    <span class="me-2"><i class="far fa-clock text-muted"></i></span>
+                    <span>@lang('Tiempo teórico')</span>
+                </div>
+            </div>
+            
+            <!-- Indicadores de fechas -->
+            <h6 class="mt-3 mb-2">@lang('Indicadores de fechas')</h6>
+            <div class="d-flex flex-wrap gap-4 mb-3">
+                <div class="d-flex align-items-center">
+                    <span class="me-2"><i class="far fa-calendar-alt text-muted"></i></span>
+                    <span>@lang('Fecha de creación tarjeta')</span>
+                </div>
+                <div class="d-flex align-items-center">
+                    <span class="me-2"><i class="fas fa-truck text-danger"></i></span>
+                    <span>@lang('Fecha de entrega en instalación cliente')</span>
+                </div>
+                <div class="d-flex align-items-center">
+                    <span class="me-2"><i class="fas fa-calendar-check text-muted"></i></span>
+                    <span>@lang('Fecha creación pedido en ERP')</span>
+                </div>
+            </div>
+            
+            <!-- Indicadores de alerta -->
+            <h6 class="mt-3 mb-2">@lang('Indicadores de alerta')</h6>
+            <div class="d-flex flex-wrap gap-4 mb-3">
+                <div class="d-flex align-items-center">
+                    <span class="me-2"><i class="fas fa-exclamation-triangle text-danger"></i></span>
+                    <span>@lang('Orden urgente')</span>
+                </div>
+                <div class="d-flex align-items-center">
+                    <span class="me-2"><i class="fas fa-exclamation-triangle text-primary"></i></span>
+                    <span>@lang('Sin stock de materiales')</span>
+                </div>
+                <div class="d-flex align-items-center">
+                    <span class="me-2"><i class="fas fa-exclamation-triangle text-warning"></i></span>
+                    <span>@lang('Orden prioritaria')</span>
+                </div>
+            </div>
+            
+            <!-- Indicadores de cantidades -->
+            <h6 class="mt-3 mb-2">@lang('Indicadores de cantidades')</h6>
+            <div class="d-flex flex-wrap gap-4">
+                <div class="d-flex align-items-center">
+                    <span class="me-2"><i class="fas fa-box text-muted"></i></span>
+                    <span>@lang('Número de cajas')</span>
+                </div>
+                <div class="d-flex align-items-center">
+                    <span class="me-2"><i class="fas fa-cubes text-muted"></i></span>
+                    <span>@lang('Número de unidades')</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 <!-- Modal Bootstrap para el planificador de línea -->
 <div class="modal fade" id="schedulerModal" tabindex="-1" aria-labelledby="schedulerModalLabel" aria-hidden="true">
   <div class="modal-dialog" style="max-width: 70%; width: 70%;">
@@ -120,7 +197,7 @@
 
         .kanban-column { flex: 0 0 340px; background-color: var(--column-bg); border-radius: 12px; min-width: 340px; display: flex; flex-direction: column; border: 1px solid var(--column-border); box-shadow: 0 1px 4px rgba(0,0,0,0.05); max-height: 100%; overflow: hidden; }
         .kanban-column.drag-over { border-color: var(--primary-color); }
-        .column-header { padding: 0.75rem 1rem; position: sticky; top: 0; background-color: var(--header-bg); z-index: 10; border-bottom: 1px solid var(--column-border); transition: all 0.3s ease; min-height: 60px; }
+        .column-header { padding: 0.75rem 1rem; position: sticky; top: 0; background-color: var(--header-bg); z-index: 10; border-bottom: 1px solid var(--column-border); transition: all 0.3s ease; min-height: 60px; flex-shrink: 0; height: auto; }
         .column-header-running { border-top: 3px solid #28a745 !important; }
         .column-header-paused { border-top: 3px solid #ffc107 !important; }
         .column-header-stopped { border-top: 3px solid #6c757d !important; }
@@ -428,7 +505,7 @@
             }
         };
 
-        // --- LÓGICA DE ORGANIZACIÓN AUTOMÁTICA CON IA (GEMINI) ---
+        
         
         function isOrderUrgent(order) {
             if (!order.delivery_date || ['completed', 'cancelled'].includes(order.status)) {
@@ -1319,6 +1396,17 @@
                                 <i class="fas fa-calendar-check me-1" title="Fecha creación pedido en ERP"></i>${fechaPedidoErpFormatted ? fechaPedidoErpFormatted : 'Sin fecha ERP'}
                             </div>
                         </div>
+                        ${order.estimated_start_datetime || order.estimated_end_datetime ? `
+                        <div class="d-flex justify-content-between align-items-center mt-1">
+                            ${order.estimated_start_datetime ? `
+                            <div class="text-xs text-primary">
+                                <i class="fas fa-hourglass-start me-1" title="Fecha estimada de inicio"></i>${new Date(order.estimated_start_datetime).toLocaleString('es-ES', {dateStyle: 'short', timeStyle: 'short'})}
+                            </div>` : ''}
+                            ${order.estimated_end_datetime ? `
+                            <div class="text-xs text-success ms-2">
+                                <i class="fas fa-hourglass-end me-1" title="Fecha estimada de fin"></i>${new Date(order.estimated_end_datetime).toLocaleString('es-ES', {dateStyle: 'short', timeStyle: 'short'})}
+                            </div>` : ''}
+                        </div>` : ''}
                     </div>
                     <div class="d-flex flex-column align-items-end">
                         <span class="card-menu" role="button" data-order-id="${order.id}"><i class="fas fa-ellipsis-h"></i></span>

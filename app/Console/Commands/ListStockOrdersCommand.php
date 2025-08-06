@@ -48,6 +48,33 @@ class ListStockOrdersCommand extends Command
      */
     public function handle()
     {
+        // Verificar si ya hay una instancia en ejecución usando un archivo de bloqueo
+        $lockFile = storage_path('app/orders_check.lock');
+        
+        if (file_exists($lockFile)) {
+            $lockTime = file_get_contents($lockFile);
+            $lockAge = time() - (int)$lockTime;
+                    
+            // Si el bloqueo tiene menos de 30 minutos, consideramos que otra instancia está en ejecución
+            if ($lockAge < 1800) {
+                $this->error('🔒 Ya existe una instancia del comando en ejecución desde hace ' . round($lockAge/60) . ' minutos');
+                $this->line('Si crees que es un error, elimina manualmente el archivo: ' . $lockFile);
+                return 1; // Salir con código de error
+            } else {
+                // El bloqueo es viejo (más de 30 minutos), probablemente un proceso que falló
+                $this->error('⚠️ Se encontró un bloqueo antiguo (> 30 min). Eliminando automáticamente.');
+                // Eliminar el archivo de bloqueo antiguo
+                if (@unlink($lockFile)) {
+                    $this->line('🗑️ Bloqueo antiguo eliminado. Continuando con la ejecución.');
+                } else {
+                    $this->error('❌ No se pudo eliminar el archivo de bloqueo antiguo. Verifica los permisos.');
+                    $this->line('Intenta eliminar manualmente: ' . $lockFile);
+                    return 1; // Salir con código de error si no se puede eliminar el bloqueo
+                }
+                // Continuamos y crearemos un nuevo bloqueo
+            }
+        }
+
         // Registra un mensaje informativo al inicio de la ejecución.
         $this->logInfo('Iniciando la búsqueda de órdenes en stock...');
 

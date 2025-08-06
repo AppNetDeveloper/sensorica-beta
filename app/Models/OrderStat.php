@@ -75,4 +75,32 @@ class OrderStat extends Model
     {
         return $this->belongsTo(ProductList::class, 'product_list_id');
     }
+    
+    /**
+     * Obtiene los operadores que han trabajado en esta orden a través de la tabla pivot.
+     */
+    public function operators()
+    {
+        return $this->belongsToMany(Operator::class, 'order_stats_operators', 'order_stat_id', 'operator_id')
+                    ->withPivot('shift_history_id', 'time_spent', 'notes')
+                    ->withTimestamps();
+    }
+    
+    /**
+     * Obtiene los registros de turnos asociados a esta orden a través de la tabla pivot.
+     */
+    public function shiftHistories()
+    {
+        return $this->belongsToMany(ShiftHistory::class, 'order_stats_operators', 'order_stat_id', 'shift_history_id')
+                    ->withPivot('operator_id', 'time_spent', 'notes')
+                    ->withTimestamps();
+    }
+    
+    /**
+     * Obtiene las relaciones directas con la tabla order_stats_operators.
+     */
+    public function orderStatOperators()
+    {
+        return $this->hasMany(OrderStatOperator::class);
+    }
 }

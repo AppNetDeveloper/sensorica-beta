@@ -16,7 +16,7 @@ class ProductionOrderObserver
      */
     public function created(ProductionOrder $productionOrder)
     {
-        $this->updateAccumulatedTimes($productionOrder);
+        //$this->updateAccumulatedTimes($productionOrder);
     }
 
     /**
@@ -29,7 +29,7 @@ class ProductionOrderObserver
     {
         // Solo actualizamos los tiempos si ha cambiado el status o la línea de producción
         if ($productionOrder->isDirty('status') || $productionOrder->isDirty('production_line_id') || $productionOrder->isDirty('orden')) {
-            $this->updateAccumulatedTimes($productionOrder);
+            //$this->updateAccumulatedTimes($productionOrder);
         }
     }
 
@@ -41,7 +41,7 @@ class ProductionOrderObserver
      */
     public function deleted(ProductionOrder $productionOrder)
     {
-        $this->updateAccumulatedTimes($productionOrder);
+        //$this->updateAccumulatedTimes($productionOrder);
     }
 
     /**

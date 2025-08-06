@@ -98,6 +98,7 @@ COMMANDS=(
     "/bin/systemctl daemon-reload"
     "/bin/systemctl enable 485.service"
     "/bin/systemctl start 485.service"
+    "/bin/systemctl restart mysql"
     "/var/www/html/verne.sh"
     "/var/www/html/reset-sensor.sh"
     "/var/www/html/node/*.js"
@@ -163,8 +164,9 @@ declare -A ENV_VARS=(
     ["REDIS_PREFIX"]=""
     ["PROCESS_ORDERS_OUT_OF_STOCK"]="false"
     ["CREATE_ALL_PROCESSORDERS"]="false"
-
-
+    ["PRODUCTION_BREAK_TIME"]="30"
+    ["PRODUCTION_OEE_HISTORY_DAYS"]="10"
+    ["PRODUCTION_OEE_MINIMUM"]="30"
 )
 
 ENV_FILE=".env"
