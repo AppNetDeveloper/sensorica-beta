@@ -1058,19 +1058,19 @@
                     lineStatus.type === 'stop' && lineStatus.action === 'end') {
                     // Línea arrancada
                     statusIcon = '<i class="fas fa-play-circle line-status-running"></i>';
-                    statusText = 'En funcionamiento';
+                    statusText = 'En Marcha';
                     statusClass = 'line-status-running';
                     headerStatusClass = 'column-header-running';
                 } else if (lineStatus.type === 'stop' && lineStatus.action === 'start') {
                     // Línea en pausa
                     statusIcon = '<i class="fas fa-pause-circle line-status-paused"></i>';
-                    statusText = 'En pausa';
+                    statusText = 'En Pausa';
                     statusClass = 'line-status-paused';
                     headerStatusClass = 'column-header-paused';
                 } else if (lineStatus.type === 'shift' && lineStatus.action === 'end') {
                     // Línea parada
                     statusIcon = '<i class="fas fa-stop-circle line-status-stopped"></i>';
-                    statusText = 'Detenida';
+                    statusText = 'Parada';
                     statusClass = 'line-status-stopped';
                     headerStatusClass = 'column-header-stopped';
                 }
