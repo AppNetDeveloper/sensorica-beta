@@ -336,10 +336,47 @@ class OperatorController extends Controller
              'rfid_colors' => $rfidColors,
          ], 200);
      }
-     
-     
-     
 
+    /**
+     * @OA\Get(
+     *     path="/api/operators/internal",
+     *     summary="Get all operators with internal IDs",
+     *     tags={"Workers"},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Returns all operators with internal IDs",
+     *         @OA\JsonContent(
+     *             type="array",
+     *             @OA\Items(
+     *                 @OA\Property(property="id", type="integer", description="Internal ID"),
+     *                 @OA\Property(property="name", type="string", description="Operator Name")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Internal server error",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="error", type="string")
+     *         )
+     *     )
+     * )
+     */
+    public function listInternalIds(Request $request)
+    {
+        try {
+            // Obtener todos los operadores con ID interno y nombre
+            $operators = Operator::select('id', 'name')
+                ->orderBy('name', 'asc')
+                ->get();
+            
+            return response()->json($operators, 200);
+        } catch (\Exception $e) {
+            Log::error('Error al obtener operadores con IDs internos: ' . $e->getMessage());
+            return response()->json(['error' => 'Error interno del servidor'], 500);
+        }
+    }
 
     /**
      * @OA\Get(

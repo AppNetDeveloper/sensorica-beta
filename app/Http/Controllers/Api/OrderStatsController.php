@@ -258,16 +258,85 @@ class OrderStatsController extends Controller
             'operator_ids' => $operatorIds
         ]);
         
-        // Iniciar la consulta base
+        // Determinar si se debe filtrar por línea de producción, por operador, o ambos
+        $filterByProductionLine = !empty($productionLineIds);
+        $filterByOperator = !empty($operatorIds);
+        
+        // Iniciar la consulta base con el filtro de fechas que siempre se aplica
         $query = OrderStat::with('operators')
-            ->whereIn('production_line_id', $productionLineIds)
             ->whereBetween('created_at', [$startDate, $endDate]);
+        
+        // Verificar si se ha enviado el parámetro filter_mode
+        $filterMode = $request->input('filter_mode', 'operator_only');
+        
+        // Aplicar filtros según lo que se haya seleccionado
+        if ($filterByProductionLine && $filterByOperator) {
+            if ($filterMode === 'or') {
+                // Filtro OR: mostrar registros que cumplan con cualquiera de las condiciones
+                $query->where(function($q) use ($productionLineIds, $operatorIds) {
+                    $q->whereIn('production_line_id', $productionLineIds)
+                      ->orWhereHas('operators', function($subq) use ($operatorIds) {
+                          $subq->whereIn('operators.id', $operatorIds);
+                      });
+                });
+                
+                \Log::info('OrderStats - Aplicando filtro OR (línea O operador):', [
+                    'production_line_ids' => $productionLineIds,
+                    'operatorIds' => $operatorIds,
+                    'sql' => $query->toSql(),
+                    'bindings' => $query->getBindings()
+                ]);
+            } else if ($filterMode === 'and') {
+                // Filtro AND: mostrar registros que cumplan con ambas condiciones
+                $query->whereIn('production_line_id', $productionLineIds)
+                      ->whereHas('operators', function($q) use ($operatorIds) {
+                          $q->whereIn('operators.id', $operatorIds);
+                      });
+                
+                \Log::info('OrderStats - Aplicando filtro AND (línea Y operador):', [
+                    'production_line_ids' => $productionLineIds,
+                    'operatorIds' => $operatorIds,
+                    'sql' => $query->toSql(),
+                    'bindings' => $query->getBindings()
+                ]);
+            } else if ($filterMode === 'operator_only') {
+                // Filtrar solo por operador, ignorando las líneas seleccionadas
+                $query->whereHas('operators', function($q) use ($operatorIds) {
+                    $q->whereIn('operators.id', $operatorIds);
+                });
+                
+                \Log::info('OrderStats - Aplicando filtro solo por operador:', [
+                    'operatorIds' => $operatorIds,
+                    'sql' => $query->toSql(),
+                    'bindings' => $query->getBindings()
+                ]);
+            } else { // 'line_only' o cualquier otro valor
+                // Filtrar solo por línea, ignorando los operadores seleccionados
+                $query->whereIn('production_line_id', $productionLineIds);
+                
+                \Log::info('OrderStats - Aplicando filtro solo por línea:', [
+                    'production_line_ids' => $productionLineIds,
+                    'sql' => $query->toSql(),
+                    'bindings' => $query->getBindings()
+                ]);
+            }
+        } else {
+            // Si solo hay un tipo de filtro, aplicarlo normalmente
+            if ($filterByProductionLine) {
+                $query->whereIn('production_line_id', $productionLineIds);
+                \Log::info('OrderStats - Aplicando solo filtro de línea:', [
+                    'production_line_ids' => $productionLineIds
+                ]);
+            }
             
-        // Si hay operadores seleccionados, filtrar por ellos
-        if (!empty($operatorIds)) {
-            $query->whereHas('operators', function($q) use ($operatorIds) {
-                $q->whereIn('operators.id', $operatorIds);
-            });
+            if ($filterByOperator) {
+                $query->whereHas('operators', function($q) use ($operatorIds) {
+                    $q->whereIn('operators.id', $operatorIds);
+                });
+                \Log::info('OrderStats - Aplicando solo filtro de operador:', [
+                    'operatorIds' => $operatorIds
+                ]);
+            }
         }
         
         // Ejecutar la consulta
@@ -277,7 +346,8 @@ class OrderStatsController extends Controller
     
         if ($orderStats->isEmpty()) {
             \Log::warning('OrderStats - No se encontraron estadísticas para las fechas y líneas especificadas');
-            return response()->json(['error' => 'No order stats found for the specified dates and production lines'], 404);
+            // Devolver un array vacío con código 200 en lugar de un error 404
+            return response()->json([], 200);
         }
     
         $response = $orderStats->map(function ($orderStat) use ($productionLineNames) {

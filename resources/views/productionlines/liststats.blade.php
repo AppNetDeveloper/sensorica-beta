@@ -574,17 +574,14 @@
         // Función para cargar los operarios disponibles
         async function fetchOperators() {
             try {
-                console.log("Intentando obtener operarios...");
-                const response = await fetch('/api/operators');
+                console.log("Intentando obtener operarios con IDs internos...");
+                const response = await fetch('/api/operators/internal');
                 if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
-                const data = await response.json();
-                console.log("Operarios recibidos:", data);
+                const operators = await response.json();
+                console.log("Operarios con IDs internos recibidos:", operators);
                 
                 const operatorSelect = $('#operatorSelect');
                 operatorSelect.empty();
-                
-                // Verificar si la respuesta tiene la estructura esperada
-                const operators = data.operators || data;
                 
                 // Ordenar los operarios alfabéticamente por nombre
                 if (Array.isArray(operators)) {
@@ -613,6 +610,14 @@
                 const filteredTokens = tokensArray.filter(token => token && token.trim() !== '');
                 const selectedOperators = $('#operatorSelect').val();
                 
+                // Determinar el modo de filtrado basado en la selección de líneas y operadores
+                let filterMode = 'line_only'; // Por defecto, filtrar solo por línea
+                
+                if (selectedOperators && selectedOperators.length > 0) {
+                    // Si hay operadores seleccionados, priorizar el filtrado por operador
+                    filterMode = 'operator_only';
+                }
+                
                 if (filteredTokens.length === 0) {
                     throw new Error('No hay tokens válidos seleccionados');
                 }
@@ -624,6 +629,9 @@
                 if (selectedOperators && selectedOperators.length > 0) {
                     const operatorParam = selectedOperators.join(',');
                     url += `&operators=${operatorParam}`;
+                    
+                    // Añadir el modo de filtrado a la URL
+                    url += `&filter_mode=${filterMode}`;
                 }
                 
                 const fullUrl = window.location.origin + url;

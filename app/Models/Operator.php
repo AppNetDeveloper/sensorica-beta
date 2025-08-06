@@ -44,4 +44,14 @@ class Operator extends Model
     {
         return $this->hasMany(BarcodeScan::class);
     }
+    
+    /**
+     * Obtiene las estadísticas de órdenes en las que ha trabajado este operador.
+     */
+    public function orderStats()
+    {
+        return $this->belongsToMany(OrderStat::class, 'order_stats_operators', 'operator_id', 'order_stat_id')
+                    ->withPivot('shift_history_id', 'time_spent', 'notes')
+                    ->withTimestamps();
+    }
 }
