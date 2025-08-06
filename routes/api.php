@@ -207,6 +207,7 @@ Route::post('/workers/update-or-insert', [OperatorController::class, 'updateOrIn
 Route::post('/workers/replace-all', [OperatorController::class, 'replaceAll']);
 Route::get('/workers/list-all', [OperatorController::class, 'listAll']);
 Route::get('/workers/list-all2', [OperatorController::class, 'listAll2']);
+Route::get('/operators', [OperatorController::class, 'listAll']); // Nueva ruta para compatibilidad con el filtro de operadores
 // Ruta para mostrar un solo operador por ID
 Route::get('/workers/{id}', [OperatorController::class, 'show']);
 // Nuevas rutas para reset de contraseña

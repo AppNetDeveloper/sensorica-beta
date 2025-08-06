@@ -129,8 +129,8 @@
                     </div>
                     <div class="col-md-2">
                         <label class="form-label">Empleado</label>
-                        <select class="form-select" disabled>
-                            <option>Todos</option>
+                        <select id="operatorSelect" class="form-select select2-multiple" multiple style="width: 100%;">
+                            <!-- Opciones dinámicas de operarios -->
                         </select>
                     </div>
                     <div class="col-md-2">
@@ -532,7 +532,7 @@
 
         // Función para formatear segundos a HH:MM:SS
         function formatTime(seconds) {
-            if (seconds === null || seconds === undefined || isNaN(seconds)) return '-';
+            if (seconds === null || seconds === undefined || isNaN(seconds) || seconds === 0) return '00:00:00';
             seconds = parseInt(seconds);
             const hours = Math.floor(seconds / 3600);
             const minutes = Math.floor((seconds % 3600) / 60);
@@ -557,8 +557,53 @@
                 data.forEach(line => {
                     modbusSelect.append(`<option value="${line.token}">${line.name}</option>`);
                 });
+                
+                // Inicializar Select2 para líneas de producción
+                modbusSelect.select2({
+                    placeholder: "Seleccionar líneas",
+                    allowClear: true
+                });
+                
+                // Cargar operarios
+                fetchOperators();
             } catch (error) {
                 console.error("Error al cargar líneas de producción:", error);
+            }
+        }
+        
+        // Función para cargar los operarios disponibles
+        async function fetchOperators() {
+            try {
+                console.log("Intentando obtener operarios...");
+                const response = await fetch('/api/operators');
+                if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
+                const data = await response.json();
+                console.log("Operarios recibidos:", data);
+                
+                const operatorSelect = $('#operatorSelect');
+                operatorSelect.empty();
+                
+                // Verificar si la respuesta tiene la estructura esperada
+                const operators = data.operators || data;
+                
+                // Ordenar los operarios alfabéticamente por nombre
+                if (Array.isArray(operators)) {
+                    operators.sort((a, b) => a.name.localeCompare(b.name));
+                    
+                    operators.forEach(operator => {
+                        operatorSelect.append(`<option value="${operator.id}">${operator.name}</option>`);
+                    });
+                } else {
+                    console.error("El formato de datos de operarios no es válido:", operators);
+                }
+                
+                // Inicializar Select2 para operarios
+                operatorSelect.select2({
+                    placeholder: "Seleccionar empleados",
+                    allowClear: true
+                });
+            } catch (error) {
+                console.error("Error al cargar operarios:", error);
             }
         }
 
@@ -566,13 +611,21 @@
             try {
                 const tokensArray = Array.isArray(lineTokens) ? lineTokens : [lineTokens];
                 const filteredTokens = tokensArray.filter(token => token && token.trim() !== '');
+                const selectedOperators = $('#operatorSelect').val();
                 
                 if (filteredTokens.length === 0) {
                     throw new Error('No hay tokens válidos seleccionados');
                 }
                 
                 const tokenParam = filteredTokens.join(',');
-                const url = `/api/order-stats-all?token=${tokenParam}&start_date=${startDate}&end_date=${endDate}`;
+                let url = `/api/order-stats-all?token=${tokenParam}&start_date=${startDate}&end_date=${endDate}`;
+                
+                // Añadir operadores seleccionados a la URL si hay alguno
+                if (selectedOperators && selectedOperators.length > 0) {
+                    const operatorParam = selectedOperators.join(',');
+                    url += `&operators=${operatorParam}`;
+                }
+                
                 const fullUrl = window.location.origin + url;
                 console.log("URL COMPLETA de la API:", fullUrl);
                 console.log("==================================================");
@@ -602,6 +655,7 @@
                         down_time: item.down_time !== undefined ? parseFloat(item.down_time) : 0,
                         production_stops_time: item.production_stops_time !== undefined ? parseFloat(item.production_stops_time) : 0,
                         on_time: item.on_time || null,
+                        operator_names: item.operator_names || [],
                         fast_time: item.fast_time || null,
                         slow_time: item.slow_time || null,
                         out_time: item.out_time || null,
@@ -635,6 +689,14 @@
                         }},
                         { data: 'order_id', title: 'Orden', className: 'text-truncate', createdCell: function(td, cellData, rowData) {
                             $(td).attr('title', `Orden: ${cellData}`);
+                        }},
+                        { data: 'operator_names', title: 'Empleados', className: 'text-truncate', render: function(data, type, row) {
+                            if (!data || data.length === 0) return '<span class="text-muted">Sin asignar</span>';
+                            // Limitar a mostrar máximo 2 nombres y un contador si hay más
+                            const names = Array.isArray(data) ? data : [data];
+                            const displayNames = names.slice(0, 2).join(', ');
+                            const remaining = names.length > 2 ? ` +${names.length - 2} más` : '';
+                            return `<span title="${names.join(', ')}">${displayNames}${remaining}</span>`;
                         }},
                         { data: 'oee', title: 'OEE', render: data => `${Math.round(data)}%`, createdCell: function(td, cellData, rowData) {
                             const color = cellData >= 80 ? 'text-success' : cellData >= 60 ? 'text-warning' : 'text-danger';
@@ -1125,6 +1187,9 @@
                 const selectedLines = $('#modbusSelect').val();
                 const startDate = $('#startDate').val();
                 const endDate = $('#endDate').val();
+                const selectedOperators = $('#operatorSelect').val();
+                console.log("Parámetros seleccionados (refresh):", { selectedLines, startDate, endDate, selectedOperators });
+                
                 if (selectedLines && selectedLines.length > 0 && startDate && endDate) {
                     $('#loadingIndicator').show();
                     $('#controlWeightTable').hide();
@@ -1140,7 +1205,8 @@
                 const selectedLines = $('#modbusSelect').val();
                 const startDate = $('#startDate').val();
                 const endDate = $('#endDate').val();
-                console.log("Parámetros seleccionados:", { selectedLines, startDate, endDate });
+                const selectedOperators = $('#operatorSelect').val();
+                console.log("Parámetros seleccionados:", { selectedLines, startDate, endDate, selectedOperators });
 
                 if (selectedLines && selectedLines.length > 0 && startDate && endDate) {
                     // Mostrar indicador de carga
