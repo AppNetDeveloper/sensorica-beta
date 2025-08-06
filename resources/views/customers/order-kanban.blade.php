@@ -1595,17 +1595,17 @@
                 // 1. Actualizar el indicador de estado (running, paused, stopped)
                 const statusIndicator = headerLine1.querySelector('.line-status-indicator');
                 if (statusIndicator) {
-                    let statusText = 'Detenida'; // Valor por defecto
+                    let statusText = 'Parada'; // Valor por defecto
                     let statusClass = 'line-status-stopped';
                     let iconType = 'stop';
                     
                     if (lineStatus.type === 'shift' && lineStatus.action === 'start' || 
                         lineStatus.type === 'stop' && lineStatus.action === 'end') {
-                        statusText = 'En funcionamiento';
+                        statusText = 'En Marcha';
                         statusClass = 'line-status-running';
                         iconType = 'play';
                     } else if (lineStatus.type === 'stop' && lineStatus.action === 'start') {
-                        statusText = 'En pausa';
+                        statusText = 'En Pausa';
                         statusClass = 'line-status-paused';
                         iconType = 'pause';
                     }
