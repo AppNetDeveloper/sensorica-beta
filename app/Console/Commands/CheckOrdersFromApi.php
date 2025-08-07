@@ -999,15 +999,34 @@ class CheckOrdersFromApi extends Command
             }
             
             // Crear el proceso
-            $createdProcess = OriginalOrderProcess::create([
+            $processCreateData = [
                 'original_order_id' => $order->id,
                 'process_id' => $process->id,
                 'time' => $calculatedTime,
-                'grupo_numero'      => $processData['grupo_numero'] ?? null, // <-- LÍNEA AÑADIDA
+                'grupo_numero'      => $processData['grupo_numero'] ?? null,
                 'created' => 0,
                 'finished' => 0,
                 'finished_at' => null
-            ]);
+            ];
+            
+            // Añadir campos box y units_box (con valor por defecto 0 si no están mapeados)
+            if (isset($processData['box'])) {
+                $processCreateData['box'] = $processData['box'];
+                $this->logLine("    📦 Campo 'box' mapeado: {$processData['box']}");
+            } else {
+                $processCreateData['box'] = 0;
+                $this->logLine("    📦 Campo 'box' no mapeado, usando valor por defecto: 0");
+            }
+            
+            if (isset($processData['units_box'])) {
+                $processCreateData['units_box'] = $processData['units_box'];
+                $this->logLine("    📦 Campo 'units_box' mapeado: {$processData['units_box']}");
+            } else {
+                $processCreateData['units_box'] = 0;
+                $this->logLine("    📦 Campo 'units_box' no mapeado, usando valor por defecto: 0");
+            }
+            
+            $createdProcess = OriginalOrderProcess::create($processCreateData);
             
             // Verificar que el proceso fue creado con ID
             if (!$createdProcess->id) {

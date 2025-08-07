@@ -16,6 +16,8 @@ class OriginalOrderProcess extends Pivot
         'original_order_id',
         'process_id',
         'time',
+        'box',
+        'units_box',
         'created',
         'finished',
         'finished_at',
@@ -25,6 +27,8 @@ class OriginalOrderProcess extends Pivot
     
     protected $casts = [
         'time' => 'decimal:2',
+        'box' => 'integer',
+        'units_box' => 'integer',
         'created' => 'boolean',
         'finished' => 'boolean',
         'finished_at' => 'datetime',

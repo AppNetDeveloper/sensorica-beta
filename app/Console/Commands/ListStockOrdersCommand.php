@@ -242,8 +242,8 @@ class ListStockOrdersCommand extends Command
             'customerOrderId' => "",
             'customerReferenceId' => "",
             'barcode' => (string)\Illuminate\Support\Str::uuid(), // Genera un UUID único para el código de barras.
-            'quantity' => 0,
-            'unit' => 'Cajas',
+            'quantity' => $orderProcess->box ?? 0,
+            'unit' => 'Cajas', 
             'isAuto' => 0,
             'theoretical_time' => (float)$orderProcess->time,
             'process_id' => $orderProcess->process_id,
@@ -275,8 +275,8 @@ class ListStockOrdersCommand extends Command
                     [
                         'id' => "",
                         'level' => 1,
-                        'uds' => 0,
-                        'total' => 0,
+                        'uds' => $orderProcess->units_box ?? 0,
+                        'total' => ($orderProcess->box ?? 0) * ($orderProcess->units_box ?? 0),
                         'measure' => 'Kg',
                         'eanCode' => "",
                         'envase' => ""

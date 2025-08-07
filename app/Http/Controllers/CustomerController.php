@@ -517,7 +517,9 @@ class CustomerController extends Controller
             // Campos estándar que podríamos querer mapear para procesos
             $processStandardFields = [
                 'process_id' => 'ID del Proceso',
-                'time' => 'Tiempo del Proceso'
+                'time' => 'Tiempo del Proceso',
+                'box' => 'Caja',
+                'units_box' => 'Unidades por Caja'
             ];
             
             // Opciones de transformaciones disponibles
@@ -877,7 +879,9 @@ class CustomerController extends Controller
         // Campos estándar para procesos
         $processStandardFields = [
             'process_id' => 'ID del Proceso',
-            'time' => 'Tiempo del Proceso'
+            'time' => 'Tiempo del Proceso',
+            'box' => 'Caja',
+            'units_box' => 'Unidades por Caja'
         ];
         
         // Campos estándar para artículos
