@@ -794,13 +794,15 @@ class CustomerController extends Controller
     {
         try {
             $index = $request->input('index', 0);
-            $type = $request->input('type', 'order'); // 'order' o 'process'
+            $type = $request->input('type', 'order'); // 'order', 'process' o 'article'
             
             if ($type === 'process') {
                 // Campos estándar para procesos
                 $standardFields = [
                     'process_id' => 'ID del Proceso',
-                    'time' => 'Tiempo del Proceso'
+                    'time' => 'Tiempo del Proceso',
+                    'box' => 'Caja',
+                    'units_box' => 'Unidades por Caja'
                 ];
                 
                 // Opciones de transformaciones disponibles
@@ -817,6 +819,33 @@ class CustomerController extends Controller
                 $html = view('customers.partials.process_field_mappings', [
                     'index' => $index,
                     'processStandardFields' => $standardFields,
+                    'transformationOptions' => $transformationOptions,
+                    'mapping' => null
+                ])->render();
+                
+            } else if ($type === 'article') {
+                // Campos estándar para artículos
+                $standardFields = [
+                    'codigo_articulo' => 'Código de Artículo (Requerido)',
+                    'descripcion_articulo' => 'Descripción del Artículo',
+                    'grupo_articulo' => 'Grupo del Artículo',
+                    'in_stock' => 'En Stock (1/0)'
+                ];
+                
+                // Opciones de transformaciones disponibles
+                $transformationOptions = [
+                    'trim' => 'Eliminar espacios',
+                    'uppercase' => 'Convertir a mayúsculas',
+                    'lowercase' => 'Convertir a minúsculas',
+                    'to_integer' => 'Convertir a entero',
+                    'to_float' => 'Convertir a decimal',
+                    'to_boolean' => 'Convertir a booleano (1/0)'
+                ];
+                
+                // Renderizar la vista parcial para la fila de mapeo de artículos
+                $html = view('customers.partials.article_field_mappings', [
+                    'index' => $index,
+                    'articleStandardFields' => $standardFields,
                     'transformationOptions' => $transformationOptions,
                     'mapping' => null
                 ])->render();
