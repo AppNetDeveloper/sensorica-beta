@@ -294,6 +294,147 @@ Sensorica utiliza Supervisor para gestionar y mantener en ejecución una serie d
 
 Todos estos comandos son gestionados por Supervisor, que garantiza su ejecución continua, reinicio automático en caso de fallo, y registro adecuado de su actividad en archivos de log dedicados. La configuración de cada comando se encuentra en archivos `.conf` individuales en el directorio raíz del proyecto.
 
+#### Servidores Node.js
+
+Sensorica implementa varios servidores Node.js especializados que complementan la funcionalidad del backend Laravel, proporcionando capacidades de comunicación en tiempo real, integración con dispositivos industriales y procesamiento de datos.
+
+**1. Servidores MQTT (`sender-mqtt-server1.js` y `sender-mqtt-server2.js`):**
+
+- **Descripción:** Gestionan la comunicación MQTT entre diferentes componentes del sistema, actuando como puentes entre el almacenamiento local y los brokers MQTT.
+- **Características principales:**
+  - **Arquitectura de publicación por lotes:** Procesan archivos JSON almacenados localmente y los publican en brokers MQTT.
+  - **Tolerancia a fallos:** Implementan mecanismos de reconexión automática y manejo de errores.
+  - **Configuración dinámica:** Monitorean y recargan automáticamente cambios en la configuración (.env).
+  - **Procesamiento secuencial:** Garantizan la entrega ordenada de mensajes mediante publicación secuencial.
+  - **Limpieza automática:** Eliminan archivos procesados correctamente para evitar duplicados.
+  - **Registro detallado:** Mantienen logs detallados de todas las operaciones para diagnóstico.
+
+**Flujo de trabajo:**
+
+1. Monitorizan directorios específicos (`../storage/app/mqtt/server1` y `../storage/app/mqtt/server2`).
+2. Procesan archivos JSON encontrados en estos directorios y sus subdirectorios.
+3. Extraen el tópico MQTT y el contenido del mensaje de cada archivo.
+4. Publican los mensajes en los brokers MQTT configurados.
+5. Eliminan los archivos procesados correctamente.
+6. Registran todas las operaciones y errores en logs detallados.
+
+**Diferencias entre servidores:**
+
+- `sender-mqtt-server1.js`: Se conecta al broker MQTT principal (MQTT_SENSORICA_SERVER).
+- `sender-mqtt-server2.js`: Se conecta al broker MQTT secundario (MQTT_SERVER), utilizado para comunicación con sistemas externos.
+
+**2. Transformador de Sensores (`sensor-transformer.js`):**
+
+- **Descripción:** Procesa y transforma datos de sensores industriales para su uso en el sistema.
+- **Características principales:**
+  - **Transformación configurable:** Aplica algoritmos de transformación específicos para cada tipo de sensor.
+  - **Filtrado inteligente:** Elimina lecturas erróneas, duplicadas o fuera de rango.
+  - **Conversión de unidades:** Normaliza las lecturas a unidades estándar del sistema.
+  - **Calibración virtual:** Permite ajustar las lecturas mediante factores de calibración.
+  - **Integración MQTT:** Recibe datos de sensores vía MQTT y publica los datos transformados.
+
+**3. Cliente MQTT para Sensores (`client-mqtt-sensors.js`):**
+
+- **Descripción:** Gestiona la comunicación con sensores industriales mediante protocolo MQTT.
+- **Características principales:**
+  - **Descubrimiento automático:** Detecta y configura nuevos sensores conectados a la red.
+  - **Monitoreo en tiempo real:** Supervisa el estado y las lecturas de los sensores.
+  - **Gestión de alarmas:** Detecta y notifica condiciones anormales en los sensores.
+  - **Almacenamiento local:** Guarda temporalmente lecturas cuando la conexión está interrumpida.
+  - **Sincronización:** Actualiza la configuración de sensores desde la base de datos.
+
+**4. Cliente MQTT para RFID (`client-mqtt-rfid.js`):**
+
+- **Descripción:** Gestiona la comunicación con lectores RFID mediante protocolo MQTT.
+- **Características principales:**
+  - **Procesamiento de tags:** Decodifica y procesa datos de tags RFID (EPC, TID, etc.).
+  - **Filtrado de lecturas:** Elimina lecturas duplicadas o no válidas.
+  - **Asociación de tags:** Vincula tags RFID con operarios, productos o ubicaciones.
+  - **Detección de eventos:** Identifica eventos de entrada/salida de zonas de trabajo.
+  - **Integración con API:** Envía datos procesados a la API REST de Sensorica.
+
+**5. Configuración RFID (`config-rfid.js`):**
+
+- **Descripción:** Proporciona configuración centralizada para el sistema RFID.
+- **Características principales:**
+  - **Definición de antenas:** Configura parámetros de antenas RFID (ubicación, potencia, etc.).
+  - **Mapeo de zonas:** Define zonas de trabajo y su asociación con antenas RFID.
+  - **Filtros de tags:** Configura filtros para tipos específicos de tags RFID.
+  - **Parámetros de lectura:** Define intervalos de lectura, potencia y otros parámetros.
+  - **Integración con base de datos:** Sincroniza configuración con la tabla `rfid_ants`.
+
+Estos servidores Node.js son componentes críticos de la arquitectura de Sensorica, proporcionando capacidades de comunicación en tiempo real, procesamiento de datos y integración con dispositivos industriales que complementan el backend Laravel principal.
+
+#### Vistas Blade Principales
+
+Las vistas Blade son componentes fundamentales de la interfaz de usuario de Sensorica, proporcionando interfaces interactivas para la gestión de producción, monitoreo OEE y organización de órdenes. A continuación se detallan las vistas más importantes del sistema.
+
+**1. Organizador de Órdenes (`order-organizer.blade.php`):**
+
+- **Descripción:** Proporciona una vista general de los procesos de producción disponibles para un cliente específico.
+- **Características principales:**
+  - **Agrupación por procesos:** Muestra los procesos disponibles agrupados por categoría.
+  - **Navegación intuitiva:** Permite acceder rápidamente al tablero Kanban de cada proceso.
+  - **Visualización de líneas:** Muestra el número de líneas de producción asociadas a cada proceso.
+  - **Diseño responsive:** Adapta la visualización a diferentes tamaños de pantalla mediante Bootstrap.
+  - **Integración con rutas:** Utiliza rutas nombradas de Laravel para la navegación entre vistas.
+
+**Estructura de la vista:**
+
+- **Cabecera:** Incluye título, migas de pan y navegación contextual.
+- **Tarjetas de procesos:** Cada proceso se muestra como una tarjeta con su descripción y número de líneas.
+- **Botón de acceso:** Enlace directo al tablero Kanban específico de cada proceso.
+
+**2. Tablero Kanban (`order-kanban.blade.php`):**
+
+- **Descripción:** Implementa un sistema Kanban completo para la gestión visual de órdenes de producción.
+- **Características principales:**
+  - **Drag & Drop:** Permite mover órdenes entre columnas mediante interacción drag & drop.
+  - **Columnas dinámicas:** Genera columnas basadas en líneas de producción y estados finales.
+  - **Filtrado avanzado:** Incluye búsqueda en tiempo real por ID de orden, cliente y otros campos.
+  - **Indicadores visuales:** Muestra estados de líneas de producción, prioridad de órdenes y alertas.
+  - **Menús contextuales:** Proporciona acciones rápidas para cada orden y columna.
+  - **Actualización en tiempo real:** Sincroniza el estado del tablero periódicamente con el servidor.
+  - **Modo pantalla completa:** Permite visualizar el tablero en modo pantalla completa.
+
+**Estructura de la vista:**
+
+- **Barra de filtros:** Controles para búsqueda, pantalla completa y navegación.
+- **Tablero Kanban:** Contenedor principal con columnas para cada línea de producción y estados finales.
+- **Tarjetas de órdenes:** Representación visual de cada orden con información relevante.
+- **Leyenda visual:** Explicación de los iconos y colores utilizados en las tarjetas.
+- **Modales:** Interfaces para editar notas, gestionar incidencias y configurar disponibilidad.
+
+**Interacción JavaScript:**
+
+- **Gestión de eventos:** Manejo de eventos de arrastrar y soltar para las tarjetas.
+- **Validación de movimientos:** Lógica para permitir o restringir movimientos según el estado de las órdenes.
+- **Actualización asíncrona:** Comunicación con el servidor mediante AJAX para guardar cambios.
+- **Filtrado en tiempo real:** Búsqueda dinámica sin necesidad de recargar la página.
+- **Gestión de estados:** Manejo del estado de las líneas de producción (activa, pausada, detenida).
+
+**3. Vistas de Monitoreo OEE:**
+
+- **Descripción:** Conjunto de vistas para visualizar y analizar métricas OEE (Overall Equipment Effectiveness).
+- **Características principales:**
+  - **Gráficos interactivos:** Visualización de métricas mediante gráficos circulares y de barras.
+  - **Filtrado por período:** Selección de rangos de fechas para análisis específicos.
+  - **Desglose de métricas:** Visualización detallada de disponibilidad, rendimiento y calidad.
+  - **Comparativa entre líneas:** Análisis comparativo del rendimiento de diferentes líneas de producción.
+  - **Exportación de datos:** Generación de informes en formatos PDF, Excel y CSV.
+
+**4. Vistas de Gestión de Incidencias:**
+
+- **Descripción:** Interfaces para registrar, visualizar y gestionar incidencias en la producción.
+- **Características principales:**
+  - **Listado filtrable:** Tabla de incidencias con filtros por fecha, tipo y estado.
+  - **Detalles completos:** Vista detallada de cada incidencia con información contextual.
+  - **Registro de notas:** Capacidad para añadir notas y seguimiento a cada incidencia.
+  - **Integración con Kanban:** Vinculación directa con el tablero Kanban para visualizar órdenes afectadas.
+  - **Gestión de estados:** Flujo de trabajo para la resolución de incidencias.
+
+Estas vistas Blade constituyen la interfaz principal de Sensorica, proporcionando una experiencia de usuario intuitiva y funcional para la gestión de producción industrial. La combinación de Laravel Blade con JavaScript moderno permite crear interfaces dinámicas y reactivas que facilitan la visualización y manipulación de datos complejos en tiempo real.
+
 ### Gestión de Incidencias
 
 Sistema para el registro y seguimiento de problemas en la producción:
