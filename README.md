@@ -500,6 +500,47 @@ Sistema para el registro y seguimiento de problemas en la producción:
 
 Estas vistas complementan el Kanban y OEE, ofreciendo un panorama operativo con foco en estados y alertas.
 
+### Vistas Blade de Clientes, Líneas y Sensores
+
+- **Clientes (`resources/views/customers/*.blade.php`)**
+  - `index/create/edit`: Gestión CRUD de clientes, navegación hacia organizador/kanban por cliente.
+
+- **Líneas de Producción (`resources/views/modbuses/*.blade.php`, `resources/views/oee/*.blade.php`)**
+  - `modbuses/index/create/edit`: Configuración de endpoints Modbus por línea.
+  - `oee/index/create/edit`: Alta y administración de monitores OEE por línea.
+
+- **Sensores**
+  - Listado/detalle accesible desde breadcrumbs de OEE: `route('sensors.index', ['id' => $production_line_id])`.
+
+Estas pantallas soportan el flujo de alta y configuración técnica de cada centro/línea y su instrumentación (sensores, Modbus, OEE).
+
+### Usuarios, Roles y Permisos
+
+Sensorica usa Spatie Laravel Permission para control de acceso basado en roles/permisos.
+
+- **Modelo de Usuario**: `app/Models/User.php` usa `Spatie\Permission\Traits\HasRoles`.
+- **Configuración**: `config/permission.php` define los modelos `Role` y `Permission`.
+- **Seeders de permisos**:
+  - `database/seeders/DatabaseSeeder.php` (registro genérico de permisos).
+  - `database/seeders/OriginalOrderPermissionsTableSeeder.php` (permisos de órdenes originales).
+  - `database/seeders/ProductionLineProcessesPermissionSeeder.php` (permisos de procesos por línea).
+  - `database/seeders/ProductionLineOrdersKanbanPermissionSeeder.php` (permisos de tablero Kanban).
+  - `database/seeders/WorkCalendarPermissionSeeder.php` (permisos de calendario laboral).
+
+- **Controladores con middleware `permission:`**:
+  - `CustomerOriginalOrderController`: `original-order-list|original-order-create|original-order-edit|original-order-delete`.
+  - `ProcessController`: `process-show|process-create|process-edit|process-delete`.
+  - `ProductionLineProcessController`: `productionline-process-view|create|edit|delete`.
+  - `ProductionOrderIncidentController`: `productionline-orders` (index/show), `productionline-delete` (destroy).
+  - `WorkCalendarController`: `workcalendar-list|create|edit|delete`.
+  - Gestión de roles/permisos: `RoleController` (`manage-role|create-role|edit-role|delete-role`), `PermissionController`, `PermissionManageController`.
+
+- **Patrón de uso**:
+  - Middleware: `->middleware('permission:perm-a|perm-b', ['only' => ['index','show']])`.
+  - Asignación típica: usuarios reciben roles; roles agrupan permisos definidos por los seeders.
+
+Este esquema garantiza control de acceso granular en vistas y endpoints, alineado con los módulos de producción, procesos, Kanban e incidencias.
+
 ## 🔧 Tecnologías Utilizadas
 
 - **Backend**: Laravel (PHP), MySQL/Percona
@@ -703,6 +744,121 @@ El sistema utiliza una base de datos relacional con las siguientes entidades pri
 - **ProductionOrderIncidents**: Registro de incidencias
 - **WorkCalendar**: Calendario laboral para cálculos de producción
 
+### 🔬 Detalle de Modelos y Eventos (Eloquent)
+
+Esta sección documenta los modelos principales, sus campos críticos, relaciones y eventos de ciclo de vida según la implementación actual en `app/Models/`.
+
+#### ProductionOrder (`app/Models/ProductionOrder.php`)
+
+- __Tabla__: `production_orders`
+- __Fillable__: `has_stock`, `production_line_id`, `original_production_line_id`, `barcoder_id`, `order_id`, `json`, `status`, `box`, `units_box`, `number_of_pallets`, `units`, `orden`, `theoretical_time`, `accumulated_time`, `process_category`, `delivery_date`, `customerId`, `original_order_id`, `original_order_process_id`, `grupo_numero`, `processes_to_do`, `processes_done`, `is_priority`, `finished_at`, `fecha_pedido_erp`, `estimated_start_datetime`, `estimated_end_datetime`, `note`
+- __Casts__: `json: array`, `processed: boolean`, `orden: integer`, `delivery_date: datetime`, `status: integer`, `theoretical_time: float`, `is_priority: boolean`, `finished_at: datetime`, `fecha_pedido_erp: datetime`, `estimated_start_datetime: datetime`, `estimated_end_datetime: datetime`
+- __Relaciones__:
+  - `originalOrder()` → `belongsTo(OriginalOrder, original_order_id)`
+  - `originalOrderProcess()` → `belongsTo(OriginalOrderProcess, original_order_process_id)`
+  - `productionLine()` → `belongsTo(ProductionLine)`
+  - `originalProductionLine()` → `belongsTo(ProductionLine, original_production_line_id)`
+  - `barcode()` → `belongsTo(Barcode)`
+  - `barcodeScans()` → `hasMany(BarcodeScan)`
+- __Eventos__:
+  - `creating`:
+    - Calcula `orden` incremental por `production_line_id`.
+    - Establece `status = 0` si viene nulo.
+    - Si existe una orden con mismo `order_id` y misma `production_line_id`, la archiva modificando su `order_id` a `order_id-<process_category>-<grupo_numero>` y guarda.
+  - `saving`:
+    - Si `status` cambia a 2 y `finished_at` está vacío, asigna `finished_at = now()`.
+    - Si cambia `production_line_id`, busca `Barcode` de esa línea y asigna `barcoder_id` (loggea cuando no encuentra).
+  - `saved`:
+    - Si `status` cambió y es 2, marca el `OriginalOrderProcess` relacionado como finalizado (`finished = 1`, `finished_at = now()`).
+
+Estados Kanban utilizados: `status = 0 (Pendiente)`, `1 (En proceso)`, `2 (Finalizada)`, `3 (Incidencia)`.
+
+#### OriginalOrder (`app/Models/OriginalOrder.php`)
+
+- __Fillable__: `order_id`, `customer_id`, `client_number`, `order_details`, `processed`, `finished_at`, `delivery_date`, `in_stock`, `fecha_pedido_erp`
+- __Casts__: `order_details: json`, `processed: boolean`, `finished_at: datetime`
+- __Relaciones__:
+  - `processes()` → `belongsToMany(Process, 'original_order_processes')` usando pivot `OriginalOrderProcess` con `pivot: id, time, created, finished, finished_at, grupo_numero`
+  - `customer()` → `belongsTo(Customer)`
+  - `articles()` → `hasManyThrough(OriginalOrderArticle, OriginalOrderProcess, ...)`
+  - `orderProcesses()` / `originalOrderProcesses()` → `hasMany(OriginalOrderProcess)`
+  - `productionOrders()` → `hasMany(ProductionOrder)`
+- __Lógica clave__:
+  - `allProcessesFinished()` comprueba si todos los pivots están `finished = true`.
+  - `updateInStockStatus()` establece `in_stock` a 0 si algún proceso tiene `in_stock = 0`, o 1 si todos son 1.
+  - `updateFinishedStatus()` fija/borra `finished_at` según resultado de `allProcessesFinished()`, usando `saveQuietly()` para evitar eventos recursivos.
+
+#### OriginalOrderProcess (`app/Models/OriginalOrderProcess.php`)
+
+- __Extiende__: `Pivot` (tabla `original_order_processes`)
+- __Fillable__: `original_order_id`, `process_id`, `time`, `box`, `units_box`, `number_of_pallets`, `created`, `finished`, `finished_at`, `grupo_numero`, `in_stock`
+- __Casts__: `time: decimal:2`, `box: integer`, `units_box: integer`, `number_of_pallets: integer`, `created: boolean`, `finished: boolean`, `finished_at: datetime`, `in_stock: integer`
+- __Relaciones__:
+  - `articles()` → `hasMany(OriginalOrderArticle, 'original_order_process_id')`
+  - `originalOrder()` → `belongsTo(OriginalOrder, 'original_order_id')`
+  - `process()` → `belongsTo(Process)`
+  - `productionOrders()` → `hasMany(ProductionOrder, 'original_order_process_id')`
+- __Eventos__:
+  - `saving`: si `finished` cambia, sincroniza `finished_at`. Si `in_stock` cambia en creación, precarga `articles`.
+  - `saved`: actualiza primero su propio `in_stock` en base a artículos (`updateStockStatus()`), luego:
+    - `originalOrder?->updateFinishedStatus()`
+    - `originalOrder?->updateInStockStatus()`
+
+#### Process (`app/Models/Process.php`)
+
+- __Fillable__: `code`, `name`, `sequence`, `description`, `factor_correccion` (cast `decimal:2`, default 1.00)
+- __Relaciones__:
+  - `productionLines()` → `belongsToMany(ProductionLine)` con `order` en pivot
+  - `nextProcess()` / `previousProcess()` por `sequence`
+
+#### ProductionLine (`app/Models/ProductionLine.php`)
+
+- __Fillable__: `customer_id`, `name`, `token`
+- __Relaciones__:
+  - `processes()` → `belongsToMany(Process)` con `order` en pivot
+  - `customer()` → `belongsTo(Customer)`
+  - `barcodes()` → `hasMany(Barcode)`
+  - `sensors()` → `hasMany(Sensor, 'production_line_id')`
+  - `orderStats()` → `hasMany(OrderStat, 'production_line_id')`
+  - `lastShiftHistory()` → `hasOne(ShiftHistory)->latest()`
+  - `barcodeScans()` → `hasMany(BarcodeScan)`
+
+#### Operator (`app/Models/Operator.php`)
+
+- __Fillable__: `client_id`, `name`, `password`, `email`, `phone`, `count_shift`, `count_order`
+- __Hidden__: `password`
+- __Relaciones__:
+  - `client()` → `belongsTo(Client)`
+  - `operatorPosts()` → `hasMany(OperatorPost, 'operator_id')`
+  - `shiftHistories()` → `hasMany(ShiftHistory, 'operator_id')`
+  - `barcodeScans()` → `hasMany(BarcodeScan)`
+  - `orderStats()` → `belongsToMany(OrderStat, 'order_stats_operators')` con pivote `shift_history_id`, `time_spent`, `notes`
+
+#### OrderStat (`app/Models/OrderStat.php`)
+
+- __Tabla__: `order_stats`
+- __Fillable__: métricas de producción y peso por orden/turno/línea (p. ej. `production_line_id`, `order_id`, `units`, `oee`, `weights_*`, etc.)
+- __Relaciones__:
+  - `productionLine()` → `belongsTo(ProductionLine)`
+  - `productList()` → `belongsTo(ProductList)`
+  - `operators()` / `shiftHistories()` → `belongsToMany` vía `order_stats_operators`
+  - `orderStatOperators()` → `hasMany(OrderStatOperator)`
+
+#### MonitorOee (`app/Models/MonitorOee.php`)
+
+- __Fillable__: `production_line_id`, `sensor_active`, `modbus_active`, `mqtt_topic`, `mqtt_topic2`, `topic_oee`, `time_start_shift`
+- __Relaciones__: `productionLine()`, `sensor()`, `modbus()`
+- __Eventos__: en `updating`, `created`, `deleted` llama a `restartSupervisor()` (ejecuta `sudo supervisorctl restart all` y registra en el canal `supervisor`).
+
+#### Sensor (`app/Models/Sensor.php`)
+
+- __Fillable__: campos de configuración del sensor (tópicos MQTT, contadores, parámetros de corrección, etc.)
+- __Relaciones__: `productionLine()`, `controlWeights()`, `controlHeights()`, `modbuses()`, `barcoder()`, `sensorCounts()`, `productList()`, `history()`
+- __Eventos__:
+  - `creating`: genera `token` único (`Str::uuid()`).
+  - `updating`/`deleted`: si cambian `mqtt_topic_sensor`/`mqtt_topic_1` o se elimina, llama a `restartSupervisor()`.
+  - `restartSupervisor()` usa `sudo supervisorctl restart all` con logs en canal `supervisor`.
+
 ## ⚙️ Servicios en Segundo Plano
 
 ## 🔄 Servicios en Segundo Plano
@@ -828,10 +984,102 @@ Sensorica incluye un sistema de notificaciones vía WhatsApp para mantener infor
 - **Plantillas de Mensajes**: Mensajes predefinidos para diferentes tipos de eventos.
 - **Programación de Envíos**: Configuración de horarios para envío automático de informes.
 
+### 📚 Inventario Completo (Archivos Reales)
+
+A continuación se listan los archivos reales detectados en el repositorio para trazabilidad directa.
+
+#### Comandos Artisan (app/Console/Commands/)
+
+- CalculateOptimalProductionTime.php
+- CalculateProductionDowntime.php
+- CalculateProductionMonitorOee.php
+- CalculateProductionMonitorOeev2.php
+- CheckBluetoothExit.php
+- CheckHostMonitor.php
+- CheckOrdersFromApi.php
+- CheckShiftList.php
+- ClearOldRecords.php
+- ConnectWhatsApp.php
+- FinalizeOperatorPosts.php
+- ListStockOrdersCommand.php
+- MonitorConnections.php
+- MqttShiftSubscriber.php
+- MqttSubscriber.php
+- MqttSubscriberLocal.php
+- MqttSubscriberLocalMac.php
+- PublishOrderStatsCommand.php
+- ReadBluetoothReadings.php
+- ReadModbuBackup.php
+- ReadModbus.php
+- ReadModbusGroup.php
+- ReadRfidReadings.php
+- ReadSensors.php
+- ReplicateDatabaseNightly.php
+- ResetWeeklyCounts.php
+- TcpClient.php
+- TcpClientLocal.php
+- UpdateAccumulatedTimes.php
+
+#### Archivos Supervisor (.conf en raíz del proyecto)
+
+- laravel-auto-finish-operator-post.conf
+- laravel-calculate-optimal-production-time.conf
+- laravel-calculate-production-downtime.conf
+- laravel-check-bluetooth.conf
+- laravel-clear-db.conf
+- laravel-connect-whatsapp.conf
+- laravel-control-antena-rfid.conf
+- laravel-created-production-orders.conf
+- laravel-modbus-subscriber.conf
+- laravel-modbus-web-8001.conf
+- laravel-monitor-oee.conf
+- laravel-monitor-server.conf
+- laravel-mqtt-rfid-to-api.conf
+- laravel-mqtt-shift-subscriber.conf
+- laravel-mqtt-subscriber-local-ordermac.conf
+- laravel-mqtt-subscriber-local.conf
+- laravel-mqtt_send_server1.conf
+- laravel-orders-check.conf
+- laravel-production-updated-accumulated-times.conf.conf
+- laravel-read-bluetooth.conf
+- laravel-read-rfid.conf
+- laravel-read-sensors.conf
+- laravel-reset-weekly-counts.conf
+- laravel-sensor-transformers.conf
+- laravel-server-check-host-monitor.conf
+- laravel-shift-list.conf
+- laravel-tcp-client-local.conf
+- laravel-tcp-client.conf
+- laravel-tcp-server.conf
+- laravel-telegram-server.conf
+
+Nota: la configuración efectiva suele residir en `/etc/supervisor/conf.d/`, pero estos `.conf` de proyecto documentan los programas y comandos a declarar allí.
+
+#### Servidores Node.js
+
+- node/client-modbus.js
+- node/client-mqtt-rfid.js
+- node/client-mqtt-sensors.js
+- node/config-rfid.js
+- node/connect-whatsapp.js
+- node/mqtt-rfid-to-api.js
+- node/sender-mqtt-server1.js
+- node/sender-mqtt-server2.js
+- node/sensor-transformer.js
+- telegram/telegram.js
+
+Relación con secciones previas:
+- SCADA/Modbus: `node/client-modbus.js`
+- Gateway RFID: `node/mqtt-rfid-to-api.js`, `node/config-rfid.js`, `node/client-mqtt-rfid.js`
+- MQTT publishers: `node/sender-mqtt-server1.js`, `node/sender-mqtt-server2.js`
+- Transformación de sensores: `node/sensor-transformer.js`
+- WhatsApp: `node/connect-whatsapp.js`
+- Telegram: `telegram/telegram.js`
+
 ## 📝 Licencia
 
-Sensorica es un software propietario. Todos los derechos reservados.
+AiXmart es un software propietario. Todos los derechos reservados.
 
 ---
 
-Desarrollado por el equipo de AppNet Developer y Boisolo Y AiXmart 2025
+Desarrollado por el equipo de AppNet Developer, Boisolo Y AiXmart 2025
