@@ -927,6 +927,39 @@ Todos estos servicios se gestionan mediante archivos de configuración en `/etc/
 
 La arquitectura distribuida permite alta disponibilidad y escalabilidad horizontal, con capacidad para procesar miles de eventos por segundo provenientes de sensores industriales.
 
+#### 🧭 Mapa Supervisor → Comando/Script (archivo → programa → ejecución)
+
+- `laravel-auto-finish-operator-post.conf` → `[program:operator-post-finalize]` → `php artisan operator-post:finalize`
+- `laravel-calculate-optimal-production-time.conf` → `[program:calculate_optimal_time]` → `php artisan production:calculate-optimal-time`
+- `laravel-calculate-production-downtime.conf` → `[program:calculate-production-downtime]` → `php artisan production:calculate-production-downtime`
+- `laravel-check-bluetooth.conf` → `[program:laravel-bluetooth-check-exit]` → `php artisan bluetooth:check-exit`
+- `laravel-clear-db.conf` → `[program:clear-old-records]` → `php artisan clear:old-records`
+- `laravel-connect-whatsapp.conf` → `[program:connect-whatsapp]` → `node node/connect-whatsapp.js` (dir: `node/`, user: root)
+- `laravel-control-antena-rfid.conf` → `[program:laravel-config-rfid-antena]` → `node node/config-rfid.js` (dir: `node/`)
+- `laravel-created-production-orders.conf` → `[program:laravel-created-production-orders]` → bucle `orders:list-stock` cada 60 s
+- `laravel-modbus-subscriber.conf` → `[program:laravel-modbus-subscriber]` → `node node/client-modbus.js` (dir: `node/`)
+- `laravel-modbus-web-8001.conf` → `[program:modbus-web.8001]` → `python3 modbus-web-8001.py`
+- `laravel-monitor-oee.conf` → `[program:calculate-monitor-oee]` → `php artisan production:calculate-monitor-oee`
+- `laravel-monitor-server.conf` → `[program:servermonitor]` → `python3 servermonitor.py`
+- `laravel-mqtt-rfid-to-api.conf` → `[program:laravel-mqtt-rfid-to-api]` → `node node/mqtt-rfid-to-api.js` (dir: `node/`)
+- `laravel-mqtt-shift-subscriber.conf` → `[program:laravel-shift-subscriber]` → `php artisan mqtt:shiftsubscribe`
+- `laravel-mqtt-subscriber-local-ordermac.conf` → `[program:subscribe-local-ordermac]` → `php artisan mqtt:subscribe-local-ordermac`
+- `laravel-mqtt-subscriber-local.conf` → `[program:subscribe-local]` → `php artisan mqtt:subscribe-local`
+- `laravel-mqtt_send_server1.conf` → `[program:laravel-mqtt-sendserver1]` → `node node/sender-mqtt-server1.js` (dir: `node/`)
+- `laravel-orders-check.conf` → `[program:laravel-orders-check]` → bucle `orders:check` cada 1800 s (30 min)
+- `laravel-production-updated-accumulated-times.conf.conf` → `[program:laravel-production-update-accumulated-times]` → bucle `production:update-accumulated-times` cada 60 s
+- `laravel-read-bluetooth.conf` → `[program:laravel-read-bluetooth]` → `php artisan bluetooth:read`
+- `laravel-read-rfid.conf` → `[program:laravel-read-rfid]` → `node node/client-mqtt-rfid.js` (dir: `node/`)
+- `laravel-read-sensors.conf` → `[program:laravel-read-sensors]` → `node node/client-mqtt-sensors.js` (dir: `node/`)
+- `laravel-reset-weekly-counts.conf` → `[program:reset-weekly-counts]` → `php artisan reset:weekly-counts`
+- `laravel-sensor-transformers.conf` → `[program:laravel-sensor-transformers]` → `node node/sensor-transformer.js` (dir: `node/`)
+- `laravel-server-check-host-monitor.conf` → `[program:check_host_monitor]` → `php artisan hostmonitor:check`
+- `laravel-shift-list.conf` → `[program:laravel-shift-list]` → `php artisan shift:check`
+- `laravel-tcp-client-local.conf` → `[program:laravel-tcp-client-local]` → `php artisan tcp:client-local`
+- `laravel-tcp-client.conf` → `[program:laravel-tcp-client]` → `php artisan tcp:client`
+- `laravel-tcp-server.conf` → `[program:tcp-server]` → `python3 tcp-server.py`
+- `laravel-telegram-server.conf` → `[program:connect-telegram-server]` → `node telegram/telegram.js` (dir: `telegram/`, user: root)
+
 ## 📱 Sistemas Especializados
 
 Sensorica integra varios sistemas especializados para cubrir necesidades específicas de entornos industriales:
