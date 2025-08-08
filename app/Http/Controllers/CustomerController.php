@@ -22,8 +22,12 @@ class CustomerController extends Controller
         // Construye la consulta base para los clientes
         $query = Customer::query();
 
-        // Usa DataTables para procesar la consulta y añadir la columna de acción
+        // Usa DataTables para procesar la consulta y añadir las columnas adicionales
         return DataTables::of($query)
+            ->addColumn('checkbox', function($customer) {
+                // Esta columna se renderiza en el cliente con JavaScript
+                return '';
+            })
             ->addColumn('action', function ($customer) {
                 // URLs para las diferentes acciones
                 $editUrl = route('customers.edit', $customer->id);
@@ -117,6 +121,47 @@ class CustomerController extends Controller
     {
         $customers = Customer::all();
         dd($customers); 
+    }
+    
+    /**
+     * Eliminar múltiples clientes seleccionados
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function bulkDelete(Request $request)
+    {
+        try {
+            $ids = $request->ids;
+            
+            // Verificar si hay IDs válidos
+            if (!$ids || !is_array($ids) || count($ids) === 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('No customers selected for deletion')
+                ], 400);
+            }
+            
+            // Eliminar los clientes seleccionados
+            $deleted = Customer::whereIn('id', $ids)->delete();
+            
+            if ($deleted) {
+                return response()->json([
+                    'success' => true,
+                    'message' => __(':count customers have been deleted successfully', ['count' => count($ids)])
+                ]);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('Failed to delete customers')
+                ], 500);
+            }
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
     
     /**

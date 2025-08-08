@@ -73,6 +73,12 @@ Auth::routes();
 
 Route::get('/debug', [DebugController::class, 'index']);
 
+// Ruta para eliminación masiva de clientes
+Route::post('customers/bulk-delete', [CustomerController::class, 'bulkDelete'])->name('customers.bulk-delete')->middleware(['auth', 'XSS']);
+
+// Ruta para obtener los datos de los clientes (para DataTables)
+Route::get('customers/getCustomers', [CustomerController::class, 'getCustomers'])->name('customers.getCustomers');
+
 // Ruta para mostrar el formulario de edición
 Route::get('customers/{id}/edit', [CustomerController::class, 'edit'])->name('customers.edit');
 
@@ -82,9 +88,6 @@ Route::put('customers/{id}', [CustomerController::class, 'update'])->name('custo
 // Ruta para eliminar el cliente
 Route::delete('customers/{id}', [CustomerController::class, 'destroy'])->name('customers.destroy');
 
-// Ruta para obtener los datos de los clientes (para DataTables)
-Route::get('customers/getCustomers', [CustomerController::class, 'getCustomers'])->name('customers.getCustomers');
-
 // Ruta para la página principal de clientes
 Route::get('customers', [CustomerController::class, 'index'])->name('customers.index');
 Route::resource('customers', CustomerController::class)->except(['edit', 'update', 'destroy']);
@@ -92,6 +95,7 @@ Route::resource('customers', CustomerController::class)->except(['edit', 'update
 // Customer Original Orders
 Route::post('customers/{customer}/original-orders/import', [CustomerOriginalOrderController::class, 'import'])->name('customers.original-orders.import');
 Route::post('customers/{customer}/original-orders/create-cards', [CustomerOriginalOrderController::class, 'createCards'])->name('customers.original-orders.create-cards');
+Route::post('customers/{customer}/original-orders/bulk-delete', [CustomerOriginalOrderController::class, 'bulkDelete'])->name('customers.original-orders.bulk-delete')->middleware(['auth', 'XSS']);
 Route::resource('customers.original-orders', CustomerOriginalOrderController::class)->except(['edit', 'update']);
 
 // Ruta para obtener el HTML de una fila de mapeo de campos

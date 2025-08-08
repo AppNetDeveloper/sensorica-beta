@@ -20,7 +20,49 @@ class CustomerOriginalOrderController extends Controller
         $this->middleware('permission:original-order-list|original-order-create|original-order-edit|original-order-delete', ['only' => ['index', 'show']]);
         $this->middleware('permission:original-order-create', ['only' => ['create', 'store']]);
         $this->middleware('permission:original-order-edit', ['only' => ['edit', 'update']]);
-        $this->middleware('permission:original-order-delete', ['only' => ['destroy']]);
+        $this->middleware('permission:original-order-delete', ['only' => ['destroy', 'bulkDelete']]);
+    }
+
+    /**
+     * Eliminar múltiples órdenes originales
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \App\Models\Customer  $customer
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function bulkDelete(Request $request, Customer $customer)
+    {
+        try {
+            $ids = $request->ids;
+            if (!$ids || !is_array($ids) || count($ids) === 0) {
+                return response()->json(['success' => false, 'message' => __('No hay órdenes seleccionadas para eliminar')], 400);
+            }
+            
+            // Verificar que las órdenes pertenezcan al cliente actual
+            $count = OriginalOrder::where('customer_id', $customer->id)
+                ->whereIn('id', $ids)
+                ->count();
+                
+            if ($count !== count($ids)) {
+                return response()->json(['success' => false, 'message' => __('Algunas órdenes seleccionadas no pertenecen a este cliente')], 400);
+            }
+            
+            // Eliminar órdenes y sus relaciones (procesos, artículos, etc.)
+            $deleted = OriginalOrder::where('customer_id', $customer->id)
+                ->whereIn('id', $ids)
+                ->delete();
+                
+            if ($deleted) {
+                return response()->json([
+                    'success' => true, 
+                    'message' => __(':count órdenes han sido eliminadas correctamente', ['count' => count($ids)])
+                ]);
+            } else {
+                return response()->json(['success' => false, 'message' => __('Error al eliminar las órdenes')], 500);
+            }
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
     }
 
     public function import(Request $request, Customer $customer)
@@ -291,6 +333,8 @@ class CustomerOriginalOrderController extends Controller
                 }
                 
                 $data[] = [
+                    'id' => $order->id,
+                    'checkbox' => '', // Campo vacío para la columna checkbox (se renderiza con el ID)
                     'DT_RowIndex' => $start + $index + 1,
                     'order_id' => $order->order_id,
                     'client_number' => $order->client_number,

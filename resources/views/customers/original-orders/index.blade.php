@@ -29,6 +29,11 @@
                             </select>
                         </div>
                         <div>
+                            @can('original-order-delete')
+                            <button id="bulk-delete" class="btn btn-danger btn-sm d-none me-2">
+                                <i class="fas fa-trash me-1"></i> {{ __('Delete Selected') }}
+                            </button>
+                            @endcan
                             @can('original-order-create')
                             <a href="#" id="import-orders-btn" class="btn btn-outline-success btn-sm me-2">
                                 <i class="fas fa-sync-alt"></i> @lang('Importar ahora')
@@ -71,6 +76,13 @@
                         <table id="original-orders-table" class="table table-striped table-hover" style="width: 100%;">
                             <thead class="table-light">
                                 <tr>
+                                    @can('original-order-delete')
+                                    <th>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="select-all">
+                                        </div>
+                                    </th>
+                                    @endcan
                                     <th>#</th>
                                     <th class="text-uppercase">@lang('ORDER ID')</th>
                                     <th class="text-uppercase">@lang('CLIENT NUMBER')</th>
@@ -204,6 +216,7 @@
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.bootstrap5.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         $(document).ready(function() {
             
@@ -231,6 +244,18 @@
                         }
                     },
                     columns: [
+                        @can('original-order-delete')
+                        {
+                            data: null,
+                            name: null,
+                            orderable: false,
+                            searchable: false,
+                            width: '5%',
+                            render: function (data, type, row) {
+                                return '<div class="form-check"><input type="checkbox" class="form-check-input row-checkbox" value="' + row.id + '"></div>';
+                            }
+                        },
+                        @endcan
                         {data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false},
                         {data: 'order_id', name: 'order_id'},
                         {data: 'client_number', name: 'client_number'},
@@ -266,6 +291,112 @@
             // Inicializar DataTable
             initDataTable();
             initTooltips();
+            
+            // Funcionalidad de selección masiva
+            $(document).on('change', '#select-all', function() {
+                $('.row-checkbox').prop('checked', $(this).prop('checked'));
+                updateBulkDeleteButton();
+            });
+            
+            $(document).on('change', '.row-checkbox', function() {
+                updateBulkDeleteButton();
+                
+                // Si se deselecciona alguna fila, desmarcar el checkbox "seleccionar todos"
+                if (!$(this).prop('checked')) {
+                    $('#select-all').prop('checked', false);
+                } else {
+                    // Si todas las filas están seleccionadas, marcar el checkbox "seleccionar todos"
+                    if ($('.row-checkbox:checked').length === $('.row-checkbox').length) {
+                        $('#select-all').prop('checked', true);
+                    }
+                }
+            });
+            
+            // Función para actualizar la visibilidad del botón de eliminación masiva
+            function updateBulkDeleteButton() {
+                const selectedCount = $('.row-checkbox:checked').length;
+                if (selectedCount > 0) {
+                    $('#bulk-delete').removeClass('d-none').text(`{{ __('Delete Selected') }} (${selectedCount})`);
+                } else {
+                    $('#bulk-delete').addClass('d-none');
+                }
+            }
+            
+            // Manejar clic en el botón de eliminación masiva
+            $('#bulk-delete').on('click', function() {
+                const selectedIds = [];
+                $('.row-checkbox:checked').each(function() {
+                    selectedIds.push($(this).val());
+                });
+                
+                if (selectedIds.length === 0) {
+                    return;
+                }
+                
+                // Mostrar confirmación con SweetAlert2
+                Swal.fire({
+                    title: '{{ __('Are you sure?') }}',
+                    text: selectedIds.length === 1 
+                        ? '{{ __('You will not be able to recover this order!') }}' 
+                        : '{{ __('You will not be able to recover these :count orders!', ['count' => '']) }}' + selectedIds.length,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: '{{ __('Yes, delete it!') }}',
+                    cancelButtonText: '{{ __('No, cancel!') }}',
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // Realizar la eliminación mediante AJAX
+                        $.ajax({
+                            url: '{{ route("customers.original-orders.bulk-delete", $customer->id) }}',
+                            type: 'POST',
+                            data: {
+                                _token: '{{ csrf_token() }}',
+                                ids: selectedIds
+                            },
+                            success: function(response) {
+                                if (response.success) {
+                                    // Mostrar mensaje de éxito
+                                    Swal.fire(
+                                        '{{ __('Deleted!') }}',
+                                        response.message,
+                                        'success'
+                                    );
+                                    
+                                    // Recargar la tabla
+                                    dataTable.ajax.reload();
+                                    
+                                    // Resetear el checkbox "seleccionar todos"
+                                    $('#select-all').prop('checked', false);
+                                    
+                                    // Actualizar el botón de eliminación masiva
+                                    updateBulkDeleteButton();
+                                } else {
+                                    // Mostrar mensaje de error
+                                    Swal.fire(
+                                        '{{ __('Error!') }}',
+                                        response.message,
+                                        'error'
+                                    );
+                                }
+                            },
+                            error: function(xhr) {
+                                // Mostrar mensaje de error
+                                const errorMsg = xhr.responseJSON && xhr.responseJSON.message 
+                                    ? xhr.responseJSON.message 
+                                    : '{{ __('An error occurred during deletion.') }}';
+                                    
+                                Swal.fire(
+                                    '{{ __('Error!') }}',
+                                    errorMsg,
+                                    'error'
+                                );
+                            }
+                        });
+                    }
+                });
+            });
             
             // Filtro por estado de pedido (server-side)
             $('#order-status-filter').on('change', function() {

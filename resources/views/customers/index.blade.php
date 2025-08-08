@@ -10,13 +10,23 @@
 @section('content')
     <div class="row">
         <div class="col-lg-12">
-            <div class="mb-3">
-                {{-- Botón para añadir clientes con un icono --}}
-                @can('productionline-create')
-                    <a href="{{ route('customers.create') }}" class="btn btn-primary">
-                        <i class="fas fa-plus me-1"></i> {{ __('Add Customers') }}
-                    </a>
-                @endcan
+            <div class="mb-3 d-flex justify-content-between">
+                <div>
+                    {{-- Botón para añadir clientes con un icono --}}
+                    @can('productionline-create')
+                        <a href="{{ route('customers.create') }}" class="btn btn-primary">
+                            <i class="fas fa-plus me-1"></i> {{ __('Add Customers') }}
+                        </a>
+                    @endcan
+                </div>
+                <div>
+                    {{-- Botón para eliminar clientes seleccionados --}}
+                    @can('productionline-delete')
+                        <button id="bulk-delete" class="btn btn-danger d-none">
+                            <i class="fas fa-trash me-1"></i> {{ __('Delete Selected') }}
+                        </button>
+                    @endcan
+                </div>
             </div>
             <div class="card">
                 <div class="card-body">
@@ -27,6 +37,13 @@
                             <table class="table table-bordered data-table dt-responsive nowrap" style="width:100%" data-buttons-container=".dt-buttons">
                                 <thead>
                                     <tr>
+                                        @can('productionline-delete')
+                                        <th>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="select-all">
+                                            </div>
+                                        </th>
+                                        @endcan
                                         <th>ID</th>
                                         <th>{{ __('Name') }}</th>
                                         <th>{{ __('Created At') }}</th>
@@ -66,40 +83,45 @@
     {{-- Moment.js para formatear fechas (si aún lo necesitas) --}}
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/locale/es.js"></script> {{-- Locale español --}}
+    {{-- DataTables Buttons --}}
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.bootstrap5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.colVis.min.js"></script>
+    {{-- SweetAlert2 --}}
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-    <script type="text/javascript">
+    <script>
         $(function () {
-            // Inicializar tooltips
-            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-            tooltipTriggerList.map(function (tooltipTriggerEl) {
-                return new bootstrap.Tooltip(tooltipTriggerEl);
-            });
-            
-            // Configura Moment.js al español
-            moment.locale('es');
-
+            // Inicializa DataTables con configuración para botones
             var table = $('.data-table').DataTable({
-                processing: true, // Muestra un indicador de procesamiento
-                serverSide: true, // Habilita el procesamiento del lado del servidor
-                responsive: true, // Habilita la funcionalidad responsive
-                ajax: "/customers/getCustomers", // URL relativa para evitar Mixed Content
+                processing: true,
+                serverSide: true,
+                responsive: true,
+                ajax: "{{ route('customers.getCustomers') }}",
                 columns: [
-                    { 
-                        data: 'id', 
-                        name: 'id',
-                        className: 'text-center',
-                        width: '80px'
+                    @can('productionline-delete')
+                    {
+                        data: 'checkbox',
+                        name: 'checkbox',
+                        orderable: false,
+                        searchable: false,
+                        width: '5%',
+                        render: function (data, type, row) {
+                            return '<div class="form-check"><input type="checkbox" class="form-check-input row-checkbox" value="' + row.id + '"></div>';
+                        }
                     },
-                    { 
-                        data: 'name', 
-                        name: 'name',
-                        className: 'fw-semibold'
-                    },
+                    @endcan
+                    { data: 'id', name: 'id', width: '5%' },
+                    { data: 'name', name: 'name', width: '20%' },
                     { 
                         data: 'created_at', 
                         name: 'created_at',
-                        className: 'text-center',
-                        width: '150px',
+                        width: '15%',
                         render: function(data) {
                             return data ? moment(data).format('LL') : '-';
                         }
@@ -109,29 +131,119 @@
                         name: 'action', 
                         orderable: false, 
                         searchable: false,
-                        className: 'text-center'
+                        className: 'text-center',
+                        width: '55%'
                     }
                 ],
                 columnDefs: [
+                    @can('productionline-delete')
+                    { responsivePriority: 1, targets: 2 }, // Prioridad 1 para el Nombre
+                    { responsivePriority: 2, targets: -1 }, // Prioridad 2 para la última columna (Acciones)
+                    { responsivePriority: 3, targets: 1 }, // Prioridad 3 para ID
+                    { responsivePriority: 4, targets: 3 }, // Prioridad 4 para Fecha
+                    @else
                     { responsivePriority: 1, targets: 1 }, // Prioridad 1 para el Nombre
                     { responsivePriority: 2, targets: -1 }, // Prioridad 2 para la última columna (Acciones)
                     { responsivePriority: 3, targets: 0 }, // Prioridad 3 para ID
                     { responsivePriority: 4, targets: 2 }, // Prioridad 4 para Fecha
+                    @endcan
                     {
                         targets: -1, // Última columna (Acción)
                         render: function (data, type, full, meta) {
                             // Devuelve el HTML que viene del servidor para las acciones
                             return '<div class="d-flex flex-wrap justify-content-center gap-1">' + data + '</div>';
                         }
-                    },
-                    { width: '5%', targets: 0 }, // Ancho para ID
-                    { width: '20%', targets: 1 }, // Ancho para Nombre
-                    { width: '15%', targets: 2 }, // Ancho para Fecha de creación
-                    { width: '60%', targets: 3 }  // Ancho para Actions
+                    }
                 ],
                 language: {
                     url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json" // URL para español
+                },
+                dom: 'Bfrtip',
+                buttons: [
+                    'copy', 'csv', 'excel', 'pdf', 'print'
+                ]
+            });
+            
+            // Coloca los botones en el contenedor especificado
+            table.buttons().container().appendTo('.dt-buttons');
+            
+            // Manejo de selección de checkboxes
+            $('#select-all').on('click', function() {
+                $('.row-checkbox').prop('checked', this.checked);
+                updateBulkDeleteButton();
+            });
+            
+            // Actualizar el estado del botón de eliminación masiva cuando se hace clic en un checkbox individual
+            $(document).on('click', '.row-checkbox', function() {
+                if ($('.row-checkbox:checked').length === $('.row-checkbox').length) {
+                    $('#select-all').prop('checked', true);
+                } else {
+                    $('#select-all').prop('checked', false);
                 }
+                updateBulkDeleteButton();
+            });
+            
+            // Función para actualizar el botón de eliminación masiva
+            function updateBulkDeleteButton() {
+                if ($('.row-checkbox:checked').length > 0) {
+                    $('#bulk-delete').removeClass('d-none');
+                } else {
+                    $('#bulk-delete').addClass('d-none');
+                }
+            }
+            
+            // Manejo del botón de eliminación masiva
+            $('#bulk-delete').on('click', function() {
+                var selectedIds = [];
+                $('.row-checkbox:checked').each(function() {
+                    selectedIds.push($(this).val());
+                });
+                
+                if (selectedIds.length === 0) {
+                    Swal.fire({
+                        title: '{{ __('Error') }}',
+                        text: '{{ __('Please select at least one item to delete') }}',
+                        icon: 'error'
+                    });
+                    return;
+                }
+                
+                Swal.fire({
+                    title: '{{ __('Are you sure?') }}',
+                    text: '{{ __('You will not be able to recover these items!') }}',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: '{{ __('Yes, delete them!') }}',
+                    cancelButtonText: '{{ __('No, cancel!') }}'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: '{{ route('customers.bulk-delete') }}',
+                            type: 'POST',
+                            data: {
+                                ids: selectedIds,
+                                _token: '{{ csrf_token() }}'
+                            },
+                            success: function(response) {
+                                Swal.fire(
+                                    '{{ __('Deleted!') }}',
+                                    response.message,
+                                    'success'
+                                );
+                                table.ajax.reload();
+                                $('#select-all').prop('checked', false);
+                                $('#bulk-delete').addClass('d-none');
+                            },
+                            error: function(xhr) {
+                                Swal.fire(
+                                    '{{ __('Error!') }}',
+                                    xhr.responseJSON.message || '{{ __('Something went wrong!') }}',
+                                    'error'
+                                );
+                            }
+                        });
+                    }
+                });
             });
         });
     </script>
