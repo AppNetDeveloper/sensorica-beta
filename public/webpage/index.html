@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Xmart | Plataforma Industrial de Producción y OEE</title>
+  <meta name="description" content="Xmart: Kanban en tiempo real, OEE, integración con sensores, RFID, Modbus/SCADA, WhatsApp/Telegram y analítica para la industria." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <div class="brand">
+        <div class="logo">Xmart</div>
+        <div class="tag">Industria 4.0</div>
+      </div>
+      <nav class="nav">
+        <a href="#solucion">Solución</a>
+        <a href="#beneficios">Beneficios</a>
+        <a href="#ia">IA</a>
+        <a href="#sectores">Sectores</a>
+        <a href="#casos">Casos de uso</a>
+        <a href="#contacto" class="btn btn-primary">Solicitar presupuesto</a>
+      </nav>
+      <button class="menu-toggle" aria-label="Abrir menú">☰</button>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="container hero-grid">
+      <div class="hero-copy">
+        <h1>La manera más sencilla de controlar tu producción</h1>
+        <p>Xmart te ayuda a planificar, ejecutar y mejorar tu fábrica con un tablero visual y métricas claras. Reduce paradas, aumenta rendimiento y toma decisiones con datos.</p>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="#contacto">Solicitar presupuesto</a>
+          <a class="btn btn-secondary" href="#solucion">Cómo funciona</a>
+        </div>
+        <ul class="trust">
+          <li>Organiza pedidos y órdenes</li>
+          <li>Control de máquinas y operarios</li>
+          <li>Producción en tiempo real</li>
+        </ul>
+      </div>
+      <div class="hero-visual" aria-hidden="true">
+        <div class="card demo">
+          <div class="badge">Realtime</div>
+          <h3>Kanban + OEE</h3>
+          <ul>
+            <li>Drag & Drop seguro</li>
+            <li>Tiempos teóricos y reales</li>
+            <li>Incidencias y notas</li>
+          </ul>
+        </div>
+        <div class="card demo alt">
+          <div class="badge green">IoT</div>
+          <h3>Sensores + RFID</h3>
+          <ul>
+            <li>MQTT de alta carga</li>
+            <li>RFID gateways</li>
+            <li>Modbus/SCADA</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="ia" class="section">
+    <div class="container">
+      <div class="ia-intro">
+        <h2>IA para tu fábrica</h2>
+        <p class="subtitle">Xmart incorpora una capa de inteligencia para organizar órdenes, controlar maquinaria y producción en tiempo real, y avisarte antes de que algo se detenga.</p>
+      </div>
+      
+      <div class="ia-grid">
+        <div class="ia-content">
+          <div class="features-grid">
+            <div class="feature">
+              <h3>Respuestas al instante</h3>
+              <p>Pregunta por pedidos, turnos o líneas y obtén el estado en lenguaje natural.</p>
+            </div>
+            <div class="feature">
+              <h3>Estimaciones</h3>
+              <p>Fechas previstas de finalización por pedido y proceso según el avance real.</p>
+            </div>
+            <div class="feature">
+              <h3>Alertas proactivas</h3>
+              <p>Detección anticipada de retrasos y recomendaciones simples para corregir rumbo.</p>
+            </div>
+            <div class="feature">
+              <h3>Contexto de planta</h3>
+              <p>Entiende tus órdenes, máquinas, operarios y prioridades actuales.</p>
+            </div>
+          </div>
+
+          <div class="stats-grid">
+            <div class="stat-card"><div class="value">-18%</div><div class="label">Paradas no planificadas</div></div>
+            <div class="stat-card"><div class="value">+12%</div><div class="label">Cumplimiento de plazos</div></div>
+            <div class="stat-card"><div class="value">-9%</div><div class="label">Retrabajos</div></div>
+            <div class="stat-card"><div class="value">+8 pts</div><div class="label">OEE medio</div></div>
+          </div>
+
+          <div class="feature-list">
+            <div class="feature-item"><span class="dot"></span><div>Organización inteligente de órdenes y prioridades por carga y turno.</div></div>
+            <div class="feature-item"><span class="dot"></span><div>Control de maquinaria con señales, sensores y estados (disponible, parada, ciclo).</div></div>
+            <div class="feature-item"><span class="dot"></span><div>Producción en tiempo real con KPIs y comparación vs objetivo.</div></div>
+            <div class="feature-item"><span class="dot"></span><div>Avisos multicanal: tablero, email, WhatsApp y Telegram.</div></div>
+            <div class="feature-item"><span class="dot"></span><div>Predicción de tiempos por pedido y proceso basada en histórico y contexto.</div></div>
+            <div class="feature-item"><span class="dot"></span><div>Consultas en lenguaje natural sobre pedidos, líneas, operarios y OEE.</div></div>
+          </div>
+
+          <div class="accordion">
+            <div class="acc-item open">
+              <div class="acc-header">¿Qué datos utiliza la IA?</div>
+              <div class="acc-content">Órdenes, procesos, estados de máquina, sensores (peso, RFID, dosificación), OEE, turnos y tiempos reales. Solo usa tus propios datos de planta.</div>
+            </div>
+            <div class="acc-item">
+              <div class="acc-header">¿Cómo calcula las estimaciones?</div>
+              <div class="acc-content">Combina el rendimiento actual, el histórico de procesos similares, la disponibilidad de equipos/operarios y la carga planificada para proyectar fechas probables de finalización.</div>
+            </div>
+            <div class="acc-item">
+              <div class="acc-header">Privacidad y control</div>
+              <div class="acc-content">Tus datos se procesan con fines operativos. Controles de acceso por rol y registro de auditoría. Integraciones cifradas con tus sistemas.</div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="ia-demo">
+          <div class="chat-container">
+            <div class="chat-header">
+              <div class="chat-title">Asistente IA</div>
+              <div class="chat-status">En línea</div>
+            </div>
+            <div class="chat">
+              <div class="chat-msg chat-user">
+                <div class="bubble">¿Cuándo se terminará el pedido PO-1234?</div>
+                <span>Jefe de planta</span>
+              </div>
+              <div class="chat-msg chat-ai">
+                <div class="bubble">Estimación: hoy a las 16:40. Quedan 2 procesos y el ritmo actual supera el objetivo por 6%.</div>
+                <span>Xmart · IA</span>
+              </div>
+              <div class="chat-msg chat-user">
+                <div class="bubble">¿Algún riesgo en la Línea 2 ahora?</div>
+                <span>Jefe de planta</span>
+              </div>
+              <div class="chat-msg chat-ai">
+                <div class="bubble">Riesgo medio: paradas intermitentes en Dosificación. Recomiendo reasignar 1 operario 30 min.</div>
+                <span>Xmart · IA</span>
+              </div>
+              <div class="chat-msg chat-user">
+                <div class="bubble">Avísame si el OEE baja del 75% en el turno de tarde.</div>
+                <span>Jefe de planta</span>
+              </div>
+              <div class="chat-msg chat-ai">
+                <div class="bubble">Hecho. Te avisaré por WhatsApp y en el tablero.</div>
+                <span>Xmart · IA</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="ia-footer">
+        <div class="partner-badge">
+          <div class="partner-label">TECNOLOGÍA DE</div>
+          <a href="https://www.appnet.dev" target="_blank" rel="noopener" class="partner-link">AppNet Developer</a>
+        </div>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="#contacto">Preguntar a la IA</a>
+          <a class="btn btn-secondary" href="#solucion">Ver cómo funciona</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="por-que" class="section alt">
+    <div class="container">
+      <h2>¿Por qué Xmart?</h2>
+      <div class="features-grid">
+        <div class="feature">
+          <h3>Ahorra tiempo</h3>
+          <p>Menos llamadas y papel. Un mismo tablero al que todos acceden.</p>
+        </div>
+        <div class="feature">
+          <h3>Reduce paradas</h3>
+          <p>Prioridades claras y alertas tempranas para actuar a tiempo.</p>
+        </div>
+        <div class="feature">
+          <h3>Mejora calidad</h3>
+          <p>Incidencias visibles, responsable asignado y seguimiento.</p>
+        </div>
+        <div class="feature">
+          <h3>Equipo alineado</h3>
+          <p>Producción, ingeniería y dirección mirando los mismos objetivos.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="testimonios" class="section">
+    <div class="container">
+      <h2>Lo que dicen nuestros clientes</h2>
+      <div class="cards">
+        <div class="card2">
+          <p>“Pasamos de gestionar por WhatsApp a tener todo en un tablero. Las paradas bajaron y cumplimos fechas.”</p>
+          <small>Director de Operaciones, Textil</small>
+        </div>
+        <div class="card2">
+          <p>“Los turnos ven objetivos claros y cada día medimos igual. Las discusiones se convierten en acciones.”</p>
+          <small>Jefe de Planta, Alimentación</small>
+        </div>
+        <div class="card2">
+          <p>“Integrar puestos y pesajes fue sencillo. Ahora sabemos dónde mejorar sin adivinar.”</p>
+          <small>Responsable de Mejora Continua, Químico</small>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq" class="section alt">
+    <div class="container">
+      <h2>Preguntas frecuentes</h2>
+      <div class="faq">
+        <details>
+          <summary>¿En cuánto tiempo podemos arrancar?</summary>
+          <p>Normalmente en semanas. Empezamos por una línea piloto y escalamos.</p>
+        </details>
+        <details>
+          <summary>¿Necesito cambiar mis sistemas?</summary>
+          <p>No. Nos adaptamos a tu forma de trabajar y datos actuales.</p>
+        </details>
+        <details>
+          <summary>¿Hay formación para el equipo?</summary>
+          <p>Sí, acompañamos el despliegue y la adopción con sesiones prácticas.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <section id="planes" class="section cta">
+    <div class="container cta-inner">
+      <h2>Planes a tu medida</h2>
+      <p>Cuéntanos tu tamaño y necesidades. Preparamos una propuesta clara y escalable.</p>
+      <div class="form-actions">
+        <a class="btn btn-light" href="#contacto">Solicitar presupuesto</a>
+        <a class="btn btn-secondary" href="#solucion">Ver cómo funciona</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="solucion" class="section">
+    <div class="container">
+      <h2>¿Qué hace Xmart por tu fábrica?</h2>
+      <div class="features-grid">
+        <div class="feature">
+          <h3>Organizador de pedidos</h3>
+          <p>Prioriza pedidos por cliente y fecha. Visualiza el flujo y evita cuellos de botella.</p>
+        </div>
+        <div class="feature">
+          <h3>Órdenes de trabajo</h3>
+          <p>Desglosa por procesos y líneas. Arrastra tareas y comunica cambios al instante.</p>
+        </div>
+        <div class="feature">
+          <h3>Control de máquinas</h3>
+          <p>Supervisa estado y tiempos. Detecta paradas y actúa rápido.</p>
+        </div>
+        <div class="feature">
+          <h3>Gestión de operarios</h3>
+          <p>Asigna puestos y turnos. Claridad para todos, sin fricción.</p>
+        </div>
+        <div class="feature">
+          <h3>Producción en tiempo real</h3>
+          <p>Tablero vivo en planta para decidir con información actualizada.</p>
+        </div>
+        <div class="feature">
+          <h3>Sistema RFID</h3>
+          <p>Trazabilidad simple por colores y registros de paso.</p>
+        </div>
+        <div class="feature">
+          <h3>Control de producción</h3>
+          <p>Objetivos, avances y cumplimiento por turno y por orden.</p>
+        </div>
+        <div class="feature">
+          <h3>Dosificación y básculas</h3>
+          <p>Confianza en los pesos y la mezcla. Evita retrabajos.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="indicadores" class="section">
+    <div class="container">
+      <h2>Indicadores clave</h2>
+      <div class="cards">
+        <div class="card2">
+          <h4>Disponibilidad</h4>
+          <p>Minimiza paradas y aprovecha mejor cada turno.</p>
+        </div>
+        <div class="card2">
+          <h4>Rendimiento</h4>
+          <p>Produce más en el mismo tiempo manteniendo la estabilidad.</p>
+        </div>
+        <div class="card2">
+          <h4>Calidad</h4>
+          <p>Menos mermas y retrabajos. Más entregas a la primera.</p>
+        </div>
+        <div class="card2">
+          <h4>Paradas</h4>
+          <p>Identifica causas y reduce su impacto con acciones simples.</p>
+        </div>
+        <div class="card2">
+          <h4>Tiempos teóricos vs reales</h4>
+          <p>Ajusta ritmos y expectativas con datos del día a día.</p>
+        </div>
+        <div class="card2">
+          <h4>Prioridades</h4>
+          <p>Todos alineados con lo que más importa cada jornada.</p>
+        </div>
+        <div class="card2">
+          <h4>Trazabilidad</h4>
+          <p>RFID y registro de eventos para saber qué pasó y cuándo.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="beneficios" class="section alt">
+    <div class="container">
+      <h2>Beneficios clave</h2>
+      <div class="benefits-grid">
+        <div class="benefit">
+          <h4>Tiempo real</h4>
+          <p>De sensores a tablero en milisegundos con colas y tolerancia a fallos.</p>
+        </div>
+        <div class="benefit">
+          <h4>Escalable</h4>
+          <p>Empieza por una línea y crece a toda la planta sin complicaciones.</p>
+        </div>
+        <div class="benefit">
+          <h4>Operable</h4>
+          <p>Supervisor controla procesos críticos; observabilidad y reinicios automáticos.</p>
+        </div>
+        <div class="benefit">
+          <h4>Adaptable</h4>
+          <p>Se ajusta a tus procesos y sistemas actuales. Sin interrupciones.</p>
+        </div>
+        <div class="benefit">
+          <h4>Trazable</h4>
+          <p>RFID, notas e incidencias vinculadas a órdenes y procesos.</p>
+        </div>
+        <div class="benefit">
+          <h4>Seguro</h4>
+          <p>Control de accesos por perfiles y buenas prácticas de protección de datos.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="sectores" class="section">
+    <div class="container">
+      <h2>Hecho para tu sector</h2>
+      <div class="integrations">
+        <div class="pill">Alimentación</div>
+        <div class="pill">Textil</div>
+        <div class="pill">Químico</div>
+        <div class="pill">Automoción</div>
+        <div class="pill">Packaging</div>
+        <div class="pill">Plástico</div>
+        <div class="pill">Madera</div>
+        <div class="pill">Piedra</div>
+        <div class="pill">Vidrio</div>
+        <div class="pill">Otros</div>
+      </div>
+      <p class="muted">Hablamos tu idioma. Adaptamos Xmart a tus procesos reales.</p>
+    </div>
+  </section>
+
+  <section id="resultados" class="section alt">
+    <div class="container two-col">
+      <div>
+        <h2>Resultados que importan</h2>
+        <p>Menos paradas, más rendimiento y mayor calidad. Comparte objetivos por turno y celebra mejoras visibles.</p>
+        <ul class="checklist">
+          <li>Avance por turno y orden</li>
+          <li>KPIs claros para todo el equipo</li>
+          <li>Gestión simple de incidencias</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <div class="panel-head">Ejemplo de KPIs</div>
+        <div class="panel-body">
+          <div class="kpi">
+            <span>OEE</span>
+            <strong>86.4%</strong>
+          </div>
+          <div class="kpi">
+            <span>Disponibilidad</span>
+            <strong>91.2%</strong>
+          </div>
+          <div class="kpi">
+            <span>Rendimiento</span>
+            <strong>88.0%</strong>
+          </div>
+          <div class="kpi">
+            <span>Calidad</span>
+            <strong>96.1%</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="casos" class="section">
+    <div class="container">
+      <h2>Casos de uso</h2>
+      <div class="cards">
+        <a class="card-link" href="#contacto">
+          <div class="card2">
+            <h4>Arranque de línea</h4>
+            <p>Planifica, asigna y comunica prioridades al instante.</p>
+          </div>
+        </a>
+        <a class="card-link" href="#contacto">
+          <div class="card2">
+            <h4>Control de calidad</h4>
+            <p>Registra incidencias y mejora tus estándares.</p>
+          </div>
+        </a>
+        <a class="card-link" href="#contacto">
+          <div class="card2">
+            <h4>Balanceo de carga</h4>
+            <p>Mejora flujo y rendimiento manteniendo la calidad.</p>
+          </div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section id="contacto" class="section cta">
+    <div class="container cta-inner">
+      <h2>Solicita tu presupuesto en 2 minutos</h2>
+      <p>Te respondemos en menos de 24h laborables. Sin compromiso.</p>
+
+      <div class="badges">
+        <span class="badge2">⚡ Implementación rápida</span>
+        <span class="badge2">🤝 Acompañamiento experto</span>
+        <span class="badge2">🎯 Demo incluida</span>
+      </div>
+
+      <div class="form-card">
+        <h3>Cuéntanos sobre tu planta</h3>
+        <form id="quote-form" class="quote-form">
+          <div class="form-row">
+            <input type="text" name="nombre" placeholder="Nombre y apellidos" required />
+            <input type="email" name="email" placeholder="Email" required />
+          </div>
+          <div class="form-row">
+            <input type="text" name="empresa" placeholder="Empresa" required />
+            <input type="tel" name="telefono" placeholder="Teléfono" />
+          </div>
+          <div class="form-row">
+            <textarea name="mensaje" rows="4" placeholder="Líneas, turnos, objetivos y retos actuales"></textarea>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-light">Solicitar presupuesto</button>
+          </div>
+          <p class="note">Al enviar, abriremos un borrador de email con tus datos. También puedes escribirnos a <a href="mailto:contacto@xmart-industria.com">contacto@xmart-industria.com</a>.</p>
+        </form>
+      </div>
+
+      <div class="alt-contacts">
+        <a class="btn btn-secondary" href="https://wa.me/34600000000" target="_blank">💬 Hablar por WhatsApp</a>
+        <a class="btn btn-secondary" href="#planes">Ver planes</a>
+      </div>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <div>© <span id="year"></span> Xmart</div>
+      <div class="footer-links">
+        <a href="../README.md" target="_blank">Documentación</a>
+        <a href="#">Términos</a>
+        <a href="#">Privacidad</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
