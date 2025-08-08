@@ -485,6 +485,21 @@ Sistema para el registro y seguimiento de problemas en la producción:
 - **Integración con Kanban**
   - En `customers/order-kanban.blade.php` se define la columna `paused` con etiqueta `Incidencias`, integrando visualmente las órdenes afectadas en el flujo operativo.
 
+### Otras Vistas Blade Relevantes
+
+- **`resources/views/productionlines/liststats.blade.php`**
+  - Panel de estadísticas por línea de producción con estados y KPI operativos.
+  - Usa badges para estados: `Incidencia` (rojo), entre otros.
+  - Integra tablas y componentes JS para filtrado y visualización.
+
+- **`resources/views/productionlines/status-legend.blade.php`**
+  - Leyenda compacta de estados utilizados en los paneles (incluye `Incidencia`).
+
+- **`resources/views/dashboard/homepage.blade.php`**
+  - Dashboard general con tarjetas/resúmenes. Incluye bloques para "estado de líneas con incidencias".
+
+Estas vistas complementan el Kanban y OEE, ofreciendo un panorama operativo con foco en estados y alertas.
+
 ## 🔧 Tecnologías Utilizadas
 
 - **Backend**: Laravel (PHP), MySQL/Percona
