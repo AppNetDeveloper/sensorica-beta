@@ -36,6 +36,7 @@ class ProductionOrder extends Model
         'status',
         'box',
         'units_box',
+        'number_of_pallets',
         'units',
         'orden', // Manufacturing order
         'theoretical_time', // Theoretical process time

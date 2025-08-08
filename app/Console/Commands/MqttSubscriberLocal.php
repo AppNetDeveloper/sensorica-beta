@@ -261,6 +261,10 @@ class MqttSubscriberLocal extends Command
                 'processes_to_do'           => $messageData['processes_to_do'] ?? null,
                 'processes_done'            => $messageData['processes_done'] ?? null,
                 'original_order_process_id' => $messageData['original_order_process_id'] ?? null,
+                'number_of_pallets'         => $messageData['number_of_pallets'] ?? 0,
+                'box'                      => $this->safeGetValue($messageData, 'quantity', 0),
+                'units_box'                => $this->safeGetNestedValue($messageData, ['refer', 'groupLevel', 0, 'uds'], 0),
+                'units'                    => $this->safeGetNestedValue($messageData, ['refer', 'groupLevel', 0, 'total'], 0),
             ];
 
             $productionOrder = ProductionOrder::create($orderData);
@@ -273,5 +277,48 @@ class MqttSubscriberLocal extends Command
             $this->error("[{$timestamp}] FATAL ERROR processing production order: " . $e->getMessage());
             $this->error($e->getTraceAsString()); // Esto es crucial para ver dónde falla
         }
+    }
+    
+    /**
+     * Obtiene un valor de forma segura de un array, con valor por defecto si no existe
+     * 
+     * @param array $data El array de datos
+     * @param string $key La clave a buscar
+     * @param mixed $default Valor por defecto si no existe la clave
+     * @return mixed
+     */
+    private function safeGetValue($data, $key, $default = null)
+    {
+        if (!is_array($data)) {
+            return $default;
+        }
+        
+        return isset($data[$key]) ? $data[$key] : $default;
+    }
+    
+    /**
+     * Obtiene un valor anidado de forma segura de un array, con valor por defecto si no existe
+     * 
+     * @param array $data El array de datos
+     * @param array $keys Array de claves en orden de anidamiento
+     * @param mixed $default Valor por defecto si no existe la ruta
+     * @return mixed
+     */
+    private function safeGetNestedValue($data, $keys, $default = null)
+    {
+        if (!is_array($data)) {
+            return $default;
+        }
+        
+        $current = $data;
+        
+        foreach ($keys as $key) {
+            if (!is_array($current) || !isset($current[$key])) {
+                return $default;
+            }
+            $current = $current[$key];
+        }
+        
+        return $current;
     }
 }

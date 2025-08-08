@@ -246,6 +246,7 @@ class ListStockOrdersCommand extends Command
             'unit' => 'Cajas', 
             'isAuto' => 0,
             'theoretical_time' => (float)$orderProcess->time,
+            'number_of_pallets' => $orderProcess->number_of_pallets ?? 0,
             'process_id' => $orderProcess->process_id,
             'process_code' => $orderProcess->process->code ?? '',
             'process_category' => $orderProcess->process->description ?? '',

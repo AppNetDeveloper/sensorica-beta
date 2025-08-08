@@ -1026,6 +1026,15 @@ class CheckOrdersFromApi extends Command
                 $this->logLine("    📦 Campo 'units_box' no mapeado, usando valor por defecto: 0");
             }
             
+            // Añadir campo number_of_pallets (con valor 0 si no está mapeado)
+            if (isset($processData['number_of_pallets'])) {
+                $processCreateData['number_of_pallets'] = $processData['number_of_pallets'];
+                $this->logLine("    🔢 Campo 'number_of_pallets' mapeado: {$processData['number_of_pallets']}");
+            } else {
+                $processCreateData['number_of_pallets'] = 0;
+                $this->logLine("    🔢 Campo 'number_of_pallets' no mapeado, usando valor por defecto: 0");
+            }
+            
             $createdProcess = OriginalOrderProcess::create($processCreateData);
             
             // Verificar que el proceso fue creado con ID

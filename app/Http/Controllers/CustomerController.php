@@ -346,6 +346,7 @@ class CustomerController extends Controller
                 'fecha_pedido_erp' => $order->fecha_pedido_erp,  
                 'estimated_start_datetime' => $order->estimated_start_datetime,
                 'estimated_end_datetime' => $order->estimated_end_datetime,
+                'number_of_pallets' => $order->number_of_pallets ?? 0,
                 ];
             });
         
@@ -499,6 +500,7 @@ class CustomerController extends Controller
                         'fecha_pedido_erp' => $order->fecha_pedido_erp,
                         'estimated_start_datetime' => $order->estimated_start_datetime,
                         'estimated_end_datetime' => $order->estimated_end_datetime,
+                        'number_of_pallets' => $order->number_of_pallets ?? 0,
                     ];
                 });
 
@@ -564,7 +566,8 @@ class CustomerController extends Controller
                 'process_id' => 'ID del Proceso',
                 'time' => 'Tiempo del Proceso',
                 'box' => 'Caja',
-                'units_box' => 'Unidades por Caja'
+                'units_box' => 'Unidades por Caja',
+                'number_of_pallets' => 'Número de Palets'
             ];
             
             // Opciones de transformaciones disponibles
@@ -955,7 +958,8 @@ class CustomerController extends Controller
             'process_id' => 'ID del Proceso',
             'time' => 'Tiempo del Proceso',
             'box' => 'Caja',
-            'units_box' => 'Unidades por Caja'
+            'units_box' => 'Unidades por Caja',
+            'number_of_pallets' => 'Número de Palets'
         ];
         
         // Campos estándar para artículos

@@ -2306,6 +2306,24 @@
                         <i class="fas fa-clock text-indigo-500 mr-1" title="Tiempo teórico"></i>
                         <span>Tiempo: ${order.theoretical_time ? formatSeconds(order.theoretical_time) : 'No disponible'}</span>
                     </div>
+                    <div class="mb-2 text-xs text-gray-700 flex flex-wrap gap-2">
+                        <span class="flex items-center">
+                            <i class="fas fa-box text-blue-500 mr-1" title="Cajas"></i>
+                            <span>Cajas: ${order.box || 0}</span>
+                        </span>
+                        <span class="flex items-center">
+                            <i class="fas fa-cubes text-green-500 mr-1" title="Unidades"></i>
+                            <span>Unidades: ${order.units || 0}</span>
+                        </span>
+                        <span class="flex items-center">
+                            <i class="fas fa-boxes text-purple-500 mr-1" title="Unidades por caja"></i>
+                            <span>Uds/caja: ${order.units_box || 0}</span>
+                        </span>
+                        <span class="flex items-center">
+                            <i class="fas fa-pallet text-orange-500 mr-1" title="Número de palets"></i>
+                            <span>Palets: ${order.number_of_pallets || 0}</span>
+                        </span>
+                    </div>
                     <div class="articles-container-${order.id}"></div>
                     <div class="flex justify-between items-center text-xs text-gray-500">
                         <span><i class="far fa-calendar-alt mr-1" title="Fecha de creación tarjeta"></i>${formatDate(order.created_at)}</span>

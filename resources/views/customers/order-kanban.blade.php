@@ -115,6 +115,10 @@
                     <span class="me-2"><i class="fas fa-cubes text-muted"></i></span>
                     <span>@lang('Número de unidades')</span>
                 </div>
+                <div class="d-flex align-items-center">
+                    <span class="me-2"><i class="fas fa-pallet text-muted"></i></span>
+                    <span>@lang('Número de palets')</span>
+                </div>
             </div>
         </div>
     </div>
@@ -1422,6 +1426,7 @@
                          <div class="d-flex align-items-center flex-wrap">
                             <span class="d-flex align-items-center me-3"><i class="fas fa-box text-muted me-1"></i><span class="text-xs">${order.box || 0}</span></span>
                             <span class="d-flex align-items-center me-3"><i class="fas fa-cubes text-muted me-1"></i><span class="text-xs">${order.units || 0}</span></span>
+                            <span class="d-flex align-items-center me-3"><i class="fas fa-pallet text-muted me-1" title="Número de Palets"></i><span class="text-xs">${order.number_of_pallets || 0}</span></span>
                              <div class="d-flex flex-column me-2">
                                 <span class="d-flex align-items-center"><i class="far fa-clock text-muted me-1" title="Tiempo teórico"></i><span class="text-xs">${order.theoretical_time || 'N/A'} </span></span>
                              </div>
