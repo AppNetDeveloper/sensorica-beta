@@ -459,11 +459,31 @@ Estas vistas Blade constituyen la interfaz principal de Sensorica, proporcionand
 
 Sistema para el registro y seguimiento de problemas en la producción:
 
-- **Registro Automático**: Creación de incidencias al mover tarjetas a la columna correspondiente.
-- **Categorización**: Clasificación de incidencias por tipo y gravedad.
-- **Asignación**: Asignación de responsables para la resolución.
-- **Seguimiento**: Monitoreo del estado y tiempo de resolución.
-- **Análisis**: Herramientas para identificar patrones y causas recurrentes.
+- **Registro**: Alta de incidencias vinculadas a órdenes de producción (vía UI/API). El Kanban incluye una columna "Incidencias" que centraliza las órdenes en estado de incidencia.
+- **Categorización**: Clasificación por motivo (reason) y estado de la orden afectada.
+- **Asignación**: Posibilidad de asociar creador/responsable (campo `created_by`).
+- **Seguimiento**: Fechas de creación/actualización, estado activo/finalizado y notas.
+- **Análisis**: Listados filtrables y relación con el Kanban para detectar cuellos de botella.
+
+#### Vistas Blade de Incidencias
+
+- **Listado (`resources/views/customers/production-order-incidents/index.blade.php`)**
+  - Ruta: `customers.production-order-incidents.index`.
+  - Tabla con columnas: `#`, `ORDER ID`, `REASON`, `STATUS`, `CREATED BY`, `CREATED AT`, `ACTIONS`.
+  - Estado visual:
+    - `Incidencia activa` si `productionOrder.status == 3` (badge rojo).
+    - `Incidencia finalizada` en caso contrario (badge gris).
+  - Acciones: Ver detalle y eliminar (eliminación protegida por permisos `@can('delete', $customer)`).
+  - Acceso rápido: Botón a `Order Organizer` (`customers.order-organizer`).
+
+- **Detalle (`resources/views/customers/production-order-incidents/show.blade.php`)**
+  - Ruta: `customers.production-order-incidents.show`.
+  - Muestra: ID de orden, motivo, creador, `created_at`, `updated_at`, estado de la orden y estado de incidencia.
+  - Acciones: Volver al listado y eliminar (con confirmación y control de permisos).
+  - Sección de notas: listado/gestión de notas asociadas a la incidencia.
+
+- **Integración con Kanban**
+  - En `customers/order-kanban.blade.php` se define la columna `paused` con etiqueta `Incidencias`, integrando visualmente las órdenes afectadas en el flujo operativo.
 
 ## 🔧 Tecnologías Utilizadas
 
