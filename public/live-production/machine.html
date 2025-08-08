@@ -2325,6 +2325,7 @@
                         </span>
                     </div>
                     <div class="articles-container-${order.id}"></div>
+                    <div class="notes-container-${order.id} hidden"></div>
                     <div class="flex justify-between items-center text-xs text-gray-500">
                         <span><i class="far fa-calendar-alt mr-1" title="Fecha de creación tarjeta"></i>${formatDate(order.created_at)}</span>
                         <span><i class="fas fa-truck-loading text-green-600 mr-1" title="Fecha de entrega en instalación cliente"></i>${order.delivery_date ? formatDate(order.delivery_date) : 'Sin fecha'}</span>
@@ -2473,12 +2474,114 @@
                                 // No hay artículos asociados
                                 articlesContainer.innerHTML = '';
                             }
+                            
+                            // Obtener y mostrar la anotación de la orden activa
+                            const notesContainer = card.querySelector(`.notes-container-${order.id}`);
+                            if (notesContainer) {
+                                // Llamar a la API para obtener la anotación
+                                getActiveOrderNote().then(data => {
+                                    if (data && data.success && data.note) {
+                                        // Mostrar la anotación
+                                        let noteHTML = `
+                                            <div class="mt-2 mb-2 bg-yellow-50 rounded-md p-2">
+                                                <div class="font-semibold text-xs text-yellow-700 mb-1">ANOTACIONES:</div>
+                                                <div class="text-xs text-gray-700">${data.note}</div>
+                                            </div>
+                                        `;
+                                        notesContainer.innerHTML = noteHTML;
+                                        notesContainer.classList.remove('hidden');
+                                    } else {
+                                        // No hay anotación o hubo un error
+                                        notesContainer.innerHTML = '';
+                                        notesContainer.classList.add('hidden');
+                                    }
+                                }).catch(error => {
+                                    console.error('Error al cargar la anotación:', error);
+                                    notesContainer.innerHTML = '';
+                                    notesContainer.classList.add('hidden');
+                                });
+                            }
                         });
                     }
                 }
                 return card;
             }
             // Función para obtener los artículos asociados a una orden de producción
+// Función para obtener la anotación de la orden activa
+async function getActiveOrderNote() {
+    console.log('API_BASE_URL:', API_BASE_URL);
+    try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const productionLineToken = urlParams.get('token');
+        
+        console.log('Token de línea de producción para anotaciones:', productionLineToken);
+        
+        if (!productionLineToken) {
+            throw new Error('No se encontró el token de la línea de producción');
+        }
+        
+        console.log('URL de la API para anotaciones:', `${API_BASE_URL}/api/production-orders/active-note?token=${productionLineToken}`);
+        const response = await fetch(`${API_BASE_URL}/api/production-orders/active-note?token=${productionLineToken}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Error al obtener la anotación: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('Datos de anotación recibidos:', data);
+        return data;
+    } catch (error) {
+        console.error('Error al obtener la anotación de la orden activa:', error);
+        return null;
+    }
+}
+
+// Función para actualizar las anotaciones de la orden activa
+async function refreshActiveOrderNote() {
+    try {
+        // Buscar la tarjeta en la columna "En curso"
+        const activeColumn = document.getElementById('col-en-curso');
+        if (!activeColumn) return;
+        
+        const activeCard = activeColumn.querySelector('.kanban-card');
+        if (!activeCard) return;
+        
+        const cardId = activeCard.dataset.cardId;
+        if (!cardId) return;
+        
+        // Obtener el contenedor de anotaciones
+        const notesContainer = activeCard.querySelector(`.notes-container-${cardId}`);
+        if (!notesContainer) return;
+        
+        // Obtener la anotación actualizada
+        const data = await getActiveOrderNote();
+        
+        if (data && data.success && data.note) {
+            // Mostrar la anotación
+            let noteHTML = `
+                <div class="mt-2 mb-2 bg-yellow-50 rounded-md p-2">
+                    <div class="font-semibold text-xs text-yellow-700 mb-1">ANOTACIONES:</div>
+                    <div class="text-xs text-gray-700">${data.note}</div>
+                </div>
+            `;
+            notesContainer.innerHTML = noteHTML;
+            notesContainer.classList.remove('hidden');
+        } else {
+            // No hay anotación o hubo un error
+            notesContainer.innerHTML = '';
+            notesContainer.classList.add('hidden');
+        }
+    } catch (error) {
+        console.error('Error al refrescar la anotación:', error);
+    }
+}
+
 async function getOrderArticles(orderId) {
     console.log('API_BASE_URL:', API_BASE_URL);
     try {
@@ -4171,6 +4274,13 @@ async function updateOrderStatus(orderId, newStatus) {
                     checkAndUpdateProductionOrder();
                 }
             }, 30000); // 120 segundos
+            
+            // Refrescar las anotaciones de la orden activa cada 10 segundos
+            setInterval(function() {
+                if (productionLineToken) {
+                    refreshActiveOrderNote();
+                }
+            }, 10000); // 10 segundos
             
             /**
              * Comprueba si la orden de producción ha cambiado y hace un escaneo silencioso si es necesario

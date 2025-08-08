@@ -501,6 +501,7 @@ class CustomerController extends Controller
                         'estimated_start_datetime' => $order->estimated_start_datetime,
                         'estimated_end_datetime' => $order->estimated_end_datetime,
                         'number_of_pallets' => $order->number_of_pallets ?? 0,
+                        'note' => $order->note,
                     ];
                 });
 

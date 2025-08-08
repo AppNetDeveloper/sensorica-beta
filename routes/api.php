@@ -234,9 +234,6 @@ Route::post('/product-lists/replace-all', [ProductListController::class, 'replac
 Route::get('/product-lists/list-all', [ProductListController::class, 'listAll']);
 Route::delete('/product-lists/{id}', [ProductListController::class, 'destroy']);
 
-
-
-
 //ver el ultimo status de comunicacion
 
 Route::get('production-line/status/{token}', [ProductionLineStatusController::class, 'getStatusByToken']);
@@ -273,6 +270,7 @@ Route::get('/kanban/orders', [\App\Http\Controllers\Api\ProductionOrderControlle
 // Orders API
 Route::prefix('production-orders')->group(function () {
     Route::get('/', [ProductionOrderController::class, 'index']); // Obtener todas las órdenes
+    Route::get('/active-note', [ProductionOrderController::class, 'getActiveOrderNote']); // Obtener anotación de orden activa
     Route::get('/{id}', [ProductionOrderController::class, 'show']); // Obtener una orden específica
     Route::patch('/{id}', [ProductionOrderController::class, 'updateOrder']); // Actualizar una orden
     Route::post('/', [ProductionOrderController::class, 'store']); // Crear una nueva orden

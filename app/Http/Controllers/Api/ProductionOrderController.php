@@ -14,6 +14,70 @@ class ProductionOrderController extends Controller
 {
     /**
      * @OA\Get(
+     *     path="/api/production-orders/active-note",
+     *     summary="Obtener la anotación de la orden en curso",
+     *     tags={"ProductionOrders"},
+     *     @OA\Parameter(
+     *         name="token",
+     *         in="query",
+     *         description="Token único de la línea de producción",
+     *         required=true,
+     *         @OA\Schema(type="string", example="abcd1234")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Anotación de la orden en curso",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="note", type="string", example="Esta es una anotación de ejemplo"),
+     *             @OA\Property(property="order_id", type="string", example="ORD123")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="No hay orden en curso o no se encontró la línea de producción"
+     *     )
+     * )
+     */
+    public function getActiveOrderNote(Request $request)
+    {
+        try {
+            // Validar el token
+            $token = $request->input('token');
+            if (!$token) {
+                return response()->json(['success' => false, 'message' => 'Token no proporcionado'], 400);
+            }
+            
+            // Buscar la línea de producción por token
+            $productionLine = ProductionLine::where('token', $token)->first();
+            if (!$productionLine) {
+                return response()->json(['success' => false, 'message' => 'Línea de producción no encontrada'], 404);
+            }
+            
+            // Buscar la orden en curso (status = 1) para esta línea de producción
+            $activeOrder = ProductionOrder::where('production_line_id', $productionLine->id)
+                ->where('status', 1)
+                ->first();
+            
+            if (!$activeOrder) {
+                return response()->json(['success' => false, 'message' => 'No hay orden en curso'], 404);
+            }
+            
+            // Devolver la anotación
+            return response()->json([
+                'success' => true,
+                'note' => $activeOrder->note,
+                'order_id' => $activeOrder->order_id
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Error al obtener la anotación de la orden en curso: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Error al procesar la solicitud'], 500);
+        }
+    }
+    
+    /**
+     * @OA\Get(
      *     path="/api/production-orders",
      *     summary="Listar órdenes de producción",
      *     tags={"ProductionOrders"},

@@ -2043,6 +2043,9 @@
                         <button id="togglePriorityBtn" class="btn ${priorityBtnClass} w-100">
                             <i class="fas ${isPriority ? 'fa-star' : 'fa-star'} me-2"></i>${priorityBtnText}
                         </button>
+                        <button id="notesBtn" class="btn btn-primary w-100">
+                            <i class="fas fa-sticky-note me-2"></i>{{ __('Anotaciones') }}
+                        </button>
                         <button id="viewIncidentsBtn" class="btn btn-danger w-100">{{ __('View Incidents') }}</button>
                         <button id="viewOriginalOrderBtn" class="btn btn-info w-100" ${isOriginalOrderDisabled ? 'disabled' : ''}>
                             {{ __('View Original Order') }}
@@ -2121,6 +2124,57 @@
                                 text: 'Ocurrió un error al procesar la solicitud',
                                 icon: 'error'
                             });
+                        });
+                    });
+                    
+                    // Evento para el botón de Anotaciones
+                    popup.querySelector('#notesBtn').addEventListener('click', () => {
+                        Swal.close();
+                        // Depurar el valor de note
+                        console.log('Valor de note en la orden:', order.id, order.note);
+                        // Mostrar modal para editar anotaciones
+                        Swal.fire({
+                            title: `Anotaciones - Orden #${order.order_id}`,
+                            html: `
+                                <div class="form-group">
+                                    <textarea id="orderNotes" class="form-control" rows="5" placeholder="Escribe aquí tus anotaciones...">${order.note !== undefined && order.note !== null ? order.note : ''}</textarea>
+                                </div>
+                            `,
+                            showCancelButton: true,
+                            confirmButtonText: 'Guardar',
+                            cancelButtonText: 'Cancelar',
+                            preConfirm: () => {
+                                const noteText = document.getElementById('orderNotes').value;
+                                return fetch('{{ route("production-orders.update-note") }}', {
+                                    method: 'POST',
+                                    headers: { 
+                                        'Content-Type': 'application/json',
+                                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                                    },
+                                    body: JSON.stringify({ order_id: orderId, note: noteText })
+                                })
+                                .then(response => response.json())
+                                .then(data => {
+                                    if (data.success) {
+                                        // Actualizar el estado en la lista maestra
+                                        const orderIndex = masterOrderList.findIndex(o => o.id == orderId);
+                                        if (orderIndex !== -1) {
+                                            masterOrderList[orderIndex].note = noteText;
+                                        }
+                                        return { success: true, message: 'Anotaciones guardadas correctamente' };
+                                    } else {
+                                        throw new Error(data.message || 'No se pudieron guardar las anotaciones');
+                                    }
+                                })
+                                .catch(error => {
+                                    Swal.showValidationMessage(`Error: ${error.message}`);
+                                    return { success: false };
+                                });
+                            }
+                        }).then((result) => {
+                            if (result.isConfirmed && result.value.success) {
+                                showToast('Anotaciones guardadas correctamente', 'success');
+                            }
                         });
                     });
                     

@@ -53,7 +53,8 @@ class ProductionOrder extends Model
         'finished_at', // Marca cuándo se terminó la orden
         'fecha_pedido_erp', // Fecha del pedido en el sistema ERP
         'estimated_start_datetime', // Fecha y hora estimada de inicio
-        'estimated_end_datetime' // Fecha y hora estimada de finalización
+        'estimated_end_datetime', // Fecha y hora estimada de finalización
+        'note' // Anotaciones sobre la orden
     ];
     
     /**

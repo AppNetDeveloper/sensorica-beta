@@ -371,16 +371,14 @@ class ProductionOrderController extends Controller
     {
         try {
             // Validar la solicitud
-            $validated = $request->validate([
-                'order_id' => 'required|integer|exists:production_orders,id',
+            $request->validate([
+                'order_id' => 'required|exists:production_orders,id',
             ]);
             
-            $orderId = $validated['order_id'];
-            
-            // Obtener la orden de producción
+            $orderId = $request->input('order_id');
             $order = ProductionOrder::findOrFail($orderId);
             
-            // Cambiar el estado de prioridad (invertir el valor actual)
+            // Invertir el valor actual de is_priority
             $order->is_priority = !$order->is_priority;
             $order->save();
             
@@ -391,11 +389,54 @@ class ProductionOrderController extends Controller
             ]);
             
         } catch (\Exception $e) {
-            Log::error('Error al cambiar prioridad de orden: ' . $e->getMessage());
+            Log::error('Error al cambiar prioridad de orden: ' . $e->getMessage(), [
+                'order_id' => $request->input('order_id'),
+                'exception' => $e
+            ]);
             
             return response()->json([
                 'success' => false,
-                'message' => 'No se pudo cambiar el estado de prioridad de la orden'
+                'message' => 'Error al procesar la solicitud: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Actualiza las anotaciones de una orden de producción
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function updateNote(Request $request)
+    {
+        try {
+            // Validar la solicitud
+            $request->validate([
+                'order_id' => 'required|exists:production_orders,id',
+                'note' => 'nullable|string',
+            ]);
+            
+            $orderId = $request->input('order_id');
+            $note = $request->input('note');
+            
+            $order = ProductionOrder::findOrFail($orderId);
+            $order->note = $note;
+            $order->save();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Anotaciones actualizadas correctamente'
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Error al actualizar anotaciones de orden: ' . $e->getMessage(), [
+                'order_id' => $request->input('order_id'),
+                'exception' => $e
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al procesar la solicitud: ' . $e->getMessage()
             ], 500);
         }
     }
