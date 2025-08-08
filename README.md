@@ -413,15 +413,35 @@ Las vistas Blade son componentes fundamentales de la interfaz de usuario de Sens
 - **Filtrado en tiempo real:** Búsqueda dinámica sin necesidad de recargar la página.
 - **Gestión de estados:** Manejo del estado de las líneas de producción (activa, pausada, detenida).
 
-**3. Vistas de Monitoreo OEE:**
+**3. Vistas de Monitoreo OEE (`oee/index.blade.php`, `oee/create.blade.php`, `oee/edit.blade.php`):**
 
-- **Descripción:** Conjunto de vistas para visualizar y analizar métricas OEE (Overall Equipment Effectiveness).
+- **Descripción:** Conjunto de vistas para configurar, visualizar y analizar métricas OEE (Overall Equipment Effectiveness).
 - **Características principales:**
-  - **Gráficos interactivos:** Visualización de métricas mediante gráficos circulares y de barras.
-  - **Filtrado por período:** Selección de rangos de fechas para análisis específicos.
-  - **Desglose de métricas:** Visualización detallada de disponibilidad, rendimiento y calidad.
-  - **Comparativa entre líneas:** Análisis comparativo del rendimiento de diferentes líneas de producción.
-  - **Exportación de datos:** Generación de informes en formatos PDF, Excel y CSV.
+  - **Gestión de monitores:** Interfaz CRUD completa para configurar monitores OEE por línea de producción.
+  - **Integración MQTT:** Configuración de tópicos MQTT para la recolección de datos en tiempo real.
+  - **Integración Modbus:** Activación/desactivación de conexiones Modbus para sensores industriales.
+  - **Configuración de turnos:** Definición de horarios de inicio de turnos para cálculos precisos.
+  - **Visualización tabular:** Presentación de monitores configurados mediante DataTables.
+  - **Navegación contextual:** Migas de pan (breadcrumbs) para facilitar la navegación entre secciones relacionadas.
+
+**Estructura de las vistas:**
+
+- **Vista de índice (`index.blade.php`):**
+  - Tabla responsive con DataTables para listar todos los monitores OEE.
+  - Columnas para ID, línea de producción, tópicos MQTT, estado de sensores y Modbus.
+  - Acciones para editar y eliminar monitores.
+  - Integración con rutas nombradas de Laravel para la navegación.
+
+- **Vista de creación (`create.blade.php`):**
+  - Formulario para configurar nuevos monitores OEE.
+  - Generación automática de tópicos MQTT basados en el nombre de la línea de producción.
+  - Opciones para activar/desactivar sensores y conexiones Modbus.
+  - Selector de fecha/hora para configurar inicio de turnos.
+
+- **Vista de edición (`edit.blade.php`):**
+  - Formulario prellenado con la configuración actual del monitor.
+  - Opciones para modificar tópicos MQTT, estado de sensores y configuración de turnos.
+  - Validación de formularios para garantizar datos correctos.
 
 **4. Vistas de Gestión de Incidencias:**
 
