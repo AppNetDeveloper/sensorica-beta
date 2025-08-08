@@ -1109,6 +1109,241 @@ Relación con secciones previas:
 - WhatsApp: `node/connect-whatsapp.js`
 - Telegram: `telegram/telegram.js`
 
+### 📦 Documentación detallada de servidores y servicios
+
+#### node/client-modbus.js
+- __Propósito__: Suscriptor MQTT para valores Modbus; aplica reglas de repetición/variación y publica a API cuando corresponde.
+- __ENV__: `MQTT_SENSORICA_SERVER`, `MQTT_SENSORICA_PORT`, `DB_HOST/PORT/USERNAME/PASSWORD/DB_DATABASE`.
+- __DB__: Lee `modbuses` (campos: `mqtt_topic_modbus`, `rep_number`, `model_name`, `variacion_number`, `conversion_factor`, `dimension_default`).
+- __MQTT__: Suscribe dinámico por `modbuses.mqtt_topic_modbus` (QoS 1). Cachea config por tópico y controla repeticiones/umbrales.
+- __HTTP__: Llama APIs internas según lógica (ver controlador correspondiente).
+- __Supervisor__: `[program:laravel-modbus-subscriber]` → `node node/client-modbus.js`.
+- __Operación/Logs__: Reconexión a MQTT/DB con backoff, limpieza de cachés en reconnect, logs con timestamps.
+
+#### node/client-mqtt-rfid.js
+- __Propósito__: Consumidor de lecturas RFID desde tópicos por antena; valida turnos y filtra duplicados por RSSI/intervalo.
+- __ENV__: `MQTT_SENSORICA_*`, `LOCAL_SERVER`, `DB_*`.
+- __DB__: Lee `rfid_ants` (topic, rssi_min, min_read_interval_ms, production_line_id), `shift_history` (estado turno), `rfid_blocked` (EPCs).
+- __MQTT__: Suscribe a `rfid_ants.mqtt_topic`. Caches por antena, mapas de EPC/TID ignorados temporales.
+- __HTTP__: POST a `${LOCAL_SERVER}/api/...` para registrar eventos RFID.
+- __Supervisor__: `[program:laravel-read-rfid]` → `node node/client-mqtt-rfid.js`.
+- __Operación__: Re-suscribe al reconectar; actualización periódica de caches; logs de control de flujo.
+
+#### node/client-mqtt-sensors.js
+- __Propósito__: Consumidor de sensores genéricos; extrae valores con rutas JSON y envía a API con reintentos y backoff.
+- __ENV__: `MQTT_SENSORICA_*`, `LOCAL_SERVER` (HTTPS permitido), `DB_*`.
+- __DB__: Lee `sensors` (mqtt_topic_sensor, sensor_type, invers_sensors, json_api).
+- __MQTT__: Suscribe/unsuscribe dinámico según `sensors`.
+- __HTTP__: POST `${LOCAL_SERVER}/api/sensor-insert` con `https.Agent({ rejectUnauthorized:false })` para entornos con TLS propio.
+- __Supervisor__: `[program:laravel-read-sensors]` → `node node/client-mqtt-sensors.js`.
+- __Operación__: Reintentos exponenciales y logging detallado de extracciones JSON.
+
+#### node/config-rfid.js
+- __Propósito__: Panel Socket.IO para administrar el lector RFID (tarea MQTT, lectura, antenas) vía API HTTP del lector.
+- __ENV__: `MQTT_SENSORICA_*`, `RFID_READER_IP`, `RFID_READER_PORT` en `.env` de Laravel.
+- __DB__: No requiere; lee `.env` para parámetros del lector.
+- __MQTT__: Publica/escucha en `rfid_command` para comandos/estados.
+- __HTTP externo__: `http://RFID_READER_IP:RFID_READER_PORT/API/Task` (endpoints `getMQTTInfo`, enable/disable, start/stop reading, etc.).
+- __Supervisor__: `[program:laravel-config-rfid-antena]` → `node node/config-rfid.js`.
+- __Operación__: Auto-monitoreo periódico, caché de estado/antenas, logs coloreados y reconexión controlada.
+
+#### node/mqtt-rfid-to-api.js
+- __Propósito__: Gateway Express + WebSocket para visualización en tiempo real de mensajes RFID y gestión de suscripciones por DB.
+- __ENV__: `MQTT_SENSORICA_*`, `DB_*`, `MQTT_GATEWAY_PORT`, `USE_HTTPS`, `SSL_KEY_PATH`, `SSL_CERT_PATH`.
+- __DB__: Lee tópicos y metadatos de antenas; mantiene `antennaDataMap`.
+- __MQTT__: Suscribe a tópicos definidos en DB; re-sync en reconexiones.
+- __HTTP__: 
+  - REST: `/api/gateway-messages` (incluye topics_info)
+  - UI: `/gateway-test` (viewer con WebSocket)
+  - WebSocket: broadcast de mensajes y lista de tópicos/antenas
+- __Supervisor__: `[program:laravel-mqtt-rfid-to-api]` → `node node/mqtt-rfid-to-api.js`.
+- __Operación__: Soporta HTTP/WS y HTTPS/WSS; almacena histórico acotado en memoria.
+
+#### node/sender-mqtt-server1.js
+- __Propósito__: Publica archivos JSON como mensajes MQTT para “server1”. Elimina archivos tras éxito.
+- __ENV__: `MQTT_SENSORICA_*`.
+- __FS__: Lee `storage/app/mqtt/server1/` recursivamente.
+- __MQTT__: Publica según `data.topic` y `data.message` del JSON.
+- __Supervisor__: `[program:laravel-mqtt-sendserver1]` → `node node/sender-mqtt-server1.js`.
+- __Operación__: Vigila cambios de `.env`, reconexión automática, manejo de JSON inválidos (eliminación segura + log).
+
+#### node/sender-mqtt-server2.js
+- __Propósito__: Igual a server1, usando broker alterno (`MQTT_SERVER`/`MQTT_PORT`).
+- __ENV__: `MQTT_SERVER`, `MQTT_PORT`.
+- __FS__: `storage/app/mqtt/server2/`.
+- __Supervisor__: (si aplica) `[program:laravel-mqtt-sendserver2]` → `node node/sender-mqtt-server2.js`.
+
+#### node/sensor-transformer.js
+- __Propósito__: Transforma valores de sensores según `sensor_transformations` y publica a tópicos de salida sólo si cambia el resultado.
+- __ENV__: `DB_*`, `MQTT_SENSORICA_*`.
+- __DB__: Lee `sensor_transformations` (min/mid/max, output_topic, etc.).
+- __MQTT__: Suscribe a `input_topic[]`; publica a `output_topic` tras `transformValue()` y deduplicación por cache.
+- __Supervisor__: `[program:laravel-sensor-transformers]` → `node node/sensor-transformer.js`.
+- __Operación__: Reconexión DB y MQTT; recarga periódica y detección de cambios de configuración.
+
+#### node/connect-whatsapp.js
+- __Propósito__: Servicio de WhatsApp basado en Baileys (QR login), persistencia de credenciales filtradas y callbacks a API Laravel.
+- __ENV__: Dependen de Baileys/puerto local.
+- __HTTP__: 
+  - POST `/start-whatsapp`, `/logout`, `/get-qr`
+  - Callback a `http://localhost/api/whatsapp-credentials` para guardar creds/keys filtrados
+- __Supervisor__: `[program:connect-whatsapp]` → `node node/connect-whatsapp.js` (user `root`).
+- __Operación__: Reconecta al cerrar no intencional; imprime QR en terminal; rota store a `baileys_store_multi.json`.
+
+#### telegram/telegram.js
+- __Propósito__: API completa para Telegram con Swagger (autenticación, mensajes, media, grupos, contactos, reglas y programación).
+- __ENV__: `API_ID`, `API_HASH`, `PORT`, `API_EXTERNAL*`, `DATA_FOLDER`, `CALLBACK_BASE`.
+- __HTTP__: Amplia lista de endpoints REST documentados en `/api-docs` (Swagger UI).
+- __FS__: Maneja sesiones y media en `DATA_FOLDER`.
+- __Supervisor__: `[program:connect-telegram-server]` → `node telegram/telegram.js` (user `root`).
+- __Operación__: Carga sesiones al inicio, deduplicación de mensajes, manejo de tareas programadas en memoria.
+
+### 🌐 Catálogo de Endpoints HTTP
+
+Para el detalle completo revisar `routes/web.php` y `routes/api.php`. A continuación, un mapa de alto nivel de los grupos más relevantes:
+
+#### Web (`routes/web.php`)
+- __Kanban de órdenes__: 
+  - `POST /production-orders/update-batch`, `/toggle-priority`, `/update-note`
+  - `GET /customers/{customer}/order-organizer`, `/order-kanban/{process}`
+  - `GET /kanban-data` (AJAX)
+- __Clientes y Órdenes Originales__: `Route::resource('customers', ...)`, anidados `customers.original-orders.*` y utilidades `field-mapping-row`
+- __Líneas de Producción__: `productionlines.*`, `.../productionlinesjson`, `liststats`
+- __Procesos por Línea__: `productionlines/{production_line}/processes.*`
+- __Sensores (SmartSensors)__: `smartsensors.*`, vistas `live`, `history`; detalle `sensors/{id}`
+- __RFID__: `rfid.*`, categorías `rfid-categories.*`, colores `rfid.colors.*`, bloqueo `DELETE /rfid-blocked/destroy-all`
+- __Turnos__: `shift-lists` CRUD, `shift-history/{productionLineId}`, `POST /shift-event`
+- __Usuarios/Roles/Permisos__: `roles`, `users`, `permission`, `modules`, util `GET /roles/list`
+- __Ajustes__: `settings` y POSTs específicos (`email`, `datetime`, `rfid`, `redis`, `upload-stats`, réplica DB)
+- __Códigos de barras__: `barcodes.*`, impresoras `Route::resource('printers', ...)`
+- __Modbus__: `modbuses.*`, `modbusesjson`, `queue-print`, `liststats`
+- __OEE y Transformaciones__: `Route::resource('oee', ...)`, `sensor-transformations.*`
+- __Monitor y Servidores__: `GET /server`, `GET /logs`
+- __Puestos de Operario__: `worker-post.*`, `GET /scan-post`
+- __SCADA/Producción__: `GET /scada-order`, `GET /production-order-kanban`
+- __Varios__: `GET /debug`, `Auth::routes()`, `GET /` (dashboard)
+
+#### API (`routes/api.php`)
+- __Sistema/Servidor__: `/server-monitor-store`, `/register-server`, `/server-stats`, `/server-ips`, `restart|start|stop-supervisor`, `reboot`, `poweroff`, `restart-mysql`, `verne-update`, `app-update`, `update-env`, `check-db-connection`, `verify-and-sync-database`, `run-update`, `check-485-service`, `install-485-service`, `getSupervisorStatus`
+- __Barcodes__: `/barcode`, `/barcode-info{,/POST}`, `/barcode-info-by-customer/{customerToken}`
+- __Token/Producción__: `/production-lines/{customerToken}`, `/modbus-info/{token}`
+- __Control de Peso__: `/control-weights/{token}/all`, throttled `/control-weight/{token}`, `GET /control_weight/{supplierOrderId}` consolidado
+- __Modbus/SCADA__: `/modbuses`, `/tolvas/{id}/dosificacion/recalcular-automatico`, `POST /modbus/send|zero|tara|tara/reset|cancel`, `GET scada/{token}`, `PUT /modbus/{modbusId}/material`, grupo `scada/*` de material types
+- __Sensores__: `/sensors{,/token}`, `POST /sensor-insert` (throttle alto)
+- __Estadísticas de órdenes__: `/order-stats`, `/order-stats-all`
+- __Producción (Kanban)__: `GET /kanban/orders`
+- __Órdenes de producción API__: `/production-orders` (CRUD parcial), incidentes `production-orders/{order}/incidents`
+- __Producción Topflow__: `reference-Topflow/*`, `topflow-production-order/*`
+- __Disponibilidad y estado de líneas__: `GET /production-line/status/{token}`, `GET/POST /production-lines/{id}/availability`, `GET /production-lines/statuses/{customerId?}`
+- __RFID__: `POST /rfid-insert`, `GET /rfid-history`, `GET /get-filters`
+- __WhatsApp__: `POST /whatsapp-credentials`, `GET|POST /send-message`, `/whatsapp/logout`, `GET /whatsapp-qr{,/svg,/base64}`
+- __Bluetooth Scanner__: `bluetooth/*` (`insert`, `history`, `filters`)
+- __Operadores/Trabajadores__: `workers/*` (update/replace/list/show/reset-password/verify/destroy), `operators` y `operators/internal`, `workers/all-list/completed`, `scada/get-logins`
+- __Listas de Producto__: `product-lists/*`, `product-list-selecteds/*`
+- __TCP Publish__: `POST /publish-message`
+- __Transferencias__: `POST /transfer-external-db`
+- __Puestos de Operario (API)__: `operator-post/*` y `POST /operator-post/update-count`
+- __Shift__: `/shift-event` (MQTT), `GET /shift-history{,/production-line/{id}}`, `GET /shift/statuses`, `GET /shift-lists`
+- __IA Prompts__: `GET /ia-prompts{,/\{key\}}`
+- __Barcode Scans__: `GET|POST /barcode-scans`
+- __SCADA Orders__: `GET /scada-orders/{token}`, `POST /scada-orders/update`, `DELETE /scada-orders/delete`, `GET /scada-orders/{scadaOrderId}/lines`, `POST /scada-orders/process/update-used`
+
+
+### 🛠️ Comandos Artisan (Supervisor y mantenimiento)
+
+Extraídos de `app/Console/Commands/*`:
+
+- `shift:check` — Check shift list and publish MQTT message if current time matches start time
+- `bluetooth:read` — Read data from Bluetooth API and publish to MQTT
+- `bluetooth:check-exit` — Verifica si los dispositivos Bluetooth han salido de la zona de detección
+- `reset:weekly-counts` — Reset count_week_0 and count_week_1 to 0 every Monday at 00:00
+- `tcp:client` — Connect to multiple TCP servers and read messages continuously
+- `modbus:read {group}` — Read data from Modbus API and publish to MQTT for a specific group
+- `hostmonitor:check` — Envía un correo de alerta si un host no tiene registros en host_monitors en los últimos 3 minutos
+- `mqtt:subscribe-local` — Subscribe to MQTT topics and update order notices
+- `operator-post:finalize` — Cierra y gestiona los registros de operadores según el inicio y fin de turno.
+- `mqtt:subscribe-local-ordermac` — Subscribe to MQTT topics and update production orders
+- `tcp:client-local` — Connect to TCP server using .env values and log messages in a loop
+- `production:calculate-monitor-oee-vieja` — Calcular y gestionar el monitoreo de la producción (versión previa)
+- `orders:check` — Verifica pedidos desde la API y los compara con la base de datos local
+- `db:replicate-nightly` — Dumps the primary database and replaces the secondary (mysql/mariadb autodetect)
+- `clear:old-records` — Clear old records from varias tablas según CLEAR_DB_DAY
+- `production:calculate-monitor-oee` — Calcular y gestionar el monitoreo de la producción (OEE v2)
+- `sensors:read` — Read data from Sensors API and publish to MQTT
+- `rfid:read` — Read data from RFID API and publish to MQTT
+- `modbus:read-ant` — Read data from Modbus API and publish to MQTT
+- `monitor:connections` — Monitor MQTT topics for connections and update their status in the database
+- `mqtt:subscribe` — Subscribe to MQTT topics and update order notices
+- `whatsapp:connect` — Conecta a WhatsApp usando Baileys sin generar QR
+- `production:calculate-production-downtime` — Calculate production downtime and publish MQTT
+- `modbus:read-backup` — Read data from Modbus API and publish to MQTT
+- `mqtt:shiftsubscribe` — Subscribe to MQTT topics and update shift control information from sensors
+- `production:update-accumulated-times {line_id?}` — Actualiza tiempos acumulados de órdenes activas (opcional por línea)
+- `production:calculate-optimal-time` — Calculate the optimal production time per product from sensor data
+- `orders:list-stock` — Busca órdenes en stock y procesa siguiente tarea pendiente por grupo
+- `mqtt:publish-order-stats` — Extrae barcodes/order_stats y publica JSON por MQTT cada 1s
+
+### 🧩 Variables de entorno (.env) requeridas
+
+Agrupadas por subsistema. Ver también `resources/views/settings/*.blade.php` para formularios de administración que dependen de estas claves.
+
+- __Core/Laravel__
+  - `APP_URL`, `ASSET_URL`
+  - `APP_TIMEZONE`, `TIMEZONE` (zona horaria)
+  - `SITE_RTL` (on/off)
+
+- __Base de Datos__
+  - `DB_CONNECTION` (mysql|pgsql|sqlsrv)
+  - `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`
+
+- __Correo__
+  - `MAIL_DRIVER`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_ENCRYPTION`
+  - `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME`
+
+- __MQTT (principal y Sensorica)__
+  - Broker genérico: `MQTT_SERVER`, `MQTT_PORT`
+  - Broker Sensorica: `MQTT_SENSORICA_SERVER`, `MQTT_SENSORICA_PORT`
+  - Backup: `MQTT_SENSORICA_SERVER_BACKUP`, `MQTT_SENSORICA_PORT_BACKUP`
+  - Credenciales/opciones: `MQTT_USERNAME`, `MQTT_PASSWORD`, `MQTT_TOPIC`
+  - Tiempos de envío por lotes (senders): `MQTT_SERVER1_CHECK_INTERVAL_MS`, `MQTT_SERVER2_CHECK_INTERVAL_MS`, `MQTT_CHECK_INTERVAL_MS`
+
+- __RFID__
+  - Panel/config lector: `RFID_READER_IP`, `RFID_READER_PORT`
+  - Monitor externo (link en `server/index.blade.php`): `RFID_MONITOR_URL`
+
+- __Gateway MQTT-RFID (Express/WebSocket)__
+  - `MQTT_GATEWAY_PORT`
+  - HTTPS opcional: `USE_HTTPS` (true/false), `SSL_KEY_PATH`, `SSL_CERT_PATH`
+  - Puerto alternativo servidor lector: `NODE_RFID_PORT`
+
+- __WhatsApp (Baileys)__
+  - Usa callbacks HTTP locales; puede requerir `PORT` si se expone servidor HTTP local del script.
+
+- __Telegram API server__
+  - `API_ID`, `API_HASH`, `PORT`
+  - `API_EXTERNAL`/`API_EXTERNAL_*` (si se usa reverse proxy o URLs públicas)
+  - `DATA_FOLDER` (almacenamiento de sesiones/media)
+  - `CALLBACK_BASE` (URL base para callbacks webhooks)
+
+- __Backups y SFTP__
+  - `BACKUP_ARCHIVE_PASSWORD`, `BACKUP_ARCHIVE_ENCRYPTION`
+  - `SFTP_HOST`, `SFTP_PORT`, `SFTP_USERNAME`, `SFTP_PASSWORD`, `SFTP_ROOT`
+
+- __Producción/OEE/limpieza__
+  - `SHIFT_TIME` (HH:MM:SS inicio de turno)
+  - `PRODUCTION_MIN_TIME`, `PRODUCTION_MAX_TIME`, `PRODUCTION_MIN_TIME_WEIGHT`
+  - `CLEAR_DB_DAY` (retención de registros en días)
+
+- __Sistema/Operaciones__
+  - `TOKEN_SYSTEM` (token de autenticación para endpoints de sistema)
+  - `USE_CURL` (true/false), `EXTERNAL_API_QUEUE_TYPE` (get|post|put|delete)
+  - Entorno runtime: `APP_ENV` (Node gateway), `NODE_ENV` (scripts Node)
+  - Base URL backend para clientes Node: `LOCAL_SERVER` (ej. https://mi-backend)
+
+Notas:
+- Algunos servicios Node.js leen credenciales DB vía `.env` de Laravel (usado por scripts con `mysql2`). Asegura consistencia.
+- Si se usa HTTPS propio, `https.Agent({ rejectUnauthorized:false })` en `client-mqtt-sensors.js` tolera TLS autofirmado.
+
 ## 📝 Licencia
 
 AiXmart es un software propietario. Todos los derechos reservados.
