@@ -15,6 +15,45 @@ use GuzzleHttp\Client;
 
 class BluetoothDetailController extends Controller
 {
+    /**
+     * @OA\Post(
+     *     path="/api/bluetooth/insert",
+     *     summary="Insertar lectura de Bluetooth",
+     *     description="Inserta una nueva lectura de Bluetooth y actualiza contadores relacionados.",
+     *     tags={"Bluetooth"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"mac","rssi","change","antenna_name"},
+     *             @OA\Property(property="mac", type="string", example="AA:BB:CC:DD:EE:FF"),
+     *             @OA\Property(property="rssi", type="integer", example=-65),
+     *             @OA\Property(property="change", type="string", example="connected"),
+     *             @OA\Property(property="antenna_name", type="string", example="ANT-01")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Registro insertado correctamente",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Registro insertado en Bluetooth list con éxito"),
+     *             @OA\Property(property="bluetooth_list", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Antena o MAC no encontrada"
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Datos inválidos"
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Error del servidor"
+     *     )
+     * )
+     */
     public function store(Request $request)
     {
         try {
@@ -161,6 +200,30 @@ class BluetoothDetailController extends Controller
         }
     }
 
+    /**
+     * @OA\Get(
+     *     path="/api/bluetooth/history",
+     *     summary="Historial de lecturas Bluetooth",
+     *     description="Obtiene el historial de lecturas Bluetooth con filtros opcionales.",
+     *     tags={"Bluetooth"},
+     *     @OA\Parameter(name="antenna_name", in="query", required=false, @OA\Schema(type="string")),
+     *     @OA\Parameter(name="mac", in="query", required=false, @OA\Schema(type="string")),
+     *     @OA\Parameter(name="change", in="query", required=false, @OA\Schema(type="string", example="connected")),
+     *     @OA\Parameter(name="date_start", in="query", required=false, @OA\Schema(type="string", format="date")),
+     *     @OA\Parameter(name="date_end", in="query", required=false, @OA\Schema(type="string", format="date")),
+     *     @OA\Parameter(name="show", in="query", required=false, @OA\Schema(type="string", enum={"all","10","latest"})),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Listado filtrado",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Listado de Bluetooth filtrado con éxito"),
+     *             @OA\Property(property="data", type="array", @OA\Items(type="object"))
+     *         )
+     *     ),
+     *     @OA\Response(response=422, description="Datos inválidos")
+     * )
+     */
     public function getHistoryBluetooth(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -228,6 +291,24 @@ class BluetoothDetailController extends Controller
         ]);
     }
 
+    /**
+     * @OA\Get(
+     *     path="/api/bluetooth/filters",
+     *     summary="Filtros disponibles Bluetooth",
+     *     description="Devuelve listas de antenas y MACs disponibles para filtrar.",
+     *     tags={"Bluetooth"},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Filtros disponibles",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Filtros disponibles obtenidos con éxito"),
+     *             @OA\Property(property="antennas", type="array", @OA\Items(type="object")),
+     *             @OA\Property(property="macs", type="array", @OA\Items(type="string"))
+     *         )
+     *     )
+     * )
+     */
     public function getFilters()
     {
         $antennas = BluetoothAnt::select('name')->get(); // Obtener nombres de antenas

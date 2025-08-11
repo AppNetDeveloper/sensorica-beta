@@ -21,6 +21,53 @@ use App\Models\RfidErrorPoint;
 
 class RfidDetailController extends Controller
 {
+    /**
+     * @OA\Post(
+     *     path="/api/rfid-insert",
+     *     summary="Insertar lectura RFID",
+     *     description="Valida e inserta un evento RFID en la lista, actualiza contadores y puede disparar alertas.",
+     *     tags={"RFID"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"epc","rssi","serialno","tid","antenna_name"},
+     *             @OA\Property(property="epc", type="string", example="300833B2DDD9014000000000"),
+     *             @OA\Property(property="rssi", type="integer", example=-45),
+     *             @OA\Property(property="serialno", type="string", example="READER-ABC-123"),
+     *             @OA\Property(property="tid", type="string", example="E2003412012345678900ABCD"),
+     *             @OA\Property(property="antenna_name", type="string", example="ANTENA-1")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Registro insertado en RFID list con éxito",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Registro insertado en RFID list con éxito")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Antena o RFID reading no encontrado; o creación automática deshabilitada",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Antena RFID no encontrada")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Datos inválidos",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Datos inválidos")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Error interno al procesar la solicitud"
+     *     )
+     * )
+     */
     public function store(Request $request)
     {
         try {

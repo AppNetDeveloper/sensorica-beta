@@ -26,6 +26,49 @@ use App\Http\Requests\StoreShiftEventRequest;
 class ShiftProcessEventController extends Controller
 {
  
+    /**
+     * @OA\Post(
+     *     path="/api/shift-process-events",
+     *     summary="Registrar evento de proceso de turno",
+     *     description="Registra un evento de proceso de turno y actualiza sensores, modbus y contadores relacionados con la línea de producción.",
+     *     tags={"Shifts"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"topic","payload"},
+     *             @OA\Property(property="topic", type="string", example="production/line/123/timeline_event"),
+     *             @OA\Property(property="payload", type="object",
+     *                 @OA\Property(property="type", type="string", enum={"shift","stop"}, example="shift"),
+     *                 @OA\Property(property="action", type="string", enum={"start","end"}, example="start"),
+     *                 @OA\Property(property="description", type="string", example="Manual"),
+     *                 @OA\Property(property="operator_id", type="integer", example=1),
+     *                 @OA\Property(property="shift_list_id", type="integer", example=3, nullable=true)
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=202,
+     *         description="Evento aceptado y procesado",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="accepted")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Datos inválidos o error en la solicitud",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="error", type="string", example="Datos inválidos")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Topic desconocido o barcode no encontrado",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="error", type="string", example="Topic desconocido")
+     *         )
+     *     )
+     * )
+     */
     public function store(StoreShiftEventRequest $request): JsonResponse
     {
         ignore_user_abort(true);

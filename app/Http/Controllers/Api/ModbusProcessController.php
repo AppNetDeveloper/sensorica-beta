@@ -23,6 +23,25 @@ use Carbon\Carbon;
 
 class ModbusProcessController extends Controller
 {
+    /**
+     * @OA\Post(
+     *     path="/api/modbus-process-data-mqtt",
+     *     summary="Procesar datos MQTT de Modbus",
+     *     description="Procesa datos recibidos desde MQTT para líneas de Modbus (peso/altura) y publica resultados.",
+     *     tags={"Modbus"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"id","data"},
+     *             @OA\Property(property="id", type="integer", example=12, description="ID del Modbus"),
+     *             @OA\Property(property="data", type="object", example={"value": 12.34})
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="Datos procesados correctamente"),
+     *     @OA\Response(response=404, description="Modbus no encontrado"),
+     *     @OA\Response(response=422, description="Datos inválidos")
+     * )
+     */
     public function processMqttData(Request $request)
     {
                     // Ignorar desconexión del cliente

@@ -562,6 +562,8 @@ class CustomerOriginalOrderController extends Controller
             'finished' => 'sometimes|array',
             'processed' => 'nullable|boolean',
             'articles' => 'sometimes|array',
+            'order_finished' => 'nullable|boolean',
+            'finished_at' => 'nullable|date',
         ]);
 
         // 2. Actualizar los campos principales de la orden.
@@ -572,6 +574,7 @@ class CustomerOriginalOrderController extends Controller
             'in_stock' => $request->boolean('in_stock'),
             'order_details' => $validated['order_details'],
             'processed' => $request->boolean('processed'),
+            'finished_at' => $request->boolean('order_finished') ? ($request->input('finished_at') ?: now()) : null,
         ]);
 
         // 3. Obtener datos del formulario.
@@ -580,24 +583,26 @@ class CustomerOriginalOrderController extends Controller
         $articlesData = $request->input('articles', []);
         $orderDetails = json_decode($validated['order_details'], true);
         
-        // Mapeará los IDs únicos del formulario a los nuevos IDs de la tabla pivote.
-        $processedPivotIds = []; 
+        // Obtener los procesos actuales para preservar IDs
+        $existingProcesses = $originalOrder->processes()->withPivot('id')->get()->keyBy('pivot.id');
+        $existingProcessIds = $existingProcesses->pluck('id', 'pivot.id')->toArray();
         
-        // 4. Sincronización de procesos: eliminar todos y volver a crearlos.
-        $originalOrder->processes()->detach();
+        // Recolectar IDs para mantener, actualizar o eliminar
+        $processIdsToKeep = [];
+        $processesToUpdate = [];
+        $processesToCreate = [];
         
+        // Clasificar los procesos seleccionados
         foreach ($selectedProcesses as $uniqueId => $processId) {
-            if (!is_numeric($processId)) {
-                if (strpos($processId, 'new_') === 0) {
-                    $processId = substr($processId, 4);
-                } else {
-                    continue;
-                }
+            // Manejar IDs nuevos (con prefijo 'new_')
+            if (!is_numeric($processId) && strpos($processId, 'new_') === 0) {
+                $processId = substr($processId, 4);
             }
             
             $process = \App\Models\Process::find($processId);
             if (!$process) continue;
             
+            // Calcular tiempo basado en los detalles del pedido
             $time = 0;
             if (isset($orderDetails['grupos'])) {
                 foreach ($orderDetails['grupos'] as $grupo) {
@@ -618,54 +623,105 @@ class CustomerOriginalOrderController extends Controller
                 'created' => true,
                 'finished' => $isFinished,
                 'finished_at' => $isFinished ? now() : null,
-                'created_at' => now(),
                 'updated_at' => now()
             ];
             
-            $pivotId = \DB::table('original_order_processes')->insertGetId(
-                array_merge(
-                    ['original_order_id' => $originalOrder->id, 'process_id' => $processId],
-                    $pivotData
-                )
-            );
-            
-            // Guardar el mapeo del ID del formulario al nuevo ID de la BD.
-            $processedPivotIds[$uniqueId] = $pivotId;
-        }
-        
-        // 5. Cargar las nuevas relaciones de procesos para poder adjuntar artículos.
-        $originalOrder->load('processes');
-
-        // 6. Sincronización de artículos usando el mapeo de IDs.
-        $remappedArticlesData = [];
-        if (is_array($articlesData)) {
-            foreach ($articlesData as $formUniqueId => $articles) {
-                // Usar el mapeo para encontrar el nuevo ID de pivote.
-                if (isset($processedPivotIds[$formUniqueId])) {
-                    $newPivotId = $processedPivotIds[$formUniqueId];
-                    $remappedArticlesData[$newPivotId] = $articles;
-                }
+            // Si el uniqueId es numérico, podría ser un ID existente
+            if (is_numeric($uniqueId) && isset($existingProcessIds[$uniqueId]) && $existingProcessIds[$uniqueId] == $processId) {
+                // Es un proceso existente, actualizarlo
+                $processIdsToKeep[] = $uniqueId;
+                $processesToUpdate[$uniqueId] = $pivotData;
+            } else {
+                // Es un proceso nuevo, crear
+                $processesToCreate[$uniqueId] = [
+                    'process_id' => $processId,
+                    'data' => array_merge($pivotData, ['created_at' => now()])
+                ];
             }
         }
         
-        $processInstancesById = $originalOrder->processes->keyBy('pivot.id');
-
-        foreach ($processInstancesById as $pivotId => $processInstance) {
-            // Borrar artículos viejos.
-            $processInstance->pivot->articles()->delete();
-            
-            // Crear artículos nuevos si existen en los datos remapeados.
-            if (isset($remappedArticlesData[$pivotId])) {
-                $articles = $remappedArticlesData[$pivotId];
+        // 1. Eliminar procesos que ya no están en la selección
+        $idsToDelete = array_diff(array_keys($existingProcessIds), $processIdsToKeep);
+        if (!empty($idsToDelete)) {
+            \DB::table('original_order_processes')->whereIn('id', $idsToDelete)->delete();
+        }
+        
+        // 2. Actualizar procesos existentes
+        foreach ($processesToUpdate as $pivotId => $data) {
+            \DB::table('original_order_processes')->where('id', $pivotId)->update($data);
+        }
+        
+        // 3. Crear nuevos procesos
+        $processedPivotIds = []; // Mapeará los IDs del formulario a los IDs de la BD
+        foreach ($processesToCreate as $formId => $processData) {
+            $pivotId = \DB::table('original_order_processes')->insertGetId(
+                array_merge(
+                    [
+                        'original_order_id' => $originalOrder->id, 
+                        'process_id' => $processData['process_id']
+                    ],
+                    $processData['data']
+                )
+            );
+            $processedPivotIds[$formId] = $pivotId;
+        }
+        
+        // Mantener IDs existentes en el mapeo
+        foreach ($processIdsToKeep as $existingId) {
+            $processedPivotIds[$existingId] = $existingId;
+        }
+        
+        // 4. Recargar los procesos para manejar artículos
+        $originalOrder->load(['processes' => function($query) {
+            $query->withPivot('id');
+        }]);
+        
+        // 5. Manejar artículos
+        if (is_array($articlesData)) {
+            foreach ($articlesData as $formUniqueId => $articles) {
+                // Obtener el ID real del proceso (existente o nuevo)
+                if (!isset($processedPivotIds[$formUniqueId])) {
+                    continue;
+                }
                 
-                foreach ($articles as $articleData) {
+                $pivotId = $processedPivotIds[$formUniqueId];
+                $processInstance = $originalOrder->processes->firstWhere('pivot.id', $pivotId);
+                
+                if (!$processInstance) continue;
+                
+                // Obtener artículos existentes para este proceso
+                $existingArticles = $processInstance->pivot->articles()->get()->keyBy('id');
+                $existingArticleIds = $existingArticles->pluck('id')->toArray();
+                $articleIdsToKeep = [];
+                
+                // Procesar artículos
+                foreach ($articles as $index => $articleData) {
                     if (empty($articleData['code'])) continue;
                     
-                    $processInstance->pivot->articles()->create([
-                        'codigo_articulo' => $articleData['code'] ?? '',
-                        'descripcion_articulo' => $articleData['description'] ?? '',
-                        'grupo_articulo' => $articleData['group'] ?? ''
-                    ]);
+                    $articleId = $articleData['id'] ?? null;
+                    
+                    // Si tiene ID y existe, actualizar
+                    if ($articleId && isset($existingArticles[$articleId])) {
+                        $articleIdsToKeep[] = $articleId;
+                        $existingArticles[$articleId]->update([
+                            'codigo_articulo' => $articleData['code'] ?? '',
+                            'descripcion_articulo' => $articleData['description'] ?? '',
+                            'grupo_articulo' => $articleData['group'] ?? ''
+                        ]);
+                    } else {
+                        // Si no tiene ID o no existe, crear nuevo
+                        $processInstance->pivot->articles()->create([
+                            'codigo_articulo' => $articleData['code'] ?? '',
+                            'descripcion_articulo' => $articleData['description'] ?? '',
+                            'grupo_articulo' => $articleData['group'] ?? ''
+                        ]);
+                    }
+                }
+                
+                // Eliminar artículos que ya no están en la lista
+                $articleIdsToDelete = array_diff($existingArticleIds, $articleIdsToKeep);
+                if (!empty($articleIdsToDelete)) {
+                    \App\Models\OriginalOrderArticle::whereIn('id', $articleIdsToDelete)->delete();
                 }
             }
         }

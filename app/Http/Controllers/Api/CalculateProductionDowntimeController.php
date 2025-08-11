@@ -24,6 +24,24 @@ class CalculateProductionDowntimeController extends Controller
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
+    /**
+     * @OA\Get(
+     *     path="/api/calculate-production-downtime",
+     *     summary="Calcular downtime de producción",
+     *     description="Dispara el cálculo de tiempos de inactividad y actualiza métricas asociadas.",
+     *     tags={"Downtime"},
+     *     @OA\Response(response=200, description="Downtime calculated successfully"),
+     *     @OA\Response(response=500, description="Error processing downtime calculation")
+     * )
+     * @OA\Post(
+     *     path="/api/calculate-production-downtime",
+     *     summary="Calcular downtime de producción",
+     *     description="Dispara el cálculo de tiempos de inactividad y actualiza métricas asociadas.",
+     *     tags={"Downtime"},
+     *     @OA\Response(response=200, description="Downtime calculated successfully"),
+     *     @OA\Response(response=500, description="Error processing downtime calculation")
+     * )
+     */
     public function calculateDowntime(Request $request)
     {
         ignore_user_abort(true);

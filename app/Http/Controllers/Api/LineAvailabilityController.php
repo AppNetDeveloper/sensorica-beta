@@ -13,6 +13,50 @@ use Illuminate\Support\Facades\Validator;
 class LineAvailabilityController extends Controller
 {
     /**
+     * @OA\Get(
+     *     path="/api/production-lines/{id}/availability",
+     *     summary="Obtener disponibilidad activa de una línea de producción",
+     *     description="Devuelve la línea, la lista de turnos configurados y la disponibilidad activa por día para la línea indicada.",
+     *     tags={"Production Lines"},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="ID de la línea de producción",
+     *         @OA\Schema(type="integer", example=12)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Datos de disponibilidad",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="productionLine", type="object"),
+     *             @OA\Property(property="shifts", type="array", @OA\Items(type="object")),
+     *             @OA\Property(
+     *                 property="availability",
+     *                 type="array",
+     *                 @OA\Items(
+     *                     type="object",
+     *                     @OA\Property(property="id", type="integer", example=101),
+     *                     @OA\Property(property="production_line_id", type="integer", example=12),
+     *                     @OA\Property(property="shift_list_id", type="integer", example=5),
+     *                     @OA\Property(property="day_of_week", type="integer", example=1, description="0=Domingo ... 6=Sábado"),
+     *                     @OA\Property(property="active", type="boolean", example=true)
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Línea de producción no encontrada"
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Error al cargar el planificador"
+     *     )
+     * )
+     */
+    /**
      * Obtener la configuración de disponibilidad para una línea de producción
      *
      * @param  int  $id ID de la línea de producción
@@ -50,6 +94,74 @@ class LineAvailabilityController extends Controller
     }
     
     /**
+     * @OA\Post(
+     *     path="/api/production-lines/{id}/availability",
+     *     summary="Guardar disponibilidad por línea y día (ruta con parámetro)",
+     *     description="Acepta la misma estructura de datos que la ruta sin parámetro. El cuerpo debe incluir production_line_id, customer_id y el mapa days.",
+     *     tags={"Production Lines"},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=false,
+     *         description="ID de la línea (solo para la ruta con parámetro; el cuerpo igualmente debe incluir production_line_id)",
+     *         @OA\Schema(type="integer", example=12)
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             type="object",
+     *             required={"production_line_id","customer_id","days"},
+     *             @OA\Property(property="production_line_id", type="integer", example=12),
+     *             @OA\Property(property="customer_id", type="integer", example=7),
+     *             @OA\Property(
+     *                 property="days",
+     *                 type="object",
+     *                 example={"1": {1,2}, "2": {3}},
+     *                 description="Mapa día->lista de IDs de turnos"
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Disponibilidad guardada correctamente",
+     *         @OA\JsonContent(type="object", @OA\Property(property="success", type="boolean", example=true))
+     *     ),
+     *     @OA\Response(response=403, description="Cliente no tiene acceso a esta línea"),
+     *     @OA\Response(response=404, description="Línea de producción no encontrada"),
+     *     @OA\Response(response=422, description="Datos inválidos"),
+     *     @OA\Response(response=500, description="Error al guardar la disponibilidad")
+     * )
+     *
+     * @OA\Post(
+     *     path="/api/production-lines/availability",
+     *     summary="Guardar disponibilidad por línea y día (ruta sin parámetro)",
+     *     tags={"Production Lines"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             type="object",
+     *             required={"production_line_id","customer_id","days"},
+     *             @OA\Property(property="production_line_id", type="integer", example=12),
+     *             @OA\Property(property="customer_id", type="integer", example=7),
+     *             @OA\Property(
+     *                 property="days",
+     *                 type="object",
+     *                 example={"1": {1,2}, "2": {3}},
+     *                 description="Mapa día->lista de IDs de turnos"
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Disponibilidad guardada correctamente",
+     *         @OA\JsonContent(type="object", @OA\Property(property="success", type="boolean", example=true))
+     *     ),
+     *     @OA\Response(response=403, description="Cliente no tiene acceso a esta línea"),
+     *     @OA\Response(response=404, description="Línea de producción no encontrada"),
+     *     @OA\Response(response=422, description="Datos inválidos"),
+     *     @OA\Response(response=500, description="Error al guardar la disponibilidad")
+     * )
+     *
      * Guardar la configuración de disponibilidad para una línea de producción
      *
      * @param  \Illuminate\Http\Request  $request

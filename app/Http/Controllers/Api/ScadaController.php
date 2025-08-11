@@ -15,6 +15,55 @@ use Exception;
 
 class ScadaController extends Controller
 {
+    /**
+     * @OA\Get(
+     *     path="/api/scada/{token}/modbuses",
+     *     summary="Obtener líneas Modbus por token de SCADA",
+     *     description="Devuelve todas las líneas Modbus asociadas a un token de SCADA específico, incluyendo información sobre materiales y niveles de llenado.",
+     *     tags={"SCADA"},
+     *     @OA\Parameter(
+     *         name="token",
+     *         in="path",
+     *         required=true,
+     *         description="Token único de la línea SCADA",
+     *         @OA\Schema(type="string")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Lista de líneas Modbus con información detallada",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="scada_name", type="string", example="Línea 1"),
+     *             @OA\Property(property="scada_order", type="string", example="ORD-123"),
+     *             @OA\Property(property="scada_order_id", type="string", example="1"),
+     *             @OA\Property(property="scada_order_update_time", type="string", format="date-time", example="2023-07-15 10:30:00"),
+     *             @OA\Property(property="modbus_lines", type="array", @OA\Items(
+     *                 type="object",
+     *                 @OA\Property(property="id", type="integer", example=1),
+     *                 @OA\Property(property="name", type="string", example="Silo 1"),
+     *                 @OA\Property(property="mqtt_topic_modbus", type="string", example="modbus/line/1"),
+     *                 @OA\Property(property="dimension", type="string", example="kg"),
+     *                 @OA\Property(property="token", type="string", example="abc123"),
+     *                 @OA\Property(property="max_kg", type="number", format="float", example=1000),
+     *                 @OA\Property(property="last_kg", type="number", format="float", example=750.5),
+     *                 @OA\Property(property="rec_box", type="string", example="A1"),
+     *                 @OA\Property(property="last_value", type="string", example="750.5"),
+     *                 @OA\Property(property="fillinglevels", type="string", example="75%"),
+     *                 @OA\Property(property="material_type", type="string", example="Cemento"),
+     *                 @OA\Property(property="density", type="string", example="1.5"),
+     *                 @OA\Property(property="m3", type="string", example="0.5"),
+     *                 @OA\Property(property="tara", type="string", example="0")
+     *             ))
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="SCADA no encontrada o sin líneas Modbus asociadas",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="error", type="string", example="Scada not found")
+     *         )
+     *     )
+     * )
+     */
     public function getModbusesByScadaToken($token)
     {
         // Buscar el registro en scada por el token
@@ -122,6 +171,59 @@ class ScadaController extends Controller
      * @param Request $request
      * @param int $modbusId
      * @return \Illuminate\Http\JsonResponse
+     */
+    /**
+     * @OA\Put(
+     *     path="/api/modbus/{modbusId}/material",
+     *     summary="Actualizar material para línea Modbus",
+     *     description="Actualiza el tipo de material asociado a una línea Modbus específica y publica un mensaje MQTT con la información actualizada.",
+     *     tags={"SCADA"},
+     *     @OA\Parameter(
+     *         name="modbusId",
+     *         in="path",
+     *         required=true,
+     *         description="ID de la línea Modbus",
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"material_type_id"},
+     *             @OA\Property(property="material_type_id", type="integer", example=1, description="ID del tipo de material")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Material actualizado correctamente",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Material updated successfully")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="ScadaList o material no encontrado",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="error", type="string", example="ScadaList not found for the given Modbus ID")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Datos de validación inválidos",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="The given data was invalid."),
+     *             @OA\Property(property="errors", type="object",
+     *                 @OA\Property(property="material_type_id", type="array", @OA\Items(type="string", example="The selected material type id is invalid."))
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Error interno del servidor",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="error", type="string", example="Error retrieving material: [error message]")
+     *         )
+     *     )
+     * )
      */
     public function updateMaterialForModbus(Request $request, $modbusId)
     {

@@ -27,6 +27,48 @@ class ShiftEventController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\JsonResponse
      */
+    /**
+     * @OA\Post(
+     *     path="/api/publish-shift-event",
+     *     summary="Publicar evento de cambio de turno o pausa",
+     *     description="Registra y publica un evento de inicio/fin de turno o pausa para una línea de producción, usando el token de línea y el operador.",
+     *     tags={"Shifts"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"production_line_token","event","operator_id"},
+     *             @OA\Property(property="production_line_token", type="string", example="abc123token"),
+     *             @OA\Property(property="event", type="string", enum={"inicio_trabajo","final_trabajo","inicio_pausa","final_pausa"}, example="inicio_trabajo"),
+     *             @OA\Property(property="operator_id", type="integer", example=1),
+     *             @OA\Property(property="shift_id", type="integer", example=10, nullable=true)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Cambio en turno registrado con éxito",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Cambio en turno registrado con éxito")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Production Line o Barcode no encontrado",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Production Line not found")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Evento inválido o validación fallida",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Invalid event")
+     *         )
+     *     )
+     * )
+     */
     public function publishShiftEvent(Request $request)
     {
         // Validar los datos recibidos

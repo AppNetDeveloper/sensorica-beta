@@ -71,12 +71,29 @@
                                                {{ old('processed', isset($originalOrder) && $originalOrder->processed ? 'checked' : '') }}>
                                         <label class="form-check-label" for="processed">@lang('Mark as Processed')</label>
                                         <small class="form-text text-muted d-block">@lang('Indicates if this order has been processed in the system')</small>
-                                        @if(isset($originalOrder) && $originalOrder->finished_at)
-                                            <div class="mt-2">
-                                                <strong>@lang('Processed on'):</strong> 
-                                                <span class="text-info">{{ $originalOrder->finished_at->format('d/m/Y H:i:s') }}</span>
-                                            </div>
-                                        @endif
+                                    </div>
+                                    
+                                    <div class="form-group mt-3">
+                                        <label for="order_finished">@lang('Order Status')</label>
+                                        <div class="form-check">
+                                            <input type="checkbox" name="order_finished" id="order_finished" 
+                                                   class="form-check-input"
+                                                   value="1" 
+                                                   {{ old('order_finished', isset($originalOrder) && $originalOrder->finished_at ? 'checked' : '') }}
+                                                   onchange="toggleFinishedDateField()">
+                                            <label class="form-check-label" for="order_finished">@lang('Mark as Finished')</label>
+                                            <small class="form-text text-muted d-block">@lang('Check to mark this order as completed')</small>
+                                        </div>
+                                        
+                                        <div id="finished_at_container" class="mt-2" style="{{ old('order_finished', isset($originalOrder) && $originalOrder->finished_at ? '' : 'display: none;') }}">
+                                            <label for="finished_at">@lang('Finished Date')</label>
+                                            <input type="datetime-local" name="finished_at" id="finished_at" 
+                                                   class="form-control @error('finished_at') is-invalid @enderror"
+                                                   value="{{ old('finished_at', isset($originalOrder->finished_at) ? $originalOrder->finished_at->format('Y-m-d\TH:i') : now()->format('Y-m-d\TH:i')) }}">
+                                            @error('finished_at')
+                                                <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
+                                            @enderror
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="form-group">
@@ -309,11 +326,24 @@
 
 @push('scripts')
 <script>
-// El Javascript no necesita cambios, se mantiene igual.
+// Function to toggle the finished date field visibility
+function toggleFinishedDateField() {
+    const isChecked = $('#order_finished').is(':checked');
+    if (isChecked) {
+        $('#finished_at_container').show();
+    } else {
+        $('#finished_at_container').hide();
+    }
+}
+
 $(document).ready(function() {
     
     const allProcesses = @json($processes->keyBy('id'));
     const articlesData = @json($articlesData ?? new stdClass());
+    
+    // Initialize the finished date field toggle
+    toggleFinishedDateField();
+    
 
     function updateNoProcessesMessage() {
         const hasProcesses = $('#processes_list tr[data-process-id]').length > 0;

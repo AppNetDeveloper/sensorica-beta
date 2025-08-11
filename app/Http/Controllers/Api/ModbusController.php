@@ -260,6 +260,50 @@ class ModbusController extends Controller
      * @param  \Illuminate\Http\Request  $request La solicitud HTTP entrante.
      * @param  int|string  $id  El ID del registro en scada_order_list_process que disparó el recálculo.
      * @return \Illuminate\Http\JsonResponse Una respuesta JSON indicando el resultado de la operación.
+     * 
+     * @OA\Post(
+     *     path="/api/modbus/recalculate-dosing-process/{id}",
+     *     summary="Recalcular proceso de dosificación",
+     *     description="Recalcula automáticamente el proceso de dosificación cuando el material en tolva es insuficiente. Divide la orden en dos partes: una con el material disponible y otra con el remanente.",
+     *     tags={"Modbus"},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="ID del registro en scada_order_list_process que dispara el recálculo",
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Recálculo completado o detenido por condiciones específicas",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", enum={"success", "stopped_due_to_process_value", "no_usable_material_above_residue"}, example="success"),
+     *             @OA\Property(property="message", type="string", example="Material insuficiente en tolva para el requerimiento original. La orden ha sido ajustada al 75% de lo disponible y se ha creado una orden de trabajo restante."),
+     *             @OA\Property(property="process_id", type="integer", example=123),
+     *             @OA\Property(property="current_total_weight_in_hopper", type="number", format="float", example=150.5),
+     *             @OA\Property(property="usable_weight_in_hopper", type="number", format="float", example=100.5),
+     *             @OA\Property(property="residue_configured", type="number", format="float", example=50.0),
+     *             @OA\Property(property="original_order_list_id", type="integer", example=45),
+     *             @OA\Property(property="new_order_list_id", type="integer", example=46)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Proceso original o configuración no encontrada",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="error"),
+     *             @OA\Property(property="message", type="string", example="Registro del proceso original no encontrado con ID: 123")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Error interno del servidor durante el recálculo",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="error"),
+     *             @OA\Property(property="message", type="string", example="Error durante el recálculo: [mensaje de error]")
+     *         )
+     *     )
+     * )
      */
     public function recalculateDosingProcess(Request $request, $id)
     {
