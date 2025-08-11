@@ -544,7 +544,22 @@ class ProductionOrderController extends Controller
     
         // Actualizamos los valores en el modelo
         if ($hasOrderChanged) {
-            $order->orden = $validatedData['orden'];
+            // Si se está moviendo la tarjeta a la primera posición (move_to_top = true)
+            if (isset($request->move_to_top) && $request->move_to_top === true) {
+                // Buscar el valor mínimo de orden para tarjetas con el mismo status y production_line_id
+                $minOrden = ProductionOrder::where('production_line_id', $order->production_line_id)
+                    ->where('status', $order->status)
+                    ->where('id', '!=', $order->id) // Excluir la tarjeta actual
+                    ->min('orden');
+                
+                // Si no hay otras tarjetas, usar 0, de lo contrario restar 1 al mínimo
+                $order->orden = $minOrden !== null ? $minOrden - 1 : 0;
+                
+                Log::info("Orden ID {$id}: Movida a primera posición con orden = {$order->orden} (mínimo encontrado: " . ($minOrden ?? 'ninguno') . ")");
+            } else {
+                // Comportamiento normal (asignar el valor que viene en la petición)
+                $order->orden = $validatedData['orden'];
+            }
         }
         // Guardar el estado anterior antes de actualizar
         $previousStatus = null;
