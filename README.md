@@ -1413,6 +1413,41 @@ Para el detalle completo revisar `routes/web.php` y `routes/api.php`. A continua
 - **Permisos/Roles**: Gestión de usuarios/roles vía UI de administración (Laravel estándar + personalizaciones del proyecto).
 - **Entornos y credenciales**: Variables `.env` para DB, MQTT, brokers, gateways y servicios externos.
 
+## 🚀 Quickstart (cómo empezar)
+
+- **Configurar entorno**
+  - Copia `.env.example` a `.env` y ajusta: DB (`DB_*`), URL (`APP_URL`), zona horaria (`APP_TIMEZONE`), MQTT (`MQTT_*`), token (`TOKEN_SYSTEM`).
+- **Instalar dependencias**
+  - PHP: `composer install` → `php artisan key:generate`
+  - Migraciones/seeders: `php artisan migrate --seed`
+- **Arrancar procesos**
+  - Web (desarrollo): `php artisan serve` o configurar Apache/Nginx apuntando a `public/`.
+  - Servicios en background: habilitar `.conf` de Supervisor en la raíz (MQTT senders, OEE, Modbus, RFID, WhatsApp, etc.).
+- **Verificar**
+  - Revisar logs en `storage/logs/`.
+  - Probar endpoints clave en `routes/api.php` (ver sección “API”).
+  - Abrir Kanban y SPAs públicas (ver “URLs útiles”).
+
+## 🔗 URLs útiles / Navegación
+
+- **Autenticación/Panel**: `/login`, `/register`.
+- **Kanban de producción**: acceso desde el panel web (vista `resources/views/customers/order-kanban.blade.php`).
+- **Organizador de órdenes**: acceso desde el panel (vista `resources/views/customers/order-organizer.blade.php`).
+- **SPAs públicas** (`public/`):
+  - Monitoreo Producción: `/live-production/machine.html`
+  - Monitoreo RFID: `/live-rfid/index.html`
+  - Confección/Asignación Puestos: `/confeccion-puesto-listado/index.html`
+- **Documentación de API**: ver sección “API (routes/api.php)” en este README.
+
+## 🛡️ Operación y mantenimiento
+
+- **Logs**: `storage/logs/` (cada servicio tiene su archivo; ver `.conf` de Supervisor en la raíz para nombres y rutas completas).
+- **Salud del sistema**: Comandos Artisan y endpoints de sistema/host monitor.
+- **Backups y SFTP**: Variables `.env` (ver sección de configuración). Programe backups y verifique credenciales SFTP.
+- **Limpieza y retención**: `CLEAR_DB_DAY` y comando `clear:old-records` (ver `laravel-clear-db.conf`).
+- **Servicios críticos**: OEE (`calculate-monitor-oee`), MQTT senders (`node/sender-mqtt-server*.js`), Modbus (`node/client-modbus.js`), RFID gateway (`node/mqtt-rfid-to-api.js`), WhatsApp (`connect-whatsapp.js`).
+- **Tareas periódicas**: `orders:check`, `shift:check`, `bluetooth:check-exit`, `production:update-accumulated-times` (ver archivos `.conf`).
+
 ### 🛠️ Comandos Artisan (Supervisor y mantenimiento)
 
 Extraídos de `app/Console/Commands/*`:
