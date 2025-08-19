@@ -102,6 +102,7 @@ COMMANDS=(
     "/var/www/html/verne.sh"
     "/var/www/html/reset-sensor.sh"
     "/var/www/html/node/*.js"
+    "/var/www/html/fix_log_permissions.sh"
 )
 
 

@@ -48,6 +48,9 @@
                     <button id="phpmyadmin" class="btn btn-warning mb-2">
                         <i class="fas fa-database"></i> {{ __('Acceder a PHPMyAdmin') }}
                     </button>
+                    <button id="fix-logs" class="btn btn-success mb-2">
+                        <i class="fas fa-file-alt"></i> {{ __('Fix Logs') }}
+                    </button>
                     <button id="logs" class="btn btn-info mb-2">
                         <i class="fas fa-file-alt"></i> {{ __('Ver Log') }}
                     </button>
@@ -227,6 +230,15 @@
         document.getElementById('start-supervisor').addEventListener('click', async () => {
             await apiCall('/api/start-supervisor');
             alert('Supervisor iniciado con éxito.');
+        });
+
+        document.getElementById('fix-logs').addEventListener('click', async () => {
+            try {
+                await apiCall('/api/fix-logs');
+                alert('Permisos de logs corregidos con éxito.');
+            } catch (error) {
+                alert('Error al corregir permisos de logs: ' + error);
+            }
         });
 
         document.getElementById('stop-supervisor').addEventListener('click', async () => {

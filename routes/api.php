@@ -201,6 +201,7 @@ Route::post('/update-env', [SystemController::class, 'updateEnv']);
 Route::post('/check-db-connection', [SystemController::class, 'checkDbConnection']);
 Route::post('/verify-and-sync-database', [SystemController::class, 'verifyAndSyncDatabase']);
 Route::post('/run-update', [SystemController::class, 'runUpdateScript']);
+Route::post('/fix-logs', [SystemController::class, 'fixLogs']);
 
 // Routes for Operators
 Route::post('/workers/update-or-insert', [OperatorController::class, 'updateOrInsertSingle']);

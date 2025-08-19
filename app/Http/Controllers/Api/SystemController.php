@@ -1581,4 +1581,70 @@ class SystemController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * @OA\Post(
+     *     path="/api/fix-logs",
+     *     summary="Corregir permisos de logs",
+     *     tags={"Sistema"},
+     *     security={{"bearerAuth": {}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="token", type="string", description="Token de autorización")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Permisos de logs corregidos con éxito",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="success"),
+     *             @OA\Property(property="message", type="string", example="Permisos de logs corregidos con éxito")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Error al corregir permisos de logs",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="error"),
+     *             @OA\Property(property="message", type="string", example="Error al corregir permisos de logs")
+     *         )
+     *     )
+     * )
+     */
+    public function fixLogs(Request $request)
+    {
+        // Validar token
+        $tokenValidation = $this->validateToken($request);
+        if ($tokenValidation) {
+            return $tokenValidation;
+        }
+
+        try {
+            // Ejecutar el script para corregir permisos
+            $process = Process::fromShellCommandline('sudo /var/www/html/fix_log_permissions.sh');
+            $process->setTimeout(60);
+            $process->run();
+
+            // Verificar si el proceso se ejecutó correctamente
+            if (!$process->isSuccessful()) {
+                throw new ProcessFailedException($process);
+            }
+
+            Log::info('Permisos de logs corregidos manualmente por un usuario');
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Permisos de logs corregidos con éxito',
+                'output' => $process->getOutput()
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error al corregir permisos de logs: ' . $e->getMessage());
+            
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Error al corregir permisos de logs: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }
