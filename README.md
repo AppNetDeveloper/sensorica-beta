@@ -20,12 +20,27 @@
 - [Instalación y Configuración](#instalación-y-configuración)
 - [Estructura de la Base de Datos](#estructura-de-la-base-de-datos)
 - [Servicios en Segundo Plano](#servicios-en-segundo-plano)
+- [🧭 Mapa de funcionalidades](#🧭-mapa-de-funcionalidades-qué-puede-hacer-la-app)
+- [📚 Dónde está cada cosa](#📚-dónde-está-cada-cosa-mapa-de-código)
+- [🔄 Flujos clave](#🔄-flujos-clave)
+- [🔐 Acceso y seguridad](#🔐-acceso-y-seguridad)
+- [🚀 Quickstart](#🚀-quickstart-cómo-empezar)
+- [🔗 URLs útiles / Navegación](#🔗-urls-útiles--navegación)
+- [🛡️ Operación y mantenimiento](#🛡️-operación-y-mantenimiento)
+  - [📦 Copias de seguridad automáticas](#📦-copias-de-seguridad-automáticas)
+  - [🔒 Seguridad operacional](#🔒-seguridad-operacional)
+  - [🛠️ Comandos Artisan](#🛠️-comandos-artisan)
+- [🏗️ Infraestructura y despliegue](#🏗️-infraestructura-y-despliegue)
+  - [Base de datos: Percona Server for MySQL](#base-de-datos-percona-server-for-mysql)
+  - [Servidor web: Caddy](#servidor-web-caddy)
+  - [Red y acceso seguro: ZeroTier + Cloudflare Tunnels](#red-y-acceso-seguro-zerotier--cloudflare-tunnels)
 - [Licencia](#licencia)
 
 ## 📄 Descripción General
 
 Sensorica es una plataforma integral para la gestión y monitorización de procesos industriales en tiempo real. El sistema permite la visualización, seguimiento y control de líneas de producción a través de tableros Kanban, monitoreo OEE (Overall Equipment Effectiveness), integración con sensores IoT, y gestión completa de órdenes de producción.
 
+{{ ... }}
 Diseñado para entornos industriales exigentes, Sensorica ofrece una interfaz intuitiva que permite a los operadores y gerentes de producción optimizar los flujos de trabajo, identificar cuellos de botella, y mejorar la eficiencia general de la planta.
 
 ## 🌟 Características Principales
@@ -54,6 +69,30 @@ El sistema utiliza un enfoque de microservicios para los componentes críticos, 
 - Cálculo de métricas OEE
 - Sincronización con APIs externas
 - Procesamiento de datos en tiempo real
+
+### 🗺️ Diagrama de arquitectura (alto nivel)
+
+```
+Usuarios/Operarios                           Integraciones/Dispositivos
+        |                                               |
+        v                                               v
+  [SPAs públicas (public/*)]     [RFID Readers]   [SCADA/Modbus]
+        |                               |              |
+        v                               v              v
+ [Nginx/Apache]  →  Laravel (routes/web.php, routes/api.php)
+                           |                    |
+                           v                    v
+                  [Controllers/API]      [Console Commands]
+                           |                    |
+                           └──────► [Models/DB] ◄──────┘
+                                            ^
+                                            |
+                         [MQTT Brokers] ◄───┼───► [Node services]
+                                             \      - sender-mqtt-server*.js
+                                              \     - sensor-transformer.js
+                                               \    - mqtt-rfid-to-api.js
+                                                \   - client-modbus.js
+```
 
 ## 📦 Módulos Principales
 
@@ -1448,6 +1487,60 @@ Para el detalle completo revisar `routes/web.php` y `routes/api.php`. A continua
 - **Servicios críticos**: OEE (`calculate-monitor-oee`), MQTT senders (`node/sender-mqtt-server*.js`), Modbus (`node/client-modbus.js`), RFID gateway (`node/mqtt-rfid-to-api.js`), WhatsApp (`connect-whatsapp.js`).
 - **Tareas periódicas**: `orders:check`, `shift:check`, `bluetooth:check-exit`, `production:update-accumulated-times` (ver archivos `.conf`).
 
+### 📦 Copias de seguridad automáticas
+
+- **Base de datos (diario)**: `php artisan db:replicate-nightly` — crea un volcado de la BD primaria y reemplaza la secundaria (auto-detección mysql/mariadb). Integrar en Supervisor/cron.
+- **Script de apoyo**: `clean_and_backup.sh` en la raíz — ejemplo de limpieza y respaldo combinados. Ajustar rutas/retención.
+- **Configuración**: `config/backup.php` y variables `.env` relacionadas a almacenamiento/credenciales SFTP si aplica.
+- **Retención**: Alinear con `CLEAR_DB_DAY` y políticas internas.
+- **Restauración**: Mantener procedimientos documentados y probados para restore desde dumps recientes.
+
+#### Programación de backups (ejemplos)
+
+- **cron (02:30 diario)**
+  ```bash
+  30 2 * * * cd /var/www/html && /usr/bin/php artisan db:replicate-nightly >> storage/logs/backup.log 2>&1
+  ```
+- **systemd timer**
+  - `/etc/systemd/system/sensorica-backup.service`
+    ```ini
+    [Unit]
+    Description=Backup diario de base de datos Sensorica
+    After=network.target
+
+    [Service]
+    Type=oneshot
+    WorkingDirectory=/var/www/html
+    ExecStart=/usr/bin/php artisan db:replicate-nightly
+    StandardOutput=append:/var/www/html/storage/logs/backup.log
+    StandardError=append:/var/www/html/storage/logs/backup.log
+    ```
+  - `/etc/systemd/system/sensorica-backup.timer`
+    ```ini
+    [Unit]
+    Description=Programador diario de backup Sensorica
+
+    [Timer]
+    OnCalendar=*-*-* 02:30:00
+    Persistent=true
+
+    [Install]
+    WantedBy=timers.target
+    ```
+  - Activar: `systemctl enable --now sensorica-backup.timer`
+
+### 🔒 Seguridad operacional
+
+- **Entorno**: `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL` correcto y HTTPS habilitado en el proxy/reverse.
+- **Credenciales**: `.env` con permisos restringidos (600) y fuera del control de versiones; rotación periódica.
+- **RBAC**: Revisar roles/permisos en la UI de admin; mínimos privilegios.
+- **Tokens**: `TOKEN_SYSTEM` y claves de terceros (WhatsApp/Telegram/SFTP) almacenadas solo en `.env`.
+- **Red**: Limitar puertos de brokers MQTT/DB a redes internas; usar autenticación en MQTT.
+- **Logs**: Vigilar `storage/logs/`; evitar datos sensibles en logs; rotación.
+- **Jobs/Servicios**: Supervisados por Supervisor con `Restart=always`; ejecutar como usuarios de servicio cuando sea posible.
+- **Backups**: Cifrar/firmar copias; transferir por SFTP/SSH; pruebas de restore periódicas.
+- **Actualizaciones**: Mantener dependencias (composer/npm) y parches de SO al día.
+
 ### 🛠️ Comandos Artisan (Supervisor y mantenimiento)
 
 Extraídos de `app/Console/Commands/*`:
@@ -1714,9 +1807,84 @@ Notas:
 - Muchos programas especifican `redirect_stderr=true`, en cuyo caso sólo habrá `stdout_logfile`.
 - Ajuste `numprocs`, `startretries`, `user` y otras opciones según su entorno.
 
+## 🏗️ Infraestructura y despliegue
+
+### Base de datos: Percona Server for MySQL
+
+- Migración a Percona por estabilidad y rendimiento superiores manteniendo compatibilidad MySQL.
+- Beneficios: mejoras en InnoDB, diagnósticos avanzados, `Percona Toolkit/Backup`, mejor manejo de alta concurrencia y recuperación ante fallos.
+- Laravel continúa usando `DB_CONNECTION=mysql`; no se requieren cambios de código. Ajustar `my.cnf` según carga.
+
+### Servidor web: Caddy
+
+- Caddy reemplaza Nginx por su HTTPS automático, HTTP/2/3, y configuración simple.
+- Beneficios: renovación automática de certificados, reverse proxy integrado, headers de seguridad por defecto, menor complejidad operativa.
+- Ejemplo mínimo de Caddyfile:
+  ```caddyfile
+  ejemplo.midominio.com {
+    encode zstd gzip
+    root * /var/www/html/public
+    php_fastcgi unix//run/php/php-fpm.sock
+    file_server
+    header {
+      Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+      X-Content-Type-Options nosniff
+      X-Frame-Options DENY
+      Referrer-Policy no-referrer-when-downgrade
+    }
+  }
+  ```
+
+### Red y acceso seguro: ZeroTier + Cloudflare Tunnels
+
+- Acceso sin abrir puertos en el firewall. La app es accesible en Internet mediante túneles salientes y redes P2P.
+- ZeroTier: crea una red virtual P2P cifrada entre nodos (planta, servidores, operadores). Beneficios P2P: NAT traversal, baja latencia, cifrado extremo a extremo, microsegmentación y control de membresía.
+- Cloudflare Tunnels: expone dominios públicos mediante un túnel saliente (origin cloaked). Beneficios: no hay puertos entrantes, WAF/CDN, Access/SSO opcional, reglas de origen restringido.
+- Patrón recomendado: acceso interno por ZeroTier (IPs privadas/ZT) y acceso externo controlado vía Cloudflare (dominio público), ambos sin exposición directa.
+  - Medidas de protección:
+  - ACLs/Members en ZeroTier; rotación de tokens; restringir auto-join.
+  - Cloudflare Access/SSO, IP allowlists, Origin Rules; mínimo de orígenes permitidos.
+  - Cifrado TLS extremo a extremo (Caddy) y seguridad de aplicación (roles, tokens, rate limits).
+  - Auditoría: métricas y logs de túneles, health-checks, alertas.
+
+#### ¿Cómo salimos a Internet sin abrir puertos ni IP fija?
+
+- **Todo es saliente**: El servidor inicia conexiones salientes (HTTPS/websocket) hacia Cloudflare y ZeroTier.
+- **NAT traversal**: ZeroTier establece enlaces P2P entre nodos aun detrás de NAT/CG-NAT; si no es posible, relé cifrado.
+- **Dominio público sin exposición**: Cloudflare Tunnel publica `https://tu-dominio` pero el origen permanece oculto (origin cloaked).
+- **DHCP/Redes cambiantes**: Funciona en cualquier LAN con DHCP; no requiere IP pública ni estática. Si cambia la IP local, el túnel se reestablece automáticamente.
+- **Seguridad**: Tráfico cifrado extremo a extremo (ZeroTier) y TLS en el túnel (Cloudflare) + WAF/CDN/Access.
+
+```
+[Cliente] ⇄ Internet ⇄ [Cloudflare Edge]
+                    ⇵
+                 (Túnel)
+                    ⇵
+            [Servidor en planta]
+                 ⇵
+            [ZeroTier P2P]
+                 ⇵
+      [Otros nodos internos]
+```
+
+#### Escenarios típicos
+
+- **Planta con ISP residencial (sin IP fija / CG-NAT)**: El servicio funciona igual; no se abren puertos, dominio público operativo.
+- **Multipunto (planta ↔ sucursales ↔ casa del gerente)**: Todos los nodos en la red ZeroTier con IPs privadas virtuales; acceso estable y cifrado.
+- **Soporte remoto**: Proveer acceso temporal a técnicos vía ZeroTier Members con expiración y políticas ACL.
+- **Exposición selectiva**: Panel interno solo por ZeroTier; APIs públicas específicas por Cloudflare con Access/SSO.
+
+#### Buenas prácticas rápidas
+
+- Usar ZeroTier para tráfico interno (DB, MQTT, panel admin) y Cloudflare solo para endpoints públicos necesarios.
+- Habilitar Cloudflare Access (SSO) en rutas sensibles; limitar orígenes con Origin Rules.
+- Segmentar por redes ZeroTier por cliente/línea; aplicar ACLs de mínimo privilegio.
+- Rotar tokens/identidades de ZeroTier y credenciales de `cloudflared`; registrar y auditar accesos.
+- Mantener Caddy con TLS y headers de seguridad; deshabilitar HTTP sin TLS.
+
 ## 📝 Licencia
 
 AiXmart es un software propietario. Todos los derechos reservados BOISOLO www.boisolo.com AiXmart www.boisolo.com.
 
----
+{{ ... }}
 Desarrollado por el equipo de AppNet Developer, Boisolo Y AiXmart 2025
