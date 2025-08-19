@@ -2,6 +2,12 @@
 
 @section('content')
 <div class="container-fluid">
+    <style>
+        /* Mini‑tarjetas 2x2 compactas */
+        .mini-cards-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .35rem .5rem; align-items: start; }
+        .mini-card { display: inline-flex; align-items: center; gap: .35rem; padding: .2rem .45rem; border-radius: .375rem; font-size: .78rem; line-height: 1rem; width: 100%; justify-content: flex-start; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .mini-card i { font-size: .85em; }
+    </style>
     <div class="row">
         <div class="col-12">
             <div class="card">
@@ -132,7 +138,7 @@
                             <div class="d-flex flex-wrap gap-3">
                                 <div class="d-flex align-items-center">
                                     <span class="badge bg-info me-2"><i class="fas fa-hourglass-half"></i></span>
-                                    <span>@lang('Tiempo acumulado de fabricación')</span>
+                                    <span>@lang('Tiempo de ocupación máquina')</span>
                                 </div>
                                 <div class="d-flex align-items-center">
                                     <span class="badge bg-primary me-2"><i class="fas fa-hourglass-start"></i></span>
@@ -240,18 +246,16 @@
                                                         }
                                                     }
                                                 @endphp
-                                                <span class="badge {{ $badgeClass }}">
-                                                    @if($pivot->finished)
+                                                <div class="mini-cards-grid mt-1">
+                                                    {{-- Estado actual siempre presente como mini‑tarjeta --}}
+                                                    <span class="badge {{ $badgeClass }} mini-card" title="@lang('Estado actual')">
                                                         {{ $statusText }}
-                                                    @else
-                                                        @lang('Estado actual:') {{ $statusText }}
-                                                    @endif
-                                                </span>
-                                                
-                                                @if(($status === 1 || ($status === 0 && !is_null($productionLineId))))
-                                                    <div class="mt-1">
-                                                        <span class="badge bg-info" title="@lang('Tiempo acumulado de fabricación')">
-                                                            <i class="fas fa-hourglass-half"></i> 
+                                                    </span>
+
+                                                    {{-- Tiempo de ocupación máquina (solo si aplica) --}}
+                                                    @if(($status === 1 || ($status === 0 && !is_null($productionLineId))))
+                                                        <span class="badge bg-info mini-card" title="@lang('Tiempo de ocupación máquina')">
+                                                            <i class="fas fa-hourglass-half"></i>
                                                             @if($productionOrder && !is_null($productionOrder->accumulated_time))
                                                                 @php
                                                                     $seconds = (int)$productionOrder->accumulated_time;
@@ -265,27 +269,22 @@
                                                                 @lang('Sin tiempo acumulado')
                                                             @endif
                                                         </span>
-                                                    </div>
-                                                    
-                                                    {{-- Fechas estimadas de inicio y fin --}}
-                                                    @if($productionOrder && ($productionOrder->estimated_start_datetime || $productionOrder->estimated_end_datetime))
-                                                        <div class="mt-1 d-flex flex-wrap gap-1">
-                                                            @if($productionOrder->estimated_start_datetime)
-                                                                <span class="badge bg-primary" title="@lang('Fecha estimada de inicio')">
-                                                                    <i class="fas fa-hourglass-start"></i> 
-                                                                    {{ \Carbon\Carbon::parse($productionOrder->estimated_start_datetime)->format('d/m/Y H:i') }}
-                                                                </span>
-                                                            @endif
-                                                            
-                                                            @if($productionOrder->estimated_end_datetime)
-                                                                <span class="badge bg-success" title="@lang('Fecha estimada de fin')">
-                                                                    <i class="fas fa-hourglass-end"></i> 
-                                                                    {{ \Carbon\Carbon::parse($productionOrder->estimated_end_datetime)->format('d/m/Y H:i') }}
-                                                                </span>
-                                                            @endif
-                                                        </div>
+
+                                                        {{-- Fechas estimadas --}}
+                                                        @if($productionOrder && $productionOrder->estimated_start_datetime)
+                                                            <span class="badge bg-primary mini-card" title="@lang('Fecha estimada de inicio')">
+                                                                <i class="fas fa-hourglass-start"></i>
+                                                                {{ \Carbon\Carbon::parse($productionOrder->estimated_start_datetime)->format('d/m/Y H:i') }}
+                                                            </span>
+                                                        @endif
+                                                        @if($productionOrder && $productionOrder->estimated_end_datetime)
+                                                            <span class="badge bg-success mini-card" title="@lang('Fecha estimada de fin')">
+                                                                <i class="fas fa-hourglass-end"></i>
+                                                                {{ \Carbon\Carbon::parse($productionOrder->estimated_end_datetime)->format('d/m/Y H:i') }}
+                                                            </span>
+                                                        @endif
                                                     @endif
-                                                @endif
+                                                </div>
                                             </td>
                                             <td class="text-center">
                                                 @if($pivot->in_stock === 0)

@@ -53,8 +53,8 @@
             <h6 class="mt-3 mb-2">@lang('Indicadores de tiempo')</h6>
             <div class="d-flex flex-wrap gap-4 mb-3">
                 <div class="d-flex align-items-center">
-                    <span class="badge bg-info me-2"><i class="fas fa-hourglass-half"></i></span>
-                    <span>@lang('Tiempo acumulado de fabricación')</span>
+                    <span class="me-2"><i class="fas fa-hourglass-half text-muted"></i></span>
+                    <span>@lang('Tiempo de ocupación máquina')</span>
                 </div>
                 <div class="d-flex align-items-center">
                     <span class="badge bg-primary me-2"><i class="fas fa-hourglass-start"></i></span>
@@ -264,7 +264,6 @@
         /* Estilo para órdenes prioritarias - solo un borde sutil */
         .kanban-card.priority-order { border: 1px solid #ffc107; }
         .kanban-card.collapsed .kanban-card-body,
-        .kanban-card.collapsed .kanban-card-footer,
         .kanban-card.collapsed .kanban-card-body .process-list,
         .kanban-card.collapsed .kanban-card-body .progress-container,
         .kanban-card.collapsed .kanban-card-body .d-flex.justify-content-between.align-items-center:not(:first-child) { 
@@ -275,7 +274,7 @@
 
         .kanban-card-header { padding: 0.75rem 1.25rem; display: flex; justify-content: space-between; align-items: flex-start; cursor: pointer; }
         .kanban-card-body { padding: 0 1.25rem 1.25rem 1.25rem; }
-        .kanban-card-footer { padding: 0.75rem 1.25rem; border-top: 1px solid var(--card-border); background-color: var(--column-bg); font-size: 0.875rem; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center; }
+        /* Footer eliminado */
         .card-menu { font-size: 1rem; color: var(--text-muted); cursor: pointer; }
         .group-badge { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; color: white; font-size: 0.75rem; font-weight: bold; margin-left: 8px; }
         .progress-container { margin-top: 0.75rem; }
@@ -1431,16 +1430,13 @@
                                 <span class="d-flex align-items-center"><i class="far fa-clock text-muted me-1" title="Tiempo teórico"></i><span class="text-xs">${order.theoretical_time || 'N/A'} </span></span>
                              </div>
                              <div class="d-flex flex-column">
-                                <span class="d-flex align-items-center accumulated-time-badge ${order.accumulated_time > 0 ? '' : 'd-none'}" title="Tiempo acumulado de tarjetas anteriores"> <i class="fas fa-hourglass-half text-muted me-1"></i><span class="text-xs">${formatSecondsToTime(order.accumulated_time || 0)}</span></span>
+                                <span class="d-flex align-items-center accumulated-time-badge ${order.accumulated_time > 0 ? '' : 'd-none'}" title="Tiempo de ocupación máquina"> <i class="fas fa-hourglass-half text-muted me-1"></i><span class="text-xs">${formatSecondsToTime(order.accumulated_time || 0)}</span></span>
                              </div>
                          </div>
                     </div>
 
                 </div>
-                <div class="kanban-card-footer">
-                    <span class="text-xs fw-medium">${translations.unassigned}</span>
-                    <div class="assigned-avatars d-flex align-items-center"><img class="avatar-img" style="width:28px; height:28px; border-radius:50%;" src="https://i.pravatar.cc/40?img=1" alt="user"></div>
-                </div>`;
+`;
             return card;
         }
         

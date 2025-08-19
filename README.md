@@ -365,6 +365,95 @@ Sensorica implementa varios servidores Node.js especializados que complementan l
 
 Estos servidores Node.js son componentes críticos de la arquitectura de Sensorica, proporcionando capacidades de comunicación en tiempo real, procesamiento de datos y integración con dispositivos industriales que complementan el backend Laravel principal.
 
+#### Archivos auxiliares en `node/` y ejecución con Supervisor
+
+Además de los servidores indicados, en el directorio `node/` existen archivos auxiliares y de soporte que conviene conocer. No es necesario modificar código para usarlos: los servicios son gestionados por Supervisor y se inician automáticamente según la configuración del sistema.
+
+- **`cert.pem` / `key.pem`**
+  - Certificado y clave TLS en formato PEM usados cuando se habilita HTTPS/WSS en los servidores que lo soportan (p. ej., gateway RFID).
+  - Úselos sólo si ha configurado TLS; de lo contrario, los servidores operan en HTTP/WS.
+
+- **`index.html`**
+  - Interfaz de monitoreo en tiempo real del gateway RFID (referenciada en este README como ruta `/gateway-test`).
+  - Es servida por el proceso Node correspondiente (no requiere configuración adicional desde Laravel).
+
+- **`install.sh`**
+  - Script auxiliar de instalación/configuración para el entorno Node (dependencias, permisos, etc.).
+  - Ejecútelo manualmente si necesita preparar el entorno; no afectará a la orquestación por Supervisor.
+
+- **`baileys_auth_info/` y `baileys_store_multi.json`**
+  - Archivos de estado/sesión de WhatsApp (librería Baileys) usados por `connect-whatsapp.js`.
+  - Contienen credenciales de sesión; trate estos archivos como sensibles y evite versionarlos públicamente.
+
+- **`wa-logs.txt`**
+  - Archivo de logs del servicio de WhatsApp. Puede crecer con el tiempo; considere rotación de logs en producción.
+
+- **`package.json` (en `node/`)**
+  - Declara dependencias Node utilizadas por los servicios. Aunque define un `main`, los servicios en producción se gestionan mediante Supervisor.
+
+**Ejecución y orquestación:**
+
+- Los servidores Node se ejecutan bajo **Supervisor** (ver archivos `.conf` en la raíz del proyecto, por ejemplo `laravel-mqtt-rfid-to-api.conf`, `laravel-sensor-transformers.conf`, `laravel-modbus-subscriber.conf`, etc.).
+- Supervisor asegura su arranque automático, reinicio en caso de fallo y registro de logs.
+- No es necesario iniciar manualmente estos procesos; cualquier actualización de configuración debe aplicarse en los archivos `.conf` correspondientes o variables de entorno.
+
+#### Scripts Python de IA y Detección de Anomalías (`python/`)
+
+En `python/` se incluyen scripts para entrenamiento y monitoreo de anomalías en producción y en turnos. Estos scripts pueden ser gestionados por **Supervisor** para su ejecución continua (existen ejemplos de configuración en la raíz como `laravel-production-monitor-ia.conf.back` y `laravel-shift-monitor-ia.conf.back`). No se requiere modificar código para su uso en producción.
+
+- **`entrenar_produccion.py`**
+  - Entrena autoencoders por combinación `(production_line_id, sensor_type)` a partir de agregaciones de `sensor_counts`.
+  - Features: `mean_time_11`, `std_time_11`, `mean_time_00`, `std_time_00` con lógica por tipo (tipo 0 usa `time_11`; resto usa `time_00`).
+  - Salida: `models/line_{line}_type_{type}_autoencoder.h5` y `models/line_{line}_type_{type}_scaler.pkl`.
+  - Conecta a la DB usando variables de entorno del `.env` de Laravel.
+
+- **`detectar_anomalias_produccion.py`**
+  - Monitoriza cada 60 s los últimos 15 minutos de `sensor_counts` por línea/tipo, omitiendo líneas con turno no activo.
+  - Carga los modelos y scalers entrenados para evaluar el MSE y reportar anomalías por sensor.
+  - Considera inactividad (pocos registros) y reporta sensores tipo 0 sin actividad reciente.
+  - Requiere: TensorFlow, scikit-learn, pandas, numpy, SQLAlchemy, python-dotenv, joblib.
+
+- **`entrena_shift.py`**
+  - Construye sesiones de turnos desde `shift_history` (parejas start/end), genera features: hora inicio, hora fin, duración.
+  - Entrena un autoencoder global para turnos y guarda `models/shift_autoencoder.h5` y `models/shift_scaler.save`.
+
+- **`detectar_anomalias_shift.py`**
+  - Cada 60 s analiza el último día de sesiones de turnos, calcula MSE y marca anomalías con umbral dinámico (p95).
+  - Usa los artefactos `shift_autoencoder.h5` y `shift_scaler.save` generados por `entrena_shift.py`.
+
+**Notas de ejecución con Supervisor:**
+
+- Estos scripts pueden ejecutarse como procesos en segundo plano mediante archivos `.conf` de Supervisor (activar/ajustar los `.conf` de ejemplo si procede).
+- Supervisor gestiona arranque automático, reinicios y logs; no es necesario invocarlos manualmente.
+
+#### Servicios RS-485 v2 para básculas (`485-v2/`)
+
+Integración con básculas/dispensadores vía RS-485/Modbus RTU y publicación/consumo de órdenes por MQTT. La configuración está en `485-v2/config.json`.
+
+- **`config.json`**
+  - MQTT: `mqtt_broker`, `mqtt_base_topic` (peso), `mqtt_status_topic`, `mqtt_dosificador_topic`, `mqtt_zero_topic`, `mqtt_tara_topic`, `mqtt_cancel_topic`.
+  - Modbus: `modbus.port` (ej. `/dev/ttyUSB0`), `baudrate`, `timeout`, `stopbits`, `bytesize`, `parity`.
+  - Rango de direcciones: `modbus_address_range` `{ start, end }`.
+  - Otros: `batch_size` (envío por lotes), `scan_interval` (escaneo), `reconnect_interval`.
+
+- **`swift.py`**
+  - Cliente Modbus (pymodbus) que escanea direcciones y lanza hilos lectores por dispositivo.
+  - Publica peso neto en `mqtt_base_topic/{direccion}` por lotes (`batch_size`).
+  - Suscripciones MQTT para operar: dosificación (`.../dosifica/{dir}` con `{"value":<decimas_kg>}`), cero (`.../zero/{dir}`), tara (`.../tara/{dir}`) y lectura de tara (`{"read":true}` → responde con `{"tara":<kg>}`).
+  - Publica estado cada 10s en `mqtt_status_topic` (`{"status":"OK|FALLO"}`).
+
+- **`swift-con-cancelacion.py`**
+  - Igual que `swift.py`, añade soporte de cancelación vía `mqtt_cancel_topic/{dir}` con `{"value": true}` que ejecuta cancelación por Modbus.
+
+- **`swift-con-cancelacion-automatica.py`**
+  - Igual que el anterior, pero fuerza una cancelación previa automática antes de iniciar una nueva dosificación.
+  - Ajusta cadencia de lectura (intervalos más rápidos) para respuesta más ágil.
+
+**Ejecución y orquestación:**
+
+- Estos servicios pueden ejecutarse de forma continua bajo **Supervisor**. Configure un `.conf` que ejecute el script deseado en `485-v2/` con el entorno apropiado y gestione logs/reintentos.
+- No es necesario modificar los scripts; la operación se controla vía MQTT y el archivo `config.json`.
+
 #### Vistas Blade Principales
 
 Las vistas Blade son componentes fundamentales de la interfaz de usuario de Sensorica, proporcionando interfaces interactivas para la gestión de producción, monitoreo OEE y organización de órdenes. A continuación se detallan las vistas más importantes del sistema.
@@ -1247,7 +1336,82 @@ Para el detalle completo revisar `routes/web.php` y `routes/api.php`. A continua
 - __IA Prompts__: `GET /ia-prompts{,/\{key\}}`
 - __Barcode Scans__: `GET|POST /barcode-scans`
 - __SCADA Orders__: `GET /scada-orders/{token}`, `POST /scada-orders/update`, `DELETE /scada-orders/delete`, `GET /scada-orders/{scadaOrderId}/lines`, `POST /scada-orders/process/update-used`
+- __Zerotier/Red__: `GET|POST /ip-zerotier`
+- __Cola de Impresión__: `GET|POST /queue-print`, `GET|POST /queue-print-list`
+- __Avisos de Orden (Order Notice)__: `GET /order-notice/{token?}`, `POST /order-notice`, `POST /order-notice/store`
+- __Modbus Ingest (MQTT)__: `POST /modbus-process-data-mqtt`
+- __Eventos de Procesos de Turno__: `POST /shift-process-events`
+- __Pedidos de Proveedor__: `POST /supplier-order/store`
+- __RFID Readings (CRUD)__: `GET /rfid-readings`, `POST /rfid-readings`, `GET /rfid-readings/{id}`, `PUT /rfid-readings/{id}`, `DELETE /rfid-readings/{id}`
+- __Exportaciones de Trabajadores__: `GET /workers-export/generate-excel`, `GET /workers-export/generate-pdf`, `GET /workers-export/send-email`, `GET /workers-export/send-assignment-list`, `GET /workers-export/complete-list`
+- __Artículos de Órdenes de Producción__: `GET /production-orders/{id}/articles`
 
+## 🧭 Mapa de funcionalidades (qué puede hacer la app)
+
+- **Gestión de Producción con Kanban**: Organiza órdenes por líneas/estados, drag & drop con reglas, notas, artículos, incidencias, y prioridad. Rutas y UI en `routes/web.php` y vistas en `resources/views/customers/order-kanban.blade.php`.
+- **Monitoreo OEE en tiempo real**: Cálculo de disponibilidad, rendimiento y calidad; integración con sensores/MQTT y Modbus. Backend en comandos `CalculateProductionMonitorOeev2.php` y endpoints en `routes/api.php`.
+- **Sensores industriales**: Alta/gestión de sensores, transformación configurable de lecturas, publicación/ingesta MQTT. API en `SensorController`, servicio Node `node/sensor-transformer.js`.
+- **Integración SCADA/Modbus**: Ingesta de pesaje/altura con filtros de repetición y variaciones mínimas; envío a API. Servicios en `node/client-modbus.js` y endpoints en `Api\Modbus*Controller`.
+- **RFID (operarios/puestos)**: Lecturas en tiempo real, histórico/filtrado, asignaciones y “Master Reset”. UI pública en `public/live-rfid/` y `public/confeccion-puesto-listado/`; API `RfidReadingController`, `ProductListSelectedsController`.
+- **Turnos (Shifts)**: Historial y estados, eventos por MQTT/API, publicación de cambios para producción. API `shift-history`, `shift/statuses`, `shift-event`, `shift-process-events`.
+- **Órdenes desde APIs externas**: Ingesta por mapeos configurables (órdenes, procesos, artículos), validaciones y logs detallados. Comando `CheckOrdersFromApi.php`, mapeos en UI de clientes.
+- **Gestión de incidencias**: Registro y seguimiento de incidencias ligadas a órdenes y líneas. Vistas en `resources/views/customers/production-order-incidents/*`, API dedicada.
+- **Operadores/Trabajadores**: CRUD, reportes, exportación Excel/PDF, envío por email/listas de asignación. API `OperatorController`, `workers-export/*`.
+- **Códigos de barras**: Generación y gestión. API `BarcodeController`, vistas `resources/views/barcodes/*`.
+- **Cola de impresión**: Gestión de colas y listados de impresión vía API `StoreQueueController`.
+- **Notificaciones**: WhatsApp (Baileys) y Telegram para alertas/comandos. Node `connect-whatsapp.js`, API `WhatsAppController` y servidor Telegram (`telegram/`).
+- **Supervisión de sistema/host**: Healthcheck, monitor de servidor/hosts, IP Zerotier. API `ServerMonitor*`, `ZerotierIpBarcoderController`.
+- **Exportaciones y reportes**: Workers PDF/Excel, listas completas y de asignación.
+
+## 📚 Dónde está cada cosa (mapa de código)
+
+- **Rutas**
+  - `routes/api.php`: Endpoints REST (módulos de producción, sensores, RFID, Modbus/SCADA, workers, etc.).
+  - `routes/web.php`: Rutas de interfaz (Kanban, organizador, administración).
+- **Controladores (API)**: `app/Http/Controllers/Api/`
+  - Producción: `ProductionOrderController`, `ProductionLineController`, `OrderStatsController`, `ProductionOrderArticlesController`, `ProductionOrderIncidentController`.
+  - Sensores/SCADA: `SensorController`, `ModbusController`, `ModbusProcessController`, `Scada*Controller`.
+  - RFID: `RfidReadingController`, `RfidDetailController`, `RfidErrorPointController`.
+  - Operaciones: `OperatorController`, `OperatorPostController`, `WorkersExport*`, `StoreQueueController`, `OrderNoticeController`.
+  - Utilidades: `Barcode*Controller`, `ProductList*Controller`, `IaPromptController`, `GetTokenController`, `ZerotierIpBarcoderController`, `ReferenceController`.
+- **Comandos/Procesos**: `app/Console/Commands/*` (OEE, ingesta externa, sensores, shifts, bluetooth, TCP, limpieza, etc.).
+- **Vistas clave**: `resources/views/customers/order-kanban.blade.php`, `resources/views/customers/order-organizer.blade.php`, OEE (`resources/views/monitor_oee/*`), incidencias, clientes y mapeos.
+- **SPAs públicas**: `public/live-production/`, `public/live-rfid/`, `public/confeccion-puesto-listado/`.
+- **Servicios Node**: `node/` (MQTT senders, sensor-transformer, client-mqtt-rfid, client-modbus, gateway de pruebas).
+- **IA/Detección de anomalías**: `python/` (entrenamiento y detección para producción y turnos).
+- **Supervisor**: archivos `.conf` en la raíz (orquestación de todos los procesos críticos).
+
+## 🔄 Flujos clave
+
+- **Ingesta de órdenes externas → Kanban**
+  1) `orders:check` consulta APIs externas y aplica mapeos (órdenes, procesos, artículos).
+  2) Se crean/actualizan órdenes y sus procesos/artículos.
+  3) Kanban refleja estados y permite mover/gestionar incidencias/notas.
+- **Monitoreo OEE**
+  1) Sensores/Modbus publican por MQTT/HTTP.
+  2) `calculate-monitor-oee` consolida actividad, tiempos y contadores.
+  3) Métricas OEE y estados se exponen por API/UI.
+- **RFID (operarios/puestos)**
+  1) Lectores publican eventos a MQTT → gateway/API.
+  2) API guarda historial/lecturas; vistas muestran en tiempo real y permiten asignaciones.
+- **Turnos**
+  1) `shift:check` y eventos `shift-event`/`shift-process-events` publican cambios.
+  2) Historial/estado de turnos disponible por API/UI.
+- **SCADA/Modbus (pesaje/altura)**
+  1) `client-modbus.js` filtra/normaliza valores.
+  2) Envía datos válidos a `/api/modbus-process-data-mqtt` u otros endpoints.
+- **Incidencias**
+  1) Operadores reportan; API registra y enlaza a órdenes/lineas.
+  2) UI permite seguimiento y cierre.
+- **Exportaciones/Reportes**
+  1) Endpoints `workers-export/*` generan PDF/Excel y envían emails/listas.
+
+## 🔐 Acceso y seguridad
+
+- **Autenticación**: UI con login/registro/2FA (`resources/views/auth/*`).
+- **Tokens del sistema**: Algunos endpoints requieren `TOKEN_SYSTEM` (ver `.env`).
+- **Permisos/Roles**: Gestión de usuarios/roles vía UI de administración (Laravel estándar + personalizaciones del proyecto).
+- **Entornos y credenciales**: Variables `.env` para DB, MQTT, brokers, gateways y servicios externos.
 
 ### 🛠️ Comandos Artisan (Supervisor y mantenimiento)
 
@@ -1344,10 +1508,180 @@ Notas:
 - Algunos servicios Node.js leen credenciales DB vía `.env` de Laravel (usado por scripts con `mysql2`). Asegura consistencia.
 - Si se usa HTTPS propio, `https.Agent({ rejectUnauthorized:false })` en `client-mqtt-sensors.js` tolera TLS autofirmado.
 
+## 🧰 Otros comandos del sistema (Artisan)
+
+Listado de comandos disponibles en `app/Console/Commands/` con su `signature` y propósito principal:
+
+- `production:calculate-optimal-time` — Calculate the optimal production time for each product based on sensor data (`CalculateOptimalProductionTime.php`).
+- `production:calculate-production-downtime` — Calcula tiempos de parada y gestiona contadores por turno; envía mensajes MQTT (`CalculateProductionDowntime.php`).
+- `production:calculate-monitor-oee` — Calcula/gestiona monitoreo OEE según reglas de `monitor_oee` (v2) (`CalculateProductionMonitorOeev2.php`).
+- `production:calculate-monitor-oee-vieja` — Versión previa del cálculo OEE (`CalculateProductionMonitorOee.php`).
+- `sensors:read` — Lee datos de Sensores y publica por MQTT (`ReadSensors.php`).
+- `modbus:read-ant` — Lee datos Modbus y publica por MQTT (`ReadModbus.php`).
+- `modbus:read-backup` — Lectura Modbus (backup) y publicación MQTT (`ReadModbuBackup.php`).
+- `modbus:read {group}` — Lectura Modbus por grupo y publicación MQTT (`ReadModbusGroup.php`).
+- `mqtt:subscribe` — Suscriptor MQTT y actualización de avisos de órdenes (`MqttSubscriber.php`).
+- `mqtt:subscribe-local` — Suscriptor MQTT local para avisos de órdenes (`MqttSubscriberLocal.php`).
+- `mqtt:subscribe-local-ordermac` — Suscriptor MQTT local para órdenes (modo OrderMac) (`MqttSubscriberLocalMac.php`).
+- `mqtt:shiftsubscribe` — Suscripción MQTT para control de turnos desde sensores (`MqttShiftSubscriber.php`).
+- `mqtt:publish-order-stats` — Publica cada 1s estadísticas de órdenes vía MQTT (`PublishOrderStatsCommand.php`).
+- `rfid:read` — Lee RFID y publica por MQTT (`ReadRfidReadings.php`).
+- `bluetooth:read` — Lee Bluetooth API y publica por MQTT (`ReadBluetoothReadings.php`).
+- `bluetooth:check-exit` — Verifica salidas de zona de dispositivos Bluetooth (`CheckBluetoothExit.php`).
+- `orders:check` — Verifica pedidos desde API externa y sincroniza con DB (`CheckOrdersFromApi.php`).
+- `orders:list-stock` — Busca órdenes en stock y procesa la siguiente tarea pendiente por grupo (`ListStockOrdersCommand.php`).
+- `operator-post:finalize` — Cierra/gestiona registros de operadores según el inicio y fin de turno (`FinalizeOperatorPosts.php`).
+- `hostmonitor:check` — Alerta por ausencia de registros recientes en `host_monitors` (`CheckHostMonitor.php`).
+- `monitor:connections` — Monitoriza conexiones (MQTT topics) y actualiza estado en DB (`MonitorConnections.php`).
+- `tcp:client` — Cliente TCP multiproceso para leer mensajes continuamente (`TcpClient.php`).
+- `tcp:client-local` — Cliente TCP con valores de `.env` y logging en bucle (`TcpClientLocal.php`).
+- `db:replicate-nightly` — Dump de DB primaria y reemplazo de secundaria (auto-detección mysql/mariadb) (`ReplicateDatabaseNightly.php`).
+- `clear:old-records` — Limpia registros antiguos según `CLEAR_DB_DAY` (`ClearOldRecords.php`).
+- `reset:weekly-counts` — Resetea contadores semanales cada lunes 00:00 (`ResetWeeklyCounts.php`).
+- `shift:check` — Verifica lista de turnos y publica mensaje MQTT al inicio (`CheckShiftList.php`).
+- `whatsapp:connect` — Conexión a WhatsApp via Baileys sin generar QR (`ConnectWhatsApp.php`).
+- `production:update-accumulated-times {line_id?}` — Actualiza tiempos acumulados de órdenes activas (opcional por línea) (`UpdateAccumulatedTimes.php`).
+
+Notas:
+- Los comandos están registrados en `app/Console/Kernel.php` y/o autocargados desde `app/Console/Commands/`.
+- Algunos `.conf` de Supervisor ejecutan estos comandos en bucle (con `sleep`) o con reinicio automático.
+
+## 🧩 Archivos Supervisor (.conf)
+
+Configuraciones en la raíz del proyecto que mapean procesos gestionados por Supervisor. Para cada archivo se indica el comando ejecutado y rutas de logs.
+
+- `laravel-calculate-optimal-production-time.conf`
+  - command: `php /var/www/html/artisan production:calculate-optimal-time`
+  - logs: `storage/logs/calculate_optimal_time.out.log`, `storage/logs/calculate_optimal_time.err.log`
+
+- `laravel-calculate-production-downtime.conf`
+  - command: `php /var/www/html/artisan production:calculate-production-downtime`
+  - logs: `storage/logs/calculate-production-downtime.out.log`, `storage/logs/calculate-production-downtime.err.log`
+
+- `laravel-monitor-oee.conf`
+  - command: `php /var/www/html/artisan production:calculate-monitor-oee`
+  - logs: `storage/logs/calculate-monitor-oee.out.log` (stderr redirigido)
+
+- `laravel-mqtt-subscriber.conf.back`
+  - command: `php /var/www/html/artisan mqtt:subscribe`
+  - logs: `storage/logs/mqtt-subscribe.log`
+
+- `laravel-mqtt-subscriber-local.conf`
+  - command: `php /var/www/html/artisan mqtt:subscribe-local`
+  - logs: `storage/logs/subscribe-local.out.log` (si configurado), `...err.log` (si configurado)
+
+- `laravel-mqtt-subscriber-local-ordermac.conf`
+  - command: `php /var/www/html/artisan mqtt:subscribe-local-ordermac`
+  - logs: `storage/logs/subscribe-local-ordermac.out.log`, `storage/logs/subscribe-local-ordermac.err.log`
+
+- `laravel-mqtt-shift-subscriber.conf`
+  - command: `php /var/www/html/artisan mqtt:shiftsubscribe`
+  - logs: `storage/logs/laravel-shift-subscriber.out.log` (si configurado)
+
+- `laravel-read-sensors.conf`
+  - command: `node /var/www/html/node/client-mqtt-sensors.js`
+  - logs: `storage/logs/laravel-read-sensors.out.log`, `storage/logs/laravel-read-sensors.err.log`
+
+- `laravel-sensor-transformers.conf`
+  - command: `node /var/www/html/node/sensor-transformer.js`
+  - logs: `storage/logs/laravel-sensor-transformers.out.log`, `storage/logs/laravel-sensor-transformers.err.log`
+
+- `laravel-read-rfid.conf`
+  - command: `node /var/www/html/node/client-mqtt-rfid.js`
+  - logs: `storage/logs/laravel-read-rfid.out.log`, `storage/logs/laravel-read-rfid.err.log`
+
+- `laravel-read-bluetooth.conf`
+  - command: `php /var/www/html/artisan bluetooth:read`
+  - logs: `storage/logs/laravel-read-bluetooth.out.log`, `storage/logs/laravel-read-bluetooth.err.log`
+
+- `laravel-control-antena-rfid.conf`
+  - command: `node /var/www/html/node/config-rfid.js`
+  - logs: `storage/logs/laravel-config-rfid-antena.out.log`, `storage/logs/laravel-config-rfid-antena.err.log`
+
+- `laravel-mqtt-rfid-to-api.conf`
+  - command: `node /var/www/html/node/mqtt-rfid-to-api.js`
+  - logs: `storage/logs/laravel-mqtt-rfid-to-api.out.log` (si configurado)
+
+- `laravel-telegram-server.conf`
+  - command: `node /var/www/html/telegram/telegram.js`
+  - logs: `storage/logs/connect-telegram.out.log`, `storage/logs/connect-telegram.err.log`
+
+- `laravel-connect-whatsapp.conf`
+  - command: `node /var/www/html/node/connect-whatsapp.js`
+  - logs: `storage/logs/connect-whatsapp.out.log`, `storage/logs/connect-whatsapp.err.log`
+
+- `laravel-modbus-subscriber.conf`
+  - command: `node /var/www/html/node/client-modbus.js`
+  - logs: `storage/logs/laravel-modbus-subscriber.log`
+
+- `laravel-modbus-web-8001.conf`
+  - command: `python3 /var/www/html/modbus-web-8001.py`
+  - logs: `storage/logs/modbus-web.log`
+
+- `laravel-tcp-client.conf`
+  - command: `php /var/www/html/artisan tcp:client`
+  - logs: `storage/logs/laravel-tcp-client.out.log` (si configurado)
+
+- `laravel-tcp-client-local.conf`
+  - command: `php /var/www/html/artisan tcp:client-local`
+  - logs: `storage/logs/laravel-tcp-client-local.out.log`, `storage/logs/laravel-tcp-client-local.err.log`
+
+- `laravel-tcp-server.conf`
+  - command: `python3 /var/www/html/tcp-server.py`
+  - logs: `storage/logs/tcp-server.out.log`, `storage/logs/tcp-server.err.log`
+
+- `laravel-auto-finish-operator-post.conf`
+  - command: `php /var/www/html/artisan operator-post:finalize`
+  - logs: `storage/logs/operator-post:finalize.out.log`, `storage/logs/operator-post:finalize.err.log`
+
+- `laravel-clear-db.conf`
+  - command: `php /var/www/html/artisan clear:old-records`
+  - logs: `storage/logs/clear-old-db.out.log`, `storage/logs/clear-old-db.err.log`
+
+- `laravel-check-bluetooth.conf`
+  - command: `php /var/www/html/artisan bluetooth:check-exit`
+  - logs: `storage/logs/laravel-bluetooth-check-exit.out.log`, `storage/logs/laravel-bluetooth-check-exit.err.log`
+
+- `laravel-shift-list.conf`
+  - command: `php /var/www/html/artisan shift:check`
+  - logs: `storage/logs/laravel-shift-list.out.log`, `storage/logs/laravel-shift-list.err.log`
+
+- `laravel-orders-check.conf`
+  - command: `/bin/sh -c 'while true; do php /var/www/html/artisan orders:check; sleep 1800; done'`
+  - logs: `storage/logs/laravel-orders-check.out.log` (según conf), `...err.log`
+
+- `laravel-created-production-orders.conf`
+  - command: `/bin/sh -c 'while true; do php /var/www/html/artisan orders:list-stock; sleep 60; done'`
+  - logs: `storage/logs/laravel-created-production-orders.out.log`, `storage/logs/laravel-created-production-orders.err.log`
+
+- `laravel-production-updated-accumulated-times.conf.conf`
+  - command: `/bin/sh -c 'while true; do php /var/www/html/artisan production:update-accumulated-times; sleep 60; done'`
+  - logs: `storage/logs/laravel-production-updated-accumulated-times.out.log` (según conf), `...err.log`
+
+- `laravel-server-check-host-monitor.conf`
+  - command: `php /var/www/html/artisan hostmonitor:check`
+  - logs: `storage/logs/check_host_monitor.out.log`, `storage/logs/check_host_monitor.err.log`
+
+- `laravel-monitor-server.conf`
+  - command: `python3 /var/www/html/servermonitor.py`
+  - logs: `storage/logs/servermonitor.out.log` (según conf), `...err.log`
+
+- `laravel-mqtt_send_server1.conf` / `laravel-mqtt_send_server2.conf.back`
+  - command: `node /var/www/html/node/sender-mqtt-server1.js` / `sender-mqtt-server2.js`
+  - logs: `storage/logs/mqtt-sendserver1.log` / `storage/logs/mqtt-sendserver2.log`
+
+- `laravel-production-monitor-ia.conf.back` / `laravel-shift-monitor-ia.conf.back`
+  - command: `python3 -u python/detectar_anomalias_produccion.py` / `python3 python/detectar_anomalias_shift.py`
+  - logs: `storage/logs/IA-production.out.log`, `storage/logs/IA-production.err.log` / `storage/logs/IA-Shift.out.log`, `storage/logs/IA-Shift.err.log`
+
+Notas:
+- Todas las rutas de logs son relativas a `storage/logs/` en este README por brevedad; en los `.conf` se usan rutas absolutas.
+- Muchos programas especifican `redirect_stderr=true`, en cuyo caso sólo habrá `stdout_logfile`.
+- Ajuste `numprocs`, `startretries`, `user` y otras opciones según su entorno.
+
 ## 📝 Licencia
 
-AiXmart es un software propietario. Todos los derechos reservados.
+AiXmart es un software propietario. Todos los derechos reservados BOISOLO www.boisolo.com AiXmart www.boisolo.com.
 
 ---
-
 Desarrollado por el equipo de AppNet Developer, Boisolo Y AiXmart 2025

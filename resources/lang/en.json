@@ -832,5 +832,7 @@
     "Created By": "Created By",
     "Incident Status": "Incident Status",
     "Has Stock": "Has Stock",
-    "Notes": "Notes"
+    "Notes": "Notes",
+    "Tiempo de ocupación máquina": "Machine Occupation Time",
+    "Tiempo acumulado de fabricación": "Machine Occupation Time"
 }
