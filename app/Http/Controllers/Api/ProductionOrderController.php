@@ -154,7 +154,10 @@ class ProductionOrderController extends Controller
         })->orWhere(function($q) {
             // O bien, órdenes con status 3 (de cualquier línea)
             $q->where('status', 3);
-        });
+        })
+        ->with(['processFiles' => function ($q) {
+            $q->select('id', 'original_order_process_id', 'original_name', 'mime_type', 'size', 'extension', 'path');
+        }]);
 
         // Aplicar filtro de status si se especifica
         $status = $request->input('status', 'all');
@@ -253,6 +256,9 @@ class ProductionOrderController extends Controller
         // 1. Órdenes activas (status 0, 1)
         $activeOrders = ProductionOrder::where('production_line_id', $productionLine->id)
             ->whereIn('status', ['0', '1'])
+            ->with(['processFiles' => function ($q) {
+                $q->select('id', 'original_order_process_id', 'original_name', 'mime_type', 'size', 'extension', 'path');
+            }])
             ->orderBy('orden', 'asc')
             ->get();
 
@@ -261,6 +267,9 @@ class ProductionOrderController extends Controller
         $finishedOrders = ProductionOrder::where('production_line_id', $productionLine->id)
             ->where('status', 2)
             ->where('updated_at', '>=', $eightHoursAgo)
+            ->with(['processFiles' => function ($q) {
+                $q->select('id', 'original_order_process_id', 'original_name', 'mime_type', 'size', 'extension', 'path');
+            }])
             ->orderBy('orden', 'asc')
             ->limit(30)
             ->get();
@@ -304,7 +313,10 @@ class ProductionOrderController extends Controller
         
         // 3. Incidencias SIEMPRE (status 3)
         // Si tenemos process_category, filtramos por él, sino traemos todas las incidencias
-        $incidentOrdersQuery = ProductionOrder::where('status', 3);
+        $incidentOrdersQuery = ProductionOrder::where('status', 3)
+            ->with(['processFiles' => function ($q) {
+                $q->select('id', 'original_order_process_id', 'original_name', 'mime_type', 'size', 'extension', 'path');
+            }]);
         
         if ($processCategory) {
             $incidentOrdersQuery->where('process_category', $processCategory);
@@ -379,7 +391,9 @@ class ProductionOrderController extends Controller
      */
     public function show($id)
     {
-        $order = ProductionOrder::find($id);
+        $order = ProductionOrder::with(['processFiles' => function ($q) {
+            $q->select('id', 'original_order_process_id', 'original_name', 'mime_type', 'size', 'extension', 'path');
+        }])->find($id);
 
         if (!$order) {
             return response()->json(['error' => 'Orden no encontrada'], 404);

@@ -123,6 +123,17 @@ class ProductionOrder extends Model
     {
         return $this->hasMany(BarcodeScan::class);
     }
+
+    /**
+     * Access process files directly from the production order using the
+     * original_order_process_id foreign key shared by both tables.
+     */
+    public function processFiles()
+    {
+        // related FK on files table: original_order_process_id
+        // local key on this model: original_order_process_id
+        return $this->hasMany(\App\Models\OriginalOrderProcessFile::class, 'original_order_process_id', 'original_order_process_id');
+    }
     
     /**
      * Boot method to handle model events.

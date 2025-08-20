@@ -296,6 +296,29 @@
                                                 @endif
                                             </td>
                                         </tr>
+                                        <tr class="process-files-row">
+                                            <td colspan="8">
+                                                <div class="mt-2 p-2 border rounded bg-white">
+                                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                                        <strong>@lang('Process Files')</strong>
+                                                        @can('original-order-edit')
+                                                        <div class="d-flex align-items-center gap-2">
+                                                            <input type="file" accept="image/*,application/pdf" multiple class="form-control form-control-sm me-2"
+                                                               data-file-input
+                                                               data-upload-url="{{ route('customers.original-orders.processes.files.store', [$customer->id, $originalOrder->id, $pivot->id]) }}">
+                                                            <button type="button" class="btn btn-sm btn-primary" data-upload-btn>
+                                                                <i class="fas fa-upload"></i> @lang('Upload')
+                                                            </button>
+                                                        </div>
+                                                        @endcan
+                                                    </div>
+                                                    <div class="small text-muted mb-2">@lang('Allowed types'): JPG, PNG, GIF, WEBP, PDF. @lang('Max') 10MB</div>
+                                                    <div class="row" data-files-container
+                                                         data-index-url="{{ route('customers.original-orders.processes.files.index', [$customer->id, $originalOrder->id, $pivot->id]) }}"
+                                                    ></div>
+                                                </div>
+                                            </td>
+                                        </tr>
                                         @if($articles->isNotEmpty())
                                             <tr class="articles-row">
                                                 <td colspan="8" class="p-3 bg-light" style="border-top: 1px solid #e9ecef;">
@@ -345,4 +368,275 @@
         </div>
     </div>
 </div>
+<!-- Delete Confirmation Modal for Process Files -->
+<div class="modal fade" id="processFileDeleteModal" tabindex="-1" role="dialog" aria-labelledby="processFileDeleteModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="processFileDeleteModalLabel">@lang('Delete File')</h5>
+        <button type="button" class="btn btn-link text-muted p-0" style="font-size:1.1rem; margin-left:auto;" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close" title="@lang('Close')">
+            <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        @lang('Are you sure you want to delete this file?')
+        <div class="small text-muted mt-2" data-delete-filename></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal" data-bs-dismiss="modal">@lang('Cancel')</button>
+        <button type="button" class="btn btn-danger" id="confirmDeleteProcessFile">@lang('Delete')</button>
+      </div>
+    </div>
+  </div>
+  </div>
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    let deleteCtx = { url: null, container: null, filename: '' };
+    const MAX_FILES = 8;
+
+    function getBootstrapModal(el) {
+        // Support Bootstrap 5 and 4
+        if (window.bootstrap && typeof window.bootstrap.Modal === 'function') {
+            return {
+                show: () => window.bootstrap.Modal.getOrCreateInstance(el).show(),
+                hide: () => {
+                    const inst = window.bootstrap.Modal.getInstance(el) || window.bootstrap.Modal.getOrCreateInstance(el);
+                    inst.hide();
+                }
+            };
+        }
+        if (window.jQuery && typeof window.jQuery.fn.modal === 'function') {
+            return { show: () => window.jQuery(el).modal('show'), hide: () => window.jQuery(el).modal('hide') };
+        }
+        // Fallback: simple toggle
+        return {
+            show: () => {
+                el.classList.add('show');
+                el.style.display = 'block';
+                document.body.classList.add('modal-open');
+                const backdrop = document.createElement('div');
+                backdrop.className = 'modal-backdrop fade show';
+                backdrop.setAttribute('data-fallback-backdrop', '1');
+                document.body.appendChild(backdrop);
+            },
+            hide: () => {
+                el.classList.remove('show');
+                el.style.display = 'none';
+                document.body.classList.remove('modal-open');
+                document.querySelectorAll('.modal-backdrop[data-fallback-backdrop="1"]').forEach(b => b.remove());
+            }
+        };
+    }
+
+    function formatBytes(bytes) {
+        if (!bytes && bytes !== 0) return '';
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = bytes === 0 ? 0 : Math.floor(Math.log(bytes) / Math.log(1024));
+        const val = (bytes / Math.pow(1024, i)).toFixed( i === 0 ? 0 : 1 );
+        return `${val} ${sizes[i]}`;
+    }
+
+    function renderFiles(container, files) {
+        container.innerHTML = '';
+        if (!files || files.length === 0) {
+            container.innerHTML = '<div class="col-12 text-muted">@lang('No files uploaded yet.')</div>';
+            // update count and enable controls
+            container.dataset.count = 0;
+            const wrapper = container.closest('.border');
+            if (wrapper) {
+                const input = wrapper.querySelector('[data-file-input]');
+                const btn = wrapper.querySelector('[data-upload-btn]');
+                if (input) input.disabled = false;
+                if (btn) btn.disabled = false;
+            }
+            return;
+        }
+        // Save count and toggle controls depending on limit
+        const maxFiles = MAX_FILES;
+        container.dataset.count = files.length;
+        const wrapperForLimit = container.closest('.border');
+        if (wrapperForLimit) {
+            const input = wrapperForLimit.querySelector('[data-file-input]');
+            const btn = wrapperForLimit.querySelector('[data-upload-btn]');
+            const over = files.length >= maxFiles;
+            if (input) input.disabled = over;
+            if (btn) btn.disabled = over;
+        }
+        files.forEach(f => {
+            const col = document.createElement('div');
+            col.className = 'col-md-3 col-sm-4 col-6 mb-2';
+            const isImage = f.mime_type && f.mime_type.startsWith('image/');
+            const isPdf = f.extension && f.extension.toLowerCase() === 'pdf';
+            let preview = '';
+            if (isImage) {
+                preview = `<a href="${f.public_url}" target="_blank"><img src="${f.public_url}" class="img-fluid rounded border" alt="${f.original_name}"></a>`;
+            } else if (isPdf) {
+                preview = `<a href="${f.public_url}" target="_blank" class="btn btn-outline-secondary btn-sm w-100"><i class="far fa-file-pdf"></i> PDF</a>`;
+            } else {
+                preview = `<a href="${f.public_url}" target="_blank" class="btn btn-outline-secondary btn-sm w-100"><i class="far fa-file"></i> ${f.extension || ''}</a>`;
+            }
+            col.innerHTML = `
+                <div class="border rounded p-2 h-100 d-flex flex-column">
+                    <div class="flex-grow-1 mb-2" style="min-height:70px">${preview}</div>
+                    <div class="small text-truncate" title="${f.original_name}"><i class="far fa-file"></i> ${f.original_name}</div>
+                    <div class="text-muted small">${formatBytes(f.size)} · ${f.created_at ? f.created_at : ''}</div>
+                    <div class="d-flex justify-content-between align-items-center mt-1">
+                        <a href="${f.public_url}" target="_blank" class="btn btn-link btn-sm p-0">@lang('Open')</a>
+                        <button type="button" class="btn btn-link btn-sm p-0" data-copy data-url="${f.public_url}">@lang('Copy link')</button>
+                        <button type="button" class="btn btn-link btn-sm text-danger p-0" data-delete data-id="${f.id}" data-name="${f.original_name}">@lang('Delete')</button>
+                    </div>
+                </div>`;
+            container.appendChild(col);
+        });
+
+        // Copy link handlers
+        container.querySelectorAll('[data-copy]').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const url = btn.getAttribute('data-url');
+                try {
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        await navigator.clipboard.writeText(url);
+                    } else {
+                        const ta = document.createElement('textarea');
+                        ta.value = url; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+                    }
+                    btn.textContent = '@lang('Copied!')';
+                    setTimeout(() => btn.textContent = '@lang('Copy link')', 1500);
+                } catch (e) { alert('@lang('Could not copy link')'); }
+            });
+        });
+
+        container.querySelectorAll('[data-delete]').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const fileId = btn.getAttribute('data-id');
+                const base = container.getAttribute('data-index-url').replace(/\/$/, '');
+                const url = `${base}/${fileId}`;
+                deleteCtx = { url, container, filename: btn.getAttribute('data-name') || '' };
+                const modalEl = document.getElementById('processFileDeleteModal');
+                modalEl.querySelector('[data-delete-filename]').textContent = deleteCtx.filename;
+                const modal = getBootstrapModal(modalEl);
+                modal.show();
+            });
+        });
+    }
+
+    async function loadFiles(container) {
+        const url = container.getAttribute('data-index-url');
+        try {
+            const res = await fetch(url, { headers: { 'Accept': 'application/json' }});
+            const data = await res.json();
+            renderFiles(container, data.data || []);
+        } catch (e) {
+            container.innerHTML = '<div class="col-12 text-danger">@lang('Error loading files')</div>';
+        }
+    }
+
+    // Initialize per process widgets
+    document.querySelectorAll('[data-files-container]').forEach(container => {
+        loadFiles(container);
+        const wrapper = container.closest('.border');
+        const input = wrapper.querySelector('[data-file-input]');
+        const btn = wrapper.querySelector('[data-upload-btn]');
+        if (btn && input) {
+            btn.addEventListener('click', async () => {
+                const count = parseInt(container.dataset.count || '0', 10);
+                if (count >= MAX_FILES) {
+                    alert('@lang('Maximum of 8 files per process reached')');
+                    return;
+                }
+                if (!input.files || input.files.length === 0) {
+                    alert('@lang('Select a file first')');
+                    return;
+                }
+                const allowed = ['image/jpeg','image/png','image/gif','image/webp','application/pdf'];
+                const files = Array.from(input.files).filter(f => allowed.includes(f.type) || /\.(jpg|jpeg|png|gif|webp|pdf)$/i.test(f.name));
+                if (files.length === 0) { alert('@lang('Only images and PDF files are allowed')'); return; }
+                const remaining = Math.max(0, MAX_FILES - count);
+                const toUpload = files.slice(0, remaining);
+                if (files.length > remaining) {
+                    alert('@lang('Maximum of 8 files per process reached')');
+                }
+                const url = input.getAttribute('data-upload-url');
+                try {
+                    btn.disabled = true; input.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+                    for (const file of toUpload) {
+                        const form = new FormData();
+                        form.append('file', file);
+                        const res = await fetch(url, {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': csrf,
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            },
+                            body: form
+                        });
+                        if (!res.ok) {
+                            const t = await res.text();
+                            throw new Error(t || 'Upload failed');
+                        }
+                    }
+                    input.value = '';
+                    await loadFiles(container);
+                } catch (e) {
+                    alert('@lang('Upload failed')');
+                } finally {
+                    btn.disabled = false; input.disabled = false; btn.innerHTML = '<i class="fas fa-upload"></i> ' + '@lang('Upload')';
+                }
+            });
+        }
+    });
+
+    // Confirm delete action handler
+    const confirmBtn = document.getElementById('confirmDeleteProcessFile');
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', async () => {
+            if (!deleteCtx.url || !deleteCtx.container) return;
+            try {
+                const res = await fetch(deleteCtx.url, {
+                    method: 'DELETE',
+                    headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                if (!res.ok) throw new Error('Delete failed');
+                loadFiles(deleteCtx.container);
+            } catch (e) {
+                alert('@lang('Error deleting file')');
+            } finally {
+                const modalEl = document.getElementById('processFileDeleteModal');
+                const modal = getBootstrapModal(modalEl);
+                modal.hide();
+                deleteCtx = { url: null, container: null, filename: '' };
+            }
+        });
+    }
+
+    // Ensure modal closes on cancel/close for BS4/BS5 and fallback
+    (function(){
+        const modalEl = document.getElementById('processFileDeleteModal');
+        if (!modalEl) return;
+        const modal = getBootstrapModal(modalEl);
+        const attach = (sel) => {
+            modalEl.querySelectorAll(sel).forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    modal.hide();
+                });
+            });
+        };
+        attach('[data-dismiss="modal"]');
+        attach('[data-bs-dismiss="modal"]');
+        attach('.close');
+        // Also close on backdrop click (BS5 handles; fallback emulate)
+        modalEl.addEventListener('click', (e) => {
+            if (e.target === modalEl) {
+                modal.hide();
+            }
+        });
+    })();
+});
+</script>
+@endpush
 @endsection

@@ -46,6 +46,7 @@ use App\Http\Controllers\Api\BarcodeScansController;
 use App\Http\Controllers\Api\ProductionOrderArticlesController;
 use App\Http\Controllers\Api\ProductionLineController;
 use App\Http\Controllers\Api\LineAvailabilityController;
+use App\Http\Controllers\Api\OriginalOrderProcessFileApiController;
 
 
 
@@ -267,6 +268,11 @@ Route::get('scada-material/{token}', [ScadaMaterialTypeController::class, 'getSc
 
 // API optimizada para el tablero Kanban
 Route::get('/kanban/orders', [\App\Http\Controllers\Api\ProductionOrderController::class, 'getKanbanOrders']);
+
+// Subida remota de archivos de proceso usando token de cliente
+Route::post('/process-files/upload', [OriginalOrderProcessFileApiController::class, 'store']);
+// Borrado de archivos de proceso por ID con autenticación por token
+Route::delete('/process-files/{id}', [OriginalOrderProcessFileApiController::class, 'destroy']);
 
 // Orders API
 Route::prefix('production-orders')->group(function () {

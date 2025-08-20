@@ -103,6 +103,14 @@ class OriginalOrderProcess extends Pivot
     }
 
     /**
+     * Archivos públicos asociados a este proceso original
+     */
+    public function files(): HasMany
+    {
+        return $this->hasMany(OriginalOrderProcessFile::class, 'original_order_process_id');
+    }
+
+    /**
      * Actualiza el estado de stock del proceso basado en sus artículos
      * - Si algún artículo tiene in_stock = 0, el proceso tendrá in_stock = 0
      * - Si todos los artículos tienen in_stock = 1 o NULL, el proceso tendrá in_stock = 1
