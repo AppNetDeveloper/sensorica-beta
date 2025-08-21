@@ -911,5 +911,12 @@
     "Holidays imported successfully": "Festivos importados correctamente",
     "Failed to fetch public holidays": "No se pudieron obtener los días festivos",
     "Invalid response format": "Formato de respuesta no válido",
-    "Skipped": "Omitidos"
+    "Skipped": "Omitidos",
+    "Region": "Región",
+    "(national and all regions)": "(nacional y todas las regiones)",
+    "If a region is selected, only holidays applicable to that region will be imported (national holidays always included).": "Si se selecciona una región, solo se importarán los festivos aplicables a esa región (los festivos nacionales siempre se incluyen).",
+    "Current month": "Mes actual",
+    "Entire year": "Año completo",
+    "of": "de",
+    "Year": "Año"
 }

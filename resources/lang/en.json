@@ -845,5 +845,8 @@
     "Holidays imported successfully": "Holidays imported successfully",
     "Failed to fetch public holidays": "Failed to fetch public holidays",
     "Invalid response format": "Invalid response format",
-    "Skipped": "Skipped"
+    "Skipped": "Skipped",
+    "Region": "Region",
+    "(national and all regions)": "(national and all regions)",
+    "If a region is selected, only holidays applicable to that region will be imported (national holidays always included).": "If a region is selected, only holidays applicable to that region will be imported (national holidays always included)."
 }

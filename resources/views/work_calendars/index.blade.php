@@ -57,6 +57,9 @@
                         <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#bulkUpdateModal">
                             <i class="fas fa-calendar-alt me-1"></i> {{ __('Mass Configuration') }}
                         </button>
+                        <button type="button" class="btn btn-outline-primary ms-2" data-bs-toggle="modal" data-bs-target="#importHolidaysModal">
+                            <i class="fas fa-file-import me-1"></i> {{ __('Import Holidays') }}
+                        </button>
                     @endcan
                 </div>
             </div>
@@ -359,7 +362,6 @@
                             </label>
                         </div>
                     </div>
-
                     <div class="mb-3">
                         <label class="form-label fw-bold">{{ __('Period') }}</label>
                         <div class="form-check mb-2">
@@ -413,6 +415,54 @@
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
                     <button type="submit" class="btn btn-primary">
                         <i class="fas fa-save me-1"></i> {{ __('Save Configuration') }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{{-- Import Holidays Modal (kept OUTSIDE of other modals) --}}
+<div class="modal fade" id="importHolidaysModal" tabindex="-1" aria-labelledby="importHolidaysModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="importHolidaysForm" action="{{ route('customers.work-calendars.import-holidays', $customer->id) }}" method="POST">
+                @csrf
+                <div class="modal-header bg-transparent text-dark border-bottom">
+                    <h5 class="modal-title" id="importHolidaysModalLabel">{{ __('Import Public Holidays') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="importCountry" class="form-label fw-bold">{{ __('Country') }} (ISO-3166)</label>
+                        <select id="importCountry" class="form-select" required>
+                            <option value="ES" selected>ES - Spain</option>
+                            <option value="PT">PT - Portugal</option>
+                            <option value="FR">FR - France</option>
+                            <option value="IT">IT - Italy</option>
+                            <option value="DE">DE - Germany</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="importYear" class="form-label fw-bold">{{ __('Year') }}</label>
+                        <input type="number" id="importYear" class="form-control" min="1970" max="2100" value="{{ $year }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="importRegion" class="form-label fw-bold">{{ __('Region') }}</label>
+                        <select id="importRegion" class="form-select">
+                            <option value="">{{ __('All') }} {{ __('(national and all regions)') }}</option>
+                        </select>
+                        <div class="form-text">{{ __('If a region is selected, only holidays applicable to that region will be imported (national holidays always included).') }}</div>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="importOverwrite" checked>
+                        <label class="form-check-label fw-bold" for="importOverwrite">{{ __('Overwrite existing days') }}</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-file-import me-1"></i> {{ __('Import') }}
                     </button>
                 </div>
             </form>
@@ -636,6 +686,77 @@
                 },
                 error: function(xhr){
                     var msg = xhr.responseJSON?.message || '{{ __('Ha ocurrido un error') }}';
+                    Swal.fire({ icon: 'error', title: '{{ __('Error') }}', text: msg });
+                }
+            });
+        });
+
+        // ---- Import Holidays ----
+        var $country = $('#importCountry');
+        var $year = $('#importYear');
+        var $region = $('#importRegion');
+        var $overwrite = $('#importOverwrite');
+        var importModalEl = document.getElementById('importHolidaysModal');
+        importModalEl && importModalEl.addEventListener('shown.bs.modal', function(){
+            if (!$year.val()) { $year.val({{ $year }}); }
+            // Preload regions for default country/year
+            loadRegions();
+        });
+
+        function loadRegions(){
+            var country = ($country.val() || '').trim();
+            var yearVal = ($year.val() || '').trim();
+            if (!country || !yearVal) return;
+            $region.prop('disabled', true).empty();
+            $region.append(new Option('{{ __('All') }} {{ __('(national and all regions)') }}', ''));
+            fetch('https://date.nager.at/api/v3/PublicHolidays/' + yearVal + '/' + country)
+                .then(function(r){ return r.json(); })
+                .then(function(list){
+                    var set = new Set();
+                    (list || []).forEach(function(h){
+                        if (Array.isArray(h.counties)) {
+                            h.counties.forEach(function(c){ set.add(c); });
+                        }
+                    });
+                    Array.from(set).sort().forEach(function(code){
+                        $region.append(new Option(code, code));
+                    });
+                })
+                .catch(function(){
+                    // ignore, user can still import national
+                })
+                .finally(function(){ $region.prop('disabled', false); });
+        }
+
+        $country.on('change', loadRegions);
+        $year.on('change', loadRegions);
+
+        $('#importHolidaysForm').on('submit', function(e){
+            e.preventDefault();
+            var payload = {
+                _token: $('input[name="_token"]').val(),
+                country_code: $country.val(),
+                year: parseInt($year.val(), 10),
+                overwrite: $overwrite.is(':checked') ? 1 : 0,
+                region: $region.val() || null
+            };
+            var url = $(this).attr('action');
+            var modal = bootstrap.Modal.getInstance(document.getElementById('importHolidaysModal'));
+            modal && modal.hide();
+            $.ajax({
+                url: url,
+                method: 'POST',
+                data: payload,
+                success: function(resp){
+                    if (resp.success) {
+                        Swal.fire({ icon: 'success', title: '{{ __('Success') }}', text: resp.message || '{{ __('Holidays imported successfully') }}' })
+                            .then(() => window.location.reload());
+                    } else {
+                        Swal.fire({ icon: 'error', title: '{{ __('Error') }}', text: resp.message || '{{ __('Failed to fetch public holidays') }}' });
+                    }
+                },
+                error: function(xhr){
+                    var msg = xhr.responseJSON?.message || '{{ __('Failed to fetch public holidays') }}';
                     Swal.fire({ icon: 'error', title: '{{ __('Error') }}', text: msg });
                 }
             });

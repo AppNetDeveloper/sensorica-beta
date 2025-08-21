@@ -150,6 +150,7 @@ Route::prefix('customers')->name('customers.')->group(function () {
             
         Route::post('work-calendars/bulk-update', [WorkCalendarController::class, 'bulkUpdate'])
             ->name('work-calendars.bulk-update');
+        Route::post('work-calendars/import-holidays', [WorkCalendarController::class, 'importHolidays'])->name('work-calendars.import-holidays');
     });
 });
 

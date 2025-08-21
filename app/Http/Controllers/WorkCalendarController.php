@@ -7,6 +7,7 @@ use App\Models\WorkCalendar;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 
 class WorkCalendarController extends Controller
 {
@@ -275,6 +276,88 @@ class WorkCalendarController extends Controller
             DB::commit();
             return response()->json(['success' => true, 'message' => __('Calendar updated successfully')]);
         } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Import public holidays from Nager.Date API for a full year, with optional region filter.
+     * Request payload: country_code (ISO-3166 alpha-2), year, overwrite (bool), region (optional)
+     */
+    public function importHolidays(Request $request, $customerId)
+    {
+        $validated = $request->validate([
+            'country_code' => 'required|string|size:2',
+            'year' => 'required|integer|min:1970|max:2100',
+            'overwrite' => 'required|boolean',
+            'region' => 'nullable|string', // e.g., "ES-CT" from API counties codes
+        ]);
+
+        $country = strtoupper($validated['country_code']);
+        $year = (int) $validated['year'];
+        $overwrite = (bool) $validated['overwrite'];
+        $region = $validated['region'] ?? null;
+
+        try {
+            $resp = Http::timeout(20)->get("https://date.nager.at/api/v3/PublicHolidays/{$year}/{$country}");
+            if (!$resp->ok()) {
+                return response()->json(['success' => false, 'message' => __('Failed to fetch public holidays')], 502);
+            }
+            $holidays = $resp->json();
+            if (!is_array($holidays)) {
+                return response()->json(['success' => false, 'message' => __('Invalid response format')], 500);
+            }
+
+            // Filter by region if provided: include national (counties == null) plus those containing region code
+            $filtered = array_values(array_filter($holidays, function ($h) use ($region) {
+                if (!isset($h['date'])) return false;
+                if (!$region) return true;
+                // counties is array of region codes or null
+                if (empty($h['counties'])) return true; // national
+                return in_array($region, $h['counties']);
+            }));
+
+            DB::beginTransaction();
+            foreach ($filtered as $h) {
+                $date = $h['date']; // YYYY-MM-DD
+                $name = $h['localName'] ?? ($h['name'] ?? '');
+                $description = ($h['name'] ?? '') . (isset($h['types']) ? ' [' . implode(',', (array)$h['types']) . ']' : '');
+
+                if ($overwrite) {
+                    WorkCalendar::updateOrCreate(
+                        [
+                            'customer_id' => $customerId,
+                            'calendar_date' => $date,
+                        ],
+                        [
+                            'name' => $name,
+                            'type' => 'holiday',
+                            'is_working_day' => false,
+                            'description' => $description,
+                        ]
+                    );
+                } else {
+                    // Only create if not exists
+                    $exists = WorkCalendar::where('customer_id', $customerId)
+                        ->where('calendar_date', $date)
+                        ->exists();
+                    if (!$exists) {
+                        WorkCalendar::create([
+                            'customer_id' => $customerId,
+                            'calendar_date' => $date,
+                            'name' => $name,
+                            'type' => 'holiday',
+                            'is_working_day' => false,
+                            'description' => $description,
+                        ]);
+                    }
+                }
+            }
+            DB::commit();
+
+            return response()->json(['success' => true, 'message' => __('Holidays imported successfully')]);
+        } catch (\Throwable $e) {
             DB::rollBack();
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
