@@ -52,13 +52,8 @@
                     </a>
                 </div>
                 <div>
-                    {{-- Botón para añadir día especial --}}
+                    {{-- Botón para configuración masiva --}}
                     @can('workcalendar-create')
-                        <a href="{{ route('customers.work-calendars.create', ['customer' => $customer->id]) }}" class="btn btn-primary me-2">
-                            <i class="fas fa-plus me-1"></i> {{ __('Add Special Day') }}
-                        </a>
-                        
-                        {{-- Botón para configuración masiva --}}
                         <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#bulkUpdateModal">
                             <i class="fas fa-calendar-alt me-1"></i> {{ __('Mass Configuration') }}
                         </button>
@@ -67,7 +62,7 @@
             </div>
             
             <div class="card">
-                <div class="card-header bg-primary text-white">
+                <div class="card-header bg-transparent text-dark border-bottom">
                     <h4 class="mb-0">{{ __('Work Calendar') }} - {{ \Carbon\Carbon::createFromDate($year, $month, 1)->format('F Y') }}</h4>
                 </div>
                 <div class="card-body">
@@ -119,18 +114,20 @@
                                         $isCurrentMonth = $currentDay->month === $month;
                                         $isToday = $currentDay->isToday();
                                         $dayData = $daysInMonth[$dateString] ?? null;
-                                        $isWorkingDay = $dayData ? $dayData['is_working_day'] : !$currentDay->isWeekend();
-                                        $dayType = $dayData ? $dayData['type'] : ($currentDay->isWeekend() ? 'weekend' : 'workday');
-                                        $dayName = $dayData ? $dayData['name'] : null;
-                                        $dayDescription = $dayData ? $dayData['description'] : null;
-                                        $existsInDb = $dayData ? ($dayData['exists_in_db'] ?? true) : false;
-                                        $dayId = $dayData ? $dayData->id ?? null : null;
+                                        $hasData = !is_null($dayData);
+                                        $isWorkingDay = $hasData ? ($dayData['is_working_day'] ?? false) : null;
+                                        $dayType = $hasData ? ($dayData['type'] ?? null) : null;
+                                        $dayName = $hasData ? ($dayData['name'] ?? null) : null;
+                                        $dayDescription = $hasData ? ($dayData['description'] ?? null) : null;
+                                        $existsInDb = $hasData;
+                                        $dayId = $hasData ? ($dayData->id ?? null) : null;
                                     @endphp
                                     
                                     <td class="calendar-day {{ !$isCurrentMonth ? 'text-muted bg-light' : '' }} 
                                               {{ $isToday ? 'today' : '' }}
-                                              {{ $isWorkingDay ? 'working-day' : 'non-working-day' }}
-                                              {{ $dayType }}"
+                                              {{ $hasData && $isWorkingDay ? 'working-day' : '' }}
+                                              {{ $hasData && $isWorkingDay === false ? 'non-working-day' : '' }}
+                                              {{ $hasData && $dayType ? $dayType : '' }}"
                                         data-date="{{ $dateString }}">
                                         
                                         <div class="day-header d-flex justify-content-between align-items-center mb-2">
@@ -138,83 +135,83 @@
                                                 {{ $currentDay->day }}
                                             </span>
                                             
-                                            <!-- Indicador de día laborable/no laborable -->
-                                            @if ($isCurrentMonth)
-                                                <span class="day-status badge {{ $isWorkingDay ? 'bg-success' : 'bg-danger' }}">
-                                                    {{ $isWorkingDay ? __('Working') : __('Non-Working') }}
-                                                </span>
-                                            @endif
+                                            <!-- Indicador de día laborable/no laborable (se muestra solo en contenido para evitar duplicados) -->
                                             
                                             @if ($isCurrentMonth && $existsInDb && $dayId)
                                                 <div class="day-actions">
                                                     @can('workcalendar-edit')
-                                                        <a href="{{ route('customers.work-calendars.edit', ['customer' => $customer->id, 'calendar' => $dayId]) }}" 
-                                                           class="btn btn-sm btn-outline-secondary" 
-                                                           data-bs-toggle="tooltip" 
-                                                           title="{{ __('Edit') }}">
+                                                        <button type="button"
+                                                                class="btn btn-sm btn-outline-secondary btn-edit-day"
+                                                                data-bs-toggle="tooltip"
+                                                                title="{{ __('Edit') }}"
+                                                                data-id="{{ $dayId }}"
+                                                                data-date="{{ $dateString }}"
+                                                                data-name="{{ $dayName }}"
+                                                                data-type="{{ $dayType }}"
+                                                                data-is-working-day="{{ $isWorkingDay ? 1 : 0 }}"
+                                                                data-description="{{ $dayDescription }}"
+                                                                data-update-url="{{ route('customers.work-calendars.update', ['customer' => $customer->id, 'calendar' => $dayId]) }}">
                                                             <i class="fas fa-edit"></i>
-                                                        </a>
+                                                        </button>
                                                     @endcan
-                                                    
+
                                                     @can('workcalendar-delete')
-                                                        <form action="{{ route('customers.work-calendars.destroy', ['customer' => $customer->id, 'calendar' => $dayId]) }}" 
-                                                              method="POST" 
-                                                              class="d-inline" 
-                                                              onsubmit="return confirm('{{ __('Are you sure?') }}');">
-                                                            @csrf
-                                                            @method('DELETE')
-                                                            <button type="submit" 
-                                                                    class="btn btn-sm btn-outline-danger" 
-                                                                    data-bs-toggle="tooltip" 
-                                                                    title="{{ __('Delete') }}">
-                                                                <i class="fas fa-trash"></i>
-                                                            </button>
-                                                        </form>
+                                                        <button type="button"
+                                                                class="btn btn-sm btn-outline-danger btn-delete-day"
+                                                                data-bs-toggle="tooltip"
+                                                                title="{{ __('Delete') }}"
+                                                                data-id="{{ $dayId }}"
+                                                                data-date="{{ $dateString }}"
+                                                                data-destroy-url="{{ route('customers.work-calendars.destroy', ['customer' => $customer->id, 'calendar' => $dayId]) }}">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
                                                     @endcan
                                                 </div>
                                             @elseif ($isCurrentMonth)
                                                 <div class="day-actions">
                                                     @can('workcalendar-create')
-                                                        <a href="{{ route('customers.work-calendars.create', ['customer' => $customer->id, 'date' => $dateString]) }}" 
-                                                           class="btn btn-sm btn-outline-primary" 
-                                                           data-bs-toggle="tooltip" 
-                                                           title="{{ __('Add') }}">
+                                                        <button type="button" 
+                                                                class="btn btn-sm btn-outline-primary btn-add-day" 
+                                                                data-bs-toggle="tooltip" 
+                                                                title="{{ __('Add') }}"
+                                                                data-date="{{ $dateString }}">
                                                             <i class="fas fa-plus"></i>
-                                                        </a>
+                                                        </button>
                                                     @endcan
                                                 </div>
                                             @endif
                                         </div>
                                         
-                                        @if ($isCurrentMonth && ($dayName || $dayType !== 'workday'))
+                                        @if ($isCurrentMonth && $hasData)
                                             <div class="day-content">
-                                                @if ($dayName)
-                                                    <div class="day-name">{{ $dayName }}</div>
-                                                @endif
-                                                
-                                                <div class="day-type">
-                                                    @switch($dayType)
-                                                        @case('holiday')
-                                                            <span class="badge bg-danger">{{ __('Holiday') }}</span>
-                                                            @break
-                                                        @case('maintenance')
-                                                            <span class="badge bg-warning text-dark">{{ __('Maintenance') }}</span>
-                                                            @break
-                                                        @case('vacation')
-                                                            <span class="badge bg-info">{{ __('Vacation') }}</span>
-                                                            @break
-                                                        @case('weekend')
-                                                            <span class="badge bg-secondary">{{ __('Weekend') }}</span>
-                                                            @break
-                                                        @case('special')
-                                                            <span class="badge bg-primary">{{ __('Special') }}</span>
-                                                            @break
-                                                    @endswitch
+                                                <div class="mb-1">
+                                                    <span class="badge {{ $isWorkingDay ? 'bg-success' : 'bg-danger' }}">
+                                                        {{ $isWorkingDay ? __('Laborable') : __('No laborable') }}
+                                                    </span>
+                                                    @if ($dayType)
+                                                        @switch($dayType)
+                                                            @case('holiday')
+                                                                <span class="badge bg-danger">{{ __('Festivo') }}</span>
+                                                                @break
+                                                            @case('maintenance')
+                                                                <span class="badge bg-warning text-dark">{{ __('Mantenimiento') }}</span>
+                                                                @break
+                                                            @case('vacation')
+                                                                <span class="badge bg-info">{{ __('Vacaciones') }}</span>
+                                                                @break
+                                                            @case('weekend')
+                                                                <span class="badge bg-secondary">{{ __('Fin de semana') }}</span>
+                                                                @break
+                                                        @endswitch
+                                                    @endif
                                                 </div>
-                                                
+                                                @php
+                                                    $statusText = $dayName ?: ($isWorkingDay ? __('Se Trabaja') : __('No se trabaja'));
+                                                @endphp
+                                                <div class="fw-semibold">{{ $statusText }}</div>
                                                 @if ($dayDescription)
                                                     <div class="day-description small text-muted mt-1">
-                                                        {{ \Illuminate\Support\Str::limit($dayDescription, 50) }}
+                                                        {{ \Illuminate\Support\Str::limit($dayDescription, 80) }}
                                                     </div>
                                                 @endif
                                             </div>
@@ -235,25 +232,27 @@
                     
                     {{-- Leyenda --}}
                     <div class="calendar-legend mt-4">
-                        <h5>{{ __('Legend') }}</h5>
-                        <div class="d-flex flex-wrap gap-3">
-                            <div class="legend-item">
-                                <span class="badge bg-success">{{ __('Working Day') }}</span>
+                        <h5>{{ __('Leyenda') }}</h5>
+                        <div class="d-flex flex-wrap gap-3 align-items-center">
+                            <div class="legend-item d-flex align-items-center gap-2">
+                                <span class="badge bg-success">{{ __('Laborable') }}</span>
+                                <i class="fas fa-info-circle text-muted" data-bs-toggle="tooltip" title="{{ __('Día de trabajo regular') }}"></i>
                             </div>
-                            <div class="legend-item">
-                                <span class="badge bg-danger">{{ __('Holiday') }}</span>
+                            <div class="legend-item d-flex align-items-center gap-2">
+                                <span class="badge bg-danger">{{ __('Festivo') }}</span>
+                                <i class="fas fa-info-circle text-muted" data-bs-toggle="tooltip" title="{{ __('Feriados y días oficiales no laborables') }}"></i>
                             </div>
-                            <div class="legend-item">
-                                <span class="badge bg-warning text-dark">{{ __('Maintenance') }}</span>
+                            <div class="legend-item d-flex align-items-center gap-2">
+                                <span class="badge bg-warning text-dark">{{ __('Mantenimiento') }}</span>
+                                <i class="fas fa-info-circle text-muted" data-bs-toggle="tooltip" title="{{ __('Paradas por mantenimiento') }}"></i>
                             </div>
-                            <div class="legend-item">
-                                <span class="badge bg-info">{{ __('Vacation') }}</span>
+                            <div class="legend-item d-flex align-items-center gap-2">
+                                <span class="badge bg-info">{{ __('Vacaciones') }}</span>
+                                <i class="fas fa-info-circle text-muted" data-bs-toggle="tooltip" title="{{ __('Vacaciones programadas') }}"></i>
                             </div>
-                            <div class="legend-item">
-                                <span class="badge bg-secondary">{{ __('Weekend') }}</span>
-                            </div>
-                            <div class="legend-item">
-                                <span class="badge bg-primary">{{ __('Special') }}</span>
+                            <div class="legend-item d-flex align-items-center gap-2">
+                                <span class="badge bg-secondary">{{ __('Fin de semana') }}</span>
+                                <i class="fas fa-info-circle text-muted" data-bs-toggle="tooltip" title="{{ __('Sábado y Domingo') }}"></i>
                             </div>
                         </div>
                     </div>
@@ -328,15 +327,15 @@
                 <input type="hidden" name="year" value="{{ $year }}">
                 <input type="hidden" name="month" value="{{ $month }}">
                 
-                <div class="modal-header bg-primary text-white">
+                <div class="modal-header bg-transparent text-dark border-bottom">
                     <h5 class="modal-title" id="bulkUpdateModalLabel">{{ __('Mass Calendar Configuration') }}</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 
                 <div class="modal-body">
                     <div class="alert alert-info">
                         <i class="fas fa-info-circle me-2"></i>
-                        {{ __('This will update all selected days in the current month. Any existing special configuration for these days will be overwritten.') }}
+                        {{ __('This will update all selected days in the current month. Any existing configuration for these days will be overwritten.') }}
                     </div>
                     
                     <div class="mb-3">
@@ -360,6 +359,22 @@
                             </label>
                         </div>
                     </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">{{ __('Period') }}</label>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="period" id="periodMonth" value="month" checked>
+                            <label class="form-check-label" for="periodMonth">
+                                {{ __('Current month') }}
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="period" id="periodYear" value="year">
+                            <label class="form-check-label" for="periodYear">
+                                {{ __('Entire year') }} ({{ __('of') }} {{ $year }})
+                            </label>
+                        </div>
+                    </div>
                     
                     <div class="row mb-3">
                         <div class="col-md-6">
@@ -370,7 +385,6 @@
                                 <option value="maintenance">{{ __('Maintenance') }}</option>
                                 <option value="vacation">{{ __('Vacation') }}</option>
                                 <option value="weekend">{{ __('Weekend') }}</option>
-                                <option value="special">{{ __('Special') }}</option>
                             </select>
                         </div>
                         
@@ -421,7 +435,7 @@
         // Actualizar automáticamente el estado de is_working_day según el tipo seleccionado
         $('#type').change(function() {
             var type = $(this).val();
-            var workingDayTypes = ['workday', 'special'];
+            var workingDayTypes = ['workday'];
             var isWorkingDay = workingDayTypes.includes(type);
             
             $('#is_working_day').prop('checked', isWorkingDay);
@@ -436,41 +450,46 @@
             
             var year = parseInt($('input[name="year"]').val());
             var month = parseInt($('input[name="month"]').val());
+            var period = $('input[name="period"]:checked').val();
             var dayType = $('input[name="day_type"]:checked').val();
             var type = $('#type').val();
             var name = $('#name').val();
             var isWorkingDay = $('#is_working_day').is(':checked') ? 1 : 0;
             var description = $('#description').val();
             
-            // Obtener todos los días del mes
-            var daysInMonth = new Date(year, month, 0).getDate();
             var days = [];
             
-            // Crear array de días según la selección
-            for (var day = 1; day <= daysInMonth; day++) {
-                var date = new Date(year, month - 1, day);
-                var dayOfWeek = date.getDay(); // 0 = domingo, 6 = sábado
-                
-                // Determinar si este día debe ser incluido según la selección
-                var include = false;
-                
-                if (dayType === 'all') {
-                    include = true;
-                } else if (dayType === 'weekdays' && dayOfWeek >= 1 && dayOfWeek <= 5) {
-                    include = true;
-                } else if (dayType === 'weekends' && (dayOfWeek === 0 || dayOfWeek === 6)) {
-                    include = true;
+            function pushDaysForMonth(y, m) {
+                var dim = new Date(y, m, 0).getDate(); // m is 1-12
+                for (var d = 1; d <= dim; d++) {
+                    var jsDate = new Date(y, m - 1, d);
+                    var dow = jsDate.getDay(); // 0=Sun, 6=Sat
+                    var include = false;
+                    if (dayType === 'all') {
+                        include = true;
+                    } else if (dayType === 'weekdays' && dow >= 1 && dow <= 5) {
+                        include = true;
+                    } else if (dayType === 'weekends' && (dow === 0 || dow === 6)) {
+                        include = true;
+                    }
+                    if (include) {
+                        days.push({
+                            date: y + '-' + (m < 10 ? '0' + m : m) + '-' + (d < 10 ? '0' + d : d),
+                            type: type,
+                            name: name,
+                            is_working_day: isWorkingDay,
+                            description: description
+                        });
+                    }
                 }
-                
-                if (include) {
-                    days.push({
-                        date: year + '-' + (month < 10 ? '0' + month : month) + '-' + (day < 10 ? '0' + day : day),
-                        type: type,
-                        name: name,
-                        is_working_day: isWorkingDay,
-                        description: description
-                    });
+            }
+
+            if (period === 'year') {
+                for (var m = 1; m <= 12; m++) {
+                    pushDaysForMonth(year, m);
                 }
+            } else {
+                pushDaysForMonth(year, month);
             }
             
             // Cerrar el modal antes de enviar la solicitud
@@ -529,6 +548,169 @@
                 }
             });
         });
+
+        // --- Modales Add / Edit / Delete ---
+        var dayModalEl = document.getElementById('dayModal');
+        var dayModal = new bootstrap.Modal(dayModalEl);
+        var deleteModalEl = document.getElementById('deleteDayModal');
+        var deleteModal = new bootstrap.Modal(deleteModalEl);
+
+        function fillDayForm(data) {
+            $('#dayForm')[0].reset();
+            $('#dayForm [name="calendar_date"]').val(data.date || '');
+            $('#dayForm [name="type"]').val(data.type || 'workday');
+            $('#dayForm [name="name"]').val(data.name || '');
+            $('#dayForm [name="is_working_day"]').prop('checked', (data.is_working_day ?? 1) == 1);
+            $('#dayForm [name="description"]').val(data.description || '');
+        }
+
+        // Add
+        $(document).on('click', '.btn-add-day', function() {
+            var date = $(this).data('date');
+            $('#dayModalLabel').text('{{ __('Añadir día') }}');
+            $('#dayForm').attr('action', $(this).closest('form').length ? $(this).closest('form').attr('action') : '{{ route('customers.work-calendars.store', $customer->id) }}');
+            $('#dayForm').data('method', 'POST');
+            fillDayForm({ date: date, is_working_day: 1 });
+            dayModal.show();
+        });
+
+        // Edit
+        $(document).on('click', '.btn-edit-day', function() {
+            $('#dayModalLabel').text('{{ __('Editar día') }}');
+            var updateUrl = $(this).data('update-url');
+            $('#dayForm').attr('action', updateUrl);
+            $('#dayForm').data('method', 'PUT');
+            fillDayForm({
+                date: $(this).data('date'),
+                type: $(this).data('type'),
+                name: $(this).data('name'),
+                is_working_day: $(this).data('is-working-day'),
+                description: $(this).data('description')
+            });
+            dayModal.show();
+        });
+
+        // Submit Add/Edit via AJAX
+        $('#dayForm').on('submit', function(e) {
+            e.preventDefault();
+            var method = $('#dayForm').data('method') || 'POST';
+            var action = $(this).attr('action');
+            var payload = $(this).serializeArray();
+            if (method === 'PUT') {
+                payload.push({ name: '_method', value: 'PUT' });
+            }
+            $.ajax({
+                url: action,
+                method: 'POST',
+                data: payload,
+                success: function(resp){
+                    dayModal.hide();
+                    Swal.fire({ icon: 'success', title: '{{ __('Éxito') }}', text: resp.message || '{{ __('Guardado correctamente') }}' })
+                        .then(() => window.location.reload());
+                },
+                error: function(xhr){
+                    var msg = xhr.responseJSON?.message || '{{ __('Ha ocurrido un error') }}';
+                    Swal.fire({ icon: 'error', title: '{{ __('Error') }}', text: msg });
+                }
+            });
+        });
+
+        // Delete
+        $(document).on('click', '.btn-delete-day', function(){
+            $('#deleteDateText').text($(this).data('date'));
+            $('#deleteForm').attr('action', $(this).data('destroy-url'));
+            deleteModal.show();
+        });
+
+        $('#deleteForm').on('submit', function(e){
+            e.preventDefault();
+            var action = $(this).attr('action');
+            $.ajax({
+                url: action,
+                method: 'POST',
+                data: { _token: $('input[name="_token"]').val(), _method: 'DELETE' },
+                success: function(resp){
+                    deleteModal.hide();
+                    Swal.fire({ icon: 'success', title: '{{ __('Éxito') }}', text: resp.message || '{{ __('Eliminado correctamente') }}' })
+                        .then(() => window.location.reload());
+                },
+                error: function(xhr){
+                    var msg = xhr.responseJSON?.message || '{{ __('Ha ocurrido un error') }}';
+                    Swal.fire({ icon: 'error', title: '{{ __('Error') }}', text: msg });
+                }
+            });
+        });
     });
 </script>
 @endpush
+
+{{-- Modal Add/Edit Day --}}
+<div class="modal fade" id="dayModal" tabindex="-1" aria-labelledby="dayModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="dayForm" action="{{ route('customers.work-calendars.store', $customer->id) }}" method="POST">
+                @csrf
+                <div class="modal-header">
+                    <h5 class="modal-title" id="dayModalLabel">{{ __('Añadir día') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">{{ __('Fecha') }}</label>
+                        <input type="date" class="form-control" name="calendar_date" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ __('Tipo') }}</label>
+                        <select class="form-select" name="type" required>
+                            <option value="workday">{{ __('Working Day') }}</option>
+                            <option value="holiday">{{ __('Holiday') }}</option>
+                            <option value="maintenance">{{ __('Maintenance') }}</option>
+                            <option value="vacation">{{ __('Vacation') }}</option>
+                            <option value="weekend">{{ __('Weekend') }}</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ __('Nombre') }}</label>
+                        <input type="text" class="form-control" name="name">
+                    </div>
+                    <div class="mb-3 form-check form-switch">
+                        <input type="hidden" name="is_working_day" value="0">
+                        <input class="form-check-input" type="checkbox" id="modalIsWorking" name="is_working_day" value="1">
+                        <label class="form-check-label" for="modalIsWorking">{{ __('¿Es laborable?') }}</label>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ __('Descripción') }}</label>
+                        <textarea class="form-control" name="description" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('Cancelar') }}</button>
+                    <button type="submit" class="btn btn-primary">{{ __('Guardar') }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    </div>
+
+{{-- Modal Delete Confirm --}}
+<div class="modal fade" id="deleteDayModal" tabindex="-1" aria-labelledby="deleteDayModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="deleteForm" method="POST" action="#">
+                @csrf
+                <input type="hidden" name="_method" value="DELETE">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteDayModalLabel">{{ __('Eliminar día') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    {{ __('¿Seguro que deseas eliminar el día') }} <strong id="deleteDateText"></strong>?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('Cancelar') }}</button>
+                    <button type="submit" class="btn btn-danger">{{ __('Eliminar') }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

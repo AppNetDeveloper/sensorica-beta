@@ -399,7 +399,6 @@ else{
             }
         }
     </script>
-</body>
 
 <!-- [ Main Content ] start -->
 <div class="dash-container">

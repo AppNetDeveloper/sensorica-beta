@@ -46,38 +46,20 @@ class WorkCalendarController extends Controller
         $endDate = Carbon::createFromDate($year, $month, 1)->endOfMonth();
         
         // Obtener todos los días del calendario para el mes seleccionado
+        // Importante: clavear por fecha en formato 'Y-m-d' para que coincida con $dateString en la vista
         $calendarDays = WorkCalendar::forCustomer($customerId)
             ->betweenDates($startDate, $endDate)
             ->orderBy('calendar_date')
             ->get()
-            ->keyBy('calendar_date');
+            ->mapWithKeys(function ($item) {
+                $date = $item->calendar_date instanceof \Carbon\Carbon
+                    ? $item->calendar_date->format('Y-m-d')
+                    : \Carbon\Carbon::parse($item->calendar_date)->format('Y-m-d');
+                return [$date => $item];
+            });
         
-        // Crear array con todos los días del mes
-        $daysInMonth = [];
-        $currentDate = clone $startDate;
-        
-        while ($currentDate <= $endDate) {
-            $dateString = $currentDate->format('Y-m-d');
-            
-            // Si existe en la BD, usar esos datos, sino crear un día por defecto
-            if ($calendarDays->has($dateString)) {
-                $daysInMonth[$dateString] = $calendarDays->get($dateString);
-            } else {
-                // Por defecto, los fines de semana no son laborables
-                $isWeekend = $currentDate->isWeekend();
-                $daysInMonth[$dateString] = [
-                    'date' => $currentDate->format('Y-m-d'),
-                    'day' => $currentDate->day,
-                    'is_working_day' => !$isWeekend,
-                    'type' => $isWeekend ? 'weekend' : 'workday',
-                    'name' => null,
-                    'description' => null,
-                    'exists_in_db' => false
-                ];
-            }
-            
-            $currentDate->addDay();
-        }
+        // Usar únicamente los días existentes en BD; no generar valores por defecto
+        $daysInMonth = $calendarDays;
         
         // Obtener meses para navegación
         $previousMonth = Carbon::createFromDate($year, $month, 1)->subMonth();
@@ -110,8 +92,7 @@ class WorkCalendarController extends Controller
             'maintenance' => __('Maintenance'),
             'vacation' => __('Vacation'),
             'workday' => __('Working Day'),
-            'weekend' => __('Weekend'),
-            'special' => __('Special')
+            'weekend' => __('Weekend')
         ];
         
         return view('work_calendars.create', compact('customer', 'date', 'dayTypes'));
@@ -143,13 +124,22 @@ class WorkCalendarController extends Controller
             // Actualizar el registro existente
             $existingDay->update($request->all());
             $message = __('Calendar day updated successfully');
+            $model = $existingDay;
         } else {
             // Crear un nuevo registro
-            WorkCalendar::create(array_merge(
+            $model = WorkCalendar::create(array_merge(
                 $request->all(),
                 ['customer_id' => $customerId]
             ));
             $message = __('Calendar day created successfully');
+        }
+        
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'data' => $model
+            ]);
         }
         
         return redirect()->route('customers.work-calendars.index', $customerId)
@@ -175,11 +165,16 @@ class WorkCalendarController extends Controller
             'maintenance' => __('Maintenance'),
             'vacation' => __('Vacation'),
             'workday' => __('Working Day'),
-            'weekend' => __('Weekend'),
-            'special' => __('Special')
+            'weekend' => __('Weekend')
         ];
         
-        return view('work_calendars.edit', compact('customer', 'calendarDay', 'dayTypes'));
+        // Pasar ambas variables por compatibilidad con la vista
+        return view('work_calendars.edit', [
+            'customer' => $customer,
+            'calendarDay' => $calendarDay,
+            'calendar' => $calendarDay,
+            'dayTypes' => $dayTypes,
+        ]);
     }
 
     /**
@@ -203,9 +198,18 @@ class WorkCalendarController extends Controller
             ->findOrFail($id);
         
         $calendarDay->update($request->all());
+        $message = __('Calendar day updated successfully');
+        
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'data' => $calendarDay
+            ]);
+        }
         
         return redirect()->route('customers.work-calendars.index', $customerId)
-            ->with('success', __('Calendar day updated successfully'));
+            ->with('success', $message);
     }
 
     /**
@@ -221,9 +225,17 @@ class WorkCalendarController extends Controller
             ->findOrFail($id);
         
         $calendarDay->delete();
+        $message = __('Calendar day deleted successfully');
+        
+        if (request()->expectsJson() || request()->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => $message
+            ]);
+        }
         
         return redirect()->route('customers.work-calendars.index', $customerId)
-            ->with('success', __('Calendar day deleted successfully'));
+            ->with('success', $message);
     }
     
     /**

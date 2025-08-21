@@ -45,7 +45,6 @@
                                     <option value="vacation" {{ old('type', $calendar->type) == 'vacation' ? 'selected' : '' }}>{{ __('Vacation') }}</option>
                                     <option value="workday" {{ old('type', $calendar->type) == 'workday' ? 'selected' : '' }}>{{ __('Working Day') }}</option>
                                     <option value="weekend" {{ old('type', $calendar->type) == 'weekend' ? 'selected' : '' }}>{{ __('Weekend') }}</option>
-                                    <option value="special" {{ old('type', $calendar->type) == 'special' ? 'selected' : '' }}>{{ __('Special') }}</option>
                                 </select>
                                 @error('type')
                                     <div class="invalid-feedback">{{ $message }}</div>
@@ -110,7 +109,7 @@
         // Actualizar automáticamente el estado de is_working_day según el tipo seleccionado
         $('#type').change(function() {
             var type = $(this).val();
-            var workingDayTypes = ['workday', 'special'];
+            var workingDayTypes = ['workday'];
             var isWorkingDay = workingDayTypes.includes(type);
             
             $('#is_working_day').prop('checked', isWorkingDay);

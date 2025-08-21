@@ -1,12 +1,12 @@
 @extends('layouts.admin')
-@section('title', __('Add Special Day') . ' - ' . $customer->name)
+@section('title', __('Add Day') . ' - ' . $customer->name)
 @section('breadcrumb')
     <ul class="breadcrumb">
         <li class="breadcrumb-item"><a href="{{ route('home') }}">{{ __('Dashboard') }}</a></li>
         <li class="breadcrumb-item"><a href="{{ route('customers.index') }}">{{ __('Customers') }}</a></li>
         <li class="breadcrumb-item">{{ $customer->name }}</li>
         <li class="breadcrumb-item"><a href="{{ route('customers.work-calendars.index', $customer->id) }}">{{ __('Work Calendar') }}</a></li>
-        <li class="breadcrumb-item">{{ __('Add Special Day') }}</li>
+        <li class="breadcrumb-item">{{ __('Add Day') }}</li>
     </ul>
 @endsection
 
@@ -15,7 +15,7 @@
         <div class="col-lg-8 mx-auto">
             <div class="card">
                 <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">{{ __('Add Special Day') }}</h4>
+                    <h4 class="mb-0">{{ __('Add Day') }}</h4>
                 </div>
                 <div class="card-body">
                     <form action="{{ route('customers.work-calendars.store', $customer->id) }}" method="POST">
@@ -44,7 +44,6 @@
                                     <option value="vacation" {{ old('type') == 'vacation' ? 'selected' : '' }}>{{ __('Vacation') }}</option>
                                     <option value="workday" {{ old('type') == 'workday' ? 'selected' : '' }}>{{ __('Working Day') }}</option>
                                     <option value="weekend" {{ old('type') == 'weekend' ? 'selected' : '' }}>{{ __('Weekend') }}</option>
-                                    <option value="special" {{ old('type') == 'special' ? 'selected' : '' }}>{{ __('Special') }}</option>
                                 </select>
                                 @error('type')
                                     <div class="invalid-feedback">{{ $message }}</div>
@@ -110,7 +109,7 @@
         // Actualizar automáticamente el estado de is_working_day según el tipo seleccionado
         $('#type').change(function() {
             var type = $(this).val();
-            var workingDayTypes = ['workday', 'special'];
+            var workingDayTypes = ['workday'];
             var isWorkingDay = workingDayTypes.includes(type);
             
             $('#is_working_day').prop('checked', isWorkingDay);
