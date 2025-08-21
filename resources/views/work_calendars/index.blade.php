@@ -545,14 +545,16 @@
             // Cerrar el modal antes de enviar la solicitud
             $('#bulkUpdateModal').modal('hide');
             
-            // Enviar la solicitud AJAX con el array de días
+            // Enviar la solicitud AJAX como JSON para evitar el límite de max_input_vars
             $.ajax({
                 url: $(this).attr('action'),
                 method: 'POST',
-                data: {
-                    _token: $('input[name="_token"]').val(),
-                    days: days
+                contentType: 'application/json',
+                dataType: 'json',
+                headers: {
+                    'X-CSRF-TOKEN': $('input[name="_token"]').val()
                 },
+                data: JSON.stringify({ days: days }),
                 success: function(response) {
                     if (response.success) {
                         // Mostrar mensaje de éxito
