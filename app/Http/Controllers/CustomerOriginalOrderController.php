@@ -21,6 +21,8 @@ class CustomerOriginalOrderController extends Controller
         $this->middleware('permission:original-order-create', ['only' => ['create', 'store']]);
         $this->middleware('permission:original-order-edit', ['only' => ['edit', 'update']]);
         $this->middleware('permission:original-order-delete', ['only' => ['destroy', 'bulkDelete']]);
+        // Permisos para la nueva vista y su API
+        $this->middleware('permission:original-order-list', ['only' => ['finishedProcessesView', 'finishedProcessesData']]);
     }
 
     /**
@@ -606,6 +608,125 @@ class CustomerOriginalOrderController extends Controller
             'processes' => $processes,
             'selectedProcesses' => $selectedProcesses,
             'articlesData' => json_encode($articlesData)
+        ]);
+    }
+
+    /**
+     * Vista: Procesos de pedidos originales finalizados por rango de fechas
+     */
+    public function finishedProcessesView(Request $request, Customer $customer)
+    {
+        return view('customers.original-orders.finished-processes', compact('customer'));
+    }
+
+    /**
+     * DataTables API: Procesos finalizados filtrados por fecha de finalización
+     */
+    public function finishedProcessesData(Request $request, Customer $customer)
+    {
+        // Parámetros DataTables
+        $search = $request->input('search.value', '');
+        $perPage = (int) $request->input('length', 10);
+        $start = (int) $request->input('start', 0);
+        $orderColumnIndex = $request->input('order.0.column', 0);
+        $orderDir = $request->input('order.0.dir', 'desc');
+
+        $dateFrom = $request->input('date_from'); // formato YYYY-MM-DD
+        $dateTo = $request->input('date_to');     // formato YYYY-MM-DD
+
+        $columns = [
+            0 => 'id',
+            1 => 'finished_at',
+            2 => 'order_id',
+            3 => 'process_description',
+            4 => 'grupo_numero',
+        ];
+
+        // Base query: procesos finalizados del cliente
+        $baseQuery = OriginalOrderProcess::query()
+            ->whereHas('originalOrder', function($q) use ($customer) {
+                $q->where('customer_id', $customer->id);
+            })
+            ->whereNotNull('finished_at');
+
+        $recordsTotal = (clone $baseQuery)->count();
+
+        // Aplicar filtro de rango de fechas (si se proveen)
+        if ($dateFrom) {
+            $baseQuery->whereDate('finished_at', '>=', $dateFrom);
+        }
+        if ($dateTo) {
+            $baseQuery->whereDate('finished_at', '<=', $dateTo);
+        }
+
+        // Búsqueda por texto en order_id o descripción de proceso
+        if (!empty($search)) {
+            $baseQuery->where(function($q) use ($search) {
+                $q->whereHas('originalOrder', function($q2) use ($search) {
+                    $q2->where('order_id', 'like', '%' . $search . '%');
+                })
+                ->orWhereHas('process', function($q3) use ($search) {
+                    $q3->where('description', 'like', '%' . $search . '%')
+                       ->orWhere('code', 'like', '%' . $search . '%');
+                });
+            });
+        }
+
+        $recordsFiltered = (clone $baseQuery)->count();
+
+        // Ordenar
+        $orderColumn = $columns[$orderColumnIndex] ?? 'finished_at';
+        if ($orderColumn === 'order_id') {
+            // Orden por order_id via relación
+            $baseQuery->join('original_orders as oo', 'oo.id', '=', 'original_order_processes.original_order_id')
+                      ->orderBy('oo.order_id', $orderDir)
+                      ->select('original_order_processes.*');
+        } elseif ($orderColumn === 'process_description') {
+            $baseQuery->join('processes as p', 'p.id', '=', 'original_order_processes.process_id')
+                      ->orderBy('p.description', $orderDir)
+                      ->select('original_order_processes.*');
+        } else {
+            $baseQuery->orderBy($orderColumn, $orderDir);
+        }
+
+        // Paginación
+        $items = $baseQuery
+            ->with(['originalOrder:id,order_id', 'process:id,description,code', 'articles'])
+            ->skip($start)
+            ->take($perPage)
+            ->get();
+
+        // Preparar respuesta
+        $data = [];
+        foreach ($items as $index => $item) {
+            // Mapear artículos relacionados del pivot/modelo
+            $articles = [];
+            if (method_exists($item, 'articles')) {
+                foreach ($item->articles as $article) {
+                    $articles[] = [
+                        'codigo_articulo' => $article->codigo_articulo ?? '',
+                        'descripcion_articulo' => $article->descripcion_articulo ?? '',
+                        'grupo_articulo' => $article->grupo_articulo ?? '',
+                        'in_stock' => $article->in_stock ?? null,
+                    ];
+                }
+            }
+            $data[] = [
+                'details' => '<button type="button" class="btn btn-sm btn-outline-secondary details-control" title="Artículos relacionados"><i class="fas fa-cubes"></i></button>',
+                'DT_RowIndex' => $start + $index + 1,
+                'finished_at' => optional($item->finished_at)->format('Y-m-d H:i'),
+                'order_id' => optional($item->originalOrder)->order_id,
+                'process' => ($item->process?->description ?? '-') . (isset($item->process?->code) ? ' ['.$item->process->code.']' : ''),
+                'grupo_numero' => $item->grupo_numero,
+                'articles' => $articles,
+            ];
+        }
+
+        return response()->json([
+            'draw' => intval($request->input('draw')),
+            'recordsTotal' => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
+            'data' => $data,
         ]);
     }
 

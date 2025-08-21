@@ -37,6 +37,11 @@
                                 <i class="fas fa-trash me-1"></i> {{ __('Delete Selected') }}
                             </button>
                             @endcan
+                            @can('original-order-list')
+                            <a href="{{ route('customers.original-orders.finished-processes.view', $customer) }}" class="btn btn-outline-dark btn-sm me-2">
+                                <i class="fas fa-chart-line"></i> @lang('Procesos finalizados')
+                            </a>
+                            @endcan
                             @can('original-order-create')
                             <a href="#" id="import-orders-btn" class="btn btn-outline-success btn-sm me-2">
                                 <i class="fas fa-sync-alt"></i> @lang('Importar ahora')

@@ -94,6 +94,12 @@ Route::get('customers', [CustomerController::class, 'index'])->name('customers.i
 Route::resource('customers', CustomerController::class)->except(['edit', 'update', 'destroy']);
 
 // Customer Original Orders
+// Rutas específicas deben declararse ANTES del resource para evitar colisiones con {originalOrder}
+Route::get('customers/{customer}/original-orders/finished-processes', [CustomerOriginalOrderController::class, 'finishedProcessesView'])
+    ->name('customers.original-orders.finished-processes.view');
+Route::get('customers/{customer}/original-orders/finished-processes/data', [CustomerOriginalOrderController::class, 'finishedProcessesData'])
+    ->name('customers.original-orders.finished-processes.data');
+
 Route::post('customers/{customer}/original-orders/import', [CustomerOriginalOrderController::class, 'import'])->name('customers.original-orders.import');
 Route::post('customers/{customer}/original-orders/create-cards', [CustomerOriginalOrderController::class, 'createCards'])->name('customers.original-orders.create-cards');
 Route::post('customers/{customer}/original-orders/bulk-delete', [CustomerOriginalOrderController::class, 'bulkDelete'])->name('customers.original-orders.bulk-delete')->middleware(['auth', 'XSS']);
