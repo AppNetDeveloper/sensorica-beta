@@ -24,8 +24,11 @@
                         <div class="filter-container">
                             <select id="order-status-filter" class="form-select form-select-sm">
                                 <option value="all" selected>@lang('Todo')</option>
-                                <option value="finished">@lang('Solo finalizados')</option>
-                                <option value="in-progress">@lang('En curso')</option>
+                                <option value="finished">@lang('Pedido finalizado')</option>
+                                <option value="started">@lang('Pedido Iniciado')</option>
+                                <option value="assigned">@lang('Asignado a máquina')</option>
+                                <option value="planned">@lang('Pendiente Planificar')</option>
+                                <option value="to-create">@lang('Pendiente Crear')</option>
                             </select>
                         </div>
                         <div>

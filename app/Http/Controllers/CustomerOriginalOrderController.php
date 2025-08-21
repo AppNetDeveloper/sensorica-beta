@@ -153,18 +153,7 @@ class CustomerOriginalOrderController extends Controller
             
             // Obtener el total de registros sin filtrar
             $recordsTotal = $query->count();
-            
-            // Aplicar filtro por estado
-            if ($statusFilter !== 'all') {
-                if ($statusFilter === 'finished') {
-                    // Filtrar solo pedidos finalizados (con fecha de finalización)
-                    $query->whereNotNull('finished_at');
-                } elseif ($statusFilter === 'in-progress') {
-                    // Filtrar pedidos en curso (sin fecha de finalización)
-                    $query->whereNull('finished_at');
-                }
-            }
-            
+
             // Aplicar búsqueda si se proporciona
             if (!empty($search)) {
                 $searchTerm = '%' . $search . '%';
@@ -173,16 +162,92 @@ class CustomerOriginalOrderController extends Controller
                       ->orWhere('client_number', 'like', $searchTerm);
                 });
             }
-            
-            // Obtener el total de registros filtrados
-            $recordsFiltered = $query->count();
-            
-            // Aplicar ordenamiento
+
+            // Cargar todos los resultados tras búsqueda para evaluar estado por pedido
+            $ordersAll = $query->get();
+            \Log::info('OriginalOrders index: after search', ['status_filter' => $statusFilter, 'orders_count' => $ordersAll->count()]);
+
+            // Cargar todas las órdenes de producción para todos los procesos de una vez (necesario para calcular estado)
+            $processIdsAll = collect();
+            foreach ($ordersAll as $o) {
+                foreach ($o->processes as $p) {
+                    $processIdsAll->push($p->pivot->id);
+                }
+            }
+            $allProductionOrders = \App\Models\ProductionOrder::whereIn('original_order_process_id', $processIdsAll->toArray())
+                ->select('id', 'original_order_process_id', 'production_line_id', 'status', 'accumulated_time')
+                ->get()
+                ->groupBy('original_order_process_id');
+
+            // Función para calcular el nivel de estado de pedido (0 a 3)
+            $computeStatusLevel = function($order) use ($allProductionOrders) {
+                if ($order->finished_at) {
+                    return 4; // Finalizado
+                }
+                $statusLevel = 0; // 0: Crear, 1: Planificar, 2: Asignado, 3: Iniciado/Finalizado
+                foreach ($order->processes as $process) {
+                    $pivotId = $process->pivot->id;
+                    if ($process->pivot->finished) {
+                        $statusLevel = 3;
+                        break;
+                    }
+                    $pos = isset($allProductionOrders[$pivotId]) ? $allProductionOrders[$pivotId] : collect();
+                    $isAssigned = false;
+                    $isPlanned = false;
+                    foreach ($pos as $po) {
+                        if (isset($po->status) && $po->status === 1) {
+                            $statusLevel = 3;
+                            break 2;
+                        }
+                        if ($po->production_line_id) {
+                            $isAssigned = true;
+                        }
+                        $isPlanned = true;
+                    }
+                    if ($isAssigned) {
+                        $statusLevel = max($statusLevel, 2);
+                    } elseif ($isPlanned) {
+                        $statusLevel = max($statusLevel, 1);
+                    }
+                }
+                return $statusLevel; // 0..3
+            };
+
+            // Aplicar filtro por estado con los nuevos valores del select
+            $filtered = $ordersAll->filter(function($order) use ($statusFilter, $computeStatusLevel) {
+                switch ($statusFilter) {
+                    case 'finished':
+                        return !is_null($order->finished_at);
+                    case 'started':
+                        return is_null($order->finished_at) && $computeStatusLevel($order) === 3;
+                    case 'assigned':
+                        return is_null($order->finished_at) && $computeStatusLevel($order) === 2;
+                    case 'planned':
+                        return is_null($order->finished_at) && $computeStatusLevel($order) === 1;
+                    case 'to-create':
+                        return is_null($order->finished_at) && $computeStatusLevel($order) === 0;
+                    case 'all':
+                    default:
+                        return true;
+                }
+            });
+
+            // Total filtrado tras aplicar estado
+            $recordsFiltered = $filtered->count();
+            \Log::info('OriginalOrders index: after filter', ['status_filter' => $statusFilter, 'filtered_count' => $recordsFiltered]);
+
+            // Aplicar ordenamiento en colección
             $orderColumn = isset($columns[$orderColumnIndex]) ? $columns[$orderColumnIndex] : 'id';
-            $query->orderBy($orderColumn, $orderDir);
-            
-            // Aplicar paginación
-            $orders = $query->skip($start)->take($perPage)->get();
+            $sorted = $filtered->sortBy(function($order) use ($orderColumn) {
+                // Para columnas no existentes en el modelo, fallback a id
+                if ($orderColumn === 'finished_at') {
+                    return $order->finished_at ? $order->finished_at->timestamp : 0;
+                }
+                return $order->{$orderColumn} ?? $order->id;
+            }, SORT_REGULAR, $orderDir === 'desc');
+
+            // Aplicar paginación en colección
+            $orders = $sorted->slice($start, $perPage)->values();
             
             // Preparar los datos para DataTables
             $data = [];
@@ -195,11 +260,7 @@ class CustomerOriginalOrderController extends Controller
                 }
             }
             
-            // Cargar todas las órdenes de producción para todos los procesos de una vez
-            $allProductionOrders = \App\Models\ProductionOrder::whereIn('original_order_process_id', $processIds->toArray())
-                ->select('id', 'original_order_process_id', 'production_line_id', 'status', 'accumulated_time')
-                ->get()
-                ->groupBy('original_order_process_id');
+            // Cargar todas las órdenes de producción para los procesos de las órdenes paginadas (ya está cargado en $allProductionOrders)
             
             foreach ($orders as $index => $order) {
                 // Generar HTML para los procesos - versión optimizada
