@@ -41,7 +41,11 @@
                         <table id="finished-processes-table" class="table table-striped table-hover w-100">
                             <thead class="table-light">
                                 <tr>
-                                    <th style="width:36px;"></th>
+                                    <th style="width:36px;" class="text-center">
+                                        <button type="button" id="toggle-all-details" class="btn btn-sm btn-outline-secondary details-control" title="@lang('Artículos relacionados (abrir/cerrar todos)')">
+                                            <i class="fas fa-cubes"></i>
+                                        </button>
+                                    </th>
                                     <th>#</th>
                                     <th>{{ __('Fecha fin') }}</th>
                                     <th>{{ __('ORDER ID') }}</th>
@@ -167,6 +171,31 @@
                 ],
                 order: [[1, 'desc']],
                 language: { url: '//cdn.datatables.net/plug-ins/1.10.25/i18n/Spanish.json' }
+            });
+
+            // Toggle abrir/cerrar todos (sólo filas visibles en la página actual)
+            $('#toggle-all-details').on('click', function () {
+                // Si hay alguna fila sin abrir -> abrir todas; si todas están abiertas -> cerrar todas
+                const pageRows = table.rows({ page: 'current' });
+                const anyClosed = pageRows.indexes().toArray().some(function (idx) {
+                    return !table.row(idx).child.isShown();
+                });
+
+                pageRows.every(function () {
+                    const row = this;
+                    const tr = $(row.node());
+                    if (anyClosed) {
+                        if (!row.child.isShown()) {
+                            row.child(formatArticles(row.data())).show();
+                            tr.addClass('shown');
+                        }
+                    } else {
+                        if (row.child.isShown()) {
+                            row.child.hide();
+                            tr.removeClass('shown');
+                        }
+                    }
+                });
             });
 
             $('#apply-filters').on('click', function() {
