@@ -2386,8 +2386,12 @@
                                     if (order) {
                                         const searchValue = lastPendingSearchValue.toLowerCase();
                                         const orderIdMatch = order.order_id?.toString().toLowerCase().includes(searchValue);
-                                        const customerMatch = order.customer?.toLowerCase().includes(searchValue);
-                                        const descripMatch = order.descrip?.toLowerCase().includes(searchValue);
+                                        // Aceptar múltiples posibles campos de cliente
+                                        const customerField = (order.customerId || order.customer || order.json?.customer || order.name || '').toString().toLowerCase();
+                                        const customerMatch = customerField.includes(searchValue);
+                                        // Aceptar descripción desde distintos orígenes
+                                        const descripField = (order.descrip || order.json?.descrip || '').toString().toLowerCase();
+                                        const descripMatch = descripField.includes(searchValue);
                                         const processesMatch = order.processes_to_do?.toLowerCase().includes(searchValue);
                                         const articlesMatch = order.articles?.some(article => 
                                             article.description?.toLowerCase().includes(searchValue));
@@ -2483,8 +2487,12 @@
                     const order = masterOrderList.find(o => o.id == orderId);
                     if (order) {
                         const orderIdMatch = order.order_id?.toString().toLowerCase().includes(pendingSearchValue);
-                        const customerMatch = order.customer?.toLowerCase().includes(pendingSearchValue);
-                        const descripMatch = order.descrip?.toLowerCase().includes(pendingSearchValue);
+                        // Aceptar múltiples posibles campos de cliente
+                        const customerField = (order.customerId || order.customer || order.json?.customer || order.name || '').toString().toLowerCase();
+                        const customerMatch = customerField.includes(pendingSearchValue);
+                        // Aceptar descripción desde distintos orígenes
+                        const descripField = (order.descrip || order.json?.descrip || '').toString().toLowerCase();
+                        const descripMatch = descripField.includes(pendingSearchValue);
                         const processesMatch = order.processes_to_do?.toLowerCase().includes(pendingSearchValue);
                         const articlesMatch = order.articles?.some(article => 
                             article.description?.toLowerCase().includes(pendingSearchValue));

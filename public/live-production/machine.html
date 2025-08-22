@@ -1043,6 +1043,7 @@
             let currentWorker = null;
             let currentShiftState = { type: null, action: null };
             let selectedShiftId = null;
+            let activeShiftId = null; // Nuevo: ID de turno activo persistente para eventos posteriores
             let potentialNewWorker = null;
             let shiftHistoryTimeoutId = null;
             let orderStatsTimeoutId = null;
@@ -1298,8 +1299,12 @@
                 if (currentWorker && currentWorker.id) {
                     payload.operator_id = currentWorker.id;
                 }
+                // Enviar shift_id según corresponda
                 if (eventName === 'inicio_trabajo' && selectedShiftId) {
                     payload.shift_id = (selectedShiftId === "especial") ? null : selectedShiftId;
+                } else if (typeof activeShiftId !== 'undefined' && activeShiftId !== null) {
+                    // Para pausa, reanudar, finalizar, etc., mantener el turno activo
+                    payload.shift_id = activeShiftId;
                 }
 
                 const eventEndpoint = '/api/shift-event';
@@ -1607,6 +1612,15 @@
                             shiftList = shiftData.data.shift_list;
                             eventCreatedAt = shiftData.data.created_at || shiftData.data.updated_at || shiftData.shift_start_date;
 
+                            // Intentar inferir el turno activo desde la respuesta del historial
+                            try {
+                                if (typeof shiftData.data.shift_id !== 'undefined' && shiftData.data.shift_id !== null) {
+                                    activeShiftId = shiftData.data.shift_id;
+                                } else if (shiftData.data.shift_list && typeof shiftData.data.shift_list.id !== 'undefined') {
+                                    activeShiftId = shiftData.data.shift_list.id;
+                                }
+                            } catch (e) { /* no-op */ }
+
                             if (type === 'shift' && action === 'start') {
                                 oeeMaquinaPercent = parseFloat(shiftData.data.oee) || 0;
                                 machineDownTimeSec = parseFloat(shiftData.data.down_time) || 0;
@@ -1622,6 +1636,8 @@
                             }
                         } else if (shiftData === null || !shiftData.data) {
                            type = 'shift'; action = 'end';
+                           // Si el historial indica fin de turno, limpiar turno activo
+                           activeShiftId = null;
                            oeeMaquinaPercent = parseFloat(shiftData.oee) || 0;
                            machineDownTimeSec = parseFloat(shiftData.down_time) || 0;
                            machineSlowTimeSec = parseFloat(shiftData.slow_time) || 0;
@@ -1632,6 +1648,7 @@
                     } else {
                         console.warn("Undefined or unexpected shiftData structure, defaulting values.");
                         type = 'shift'; action = 'end';
+                        activeShiftId = null;
                     }
 
                     oeeMaquinaPercent = Math.max(0, Math.min(100, oeeMaquinaPercent));
@@ -2327,10 +2344,10 @@
                     <div class="articles-container-${order.id}"></div>
                     <div class="notes-container-${order.id} hidden"></div>
                     <div class="flex justify-between items-center text-xs text-gray-500">
-                        <span><i class="far fa-calendar-alt mr-1" title="Fecha de creación tarjeta"></i>${formatDate(order.created_at)}</span>
+                        <span class="hidden"><i class="far fa-calendar-alt mr-1" title="Fecha de creación tarjeta"></i>${formatDate(order.created_at)}</span>
                         <span><i class="fas fa-truck-loading text-green-600 mr-1" title="Fecha de entrega en instalación cliente"></i>${order.delivery_date ? formatDate(order.delivery_date) : 'Sin fecha'}</span>
                     </div>
-                    <div class="mt-1 text-xs text-gray-500">
+                    <div class="mt-1 text-xs text-gray-500 hidden">
                         <span><i class="fas fa-calendar-check text-blue-500 mr-1" title="Fecha creación pedido en ERP"></i>${order.fecha_pedido_erp ? formatDate(order.fecha_pedido_erp) : 'Sin fecha ERP'}</span>
                     </div>`;
                 
@@ -3130,6 +3147,8 @@ async function updateOrderStatus(orderId, newStatus) {
 
                         try {
                             await postShiftEvent("inicio_trabajo");
+                            // Guardar el turno activo tras iniciar correctamente
+                            activeShiftId = (selectedShiftId === "especial") ? null : selectedShiftId;
                             if (typeof Swal === 'function' && Swal.isLoading()) { Swal.close(); }
                             resetShiftSelection();
                             if (typeof Swal === 'function') { Swal.fire({ title: '¡Éxito!', text: `Turno iniciado para ${currentWorker.name}.`, icon: 'success', timer: 2500, timerProgressBar: true }); } else { alert('¡Éxito!'); }
@@ -3137,7 +3156,7 @@ async function updateOrderStatus(orderId, newStatus) {
                             console.error("DEBUG: Error during start shift API call:", error);
                             if (typeof Swal === 'function' && Swal.isLoading()) { Swal.close(); }
                             if (typeof Swal === 'function') { Swal.fire('Error', `No se pudo iniciar el turno. ${error.message || ''}`, 'error'); } else { alert(`Error al iniciar turno. ${error.message || ''}`); }
-                            currentWorker = null; selectedShiftId = null;
+                            currentWorker = null; selectedShiftId = null; activeShiftId = null;
                             displayContainer.addClass('hidden'); workerLabel.removeClass('hidden'); selectContainer.removeClass('hidden');
                             workerSelect.val(null).trigger('change.select2');
                             resetShiftSelection();

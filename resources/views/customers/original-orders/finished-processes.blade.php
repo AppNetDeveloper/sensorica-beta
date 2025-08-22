@@ -20,11 +20,11 @@
                     <div class="d-flex align-items-end gap-2 flex-wrap">
                         <div>
                             <label for="date_from" class="form-label mb-0 small">{{ __('Desde') }}</label>
-                            <input type="date" id="date_from" class="form-control form-control-sm">
+                            <input type="date" id="date_from" class="form-control form-control-sm" value="{{ date('Y-m-d', strtotime('-1 day')) }}">
                         </div>
                         <div>
                             <label for="date_to" class="form-label mb-0 small">{{ __('Hasta') }}</label>
-                            <input type="date" id="date_to" class="form-control form-control-sm">
+                            <input type="date" id="date_to" class="form-control form-control-sm" value="{{ date('Y-m-d') }}">
                         </div>
                         <button id="apply-filters" class="btn btn-primary btn-sm mt-3 mt-sm-0">
                             <i class="fas fa-filter me-1"></i> {{ __('Aplicar') }}

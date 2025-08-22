@@ -68,6 +68,13 @@ class CustomerController extends Controller
                     $originalOrdersUrl = route('customers.original-orders.index', $customer->id);
                     $originalOrdersButton = "<a href='{$originalOrdersUrl}' class='btn btn-sm btn-dark me-1' data-bs-toggle='tooltip' title='" . __('Original Orders') . "'><i class='fas fa-clipboard-list'></i> " . __('Pedidos') . "</a>";
                     $buttons[] = $originalOrdersButton;
+                }
+
+                // Botón de Procesos Finalizados (solo con permiso original-order-list)
+                if (auth()->user()->can('original-order-list')) {
+                    $finishedProcessesUrl = route('customers.original-orders.finished-processes.view', $customer->id);
+                    $finishedProcessesButton = "<a href='{$finishedProcessesUrl}' class='btn btn-sm btn-dark me-1' data-bs-toggle='tooltip' title='" . __('Procesos Finalizados') . "'><i class='fas fa-chart-line'></i>" . __('Procesos finalizados') . "</a>";
+                    $buttons[] = $finishedProcessesButton;
                 }                
                 
                 // Botón de Incidencias de Órdenes de Producción (solo con permiso productionline-incidents)
