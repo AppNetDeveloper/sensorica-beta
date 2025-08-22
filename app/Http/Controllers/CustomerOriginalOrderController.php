@@ -540,7 +540,7 @@ class CustomerOriginalOrderController extends Controller
     {
         // Cargar procesos con todos los campos pivot
         $originalOrder->load(['processes' => function($query) {
-            $query->withPivot('id', 'time', 'created', 'finished', 'finished_at', 'in_stock');
+            $query->withPivot('id', 'time', 'created', 'finished', 'finished_at', 'in_stock', 'box', 'units_box', 'number_of_pallets');
         }]);
         
         // Cargar productionOrders para cada proceso
@@ -567,7 +567,7 @@ class CustomerOriginalOrderController extends Controller
         
         // Cargar procesos con todos los campos pivot explícitamente
         $originalOrder->load(['processes' => function($query) {
-            $query->withPivot('id', 'time', 'created', 'finished', 'finished_at');
+            $query->withPivot('id', 'time', 'created', 'finished', 'finished_at', 'box', 'units_box', 'number_of_pallets');
         }]);
         
         // Preparar los artículos para cada proceso
@@ -640,6 +640,10 @@ class CustomerOriginalOrderController extends Controller
             2 => 'order_id',
             3 => 'process_description',
             4 => 'grupo_numero',
+            5 => 'box',
+            6 => 'units_box',
+            7 => 'number_of_pallets',
+            // Nota: total_units es calculado, no columna directa
         ];
 
         // Base query: procesos finalizados del cliente
@@ -718,6 +722,10 @@ class CustomerOriginalOrderController extends Controller
                 'order_id' => optional($item->originalOrder)->order_id,
                 'process' => ($item->process?->description ?? '-') . (isset($item->process?->code) ? ' ['.$item->process->code.']' : ''),
                 'grupo_numero' => $item->grupo_numero,
+                'box' => $item->box,
+                'units_box' => $item->units_box,
+                'total_units' => ($item->box && $item->units_box) ? ($item->box * $item->units_box) : null,
+                'number_of_pallets' => $item->number_of_pallets,
                 'articles' => $articles,
             ];
         }

@@ -161,6 +161,10 @@
                                         <th>@lang('Correction Factor')</th>
                                         <th>@lang('Time')</th>
                                         <th>@lang('Created')</th>
+                                        <th>@lang('Boxes')</th>
+                                        <th>@lang('Units/Box')</th>
+                                        <th>@lang('Total Units')</th>
+                                        <th>@lang('Pallets')</th>
                                         <th>@lang('Process Status')</th>
                                         <th>@lang('Stock Status')</th>
                                     </tr>
@@ -210,6 +214,17 @@
                                                     <span class="badge bg-warning">@lang('No')</span>
                                                 @endif
                                             </td>
+                                            <td class="text-center">{{ isset($pivot->box) ? $pivot->box : '-' }}</td>
+                                            <td class="text-center">{{ isset($pivot->units_box) ? $pivot->units_box : '-' }}</td>
+                                            <td class="text-center">
+                                                @php
+                                                    $totalUnits = (isset($pivot->box) && isset($pivot->units_box) && is_numeric($pivot->box) && is_numeric($pivot->units_box))
+                                                        ? ($pivot->box * $pivot->units_box)
+                                                        : null;
+                                                @endphp
+                                                {{ isset($totalUnits) ? $totalUnits : '-' }}
+                                            </td>
+                                            <td class="text-center">{{ isset($pivot->number_of_pallets) ? $pivot->number_of_pallets : '-' }}</td>
                                             <td class="text-center">
                                                 @php
                                                     $productionOrder = $pivot->productionOrders->first();
@@ -298,7 +313,7 @@
                                         </tr>
                                         @if($articles->isNotEmpty())
                                             <tr class="articles-row">
-                                                <td colspan="8" class="p-3 bg-light" style="border-top: 1px solid #e9ecef;">
+                                                <td colspan="12" class="p-3 bg-light" style="border-top: 1px solid #e9ecef;">
                                                     <h6 class="mb-3 font-weight-bold"><i class="fas fa-cubes text-secondary mr-2"></i> @lang('Related Articles')</h6>
                                                     <table class="table table-sm table-hover mb-0 bg-white rounded">
                                                         <thead class="thead-light">

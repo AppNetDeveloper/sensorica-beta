@@ -45,7 +45,7 @@ class OriginalOrder extends Model
     {
         return $this->belongsToMany(Process::class, 'original_order_processes')
                     ->using(OriginalOrderProcess::class)
-                    ->withPivot(['id', 'time', 'created', 'finished', 'finished_at', 'grupo_numero']) // <-- ¡AÑADIDO!
+                    ->withPivot(['id', 'time', 'created', 'finished', 'finished_at', 'grupo_numero', 'box', 'units_box', 'number_of_pallets', 'in_stock']) // incluir campos extra del pivot
                     ->withTimestamps();
     }
     

@@ -47,6 +47,10 @@
                                     <th>{{ __('ORDER ID') }}</th>
                                     <th>{{ __('Proceso') }}</th>
                                     <th>{{ __('Grupo') }}</th>
+                                    <th>{{ __('Boxes') }}</th>
+                                    <th>{{ __('Units/Box') }}</th>
+                                    <th>{{ __('Total Units') }}</th>
+                                    <th>{{ __('Pallets') }}</th>
                                 </tr>
                             </thead>
                             <tbody></tbody>
@@ -156,6 +160,10 @@
                     { data: 'order_id', name: 'order_id' },
                     { data: 'process', name: 'process_description' },
                     { data: 'grupo_numero', name: 'grupo_numero' },
+                    { data: 'box', name: 'box' },
+                    { data: 'units_box', name: 'units_box' },
+                    { data: 'total_units', name: 'total_units', orderable: false, searchable: false },
+                    { data: 'number_of_pallets', name: 'number_of_pallets' },
                 ],
                 order: [[1, 'desc']],
                 language: { url: '//cdn.datatables.net/plug-ins/1.10.25/i18n/Spanish.json' }
