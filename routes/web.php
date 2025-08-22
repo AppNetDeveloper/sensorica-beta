@@ -48,6 +48,7 @@ use App\Http\Controllers\RfidBlockedController;
 use App\Http\Controllers\IaPromptAdminController;
 use App\Http\Controllers\Api\ProductionLineInfoController;
 use App\Http\Controllers\WorkCalendarController;
+use App\Http\Controllers\OriginalOrderProcessFileController;
 
 // Rutas para el Kanban Board
 Route::post('production-orders/update-batch', [ProductionOrderController::class, 'updateBatch'])->name('production-orders.update-batch')->middleware(['auth', 'XSS']);
@@ -157,6 +158,18 @@ Route::prefix('customers')->name('customers.')->group(function () {
         Route::post('work-calendars/bulk-update', [WorkCalendarController::class, 'bulkUpdate'])
             ->name('work-calendars.bulk-update');
         Route::post('work-calendars/import-holidays', [WorkCalendarController::class, 'importHolidays'])->name('work-calendars.import-holidays');
+
+        // Archivos públicos por proceso de orden original
+        Route::prefix('original-orders/{originalOrder}/processes/{originalOrderProcess}/files')
+            ->name('original-orders.processes.files.')
+            ->group(function () {
+                Route::get('/', [OriginalOrderProcessFileController::class, 'index'])
+                    ->name('index');
+                Route::post('/', [OriginalOrderProcessFileController::class, 'store'])
+                    ->name('store');
+                Route::delete('{file}', [OriginalOrderProcessFileController::class, 'destroy'])
+                    ->name('destroy');
+            });
     });
 });
 

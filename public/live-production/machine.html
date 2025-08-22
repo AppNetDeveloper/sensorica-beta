@@ -521,6 +521,19 @@
                 <i class="fas fa-expand"></i>
             </button>
         </div>
+
+    <!-- Modal de Vista Previa de Archivo del Proceso -->
+    <div id="processFilePreviewModal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[60] hidden">
+        <div class="bg-white rounded-lg w-[80vw] h-[80vh] overflow-hidden shadow-lg flex flex-col">
+            <div class="flex items-center justify-between px-4 py-3 border-b">
+                <h4 class="text-lg font-semibold" id="processFilePreviewTitle">Vista previa</h4>
+                <button type="button" id="closeProcessFilePreview" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div id="processFilePreviewContent" class="w-full flex-1 bg-gray-50 flex items-center justify-center"></div>
+        </div>
+    </div>
         
         <!-- Botón flotante de refresco en la parte inferior -->
         <div class="fixed bottom-4 right-4 z-50 flex flex-col space-y-2">
@@ -2559,6 +2572,60 @@ async function getActiveOrderNote() {
     }
 }
 
+// Abrir vista previa de archivo en modal (PDF/Imagen)
+function openProcessFilePreview(file, url) {
+    const previewModal = document.getElementById('processFilePreviewModal');
+    const previewContent = document.getElementById('processFilePreviewContent');
+    const previewTitle = document.getElementById('processFilePreviewTitle');
+    const closeBtn = document.getElementById('closeProcessFilePreview');
+
+    if (!previewModal || !previewContent) return;
+
+    // Limpiar contenido anterior
+    previewContent.innerHTML = '';
+    previewTitle.textContent = file?.original_name || file?.filename || 'Vista previa';
+
+    const isPdf = (file?.mime_type || '').includes('pdf') || (file?.extension || '').toLowerCase() === 'pdf';
+    const isImage = (file?.mime_type || '').startsWith('image/') || ['png','jpg','jpeg','gif','webp','bmp','svg'].includes((file?.extension || '').toLowerCase());
+
+    if (isPdf) {
+        const iframe = document.createElement('iframe');
+        iframe.src = `${url}#toolbar=0&navpanes=0`; // Mejor para kiosco
+        iframe.className = 'w-full h-full';
+        iframe.setAttribute('frameborder', '0');
+        previewContent.appendChild(iframe);
+    } else if (isImage) {
+        const img = document.createElement('img');
+        img.src = url;
+        img.alt = file?.original_name || 'Imagen';
+        img.className = 'max-w-full max-h-full object-contain';
+        previewContent.appendChild(img);
+    } else {
+        previewContent.innerHTML = `
+            <div class="p-6 text-center text-gray-600">
+                <i class="fas fa-file-alt text-3xl mb-3"></i>
+                <p>No se puede previsualizar este tipo de archivo.</p>
+                <p class="text-sm text-gray-500 mt-2">${file?.mime_type || file?.extension || ''}</p>
+            </div>
+        `;
+    }
+
+    previewModal.classList.remove('hidden');
+
+    // Cierre
+    const closeHandler = () => {
+        previewModal.classList.add('hidden');
+        previewContent.innerHTML = '';
+        if (closeBtn) closeBtn.removeEventListener('click', closeHandler);
+        previewModal.removeEventListener('click', overlayHandler);
+    };
+    const overlayHandler = (e) => {
+        if (e.target === previewModal) closeHandler();
+    };
+    if (closeBtn) closeBtn.addEventListener('click', closeHandler);
+    previewModal.addEventListener('click', overlayHandler);
+}
+
 // Función para actualizar las anotaciones de la orden activa
 async function refreshActiveOrderNote() {
     try {
@@ -2673,6 +2740,7 @@ async function showOrderDetailsModal(order) {
     try {
         // Obtener los artículos asociados a la orden
         const articles = await getOrderArticles(order.id);
+        const processFiles = (order.processFiles || order.process_files || []).filter(Boolean);
         
         // Crear el contenido del modal
         let contentHTML = `
@@ -2735,6 +2803,44 @@ async function showOrderDetailsModal(order) {
                 <h4 class="text-md font-semibold text-gray-800 mb-2">Descripción</h4>
                 <div class="text-sm text-gray-700">${order.descrip || 'Sin descripción'}</div>
             </div>
+
+            <!-- Archivos de Proceso -->
+            <div class="mt-4 bg-gray-50 p-4 rounded-lg">
+                <h4 class="text-md font-semibold text-gray-800 mb-3 flex items-center">
+                    <i class="fas fa-paperclip mr-2 text-gray-600"></i>
+                    Archivos del Proceso
+                </h4>
+                ${processFiles.length > 0 ? `
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3" id="processFilesGrid">
+                        ${processFiles.map((file, idx) => `
+                            <div class="process-file-item group cursor-pointer bg-white border rounded p-3 flex items-center space-x-3 hover:border-blue-400" data-file-index="${idx}">
+                                ${((file.mime_type || '').includes('pdf') || (file.extension || '').toLowerCase() === 'pdf') ? `
+                                    <div class="w-10 h-10 flex items-center justify-center bg-red-50 text-red-600 rounded">
+                                        <i class="fas fa-file-pdf text-xl"></i>
+                                    </div>
+                                ` : ((file.mime_type || '').startsWith('image/') || ['png','jpg','jpeg','gif','webp','bmp','svg'].includes((file.extension || '').toLowerCase())) ? `
+                                    <div class="w-10 h-10 overflow-hidden rounded bg-gray-100 flex items-center justify-center">
+                                        <img src="${'__URL_PLACEHOLDER__'}" alt="preview" class="max-w-full max-h-full object-contain" onload="this.parentElement.classList.remove('bg-gray-100')" />
+                                    </div>
+                                ` : `
+                                    <div class="w-10 h-10 flex items-center justify-center bg-gray-100 text-gray-600 rounded">
+                                        <i class="fas fa-file-alt text-xl"></i>
+                                    </div>
+                                `}
+                                <div class="flex-1 min-w-0">
+                                    <div class="text-sm font-medium text-gray-800 truncate" title="${file.original_name || file.filename || 'Archivo'}">${file.original_name || file.filename || 'Archivo'}</div>
+                                    <div class="text-xs text-gray-500 truncate">${file.mime_type || file.extension || ''}</div>
+                                </div>
+                                <div class="opacity-0 group-hover:opacity-100 transition-opacity text-blue-500">
+                                    <i class="fas fa-eye"></i>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : `
+                    <div class="text-sm text-gray-500 italic">No hay archivos de proceso para esta orden</div>
+                `}
+            </div>
             
             <!-- Botones de acción -->
             <div class="mt-6 flex justify-end">
@@ -2747,12 +2853,50 @@ async function showOrderDetailsModal(order) {
         // Actualizar el contenido del modal
         modalContent.innerHTML = contentHTML;
         
+        // Helper para construir URL pública del archivo
+        const buildFileUrl = (file) => {
+            if (!file) return '';
+            if (file.public_url) return file.public_url;
+            if (file.url) return file.url;
+            const rawPath = (file.path || '').replace(/^\/+/, '');
+            return rawPath ? `${API_BASE_URL}/storage/${rawPath}` : '';
+        };
+
+        // Rellenar thumbnails de imágenes con URL real
+        if (processFiles.length > 0) {
+            const grid = document.getElementById('processFilesGrid');
+            if (grid) {
+                const items = grid.querySelectorAll('.process-file-item');
+                items.forEach((item) => {
+                    const idx = parseInt(item.getAttribute('data-file-index'));
+                    const file = processFiles[idx];
+                    const url = buildFileUrl(file);
+                    // Si el primer hijo contiene un <img>, reemplazar placeholder
+                    const img = item.querySelector('img');
+                    if (img) {
+                        img.src = url;
+                    }
+                    // Click para abrir vista previa
+                    item.addEventListener('click', () => {
+                        openProcessFilePreview(file, url);
+                    });
+                });
+            }
+        }
+        
         // Añadir evento al botón de cerrar dentro del modal
         const closeModalBtn = document.getElementById('closeModalBtn');
         if (closeModalBtn) {
             closeModalBtn.addEventListener('click', () => {
                 modal.classList.add('hidden');
                 // Restaurar la visibilidad de la sección de incidencias
+                if (incidentsSection) incidentsSection.style.display = '';
+            });
+        }
+        const closeOrderDetailsBtn = document.getElementById('closeOrderDetailsModal');
+        if (closeOrderDetailsBtn) {
+            closeOrderDetailsBtn.addEventListener('click', () => {
+                modal.classList.add('hidden');
                 if (incidentsSection) incidentsSection.style.display = '';
             });
         }
