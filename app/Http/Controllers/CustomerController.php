@@ -31,102 +31,117 @@ class CustomerController extends Controller
             ->addColumn('action', function ($customer) {
                 // URLs para las diferentes acciones
                 $editUrl = route('customers.edit', $customer->id);
-                // *** CAMBIO: Corregido el nombre del parámetro de 'customer' a 'customer_id' ***
-                $productionLinesUrl = route('productionlines.index', ['customer_id' => $customer->id]); // Asegúrate que la ruta acepte el parámetro así
+                $productionLinesUrl = route('productionlines.index', ['customer_id' => $customer->id]);
                 $deleteUrl = route('customers.destroy', $customer->id);
                 $csrfToken = csrf_token();
-                // Genera URLs seguras si tu aplicación corre sobre HTTPS
                 $liveViewUrl = secure_url('/modbuses/liststats/weight?token=' . $customer->token);
                 $liveViewUrlProd = secure_url('/productionlines/liststats?token=' . $customer->token);
 
-                // Construye el HTML para los botones con iconos (Font Awesome)
-                // Añade un pequeño margen a la derecha del icono (me-1)
-                // Inicializar botones
-                $buttons = [];
+                // Construir elementos del dropdown
+                $dropdownItems = [];
                 
                 // Botón del organizador de órdenes (solo con permiso productionline-kanban)
                 if (auth()->user()->can('productionline-kanban')) {
                     $orderOrganizerUrl = route('customers.order-organizer', $customer->id);
-                    $orderOrganizerButton = "<a href='{$orderOrganizerUrl}' class='btn btn-sm btn-primary me-1' data-bs-toggle='tooltip' title='" . __('Order Organizer') . "'><i class='fas fa-tasks'> </i>" . __('Kanban') . "</a>";
-                    $buttons[] = $orderOrganizerButton;
+                    $dropdownItems[] = "<a class='dropdown-item' href='{$orderOrganizerUrl}'><i class='fas fa-tasks me-2'></i>" . __('Kanban') . "</a>";
                 }
 
                 // Botón de editar (solo con permiso productionline-edit)
                 if (auth()->user()->can('productionline-edit')) {
-                    $editButton = "<a href='{$editUrl}' class='btn btn-sm btn-info me-1' data-bs-toggle='tooltip' title='" . __('Edit') . "'><i class='fas fa-edit'> </i>" . __('Edit') . "</a>";
-                    $buttons[] = $editButton;
+                    $dropdownItems[] = "<a class='dropdown-item' href='{$editUrl}'><i class='fas fa-edit me-2'></i>" . __('Edit') . "</a>";
                 }
 
                 // Botón de líneas de producción (solo con permiso productionline-show)
                 if (auth()->user()->can('productionline-show')) {
-                    $linesButton = "<a href='{$productionLinesUrl}' class='btn btn-sm btn-secondary me-1' data-bs-toggle='tooltip' title='" . __('Production Lines') . "'><i class='fas fa-sitemap'></i>" . __('Lineas') . "</a>";
-                    $buttons[] = $linesButton;
+                    $dropdownItems[] = "<a class='dropdown-item' href='{$productionLinesUrl}'><i class='fas fa-sitemap me-2'></i>" . __('Lineas') . "</a>";
+                }
+
+                // Separador
+                if (!empty($dropdownItems)) {
+                    $dropdownItems[] = "<div class='dropdown-divider'></div>";
                 }
 
                 // Botón de Órdenes Originales (solo con permiso productionline-orders)
                 if (auth()->user()->can('productionline-orders')) {
                     $originalOrdersUrl = route('customers.original-orders.index', $customer->id);
-                    $originalOrdersButton = "<a href='{$originalOrdersUrl}' class='btn btn-sm btn-dark me-1' data-bs-toggle='tooltip' title='" . __('Original Orders') . "'><i class='fas fa-clipboard-list'></i> " . __('Pedidos') . "</a>";
-                    $buttons[] = $originalOrdersButton;
+                    $dropdownItems[] = "<a class='dropdown-item' href='{$originalOrdersUrl}'><i class='fas fa-clipboard-list me-2'></i>" . __('Pedidos') . "</a>";
                 }
 
                 // Botón de Procesos Finalizados (solo con permiso original-order-list)
                 if (auth()->user()->can('original-order-list')) {
                     $finishedProcessesUrl = route('customers.original-orders.finished-processes.view', $customer->id);
-                    $finishedProcessesButton = "<a href='{$finishedProcessesUrl}' class='btn btn-sm btn-dark me-1' data-bs-toggle='tooltip' title='" . __('Procesos Finalizados') . "'><i class='fas fa-chart-line'></i>" . __('Procesos finalizados') . "</a>";
-                    $buttons[] = $finishedProcessesButton;
-                }                
-                
-                // Botón de Incidencias de Órdenes de Producción (solo con permiso productionline-incidents)
-                if (auth()->user()->can('productionline-incidents')) {
-                    $incidentsUrl = route('customers.production-order-incidents.index', $customer->id);
-                    $incidentsButton = "<a href='{$incidentsUrl}' class='btn btn-sm btn-danger me-1' data-bs-toggle='tooltip' title='" . __('Production Order Incidents') . "'><i class='fas fa-exclamation-triangle'></i> " . __('Incidencias') . "</a>";
-                    $buttons[] = $incidentsButton;
+                    $dropdownItems[] = "<a class='dropdown-item' href='{$finishedProcessesUrl}'><i class='fas fa-chart-line me-2'></i>" . __('Procesos finalizados') . "</a>";
                 }
-                // Botón de Incidencias QC (solo con permiso productionline-incidents)
-                if (auth()->user()->can('productionline-incidents')) {
-                    $qcIncidentsUrl = route('customers.quality-incidents.index', $customer->id);
-                    $qcIncidentsButton = "<a href='{$qcIncidentsUrl}' class='btn btn-sm btn-outline-danger me-1' data-bs-toggle='tooltip' title='" . __('Quality Incidents (QC)') . "'><i class='fas fa-vial'></i> " . __('Incidencias QC') . "</a>";
-                    $buttons[] = $qcIncidentsButton;
-                }
-                // Botón de Confirmaciones QC (solo con permiso productionline-incidents)
-                if (auth()->user()->can('productionline-incidents')) {
-                    $qcConfirmationsUrl = route('customers.qc-confirmations.index', $customer->id);
-                    $qcConfirmationsButton = "<a href='{$qcConfirmationsUrl}' class='btn btn-sm btn-outline-primary me-1' data-bs-toggle='tooltip' title='" . __('QC Confirmations') . "'><i class='fas fa-clipboard-check'></i> " . __('QC Confirmations') . "</a>";
-                    $buttons[] = $qcConfirmationsButton;
-                }
-                
+
                 // Botón de Calendario Laboral (solo con permiso workcalendar-list)
                 if (auth()->user()->can('workcalendar-list')) {
                     $workCalendarUrl = route('customers.work-calendars.index', $customer->id);
-                    $workCalendarButton = "<a href='{$workCalendarUrl}' class='btn btn-sm btn-info me-1' data-bs-toggle='tooltip' title='" . __('Work Calendar') . "'><i class='fas fa-calendar-alt'></i> " . __('Calendario') . "</a>";
-                    $buttons[] = $workCalendarButton;
+                    $dropdownItems[] = "<a class='dropdown-item' href='{$workCalendarUrl}'><i class='fas fa-calendar-alt me-2'></i>" . __('Calendario') . "</a>";
                 }
 
-                // Botón de estadísticas de peso (solo con permiso productionline-weight-stats)
-                if (auth()->user()->can('productionline-weight-stats')) {
-                    $weightStatsButton = "<a href='{$liveViewUrl}' class='btn btn-sm btn-success me-1' data-bs-toggle='tooltip' title='" . __('Weight Stats') . "' target='_blank'><i class='fas fa-weight-hanging'></i> " . __('Weight Stats') . "</a>";
-                    $buttons[] = $weightStatsButton;
-                }
-                
-                // Botón de estadísticas de producción (solo con permiso productionline-production-stats)
-                if (auth()->user()->can('productionline-production-stats')) {
-                    $productionStatsButton = "<a href='{$liveViewUrlProd}' class='btn btn-sm btn-warning me-1' data-bs-toggle='tooltip' title='" . __('Production Stats') . "' target='_blank'><i class='fas fa-chart-line'></i> " . __('Production Stats') . "</a>";
-                    $buttons[] = $productionStatsButton;
+                // Separador para incidencias y QC
+                if (auth()->user()->can('productionline-incidents')) {
+                    $dropdownItems[] = "<div class='dropdown-divider'></div>";
+                    $dropdownItems[] = "<h6 class='dropdown-header'><i class='fas fa-exclamation-triangle me-1'></i>" . __('Quality & Incidents') . "</h6>";
+                    
+                    // Botón de Incidencias de Órdenes de Producción
+                    $incidentsUrl = route('customers.production-order-incidents.index', $customer->id);
+                    $dropdownItems[] = "<a class='dropdown-item' href='{$incidentsUrl}'><i class='fas fa-exclamation-triangle me-2 text-danger'></i>" . __('Incidencias') . "</a>";
+                    
+                    // Botón de Incidencias QC
+                    $qcIncidentsUrl = route('customers.quality-incidents.index', $customer->id);
+                    $dropdownItems[] = "<a class='dropdown-item' href='{$qcIncidentsUrl}'><i class='fas fa-vial me-2 text-warning'></i>" . __('Incidencias QC') . "</a>";
+                    
+                    // Botón de Confirmaciones QC
+                    $qcConfirmationsUrl = route('customers.qc-confirmations.index', $customer->id);
+                    $dropdownItems[] = "<a class='dropdown-item' href='{$qcConfirmationsUrl}'><i class='fas fa-clipboard-check me-2 text-primary'></i>" . __('QC Confirmations') . "</a>";
                 }
 
-                // Botón de eliminar (solo con permiso productionline-delete)
+                // Separador para estadísticas
+                if (auth()->user()->can('productionline-weight-stats') || auth()->user()->can('productionline-production-stats')) {
+                    $dropdownItems[] = "<div class='dropdown-divider'></div>";
+                    $dropdownItems[] = "<h6 class='dropdown-header'><i class='fas fa-chart-bar me-1'></i>" . __('Statistics') . "</h6>";
+                    
+                    // Botón de estadísticas de peso
+                    if (auth()->user()->can('productionline-weight-stats')) {
+                        $dropdownItems[] = "<a class='dropdown-item' href='{$liveViewUrl}' target='_blank'><i class='fas fa-weight-hanging me-2 text-success'></i>" . __('Weight Stats') . "</a>";
+                    }
+                    
+                    // Botón de estadísticas de producción
+                    if (auth()->user()->can('productionline-production-stats')) {
+                        $dropdownItems[] = "<a class='dropdown-item' href='{$liveViewUrlProd}' target='_blank'><i class='fas fa-chart-line me-2 text-warning'></i>" . __('Production Stats') . "</a>";
+                    }
+                }
+
+                // Separador y botón de eliminar (solo con permiso productionline-delete)
                 if (auth()->user()->can('productionline-delete')) {
-                    $deleteForm = "<form action='{$deleteUrl}' method='POST' style='display:inline;' onsubmit='return confirm(\"" . __('Are you sure?') . "\");'>
-                                    <input type='hidden' name='_token' value='{$csrfToken}'>
-                                    <input type='hidden' name='_method' value='DELETE'>
-                                    <button type='submit' class='btn btn-sm btn-danger me-1' data-bs-toggle='tooltip' title='" . __('Delete') . "'><i class='fas fa-trash'></i> " . __('Delete') . "</button>
-                                   </form>";
-                    $buttons[] = $deleteForm;
+                    $dropdownItems[] = "<div class='dropdown-divider'></div>";
+                    $dropdownItems[] = "<a class='dropdown-item text-danger' href='#' onclick='if(confirm(\"" . __('Are you sure?') . "\")) { document.getElementById(\"delete-form-{$customer->id}\").submit(); }'><i class='fas fa-trash me-2'></i>" . __('Delete') . "</a>";
+                    $dropdownItems[] = "<form id='delete-form-{$customer->id}' action='{$deleteUrl}' method='POST' style='display: none;'><input type='hidden' name='_token' value='{$csrfToken}'><input type='hidden' name='_method' value='DELETE'></form>";
                 }
                 
-                // Combinar todos los botones en un solo string HTML
-                return "<div class='d-flex flex-wrap'>" . implode('', $buttons) . "</div>";
+                // Si no hay elementos, retornar vacío
+                if (empty($dropdownItems)) {
+                    return '';
+                }
+                
+                // Construir el dropdown
+                $dropdown = "
+                <div class='dropdown'>
+                    <button class='btn btn-sm btn-outline-secondary dropdown-toggle' type='button' data-bs-toggle='dropdown' aria-expanded='false'>
+                        <i class='fas fa-cog'></i> " . __('Actions') . "
+                    </button>
+                    <ul class='dropdown-menu'>
+                        " . implode('', array_map(function($item) {
+                            if (strpos($item, 'dropdown-item') !== false || strpos($item, 'dropdown-divider') !== false || strpos($item, 'dropdown-header') !== false) {
+                                return "<li>{$item}</li>";
+                            }
+                            return $item;
+                        }, $dropdownItems)) . "
+                    </ul>
+                </div>";
+                
+                return $dropdown;
             })
             // Indica a DataTables que la columna 'action' contiene HTML y no debe ser escapada
             ->rawColumns(['action'])
