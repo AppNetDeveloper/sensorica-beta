@@ -58,6 +58,23 @@
                                     <td>{{ $originalOrder->client_number }}</td>
                                 </tr>
                                 <tr>
+                                    <th class="bg-light">@lang('QC Confirmation')</th>
+                                    <td>
+                                        @if(method_exists($originalOrder, 'hasQcConfirmations') ? $originalOrder->hasQcConfirmations() : \App\Models\QcConfirmation::where('original_order_id', $originalOrder->id)->exists())
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check"></i> {{ __('QC confirmation done') }}
+                                            </span>
+                                        @else
+                                            <span class="badge bg-warning text-dark">
+                                                <i class="fas fa-hourglass-half"></i> {{ __('QC confirmation pending') }}
+                                            </span>
+                                        @endif
+                                        <a href="{{ route('customers.qc-confirmations.index', ['customer' => $customer->id]) }}" class="btn btn-sm btn-outline-primary ms-2">
+                                            <i class="fas fa-clipboard-check"></i> {{ __('QC Confirmations') }}
+                                        </a>
+                                    </td>
+                                </tr>
+                                <tr>
                                     <th class="bg-light">@lang('Processed')</th>
                                     <td>
                                         @if($originalOrder->processed)

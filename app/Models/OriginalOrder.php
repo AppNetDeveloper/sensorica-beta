@@ -75,6 +75,22 @@ class OriginalOrder extends Model
         return $this->hasMany(ProductionOrder::class, 'original_order_id');
     }
 
+    /**
+     * Relación con confirmaciones de Calidad (QC) para esta orden original.
+     */
+    public function qcConfirmations()
+    {
+        return $this->hasMany(QcConfirmation::class, 'original_order_id');
+    }
+
+    /**
+     * Indica si existen confirmaciones de QC asociadas a esta orden.
+     */
+    public function hasQcConfirmations(): bool
+    {
+        return $this->qcConfirmations()->exists();
+    }
+
     public function originalOrderProcesses()
     {
         return $this->hasMany(OriginalOrderProcess::class);

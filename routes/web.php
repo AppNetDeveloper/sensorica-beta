@@ -37,6 +37,7 @@ use App\Http\Controllers\ScadaOrderController;
 use App\Http\Controllers\ProductionOrderController;
 use App\Http\Controllers\ProductionOrderIncidentController;
 use App\Http\Controllers\QualityIncidentController;
+use App\Http\Controllers\QcConfirmationWebController;
 use App\Http\Controllers\ServerController;
 use App\Http\Controllers\ShiftManagementController;
 use App\Http\Controllers\OperatorPostController;
@@ -140,6 +141,9 @@ Route::prefix('customers')->name('customers.')->group(function () {
         // Rutas para las incidencias de Calidad (QC)
         Route::get('quality-incidents', [QualityIncidentController::class, 'index'])
             ->name('quality-incidents.index');
+        // Rutas para las confirmaciones de Calidad (QC)
+        Route::get('qc-confirmations', [QcConfirmationWebController::class, 'index'])
+            ->name('qc-confirmations.index');
             
         // Rutas para el calendario laboral
         Route::get('work-calendars', [WorkCalendarController::class, 'index'])

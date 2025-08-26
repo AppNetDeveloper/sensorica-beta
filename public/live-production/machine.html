@@ -2317,7 +2317,7 @@
                             </button>
                             <div class="card-menu hidden absolute right-0 top-full mt-1 bg-white shadow-lg rounded-md z-50 w-32 py-1">
                                 <button class="card-menu-quality w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 flex items-center">
-                                    <i class="fas fa-clipboard-check text-emerald-500 mr-2"></i> Calidad
+                                    <i class="fas fa-clipboard-check text-emerald-500 mr-2"></i> Control Calidad 
                                 </button>
                                 <button class="card-menu-incident w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 flex items-center">
                                     <i class="fas fa-exclamation-triangle text-yellow-500 mr-2"></i> Incidencias
@@ -2417,19 +2417,21 @@
 
                             // Modal con textarea apta para lectores de códigos de barras
                             Swal.fire({
-                                title: 'Problemas de calidad',
+                                title: 'Control de calidad',
                                 width: '70%',
                                 html: `
                                     <div class="text-left">
                                         <label for="qualityInput" class="block text-sm font-bold text-red-600 text-center mb-2">
-                                            Escanee o escriba las pegatinas con problemas (una por línea)
+                                            Escanee o escriba las pegatinas  (una por línea) o añada notas
                                         </label>
                                         <textarea id="qualityInput" class="swal2-textarea" placeholder="Escanee aquí..." rows="5" style="width:93%;resize:vertical;max-height:140px;min-height:90px;box-sizing:border-box"></textarea>
                                     </div>
                                 `,
                                 focusConfirm: false,
                                 showCancelButton: true,
-                                confirmButtonText: 'Guardar',
+                                showDenyButton: true,
+                                confirmButtonText: 'Guardar problemas',
+                                denyButtonText: 'Confirmar QC',
                                 cancelButtonText: 'Cancelar',
                                 didOpen: () => {
                                     const ta = Swal.getPopup().querySelector('#qualityInput');
@@ -2446,26 +2448,21 @@
                                     }
                                 }
                             }).then((result) => {
-                                if (result.isConfirmed) {
-                                    const ta = document.getElementById('qualityInput');
-                                    const content = ta ? ta.value : '';
-                                    const urlParams = new URLSearchParams(window.location.search);
-                                    const tokenFromUrl = urlParams.get('token');
-                                    const token = (typeof productionLineToken !== 'undefined' && productionLineToken) ? productionLineToken : tokenFromUrl;
-                                    console.log('[QUALITY CONTROL] Guardar problemas de calidad', {
-                                        orderId: order.id,
-                                        productionLineToken: token,
-                                        operator_id: (typeof currentWorker !== 'undefined' && currentWorker && currentWorker.id) ? currentWorker.id : null,
-                                        input: content
-                                    });
+                                const ta = document.getElementById('qualityInput');
+                                const content = ta ? ta.value : '';
+                                const urlParams = new URLSearchParams(window.location.search);
+                                const tokenFromUrl = urlParams.get('token');
+                                const token = (typeof productionLineToken !== 'undefined' && productionLineToken) ? productionLineToken : tokenFromUrl;
+                                const operatorId = (typeof currentWorker !== 'undefined' && currentWorker && currentWorker.id) ? currentWorker.id : null;
 
-                                    // Enviar a la nueva API (solo log en backend por ahora)
+                                if (result.isConfirmed) {
+                                    // Guardar problemas de calidad (flujo existente)
                                     const payload = { 
                                         token: token || '', 
                                         id: order.id, 
                                         production_order_id: order.id,
                                         texto: content,
-                                        operator_id: (typeof currentWorker !== 'undefined' && currentWorker && currentWorker.id) ? currentWorker.id : null
+                                        operator_id: operatorId
                                     };
                                     fetch(`${API_BASE_URL}/api/quality-issues`, {
                                         method: 'POST',
@@ -2477,20 +2474,8 @@
                                     })
                                     .then(async r => {
                                         const data = await r.json().catch(() => ({ success: false, message: 'Respuesta no válida' }));
-                                        console.log('[QUALITY CONTROL] API response:', data);
                                         if (r.ok && data && data.success) {
-                                            // Toast de éxito 2 segundos
-                                            if (typeof Swal !== 'undefined') {
-                                                Swal.fire({
-                                                    icon: 'success',
-                                                    title: 'Guardado',
-                                                    text: 'Problemas de calidad registrados',
-                                                    timer: 2000,
-                                                    showConfirmButton: false,
-                                                    position: 'top-end',
-                                                    toast: true
-                                                });
-                                            }
+                                            Swal.fire({ icon: 'success', title: 'Guardado', timer: 1200, showConfirmButton: false });
                                         } else {
                                             const msg = (data && data.message) ? data.message : 'No se pudo registrar';
                                             if (typeof Swal !== 'undefined') {
@@ -2504,6 +2489,48 @@
                                     })
                                     .catch(err => {
                                         console.error('[QUALITY CONTROL] API error:', err);
+                                        if (typeof Swal !== 'undefined') {
+                                            Swal.fire({
+                                                icon: 'error',
+                                                title: 'Error',
+                                                text: 'Fallo de red o servidor'
+                                            });
+                                        }
+                                    });
+                                } else if (result.isDenied) {
+                                    // Confirmar QC -> enviar a /api/qc-confirmations
+                                    const payload = {
+                                        token: token || '',
+                                        id: order.id,
+                                        production_order_id: order.id,
+                                        operator_id: operatorId,
+                                        notes: content || null
+                                    };
+                                    fetch(`${API_BASE_URL}/api/qc-confirmations`, {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                                        },
+                                        body: JSON.stringify(payload)
+                                    })
+                                    .then(async r => {
+                                        const data = await r.json().catch(() => ({ success: false, message: 'Respuesta no válida' }));
+                                        if (r.ok && data && data.success) {
+                                            Swal.fire({ icon: 'success', title: 'QC confirmado', timer: 1200, showConfirmButton: false });
+                                        } else {
+                                            const msg = (data && data.message) ? data.message : 'No se pudo confirmar QC';
+                                            if (typeof Swal !== 'undefined') {
+                                                Swal.fire({
+                                                    icon: 'error',
+                                                    title: 'Error',
+                                                    text: msg
+                                                });
+                                            }
+                                        }
+                                    })
+                                    .catch(err => {
+                                        console.error('[QC CONFIRMATION] API error:', err);
                                         if (typeof Swal !== 'undefined') {
                                             Swal.fire({
                                                 icon: 'error',

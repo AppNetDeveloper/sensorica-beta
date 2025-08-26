@@ -111,6 +111,10 @@ class ShiftProcessEventController extends Controller
         if ($shiftListId === null || empty($shiftListId)) {
             $shiftListId = null;
         }
+        if ($shiftListId === 'especial') {
+            $shiftListId = null;
+        }
+            
         
 
 

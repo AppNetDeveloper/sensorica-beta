@@ -48,6 +48,7 @@ use App\Http\Controllers\Api\ProductionLineController;
 use App\Http\Controllers\Api\LineAvailabilityController;
 use App\Http\Controllers\Api\OriginalOrderProcessFileApiController;
 use App\Http\Controllers\Api\QualityIssueController;
+use App\Http\Controllers\Api\QcConfirmationController;
 
 
 
@@ -272,6 +273,9 @@ Route::get('/kanban/orders', [\App\Http\Controllers\Api\ProductionOrderControlle
 
 // API de control de calidad (recibe token, id, texto) -> solo log por ahora
 Route::post('/quality-issues', [QualityIssueController::class, 'store'])->name('api.quality-issues.store');
+
+// API de confirmaciones de QC (recibe token, production_order_id|id, operator_id?, notes?)
+Route::post('/qc-confirmations', [QcConfirmationController::class, 'store'])->name('api.qc-confirmations.store');
 
 // Subida remota de archivos de proceso usando token de cliente
 Route::post('/process-files/upload', [OriginalOrderProcessFileApiController::class, 'store']);
