@@ -38,45 +38,34 @@ pip3 install paho-mqtt --break-system-packages
 echo "Cambiando al directorio /var/www/html..."
 cd /var/www/html || { echo "Error: No se pudo cambiar al directorio /var/www/html"; exit 1; }
     echo 'npm install update'
-    /usr/bin/npm install
-    /usr/bin/npm update
+    /usr/bin/npm install --no-audit --no-fund --no-progress
+    /usr/bin/npm update --yes --no-audit --no-fund --no-progress
     echo 'dar permiso composer root y instalar y actualizar'
     export COMPOSER_ALLOW_SUPERUSER=1
-    /usr/local/bin/composer update
+    /usr/local/bin/composer update --no-interaction --prefer-dist --no-progress
    # /usr/bin/npm run dev
 # Detener todos los procesos de Supervisor
 #echo "Deteniendo todos los procesos de Supervisor..."
 #sudo supervisorctl stop all
 
-# Guardar cambios locales en Git antes de hacer un rebase
-echo "Guardando cambios locales en Git..."
-git add .
-git pull origin main
-#git commit -m "Guardando cambios locales antes de rebase"
-
-# Hacer pull con rebase
-echo "Actualizando el repositorio con rebase..."
-#git pull --rebase origin main || { echo "Error: Falló el pull con rebase."; exit 1; }
-
-# Resolver conflictos si los hay
-#git rebase --continue || echo "No hay conflictos de rebase o ya fueron resueltos."
-
-# Empujar los cambios al repositorio
-echo "Empujando los cambios al repositorio remoto..."
-#git push origin main || { echo "Error: Falló el push al repositorio remoto."; exit 1; }
+# Actualizar el repositorio: DESCARTAR cambios locales y sincronizar con origin/main
+echo "Actualizando el repositorio (descartando cambios locales)..."
+git fetch --all --prune || { echo "Error: Falló git fetch."; exit 1; }
+git reset --hard origin/main || { echo "Error: No se pudo resetear a origin/main."; exit 1; }
+git clean -fd || { echo "Error: Falló git clean."; exit 1; }
 
 # Ejecutar migraciones de Laravel
 echo "Ejecutando migraciones..."
-php artisan migrate --force || { echo "Error: Falló la ejecución de las migraciones."; exit 1; }
+php artisan migrate --force -n || { echo "Error: Falló la ejecución de las migraciones."; exit 1; }
 
 # Actualizar dependencias de NPM
 echo "Actualizando dependencias de NPM..."
-npm update --yes || { echo "Error: Falló la actualización de dependencias de NPM."; exit 1; }
+npm update --yes --no-audit --no-fund --no-progress || { echo "Error: Falló la actualización de dependencias de NPM."; exit 1; }
 
 # Actualizar dependencias de Composer
 echo "Actualizando dependencias de Composer..."
 export COMPOSER_ALLOW_SUPERUSER=1
-composer update --no-interaction || { echo "Error: Falló la actualización de dependencias de Composer."; exit 1; }
+composer update --no-interaction --prefer-dist --no-progress || { echo "Error: Falló la actualización de dependencias de Composer."; exit 1; }
 
 # Configurar permisos en sudoers
 echo "Configurando permisos en sudoers..."
@@ -107,11 +96,11 @@ COMMANDS=(
 
 
 for COMMAND in "${COMMANDS[@]}"; do
-    if sudo grep -Fxq "$USER ALL=(ALL) NOPASSWD: $COMMAND" /etc/sudoers; then
+    if sudo grep -Fxq "$USER ALL=\(ALL\) NOPASSWD: $COMMAND" /etc/sudoers; then
         echo "La entrada para '$COMMAND' ya está en sudoers."
     else
         echo "Añadiendo '$COMMAND' a sudoers..."
-        echo "$USER ALL=(ALL) NOPASSWD: $COMMAND" | sudo EDITOR='tee -a' visudo
+        echo "$USER ALL=\(ALL\) NOPASSWD: $COMMAND" | sudo EDITOR='tee -a' visudo
     fi
 done
 
@@ -228,14 +217,14 @@ EOF
     
     echo "Registrando servidor en la API..."
     # Se usa --insecure para ignorar la verificación SSL (ideal para pruebas; en producción usa certificados válidos)
-    curl -v -X POST -H "Content-Type: application/json" -d "$JSON_PAYLOAD" "$REGISTER_URL" --insecure
+    curl -sS -X POST -H "Content-Type: application/json" -d "$JSON_PAYLOAD" "$REGISTER_URL" --insecure
 
     # Guardar el token en el archivo
     echo "$API_TOKEN" > "$TOKEN_FILE"
     echo "Token guardado en $TOKEN_FILE"
 fi
 
-php artisan db:seed --force || { echo "Error: Falló la ejecución de las seeds."; exit 1; }
+php artisan db:seed --force -n || { echo "Error: Falló la ejecución de las seeds."; exit 1; }
 
 sudo sh telegram/install.sh || { echo "Error: Falló la instalación de Telegram."; exit 1; }
 sudo sh node/install.sh || { echo "Error: Falló la instalación de Node.js."; exit 1; }
@@ -342,7 +331,7 @@ echo "Cron actualizado."
 
 
 pip install pymysql pandas numpy scikit-learn tensorflow joblib --break-system-packages
-pip install python-dotenv --break-system-package
+pip install python-dotenv --break-system-packages
 pip3 install scikit-learn tensorflow pandas pymysql joblib --break-system-packages
 pip install pymysql --break-system-packages
 pip install SQLAlchemy --break-system-packages
@@ -357,18 +346,23 @@ echo 'limpiar cache'
     php artisan route:clear
     php artisan view:clear
     echo 'npm install update'
-    /usr/bin/npm install
-    /usr/bin/npm update
+    /usr/bin/npm install --no-audit --no-fund --no-progress
+    /usr/bin/npm update --yes --no-audit --no-fund --no-progress
     echo 'dar permiso composer root y instalar y actualizar'
     export COMPOSER_ALLOW_SUPERUSER=1
-    /usr/local/bin/composer update
+    /usr/local/bin/composer update --no-interaction --prefer-dist --no-progress
    # /usr/bin/npm run dev
     /usr/bin/npm run prod
-    /usr/bin/npm run build
+    # "build" no existe en package.json; si se añade en el futuro, descomenta la línea siguiente
+    # /usr/bin/npm run build
     
     echo 'dar los permisos necesario'
     cd storage || exit
-    unzip logos.zip -d app
+    if [ -f logos.zip ]; then
+        unzip -o logos.zip -d app
+    else
+        echo "logos.zip no existe, omitiendo unzip"
+    fi
     cd /var/www/html/ || exit
     sudo rm -rf /var/www/html/public/storage
     sudo php artisan storage:link
@@ -379,47 +373,55 @@ echo 'limpiar cache'
     sudo chmod 777 /var/www/html/storage/logs/
     sudo chmod 777 /var/www/html/storage/framework/sessions
     sudo chmod 777 /var/www/html/storage/framework/views
+    # Crear archivos y directorios si no existen para evitar errores de chown/chmod
+    sudo mkdir -p /var/www/html/baileys_auth_info
+    sudo touch /var/www/html/wa-logs.txt
+    sudo touch /var/www/html/baileys_store_multi.json
+    sudo mkdir -p /var/www/html/whatsapp /var/www/html/whatsapp/media
+    # Asignar permisos/propietarios
     sudo chown www-data:www-data /var/www/html/baileys_auth_info
     sudo chown www-data:www-data /var/www/html/wa-logs.txt
-sudo chmod 664 /var/www/html/wa-logs.txt
-sudo chown -R www-data:www-data /var/www/html/baileys_auth_info
-sudo chmod -R 700 /var/www/html/baileys_auth_info
-sudo chown www-data:www-data /var/www/html/baileys_store_multi.json
-sudo chmod 600 /var/www/html/baileys_store_multi.json
-sudo chown -R www-data:www-data /var/www/html/whatsapp
-sudo chmod -R 755 /var/www/html/whatsapp
+    sudo chmod 664 /var/www/html/wa-logs.txt
+    sudo chown -R www-data:www-data /var/www/html/baileys_auth_info
+    sudo chmod -R 700 /var/www/html/baileys_auth_info
+    sudo chown www-data:www-data /var/www/html/baileys_store_multi.json
+    sudo chmod 600 /var/www/html/baileys_store_multi.json
+    sudo chown -R www-data:www-data /var/www/html/whatsapp
+    sudo chmod -R 755 /var/www/html/whatsapp
+    
+    # Asignar grupo si existe 'nginx'; de lo contrario usar www-data
+    if getent group nginx >/dev/null 2>&1; then
+        sudo chown -R :nginx /var/www/html
+        sudo chmod -R g+rwx /var/www/html
+    fi
+    sudo chown -R :www-data /var/www/html
+    sudo chmod -R g+rwx /var/www/html
+    sudo chown -R www-data:www-data /var/www/html/whatsapp/media
+    sudo chmod -R 755 /var/www/html/whatsapp/media
 
-sudo chown -R :nginx /var/www/html
-sudo chown -R :www-data /var/www/html
-sudo chmod -R g+rwx /var/www/html
-sudo chown -R :nginx /var/www/html
-sudo chmod -R g+rwx /var/www/html
-sudo chown -R www-data:www-data /var/www/html/whatsapp/media
-sudo chmod -R 755 /var/www/html/whatsapp/media
-
-sudo apt -y purge apache
-sudo apt -y purge apache2
-sudo apt -y autoremove
-
-
-# Reiniciar Supervisor con nueva configuración
-echo "Reconfigurando Supervisor..."
-sudo rm -rf /etc/supervisor/conf.d/*
-sudo cp laravel*.conf /etc/supervisor/conf.d/
-sudo supervisorctl reread
-sudo supervisorctl update
-sudo supervisorctl restart all
+    sudo DEBIAN_FRONTEND=noninteractive apt -y -o Dpkg::Options::="--force-confnew" purge apache || true
+    sudo DEBIAN_FRONTEND=noninteractive apt -y -o Dpkg::Options::="--force-confnew" purge apache2 || true
+    sudo DEBIAN_FRONTEND=noninteractive apt -y autoremove || true
 
 
+    # Reiniciar Supervisor con nueva configuración
+    echo "Reconfigurando Supervisor..."
+    sudo rm -rf /etc/supervisor/conf.d/*
+    sudo cp laravel*.conf /etc/supervisor/conf.d/
+    sudo supervisorctl reread
+    sudo supervisorctl update
+    sudo supervisorctl restart all
 
 
-sudo chown -R www-data:www-data /var/www/html/storage
 
 
-chmod +x /var/www/html/update.sh
+    sudo chown -R www-data:www-data /var/www/html/storage
 
-php artisan db:seed --class=DatabaseSeeder
-php artisan db:seed --class=ProductionLineProcessesPermissionSeeder
-php artisan db:seed --class=ProductionLineOrdersKanbanPermissionSeeder
-php artisan db:seed --class=WorkCalendarPermissionSeeder
-echo "Proceso completado con éxito."
+
+    chmod +x /var/www/html/update.sh
+
+    php artisan db:seed --class=DatabaseSeeder --force -n
+    php artisan db:seed --class=ProductionLineProcessesPermissionSeeder --force -n
+    php artisan db:seed --class=ProductionLineOrdersKanbanPermissionSeeder --force -n
+    php artisan db:seed --class=WorkCalendarPermissionSeeder --force -n
+    echo "Proceso completado con éxito."
