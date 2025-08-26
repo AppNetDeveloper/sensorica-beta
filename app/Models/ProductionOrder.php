@@ -145,9 +145,11 @@ class ProductionOrder extends Model
         // --- Evento `creating` (se mantiene exactamente igual) ---
         // Se ejecuta una sola vez, antes de que un nuevo registro se inserte en la BD.
         static::creating(function ($model) {
-            // Asignar valor incremental al campo `orden` POR LÍNEA DE PRODUCCIÓN
-            $lastOrder = self::where('production_line_id', $model->production_line_id)->max('orden');
-            $model->orden = $lastOrder !== null ? $lastOrder + 1 : 0;
+            // Asignar valor incremental al campo `orden` POR LÍNEA DE PRODUCCIÓN SOLO si no viene definido
+            if (is_null($model->orden)) {
+                $lastOrder = self::where('production_line_id', $model->production_line_id)->max('orden');
+                $model->orden = $lastOrder !== null ? $lastOrder + 1 : 0;
+            }
             
             // Asignar status predeterminado si no viene uno
             $model->status = $model->status ?? 0; // 0: Pendiente (predeterminado)

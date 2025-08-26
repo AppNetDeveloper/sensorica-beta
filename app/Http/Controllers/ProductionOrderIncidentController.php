@@ -29,11 +29,14 @@ class ProductionOrderIncidentController extends Controller
     {
         // Obtener todas las incidencias relacionadas con órdenes de producción del cliente
         $incidents = ProductionOrderIncident::where('customer_id', $customer->id)
-            ->with(['productionOrder', 'createdBy', 'customer'])
+            ->with(['productionOrder.productionLine', 'createdBy', 'customer'])
             ->latest()
             ->get();
-        
-        return view('customers.production-order-incidents.index', compact('customer', 'incidents'));
+        // Listas distintas para filtros de UI
+        $lines = $incidents->pluck('productionOrder.productionLine')->filter()->unique('id')->values();
+        $operators = $incidents->pluck('createdBy')->filter()->unique('id')->values();
+
+        return view('customers.production-order-incidents.index', compact('customer', 'incidents', 'lines', 'operators'));
     }
 
     /**

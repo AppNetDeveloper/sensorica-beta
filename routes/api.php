@@ -47,6 +47,7 @@ use App\Http\Controllers\Api\ProductionOrderArticlesController;
 use App\Http\Controllers\Api\ProductionLineController;
 use App\Http\Controllers\Api\LineAvailabilityController;
 use App\Http\Controllers\Api\OriginalOrderProcessFileApiController;
+use App\Http\Controllers\Api\QualityIssueController;
 
 
 
@@ -268,6 +269,9 @@ Route::get('scada-material/{token}', [ScadaMaterialTypeController::class, 'getSc
 
 // API optimizada para el tablero Kanban
 Route::get('/kanban/orders', [\App\Http\Controllers\Api\ProductionOrderController::class, 'getKanbanOrders']);
+
+// API de control de calidad (recibe token, id, texto) -> solo log por ahora
+Route::post('/quality-issues', [QualityIssueController::class, 'store'])->name('api.quality-issues.store');
 
 // Subida remota de archivos de proceso usando token de cliente
 Route::post('/process-files/upload', [OriginalOrderProcessFileApiController::class, 'store']);

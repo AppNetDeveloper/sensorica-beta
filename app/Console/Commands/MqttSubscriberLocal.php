@@ -8,6 +8,7 @@ use PhpMqtt\Client\MqttClient;
 use PhpMqtt\Client\ConnectionSettings;
 use Carbon\Carbon;
 use App\Models\ProductionOrder;
+use App\Models\QualityIssue;
 
 class MqttSubscriberLocal extends Command
 {
@@ -242,6 +243,36 @@ class MqttSubscriberLocal extends Command
                 $hasStock = ($stockValue === 0 || $stockValue === 1) ? (int)$stockValue : 1;
             }
             
+            // Obtener nota desde QualityIssue si tenemos original_order_id
+            $note = null;
+            $resolvedOriginalOrderId = $messageData['original_order_id'] ?? null;
+            if (!empty($resolvedOriginalOrderId)) {
+                // Buscar por original_order_id o por original_order_id_qc
+                $noteFromIssue = QualityIssue::where('original_order_id', $resolvedOriginalOrderId)
+                    ->orWhere('original_order_id_qc', $resolvedOriginalOrderId)
+                    ->orderByDesc('id')
+                    ->value('texto');
+                if (is_string($noteFromIssue) && trim($noteFromIssue) !== '') {
+                    $note = trim($noteFromIssue);
+                    $this->info("[{$timestamp}] Note pulled from QualityIssue for original_order_id={$resolvedOriginalOrderId}");
+                }
+            }
+            
+            // Calcular 'orden' según si hay nota (prioridad). Se calcula dentro del mismo grupo de línea (aquí production_line_id es null)
+            $ordenQuery = ProductionOrder::query();
+            if (is_null($messageData['production_line_id'] ?? null)) {
+                $ordenQuery->whereNull('production_line_id');
+            } else {
+                $ordenQuery->where('production_line_id', $messageData['production_line_id']);
+            }
+            if ($note !== null && trim((string)$note) !== '') {
+                $minOrden = $ordenQuery->min('orden');
+                $computedOrden = ($minOrden !== null) ? ($minOrden - 1) : 0;
+            } else {
+                $maxOrden = $ordenQuery->max('orden');
+                $computedOrden = ($maxOrden !== null) ? ($maxOrden + 1) : 0;
+            }
+
             // Prepare data for update or create
             $orderData = [
                 'order_id'                  => $messageData['orderId'],
@@ -250,7 +281,7 @@ class MqttSubscriberLocal extends Command
                 'json'                      => $messageData,
                 'status'                    => '0',
                 'has_stock'                 => $hasStock, // Añadido el campo has_stock
-                'orden'                     => ProductionOrder::max('orden') + 1,
+                'orden'                     => $computedOrden,
                 'theoretical_time'          => isset($messageData['theoretical_time']) ? floatval($messageData['theoretical_time']) : null,
                 'process_category'          => $messageData['process_category'] ?? null,
                 'delivery_date'             => isset($messageData['delivery_date']) ? Carbon::parse($messageData['delivery_date']) : null,
@@ -265,6 +296,8 @@ class MqttSubscriberLocal extends Command
                 'box'                      => $this->safeGetValue($messageData, 'quantity', 0),
                 'units_box'                => $this->safeGetNestedValue($messageData, ['refer', 'groupLevel', 0, 'uds'], 0),
                 'units'                    => $this->safeGetNestedValue($messageData, ['refer', 'groupLevel', 0, 'total'], 0),
+                'note'                      => $note,
+                'is_priority'               => ($note !== null && trim((string)$note) !== '') ? 1 : 0,
             ];
 
             $productionOrder = ProductionOrder::create($orderData);

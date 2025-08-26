@@ -83,6 +83,12 @@ class CustomerController extends Controller
                     $incidentsButton = "<a href='{$incidentsUrl}' class='btn btn-sm btn-danger me-1' data-bs-toggle='tooltip' title='" . __('Production Order Incidents') . "'><i class='fas fa-exclamation-triangle'></i> " . __('Incidencias') . "</a>";
                     $buttons[] = $incidentsButton;
                 }
+                // Botón de Incidencias QC (solo con permiso productionline-incidents)
+                if (auth()->user()->can('productionline-incidents')) {
+                    $qcIncidentsUrl = route('customers.quality-incidents.index', $customer->id);
+                    $qcIncidentsButton = "<a href='{$qcIncidentsUrl}' class='btn btn-sm btn-outline-danger me-1' data-bs-toggle='tooltip' title='" . __('Quality Incidents (QC)') . "'><i class='fas fa-vial'></i> " . __('Incidencias QC') . "</a>";
+                    $buttons[] = $qcIncidentsButton;
+                }
                 
                 // Botón de Calendario Laboral (solo con permiso workcalendar-list)
                 if (auth()->user()->can('workcalendar-list')) {

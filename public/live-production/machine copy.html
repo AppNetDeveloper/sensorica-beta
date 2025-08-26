@@ -2316,9 +2316,6 @@
                                 <i class="fas fa-ellipsis-v"></i>
                             </button>
                             <div class="card-menu hidden absolute right-0 top-full mt-1 bg-white shadow-lg rounded-md z-50 w-32 py-1">
-                                <button class="card-menu-quality w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 flex items-center">
-                                    <i class="fas fa-clipboard-check text-emerald-500 mr-2"></i> Calidad
-                                </button>
                                 <button class="card-menu-incident w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 flex items-center">
                                     <i class="fas fa-exclamation-triangle text-yellow-500 mr-2"></i> Incidencias
                                 </button>
@@ -2371,7 +2368,6 @@
                 const menuBtn = card.querySelector('.card-menu-btn');
                 const menuContainer = card.querySelector('.card-menu-container');
                 const menu = card.querySelector('.card-menu');
-                const qualityBtn = card.querySelector('.card-menu-quality');
                 const incidentBtn = card.querySelector('.card-menu-incident');
                 const topBtn = card.querySelector('.card-menu-top');
                 const detailsBtn = card.querySelector('.card-menu-details');
@@ -2408,115 +2404,6 @@
                         e.stopPropagation();
                     });
                     
-                    // Opción 1: Incidencias - Abrir el modal de incidencias
-                    // Nueva opción: Problemas de calidad (calidad / quality control)
-                    if (qualityBtn) {
-                        qualityBtn.addEventListener('click', (e) => {
-                            e.stopPropagation();
-                            menu.classList.add('hidden'); // Ocultar el menú
-
-                            // Modal con textarea apta para lectores de códigos de barras
-                            Swal.fire({
-                                title: 'Problemas de calidad',
-                                width: '70%',
-                                html: `
-                                    <div class="text-left">
-                                        <label for="qualityInput" class="block text-sm font-bold text-red-600 text-center mb-2">
-                                            Escanee o escriba las pegatinas con problemas (una por línea)
-                                        </label>
-                                        <textarea id="qualityInput" class="swal2-textarea" placeholder="Escanee aquí..." rows="5" style="width:93%;resize:vertical;max-height:140px;min-height:90px;box-sizing:border-box"></textarea>
-                                    </div>
-                                `,
-                                focusConfirm: false,
-                                showCancelButton: true,
-                                confirmButtonText: 'Guardar',
-                                cancelButtonText: 'Cancelar',
-                                didOpen: () => {
-                                    const ta = Swal.getPopup().querySelector('#qualityInput');
-                                    if (ta) {
-                                        ta.focus();
-                                        // Permitir que Enter agregue nueva línea sin cerrar el modal
-                                        ta.addEventListener('keydown', (ev) => {
-                                            if (ev.key === 'Enter') {
-                                                // Evitar que SweetAlert2 lo interprete como confirmar
-                                                ev.stopPropagation();
-                                                // NO llamamos preventDefault para que inserte salto de línea
-                                            }
-                                        });
-                                    }
-                                }
-                            }).then((result) => {
-                                if (result.isConfirmed) {
-                                    const ta = document.getElementById('qualityInput');
-                                    const content = ta ? ta.value : '';
-                                    const urlParams = new URLSearchParams(window.location.search);
-                                    const tokenFromUrl = urlParams.get('token');
-                                    const token = (typeof productionLineToken !== 'undefined' && productionLineToken) ? productionLineToken : tokenFromUrl;
-                                    console.log('[QUALITY CONTROL] Guardar problemas de calidad', {
-                                        orderId: order.id,
-                                        productionLineToken: token,
-                                        operator_id: (typeof currentWorker !== 'undefined' && currentWorker && currentWorker.id) ? currentWorker.id : null,
-                                        input: content
-                                    });
-
-                                    // Enviar a la nueva API (solo log en backend por ahora)
-                                    const payload = { 
-                                        token: token || '', 
-                                        id: order.id, 
-                                        production_order_id: order.id,
-                                        texto: content,
-                                        operator_id: (typeof currentWorker !== 'undefined' && currentWorker && currentWorker.id) ? currentWorker.id : null
-                                    };
-                                    fetch(`${API_BASE_URL}/api/quality-issues`, {
-                                        method: 'POST',
-                                        headers: {
-                                            'Content-Type': 'application/json',
-                                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
-                                        },
-                                        body: JSON.stringify(payload)
-                                    })
-                                    .then(async r => {
-                                        const data = await r.json().catch(() => ({ success: false, message: 'Respuesta no válida' }));
-                                        console.log('[QUALITY CONTROL] API response:', data);
-                                        if (r.ok && data && data.success) {
-                                            // Toast de éxito 2 segundos
-                                            if (typeof Swal !== 'undefined') {
-                                                Swal.fire({
-                                                    icon: 'success',
-                                                    title: 'Guardado',
-                                                    text: 'Problemas de calidad registrados',
-                                                    timer: 2000,
-                                                    showConfirmButton: false,
-                                                    position: 'top-end',
-                                                    toast: true
-                                                });
-                                            }
-                                        } else {
-                                            const msg = (data && data.message) ? data.message : 'No se pudo registrar';
-                                            if (typeof Swal !== 'undefined') {
-                                                Swal.fire({
-                                                    icon: 'error',
-                                                    title: 'Error',
-                                                    text: msg
-                                                });
-                                            }
-                                        }
-                                    })
-                                    .catch(err => {
-                                        console.error('[QUALITY CONTROL] API error:', err);
-                                        if (typeof Swal !== 'undefined') {
-                                            Swal.fire({
-                                                icon: 'error',
-                                                title: 'Error',
-                                                text: 'Fallo de red o servidor'
-                                            });
-                                        }
-                                    });
-                                }
-                            });
-                        });
-                    }
-
                     // Opción 1: Incidencias - Abrir el modal de incidencias
                     if (incidentBtn) {
                         incidentBtn.addEventListener('click', (e) => {

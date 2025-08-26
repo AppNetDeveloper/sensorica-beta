@@ -36,6 +36,7 @@ use App\Http\Controllers\PermissionManageController;
 use App\Http\Controllers\ScadaOrderController;
 use App\Http\Controllers\ProductionOrderController;
 use App\Http\Controllers\ProductionOrderIncidentController;
+use App\Http\Controllers\QualityIncidentController;
 use App\Http\Controllers\ServerController;
 use App\Http\Controllers\ShiftManagementController;
 use App\Http\Controllers\OperatorPostController;
@@ -135,6 +136,10 @@ Route::prefix('customers')->name('customers.')->group(function () {
             
         Route::delete('production-order-incidents/{incident}', [ProductionOrderIncidentController::class, 'destroy'])
             ->name('production-order-incidents.destroy');
+
+        // Rutas para las incidencias de Calidad (QC)
+        Route::get('quality-incidents', [QualityIncidentController::class, 'index'])
+            ->name('quality-incidents.index');
             
         // Rutas para el calendario laboral
         Route::get('work-calendars', [WorkCalendarController::class, 'index'])

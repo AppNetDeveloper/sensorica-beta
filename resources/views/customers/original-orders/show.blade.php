@@ -35,6 +35,24 @@
                                     <th class="bg-light">@lang('Order ID')</th>
                                     <td>{{ $originalOrder->order_id }}</td>
                                 </tr>
+                                @php
+                                    $qcIncidentsCount = \App\Models\QualityIssue::where('original_order_id', $originalOrder->id)
+                                        ->orWhere('original_order_id_qc', $originalOrder->id)
+                                        ->count();
+                                @endphp
+                                @if($qcIncidentsCount > 0)
+                                <tr>
+                                    <th class="bg-light">@lang('Quality Incidents')</th>
+                                    <td>
+                                        <a href="{{ route('customers.quality-incidents.index', ['customer' => $customer->id]) }}"
+                                           class="btn btn-sm btn-outline-danger">
+                                            <i class="fas fa-vial"></i>
+                                            @lang('View Incidents')
+                                            <span class="badge bg-danger ms-1">{{ $qcIncidentsCount }}</span>
+                                        </a>
+                                    </td>
+                                </tr>
+                                @endif
                                 <tr>
                                     <th class="bg-light">@lang('Client Name')</th>
                                     <td>{{ $originalOrder->client_number }}</td>

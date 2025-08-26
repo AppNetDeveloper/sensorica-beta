@@ -32,11 +32,11 @@ class ProductionOrderIncident extends Model
     }
 
     /**
-     * Usuario que creó la incidencia
+     * Operador que creó la incidencia (created_by -> operators.id)
      */
     public function createdBy(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'created_by');
+        return $this->belongsTo(Operator::class, 'created_by');
     }
 
     /**

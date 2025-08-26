@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', __('Production Order Incidents'))
+@section('title', __('Incidencias QC'))
 
 @section('breadcrumb')
     <ul class="breadcrumb">
@@ -10,7 +10,7 @@
         <li class="breadcrumb-item">
             <a href="{{ route('customers.index') }}">{{ __('Customers') }}</a>
         </li>
-        <li class="breadcrumb-item active">{{ __('Production Order Incidents') }}</li>
+        <li class="breadcrumb-item active">{{ __('Incidencias QC') }}</li>
     </ul>
 @endsection
 
@@ -19,9 +19,9 @@
     <div class="row mt-3 mx-0">
         <div class="col-12 px-0">
             <div class="card border-0 shadow" style="width: 100%;">
-                <div class="card-header bg-primary text-white">
+                <div class="card-header bg-danger text-white">
                     <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">@lang('Production Order Incidents') - {{ $customer->name }}</h5>
+                        <h5 class="mb-0">@lang('Incidencias QC') - {{ $customer->name }}</h5>
                         <a href="{{ route('customers.order-organizer', $customer->id) }}" class="btn btn-light btn-sm">
                             <i class="fas fa-th"></i> @lang('Order Organizer')
                         </a>
@@ -61,85 +61,84 @@
                             <label class="form-label mb-1">@lang('Operador')</label>
                             <select id="filter-operator" class="form-select form-select-sm">
                                 <option value="">@lang('Todos')</option>
-                                @foreach($operators as $u)
-                                    <option value="{{ $u->id }}">{{ $u->name ?? ('#'.$u->id) }}</option>
+                                @foreach($operators as $op)
+                                    <option value="{{ $op->id }}">{{ $op->name ?? ('#'.$op->id) }}</option>
                                 @endforeach
                             </select>
                         </div>
                     </div>
 
                     <div class="table-responsive" style="width: 100%; margin: 0 auto;">
-                        <table id="incidents-table" class="table table-striped table-hover" style="width: 100%;">
+                        <table id="qc-incidents-table" class="table table-striped table-hover" style="width: 100%;">
                             <thead class="table-light">
                                 <tr>
                                     <th>#</th>
-                                    <th class="text-uppercase">@lang('ORDER ID')</th>
-                                    <th class="text-uppercase">@lang('REASON')</th>
-                                    <th class="text-uppercase">@lang('STATUS')</th>
-                                    <th class="text-uppercase">@lang('INFO')</th>
-                                    <th class="text-uppercase">@lang('OPERATOR')</th>
-                                    <th class="text-uppercase">@lang('CREATED AT')</th>
-                                    <th class="text-uppercase">@lang('ACTIONS')</th>
+                                    <th class="text-uppercase">@lang('Original Order')</th>
+                                    <th class="text-uppercase">@lang('Original Order QC')</th>
+                                    <th class="text-uppercase">@lang('Process')</th>
+                                    <th class="text-uppercase">@lang('Info')</th>
+                                    <th class="text-uppercase">@lang('Reason')</th>
+                                    <th class="text-uppercase">@lang('Created At')</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach($incidents as $index => $incident)
+                                @foreach($incidents as $index => $issue)
                                     @php
-                                        $status = optional($incident->productionOrder)->status;
+                                        $status = optional($issue->productionOrder)->status;
                                         $rowClass = '';
-                                        if ($status === 3) { $rowClass = 'table-danger'; }
-                                        elseif ($status === 2) { $rowClass = 'table-success'; }
-                                        elseif ($status === 1) { $rowClass = 'table-warning'; }
-                                        elseif ($status === 0) { $rowClass = 'table-light'; }
+                                        if ($status === 3) { // incidencias
+                                            $rowClass = 'table-danger';
+                                        } elseif ($status === 2) { // finalizada
+                                            $rowClass = 'table-success';
+                                        } elseif ($status === 1) { // en curso
+                                            $rowClass = 'table-warning';
+                                        } elseif ($status === 0) { // pendiente
+                                            $rowClass = 'table-light';
+                                        }
                                     @endphp
-                                    <tr class="{{ $rowClass }}"
-                                        data-line-id="{{ optional($incident->productionOrder)->production_line_id }}"
-                                        data-operator-id="{{ optional($incident->createdBy)->id }}"
-                                        data-created-at="{{ optional($incident->created_at)->format('Y-m-d') }}">
+                                    <tr class="{{ $rowClass }}" data-line-id="{{ $issue->production_line_id ?? optional($issue->productionOrder)->production_line_id }}"
+                                        data-operator-id="{{ $issue->operator_id ?? '' }}"
+                                        data-created-at="{{ optional($issue->created_at)->format('Y-m-d') }}">
                                         <td>{{ $index + 1 }}</td>
                                         <td>
-                                            #{{ $incident->productionOrder->order_id }}
-                                        </td>
-                                        <td>{{ Str::limit($incident->reason, 50) }}</td>
-                                        <td>
-                                            @if($incident->productionOrder->status == 3)
-                                                <span class="badge bg-danger">@lang('Incidencia activa')</span>
-                                            @else
-                                                <span class="badge bg-secondary">@lang('Incidencia finalizada')</span>
-                                            @endif
-                                        </td>
-                                        <td>
-                                            @if(optional($incident->productionOrder)->productionLine)
-                                                <span class="badge bg-primary me-1" title="@lang('Línea')">{{ $incident->productionOrder->productionLine->name ?? ('L#'.optional($incident->productionOrder->productionLine)->id) }}</span>
-                                            @endif
-                                            @if($incident->createdBy)
-                                                <span class="badge bg-secondary" title="@lang('Operador')"><i class="fas fa-user"></i> {{ $incident->createdBy->name }}</span>
-                                            @else
-                                                <span class="badge bg-secondary" title="@lang('Operador')"><i class="fas fa-user"></i> Sistema</span>
-                                            @endif
-                                        </td>
-                                        <td>{{ $incident->createdBy ? $incident->createdBy->name : 'Sistema' }}</td>
-                                        <td>{{ $incident->created_at->format('Y-m-d H:i') }}</td>
-                                        <td>
-                                            <div class="btn-group" role="group">
-                                                <a href="{{ route('customers.production-order-incidents.show', [$customer->id, $incident->id]) }}" 
-                                                   class="btn btn-sm btn-info" data-bs-toggle="tooltip" title="@lang('View')">
-                                                    <i class="fas fa-eye"></i>
+                                            @if($issue->originalOrder)
+                                                <a href="{{ route('customers.original-orders.show', ['customer' => $customer->id, 'originalOrder' => $issue->originalOrder->id]) }}" class="text-decoration-none">
+                                                    #{{ $issue->originalOrder->order_id }}
                                                 </a>
-                                                @can('delete', $customer)
-                                                <form action="{{ route('customers.production-order-incidents.destroy', [$customer->id, $incident->id]) }}" 
-                                                      method="POST" style="display: inline-block;">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="btn btn-sm btn-danger" 
-                                                            data-bs-toggle="tooltip" title="@lang('Delete')" 
-                                                            onclick="return confirm('@lang('Are you sure you want to delete this incident?')')">
-                                                        <i class="fas fa-trash"></i>
-                                                    </button>
-                                                </form>
-                                                @endcan
-                                            </div>
+                                            @else
+                                                -
+                                            @endif
                                         </td>
+                                        <td>
+                                            @if($issue->originalOrderQc)
+                                                <a href="{{ route('customers.original-orders.show', ['customer' => $customer->id, 'originalOrder' => $issue->originalOrderQc->id]) }}" class="text-decoration-none">
+                                                    #{{ $issue->originalOrderQc->order_id }}
+                                                </a>
+                                            @else
+                                                -
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if($issue->productionOrder)
+                                                #{{ $issue->productionOrder->order_id }}
+                                            @else
+                                                -
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if($issue->productionLine)
+                                                <span class="badge bg-primary me-1" title="@lang('Línea')">{{ $issue->productionLine->name ?? ('L#'.$issue->productionLine->id) }}</span>
+                                            @elseif(optional($issue->productionOrder)->productionLine)
+                                                <span class="badge bg-primary me-1" title="@lang('Línea')">{{ $issue->productionOrder->productionLine->name ?? ('L#'.$issue->productionOrder->productionLine->id) }}</span>
+                                            @endif
+                                            @if($issue->operator)
+                                                <span class="badge bg-secondary" title="@lang('Operador')"><i class="fas fa-user"></i> {{ $issue->operator->name }}</span>
+                                            @elseif($issue->operator_id)
+                                                <span class="badge bg-secondary" title="@lang('Operador')"><i class="fas fa-user"></i> #{{ $issue->operator_id }}</span>
+                                            @endif
+                                        </td>
+                                        <td>{{ \Illuminate\Support\Str::limit($issue->texto, 80) }}</td>
+                                        <td>{{ optional($issue->created_at)->format('Y-m-d H:i') }}</td>
                                     </tr>
                                 @endforeach
                             </tbody>
@@ -170,8 +169,8 @@
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
     <script>
         $(document).ready(function() {
-            // Filtro personalizado por fecha, línea y operador
-            $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+            // Custom filter by date range, line, and operator
+            $.fn.dataTable.ext.search.push(function(settings, data, dataIndex, rowData, counter) {
                 const tr = $(settings.aoData[dataIndex].nTr);
                 const lineFilter = $('#filter-line').val();
                 const operatorFilter = $('#filter-operator').val();
@@ -180,16 +179,19 @@
 
                 const lineId = (tr.data('line-id') || '').toString();
                 const operatorId = (tr.data('operator-id') || '').toString();
-                const createdAt = (tr.data('created-at') || '').toString(); // YYYY-MM-DD
+                const createdAt = (tr.data('created-at') || '').toString(); // 'YYYY-MM-DD'
 
+                // Line filter
                 if (lineFilter && lineId !== lineFilter) return false;
+                // Operator filter
                 if (operatorFilter && operatorId !== operatorFilter) return false;
+                // Date range filter
                 if (dateFrom && createdAt < dateFrom) return false;
                 if (dateTo && createdAt > dateTo) return false;
                 return true;
             });
 
-            const table = $('#incidents-table').DataTable({
+            const table = $('#qc-incidents-table').DataTable({
                 responsive: true,
                 language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json' },
                 order: [[6, 'desc']],
@@ -201,6 +203,7 @@
                 ]
             });
 
+            // Re-draw on filter changes
             $('#filter-line, #filter-operator, #filter-date-from, #filter-date-to').on('change keyup', function() {
                 table.draw();
             });
