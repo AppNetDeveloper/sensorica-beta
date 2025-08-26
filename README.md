@@ -15,6 +15,7 @@
   - [Gestión de Sensores](#gestión-de-sensores)
   - [Integración con APIs Externas](#integración-con-apis-externas)
   - [Gestión de Incidencias](#gestión-de-incidencias)
+  - [Control de Calidad (QC): Incidencias y Confirmaciones](#control-de-calidad-qc-incidencias-y-confirmaciones)
 - [Tecnologías Utilizadas](#tecnologías-utilizadas)
 - [Requisitos del Sistema](#requisitos-del-sistema)
 - [Instalación y Configuración](#instalación-y-configuración)
@@ -137,6 +138,70 @@ Sistema flexible para la integración con sistemas externos:
 - **Validación de Datos**: Verificación de integridad y formato de los datos.
 - **Procesamiento por Lotes**: Importación eficiente de grandes volúmenes de datos.
 - **Registro Detallado**: Logs completos de todas las operaciones de integración.
+
+### Control de Calidad (QC): Incidencias y Confirmaciones
+
+El módulo de Control de Calidad (QC) permite gestionar tanto las Incidencias de Calidad como las Confirmaciones de QC realizadas sobre órdenes de producción. Este módulo integra vistas, rutas, permisos y mejoras de interfaz para una navegación clara.
+
+- __¿Para qué se usa?__
+  - Asegurar que cada pedido original pase por un punto de control de calidad antes de considerarse completamente terminado.
+  - Registrar y consultar incidencias de calidad detectadas en el flujo productivo.
+  - Dar trazabilidad: qué orden, en qué línea, qué operador y cuándo se confirmó la calidad.
+
+- __Flujo de trabajo (alto nivel)__
+  1. El equipo detecta un problema de calidad durante la producción y lo registra como __Incidencia de Calidad__ desde el tablero/acciones del cliente (`customers/{customer}/quality-incidents`).
+  2. Una vez resuelto y verificado, un responsable realiza la __Confirmación de QC__ asociada a la orden original/orden de producción (`customers/{customer}/qc-confirmations`).
+  3. En el detalle de la orden (`customers/original-orders/show`) el sistema muestra un badge:
+     - “QC confirmation done” si existe al menos una confirmación (`OriginalOrder::hasQcConfirmations()`).
+     - “QC confirmation pending” si aún no se confirmó.
+
+- __Vistas__
+  - `resources/views/customers/quality-incidents/index.blade.php`: Lista las incidencias de calidad por cliente.
+  - `resources/views/customers/qc-confirmations/index.blade.php`: Lista las confirmaciones de QC por cliente.
+  - `resources/views/customers/original-orders/show.blade.php`: Muestra el estado “QC confirmation done / pending” en el detalle de pedido original, con enlace directo a la lista de confirmaciones.
+
+- __Modelos y relaciones__
+  - `app/Models/QcConfirmation.php`: Modelo para confirmaciones de QC, relacionado con `OriginalOrder`, `ProductionOrder`, `ProductionLine` y `Operator`.
+  - `app/Models/OriginalOrder.php`: Incluye la relación `qcConfirmations()` y el helper `hasQcConfirmations()` para saber si un pedido original tiene confirmaciones de QC.
+
+- __Rutas__ (en `routes/web.php`)
+  - `customers/{customer}/quality-incidents` → nombre `customers.quality-incidents.index`.
+  - `customers/{customer}/qc-confirmations` → nombre `customers.qc-confirmations.index` (controlador `QcConfirmationWebController@index`).
+
+- __Permisos__
+  - Las vistas y botones de QC usan el permiso `productionline-incidents` para control de acceso.
+
+- __Controladores__
+  - `app/Http/Controllers/QcConfirmationWebController.php@index(Customer $customer)`: lista confirmaciones de QC filtradas por cliente, con `with()` de relaciones necesarias.
+  - `app/Http/Controllers/CustomerController.php@getCustomers()`: genera acciones de cada cliente e integra el acceso a QC (Incidencias y Confirmaciones).
+
+- __Mejoras de interfaz (Customers)__
+  - En `resources/views/customers/index.blade.php` y `CustomerController@getCustomers()` se reemplazó la multitud de botones por un __diseño de fila expandible__:
+    - Columna `action`: botón “Actions” con icono para expandir.
+    - Al hacer clic se inserta una __segunda fila__ bajo el cliente con todos los botones agrupados: Básicas, Órdenes/Procesos, Calidad & Incidencias (incluye QC Incidents y QC Confirmations), Estadísticas y zona de peligro.
+    - DataTables recibe una columna oculta `action_buttons` con el HTML de los botones. JS inserta la fila expandida dinámicamente.
+
+- __Estado en detalle de pedido__
+  - En `resources/views/customers/original-orders/show.blade.php` se añadió una fila con badge de estado:
+    - Verde: “QC confirmation done” si el pedido tiene confirmaciones (`hasQcConfirmations()`)
+    - Amarillo: “QC confirmation pending” si no tiene
+    - Incluye enlace a `route('customers.qc-confirmations.index', $customer->id)`
+
+- __Migraciones__
+  - `database/migrations/2025_08_26_000000_create_qc_confirmations_table.php`: tabla para confirmaciones de QC.
+  - `database/migrations/2025_08_26_113700_add_original_order_id_qc_to_quality_issues_table.php`: relación de issues de calidad con `original_order_id` para trazabilidad.
+
+- __Pruebas y verificación rápida__
+  1. __Permisos__: Con un usuario con `productionline-incidents`, entrar a `Clientes` y expandir una fila: deben aparecer “Incidencias”, “Incidencias QC” y “QC Confirmations”.
+  2. __Navegación__: En `Clientes` → expandir → “QC Confirmations” debe llevar a `customers/{id}/qc-confirmations` y listar confirmaciones de ese cliente.
+  3. __Detalle de pedido__: En `customers/original-orders/show` verificar el badge “QC confirmation done/pending” y el enlace a confirmaciones.
+  4. __Responsivo__: Probar la expansión/contracción de la segunda fila en desktop y móvil. El ícono debe alternar chevron up/down.
+  5. __Traducciones__: Verificar textos “QC Confirmations”, “QC confirmation done”, “QC confirmation pending”.
+
+- __Consideraciones UX__
+  - La fila expandible reduce ruido visual y agrupa acciones por contexto.
+  - Los iconos usan colores semánticos: rojo para incidencias, azul para confirmaciones, verde/amarillo para estadísticas.
+
 
 ### Sistemas de Control y Transformación de Datos
 

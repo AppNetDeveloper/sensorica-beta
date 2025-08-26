@@ -132,7 +132,14 @@
                         orderable: false, 
                         searchable: false,
                         className: 'text-center',
-                        width: '55%'
+                        width: '15%'
+                    },
+                    { 
+                        data: 'action_buttons', 
+                        name: 'action_buttons', 
+                        orderable: false, 
+                        searchable: false,
+                        visible: false
                     }
                 ],
                 columnDefs: [
@@ -245,6 +252,77 @@
                     }
                 });
             });
+            
+            // Funcionalidad para expandir/contraer filas de acciones
+            $(document).on('click', '.toggle-actions', function() {
+                var customerId = $(this).data('customer-id');
+                var $button = $(this);
+                var $icon = $button.find('i');
+                var $row = $button.closest('tr');
+                var $nextRow = $row.next('.action-row');
+                
+                // Si ya existe una fila expandida, la eliminamos
+                if ($nextRow.length > 0) {
+                    $nextRow.remove();
+                    $icon.removeClass('fa-chevron-up').addClass('fa-chevron-down');
+                    $button.attr('title', '{{ __("Show Actions") }}');
+                    return;
+                }
+                
+                // Obtener los datos de la fila actual
+                var rowData = table.row($row).data();
+                
+                // Crear nueva fila con los botones de acción
+                var $newRow = $('<tr class="action-row"><td colspan="' + table.columns().count() + '">' + rowData.action_buttons + '</td></tr>');
+                
+                // Insertar la nueva fila después de la fila actual
+                $row.after($newRow);
+                
+                // Mostrar la fila de botones con animación
+                $newRow.find('.action-buttons-row').slideDown(300);
+                
+                // Cambiar el icono y tooltip
+                $icon.removeClass('fa-chevron-down').addClass('fa-chevron-up');
+                $button.attr('title', '{{ __("Hide Actions") }}');
+            });
+            
+            // Cerrar filas expandidas cuando se recarga la tabla
+            table.on('draw', function() {
+                $('.action-row').remove();
+                $('.toggle-actions i').removeClass('fa-chevron-up').addClass('fa-chevron-down');
+                $('.toggle-actions').attr('title', '{{ __("Show Actions") }}');
+            });
         });
     </script>
+    
+    <style>
+        .btn-group-section {
+            display: inline-block;
+            margin-right: 10px;
+            margin-bottom: 5px;
+        }
+        
+        .action-buttons-row {
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 5px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .action-row td {
+            background-color: #ffffff;
+            border-top: none !important;
+            padding: 0 !important;
+        }
+        
+        .toggle-actions {
+            transition: all 0.3s ease;
+        }
+        
+        .toggle-actions:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+    </style>
 @endpush
