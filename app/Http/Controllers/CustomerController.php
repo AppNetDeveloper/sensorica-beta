@@ -8,6 +8,7 @@ use Yajra\DataTables\DataTables;
 use Illuminate\Support\Facades\Log; // Agrega esta línea para usar Log
 use Illuminate\Support\Facades\DB;
 use App\Models\ProductionOrder;
+use App\Models\Sensor;
 
 
 class CustomerController extends Controller
@@ -42,6 +43,7 @@ class CustomerController extends Controller
                 $csrfToken = csrf_token();
                 $liveViewUrl = secure_url('/modbuses/liststats/weight?token=' . $customer->token);
                 $liveViewUrlProd = secure_url('/productionlines/liststats?token=' . $customer->token);
+                $customerSensorsUrl = route('customers.sensors.index', $customer->id);
 
                 // Construir botones organizados por grupos
                 $buttons = [];
@@ -51,6 +53,10 @@ class CustomerController extends Controller
                 if (auth()->user()->can('productionline-kanban')) {
                     $orderOrganizerUrl = route('customers.order-organizer', $customer->id);
                     $basicActions[] = "<a href='{$orderOrganizerUrl}' class='btn btn-sm btn-primary me-1 mb-1' title='" . __('Kanban') . "'><i class='fas fa-tasks'></i> " . __('Kanban') . "</a>";
+                }
+                if (auth()->user()->can('maintenance-show')) {
+                    $maintenancesUrl = route('customers.maintenances.index', $customer->id);
+                    $basicActions[] = "<a href='{$maintenancesUrl}' class='btn btn-sm btn-outline-secondary me-1 mb-1' title='" . __('Maintenances') . "'><i class='fas fa-wrench'></i> " . __('Mantenimiento') . "</a>";
                 }
                 if (auth()->user()->can('productionline-edit')) {
                     $basicActions[] = "<a href='{$editUrl}' class='btn btn-sm btn-info me-1 mb-1' title='" . __('Edit') . "'><i class='fas fa-edit'></i> " . __('Edit') . "</a>";
@@ -95,6 +101,9 @@ class CustomerController extends Controller
                 if (auth()->user()->can('productionline-production-stats')) {
                     $statsActions[] = "<a href='{$liveViewUrlProd}' target='_blank' class='btn btn-sm btn-warning me-1 mb-1' title='" . __('Production Stats') . "'><i class='fas fa-chart-line'></i> " . __('Production Stats') . "</a>";
                 }
+                if (auth()->user()->can('productionline-production-stats')) {
+                    $statsActions[] = "<a href='{$customerSensorsUrl}' class='btn btn-sm btn-outline-success me-1 mb-1' title='" . __('Sensors') . "'><i class='fas fa-microchip'></i> " . __('Sensors') . "</a>";
+                }
                 
                 // Grupo 5: Acciones peligrosas
                 $dangerActions = [];
@@ -124,7 +133,7 @@ class CustomerController extends Controller
                     $allButtons .= "<div class='btn-group-section'>" . implode('', $dangerActions) . "</div>";
                 }
                 
-                return "<div class='action-buttons-row' style='display: none; padding: 10px; background-color: #f8f9fa; border-radius: 5px; margin-top: 5px;'>" . $allButtons . "</div>";
+                return "<div class='action-buttons-row d-flex flex-wrap' style='display: none; gap: 6px; padding: 10px; background-color: #f8f9fa; border-radius: 5px; margin-top: 5px;'>" . $allButtons . "</div>";
             })
             // Indica a DataTables que las columnas contienen HTML y no deben ser escapadas
             ->rawColumns(['action', 'action_buttons'])
@@ -1120,5 +1129,27 @@ class CustomerController extends Controller
                 ->with('error', 'Error al crear el cliente: ' . $e->getMessage())
                 ->withInput();
         }
+    }
+
+    /**
+     * Lista los sensores asociados a todas las líneas de producción de un cliente.
+     * Ruta: customers/{customer}/sensors
+     */
+    public function sensorsIndex(Customer $customer)
+    {
+        // IDs de líneas del cliente
+        $lineIds = $customer->productionLines()->pluck('id');
+
+        // Sensores con su relación de línea
+        $sensors = Sensor::with('productionLine')
+            ->whereIn('production_line_id', $lineIds)
+            ->orderBy('production_line_id')
+            ->orderBy('id', 'desc')
+            ->get();
+
+        // Líneas para filtros en la vista
+        $lines = $customer->productionLines()->select('id', 'name')->orderBy('name')->get();
+
+        return view('customers.sensors.index', compact('customer', 'sensors', 'lines'));
     }
 }

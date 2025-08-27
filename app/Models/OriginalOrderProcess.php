@@ -20,8 +20,8 @@ class OriginalOrderProcess extends Pivot
         'units_box',
         'number_of_pallets',
         'created',
-        'finished',
-        'finished_at',
+        // 'finished',        // Se gestiona por lógica interna
+        // 'finished_at',     // Se gestiona por lógica interna
         'grupo_numero',
         'in_stock'
     ];
@@ -55,7 +55,22 @@ class OriginalOrderProcess extends Pivot
         
         static::saving(function (self $pivot) {
             if ($pivot->isDirty('finished')) {
-                $pivot->finished_at = $pivot->finished ? now() : null;
+                if ($pivot->finished) {
+                    // Solo permitir marcar como finalizado si existe al menos una ProductionOrder en status 2
+                    $hasFinishedProductionOrder = $pivot->productionOrders()->where('status', 2)->exists();
+                    if ($hasFinishedProductionOrder) {
+                        $pivot->finished_at = now();
+                    } else {
+                        // Bloquear el acabado si no hay ninguna orden de producción finalizada
+                        $pivot->finished = false;
+                        $pivot->finished_at = null;
+                        Log::warning("OriginalOrderProcess {$pivot->id}: intento de marcar finished sin ProductionOrder en status 2. Operación bloqueada.");
+                    }
+                } else {
+                    // Si se desmarca finished, limpiar la fecha
+                    $pivot->finished_at = null;
+                    $pivot->finished = false;
+                }
             }
             
             // Si se está actualizando manualmente el campo in_stock, forzamos la recarga de la relación

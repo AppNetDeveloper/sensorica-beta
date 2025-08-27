@@ -44,6 +44,7 @@ use App\Http\Controllers\Api\RfidErrorPointController;
 use App\Http\Controllers\Api\IaPromptController; // Importa tu controlador
 use App\Http\Controllers\Api\BarcodeScansController;
 use App\Http\Controllers\Api\ProductionOrderArticlesController;
+use App\Http\Controllers\Api\MaintenanceApiController;
 use App\Http\Controllers\Api\ProductionLineController;
 use App\Http\Controllers\Api\LineAvailabilityController;
 use App\Http\Controllers\Api\OriginalOrderProcessFileApiController;
@@ -241,6 +242,10 @@ Route::delete('/product-lists/{id}', [ProductListController::class, 'destroy']);
 //ver el ultimo status de comunicacion
 
 Route::get('production-line/status/{token}', [ProductionLineStatusController::class, 'getStatusByToken']);
+
+// Maintenance by Production Line Token
+Route::post('/maintenances/{token}', [MaintenanceApiController::class, 'storeByToken']);
+Route::get('/maintenances/status/{token}', [MaintenanceApiController::class, 'getStatusByToken']);
 
 // Modbus API
 Route::middleware(['throttle:90000,1'])->group(function () {

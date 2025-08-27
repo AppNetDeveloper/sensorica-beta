@@ -920,6 +920,19 @@
     "If a region is selected, only holidays applicable to that region will be imported (national holidays always included).": "Si se selecciona una región, solo se importarán los festivos aplicables a esa región (los festivos nacionales siempre se incluyen).",
     "Current month": "Mes actual",
     "Entire year": "Año completo",
-    "of": "de",
-    "Year": "Año"
+    "Maintenances": "Mantenimientos",
+    "Production Line": "Línea de Producción",
+    "Operator": "Operador",
+    "Start": "Inicio",
+    "End": "Fin",
+    "Filter": "Filtrar",
+    "Annotations": "Anotaciones",
+    "Date Range": "Rango de fechas",
+    "From": "Desde",
+    "To": "Hasta",
+    "Start from": "Inicio desde",
+    "Start to": "Inicio hasta",
+    "End from": "Fin desde",
+    "End to": "Fin hasta",
+    "Operator Annotation": "Anotación de operario"
 }

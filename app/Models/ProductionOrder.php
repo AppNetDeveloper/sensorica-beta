@@ -50,7 +50,6 @@ class ProductionOrder extends Model
         'processes_to_do', // Number of processes to do
         'processes_done', // Number of processes completed
         'is_priority', // Indica si la orden es prioritaria/importante según el encargado
-        'finished_at', // Marca cuándo se terminó la orden
         'fecha_pedido_erp', // Fecha del pedido en el sistema ERP
         'estimated_start_datetime', // Fecha y hora estimada de inicio
         'estimated_end_datetime', // Fecha y hora estimada de finalización
@@ -91,6 +90,20 @@ class ProductionOrder extends Model
         'estimated_start_datetime' => 'datetime', // Fecha y hora estimada de inicio
         'estimated_end_datetime' => 'datetime', // Fecha y hora estimada de finalización
     ];
+
+    /**
+     * Mutator: Only allow setting finished_at when status == 2.
+     * If status is not 2, force finished_at to null.
+     */
+    public function setFinishedAtAttribute($value)
+    {
+        $currentStatus = (int)($this->attributes['status'] ?? $this->status ?? 0);
+        if ($currentStatus === 2) {
+            $this->attributes['finished_at'] = $value;
+        } else {
+            $this->attributes['finished_at'] = null;
+        }
+    }
 
     /**
      * Obtener la línea de producción original de la orden
@@ -172,6 +185,10 @@ class ProductionOrder extends Model
         // --- Evento `saving` ---
         // Se ejecuta ANTES de guardar (crear o actualizar). Ideal para modificar datos que se van a guardar.
         static::saving(function ($model) {
+            // Regla global: si no es status 2, no permitimos finished_at
+            if ((int)$model->status !== 2) {
+                $model->finished_at = null;
+            }
             // Si el status ha cambiado a 2 (finalizada) y no estaba en 2 antes
             if ($model->isDirty('status') && $model->status == 2 && $model->getOriginal('status') != 2) {
                 if (empty($model->finished_at)) {
@@ -196,14 +213,27 @@ class ProductionOrder extends Model
         });
         // Se ejecuta después de guardar (crear o actualizar) el modelo.
         static::saved(function ($model) {
-            // Disparador: solo actuar si el campo 'status' ha sido modificado y es 1 o 2.
-            if ($model->isDirty('status') && in_array($model->status, [2])) {
-                
-                // Lógica de negocio que se mantiene: actualizar el proceso original si finaliza.
-                if ($model->status == 2 && $model->original_order_process_id) {
-                    $originalOrderProcess = \App\Models\OriginalOrderProcess::find($model->original_order_process_id);
-                    if ($originalOrderProcess) {
-                        $originalOrderProcess->update(['finished' => 1, 'finished_at' => now()]);
+            // Solo actuar si el campo 'status' ha sido modificado
+            if ($model->isDirty('status') && $model->original_order_process_id) {
+                $originalOrderProcess = \App\Models\OriginalOrderProcess::find($model->original_order_process_id);
+                if (!$originalOrderProcess) {
+                    return;
+                }
+
+                if ((int)$model->status === 2) {
+                    // Marcar el proceso como finalizado (asignación directa para evitar mass-assignment)
+                    $originalOrderProcess->finished = 1;
+                    $originalOrderProcess->finished_at = now();
+                    $originalOrderProcess->save();
+                } else {
+                    // Si la orden deja de estar finalizada, comprobar si quedan otras POs finalizadas
+                    $hasOtherFinished = $originalOrderProcess->productionOrders()
+                        ->where('status', 2)
+                        ->exists();
+                    if (!$hasOtherFinished) {
+                        $originalOrderProcess->finished = 0;
+                        $originalOrderProcess->finished_at = null;
+                        $originalOrderProcess->save();
                     }
                 }
             }

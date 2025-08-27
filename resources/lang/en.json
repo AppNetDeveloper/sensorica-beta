@@ -851,5 +851,20 @@
     "Skipped": "Skipped",
     "Region": "Region",
     "(national and all regions)": "(national and all regions)",
-    "If a region is selected, only holidays applicable to that region will be imported (national holidays always included).": "If a region is selected, only holidays applicable to that region will be imported (national holidays always included)."
+    "If a region is selected, only holidays applicable to that region will be imported (national holidays always included).": "If a region is selected, only holidays applicable to that region will be imported (national holidays always included).",
+    "Maintenances": "Maintenances",
+    "Production Line": "Production Line",
+    "Operator": "Operator",
+    "Start": "Start",
+    "End": "End",
+    "Filter": "Filter",
+    "Annotations": "Annotations",
+    "Date Range": "Date Range",
+    "From": "From",
+    "To": "To",
+    "Start from": "Start from",
+    "Start to": "Start to",
+    "End from": "End from",
+    "End to": "End to",
+    "Operator Annotation": "Operator Annotation"
 }

@@ -40,6 +40,7 @@ use App\Http\Controllers\QualityIncidentController;
 use App\Http\Controllers\QcConfirmationWebController;
 use App\Http\Controllers\ServerController;
 use App\Http\Controllers\ShiftManagementController;
+use App\Http\Controllers\MaintenanceController;
 use App\Http\Controllers\OperatorPostController;
 use App\Http\Controllers\RfidPostController;
 use App\Http\Controllers\RfidColorController;
@@ -128,6 +129,11 @@ Route::prefix('customers')->name('customers.')->group(function () {
             
 
             
+        // Rutas para mantenimientos
+        Route::resource('maintenances', MaintenanceController::class)
+            ->names('maintenances')
+            ->parameters(['maintenances' => 'maintenance']);
+
         // Rutas para las incidencias de órdenes de producción
         Route::get('production-order-incidents', [ProductionOrderIncidentController::class, 'index'])
             ->name('production-order-incidents.index');
@@ -179,6 +185,10 @@ Route::prefix('customers')->name('customers.')->group(function () {
                 Route::delete('{file}', [OriginalOrderProcessFileController::class, 'destroy'])
                     ->name('destroy');
             });
+
+        // Listado de sensores por cliente
+        Route::get('sensors', [CustomerController::class, 'sensorsIndex'])
+            ->name('sensors.index');
     });
 });
 

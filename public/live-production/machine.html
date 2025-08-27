@@ -192,6 +192,36 @@
             align-items: center;
             justify-content: center;
         }
+        /* --- Overlay de Mantenimiento (bloquea toda la UI) --- */
+        #maintenance-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            display: none; /* oculto por defecto */
+            z-index: 1000000; /* por encima de todo */
+        }
+        #maintenance-overlay .message {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: #fff;
+            padding: 2rem;
+            backdrop-filter: blur(2px);
+        }
+        #maintenance-overlay .message h1 {
+            font-size: clamp(2rem, 6vw, 5rem);
+            font-weight: 900;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        #maintenance-overlay .message p {
+            margin-top: 1rem;
+            font-size: clamp(1rem, 2.5vw, 1.5rem);
+            opacity: 0.9;
+        }
         
         .column-counter {
             display: inline-flex;
@@ -511,6 +541,15 @@
     </style>
 </head>
 <body class="bg-gray-200 p-8">
+    <!-- Overlay de Mantenimiento -->
+    <div id="maintenance-overlay">
+        <div class="message">
+            <div>
+                <h1>Máquina en mantenimiento</h1>
+                <p>La operación está temporalmente deshabilitada. Contacta con el supervisor.</p>
+            </div>
+        </div>
+    </div>
     <!-- Modal para mostrar detalles de la orden (ahora usado para artículos) -->
     <!-- Este modal se usa para mostrar los artículos de la orden, no las incidencias -->
     <div class="container mx-auto bg-white p-6 rounded-lg shadow-md">
@@ -537,6 +576,9 @@
         
         <!-- Botón flotante de refresco en la parte inferior -->
         <div class="fixed bottom-4 right-4 z-50 flex flex-col space-y-2">
+            <button id="maintenance-button" class="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-full shadow-sm transition-all duration-150" title="Solicitar mantenimiento">
+                <i class="fas fa-tools"></i>
+            </button>
             <button id="whatsapp-button" class="bg-green-500 hover:bg-green-600 text-white p-2 rounded-full shadow-sm transition-all duration-150" title="Notificaciones en tiempo real de la máquina">
                 <i class="fab fa-whatsapp"></i>
             </button>
@@ -980,6 +1022,7 @@
             const API_BASE_URL = window.location.origin;
             const REFRESH_INTERVAL_MS = 1000;
             const PRODUCTION_ORDERS_REFRESH_INTERVAL_MS = 60000; // 60 seconds (aumentado de 5 a 60 segundos)
+            const MAINTENANCE_POLL_INTERVAL_MS = 5000; // 5 segundos para comprobar mantenimiento
             const API_DELAY_MS = 500;
             console.log(`API Base URL set dynamically to: ${API_BASE_URL}`);
             
@@ -3320,8 +3363,62 @@ async function updateOrderStatus(orderId, newStatus) {
                 return params.get('token');
             }
 
+            // --- Comprobar estado de mantenimiento y bloquear UI si aplica ---
+            let maintenancePollId = null;
+            let maintenanceRequestInFlight = false;
+
+            async function checkMaintenanceAndBlock(token) {
+                try {
+                    if (!token || maintenanceRequestInFlight) return false;
+                    maintenanceRequestInFlight = true;
+                    // Protegernos contra cuelgues de red: timeout de 4s
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 4000);
+                    const url = `${API_BASE_URL}/api/maintenances/status/${encodeURIComponent(token)}`;
+                    console.log('Comprobando mantenimiento:', url);
+                    const res = await fetch(url, { headers: { 'Accept': 'application/json' }, signal: controller.signal });
+                    if (!res.ok) {
+                        console.warn('No se pudo comprobar mantenimiento. Status:', res.status);
+                        return false;
+                    }
+                    const data = await res.json();
+                    if (data && data.in_maintenance) {
+                        const overlay = document.getElementById('maintenance-overlay');
+                        if (overlay) {
+                            overlay.style.display = 'block';
+                        }
+                        document.body.style.overflow = 'hidden';
+                        return true;
+                    } else {
+                        // No en mantenimiento: ocultar overlay si estuviera visible
+                        const overlay = document.getElementById('maintenance-overlay');
+                        if (overlay) {
+                            overlay.style.display = 'none';
+                        }
+                        document.body.style.overflow = '';
+                    }
+                } catch (e) {
+                    console.error('Error comprobando mantenimiento:', e);
+                }
+                finally {
+                    maintenanceRequestInFlight = false;
+                }
+                return false;
+            }
+
             // --- Flujo Inicial ---
             productionLineToken = getTokenFromUrl();
+            // Lanzar comprobación de mantenimiento (inmediata) y configurar polling cada 5s
+            checkMaintenanceAndBlock(productionLineToken);
+            if (maintenancePollId) clearInterval(maintenancePollId);
+            maintenancePollId = setInterval(() => {
+                checkMaintenanceAndBlock(productionLineToken);
+            }, MAINTENANCE_POLL_INTERVAL_MS);
+
+            // Limpiar el intervalo al salir de la página
+            window.addEventListener('beforeunload', () => {
+                if (maintenancePollId) clearInterval(maintenancePollId);
+            });
             loadWorkers();
             fetchLastShiftHistory(productionLineToken);
             fetchOrderStats(productionLineToken);
@@ -5671,6 +5768,68 @@ async function updateOrderStatus(orderId, newStatus) {
                     });
                 }
             });
+
+            // Evento para el botón de Mantenimiento
+            const maintenanceButton = document.getElementById('maintenance-button');
+            if (maintenanceButton) {
+                maintenanceButton.addEventListener('click', async function() {
+                    try {
+                        if (!productionLineToken) {
+                            Swal.fire('Error', 'No se encontró el token de la línea.', 'error');
+                            return;
+                        }
+                        if (!currentWorker || !currentWorker.id) {
+                            Swal.fire('Operario requerido', 'Debes seleccionar/iniciar sesión un operario antes de solicitar mantenimiento.', 'warning');
+                            return;
+                        }
+
+                        const { value: reason } = await Swal.fire({
+                            title: 'Solicitud de mantenimiento',
+                            input: 'textarea',
+                            inputLabel: 'Motivo',
+                            inputPlaceholder: 'Escribe el motivo de la petición de mantenimiento...',
+                            inputAttributes: { 'aria-label': 'Motivo de mantenimiento' },
+                            inputValidator: (value) => { if (!value || value.trim().length === 0) return 'El motivo es obligatorio'; },
+                            showCancelButton: true,
+                            confirmButtonText: 'Enviar',
+                            cancelButtonText: 'Cancelar'
+                        });
+
+                        if (!reason) return;
+
+                        maintenanceButton.disabled = true;
+                        maintenanceButton.classList.add('opacity-70', 'cursor-not-allowed');
+
+                        const url = `${API_BASE_URL}/api/maintenances/${encodeURIComponent(productionLineToken)}`;
+                        const res = await fetch(url, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                            body: JSON.stringify({ operator_id: currentWorker.id, annotation: reason })
+                        });
+
+                        if (res.status === 201 || res.status === 409) {
+                            const data = await res.json();
+                            // Forzar el overlay inmediatamente
+                            checkMaintenanceAndBlock(productionLineToken);
+                            Swal.fire('Enviado', 'La solicitud de mantenimiento ha sido registrada.', 'success');
+                        } else if (res.status === 404) {
+                            Swal.fire('Error', 'Token de línea inválido.', 'error');
+                        } else if (res.status === 422) {
+                            Swal.fire('Error de validación', 'Revisa los datos enviados.', 'error');
+                        } else {
+                            const text = await res.text();
+                            console.error('Maintenance create error:', res.status, text);
+                            Swal.fire('Error', 'No se pudo registrar la solicitud de mantenimiento.', 'error');
+                        }
+                    } catch (e) {
+                        console.error('Maintenance request error:', e);
+                        Swal.fire('Error', 'Ha ocurrido un error al enviar la solicitud.', 'error');
+                    } finally {
+                        maintenanceButton.disabled = false;
+                        maintenanceButton.classList.remove('opacity-70', 'cursor-not-allowed');
+                    }
+                });
+            }
 
             // Evento para el botón de WhatsApp
             const whatsappButton = document.getElementById('whatsapp-button');
