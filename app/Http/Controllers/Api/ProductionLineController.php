@@ -156,4 +156,102 @@ class ProductionLineController extends Controller
             'statuses' => $statuses
         ]);
     }
+
+    /**
+     * Get schedule status for a production line by its public token.
+     * Returns whether we are currently within any defined shift (in_shift)
+     * and whether the line is scheduled for the current shift window (scheduled).
+     * status values:
+     *  - 'scheduled'  -> in shift and line planned for at least one active shift
+     *  - 'unscheduled'-> in shift but line not planned for the current shift
+     *  - 'off_shift'  -> currently outside of all shift windows
+     *
+     * @param string $token
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getScheduleStatusByToken($token)
+    {
+        // Find line by token
+        $line = ProductionLine::where('token', $token)->first();
+        if (!$line) {
+            return response()->json(['success' => false, 'error' => 'Línea no encontrada'], 404);
+        }
+
+        // Current day of week: convert 0 (Sun) to 7 to match DB if needed
+        $currentDayOfWeek = now()->dayOfWeek;
+        if ($currentDayOfWeek == 0) {
+            $currentDayOfWeek = 7;
+        }
+
+        $currentTime = now();
+
+        // Get active availabilities for the line for current day
+        $availabilities = LineAvailability::where('production_line_id', $line->id)
+            ->where('day_of_week', $currentDayOfWeek)
+            ->where('active', true)
+            ->get();
+
+        // Get all shifts for the line (some implementations may keep shifts per line)
+        // We will consider a shift "active window" if current time is inside its [start, end) range,
+        // handling cross-midnight ranges as in getStatuses().
+        $shifts = ShiftList::where('production_line_id', $line->id)->get();
+
+        $inShift = false;
+        $scheduled = false;
+
+        foreach ($shifts as $shift) {
+            $startTime = null;
+            $endTime = null;
+            if (isset($shift->start_time) && isset($shift->end_time)) {
+                $startTime = Carbon::parse($shift->start_time);
+                $endTime = Carbon::parse($shift->end_time);
+            } elseif (isset($shift->start) && isset($shift->end)) {
+                $startTime = Carbon::parse($shift->start);
+                $endTime = Carbon::parse($shift->end);
+            }
+
+            if (!$startTime || !$endTime) {
+                continue;
+            }
+
+            $isNowInThisShift = false;
+            if ($startTime->greaterThan($endTime)) {
+                // Cross-midnight
+                if ($currentTime->greaterThanOrEqualTo($startTime) || $currentTime->lessThan($endTime)) {
+                    $isNowInThisShift = true;
+                }
+            } else {
+                if ($currentTime->greaterThanOrEqualTo($startTime) && $currentTime->lessThan($endTime)) {
+                    $isNowInThisShift = true;
+                }
+            }
+
+            if ($isNowInThisShift) {
+                $inShift = true;
+                // Check if this shift is planned for today for this line
+                $isPlanned = $availabilities->first(function ($a) use ($shift) {
+                    return (int)$a->shift_list_id === (int)$shift->id;
+                }) !== null;
+                if ($isPlanned) {
+                    $scheduled = true;
+                    break; // already scheduled in current shift
+                }
+                // else keep checking other overlapping shifts if any
+            }
+        }
+
+        $status = 'off_shift';
+        if ($inShift && $scheduled) {
+            $status = 'scheduled';
+        } elseif ($inShift && !$scheduled) {
+            $status = 'unscheduled';
+        }
+
+        return response()->json([
+            'success' => true,
+            'in_shift' => $inShift,
+            'scheduled' => $scheduled,
+            'status' => $status,
+        ]);
+    }
 }

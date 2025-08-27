@@ -107,6 +107,8 @@ Route::match(['get', 'post'], '/barcode-info-by-customer/{customerToken}', [GetT
 
 // Ruta para obtener estados de líneas de producción
 Route::get('/production-lines/statuses/{customerId?}', [ProductionLineController::class, 'getStatuses'])->name('api.production-lines.statuses');
+// Ruta para obtener el estado de planificación actual por token de línea
+Route::get('/production-lines/schedule-status/{token}', [ProductionLineController::class, 'getScheduleStatusByToken'])->name('api.production-lines.schedule-status');
 
 // Rutas para la disponibilidad de líneas de producción
 Route::get('/production-lines/{id}/availability', [LineAvailabilityController::class, 'getAvailability']);

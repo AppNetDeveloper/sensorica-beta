@@ -222,6 +222,36 @@
             font-size: clamp(1rem, 2.5vw, 1.5rem);
             opacity: 0.9;
         }
+        /* --- Overlay de Planificación (bloquea toda la UI si no está planificada) --- */
+        #planning-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.8);
+            display: none; /* oculto por defecto */
+            z-index: 999999; /* por debajo del mantenimiento */
+        }
+        #planning-overlay .message {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: #fff;
+            padding: 2rem;
+            backdrop-filter: blur(2px);
+        }
+        #planning-overlay .message h1 {
+            font-size: clamp(2rem, 5vw, 4rem);
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        #planning-overlay .message p {
+            margin-top: 1rem;
+            font-size: clamp(1rem, 2.2vw, 1.25rem);
+            opacity: 0.95;
+        }
         
         .column-counter {
             display: inline-flex;
@@ -540,16 +570,25 @@
       .lucide { font-family: 'LucideIcons'; font-style: normal; font-weight: normal; font-variant: normal; text-rendering: auto; line-height: 1; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; display: inline-block; vertical-align: middle; }
     </style>
 </head>
-<body class="bg-gray-200 p-8">
-    <!-- Overlay de Mantenimiento -->
-    <div id="maintenance-overlay">
-        <div class="message">
-            <div>
-                <h1>Máquina en mantenimiento</h1>
-                <p>La operación está temporalmente deshabilitada. Contacta con el supervisor.</p>
+    <body class="bg-gray-200 p-8">
+        <!-- Overlay de Mantenimiento -->
+        <div id="maintenance-overlay">
+            <div class="message">
+                <div>
+                    <h1>Máquina en mantenimiento</h1>
+                    <p>La operación está temporalmente deshabilitada. Contacta con el supervisor.</p>
+                </div>
             </div>
         </div>
-    </div>
+        <!-- Overlay de Planificación -->
+        <div id="planning-overlay" style="z-index: 10000;">
+            <div class="message">
+                <div>
+                    <h1>Máquina no planificada para este turno</h1>
+                    <p>Según la planificación de turnos, esta línea no está programada ahora.</p>
+                </div>
+            </div>
+        </div>
     <!-- Modal para mostrar detalles de la orden (ahora usado para artículos) -->
     <!-- Este modal se usa para mostrar los artículos de la orden, no las incidencias -->
     <div class="container mx-auto bg-white p-6 rounded-lg shadow-md">
@@ -1021,8 +1060,9 @@
             // --- Configuración ---
             const API_BASE_URL = window.location.origin;
             const REFRESH_INTERVAL_MS = 1000;
-            const PRODUCTION_ORDERS_REFRESH_INTERVAL_MS = 60000; // 60 seconds (aumentado de 5 a 60 segundos)
+            const PRODUCTION_ORDERS_REFRESH_INTERVAL_MS = 6000; // 6 seconds (aumentado de 5 a 60 segundos)
             const MAINTENANCE_POLL_INTERVAL_MS = 5000; // 5 segundos para comprobar mantenimiento
+            const PLANNING_POLL_INTERVAL_MS = 10000; // 10 segundos para comprobar planificación
             const API_DELAY_MS = 500;
             console.log(`API Base URL set dynamically to: ${API_BASE_URL}`);
             
@@ -3367,6 +3407,10 @@ async function updateOrderStatus(orderId, newStatus) {
             let maintenancePollId = null;
             let maintenanceRequestInFlight = false;
 
+            // --- Comprobar estado de planificación y bloquear UI si no está planificada en turno ---
+            let planningPollId = null;
+            let planningRequestInFlight = false;
+
             async function checkMaintenanceAndBlock(token) {
                 try {
                     if (!token || maintenanceRequestInFlight) return false;
@@ -3406,6 +3450,44 @@ async function updateOrderStatus(orderId, newStatus) {
                 return false;
             }
 
+            async function checkPlanningAndBlock(token) {
+                if (!token || planningRequestInFlight) return;
+                planningRequestInFlight = true;
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 4000);
+                    const url = `${API_BASE_URL}/api/production-lines/schedule-status/${encodeURIComponent(token)}`;
+                    console.log('Comprobando planificación:', url);
+                    const res = await fetch(url, { headers: { 'Accept': 'application/json' }, signal: controller.signal });
+                    clearTimeout(timeoutId);
+                    if (!res.ok) {
+                        console.warn('No se pudo comprobar planificación. Status:', res.status);
+                        return;
+                    }
+                    const data = await res.json();
+                    const overlay = document.getElementById('planning-overlay');
+                    if (!overlay) return;
+                    // Mostrar overlay solo si estamos en turno pero NO planificada
+                    if (data && data.success && data.in_shift === true && data.scheduled === false) {
+                        overlay.style.display = 'block';
+                        // No forzamos overflow si mantenimiento ya controla; mantener coherencia visual
+                        document.body.style.overflow = 'hidden';
+                    } else {
+                        overlay.style.display = 'none';
+                        // Solo liberar overflow si el de mantenimiento no está visible
+                        const mOverlay = document.getElementById('maintenance-overlay');
+                        if (mOverlay && mOverlay.style.display !== 'block') {
+                            document.body.style.overflow = '';
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error comprobando planificación:', e);
+                } finally {
+                    planningRequestInFlight = false;
+                }
+            }
+
+
             // --- Flujo Inicial ---
             productionLineToken = getTokenFromUrl();
             // Lanzar comprobación de mantenimiento (inmediata) y configurar polling cada 5s
@@ -3415,9 +3497,17 @@ async function updateOrderStatus(orderId, newStatus) {
                 checkMaintenanceAndBlock(productionLineToken);
             }, MAINTENANCE_POLL_INTERVAL_MS);
 
+            // Lanzar comprobación de planificación (inmediata) y configurar polling
+            checkPlanningAndBlock(productionLineToken);
+            if (planningPollId) clearInterval(planningPollId);
+            planningPollId = setInterval(() => {
+                checkPlanningAndBlock(productionLineToken);
+            }, PLANNING_POLL_INTERVAL_MS);
+
             // Limpiar el intervalo al salir de la página
             window.addEventListener('beforeunload', () => {
                 if (maintenancePollId) clearInterval(maintenancePollId);
+                if (planningPollId) clearInterval(planningPollId);
             });
             loadWorkers();
             fetchLastShiftHistory(productionLineToken);
