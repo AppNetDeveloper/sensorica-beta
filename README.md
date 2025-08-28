@@ -203,6 +203,57 @@ El módulo de Control de Calidad (QC) permite gestionar tanto las Incidencias de
   - Los iconos usan colores semánticos: rojo para incidencias, azul para confirmaciones, verde/amarillo para estadísticas.
 
 
+### Gestión de Mantenimientos
+
+El módulo de Mantenimientos permite registrar, iniciar y finalizar incidencias de mantenimiento por línea de producción, con trazabilidad de causas y piezas utilizadas, y una vista índice con métricas agregadas.
+
+- __¿Qué incluye?__
+  - Relación de muchos-a-muchos entre `maintenances` y `maintenance_causes`, y entre `maintenances` y `maintenance_parts` mediante tablas pivote.
+  - Formulario de finalización con selección múltiple de causas y piezas usadas.
+  - Vista índice con DataTable y un bloque de 3 tarjetas de resumen con totales dinámicos: “Stopped before Start”, “Downtime” y “Total Time”.
+  - Endpoint ligero en el `MaintenanceController@index` para devolver totales filtrados vía AJAX.
+
+- __Migraciones (tablas pivote)__
+  - `database/migrations/2025_08_28_173600_create_pivot_maintenance_cause_maintenance_table.php`
+  - `database/migrations/2025_08_28_173601_create_pivot_maintenance_part_maintenance_table.php`
+  - Ejecutar: `php artisan migrate`
+
+- __Modelo__
+  - `app/Models/Maintenance.php`
+    - Relaciones añadidas:
+      - `causes(): belongsToMany(MaintenanceCause::class)`
+      - `parts(): belongsToMany(MaintenancePart::class)`
+
+- __Controlador__
+  - `app/Http/Controllers/MaintenanceController.php`
+    - En `index(Request $request)` se añadió soporte AJAX para totales cuando `?totals=1`:
+      - `stopped_before_start`: segundos desde `created_at` hasta `start_datetime` (o hasta `end/now` si nunca inició).
+      - `downtime`: segundos desde `start_datetime` hasta `end/now`.
+      - `total_time`: segundos desde `created_at` hasta `end/now`.
+    - Respuesta también incluye las versiones formateadas `HH:MM:SS`.
+
+- __Vistas__
+  - `resources/views/customers/maintenances/finish.blade.php`
+    - Multiselect de causas y piezas usadas al finalizar un mantenimiento.
+  - `resources/views/customers/maintenances/index.blade.php`
+    - Se eliminó la columna “Machine Stopped?”.
+    - Se añadió una fila de 3 tarjetas debajo de los filtros con ids `#sum_stopped`, `#sum_downtime`, `#sum_total`.
+    - JS llama a `loadTotals()` que hace `fetch` a `index?totals=1` con los filtros actuales y actualiza las tarjetas.
+    - DataTable muestra columnas “Stopped before Start”, “Downtime”, “Total Time”, además de listas de causas y piezas.
+
+- __Internacionalización__
+  - Claves añadidas en `resources/lang/es.json` y `resources/lang/en.json`:
+    - "Cause", "Causes", "Part", "Parts"
+    - "Maintenance Cause(s)", "Maintenance Part(s)", "Used Parts"
+    - "Stopped before Start", "Total Time"
+
+- __Uso rápido__
+  1. Ejecuta migraciones: `php artisan migrate`.
+  2. Entra a `Clientes` → Mantenimientos de un cliente.
+  3. Aplica filtros según línea/operario/usuario/fechas.
+  4. Observa las tarjetas de resumen; se actualizan automáticamente según los filtros.
+  5. Finaliza un mantenimiento seleccionando múltiples causas y piezas; verifica que el índice muestra las listas y que los totales se recalculan.
+
 ### Sistemas de Control y Transformación de Datos
 
 #### Transformación de Sensores
