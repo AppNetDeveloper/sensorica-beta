@@ -79,6 +79,8 @@
             <th>{{ __('Production Line') }}</th>
             <th>{{ __('Start') }}</th>
             <th>{{ __('End') }}</th>
+            <th>{{ __('Downtime') }}</th>
+            <th>{{ __('Machine Stopped?') }}</th>
             <th>{{ __('Operator') }}</th>
             <th>{{ __('User') }}</th>
             <th>{{ __('Annotations') }}</th>
@@ -110,6 +112,12 @@
       serverSide: true,
       responsive: true,
       order: [[2, 'desc']], // start_datetime desc
+      columnDefs: [
+        { targets: -1, responsivePriority: 1 }, // Actions column highest priority
+        { targets: 0, responsivePriority: 100 }, // ID lowest priority
+        { targets: [2,3], responsivePriority: 2 }, // Start/End
+        { targets: [4], responsivePriority: 3 } // Downtime
+      ],
       ajax: {
         url: "{{ route('customers.maintenances.index', $customer->id) }}",
         data: function(d) {
@@ -128,6 +136,8 @@
         { data: 'production_line', name: 'production_line', orderable: false, searchable: true },
         { data: 'start_datetime', name: 'start_datetime' },
         { data: 'end_datetime', name: 'end_datetime' },
+        { data: 'downtime_formatted', name: 'downtime_formatted', orderable: false, searchable: false },
+        { data: 'production_line_stop_label', name: 'production_line_stop', orderable: false, searchable: false },
         { data: 'operator_name', name: 'operator_name', orderable: false, searchable: true },
         { data: 'user_name', name: 'user_name', orderable: false, searchable: true },
         { data: 'annotations_short', name: 'annotations', orderable: false, searchable: true },

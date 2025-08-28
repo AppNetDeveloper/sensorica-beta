@@ -28,12 +28,14 @@ class WhatsAppController extends Controller
                 'isLinked' => $isLinked,
                 'qrCode' => $qrCode,
                 'phoneNumber' => env('WHATSAPP_PHONE_NOT'),
+                'phoneNumberMaintenance' => env('WHATSAPP_PHONE_MANTENIMIENTO'),
             ]);
         } catch (\Exception $e) {
             return view('whatsapp.notification', [
                 'isLinked' => false,
                 'qrCode' => null,
                 'phoneNumber' => env('WHATSAPP_PHONE_NOT'),
+                'phoneNumberMaintenance' => env('WHATSAPP_PHONE_MANTENIMIENTO'),
             ]);
         }
     }
@@ -66,15 +68,48 @@ class WhatsAppController extends Controller
         $envPath = base_path('.env');
         $envContent = file_get_contents($envPath);
 
-        $envContent = preg_replace(
-            '/^WHATSAPP_PHONE_NOT=.*$/m',
-            "WHATSAPP_PHONE_NOT={$newPhone}",
-            $envContent
-        );
+        if (preg_match('/^WHATSAPP_PHONE_NOT=.*/m', $envContent)) {
+            $envContent = preg_replace(
+                '/^WHATSAPP_PHONE_NOT=.*$/m',
+                "WHATSAPP_PHONE_NOT={$newPhone}",
+                $envContent
+            );
+        } else {
+            $envContent .= (str_ends_with($envContent, "\n") ? '' : "\n") . "WHATSAPP_PHONE_NOT={$newPhone}\n";
+        }
 
         file_put_contents($envPath, $envContent);
 
         return redirect()->route('whatsapp.notifications')->with('status', 'Número de notificación actualizado correctamente.');
+    }
+
+    /**
+     * Actualizar los números de mantenimiento (separados por coma) en .env.
+     */
+    public function updateMaintenancePhones(Request $request)
+    {
+        $request->validate([
+            // Permitir lista separada por comas, espacios opcionales; hasta ~200 chars
+            'maintenance_phones' => 'required|string|max:200',
+        ]);
+
+        $newPhones = trim($request->input('maintenance_phones'));
+        $envPath = base_path('.env');
+        $envContent = file_get_contents($envPath);
+
+        if (preg_match('/^WHATSAPP_PHONE_MANTENIMIENTO=.*/m', $envContent)) {
+            $envContent = preg_replace(
+                '/^WHATSAPP_PHONE_MANTENIMIENTO=.*$/m',
+                "WHATSAPP_PHONE_MANTENIMIENTO={$newPhones}",
+                $envContent
+            );
+        } else {
+            $envContent .= (str_ends_with($envContent, "\n") ? '' : "\n") . "WHATSAPP_PHONE_MANTENIMIENTO={$newPhones}\n";
+        }
+
+        file_put_contents($envPath, $envContent);
+
+        return redirect()->route('whatsapp.notifications')->with('status', 'Teléfonos de mantenimiento actualizados correctamente.');
     }
 
     /**

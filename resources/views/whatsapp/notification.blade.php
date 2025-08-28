@@ -57,6 +57,24 @@
             </div>
         </div>
 
+        {{-- Teléfonos de Mantenimiento --}}
+        <div class="card shadow-lg mb-4">
+            <div class="card-body">
+                <h3 class="h5 mb-3 text-center"><i class="bi bi-tools"></i> {{ __('Teléfonos de Mantenimiento') }}</h3>
+                <form action="{{ route('whatsapp.updateMaintenancePhones') }}" method="POST">
+                    @csrf
+                    <div class="mb-3">
+                        <label for="maintenance_phones" class="form-label">{{ __('Números (separados por coma)') }}</label>
+                        <input type="text" name="maintenance_phones" id="maintenance_phones" class="form-control" value="{{ $phoneNumberMaintenance }}" placeholder="346XXXXXXXX, 346YYYYYYYY">
+                        <div class="form-text">{{ __('Ejemplo: 34611111111,34622222222') }}</div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-save"></i> {{ __('Guardar teléfonos') }}
+                    </button>
+                </form>
+            </div>
+        </div>
+
         {{-- Actualizar Número de Notificación --}}
         <div class="card shadow-lg mb-4">
             <div class="card-body">

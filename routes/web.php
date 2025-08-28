@@ -134,6 +134,12 @@ Route::prefix('customers')->name('customers.')->group(function () {
             ->names('maintenances')
             ->parameters(['maintenances' => 'maintenance']);
 
+        // Finalizar mantenimiento (formulario y acción)
+        Route::get('maintenances/{maintenance}/finish', [MaintenanceController::class, 'finishForm'])
+            ->name('maintenances.finish.form');
+        Route::post('maintenances/{maintenance}/finish', [MaintenanceController::class, 'finishStore'])
+            ->name('maintenances.finish.store');
+
         // Rutas para las incidencias de órdenes de producción
         Route::get('production-order-incidents', [ProductionOrderIncidentController::class, 'index'])
             ->name('production-order-incidents.index');
@@ -454,6 +460,7 @@ Route::post('generator_builder/generate-from-file', '\InfyOm\GeneratorBuilder\Co
 Route::get('whatsapp/notifications', [App\Http\Controllers\WhatsAppController::class, 'sendNotification'])->name('whatsapp.notifications');
 Route::post('whatsapp/disconnect', [App\Http\Controllers\WhatsAppController::class, 'disconnect'])->name('whatsapp.disconnect');
 Route::post('whatsapp/update-phone', [App\Http\Controllers\WhatsAppController::class, 'updatePhoneNumber'])->name('whatsapp.updatePhone');
+Route::post('whatsapp/update-maintenance-phones', [App\Http\Controllers\WhatsAppController::class, 'updateMaintenancePhones'])->name('whatsapp.updateMaintenancePhones');
 Route::post('whatsapp/send-test-message', [App\Http\Controllers\WhatsAppController::class, 'sendTestMessage'])->name('whatsapp.sendTestMessage');
 Route::get('/whatsapp-status', [WhatsAppController::class, 'getStatus'])->name('whatsapp.status');
 
@@ -563,6 +570,7 @@ Route::prefix('telegram')->group(function () {
     Route::post('/verify-code', [TelegramController::class, 'verifyCode'])->name('telegram.verifyCode');
     Route::post('/logout', [TelegramController::class, 'logout'])->name('telegram.logout');
     Route::post('/send-message', [TelegramController::class, 'sendMessage'])->name('telegram.sendMessage');
+    Route::post('/update-maintenance-peers', [TelegramController::class, 'updateMaintenancePeers'])->name('telegram.updateMaintenancePeers');
     Route::get('/status', [TelegramController::class, 'status'])->name('telegram.status');
 });
 

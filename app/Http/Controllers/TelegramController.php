@@ -25,7 +25,8 @@ class TelegramController extends Controller
             }
         }
     
-        return view('telegram.index', compact('isConnected')); // Se cambia a 'telegram.index'
+        $maintenancePeers = env('TELEGRAM_MANTENIMIENTO_PEERS');
+        return view('telegram.index', compact('isConnected', 'maintenancePeers')); // Se cambia a 'telegram.index'
     }
     
 
@@ -106,6 +107,33 @@ class TelegramController extends Controller
         }
 
         return back()->with('error', 'Error al enviar el mensaje.');
+    }
+
+    /**
+     * Actualiza los destinatarios de mantenimiento (separados por coma) en .env
+     */
+    public function updateMaintenancePeers(Request $request)
+    {
+        $request->validate([
+            'maintenance_peers' => 'required|string|max:300',
+        ]);
+
+        $envPath = base_path('.env');
+        $envContent = file_get_contents($envPath);
+        $newPeers = trim($request->input('maintenance_peers'));
+
+        if (preg_match('/^TELEGRAM_MANTENIMIENTO_PEERS=.*/m', $envContent)) {
+            $envContent = preg_replace(
+                '/^TELEGRAM_MANTENIMIENTO_PEERS=.*$/m',
+                "TELEGRAM_MANTENIMIENTO_PEERS={$newPeers}",
+                $envContent
+            );
+        } else {
+            $envContent .= (str_ends_with($envContent, "\n") ? '' : "\n") . "TELEGRAM_MANTENIMIENTO_PEERS={$newPeers}\n";
+        }
+
+        file_put_contents($envPath, $envContent);
+        return redirect()->route('telegram.index')->with('status', 'Destinatarios de mantenimiento actualizados.');
     }
 
     public function status()

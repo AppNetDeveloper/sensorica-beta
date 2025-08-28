@@ -35,6 +35,19 @@
         <textarea class="form-control" name="annotations" rows="4"></textarea>
       </div>
 
+      <div class="mb-3">
+        <label class="form-label d-block">{{ __('Machine stop during maintenance?') }}</label>
+        <div class="form-check form-check-inline">
+          <input class="form-check-input" type="radio" name="production_line_stop" id="pls_yes" value="1" checked>
+          <label class="form-check-label" for="pls_yes">{{ __('Yes, stop the machine (blocking)') }}</label>
+        </div>
+        <div class="form-check form-check-inline">
+          <input class="form-check-input" type="radio" name="production_line_stop" id="pls_no" value="0">
+          <label class="form-check-label" for="pls_no">{{ __('No, it can keep working (non-blocking)') }}</label>
+        </div>
+        <div class="form-text">{{ __('If selected No, the UI will show a non-blocking indicator instead of the full overlay.') }}</div>
+      </div>
+
       <div class="row">
         <div class="col-md-6 mb-3">
           <label class="form-label">{{ __('Operator (optional)') }}</label>

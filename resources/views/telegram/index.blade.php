@@ -88,6 +88,24 @@
         </div>
         @endif
 
+        {{-- Destinatarios de Mantenimiento (Peers) --}}
+        <div class="card shadow-lg mb-4">
+            <div class="card-body">
+                <h3 class="h5 mb-3 text-center"><i class="bi bi-person-lines-fill"></i> {{ __('Destinatarios de Mantenimiento (Telegram)') }}</h3>
+                <form action="{{ route('telegram.updateMaintenancePeers') }}" method="POST">
+                    @csrf
+                    <div class="mb-3">
+                        <label for="maintenance_peers" class="form-label">{{ __('Peers (separados por coma)') }}</label>
+                        <input type="text" name="maintenance_peers" id="maintenance_peers" class="form-control" value="{{ $maintenancePeers }}" placeholder="@usuario1, +346XXXXXXXX, 123456789">
+                        <div class="form-text">{{ __('Puedes usar usernames (@usuario) o números con prefijo país (+34...). Separar por comas.') }}</div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-save"></i> {{ __('Guardar destinatarios') }}
+                    </button>
+                </form>
+            </div>
+        </div>
+
         {{-- Enviar Mensaje de Prueba --}}
         @if ($isConnected)
         <div class="card shadow-lg mb-4">

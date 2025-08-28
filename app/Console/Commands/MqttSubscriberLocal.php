@@ -279,7 +279,13 @@ class MqttSubscriberLocal extends Command
                 'barcoder_id'               => $barcoderId,
                 'production_line_id'        => null, // Set production_line_id to null for default topic
                 'json'                      => $messageData,
-                'status'                    => (strpos($messageData['orderId'] ?? '', '-QC') !== false) ? '3' : '0',
+                // Status: set to '3' if orderId contains 'QC' as a dash-delimited token (e.g., '-QC', 'ABC-QC', '-QC-CNC')
+                'status'                    => (function($orderId){
+                    $oid = strtoupper((string)($orderId ?? ''));
+                    if ($oid === '') { return '0'; }
+                    $parts = preg_split('/-+/', $oid);
+                    return (is_array($parts) && in_array('QC', $parts, true)) ? '3' : '0';
+                })($messageData['orderId'] ?? null),
                 'has_stock'                 => $hasStock, // Añadido el campo has_stock
                 'orden'                     => $computedOrden,
                 'theoretical_time'          => isset($messageData['theoretical_time']) ? floatval($messageData['theoretical_time']) : null,
