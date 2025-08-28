@@ -1136,6 +1136,43 @@
 
 
             // Inicialización de variables
+            // Delegación: doble click en tarjetas dentro de Incidencias
+            if (colIncidencias) {
+                colIncidencias.addEventListener('dblclick', (e) => {
+                    const cardEl = e.target.closest('.kanban-card');
+                    if (!cardEl || !colIncidencias.contains(cardEl)) return;
+                    // Evitar si no hay operario
+                    if (!currentWorker) { showWorkerRequiredAlert(); return; }
+                    const orderId = cardEl.dataset.cardId;
+                    if (!orderId) return;
+                    // Confirmar acción
+                    const enCursoCard = document.querySelector('#col-en-curso .kanban-card');
+                    const hasEnCurso = !!enCursoCard;
+                    const textMsg = hasEnCurso
+                        ? 'Estás a punto de pausar la orden en curso y ponerla como Pendiente (primera), e iniciar esta incidencia en En curso.'
+                        : 'No hay orden en curso. Esta incidencia pasará directamente a En curso.';
+                    if (window.Swal && typeof window.Swal.fire === 'function') {
+                        window.Swal.fire({
+                            title: 'Confirmar cambio',
+                            text: textMsg,
+                            icon: 'question',
+                            showCancelButton: true,
+                            confirmButtonColor: '#3085d6',
+                            cancelButtonColor: '#ef4444',
+                            confirmButtonText: 'Sí, continuar',
+                            cancelButtonText: 'Cancelar'
+                        }).then(result => {
+                            if (result.isConfirmed) {
+                                swapIncidentWithEnCurso(cardEl, orderId);
+                            }
+                        });
+                    } else {
+                        if (confirm('Confirmar cambio de estados')) {
+                            swapIncidentWithEnCurso(cardEl, orderId);
+                        }
+                    }
+                });
+            }
             let currentWorker = null;
             let currentShiftState = { type: null, action: null };
             let selectedShiftId = null;
@@ -1472,6 +1509,113 @@
                 } else {
                     if (!indicatorElement) console.error("Elemento indicador del círculo de progreso no encontrado.");
                     if (!valueElement) console.error("Elemento de valor del círculo de progreso no encontrado.");
+                }
+            }
+
+            // Intercambia: la tarjeta en curso (si existe) pasa a Pendiente (primera),
+            // y la tarjeta de Incidencias indicada pasa a En curso.
+            async function swapIncidentWithEnCurso(incidentCardEl, incidentOrderId) {
+                try {
+                    // Evitar acción si overlays bloquean
+                    const mOverlay = document.getElementById('maintenance-overlay');
+                    const pOverlay = document.getElementById('planning-overlay');
+                    if ((mOverlay && mOverlay.style.display === 'block') || (pOverlay && pOverlay.style.display === 'block')) {
+                        return;
+                    }
+
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const productionLineToken = urlParams.get('token');
+                    if (!productionLineToken) throw new Error('No se encontró el token de la línea de producción');
+
+                    const enCursoCard = document.querySelector('#col-en-curso .kanban-card');
+                    const enCursoOrderId = enCursoCard ? enCursoCard.dataset.cardId : null;
+
+                    // Mostrar loading
+                    if (window.Swal && typeof window.Swal.fire === 'function') {
+                        window.Swal.fire({
+                            title: 'Actualizando estados...',
+                            allowOutsideClick: false,
+                            didOpen: () => window.Swal.showLoading()
+                        });
+                    }
+
+                    // 1) Si hay en curso, mandarlo a pendiente (top)
+                    if (enCursoOrderId) {
+                        const payload1 = {
+                            status: 0, // Pendiente
+                            token: productionLineToken,
+                            move_to_top: true,
+                            force_reorder: true
+                        };
+                        const resp1 = await fetch(`${API_BASE_URL}/api/production-orders/${enCursoOrderId}`, {
+                            method: 'PATCH',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                            },
+                            body: JSON.stringify(payload1)
+                        });
+                        if (!resp1.ok) throw new Error('No se pudo mover la orden en curso a Pendiente');
+
+                        // Actualizar DOM rápidamente
+                        const colPendiente = document.getElementById('col-pendiente');
+                        if (colPendiente && enCursoCard) {
+                            enCursoCard.dataset.status = '0';
+                            // Icono reloj
+                            const firstDiv = enCursoCard.querySelector('div > div');
+                            if (firstDiv) {
+                                const relojIcon = '<i class="fas fa-clock text-red-500 mr-1" title="Pendiente"></i>';
+                                const currentHTML = firstDiv.innerHTML;
+                                firstDiv.innerHTML = currentHTML.replace(/<i class="fas fa-(clock|play|check|exclamation-triangle).*?<\/i>/g, relojIcon);
+                            }
+                            colPendiente.insertBefore(enCursoCard, colPendiente.querySelector('.kanban-card'));
+                        }
+                    }
+
+                    // 2) Promover la incidencia a En curso
+                    const payload2 = { status: 1, token: productionLineToken };
+                    const resp2 = await fetch(`${API_BASE_URL}/api/production-orders/${incidentOrderId}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                        },
+                        body: JSON.stringify(payload2)
+                    });
+                    if (!resp2.ok) throw new Error('No se pudo promover la incidencia a En curso');
+
+                    // Mover en DOM a En curso
+                    const colEnCurso = document.getElementById('col-en-curso');
+                    if (colEnCurso && incidentCardEl) {
+                        incidentCardEl.dataset.status = '1';
+                        const firstDivInc = incidentCardEl.querySelector('div > div');
+                        if (firstDivInc) {
+                            const playIcon = '<i class="fas fa-play text-blue-500 mr-1" title="En curso"></i>';
+                            const currentHTML2 = firstDivInc.innerHTML;
+                            firstDivInc.innerHTML = currentHTML2.replace(/<i class="fas fa-(clock|play|check|exclamation-triangle).*?<\/i>/g, playIcon);
+                        }
+                        colEnCurso.insertBefore(incidentCardEl, colEnCurso.querySelector('.kanban-card'));
+                    }
+
+                    // Refrescar datos para sincronizar contadores y órdenes
+                    if (typeof fetchProductionOrders === 'function') {
+                        fetchProductionOrders(productionLineToken);
+                    }
+                    if (typeof fetchOrderStats === 'function') {
+                        fetchOrderStats(productionLineToken);
+                    }
+
+                    if (window.Swal && typeof window.Swal.close === 'function') {
+                        window.Swal.close();
+                    }
+
+                } catch (err) {
+                    console.error('Error en swapIncidentWithEnCurso:', err);
+                    if (window.Swal && typeof window.Swal.fire === 'function') {
+                        window.Swal.fire({ icon: 'error', title: 'Error', text: err.message });
+                    }
                 }
             }
 
@@ -2505,7 +2649,7 @@
                                 html: `
                                     <div class="text-left">
                                         <label for="qualityInput" class="block text-sm font-bold text-red-600 text-center mb-2">
-                                            Escanee o escriba las pegatinas  (una por línea) o añada notas
+                                            Escanee o escriba las pegatinas ,o añada notas
                                         </label>
                                         <textarea id="qualityInput" class="swal2-textarea" placeholder="Escanee aquí..." rows="5" style="width:93%;resize:vertical;max-height:140px;min-height:90px;box-sizing:border-box"></textarea>
                                     </div>
@@ -2513,8 +2657,8 @@
                                 focusConfirm: false,
                                 showCancelButton: true,
                                 showDenyButton: true,
-                                confirmButtonText: 'Guardar problemas',
-                                denyButtonText: 'Confirmar QC',
+                                confirmButtonText: 'Crear incidencia de calidad',
+                                denyButtonText: 'Crear control de calidad',
                                 cancelButtonText: 'Cancelar',
                                 didOpen: () => {
                                     const ta = Swal.getPopup().querySelector('#qualityInput');
@@ -2756,6 +2900,44 @@
                             }
                         });
                     }
+                }
+                // Agregar evento de doble click para tarjetas en Incidencias (status 3): swap con En curso
+                if (order.status === 3) {
+                    card.addEventListener('dblclick', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('[DBLCLICK] Incidencia detectada. Card ID:', order.id);
+                        if (!currentWorker) {
+                            showWorkerRequiredAlert();
+                            return;
+                        }
+                        const enCursoCard = document.querySelector('#col-en-curso .kanban-card');
+                        const hasEnCurso = !!enCursoCard;
+                        const textMsg = hasEnCurso
+                            ? 'Estás a punto de pausar la orden en curso y ponerla como Pendiente (primera), e iniciar esta incidencia en En curso.'
+                            : 'No hay orden en curso. Esta incidencia pasará directamente a En curso.';
+                        if (window.Swal && typeof window.Swal.fire === 'function') {
+                            window.Swal.fire({
+                                title: 'Confirmar cambio',
+                                text: textMsg,
+                                icon: 'question',
+                                showCancelButton: true,
+                                confirmButtonColor: '#3085d6',
+                                cancelButtonColor: '#ef4444',
+                                confirmButtonText: 'Sí, continuar',
+                                cancelButtonText: 'Cancelar'
+                            }).then(result => {
+                                if (result.isConfirmed) {
+                                    swapIncidentWithEnCurso(card, order.id);
+                                }
+                            });
+                        } else {
+                            // Fallback sin Swal
+                            if (confirm('Confirmar cambio de estados')) {
+                                swapIncidentWithEnCurso(card, order.id);
+                            }
+                        }
+                    });
                 }
                 return card;
             }

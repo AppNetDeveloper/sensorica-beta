@@ -279,7 +279,7 @@ class MqttSubscriberLocal extends Command
                 'barcoder_id'               => $barcoderId,
                 'production_line_id'        => null, // Set production_line_id to null for default topic
                 'json'                      => $messageData,
-                'status'                    => '0',
+                'status'                    => (strpos($messageData['orderId'] ?? '', '-QC') !== false) ? '3' : '0',
                 'has_stock'                 => $hasStock, // Añadido el campo has_stock
                 'orden'                     => $computedOrden,
                 'theoretical_time'          => isset($messageData['theoretical_time']) ? floatval($messageData['theoretical_time']) : null,

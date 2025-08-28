@@ -18,11 +18,15 @@ class Maintenance extends Model
         'operator_id',
         'user_id',
         'operator_annotations',
+        'accumulated_maintenance_seconds',
+        'production_line_stop',
     ];
 
     protected $casts = [
         'start_datetime' => 'datetime',
         'end_datetime' => 'datetime',
+        'accumulated_maintenance_seconds' => 'integer',
+        'production_line_stop' => 'boolean',
     ];
 
     public function customer()
