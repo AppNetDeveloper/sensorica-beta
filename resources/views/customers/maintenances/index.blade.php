@@ -17,9 +17,17 @@
 <div class="card">
   <div class="card-header d-flex justify-content-between align-items-center">
     <h5 class="mb-0">{{ __('Maintenances') }}</h5>
-    @can('maintenance-create')
-    <a href="{{ route('customers.maintenances.create', $customer->id) }}" class="btn btn-sm btn-primary">{{ __('Create') }}</a>
-    @endcan
+    <div class="d-flex gap-2">
+      <a href="{{ route('customers.maintenance-causes.index', $customer->id) }}" class="btn btn-sm btn-outline-secondary">
+        {{ __('Causas de mantenimiento') }}
+      </a>
+      <a href="{{ route('customers.maintenance-parts.index', $customer->id) }}" class="btn btn-sm btn-outline-secondary">
+        {{ __('Piezas de mantenimiento') }}
+      </a>
+      @can('maintenance-create')
+      <a href="{{ route('customers.maintenances.create', $customer->id) }}" class="btn btn-sm btn-primary">{{ __('Create') }}</a>
+      @endcan
+    </div>
   </div>
   <div class="card-body">
     <form method="GET" action="{{ route('customers.maintenances.index', $customer->id) }}" class="row g-2 align-items-end mb-3">
@@ -71,16 +79,63 @@
       </div>
     </form>
 
+    <!-- Summary cards -->
+    <div class="row g-3 mb-3" id="maint-summary">
+      <div class="col-md-4">
+        <div class="card h-100">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <div class="text-muted small">{{ __('Stopped before Start') }}</div>
+                <div class="fs-4 fw-bold" id="sum_stopped">00:00:00</div>
+              </div>
+              <i class="ti ti-player-pause fs-2 text-warning"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card h-100">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <div class="text-muted small">{{ __('Downtime') }}</div>
+                <div class="fs-4 fw-bold" id="sum_downtime">00:00:00</div>
+              </div>
+              <i class="ti ti-clock fs-2 text-danger"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card h-100">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <div class="text-muted small">{{ __('Total Time') }}</div>
+                <div class="fs-4 fw-bold" id="sum_total">00:00:00</div>
+              </div>
+              <i class="ti ti-sum fs-2 text-primary"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="table-responsive" style="max-width: 100%; margin: 0 auto;">
       <table class="table table-striped align-middle" id="maintenancesTable">
         <thead>
           <tr>
             <th>#</th>
             <th>{{ __('Production Line') }}</th>
+            <th>{{ __('Created') }}</th>
             <th>{{ __('Start') }}</th>
             <th>{{ __('End') }}</th>
+            <th>{{ __('Stopped before Start') }}</th>
             <th>{{ __('Downtime') }}</th>
-            <th>{{ __('Machine Stopped?') }}</th>
+            <th>{{ __('Total Time') }}</th>
+            <th>{{ __('Causes') }}</th>
+            <th>{{ __('Parts') }}</th>
             <th>{{ __('Operator') }}</th>
             <th>{{ __('User') }}</th>
             <th>{{ __('Annotations') }}</th>
@@ -111,12 +166,12 @@
       processing: true,
       serverSide: true,
       responsive: true,
-      order: [[2, 'desc']], // start_datetime desc
+      order: [[2, 'desc']], // created_at desc
       columnDefs: [
         { targets: -1, responsivePriority: 1 }, // Actions column highest priority
         { targets: 0, responsivePriority: 100 }, // ID lowest priority
-        { targets: [2,3], responsivePriority: 2 }, // Start/End
-        { targets: [4], responsivePriority: 3 } // Downtime
+        { targets: [2,3,4], responsivePriority: 2 }, // Created/Start/End
+        { targets: [5,6,7], responsivePriority: 3 } // Stopped/Downtime/Total
       ],
       ajax: {
         url: "{{ route('customers.maintenances.index', $customer->id) }}",
@@ -134,10 +189,14 @@
       columns: [
         { data: 'id', name: 'id' },
         { data: 'production_line', name: 'production_line', orderable: false, searchable: true },
+        { data: 'created_at', name: 'created_at' },
         { data: 'start_datetime', name: 'start_datetime' },
         { data: 'end_datetime', name: 'end_datetime' },
+        { data: 'stopped_formatted', name: 'stopped_formatted', orderable: false, searchable: false },
         { data: 'downtime_formatted', name: 'downtime_formatted', orderable: false, searchable: false },
-        { data: 'production_line_stop_label', name: 'production_line_stop', orderable: false, searchable: false },
+        { data: 'total_time_formatted', name: 'total_time_formatted', orderable: false, searchable: false },
+        { data: 'causes_list', name: 'causes_list', orderable: false, searchable: true },
+        { data: 'parts_list', name: 'parts_list', orderable: false, searchable: true },
         { data: 'operator_name', name: 'operator_name', orderable: false, searchable: true },
         { data: 'user_name', name: 'user_name', orderable: false, searchable: true },
         { data: 'annotations_short', name: 'annotations', orderable: false, searchable: true },
@@ -149,11 +208,41 @@
       }
     });
 
+    // Load totals
+    function loadTotals() {
+      const form = document.querySelector('form[action="{{ route('customers.maintenances.index', $customer->id) }}"]');
+      const params = new URLSearchParams({
+        totals: 1,
+        production_line_id: form.production_line_id.value || '',
+        operator_id: form.operator_id.value || '',
+        user_id: form.user_id.value || '',
+        start_from: form.start_from.value || '',
+        start_to: form.start_to.value || '',
+        end_from: form.end_from.value || '',
+        end_to: form.end_to.value || ''
+      });
+      fetch("{{ route('customers.maintenances.index', $customer->id) }}?" + params.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest' }})
+        .then(r => r.json())
+        .then(data => {
+          document.getElementById('sum_stopped').textContent = data.stopped_before_start || '00:00:00';
+          document.getElementById('sum_downtime').textContent = data.downtime || '00:00:00';
+          document.getElementById('sum_total').textContent = data.total_time || '00:00:00';
+        })
+        .catch(() => {
+          document.getElementById('sum_stopped').textContent = '—';
+          document.getElementById('sum_downtime').textContent = '—';
+          document.getElementById('sum_total').textContent = '—';
+        });
+    }
+
+    loadTotals();
+
     // Filtros: recargar DataTable sin navegar
     const filterForm = document.querySelector('form[action="{{ route('customers.maintenances.index', $customer->id) }}"]');
     filterForm.addEventListener('submit', function(e){
       e.preventDefault();
       table.ajax.reload();
+      loadTotals();
     });
   });
 </script>

@@ -953,5 +953,16 @@
     "Machine stop during maintenance?": "¿Parar la máquina durante el mantenimiento?",
     "Yes, stop the machine (blocking)": "Sí, parar la máquina (bloqueante)",
     "No, it can keep working (non-blocking)": "No, puede seguir funcionando (no bloqueante)",
-    "If selected No, the UI will show a non-blocking indicator instead of the full overlay.": "Si se selecciona No, la interfaz mostrará un indicador no bloqueante en lugar de la superposición completa."
+    "If selected No, the UI will show a non-blocking indicator instead of the full overlay.": "Si se selecciona No, la interfaz mostrará un indicador no bloqueante en lugar de la superposición completa.",
+    "Cause": "Causa",
+    "Causes": "Causas",
+    "Part": "Pieza",
+    "Parts": "Piezas",
+    "Maintenance Cause": "Causa de Mantenimiento",
+    "Maintenance Causes": "Causas de mantenimiento",
+    "Maintenance Part": "Pieza de Mantenimiento",
+    "Maintenance Parts": "Piezas de mantenimiento",
+    "Used Parts": "Piezas usadas",
+    "Stopped before Start": "Parada previa al inicio",
+    "Total Time": "Tiempo total"
 }

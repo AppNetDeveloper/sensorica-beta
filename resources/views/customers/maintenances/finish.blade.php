@@ -44,6 +44,34 @@
             @enderror
           </div>
 
+          <div class="mb-3">
+            <label for="cause_ids" class="form-label fw-bold">{{ __('Causas de mantenimiento') }}</label>
+            <select id="cause_ids" name="cause_ids[]" class="form-select" multiple size="8">
+              @foreach(($causes ?? []) as $cause)
+                <option value="{{ $cause->id }}" {{ in_array($cause->id, old('cause_ids', $selectedCauseIds ?? [])) ? 'selected' : '' }}>
+                  {{ $cause->name }}
+                </option>
+              @endforeach
+            </select>
+            @error('cause_ids')
+              <div class="text-danger small">{{ $message }}</div>
+            @enderror
+          </div>
+
+          <div class="mb-3">
+            <label for="part_ids" class="form-label fw-bold">{{ __('Piezas usadas') }}</label>
+            <select id="part_ids" name="part_ids[]" class="form-select" multiple size="8">
+              @foreach(($parts ?? []) as $part)
+                <option value="{{ $part->id }}" {{ in_array($part->id, old('part_ids', $selectedPartIds ?? [])) ? 'selected' : '' }}>
+                  {{ $part->name }}
+                </option>
+              @endforeach
+            </select>
+            @error('part_ids')
+              <div class="text-danger small">{{ $message }}</div>
+            @enderror
+          </div>
+
           <div class="d-flex gap-2">
             <a href="{{ route('customers.maintenances.index', $customer->id) }}" class="btn btn-secondary">{{ __('Cancelar') }}</a>
             <button type="submit" class="btn btn-warning">{{ __('Finalizar mantenimiento ahora') }}</button>

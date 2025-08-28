@@ -19,6 +19,7 @@ class Maintenance extends Model
         'user_id',
         'operator_annotations',
         'accumulated_maintenance_seconds',
+        'accumulated_maintenance_seconds_stoped',
         'production_line_stop',
     ];
 
@@ -26,12 +27,25 @@ class Maintenance extends Model
         'start_datetime' => 'datetime',
         'end_datetime' => 'datetime',
         'accumulated_maintenance_seconds' => 'integer',
+        'accumulated_maintenance_seconds_stoped' => 'integer',
         'production_line_stop' => 'boolean',
     ];
 
     public function customer()
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function causes()
+    {
+        return $this->belongsToMany(MaintenanceCause::class, 'maintenance_cause_maintenance', 'maintenance_id', 'maintenance_cause_id')
+            ->withTimestamps();
+    }
+
+    public function parts()
+    {
+        return $this->belongsToMany(MaintenancePart::class, 'maintenance_part_maintenance', 'maintenance_id', 'maintenance_part_id')
+            ->withTimestamps();
     }
 
     public function productionLine()

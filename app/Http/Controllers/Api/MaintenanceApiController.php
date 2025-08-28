@@ -34,7 +34,7 @@ class MaintenanceApiController extends Controller
                 $q->whereNull('end_datetime')
                   ->orWhere('end_datetime', '0000-00-00 00:00:00');
             })
-            ->latest('start_datetime')
+            ->latest('created_at')
             ->first();
         if ($active) {
             return response()->json([
@@ -48,7 +48,7 @@ class MaintenanceApiController extends Controller
         $maintenance = Maintenance::create([
             'customer_id' => $line->customer_id,
             'production_line_id' => $line->id,
-            'start_datetime' => $now,
+            // start_datetime not set at creation; will be set when maintenance actually starts
             'end_datetime' => null,
             'annotations' => null,
             'operator_id' => $validated['operator_id'],
@@ -67,7 +67,7 @@ class MaintenanceApiController extends Controller
                     "Mantenimiento creado (API):\nCliente: %s\nLínea: %s\nInicio: %s\nOperario: %s\nParo de línea: %s",
                     (string) $line->customer_id,
                     $line->name ?? ('ID '.$line->id),
-                    Carbon::parse($maintenance->start_datetime)->format('Y-m-d H:i'),
+                    Carbon::now()->format('Y-m-d H:i'),
                     $operator->name ?? '-',
                     $stopped ? 'Sí' : 'No'
                 );
@@ -93,7 +93,7 @@ class MaintenanceApiController extends Controller
                     'Mantenimiento creado (API):\nCliente: %s\nLínea: %s\nInicio: %s\nOperario: %s\nParo de línea: %s',
                     (string) $line->customer_id,
                     $line->name ?? ('ID '.$line->id),
-                    Carbon::parse($maintenance->start_datetime)->format('Y-m-d H:i'),
+                    Carbon::now()->format('Y-m-d H:i'),
                     $operator->name ?? '-',
                     $stopped ? 'Sí' : 'No'
                 );
@@ -131,7 +131,7 @@ class MaintenanceApiController extends Controller
                 $q->whereNull('end_datetime')
                   ->orWhere('end_datetime', '0000-00-00 00:00:00');
             })
-            ->latest('start_datetime')
+            ->latest('created_at')
             ->first();
 
         if ($active) {
@@ -139,7 +139,8 @@ class MaintenanceApiController extends Controller
             $accumulated = (int)($active->accumulated_maintenance_seconds ?? 0);
             $live = 0;
             if (empty($active->end_datetime)) {
-                $live = $active->start_datetime ? Carbon::parse($active->start_datetime)->diffInSeconds($now) : 0;
+                $from = $active->start_datetime ? Carbon::parse($active->start_datetime) : Carbon::parse($active->created_at);
+                $live = max(0, $from->diffInSeconds($now));
             }
             $elapsedSeconds = $accumulated + $live;
 

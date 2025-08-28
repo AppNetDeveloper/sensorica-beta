@@ -7,6 +7,8 @@ use App\Models\Maintenance;
 use App\Models\ProductionLine;
 use App\Models\Operator;
 use App\Models\User;
+use App\Models\MaintenanceCause;
+use App\Models\MaintenancePart;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Yajra\DataTables\DataTables;
@@ -26,7 +28,7 @@ class MaintenanceController extends Controller
 
     public function index(Request $request, Customer $customer)
     {
-        $query = Maintenance::with(['productionLine', 'operator', 'user'])
+        $query = Maintenance::with(['productionLine', 'operator', 'user', 'causes:id,name', 'parts:id,name'])
             ->where('customer_id', $customer->id);
 
         $lineId = $request->get('production_line_id');
@@ -59,11 +61,52 @@ class MaintenanceController extends Controller
             $query->whereNotNull('end_datetime')->where('end_datetime', '<=', $endTo . ' 23:59:59');
         }
 
+        // Totals for current filters (AJAX lightweight endpoint)
+        if ($request->ajax() && $request->boolean('totals')) {
+            $now = Carbon::now();
+            $stoppedTotal = 0; // created -> start (or created -> end/now if not started)
+            $downtimeTotal = 0; // start -> end/now
+            $overallTotal = 0; // created -> end/now
+
+            foreach ((clone $query)->get() as $m) {
+                $created = Carbon::parse($m->created_at);
+                $end = $m->end_datetime ? Carbon::parse($m->end_datetime) : $now;
+                $overallTotal += max(0, $created->diffInSeconds($end));
+
+                if ($m->start_datetime) {
+                    $start = Carbon::parse($m->start_datetime);
+                    $stoppedTotal += max(0, $created->diffInSeconds($start));
+                    $downtimeTotal += max(0, $start->diffInSeconds($end));
+                } else {
+                    // Never started: whole period counts as stopped, downtime 0
+                    $stoppedTotal += max(0, $created->diffInSeconds($end));
+                }
+            }
+
+            $fmt = function ($seconds) {
+                $seconds = (int) max(0, $seconds);
+                $h = floor($seconds / 3600);
+                $m = floor(($seconds % 3600) / 60);
+                $s = $seconds % 60;
+                return sprintf('%02d:%02d:%02d', $h, $m, $s);
+            };
+
+            return response()->json([
+                'stopped_before_start_seconds' => $stoppedTotal,
+                'downtime_seconds' => $downtimeTotal,
+                'total_time_seconds' => $overallTotal,
+                'stopped_before_start' => $fmt($stoppedTotal),
+                'downtime' => $fmt($downtimeTotal),
+                'total_time' => $fmt($overallTotal),
+            ]);
+        }
+
         // Respuesta para DataTables (AJAX)
         if ($request->ajax()) {
-            $query->orderByDesc('start_datetime');
+            $query->orderByDesc('created_at');
             return DataTables::of($query)
                 ->addColumn('production_line', function($m){ return optional($m->productionLine)->name; })
+                ->editColumn('created_at', function($m){ return $m->created_at ? Carbon::parse($m->created_at)->format('Y-m-d H:i') : null; })
                 ->editColumn('start_datetime', function($m){ return $m->start_datetime ? Carbon::parse($m->start_datetime)->format('Y-m-d H:i') : null; })
                 ->editColumn('end_datetime', function($m){ return $m->end_datetime ? Carbon::parse($m->end_datetime)->format('Y-m-d H:i') : null; })
                 ->addColumn('operator_name', function($m){ return optional($m->operator)->name; })
@@ -77,16 +120,69 @@ class MaintenanceController extends Controller
                     return "<span class='badge {$badgeClass}'>" . e($label) . "</span>";
                 })
                 ->addColumn('downtime_formatted', function($m){
-                    if ($m->start_datetime && $m->end_datetime) {
+                    // Downtime (avería): start -> end (or live until now if started and not ended)
+                    if ($m->start_datetime) {
                         $start = Carbon::parse($m->start_datetime);
-                        $end = Carbon::parse($m->end_datetime);
+                        $end = $m->end_datetime ? Carbon::parse($m->end_datetime) : Carbon::now();
                         $seconds = max(0, $start->diffInSeconds($end));
-                        return gmdate('H:i:s', $seconds);
+                        $live = gmdate('H:i:s', $seconds);
+                        $acc = (int)($m->accumulated_maintenance_seconds ?? 0);
+                        if ($acc > 0) {
+                            $accFmt = gmdate('H:i:s', $acc);
+                            return $live . "<div class='text-muted small'>(" . __('Accumulated') . ": {$accFmt})</div>";
+                        }
+                        return $live;
                     }
                     return '-';
                 })
+                ->addColumn('stopped_formatted', function($m){
+                    // Parada previa: created -> start (or live until now if not started and not ended)
+                    $created = Carbon::parse($m->created_at);
+                    if ($m->start_datetime) {
+                        $start = Carbon::parse($m->start_datetime);
+                        $seconds = max(0, $created->diffInSeconds($start));
+                        $live = gmdate('H:i:s', $seconds);
+                        $acc = (int)($m->accumulated_maintenance_seconds_stoped ?? 0);
+                        if ($acc > 0) {
+                            $accFmt = gmdate('H:i:s', $acc);
+                            return $live . "<div class='text-muted small'>(" . __('Accumulated') . ": {$accFmt})</div>";
+                        }
+                        return $live;
+                    }
+                    // Not started yet: if still open, show live since created; if ended without start, show created -> end
+                    $end = $m->end_datetime ? Carbon::parse($m->end_datetime) : Carbon::now();
+                    $seconds = max(0, $created->diffInSeconds($end));
+                    $live = gmdate('H:i:s', $seconds);
+                    $acc = (int)($m->accumulated_maintenance_seconds_stoped ?? 0);
+                    if ($acc > 0) {
+                        $accFmt = gmdate('H:i:s', $acc);
+                        return $live . "<div class='text-muted small'>(" . __('Accumulated') . ": {$accFmt})</div>";
+                    }
+                    return $live;
+                })
+                ->addColumn('total_time_formatted', function($m){
+                    // Total ciclo: created -> end (or live until now if not ended)
+                    $created = Carbon::parse($m->created_at);
+                    $end = $m->end_datetime ? Carbon::parse($m->end_datetime) : Carbon::now();
+                    $seconds = max(0, $created->diffInSeconds($end));
+                    return gmdate('H:i:s', $seconds);
+                })
+                ->addColumn('causes_list', function($m){
+                    return $m->causes ? $m->causes->pluck('name')->join(', ') : '';
+                })
+                ->addColumn('parts_list', function($m){
+                    return $m->parts ? $m->parts->pluck('name')->join(', ') : '';
+                })
                 ->addColumn('actions', function($m) use ($customer) {
                     $buttons = '';
+                    // Start button: if not started yet
+                    if (empty($m->start_datetime)) {
+                        $startUrl = route('customers.maintenances.start', [$customer->id, $m->id]);
+                        $csrf = csrf_token();
+                        $buttons .= "<form action='{$startUrl}' method='POST' style='display:inline' onsubmit=\"return confirm('" . __('Are you sure?') . "')\">".
+                                   "<input type='hidden' name='_token' value='{$csrf}'>".
+                                   "<button type='submit' class='btn btn-sm btn-success me-1'>" . __('Iniciar mantenimiento') . "</button></form>";
+                    }
                     // Finish is visible to all users if maintenance is still open
                     if (empty($m->end_datetime)) {
                         $finishUrl = route('customers.maintenances.finish.form', [$customer->id, $m->id]);
@@ -109,7 +205,7 @@ class MaintenanceController extends Controller
                     }
                     return $buttons ?: '-';
                 })
-                ->rawColumns(['actions','production_line_stop_label'])
+                ->rawColumns(['actions','production_line_stop_label','stopped_formatted','downtime_formatted'])
                 ->make(true);
         }
         $lines = $customer->productionLines()->orderBy('name')->get(['id','name']);
@@ -131,7 +227,7 @@ class MaintenanceController extends Controller
     {
         $data = $request->validate([
             'production_line_id' => 'required|exists:production_lines,id',
-            'start_datetime' => 'required|date',
+            'start_datetime' => 'nullable|date',
             'end_datetime' => 'nullable|date|after_or_equal:start_datetime',
             'annotations' => 'nullable|string',
             'operator_id' => 'nullable|exists:operators,id',
@@ -148,6 +244,10 @@ class MaintenanceController extends Controller
             $data['production_line_stop'] = 1;
         }
 
+        // Do not set start_datetime on creation unless explicitly provided
+        if (empty($data['start_datetime'])) {
+            unset($data['start_datetime']);
+        }
         $maintenance = Maintenance::create($data);
 
         // WhatsApp notification on maintenance creation
@@ -161,7 +261,7 @@ class MaintenanceController extends Controller
                     "Mantenimiento creado:\nCliente: %s\nLínea: %s\nInicio: %s\nOperario: %s\nParo de línea: %s",
                     $customer->name ?? ('ID '.$customer->id),
                     $line->name ?? ('ID '.$data['production_line_id']),
-                    Carbon::parse($maintenance->start_datetime)->format('Y-m-d H:i'),
+                    Carbon::now()->format('Y-m-d H:i'),
                     $operator->name ?? '-',
                     $stopped ? 'Sí' : 'No'
                 );
@@ -220,7 +320,11 @@ class MaintenanceController extends Controller
     public function finishForm(Customer $customer, Maintenance $maintenance)
     {
         abort_unless($maintenance->customer_id === $customer->id, 404);
-        return view('customers.maintenances.finish', compact('customer','maintenance'));
+        $causes = MaintenanceCause::where('customer_id', $customer->id)->where('active', 1)->orderBy('name')->get(['id','name']);
+        $parts = MaintenancePart::where('customer_id', $customer->id)->where('active', 1)->orderBy('name')->get(['id','name']);
+        $selectedCauseIds = $maintenance->causes()->pluck('maintenance_cause_id')->toArray();
+        $selectedPartIds = $maintenance->parts()->pluck('maintenance_part_id')->toArray();
+        return view('customers.maintenances.finish', compact('customer','maintenance','causes','parts','selectedCauseIds','selectedPartIds'));
     }
 
     public function finishStore(Request $request, Customer $customer, Maintenance $maintenance)
@@ -228,15 +332,51 @@ class MaintenanceController extends Controller
         abort_unless($maintenance->customer_id === $customer->id, 404);
         $data = $request->validate([
             'annotations' => 'nullable|string',
+            'cause_ids' => 'nullable|array',
+            'cause_ids.*' => 'integer',
+            'part_ids' => 'nullable|array',
+            'part_ids.*' => 'integer',
         ]);
         // Save note into annotations (requested behavior)
         $maintenance->annotations = $data['annotations'] ?? $maintenance->annotations;
         $maintenance->end_datetime = now();
         $maintenance->user_id = auth()->id();
+        // Calculate incident (stopped-before-start) time
+        $stoppedAccum = (int)($maintenance->accumulated_maintenance_seconds_stoped ?? 0);
+        if (!empty($maintenance->start_datetime)) {
+            $stoppedAccum += max(0, Carbon::parse($maintenance->created_at)->diffInSeconds(Carbon::parse($maintenance->start_datetime)));
+        } else {
+            // Never started: count whole period as stopped
+            $stoppedAccum += max(0, Carbon::parse($maintenance->created_at)->diffInSeconds(Carbon::parse($maintenance->end_datetime)));
+        }
+        $maintenance->accumulated_maintenance_seconds_stoped = $stoppedAccum;
         $maintenance->save();
+
+        // Sync causes and parts limited to this customer
+        $allowedCauseIds = MaintenanceCause::where('customer_id', $customer->id)->pluck('id')->toArray();
+        $allowedPartIds = MaintenancePart::where('customer_id', $customer->id)->pluck('id')->toArray();
+        $syncCauseIds = array_values(array_intersect($allowedCauseIds, (array)($data['cause_ids'] ?? [])));
+        $syncPartIds = array_values(array_intersect($allowedPartIds, (array)($data['part_ids'] ?? [])));
+        $maintenance->causes()->sync($syncCauseIds);
+        $maintenance->parts()->sync($syncPartIds);
 
         return redirect()->route('customers.maintenances.index', $customer->id)
             ->with('success', __('Maintenance finished successfully'));
+    }
+
+    // POST: start maintenance -> set start_datetime=now and toggle production_line_stop to 1 if was 0
+    public function start(Request $request, Customer $customer, Maintenance $maintenance)
+    {
+        abort_unless($maintenance->customer_id === $customer->id, 404);
+        if (empty($maintenance->start_datetime)) {
+            $maintenance->start_datetime = now();
+        }
+        if ((int)$maintenance->production_line_stop === 0) {
+            $maintenance->production_line_stop = 1;
+        }
+        $maintenance->save();
+        return redirect()->route('customers.maintenances.index', $customer->id)
+            ->with('success', __('Maintenance started'));
     }
 
     public function update(Request $request, Customer $customer, Maintenance $maintenance)

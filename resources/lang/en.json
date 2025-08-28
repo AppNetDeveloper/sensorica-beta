@@ -885,5 +885,21 @@
     "Machine stop during maintenance?": "Machine stop during maintenance?",
     "Yes, stop the machine (blocking)": "Yes, stop the machine (blocking)",
     "No, it can keep working (non-blocking)": "No, it can keep working (non-blocking)",
-    "If selected No, the UI will show a non-blocking indicator instead of the full overlay.": "If selected No, the UI will show a non-blocking indicator instead of the full overlay."
+    "If selected No, the UI will show a non-blocking indicator instead of the full overlay.": "If selected No, the UI will show a non-blocking indicator instead of the full overlay.",
+    "Cause": "Cause",
+    "Causes": "Causes",
+    "Part": "Part",
+    "Parts": "Parts",
+    "Cause of maintenance": "Cause of maintenance",
+    "Part affected by maintenance": "Part affected by maintenance",
+    "Maintenance cause": "Maintenance cause",
+    "Maintenance part": "Maintenance part",
+    "Maintenance Causes": "Maintenance Causes",
+    "Maintenance Parts": "Maintenance Parts",
+    "Used Parts": "Used Parts",
+    "Causas de mantenimiento": "Causes of Maintenance",
+    "Piezas de mantenimiento": "Maintenance Parts",
+    "Piezas usadas": "Used Parts",
+    "Stopped before Start": "Stopped before Start",
+    "Total Time": "Total Time"
 }

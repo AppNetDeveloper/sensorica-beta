@@ -53,6 +53,27 @@ use App\Http\Controllers\Api\ProductionLineInfoController;
 use App\Http\Controllers\WorkCalendarController;
 use App\Http\Controllers\OriginalOrderProcessFileController;
 
+
+// Maintenance Causes & Parts (by customer)
+Route::middleware(['auth', 'XSS'])->group(function () {
+    Route::prefix('customers/{customer}')->group(function () {
+        // Causes
+        Route::get('maintenance-causes', [\App\Http\Controllers\MaintenanceCauseController::class, 'index'])->name('customers.maintenance-causes.index');
+        Route::get('maintenance-causes/create', [\App\Http\Controllers\MaintenanceCauseController::class, 'create'])->name('customers.maintenance-causes.create');
+        Route::post('maintenance-causes', [\App\Http\Controllers\MaintenanceCauseController::class, 'store'])->name('customers.maintenance-causes.store');
+        Route::get('maintenance-causes/{maintenance_cause}/edit', [\App\Http\Controllers\MaintenanceCauseController::class, 'edit'])->name('customers.maintenance-causes.edit');
+        Route::put('maintenance-causes/{maintenance_cause}', [\App\Http\Controllers\MaintenanceCauseController::class, 'update'])->name('customers.maintenance-causes.update');
+        Route::delete('maintenance-causes/{maintenance_cause}', [\App\Http\Controllers\MaintenanceCauseController::class, 'destroy'])->name('customers.maintenance-causes.destroy');
+
+        // Parts
+        Route::get('maintenance-parts', [\App\Http\Controllers\MaintenancePartController::class, 'index'])->name('customers.maintenance-parts.index');
+        Route::get('maintenance-parts/create', [\App\Http\Controllers\MaintenancePartController::class, 'create'])->name('customers.maintenance-parts.create');
+        Route::post('maintenance-parts', [\App\Http\Controllers\MaintenancePartController::class, 'store'])->name('customers.maintenance-parts.store');
+        Route::get('maintenance-parts/{maintenance_part}/edit', [\App\Http\Controllers\MaintenancePartController::class, 'edit'])->name('customers.maintenance-parts.edit');
+        Route::put('maintenance-parts/{maintenance_part}', [\App\Http\Controllers\MaintenancePartController::class, 'update'])->name('customers.maintenance-parts.update');
+        Route::delete('maintenance-parts/{maintenance_part}', [\App\Http\Controllers\MaintenancePartController::class, 'destroy'])->name('customers.maintenance-parts.destroy');
+    });
+});
 // Rutas para el Kanban Board
 Route::post('production-orders/update-batch', [ProductionOrderController::class, 'updateBatch'])->name('production-orders.update-batch')->middleware(['auth', 'XSS']);
 Route::post('production-orders/toggle-priority', [ProductionOrderController::class, 'togglePriority'])->name('production-orders.toggle-priority')->middleware(['auth', 'XSS']);
@@ -139,6 +160,10 @@ Route::prefix('customers')->name('customers.')->group(function () {
             ->name('maintenances.finish.form');
         Route::post('maintenances/{maintenance}/finish', [MaintenanceController::class, 'finishStore'])
             ->name('maintenances.finish.store');
+
+        // Iniciar mantenimiento (start)
+        Route::post('maintenances/{maintenance}/start', [MaintenanceController::class, 'start'])
+            ->name('maintenances.start');
 
         // Rutas para las incidencias de órdenes de producción
         Route::get('production-order-incidents', [ProductionOrderIncidentController::class, 'index'])
