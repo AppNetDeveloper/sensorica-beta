@@ -226,7 +226,7 @@ class UpdateAccumulatedTimes extends Command
                             // Paso 2: Obtener la disponibilidad de la línea (días y turnos)
                             try {
                                 $lineAvailability = LineAvailability::where('production_line_id', $order->production_line_id)
-                                    ->where('active', true)
+                                    // No filtrar por 'active'; se considerará toda disponibilidad configurada
                                     ->get();
                                 
                                 if ($lineAvailability->isEmpty()) {
@@ -315,7 +315,9 @@ class UpdateAccumulatedTimes extends Command
                                         ->first();
                                     
                                     if ($calendarDay) {
-                                        $isWorkingDay = $calendarDay->is_working_day;
+                                        // Día laborable si is_working_day == true o type == 'workday'
+                                        $isWorkingDay = ($calendarDay->is_working_day)
+                                            || (strtolower((string)$calendarDay->type) === 'workday');
                                     }
                                     
                                     if (!$isWorkingDay) {
@@ -356,7 +358,17 @@ class UpdateAccumulatedTimes extends Command
                                             $shiftEnd->addDay();
                                         }
                                         
-                                        // Calcular duración del turno en segundos
+                                        // Si estamos en el día actual y la hora actual es posterior al inicio del turno,
+                                        // ajustar el tiempo disponible
+                                        if ($estimatedStartDate->format('Y-m-d') === $now->format('Y-m-d') && $now > $shiftStart) {
+                                            $shiftStart = $now->copy();
+                                        }
+                                        // Si tras ajustar, el turno ya no tiene ventana válida, continuar con el siguiente turno
+                                        if ($shiftStart >= $shiftEnd) {
+                                            continue;
+                                        }
+                                        
+                                        // Calcular duración del turno en segundos tras los ajustes
                                         $shiftDurationSeconds = $shiftEnd->diffInSeconds($shiftStart);
                                         
                                         // Descontar el tiempo de pausa si el turno es lo suficientemente largo
@@ -364,13 +376,6 @@ class UpdateAccumulatedTimes extends Command
                                         if ($shiftDurationSeconds >= 4 * 3600) {
                                             $shiftDurationSeconds -= $breakTimeSeconds;
                                             $this->info("        * Descontando {$breakTimeMinutes} minutos de pausa del turno");
-                                        }
-                                        
-                                        // Si estamos en el día actual y la hora actual es posterior al inicio del turno,
-                                        // ajustar el tiempo disponible
-                                        if ($estimatedStartDate->format('Y-m-d') === $now->format('Y-m-d') && $now > $shiftStart) {
-                                            $shiftStart = $now->copy();
-                                            $shiftDurationSeconds = $shiftEnd->diffInSeconds($shiftStart);
                                         }
                                         
                                         // Determinar cuántos segundos podemos procesar en este turno
@@ -428,7 +433,9 @@ class UpdateAccumulatedTimes extends Command
                                         ->first();
                                     
                                     if ($calendarDay) {
-                                        $isWorkingDay = $calendarDay->is_working_day;
+                                        // Día laborable si is_working_day == true o type == 'workday'
+                                        $isWorkingDay = ($calendarDay->is_working_day)
+                                            || (strtolower((string)$calendarDay->type) === 'workday');
                                     }
                                     
                                     if (!$isWorkingDay) {
@@ -472,6 +479,10 @@ class UpdateAccumulatedTimes extends Command
                                         if ($estimatedEndDate->format('Y-m-d') === $estimatedStartDate->format('Y-m-d') && 
                                             $estimatedStartDate > $shiftStart) {
                                             $shiftStart = $estimatedStartDate->copy();
+                                        }
+                                        // Si tras ajustar, el turno ya no tiene ventana válida, continuar con el siguiente turno
+                                        if ($shiftStart >= $shiftEnd) {
+                                            continue;
                                         }
                                         
                                         // Calcular duración del turno en segundos
