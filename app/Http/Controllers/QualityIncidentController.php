@@ -17,8 +17,14 @@ class QualityIncidentController extends Controller
     /**
      * List QC quality incidences for a customer.
      */
-    public function index(Customer $customer)
+    public function index(Customer $customer, Request $request)
     {
+        // Default window: last 7 days
+        $from = $request->query('from');
+        $to = $request->query('to');
+        $fromDate = $from ? \Carbon\Carbon::parse($from)->startOfDay() : now()->subDays(7)->startOfDay();
+        $toDate = $to ? \Carbon\Carbon::parse($to)->endOfDay() : now()->endOfDay();
+
         // Fetch issues linked either to the source original order or the duplicated QC order for this customer
         $incidents = QualityIssue::query()
             ->with(['productionOrder.productionLine', 'originalOrder', 'originalOrderQc', 'productionLine', 'operator'])
@@ -30,6 +36,7 @@ class QualityIncidentController extends Controller
                     $qq->where('customer_id', $customer->id);
                 });
             })
+            ->whereBetween('created_at', [$fromDate, $toDate])
             ->latest()
             ->get();
 

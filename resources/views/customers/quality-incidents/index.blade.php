@@ -22,9 +22,18 @@
                 <div class="card-header bg-danger text-white">
                     <div class="d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">@lang('Incidencias QC') - {{ $customer->name }}</h5>
-                        <a href="{{ route('customers.order-organizer', $customer->id) }}" class="btn btn-light btn-sm">
-                            <i class="fas fa-th"></i> @lang('Order Organizer')
-                        </a>
+                        <div class="btn-toolbar" role="toolbar" aria-label="Toolbar">
+                            <div class="btn-group btn-group-sm me-2" role="group" aria-label="IA">
+                                <button type="button" class="btn btn-dark" id="btn-ai-open" data-bs-toggle="modal" data-bs-target="#aiPromptModal" title="@lang('Análisis con IA')">
+                                    <i class="bi bi-stars me-1 text-white"></i><span class="d-none d-sm-inline">@lang('Análisis IA')</span>
+                                </button>
+                            </div>
+                            <div class="btn-group btn-group-sm" role="group" aria-label="Kanban">
+                                <a href="{{ route('customers.order-organizer', $customer->id) }}" class="btn btn-light">
+                                    <i class="fas fa-th me-1"></i><span class="d-none d-sm-inline">@lang('Order Organizer')</span>
+                                </a>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="card-body">
@@ -65,6 +74,11 @@
                                     <option value="{{ $op->id }}">{{ $op->name ?? ('#'.$op->id) }}</option>
                                 @endforeach
                             </select>
+                        </div>
+                        <div class="col-12 d-flex justify-content-end align-items-end">
+                            <button class="btn btn-outline-primary btn-sm" id="btn-ai-open" type="button">
+                                <i class="fas fa-robot"></i> @lang('Análisis IA')
+                            </button>
                         </div>
                     </div>
 
@@ -169,6 +183,16 @@
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
     <script>
         $(document).ready(function() {
+            // Enable Bootstrap tooltips
+            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function (tooltipTriggerEl) { return new bootstrap.Tooltip(tooltipTriggerEl); });
+            // Set default date range to last 7 days
+            const to = new Date();
+            const from = new Date(to);
+            from.setDate(from.getDate() - 7);
+            const fmt = d => d.toISOString().slice(0,10);
+            if (!$('#filter-date-from').val()) $('#filter-date-from').val(fmt(from));
+            if (!$('#filter-date-to').val()) $('#filter-date-to').val(fmt(to));
             // Custom filter by date range, line, and operator
             $.fn.dataTable.ext.search.push(function(settings, data, dataIndex, rowData, counter) {
                 const tr = $(settings.aoData[dataIndex].nTr);
@@ -207,6 +231,152 @@
             $('#filter-line, #filter-operator, #filter-date-from, #filter-date-to').on('change keyup', function() {
                 table.draw();
             });
+
+            // === AI integration (same behavior as maintenances) ===
+            const AI_URL = "{{ env('AI_URL') }}";
+            const AI_TOKEN = "{{ env('AI_TOKEN') }}";
+
+            function collectCurrentRows() {
+                const rows = $('#qc-incidents-table').DataTable().rows({ page: 'current' }).nodes();
+                const out = [];
+                $('#qc-incidents-table').DataTable().rows({ page: 'current' }).every(function(rowIdx){
+                    const tr = $(rows[rowIdx]);
+                    const cells = $(this.node()).find('td');
+                    out.push({
+                        index: $(cells[0]).text().trim(),
+                        original_order: $(cells[1]).text().trim(),
+                        original_order_qc: $(cells[2]).text().trim(),
+                        process_or_po: $(cells[3]).text().trim(),
+                        info: $(cells[4]).text().trim(),
+                        reason: $(cells[5]).text().trim(),
+                        created_at: $(cells[6]).text().trim(),
+                        line_id: (tr.data('line-id') || '').toString(),
+                        operator_id: (tr.data('operator-id') || '').toString(),
+                        created_date: (tr.data('created-at') || '').toString()
+                    });
+                });
+                const filters = {
+                    line: $('#filter-line').val() || '',
+                    operator: $('#filter-operator').val() || '',
+                    date_from: $('#filter-date-from').val() || '',
+                    date_to: $('#filter-date-to').val() || ''
+                };
+                return { rows: out, filters };
+            }
+
+            function showLoading(show) {
+                $('#btn-ai-send').prop('disabled', !!show).toggleClass('disabled', !!show);
+            }
+
+            async function startAiTask(prompt) {
+                if (!AI_URL || !AI_TOKEN) { alert('AI config missing'); return; }
+                showLoading(true);
+                try {
+                    const payload = collectCurrentRows();
+                    console.log('[AI][QC Incidents] Collected rows:', payload.rows.length, 'filters:', payload.filters);
+                    let combinedPrompt;
+                    try {
+                        combinedPrompt = `${prompt}\n\n=== Datos para analizar (JSON) ===\n${JSON.stringify(payload, null, 2)}`;
+                    } catch (e) {
+                        combinedPrompt = `${prompt}\n\n=== Datos para analizar (JSON) ===\n[Error serializando datos]`;
+                    }
+                    console.log('[AI] Combined prompt length:', combinedPrompt.length);
+                    console.log('[AI] Combined prompt preview:', combinedPrompt.substring(0, 500));
+                    const fd = new FormData();
+                    fd.append('prompt', combinedPrompt);
+
+                    console.log('[AI] Starting task POST ...');
+                    console.log('[AI] Using URL:', AI_URL);
+                    console.log('[AI] Token present:', !!AI_TOKEN);
+                    const startResp = await fetch(`${AI_URL.replace(/\/$/, '')}/api/ollama-tasks`, {
+                        method: 'POST', headers: { 'Authorization': `Bearer ${AI_TOKEN}` }, body: fd
+                    });
+                    if (!startResp.ok) throw new Error('start failed');
+                    const startData = await startResp.json();
+                    console.log('[AI] Start response:', startData);
+                    const taskId = (startData && startData.task && (startData.task.id || startData.task.uuid)) || startData.id || startData.task_id || startData.uuid;
+                    if (!taskId) throw new Error('no id');
+
+                    let done = false; let last;
+                    while (!done) {
+                        await new Promise(r => setTimeout(r, 5000));
+                        console.log(`[AI] Polling task ${taskId} ...`);
+                        const pollResp = await fetch(`${AI_URL.replace(/\/$/, '')}/api/ollama-tasks/${encodeURIComponent(taskId)}`, {
+                            headers: { 'Authorization': `Bearer ${AI_TOKEN}` }
+                        });
+                        if (pollResp.status === 404) {
+                            try { const nf = await pollResp.json(); alert(nf?.error || 'Task not found'); } catch {}
+                            return;
+                        }
+                        if (!pollResp.ok) throw new Error('poll failed');
+                        last = await pollResp.json();
+                        console.log('[AI] Poll data:', last);
+                        const task = last && last.task ? last.task : null;
+                        if (!task) continue;
+                        if (task.response == null) {
+                            if (task.error && /processing/i.test(task.error)) { console.log('[AI] Task pending (processing):', task.error); continue; }
+                            if (task.error == null) { console.log('[AI] Task pending (no response yet)'); continue; }
+                        }
+                        if (task.error && !/processing/i.test(task.error)) { console.error('[AI] Task failed:', task.error); alert(task.error); return; }
+                        if (task.response != null) { done = true; }
+                    }
+
+                    $('#aiResultPrompt').text(prompt);
+                    const content = (last && last.task && last.task.response != null) ? last.task.response : last;
+                    try { $('#aiResultData').text(typeof content === 'string' ? content : JSON.stringify(content, null, 2)); } catch { $('#aiResultData').text(String(content)); }
+                    const resultModal = new bootstrap.Modal(document.getElementById('aiResultModal'));
+                    resultModal.show();
+                } catch (err) {
+                    console.error('[AI] Unexpected error:', err);
+                    alert('{{ __('An error occurred') }}');
+                } finally {
+                    showLoading(false);
+                }
+            }
+
+            // Send from modal
+            $('#btn-ai-send').on('click', function(){
+                const defaultPrompt = {!! json_encode(__('Analiza las incidencias de calidad mostradas, buscando motivos, líneas afectadas y tendencias en los últimos días.')) !!};
+                const prompt = ($('#aiPrompt').val() || '').trim() || defaultPrompt;
+                startAiTask(prompt);
+            });
         });
     </script>
+    <!-- AI Prompt Modal -->
+    <div class="modal fade" id="aiPromptModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-robot me-2"></i>@lang('Análisis IA')</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <label class="form-label">@lang('¿Qué necesitas analizar?')</label>
+                    <textarea class="form-control" id="aiPrompt" rows="4" placeholder="@lang('Describe qué análisis quieres sobre las incidencias mostradas')"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@lang('Close')</button>
+                    <button type="button" class="btn btn-primary" id="btn-ai-send">@lang('Enviar a IA')</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- AI Result Modal -->
+    <div class="modal fade" id="aiResultModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@lang('Resultado IA')</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted"><strong>@lang('Prompt'):</strong> <span id="aiResultPrompt"></span></p>
+                    <pre id="aiResultData" class="bg-light p-3 rounded" style="white-space: pre-wrap;"></pre>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@lang('Close')</button>
+                </div>
+            </div>
+        </div>
+    </div>
 @endpush
