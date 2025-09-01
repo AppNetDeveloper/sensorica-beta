@@ -19,11 +19,11 @@
     <h5 class="mb-0">{{ __('Maintenances') }}</h5>
     <div class="btn-toolbar" role="toolbar" aria-label="Toolbar">
       <div class="btn-group btn-group-sm me-2" role="group" aria-label="Catálogos">
-        <a href="{{ route('customers.maintenance-causes.index', $customer->id) }}" class="btn btn-outline-secondary" data-bs-toggle="tooltip" title="{{ __('Causas de mantenimiento') }}">
-          <i class="ti ti-flag-3 me-1"></i><span class="d-none d-sm-inline">{{ __('Causas') }}</span>
+        <a href="{{ route('customers.maintenance-causes.index', $customer->id) }}" class="btn btn-outline-secondary" data-bs-toggle="tooltip" title="{{ __('Operaciones de mantenimiento') }}">
+          <i class="ti ti-flag-3 me-1"></i><span class="d-none d-sm-inline">{{ __('Operaciones') }}</span>
         </a>
-        <a href="{{ route('customers.maintenance-parts.index', $customer->id) }}" class="btn btn-outline-secondary" data-bs-toggle="tooltip" title="{{ __('Piezas de mantenimiento') }}">
-          <i class="ti ti-tools me-1"></i><span class="d-none d-sm-inline">{{ __('Piezas') }}</span>
+        <a href="{{ route('customers.maintenance-parts.index', $customer->id) }}" class="btn btn-outline-secondary" data-bs-toggle="tooltip" title="{{ __('Repuestos de mantenimiento') }}">
+          <i class="ti ti-tools me-1"></i><span class="d-none d-sm-inline">{{ __('Repuestos') }}</span>
         </a>
       </div>
       <div class="btn-group btn-group-sm me-2" role="group" aria-label="Crear">
