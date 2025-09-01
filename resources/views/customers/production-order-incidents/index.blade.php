@@ -22,9 +22,20 @@
                 <div class="card-header bg-primary text-white">
                     <div class="d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">@lang('Production Order Incidents') - {{ $customer->name }}</h5>
-                        <a href="{{ route('customers.order-organizer', $customer->id) }}" class="btn btn-light btn-sm">
-                            <i class="fas fa-th"></i> @lang('Order Organizer')
-                        </a>
+                        <div class="btn-toolbar" role="toolbar" aria-label="Toolbar">
+                            @if(!empty(config('services.ai.url')) && !empty(config('services.ai.token')))
+                            <div class="btn-group btn-group-sm me-2" role="group" aria-label="IA">
+                                <button type="button" class="btn btn-dark" id="btn-ai-open" data-bs-toggle="modal" data-bs-target="#aiPromptModal" title="@lang('Análisis con IA')">
+                                    <i class="bi bi-stars me-1 text-white"></i><span class="d-none d-sm-inline">@lang('Análisis IA')</span>
+                                </button>
+                            </div>
+                            @endif
+                            <div class="btn-group btn-group-sm" role="group" aria-label="Kanban">
+                                <a href="{{ route('customers.order-organizer', $customer->id) }}" class="btn btn-light">
+                                    <i class="fas fa-th me-1"></i><span class="d-none d-sm-inline">@lang('Order Organizer')</span>
+                                </a>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="card-body">
@@ -100,7 +111,7 @@
                                         <td>
                                             #{{ $incident->productionOrder->order_id }}
                                         </td>
-                                        <td>{{ Str::limit($incident->reason, 50) }}</td>
+                                        <td>{{ \Illuminate\Support\Str::limit($incident->reason, 50) }}</td>
                                         <td>
                                             @if($incident->productionOrder->status == 3)
                                                 <span class="badge bg-danger">@lang('Incidencia activa')</span>
@@ -204,6 +215,143 @@
             $('#filter-line, #filter-operator, #filter-date-from, #filter-date-to').on('change keyup', function() {
                 table.draw();
             });
+
+            // === AI integration (like Maintenances/QC) ===
+            const AI_URL = @json(config('services.ai.url'));
+            const AI_TOKEN = @json(config('services.ai.token'));
+
+            function collectCurrentRows() {
+                const dt = $('#incidents-table').DataTable();
+                const nodes = dt.rows({ page: 'current' }).nodes();
+                const out = [];
+                dt.rows({ page: 'current' }).every(function(rowIdx){
+                    const tr = $(nodes[rowIdx]);
+                    const cells = $(this.node()).find('td');
+                    out.push({
+                        index: $(cells[0]).text().trim(),
+                        order_id: $(cells[1]).text().trim(),
+                        reason: $(cells[2]).text().trim(),
+                        status: $(cells[3]).text().trim(),
+                        info: $(cells[4]).text().trim(),
+                        operator: $(cells[5]).text().trim(),
+                        created_at: $(cells[6]).text().trim(),
+                        line_id: (tr.data('line-id') || '').toString(),
+                        operator_id: (tr.data('operator-id') || '').toString(),
+                        created_date: (tr.data('created-at') || '').toString()
+                    });
+                });
+                const filters = {
+                    line: $('#filter-line').val() || '',
+                    operator: $('#filter-operator').val() || '',
+                    date_from: $('#filter-date-from').val() || '',
+                    date_to: $('#filter-date-to').val() || ''
+                };
+                return { rows: out, filters };
+            }
+
+            function showLoading(show) { $('#btn-ai-send').prop('disabled', !!show).toggleClass('disabled', !!show); }
+
+            async function startAiTask(prompt) {
+                if (!AI_URL || !AI_TOKEN) { alert('AI config missing'); return; }
+                showLoading(true);
+                try {
+                    const payload = collectCurrentRows();
+                    console.log('[AI][PO Incidents] rows:', payload.rows.length, 'filters:', payload.filters);
+                    let combinedPrompt;
+                    try {
+                        combinedPrompt = `${prompt}\n\n=== Datos para analizar (JSON) ===\n${JSON.stringify(payload, null, 2)}`;
+                    } catch (e) {
+                        combinedPrompt = `${prompt}\n\n=== Datos para analizar (JSON) ===\n[Error serializando datos]`;
+                    }
+                    const fd = new FormData();
+                    fd.append('prompt', combinedPrompt);
+
+                    const startResp = await fetch(`${AI_URL.replace(/\/$/, '')}/api/ollama-tasks`, {
+                        method: 'POST', headers: { 'Authorization': `Bearer ${AI_TOKEN}` }, body: fd
+                    });
+                    if (!startResp.ok) throw new Error('start failed');
+                    const startData = await startResp.json();
+                    const taskId = (startData && startData.task && (startData.task.id || startData.task.uuid)) || startData.id || startData.task_id || startData.uuid;
+                    if (!taskId) throw new Error('no id');
+
+                    let done = false; let last;
+                    while (!done) {
+                        await new Promise(r => setTimeout(r, 5000));
+                        const pollResp = await fetch(`${AI_URL.replace(/\/$/, '')}/api/ollama-tasks/${encodeURIComponent(taskId)}`, {
+                            headers: { 'Authorization': `Bearer ${AI_TOKEN}` }
+                        });
+                        if (pollResp.status === 404) { try { const nf = await pollResp.json(); alert(nf?.error || 'Task not found'); } catch {} return; }
+                        if (!pollResp.ok) throw new Error('poll failed');
+                        last = await pollResp.json();
+                        const task = last && last.task ? last.task : null;
+                        if (!task) continue;
+                        if (task.response == null) {
+                            if (task.error && /processing/i.test(task.error)) { continue; }
+                            if (task.error == null) { continue; }
+                        }
+                        if (task.error && !/processing/i.test(task.error)) { alert(task.error); return; }
+                        if (task.response != null) { done = true; }
+                    }
+
+                    $('#aiResultPrompt').text(prompt);
+                    const content = (last && last.task && last.task.response != null) ? last.task.response : last;
+                    try { $('#aiResultData').text(typeof content === 'string' ? content : JSON.stringify(content, null, 2)); } catch { $('#aiResultData').text(String(content)); }
+                    const resultModal = new bootstrap.Modal(document.getElementById('aiResultModal'));
+                    resultModal.show();
+                } catch (err) {
+                    console.error('[AI] Unexpected error:', err);
+                    alert('{{ __('An error occurred') }}');
+                } finally {
+                    showLoading(false);
+                }
+            }
+
+            const defaultPromptPOI = {!! json_encode(__('Analiza las incidencias de órdenes de producción mostradas, identificando causas frecuentes, líneas afectadas y patrones por operador/fecha.')) !!};
+            $('#aiPromptModal').on('shown.bs.modal', function(){
+                const $ta = $('#aiPrompt'); if (!$ta.val()) $ta.val(defaultPromptPOI); $ta.trigger('focus');
+            });
+            $('#btn-ai-reset').on('click', function(){ $('#aiPrompt').val(defaultPromptPOI); });
+            $('#btn-ai-send').on('click', function(){ const prompt = ($('#aiPrompt').val() || '').trim() || defaultPromptPOI; startAiTask(prompt); });
         });
     </script>
+
+    <!-- AI Prompt Modal -->
+    <div class="modal fade" id="aiPromptModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-robot me-2"></i>@lang('Análisis IA')</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <label class="form-label">@lang('¿Qué necesitas analizar?')</label>
+                    <textarea class="form-control" id="aiPrompt" rows="4" placeholder="@lang('Describe qué análisis quieres sobre las incidencias mostradas')"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" id="btn-ai-reset">@lang('Limpiar prompt por defecto')</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@lang('Close')</button>
+                    <button type="button" class="btn btn-primary" id="btn-ai-send">@lang('Enviar a IA')</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Result Modal -->
+    <div class="modal fade" id="aiResultModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@lang('Resultado IA')</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted"><strong>@lang('Prompt'):</strong> <span id="aiResultPrompt"></span></p>
+                    <pre id="aiResultData" class="bg-light p-3 rounded" style="white-space: pre-wrap;"></pre>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@lang('Close')</button>
+                </div>
+            </div>
+        </div>
+    </div>
 @endpush

@@ -23,9 +23,7 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">@lang('Incidencias QC') - {{ $customer->name }}</h5>
                         <div class="btn-toolbar" role="toolbar" aria-label="Toolbar">
-                            @php($aiUrl = config('services.ai.url'))
-                            @php($aiToken = config('services.ai.token'))
-                            @if(!empty($aiUrl) && !empty($aiToken))
+                            @if(!empty(config('services.ai.url')) && !empty(config('services.ai.token')))
                             <div class="btn-group btn-group-sm me-2" role="group" aria-label="IA">
                                 <button type="button" class="btn btn-dark" id="btn-ai-open" data-bs-toggle="modal" data-bs-target="#aiPromptModal" title="@lang('Análisis con IA')">
                                     <i class="bi bi-stars me-1 text-white"></i><span class="d-none d-sm-inline">@lang('Análisis IA')</span>
