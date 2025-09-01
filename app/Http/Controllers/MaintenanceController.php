@@ -39,6 +39,12 @@ class MaintenanceController extends Controller
         $endFrom = $request->get('end_from');
         $endTo = $request->get('end_to');
 
+        // If no date filters are provided, default Start from to 7 days ago (for UI and DataTable)
+        $noDateFilters = empty($startFrom) && empty($startTo) && empty($endFrom) && empty($endTo);
+        if ($noDateFilters) {
+            $startFrom = Carbon::now()->subDays(7)->toDateString();
+        }
+
         if ($lineId) {
             $query->where('production_line_id', $lineId);
         }
@@ -60,6 +66,8 @@ class MaintenanceController extends Controller
         if ($endTo) {
             $query->whereNotNull('end_datetime')->where('end_datetime', '<=', $endTo . ' 23:59:59');
         }
+
+        // (Removed created_at default limiter; we now prefill start_from and use the standard start_datetime filter)
 
         // Totals for current filters (AJAX lightweight endpoint)
         if ($request->ajax() && $request->boolean('totals')) {
@@ -189,6 +197,19 @@ class MaintenanceController extends Controller
                         $buttons .= "<a href='{$finishUrl}' class='btn btn-sm btn-warning me-1'>" . __('Finish') . "</a>";
                     }
 
+                    // Details button (no permission required) only if finished (has end_datetime)
+                    if (!empty($m->end_datetime)) {
+                        $annotations = e((string) $m->annotations);
+                        $opAnnotations = e((string) $m->operator_annotations);
+                        $causes = e(($m->causes ? $m->causes->pluck('name')->join(', ') : ''));
+                        $parts = e(($m->parts ? $m->parts->pluck('name')->join(', ') : ''));
+                        $buttons .= "<button type='button' class='btn btn-sm btn-secondary me-1 btn-maint-details' data-bs-toggle='modal' data-bs-target='#maintenanceDetailsModal' "
+                                   . "data-annotations='{$annotations}' "
+                                   . "data-operator-annotations='{$opAnnotations}' "
+                                   . "data-causes='{$causes}' "
+                                   . "data-parts='{$parts}'>" . __('Detalles') . "</button>";
+                    }
+
                     // Edit only for users with permission
                     if (auth()->user()->can('maintenance-edit')) {
                         $editUrl = route('customers.maintenances.edit', [$customer->id, $m->id]);
@@ -225,6 +246,12 @@ class MaintenanceController extends Controller
 
     public function store(Request $request, Customer $customer)
     {
+        // Normalize empty datetime inputs to null before validation
+        foreach (['start_datetime','end_datetime'] as $f) {
+            if ($request->has($f) && trim((string)$request->input($f)) === '') {
+                $request->merge([$f => null]);
+            }
+        }
         $data = $request->validate([
             'production_line_id' => 'required|exists:production_lines,id',
             'start_datetime' => 'nullable|date',
@@ -244,9 +271,12 @@ class MaintenanceController extends Controller
             $data['production_line_stop'] = 1;
         }
 
-        // Do not set start_datetime on creation unless explicitly provided
-        if (empty($data['start_datetime'])) {
+        // Do not set start/end datetime on creation unless explicitly provided (avoid "00:00:00")
+        if (!array_key_exists('start_datetime', $data) || empty($data['start_datetime'])) {
             unset($data['start_datetime']);
+        }
+        if (!array_key_exists('end_datetime', $data) || empty($data['end_datetime'])) {
+            unset($data['end_datetime']);
         }
         $maintenance = Maintenance::create($data);
 
@@ -320,8 +350,22 @@ class MaintenanceController extends Controller
     public function finishForm(Customer $customer, Maintenance $maintenance)
     {
         abort_unless($maintenance->customer_id === $customer->id, 404);
-        $causes = MaintenanceCause::where('customer_id', $customer->id)->where('active', 1)->orderBy('name')->get(['id','name']);
-        $parts = MaintenancePart::where('customer_id', $customer->id)->where('active', 1)->orderBy('name')->get(['id','name']);
+        $causes = MaintenanceCause::where('customer_id', $customer->id)
+            ->where('active', 1)
+            ->where(function($q) use ($maintenance) {
+                $q->whereNull('production_line_id')
+                  ->orWhere('production_line_id', $maintenance->production_line_id);
+            })
+            ->orderBy('name')
+            ->get(['id','name']);
+        $parts = MaintenancePart::where('customer_id', $customer->id)
+            ->where('active', 1)
+            ->where(function($q) use ($maintenance) {
+                $q->whereNull('production_line_id')
+                  ->orWhere('production_line_id', $maintenance->production_line_id);
+            })
+            ->orderBy('name')
+            ->get(['id','name']);
         $selectedCauseIds = $maintenance->causes()->pluck('maintenance_cause_id')->toArray();
         $selectedPartIds = $maintenance->parts()->pluck('maintenance_part_id')->toArray();
         return view('customers.maintenances.finish', compact('customer','maintenance','causes','parts','selectedCauseIds','selectedPartIds'));
@@ -383,9 +427,15 @@ class MaintenanceController extends Controller
     {
         abort_unless($maintenance->customer_id === $customer->id, 404);
 
+        // Normalize empty datetime inputs to null before validation
+        foreach (['start_datetime','end_datetime'] as $f) {
+            if ($request->has($f) && trim((string)$request->input($f)) === '') {
+                $request->merge([$f => null]);
+            }
+        }
         $data = $request->validate([
             'production_line_id' => 'required|exists:production_lines,id',
-            'start_datetime' => 'required|date',
+            'start_datetime' => 'nullable|date',
             'end_datetime' => 'nullable|date|after_or_equal:start_datetime',
             'annotations' => 'nullable|string',
             'operator_id' => 'nullable|exists:operators,id',

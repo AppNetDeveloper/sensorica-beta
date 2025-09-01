@@ -35,12 +35,26 @@
         <label class="form-label">{{ __('Description') }}</label>
         <textarea name="description" rows="3" class="form-control">{{ old('description') }}</textarea>
       </div>
+      <div class="col-12">
+        <label class="form-label">{{ __('Production lines (optional)') }}</label>
+        <select name="production_line_ids[]" class="form-select" multiple size="6">
+          @foreach($lines as $line)
+            <option value="{{ $line->id }}" {{ collect(old('production_line_ids', []))->contains($line->id) ? 'selected' : '' }}>
+              {{ $line->name }}
+            </option>
+          @endforeach
+        </select>
+        <small class="text-muted d-block mt-1">
+          {{ __('Si no seleccionas ninguna línea, la pieza será Global (aplicable a todas las líneas). Si seleccionas varias líneas, se crearán varias piezas (una por línea).') }}
+        </small>
+      </div>
       <div class="col-md-3 form-check form-switch mt-3 ms-2">
         <input class="form-check-input" type="checkbox" id="active" name="active" value="1" checked>
         <label class="form-check-label" for="active">{{ __('Active') }}</label>
       </div>
       <div class="col-12">
         <button type="submit" class="btn btn-primary">{{ __('Save') }}</button>
+        <button type="button" class="btn btn-outline-secondary ms-2" onclick="history.back(); return false;">{{ __('Atrás') }}</button>
       </div>
     </form>
   </div>

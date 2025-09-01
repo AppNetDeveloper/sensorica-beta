@@ -36,12 +36,24 @@
         <label class="form-label">{{ __('Description') }}</label>
         <textarea name="description" rows="3" class="form-control">{{ old('description', $cause->description) }}</textarea>
       </div>
+      <div class="col-md-6">
+        <label class="form-label">{{ __('Production line') }}</label>
+        <select name="production_line_id" class="form-select">
+          <option value="" {{ old('production_line_id', $cause->production_line_id) ? '' : 'selected' }}>{{ __('Global (todas las líneas)') }}</option>
+          @foreach($lines as $line)
+            <option value="{{ $line->id }}" {{ (string)old('production_line_id', $cause->production_line_id) === (string)$line->id ? 'selected' : '' }}>
+              {{ $line->name }}
+            </option>
+          @endforeach
+        </select>
+      </div>
       <div class="col-md-3 form-check form-switch mt-3 ms-2">
         <input class="form-check-input" type="checkbox" id="active" name="active" value="1" {{ old('active', $cause->active) ? 'checked' : '' }}>
         <label class="form-check-label" for="active">{{ __('Active') }}</label>
       </div>
       <div class="col-12">
         <button type="submit" class="btn btn-primary">{{ __('Save') }}</button>
+        <button type="button" class="btn btn-outline-secondary ms-2" onclick="history.back(); return false;">{{ __('Atrás') }}</button>
       </div>
     </form>
   </div>

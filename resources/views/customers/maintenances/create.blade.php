@@ -22,7 +22,7 @@
       <div class="row">
         <div class="col-md-6 mb-3">
           <label class="form-label">{{ __('Start date & time') }}</label>
-          <input type="datetime-local" class="form-control" name="start_datetime" required>
+          <input type="datetime-local" class="form-control" name="start_datetime">
         </div>
         <div class="col-md-6 mb-3">
           <label class="form-label">{{ __('End date & time') }}</label>

@@ -17,20 +17,31 @@ class MaintenancePartController extends Controller
 
     public function index(Customer $customer)
     {
-        $parts = MaintenancePart::where('customer_id', $customer->id)
-            ->orderByDesc('id')
-            ->get();
+        $lineId = request('production_line_id');
+        $query = MaintenancePart::where('customer_id', $customer->id);
+        if ($lineId === 'global') {
+            $query->whereNull('production_line_id');
+        } elseif (!empty($lineId)) {
+            $query->where('production_line_id', (int)$lineId);
+        }
+        $parts = $query->orderByDesc('id')->get();
+
+        $lines = $customer->productionLines()->orderBy('name')->get(['id','name']);
 
         return view('customers.maintenance_parts.index', [
             'customer' => $customer,
             'parts' => $parts,
+            'lines' => $lines,
+            'currentLineId' => $lineId,
         ]);
     }
 
     public function create(Customer $customer)
     {
+        $lines = $customer->productionLines()->orderBy('name')->get(['id','name']);
         return view('customers.maintenance_parts.create', [
             'customer' => $customer,
+            'lines' => $lines,
         ]);
     }
 
@@ -41,11 +52,25 @@ class MaintenancePartController extends Controller
             'code' => 'nullable|string|max:100',
             'description' => 'nullable|string',
             'active' => 'nullable|boolean',
+            'production_line_ids' => 'nullable|array',
+            'production_line_ids.*' => 'integer',
         ]);
-        $data['customer_id'] = $customer->id;
-        $data['active'] = (bool)($data['active'] ?? true);
-
-        MaintenancePart::create($data);
+        $active = (bool)($data['active'] ?? true);
+        $base = [
+            'customer_id' => $customer->id,
+            'name' => $data['name'],
+            'code' => $data['code'] ?? null,
+            'description' => $data['description'] ?? null,
+            'active' => $active,
+        ];
+        $lineIds = collect($data['production_line_ids'] ?? [])->filter()->map(fn($id) => (int)$id)->unique();
+        if ($lineIds->isEmpty()) {
+            MaintenancePart::create($base + ['production_line_id' => null]);
+        } else {
+            foreach ($lineIds as $lid) {
+                MaintenancePart::create($base + ['production_line_id' => $lid]);
+            }
+        }
 
         return redirect()->route('customers.maintenance-parts.index', $customer->id)
             ->with('success', __('Part created successfully'));
@@ -56,9 +81,11 @@ class MaintenancePartController extends Controller
         if ($maintenance_part->customer_id !== $customer->id) {
             abort(404);
         }
+        $lines = $customer->productionLines()->orderBy('name')->get(['id','name']);
         return view('customers.maintenance_parts.edit', [
             'customer' => $customer,
             'part' => $maintenance_part,
+            'lines' => $lines,
         ]);
     }
 
@@ -72,10 +99,17 @@ class MaintenancePartController extends Controller
             'code' => 'nullable|string|max:100',
             'description' => 'nullable|string',
             'active' => 'nullable|boolean',
+            'production_line_id' => 'nullable|integer',
         ]);
         $data['active'] = (bool)($data['active'] ?? false);
 
-        $maintenance_part->update($data);
+        $maintenance_part->update([
+            'name' => $data['name'],
+            'code' => $data['code'] ?? null,
+            'description' => $data['description'] ?? null,
+            'active' => $data['active'],
+            'production_line_id' => $data['production_line_id'] ?? null,
+        ]);
 
         return redirect()->route('customers.maintenance-parts.index', $customer->id)
             ->with('success', __('Part updated successfully'));

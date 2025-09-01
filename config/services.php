@@ -30,4 +30,10 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    // AI/Ollama task API configuration
+    'ai' => [
+        'url' => env('AI_URL'), // base URL, e.g. https://tu-dominio
+        'token' => env('AI_TOKEN'),
+    ],
+
 ];

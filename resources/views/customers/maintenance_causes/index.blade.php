@@ -17,11 +17,26 @@
 <div class="card">
   <div class="card-header d-flex justify-content-between align-items-center">
     <h5 class="mb-0">{{ __('Causas de mantenimiento') }}</h5>
-    @can('maintenance-create')
-    <a href="{{ route('customers.maintenance-causes.create', $customer->id) }}" class="btn btn-sm btn-primary">{{ __('Crear causa') }}</a>
-    @endcan
+    <div class="d-flex align-items-center gap-2">
+      <button type="button" class="btn btn-sm btn-outline-secondary" onclick="history.back(); return false;">{{ __('Atrás') }}</button>
+      @can('maintenance-create')
+      <a href="{{ route('customers.maintenance-causes.create', $customer->id) }}" class="btn btn-sm btn-primary">{{ __('Crear causa') }}</a>
+      @endcan
+    </div>
   </div>
   <div class="card-body">
+    <form method="GET" class="row g-2 align-items-end mb-3">
+      <div class="col-md-6">
+        <label class="form-label">{{ __('Filtrar por línea') }}</label>
+        <select name="production_line_id" class="form-select" onchange="this.form.submit()">
+          <option value="">{{ __('Todas las líneas') }}</option>
+          <option value="global" {{ ($currentLineId ?? '') === 'global' ? 'selected' : '' }}>{{ __('Global (todas las líneas)') }}</option>
+          @foreach(($lines ?? []) as $line)
+            <option value="{{ $line->id }}" {{ (string)($currentLineId ?? '') === (string)$line->id ? 'selected' : '' }}>{{ $line->name }}</option>
+          @endforeach
+        </select>
+      </div>
+    </form>
     <div class="table-responsive" style="max-width: 100%; margin: 0 auto;">
       <table class="table table-striped align-middle" id="causesTable">
         <thead>

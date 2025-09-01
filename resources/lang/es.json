@@ -963,6 +963,8 @@
     "Maintenance Part": "Pieza de Mantenimiento",
     "Maintenance Parts": "Piezas de mantenimiento",
     "Used Parts": "Piezas usadas",
-    "Stopped before Start": "Parada previa al inicio",
-    "Total Time": "Tiempo total"
+    "Stopped before Start": "Tiempo de espera hasta el Mantenimiento",
+    "Total Time": "Tiempo total",
+    "Análisis IA": "Análisis IA",
+    "Análisis con IA": "Análisis con IA"
 }

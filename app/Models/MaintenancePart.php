@@ -11,6 +11,7 @@ class MaintenancePart extends Model
 
     protected $fillable = [
         'customer_id',
+        'production_line_id',
         'name',
         'code',
         'description',
@@ -24,5 +25,10 @@ class MaintenancePart extends Model
     public function customer()
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function productionLine()
+    {
+        return $this->belongsTo(ProductionLine::class);
     }
 }
