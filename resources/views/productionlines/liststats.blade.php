@@ -276,7 +276,16 @@
                         <i class="fas fa-table me-2 text-primary" hidden></i>
                         
                     </h6>
-                    <div class="d-flex">
+                    <div class="btn-toolbar" role="toolbar" aria-label="Toolbar">
+                        @php($aiUrl = config('services.ai.url'))
+                        @php($aiToken = config('services.ai.token'))
+                        @if(!empty($aiUrl) && !empty($aiToken))
+                        <div class="btn-group btn-group-sm me-2" role="group" aria-label="IA">
+                            <button type="button" class="btn btn-dark" id="btn-ai-open" data-bs-toggle="modal" data-bs-target="#aiPromptModal" title="@lang('Análisis con IA')">
+                                <i class="bi bi-stars me-1 text-white"></i><span class="d-none d-sm-inline">@lang('Análisis IA')</span>
+                            </button>
+                        </div>
+                        @endif
                         <div class="btn-group" role="group">
                             <button type="button" class="btn btn-sm btn-outline-success" id="exportExcel">
                                 <i class="fas fa-file-excel me-1"></i> Excel
@@ -521,7 +530,163 @@
             console.log('Document ready, checking for DashboardAnimations class...');
             // La clase se inicializa automáticamente en el archivo JS
         });
+        // Limitar el rango máximo de fechas a 7 días
+        function ensureMaxRange7Days() {
+            const startVal = $('#startDate').val();
+            const endVal = $('#endDate').val();
+            if (!startVal || !endVal) return;
+            const start = new Date(startVal);
+            const end = new Date(endVal);
+            const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+            if ((end - start) > sevenDaysMs) {
+                const newStart = new Date(end.getTime() - sevenDaysMs);
+                const fmt = (d) => d.toISOString().slice(0,16);
+                $('#startDate').val(fmt(newStart));
+            }
+        }
     </script>
+
+    <script>
+        // IA: Configuración y utilidades
+        const AI_URL = "{{ config('services.ai.url') }}";
+        const AI_TOKEN = "{{ config('services.ai.token') }}";
+
+        function collectAiContext() {
+            const table = $('#controlWeightTable').DataTable();
+            const rows = table ? table.rows({ page: 'current' }).data().toArray() : [];
+            const filters = {
+                lines: $('#modbusSelect').val() || [],
+                operators: $('#operatorSelect').val() || [],
+                startDate: $('#startDate').val(),
+                endDate: $('#endDate').val()
+            };
+            return { rows, filters, page: 'productionlines/liststats' };
+        }
+
+        function showAiLoading(show) {
+            const btn = document.getElementById('btn-ai-send');
+            if (!btn) return;
+            btn.disabled = !!show;
+            btn.innerText = show ? '{{ __('Enviando...') }}' : '{{ __('Enviar a IA') }}';
+        }
+
+        async function startAiTask(prompt) {
+            try {
+                showAiLoading(true);
+                const payload = collectAiContext();
+                console.log('[AI][Prod Lines] Context rows:', payload.rows.length, 'Filters:', payload.filters);
+                let combinedPrompt;
+                try {
+                    combinedPrompt = `${prompt}\n\n=== Datos para analizar (JSON) ===\n${JSON.stringify(payload, null, 2)}`;
+                } catch (e) {
+                    combinedPrompt = `${prompt}\n\n=== Datos para analizar (JSON) ===\n[Error serializando datos]`;
+                }
+                console.log('[AI] Combined prompt length:', combinedPrompt.length);
+                console.log('[AI] Combined prompt preview:', combinedPrompt.substring(0, 500));
+                const fd = new FormData();
+                fd.append('prompt', combinedPrompt);
+
+                const resp = await fetch(`${AI_URL.replace(/\/$/, '')}/api/ollama-tasks`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${AI_TOKEN}` },
+                    body: fd
+                });
+                if (!resp.ok) {
+                    const t = await resp.text();
+                    throw new Error(`AI create failed ${resp.status}: ${t}`);
+                }
+                const created = await resp.json();
+                const taskId = (created && (created.id || created.task_id || created.taskId)) || created;
+                if (!taskId) throw new Error('No task id');
+
+                let done = false; let last;
+                while (!done) {
+                    await new Promise(r => setTimeout(r, 5000));
+                    const pollResp = await fetch(`${AI_URL.replace(/\/$/, '')}/api/ollama-tasks/${encodeURIComponent(taskId)}`, {
+                        headers: { 'Authorization': `Bearer ${AI_TOKEN}` }
+                    });
+                    if (pollResp.status === 404) {
+                        try { const nf = await pollResp.json(); alert(nf?.error || 'Task not found'); } catch {}
+                        return;
+                    }
+                    if (!pollResp.ok) throw new Error('poll failed');
+                    last = await pollResp.json();
+                    const task = last && last.task ? last.task : null;
+                    if (!task) continue;
+                    if (task.response == null) {
+                        if (task.error && /processing/i.test(task.error)) { continue; }
+                        if (task.error == null) { continue; }
+                    }
+                    if (task.error && !/processing/i.test(task.error)) { alert(task.error); return; }
+                    if (task.response != null) { done = true; }
+                }
+
+                $('#aiResultPrompt').text(prompt);
+                const content = (last && last.task && last.task.response != null) ? last.task.response : last;
+                try { $('#aiResultData').text(typeof content === 'string' ? content : JSON.stringify(content, null, 2)); } catch { $('#aiResultData').text(String(content)); }
+                const resultModal = new bootstrap.Modal(document.getElementById('aiResultModal'));
+                resultModal.show();
+            } catch (err) {
+                console.error('[AI] Unexpected error:', err);
+                alert('{{ __('An error occurred') }}');
+            } finally {
+                showAiLoading(false);
+            }
+        }
+
+        $(function(){
+            const defaultPromptPL = {!! json_encode(__('Analiza las líneas de producción mostradas (OEE, tiempos, paradas y operadores) para detectar patrones en los últimos días.')) !!};
+            $('#aiPromptModal').on('shown.bs.modal', function(){
+                const $ta = $('#aiPrompt');
+                if (!$ta.val()) $ta.val(defaultPromptPL);
+                $ta.trigger('focus');
+            });
+            $('#btn-ai-reset').on('click', function(){ $('#aiPrompt').val(defaultPromptPL); });
+            $('#btn-ai-send').on('click', function(){
+                const prompt = ($('#aiPrompt').val() || '').trim() || defaultPromptPL;
+                startAiTask(prompt);
+            });
+        });
+    </script>
+
+    <!-- AI Prompt Modal -->
+    <div class="modal fade" id="aiPromptModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-robot me-2"></i>@lang('Análisis IA')</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <label class="form-label">@lang('¿Qué necesitas analizar?')</label>
+                    <textarea class="form-control" id="aiPrompt" rows="4" placeholder="@lang('Describe qué análisis quieres sobre las líneas mostradas')"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" id="btn-ai-reset">@lang('Limpiar prompt por defecto')</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@lang('Close')</button>
+                    <button type="button" class="btn btn-primary" id="btn-ai-send">@lang('Enviar a IA')</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- AI Result Modal -->
+    <div class="modal fade" id="aiResultModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@lang('Resultado IA')</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted"><strong>@lang('Prompt'):</strong> <span id="aiResultPrompt"></span></p>
+                    <pre id="aiResultData" class="bg-light p-3 rounded" style="white-space: pre-wrap;"></pre>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@lang('Close')</button>
+                </div>
+            </div>
+        </div>
+    </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
@@ -1199,6 +1364,7 @@
                 console.log("Parámetros seleccionados (refresh):", { selectedLines, startDate, endDate, selectedOperators });
                 
                 if (selectedLines && selectedLines.length > 0 && startDate && endDate) {
+                    ensureMaxRange7Days();
                     $('#loadingIndicator').show();
                     $('#controlWeightTable').hide();
                     $(this).find('i').addClass('fa-spin');
@@ -1217,6 +1383,7 @@
                 console.log("Parámetros seleccionados:", { selectedLines, startDate, endDate, selectedOperators });
 
                 if (selectedLines && selectedLines.length > 0 && startDate && endDate) {
+                    ensureMaxRange7Days();
                     // Mostrar indicador de carga
                     $('#loadingIndicator').show();
                     $('#controlWeightTable').hide();

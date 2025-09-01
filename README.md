@@ -36,6 +36,7 @@
   - [Servidor web: Caddy](#servidor-web-caddy)
   - [Red y acceso seguro: ZeroTier + Cloudflare Tunnels](#red-y-acceso-seguro-zerotier--cloudflare-tunnels)
 - [Licencia](#licencia)
+ - [🤖 Integración IA (Análisis con Ollama)](#🤖-integración-ia-análisis-con-ollama)
 
 ## 📄 Descripción General
 
@@ -201,6 +202,65 @@ El módulo de Control de Calidad (QC) permite gestionar tanto las Incidencias de
 - __Consideraciones UX__
   - La fila expandible reduce ruido visual y agrupa acciones por contexto.
   - Los iconos usan colores semánticos: rojo para incidencias, azul para confirmaciones, verde/amarillo para estadísticas.
+
+
+### 🤖 Integración IA (Análisis con Ollama)
+
+La aplicación integra un flujo de análisis asistido por IA que permite enviar los datos actualmente visibles en tablas (DataTables) junto con un prompt a un servicio de tareas de IA. El backend esperado es un endpoint interno tipo `/api/ollama-tasks` que crea y gestiona tareas con un modelo LLM (por ejemplo, Ollama).
+
+__Vistas con botón “Análisis IA”__
+- `resources/views/customers/maintenances/index.blade.php`
+- `resources/views/customers/quality-incidents/index.blade.php`
+- `resources/views/customers/qc-confirmations/index.blade.php`
+- `resources/views/productionlines/liststats.blade.php`
+
+__Habilitación por configuración__
+- El botón de IA solo se muestra si existen ambas variables en configuración Laravel:
+  - `config('services.ai.url')` → URL base del servicio IA
+  - `config('services.ai.token')` → Token Bearer
+- Defínelas en `.env` y el mapeo en `config/services.php`:
+  - `.env`:
+    - `AI_URL=https://mi-servidor-ia`
+    - `AI_TOKEN=mi_token_secreto`
+  - `config/services.php`:
+    - `'ai' => ['url' => env('AI_URL'), 'token' => env('AI_TOKEN')],`
+
+__Comportamiento de UI__
+- Botón en el header de la tarjeta, estilo `btn btn-dark` con icono “stars”.
+- Modal de prompt con:
+  - Prompt por defecto que se autocompleta al abrir.
+  - Botón “Limpiar prompt por defecto” para restablecer el texto.
+  - Botón “Enviar a IA” que muestra estado de carga.
+- Modal de resultados que muestra el prompt y la respuesta formateada.
+
+__Qué datos se envían a la IA__
+- Se recoge el contexto visible en el DataTable (página o búsqueda aplicada según vista) y los filtros actuales.
+- El JavaScript combina el prompt del usuario con los datos en formato JSON dentro del mismo campo `prompt` (no se envía un JSON separado en el body). Ejemplo de estructura:
+
+```
+<prompt_del_usuario>
+
+=== Datos para analizar (JSON) ===
+{ "rows": [...], "filters": { ... } }
+```
+
+__API utilizada__
+- Crear tarea: `POST {AI_URL}/api/ollama-tasks`
+  - Headers: `Authorization: Bearer {AI_TOKEN}`
+  - Body: `multipart/form-data` con campo `prompt` (string combinado)
+- Consultar tarea: `GET {AI_URL}/api/ollama-tasks/{id}`
+  - Headers: `Authorization: Bearer {AI_TOKEN}`
+  - Polling automático cada 5s hasta obtener `task.response`.
+
+__Mensajería de errores__
+- Si la creación o el polling fallan, se muestra un `alert()` y logs en consola.
+- Si falta configuración (`AI_URL`/`AI_TOKEN`), el botón no aparece.
+
+__Prueba rápida__
+1. Asegúrate de tener `AI_URL` y `AI_TOKEN` válidos en `.env` y `php artisan config:clear`.
+2. Abre una de las vistas listadas, ajusta filtros para reducir filas visibles a un subconjunto relevante.
+3. Haz clic en “Análisis IA”, revisa/ajusta el prompt (o usa el predeterminado) y envía.
+4. Espera a que el polling complete y verifica el resultado en el modal.
 
 
 ### Gestión de Mantenimientos

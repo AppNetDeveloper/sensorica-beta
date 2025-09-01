@@ -23,11 +23,15 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">@lang('Incidencias QC') - {{ $customer->name }}</h5>
                         <div class="btn-toolbar" role="toolbar" aria-label="Toolbar">
+                            @php($aiUrl = config('services.ai.url'))
+                            @php($aiToken = config('services.ai.token'))
+                            @if(!empty($aiUrl) && !empty($aiToken))
                             <div class="btn-group btn-group-sm me-2" role="group" aria-label="IA">
                                 <button type="button" class="btn btn-dark" id="btn-ai-open" data-bs-toggle="modal" data-bs-target="#aiPromptModal" title="@lang('Análisis con IA')">
                                     <i class="bi bi-stars me-1 text-white"></i><span class="d-none d-sm-inline">@lang('Análisis IA')</span>
                                 </button>
                             </div>
+                            @endif
                             <div class="btn-group btn-group-sm" role="group" aria-label="Kanban">
                                 <a href="{{ route('customers.order-organizer', $customer->id) }}" class="btn btn-light">
                                     <i class="fas fa-th me-1"></i><span class="d-none d-sm-inline">@lang('Order Organizer')</span>
@@ -75,11 +79,7 @@
                                 @endforeach
                             </select>
                         </div>
-                        <div class="col-12 d-flex justify-content-end align-items-end">
-                            <button class="btn btn-outline-primary btn-sm" id="btn-ai-open" type="button">
-                                <i class="fas fa-robot"></i> @lang('Análisis IA')
-                            </button>
-                        </div>
+                        
                     </div>
 
                     <div class="table-responsive" style="width: 100%; margin: 0 auto;">
@@ -233,8 +233,8 @@
             });
 
             // === AI integration (same behavior as maintenances) ===
-            const AI_URL = "{{ env('AI_URL') }}";
-            const AI_TOKEN = "{{ env('AI_TOKEN') }}";
+            const AI_URL = @json(config('services.ai.url'));
+            const AI_TOKEN = @json(config('services.ai.token'));
 
             function collectCurrentRows() {
                 const rows = $('#qc-incidents-table').DataTable().rows({ page: 'current' }).nodes();
@@ -334,10 +334,20 @@
                 }
             }
 
+            // Default prompt + reset
+            const defaultPromptQI = {!! json_encode(__('Analiza las incidencias de calidad mostradas, buscando motivos, líneas afectadas y tendencias en los últimos días.')) !!};
+            $('#aiPromptModal').on('shown.bs.modal', function(){
+                const $ta = $('#aiPrompt');
+                if (!$ta.val()) $ta.val(defaultPromptQI);
+                $ta.trigger('focus');
+            });
+            $('#btn-ai-reset').on('click', function(){
+                $('#aiPrompt').val(defaultPromptQI);
+            });
+
             // Send from modal
             $('#btn-ai-send').on('click', function(){
-                const defaultPrompt = {!! json_encode(__('Analiza las incidencias de calidad mostradas, buscando motivos, líneas afectadas y tendencias en los últimos días.')) !!};
-                const prompt = ($('#aiPrompt').val() || '').trim() || defaultPrompt;
+                const prompt = ($('#aiPrompt').val() || '').trim() || defaultPromptQI;
                 startAiTask(prompt);
             });
         });
@@ -355,6 +365,7 @@
                     <textarea class="form-control" id="aiPrompt" rows="4" placeholder="@lang('Describe qué análisis quieres sobre las incidencias mostradas')"></textarea>
                 </div>
                 <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" id="btn-ai-reset">@lang('Limpiar prompt por defecto')</button>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@lang('Close')</button>
                     <button type="button" class="btn btn-primary" id="btn-ai-send">@lang('Enviar a IA')</button>
                 </div>
