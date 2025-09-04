@@ -459,6 +459,71 @@
         let cachedDropPosition = null; // Cachear posición detectada durante dragOver
         let cachedTargetContainer = null; // Cachear contenedor objetivo
         let isRequestInProgress = false; // Variable para controlar si hay una solicitud en curso
+        // Estado para el buscador de la columna Pendientes
+        let pendingSearchValue = '';
+        let pendingSearchFocused = false;
+        let pendingSearchCaret = null;
+        
+        // Utilidades para capturar/restaurar estado del buscador de Pendientes
+        function capturePendingSearchState() {
+            const el = document.querySelector('#pending_assignment .pending-search-input');
+            if (el) {
+                pendingSearchValue = el.value;
+                if (document.activeElement === el) {
+                    pendingSearchFocused = true;
+                    try { pendingSearchCaret = el.selectionStart; } catch(_) { pendingSearchCaret = null; }
+                } else {
+                    pendingSearchFocused = false;
+                    pendingSearchCaret = null;
+                }
+            }
+        }
+        function restorePendingSearchState() {
+            const el = document.querySelector('#pending_assignment .pending-search-input');
+            if (el) {
+                el.value = pendingSearchValue || '';
+                // Conectar handler de entrada para actualizar valor y re-filtrar en vivo
+                const onInput = (e) => {
+                    pendingSearchValue = e.target.value || '';
+                    // Re-render mínimo: solo redistribuir para aplicar filtro; sin perder foco
+                    distributeAndRender(false);
+                    // Volver a enfocar tras re-render
+                    const el2 = document.querySelector('#pending_assignment .pending-search-input');
+                    if (el2) {
+                        el2.focus();
+                        try {
+                            const pos = e.target.selectionStart ?? el2.value.length;
+                            el2.setSelectionRange(pos, pos);
+                        } catch(_) {}
+                    }
+                };
+                // Evitar múltiples listeners: el nodo se recrea en cada render, así que es seguro añadir
+                el.addEventListener('input', onInput);
+                el.addEventListener('focus', () => { pendingSearchFocused = true; });
+                el.addEventListener('blur', () => { pendingSearchFocused = false; });
+                if (pendingSearchFocused) {
+                    el.focus();
+                    try { if (pendingSearchCaret != null) el.setSelectionRange(pendingSearchCaret, pendingSearchCaret); } catch(_) {}
+                    // Refuerzo de foco para evitar pérdida cuando el valor está vacío
+                    try {
+                        requestAnimationFrame(() => {
+                            const el3 = document.querySelector('#pending_assignment .pending-search-input');
+                            if (el3) {
+                                el3.focus();
+                                try { if (pendingSearchCaret != null) el3.setSelectionRange(pendingSearchCaret, pendingSearchCaret); } catch(_) {}
+                            }
+                        });
+                        setTimeout(() => {
+                            const el4 = document.querySelector('#pending_assignment .pending-search-input');
+                            if (el4) {
+                                el4.focus();
+                                try { if (pendingSearchCaret != null) el4.setSelectionRange(pendingSearchCaret, pendingSearchCaret); } catch(_) {}
+                            }
+                        }, 0);
+                    } catch(_) {}
+                }
+            }
+        }
         
         const translations = {
             noOrdersToOrganize: "{{ __('No hay órdenes o líneas de producción para organizar.') }}",
@@ -529,6 +594,8 @@
         // --- 2. LÓGICA PRINCIPAL DE RENDERIZADO ---
 
         function distributeAndRender(shouldSort = true, callback = null) {
+            // Capturar estado del input de búsqueda de Pendientes antes de re-renderizar
+            capturePendingSearchState();
             const searchTerm = searchInput.value.trim().toLowerCase();
             
             let ordersToDisplay = searchTerm ? masterOrderList.filter(order => {
@@ -580,8 +647,24 @@
                 }
             });
             
+            // Aplicar filtro solo a la columna Pendientes, según pendingSearchValue
+            if (pendingSearchValue && columns.pending_assignment) {
+                const term = pendingSearchValue.trim().toLowerCase();
+                const matches = (order) => {
+                    const orderIdMatch = String(order.order_id || '').toLowerCase().includes(term);
+                    const descripMatch = String(order.json?.descrip || '').toLowerCase().includes(term);
+                    const customerMatch = String(order.customerId || '').toLowerCase().includes(term);
+                    const processesMatch = String(order.processes_to_do || '').toLowerCase().includes(term);
+                    const articlesMatch = Array.isArray(order.articles_descriptions) && order.articles_descriptions.some(d => String(d||'').toLowerCase().includes(term));
+                    return orderIdMatch || descripMatch || customerMatch || processesMatch || articlesMatch;
+                };
+                columns.pending_assignment.items = columns.pending_assignment.items.filter(matches);
+            }
+
+            // Render y restauración del estado del input
             renderBoard();
-            
+            restorePendingSearchState();
+
             // Actualizar estadísticas de la columna de pendientes después de renderizar
             const pendingColumn = document.getElementById('pending_assignment');
             if (pendingColumn) {
@@ -1284,6 +1367,10 @@
             columnElement.addEventListener('dragover', throttledProcessDragOver);
             columnElement.addEventListener('dragleave', resetDropZones);
             columnElement.addEventListener('drop', drop);
+            // Inicializar header de línea de producción con estado actual para evitar parpadeos
+            if (column.productionLineId) {
+                try { renderColumnStatusIndicator(column, columnElement); } catch(_) {}
+            }
             
             return columnElement;
         }
@@ -1603,6 +1690,8 @@
         }
         
         function updateColumnHeaderStatuses() {
+            // Proteger el estado del input de Pendientes durante actualización de headers
+            capturePendingSearchState();
             Object.values(columns).forEach(column => {
                 if (!column.productionLineId) return;
                 
@@ -1657,6 +1746,8 @@
                 // Actualizar estadísticas de la columna sin reconstruir el DOM
                 updateColumnStats(columnElement, true);
             });
+            // Restaurar estado del input de Pendientes tras actualizar headers
+            restorePendingSearchState();
         }
         
         function renderColumnStatusIndicator(column, columnElement) {
@@ -1664,7 +1755,7 @@
             
             const lineStatus = productionLineStatuses[column.productionLineId];
             if (!lineStatus) {
-                console.warn(`⚠️ No se encontró estado para la línea ${column.productionLineId}`);
+                // Silenciar para evitar ruido en consola y micro-janks
                 return;
             }
             
@@ -1704,17 +1795,24 @@
                     if (iconElement) {
                         // Solo actualizar la clase si es diferente para evitar reflow
                         const newIconClass = `fas fa-${iconType}-circle`;
-                        iconElement.className = newIconClass;
+                        if (iconElement.className !== newIconClass) {
+                            iconElement.className = newIconClass;
+                        }
                     }
                     
                     // Actualizar el texto
                     const textElement = statusIndicator.querySelector('span');
                     if (textElement) {
-                        textElement.textContent = statusText;
+                        if (textElement.textContent !== statusText) {
+                            textElement.textContent = statusText;
+                        }
                     }
                     
-                    // Actualizar la clase
-                    statusIndicator.className = `line-status-indicator ${statusClass}`;
+                    // Actualizar la clase solo si cambió
+                    const desiredClass = `line-status-indicator ${statusClass}`;
+                    if (statusIndicator.className !== desiredClass) {
+                        statusIndicator.className = desiredClass;
+                    }
                 }
                 
                 // 2. Actualizar el elemento del operario
@@ -1723,7 +1821,7 @@
                     const textElement = operatorElement.querySelector('span');
                     const operatorName = lineStatus.operator_name || '';
                     
-                    if (textElement) {
+                    if (textElement && textElement.textContent !== operatorName) {
                         textElement.textContent = operatorName;
                     }
                 }
@@ -1751,24 +1849,27 @@
                     // Actualizar el icono
                     const iconElement = scheduleElement.querySelector('i');
                     if (iconElement) {
-                        iconElement.className = `fas ${scheduleIcon}`;
+                        const desired = `fas ${scheduleIcon}`;
+                        if (iconElement.className !== desired) {
+                            iconElement.className = desired;
+                        }
                     }
                     
                     // Actualizar el texto
                     const textElement = scheduleElement.querySelector('span');
-                    if (textElement) {
+                    if (textElement && textElement.textContent !== scheduleText) {
                         textElement.textContent = scheduleText;
                     }
                     
                     // Actualizar la clase
-                    scheduleElement.className = `line-schedule ${scheduleClass}`;
+                    const desiredScheduleClass = `line-schedule ${scheduleClass}`;
+                    if (scheduleElement.className !== desiredScheduleClass) {
+                        scheduleElement.className = desiredScheduleClass;
+                    }
                 }
                 
                 // 4. Aplicar transiciones suaves para evitar parpadeo
                 statusContainer.classList.add('smooth-updates');
-                
-                // Registrar en consola para depuración
-                console.log(`📌 Actualizado header para línea ${column.productionLineId}: ${lineStatus.scheduled_status}`);
             } catch (error) {
                 console.error(`❌ Error al actualizar header de línea ${column.productionLineId}:`, error);
             }

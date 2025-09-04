@@ -75,6 +75,14 @@
         </select>
       </div>
       <div class="col-md-3">
+        <label class="form-label">{{ __('Created from') }}</label>
+        <input type="date" name="created_from" value="{{ $createdFrom ?? '' }}" class="form-control" />
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">{{ __('Created to') }}</label>
+        <input type="date" name="created_to" value="{{ $createdTo ?? '' }}" class="form-control" />
+      </div>
+      <div class="col-md-3">
         <label class="form-label">{{ __('Start from') }}</label>
         <input type="date" name="start_from" value="{{ $startFrom ?? '' }}" class="form-control" />
       </div>
@@ -250,6 +258,32 @@
 @push('styles')
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css"/>
 <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css"/>
+<style>
+  /* Bigger summary cards */
+  #maint-summary .card {
+    min-height: 190px;
+    border-radius: 14px;
+  }
+  #maint-summary .card .card-body { padding: 1.5rem 1.75rem; }
+  /* Label text */
+  #maint-summary .text-muted.small { font-size: 1.35rem !important; font-weight: 700; }
+  /* Main number */
+  #maint-summary .fs-4.fw-bold { font-size: 3.8rem !important; line-height: 1.05; }
+  /* Icon */
+  #maint-summary i { font-size: 3.8rem !important; }
+
+  @media (min-width: 1200px) {
+    #maint-summary .card { min-height: 210px; }
+    #maint-summary .fs-4.fw-bold { font-size: 4.2rem !important; }
+    #maint-summary i { font-size: 4.2rem !important; }
+  }
+
+  @media (max-width: 575.98px) {
+    #maint-summary .card { min-height: 170px; }
+    #maint-summary .fs-4.fw-bold { font-size: 3rem !important; }
+    #maint-summary .text-muted.small { font-size: 1.25rem !important; }
+  }
+</style>
 @endpush
 
 @push('scripts')
@@ -292,6 +326,8 @@
         url: "{{ route('customers.maintenances.index', $customer->id) }}",
         data: function(d) {
           const form = document.querySelector('form[action="{{ route('customers.maintenances.index', $customer->id) }}"]');
+          d.created_from = form.created_from.value;
+          d.created_to = form.created_to.value;
           d.production_line_id = form.production_line_id.value;
           d.operator_id = form.operator_id.value;
           d.user_id = form.user_id.value;
@@ -357,6 +393,8 @@
       });
       const form = document.querySelector('form[action="{{ route('customers.maintenances.index', $customer->id) }}"]');
       const filters = {
+        created_from: form?.created_from?.value || '',
+        created_to: form?.created_to?.value || '',
         production_line_id: form?.production_line_id?.value || '',
         operator_id: form?.operator_id?.value || '',
         user_id: form?.user_id?.value || '',
@@ -373,6 +411,8 @@
       const form = document.querySelector('form[action="{{ route('customers.maintenances.index', $customer->id) }}"]');
       const params = new URLSearchParams({
         totals: 1,
+        created_from: form.created_from.value || '',
+        created_to: form.created_to.value || '',
         production_line_id: form.production_line_id.value || '',
         operator_id: form.operator_id.value || '',
         user_id: form.user_id.value || '',

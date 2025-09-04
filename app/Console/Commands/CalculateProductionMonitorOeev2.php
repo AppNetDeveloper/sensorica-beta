@@ -133,7 +133,9 @@ class CalculateProductionMonitorOeev2 extends Command
 
                         //enviar downtime acumulado
                         //enviar datos a mqtt
-                        $this->sendProductionDownTimeToMQTT($monitor,$currentOrder->down_time);
+                        // Proteger cuando no exista orden actual
+                        $downTime = $currentOrder?->down_time ?? 0;
+                        $this->sendProductionDownTimeToMQTT($monitor, $downTime);
 
                         //llamar a la mqtt para enviar los datos de producción conteo semana y turno
                         $this->sendProductionDataToMQTT($totalUnitsShift, $totalUnitsWeek, $monitor);

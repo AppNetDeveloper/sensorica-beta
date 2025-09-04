@@ -132,6 +132,56 @@
                                         @endif
                                     </td>
                                 </tr>
+                                @if($originalOrder->finished_at)
+                                @php
+                                    // Helper inline para formatear segundos a HH:MM:SS
+                                    $fmt = function($seconds) {
+                                        if ($seconds === null) return null;
+                                        $hours = floor($seconds / 3600);
+                                        $minutes = floor(($seconds % 3600) / 60);
+                                        $secs = $seconds % 60;
+                                        return sprintf('%02d:%02d:%02d', $hours, $minutes, $secs);
+                                    };
+
+                                    // 1) Tiempo desde Fecha Pedido ERP hasta Finalizado
+                                    $erpToFinishedSeconds = null;
+                                    if (!empty($originalOrder->fecha_pedido_erp)) {
+                                        try {
+                                            $erpToFinishedSeconds = $originalOrder->fecha_pedido_erp->diffInSeconds($originalOrder->finished_at);
+                                        } catch (Exception $e) {
+                                            $erpToFinishedSeconds = null;
+                                        }
+                                    }
+
+                                    // 2) Tiempo desde Creado hasta Finalizado
+                                    $createdToFinishedSeconds = null;
+                                    try {
+                                        $createdToFinishedSeconds = $originalOrder->created_at->diffInSeconds($originalOrder->finished_at);
+                                    } catch (Exception $e) {
+                                        $createdToFinishedSeconds = null;
+                                    }
+                                @endphp
+                                <tr>
+                                    <th class="bg-light">{{ __('Tiempo desde ERP hasta fin') }}</th>
+                                    <td>
+                                        @if($erpToFinishedSeconds !== null)
+                                            <span class="badge bg-secondary">{{ $fmt($erpToFinishedSeconds) }}</span>
+                                        @else
+                                            <span class="text-muted">-</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th class="bg-light">{{ __('Tiempo desde creación hasta fin') }}</th>
+                                    <td>
+                                        @if($createdToFinishedSeconds !== null)
+                                            <span class="badge bg-secondary">{{ $fmt($createdToFinishedSeconds) }}</span>
+                                        @else
+                                            <span class="text-muted">-</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                                @endif
                             </table>
                         </div>
                         <div class="col-md-6">
@@ -351,7 +401,7 @@
                                                 <div class="mt-2 p-2 border rounded bg-white">
                                                     <div class="d-flex justify-content-between align-items-center mb-2">
                                                         <strong>@lang('Process Files')</strong>
-                                                        @can('original-order-edit')
+                                                        @can('original-order-files-upload')
                                                         <div class="d-flex align-items-center gap-2">
                                                             <input type="file" accept="image/*,application/pdf" multiple class="form-control form-control-sm me-2"
                                                                data-file-input
@@ -443,6 +493,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    const CAN_DELETE = {{ auth()->check() && auth()->user()->can('original-order-files-delete') ? 'true' : 'false' }};
     let deleteCtx = { url: null, container: null, filename: '' };
     const MAX_FILES = 8;
 
@@ -527,6 +578,9 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 preview = `<a href="${f.public_url}" target="_blank" class="btn btn-outline-secondary btn-sm w-100"><i class="far fa-file"></i> ${f.extension || ''}</a>`;
             }
+            const deleteBtnHtml = CAN_DELETE
+                ? `<button type="button" class="btn btn-link btn-sm text-danger p-0" data-delete data-id="${f.id}" data-name="${f.original_name}">@lang('Delete')</button>`
+                : '';
             col.innerHTML = `
                 <div class="border rounded p-2 h-100 d-flex flex-column">
                     <div class="flex-grow-1 mb-2" style="min-height:70px">${preview}</div>
@@ -535,7 +589,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="d-flex justify-content-between align-items-center mt-1">
                         <a href="${f.public_url}" target="_blank" class="btn btn-link btn-sm p-0">@lang('Open')</a>
                         <button type="button" class="btn btn-link btn-sm p-0" data-copy data-url="${f.public_url}">@lang('Copy link')</button>
-                        <button type="button" class="btn btn-link btn-sm text-danger p-0" data-delete data-id="${f.id}" data-name="${f.original_name}">@lang('Delete')</button>
+                        ${deleteBtnHtml}
                     </div>
                 </div>`;
             container.appendChild(col);

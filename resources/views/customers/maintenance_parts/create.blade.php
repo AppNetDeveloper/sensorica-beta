@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
-@section('title', __('Crear pieza de mantenimiento') . ' - ' . $customer->name)
-@section('page-title', __('Crear pieza de mantenimiento'))
+@section('title', __('Crear repuesto de mantenimiento') . ' - ' . $customer->name)
+@section('page-title', __('Crear repuesto de mantenimiento'))
 
 @section('breadcrumb')
 <div class="mb-4">
@@ -17,7 +17,7 @@
 @section('content')
 <div class="card">
   <div class="card-header d-flex justify-content-between align-items-center">
-    <h5 class="mb-0">{{ __('Nueva pieza') }}</h5>
+    <h5 class="mb-0">{{ __('Nuevo repuesto') }}</h5>
     <a href="{{ route('customers.maintenance-parts.index', $customer->id) }}" class="btn btn-sm btn-outline-secondary">{{ __('Volver') }}</a>
   </div>
   <div class="card-body">

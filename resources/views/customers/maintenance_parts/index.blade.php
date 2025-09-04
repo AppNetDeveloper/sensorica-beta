@@ -1,14 +1,14 @@
 @extends('layouts.admin')
 
-@section('title', __('Piezas de mantenimiento') . ' - ' . $customer->name)
-@section('page-title', __('Piezas de mantenimiento'))
+@section('title', __('Repuestos de mantenimiento') . ' - ' . $customer->name)
+@section('page-title', __('Repuestos de mantenimiento'))
 
 @section('breadcrumb')
 <div class="mb-4">
   <ul class="breadcrumb">
     <li class="breadcrumb-item"><a href="{{ route('home') }}">{{ __('Dashboard') }}</a></li>
     <li class="breadcrumb-item"><a href="{{ route('customers.index') }}">{{ __('Customers') }}</a></li>
-    <li class="breadcrumb-item">{{ $customer->name }} - {{ __('Piezas de mantenimiento') }}</li>
+    <li class="breadcrumb-item">{{ $customer->name }} - {{ __('Repuestos de mantenimiento') }}</li>
   </ul>
 </div>
 @endsection
@@ -16,11 +16,11 @@
 @section('content')
 <div class="card">
   <div class="card-header d-flex justify-content-between align-items-center">
-    <h5 class="mb-0">{{ __('Piezas de mantenimiento') }}</h5>
+    <h5 class="mb-0">{{ __('Repuestos de mantenimiento') }}</h5>
     <div class="d-flex align-items-center gap-2">
       <button type="button" class="btn btn-sm btn-outline-secondary" onclick="history.back(); return false;">{{ __('Atrás') }}</button>
       @can('maintenance-create')
-      <a href="{{ route('customers.maintenance-parts.create', $customer->id) }}" class="btn btn-sm btn-primary">{{ __('Crear pieza') }}</a>
+      <a href="{{ route('customers.maintenance-parts.create', $customer->id) }}" class="btn btn-sm btn-primary">{{ __('Crear repuesto') }}</a>
       @endcan
     </div>
   </div>

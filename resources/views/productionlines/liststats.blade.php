@@ -196,8 +196,8 @@
                     <div class="card-body py-2 px-3">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
-                                <h6 class="text-muted mb-1 small">Teórico Total</h6>
-                                <h4 class="mb-0" id="totalTheoretical">00:00:00</h4>
+                                <h6 class="text-muted mb-1 small">Total Diferencia</h6>
+                                <h4 class="mb-0" id="totalTheoretical" title="Suma neta: tiempo ganado (fast_time) menos tiempo de más (out_time)">00:00:00</h4>
                             </div>
                             <div class="bg-warning bg-opacity-10 p-2 rounded">
                                 <i class="fas fa-balance-scale text-warning"></i>
@@ -898,7 +898,7 @@
                         { data: 'on_time', title: 'DURACIÓN', render: data => formatTime(data), createdCell: function(td, cellData, rowData) {
                             $(td).attr('title', `Duración: ${formatTime(cellData)}`);
                         }},
-                        { data: null, title: 'Teórico', render: function(data, type, row) {
+                        { data: null, title: 'Diferencia duración teórica', render: function(data, type, row) {
                             if (row.fast_time && parseInt(row.fast_time) > 0) {
                                 return '<span class="badge bg-success">' + formatTime(row.fast_time) + '</span>';
                             } else if (row.out_time && parseInt(row.out_time) > 0) {
@@ -1012,9 +1012,10 @@
                 }
             });
             
-            // Actualizar los valores en las tarjetas separadas
-            $('#totalDownTime').text(formatTime(totalDownTime));
-            $('#totalProductionStopsTime').text(formatTime(totalProductionStopsTime));
+            // Actualizar los valores en las tarjetas separadas (invertido según requerimiento)
+            // Paradas => down_time, Falta Material => production_stops_time
+            $('#totalProductionStopsTime').text(formatTime(totalDownTime));
+            $('#totalDownTime').text(formatTime(totalProductionStopsTime));
             
             let netTheoreticalTime = 0;
             let isPositive = false;
@@ -1072,9 +1073,10 @@
                 }
             });
             
-            // Mostrar los totales en tarjetas separadas
-            $('#totalDownTime').text(formatTime(totalDownTime));
-            $('#totalProductionStopsTime').text(formatTime(totalProductionStopsTime));
+            // Mostrar los totales en tarjetas separadas (invertido según requerimiento)
+            // Paradas => down_time, Falta Material => production_stops_time
+            $('#totalProductionStopsTime').text(formatTime(totalDownTime));
+            $('#totalDownTime').text(formatTime(totalProductionStopsTime));
         }
 
         // Inicializar fechas por defecto

@@ -34,15 +34,20 @@ class MaintenanceController extends Controller
         $lineId = $request->get('production_line_id');
         $operatorId = $request->get('operator_id');
         $userId = $request->get('user_id');
+        $createdFrom = $request->get('created_from');
+        $createdTo = $request->get('created_to');
         $startFrom = $request->get('start_from');
         $startTo = $request->get('start_to');
         $endFrom = $request->get('end_from');
         $endTo = $request->get('end_to');
 
-        // If no date filters are provided, default Start from to 7 days ago (for UI and DataTable)
-        $noDateFilters = empty($startFrom) && empty($startTo) && empty($endFrom) && empty($endTo);
+        // If no date filters are provided, default to last 7 days by CREATED date (not start_datetime)
+        // This avoids hiding new rows that have NULL start_datetime (not started yet)
+        $noDateFilters = empty($createdFrom) && empty($createdTo) && empty($startFrom) && empty($startTo) && empty($endFrom) && empty($endTo);
         if ($noDateFilters) {
-            $startFrom = Carbon::now()->subDays(7)->toDateString();
+            $createdFrom = Carbon::now()->subDays(7)->toDateString();
+            // Limit by created_at only when no explicit date filters are provided
+            $query->where('created_at', '>=', $createdFrom . ' 00:00:00');
         }
 
         if ($lineId) {
@@ -54,10 +59,20 @@ class MaintenanceController extends Controller
         if ($userId) {
             $query->where('user_id', $userId);
         }
-        if ($startFrom) {
+        // Explicit Created range filter
+        if ($createdFrom) {
+            $query->where('created_at', '>=', $createdFrom . ' 00:00:00');
+        }
+        if ($createdTo) {
+            $query->where('created_at', '<=', $createdTo . ' 23:59:59');
+        }
+
+        // Apply start_datetime filters ONLY if the user actually provided them (not by our created default)
+        $applyStartFilters = ($startFrom || $startTo);
+        if ($applyStartFilters && $startFrom) {
             $query->where('start_datetime', '>=', $startFrom . ' 00:00:00');
         }
-        if ($startTo) {
+        if ($applyStartFilters && $startTo) {
             $query->where('start_datetime', '<=', $startTo . ' 23:59:59');
         }
         if ($endFrom) {
@@ -191,8 +206,8 @@ class MaintenanceController extends Controller
                                    "<input type='hidden' name='_token' value='{$csrf}'>".
                                    "<button type='submit' class='btn btn-sm btn-success me-1'>" . __('Iniciar mantenimiento') . "</button></form>";
                     }
-                    // Finish is visible to all users if maintenance is still open
-                    if (empty($m->end_datetime)) {
+                    // Finish is visible only if maintenance has been STARTED and is still open
+                    if (!empty($m->start_datetime) && empty($m->end_datetime)) {
                         $finishUrl = route('customers.maintenances.finish.form', [$customer->id, $m->id]);
                         $buttons .= "<a href='{$finishUrl}' class='btn btn-sm btn-warning me-1'>" . __('Finish') . "</a>";
                     }
@@ -233,7 +248,11 @@ class MaintenanceController extends Controller
         $operators = Operator::orderBy('name')->get(['id','name']);
         $users = User::orderBy('name')->get(['id','name']);
 
-        return view('customers.maintenances.index', compact('customer','lines','operators','users','lineId','operatorId','userId','startFrom','startTo','endFrom','endTo'));
+        return view('customers.maintenances.index', compact(
+            'customer','lines','operators','users',
+            'lineId','operatorId','userId',
+            'createdFrom','createdTo','startFrom','startTo','endFrom','endTo'
+        ));
     }
 
     public function create(Customer $customer)
@@ -350,6 +369,11 @@ class MaintenanceController extends Controller
     public function finishForm(Customer $customer, Maintenance $maintenance)
     {
         abort_unless($maintenance->customer_id === $customer->id, 404);
+        // Prevent finishing if it was not started
+        if (empty($maintenance->start_datetime)) {
+            return redirect()->route('customers.maintenances.index', $customer->id)
+                ->with('error', __('Maintenance must be started before it can be finished'));
+        }
         $causes = MaintenanceCause::where('customer_id', $customer->id)
             ->where('active', 1)
             ->where(function($q) use ($maintenance) {
@@ -374,6 +398,11 @@ class MaintenanceController extends Controller
     public function finishStore(Request $request, Customer $customer, Maintenance $maintenance)
     {
         abort_unless($maintenance->customer_id === $customer->id, 404);
+        // Prevent finishing if it was not started
+        if (empty($maintenance->start_datetime)) {
+            return redirect()->route('customers.maintenances.index', $customer->id)
+                ->with('error', __('Maintenance must be started before it can be finished'));
+        }
         $data = $request->validate([
             'annotations' => 'nullable|string',
             'cause_ids' => 'nullable|array',

@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
-@section('title', __('Crear causa de mantenimiento') . ' - ' . $customer->name)
-@section('page-title', __('Crear causa de mantenimiento'))
+@section('title', __('Crear operacion de mantenimiento') . ' - ' . $customer->name)
+@section('page-title', __('Crear operacion de mantenimiento'))
 
 @section('breadcrumb')
 <div class="mb-4">

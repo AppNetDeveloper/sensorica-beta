@@ -59,7 +59,8 @@ class OrderStat extends Model
         'weights_3_orderNumber', //Numero de orden
         'weights_3_orderKg', //Kg de orden
         'down_time', //Tiempo de paro
-        'prepair_time' //Tiempo de reparacion
+        'prepair_time', //Tiempo de reparacion
+        'on_time', //Tiempo en produccion
     ];
 
     // Asegúrate de que se gestionen las marcas de tiempo automáticamente.
