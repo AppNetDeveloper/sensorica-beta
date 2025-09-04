@@ -53,6 +53,7 @@ class ProductionOrder extends Model
         'fecha_pedido_erp', // Fecha del pedido en el sistema ERP
         'estimated_start_datetime', // Fecha y hora estimada de inicio
         'estimated_end_datetime', // Fecha y hora estimada de finalización
+        'ready_after_datetime', // Fecha y hora a partir de la cual el siguiente proceso puede empezar
         'note' // Anotaciones sobre la orden
     ];
     
@@ -89,6 +90,7 @@ class ProductionOrder extends Model
         'fecha_pedido_erp' => 'datetime', // Fecha del pedido en el sistema ERP
         'estimated_start_datetime' => 'datetime', // Fecha y hora estimada de inicio
         'estimated_end_datetime' => 'datetime', // Fecha y hora estimada de finalización
+        'ready_after_datetime' => 'datetime', // Disponibilidad para iniciar siguiente proceso
     ];
 
     /**

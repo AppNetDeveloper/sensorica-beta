@@ -536,10 +536,99 @@ class UpdateAccumulatedTimes extends Command
             }
             
             $this->info("Se actualizaron los tiempos acumulados de {$updatedCount} órdenes.");
+            
+            // Tras calcular y guardar estimated_start/end para todas las órdenes activas,
+            // encadenamos disponibilidad por grupo (original_order_id + grupo_numero)
+            try {
+                $this->updateGroupReadyAfter($activeOrders);
+            } catch (\Throwable $e) {
+                $this->warn('Error actualizando ready_after_datetime por grupo: ' . $e->getMessage());
+                Log::warning('updateGroupReadyAfter error: ' . $e->getMessage());
+            }
+
             return 0;
         } catch (\Exception $e) {
             $this->error("Error al actualizar los tiempos acumulados: {$e->getMessage()}");
+            Log::error("Error en UpdateAccumulatedTimes: {$e->getMessage()}");
             return 1;
+        }
+    }
+
+    /**
+     * Encadenar ready_after_datetime por grupos de procesos dentro de cada OriginalOrder.
+     * Para cada grupo (original_order_id + grupo_numero), ordena por sequence del Process
+     * y establece ready_after_datetime del elemento i con el estimated_end_datetime del elemento i-1.
+     * Si no hay estimated_end_datetime disponible, no establece valor.
+     */
+    protected function updateGroupReadyAfter($orders)
+    {
+        // Filtrar solo órdenes con referencias necesarias
+        $orders = $orders->filter(function($o) {
+            return !empty($o->original_order_id)
+                && !empty($o->original_order_process_id)
+                && isset($o->grupo_numero);
+        });
+
+        if ($orders->isEmpty()) {
+            $this->info('No hay órdenes con grupo/proceso para encadenar ready_after_datetime.');
+            return;
+        }
+
+        // Cargar procesos con su secuencia para ordenar correctamente
+        $originalOrderProcessIds = $orders->pluck('original_order_process_id')->unique()->values();
+        $processByOOP = OriginalOrderProcess::with('process')
+            ->whereIn('id', $originalOrderProcessIds)
+            ->get()
+            ->keyBy('id');
+
+        // Agrupar por original_order_id + grupo_numero
+        $grouped = $orders->groupBy(function($o) {
+            return $o->original_order_id . '|' . ($o->grupo_numero ?? '');
+        });
+
+        foreach ($grouped as $groupKey => $groupOrders) {
+            // Ordenar las órdenes del grupo por sequence del Process
+            $sorted = $groupOrders->sortBy(function($o) use ($processByOOP) {
+                $oop = $processByOOP->get($o->original_order_process_id);
+                return $oop && $oop->process ? ($oop->process->sequence ?? PHP_INT_MAX) : PHP_INT_MAX;
+            })->values();
+
+            // Encadenar: para i>0, ready_after_datetime = estimated_end_datetime de i-1
+            for ($i = 0; $i < $sorted->count(); $i++) {
+                /** @var ProductionOrder $current */
+                $current = $sorted[$i];
+
+                if ($i === 0) {
+                    // El primero del grupo no depende de otro. Lo dejamos como está.
+                    continue;
+                }
+
+                /** @var ProductionOrder $prev */
+                $prev = $sorted[$i - 1];
+
+                // Preferimos fecha real de fin si existe; si no, usamos la estimada
+                $readyAfter = $prev->finished_at ?: $prev->estimated_end_datetime;
+
+                // Si hay valor, persistirlo (aunque no exista cast en el modelo)
+                if (!empty($readyAfter)) {
+                    // Evitar escritura si no cambia, para reducir saves
+                    if ($current->ready_after_datetime != $readyAfter) {
+                        $current->ready_after_datetime = $readyAfter;
+                        // Si no hay estimated_start_datetime, alinearlo con ready_after + margen de seguridad
+                        if (empty($current->estimated_start_datetime)) {
+                            try {
+                                $safetyHours = (int) Config::get('production.ready_after_safety_hours', 6);
+                                $current->estimated_start_datetime = Carbon::parse($readyAfter)->addHours($safetyHours);
+                            } catch (\Throwable $e) {
+                                // Fallback: si por alguna razón falla el parse, usar ready_after directamente
+                                $current->estimated_start_datetime = $readyAfter;
+                            }
+                        }
+                        $current->save();
+                        $this->info("[ready_after] PO {$current->id} disponible desde {$readyAfter} (prev PO {$prev->id})");
+                    }
+                }
+            }
         }
     }
     

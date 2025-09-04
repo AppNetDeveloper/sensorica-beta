@@ -157,6 +157,9 @@ declare -A ENV_VARS=(
     ["PRODUCTION_BREAK_TIME"]="30"
     ["PRODUCTION_OEE_HISTORY_DAYS"]="10"
     ["PRODUCTION_OEE_MINIMUM"]="30"
+    ["READY_AFTER_SAFETY_HOURS"]="6"
+    ["AI_URL"]=""
+    ["AI_TOKEN"]=""
 )
 
 ENV_FILE=".env"

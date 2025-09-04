@@ -372,6 +372,7 @@ class CustomerController extends Controller
                 'fecha_pedido_erp' => $order->fecha_pedido_erp,  
                 'estimated_start_datetime' => $order->estimated_start_datetime,
                 'estimated_end_datetime' => $order->estimated_end_datetime,
+                'ready_after_datetime' => $order->ready_after_datetime,
                 'number_of_pallets' => $order->number_of_pallets ?? 0,
                 ];
             });
@@ -526,6 +527,7 @@ class CustomerController extends Controller
                         'fecha_pedido_erp' => $order->fecha_pedido_erp,
                         'estimated_start_datetime' => $order->estimated_start_datetime,
                         'estimated_end_datetime' => $order->estimated_end_datetime,
+                        'ready_after_datetime' => $order->ready_after_datetime,
                         'number_of_pallets' => $order->number_of_pallets ?? 0,
                         'note' => $order->note,
                     ];

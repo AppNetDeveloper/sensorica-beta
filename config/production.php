@@ -35,4 +35,16 @@ return [
     
     // OEE mínimo a aplicar (porcentaje)
     'oee_minimum_percentage' => env('PRODUCTION_OEE_MINIMUM', 30),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Margen de seguridad para inicio estimado tras disponibilidad (en horas)
+    |--------------------------------------------------------------------------
+    |
+    | Cuando encadenamos la disponibilidad (ready_after_datetime) para el
+    | siguiente proceso, si por alguna razón no existe estimated_start_datetime
+    | en la orden, se alineará a ready_after_datetime + este margen de
+    | seguridad. Configurable vía env READY_AFTER_SAFETY_HOURS.
+    */
+    'ready_after_safety_hours' => env('READY_AFTER_SAFETY_HOURS', 6),
 ];

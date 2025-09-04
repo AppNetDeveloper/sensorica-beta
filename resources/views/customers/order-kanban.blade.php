@@ -65,6 +65,14 @@
                     <span>@lang('Fecha estimada de fin')</span>
                 </div>
                 <div class="d-flex align-items-center">
+                    <span class="badge bg-warning text-dark me-2"><i class="fas fa-lock"></i></span>
+                    <span>@lang('Disponible en (countdown)')</span>
+                </div>
+                <div class="d-flex align-items-center">
+                    <span class="badge bg-success me-2"><i class="fas fa-unlock"></i></span>
+                    <span>@lang('Ready desde (fecha)')</span>
+                </div>
+                <div class="d-flex align-items-center">
                     <span class="me-2"><i class="far fa-clock text-muted"></i></span>
                     <span>@lang('Tiempo teórico')</span>
                 </div>
@@ -477,6 +485,38 @@
                     pendingSearchCaret = null;
                 }
             }
+        }
+        function diffMs(a, b) { return a.getTime() - b.getTime(); }
+        function formatRelativeEs(ms) {
+            const abs = Math.abs(ms);
+            const totalSec = Math.floor(abs / 1000);
+            const mins = Math.floor(totalSec / 60) % 60;
+            const hours = Math.floor(totalSec / 3600) % 24;
+            const days = Math.floor(totalSec / 86400);
+            const parts = [];
+            if (days) parts.push(days + 'd');
+            if (hours) parts.push(hours + 'h');
+            parts.push(mins + 'm');
+            return parts.join(' ');
+        }
+        function isReady(dateInput) {
+            if (!dateInput) return true; // si no hay restricción, consideramos listo
+            let d = new Date(dateInput);
+            if (isNaN(d)) {
+                if (typeof dateInput === 'string') d = new Date(dateInput.replace(' ', 'T'));
+            }
+            if (isNaN(d)) return true;
+            return Date.now() >= d.getTime();
+        }
+        // Formateador específico para ready_after con logs por tarjeta
+        function formatReady(dateInput, orderId) {
+            if (!dateInput) {
+                console.debug('[Kanban] PO', orderId, 'ready_after_datetime vacío');
+                return '';
+            }
+            const out = formatDateTimeEs(dateInput);
+            console.debug('[Kanban] PO', orderId, 'ready_after_datetime =', dateInput, '=>', out);
+            return out;
         }
         function restorePendingSearchState() {
             const el = document.querySelector('#pending_assignment .pending-search-input');
@@ -1486,6 +1526,29 @@
                                 <i class="fas fa-calendar-check me-1" title="Fecha creación pedido en ERP"></i>${fechaPedidoErpFormatted ? fechaPedidoErpFormatted : 'Sin fecha ERP'}
                             </div>
                         </div>
+                        ${order.ready_after_datetime ? `
+                        ${(() => {
+                            const ready = isReady(order.ready_after_datetime);
+                            const target = new Date((typeof order.ready_after_datetime === 'string') ? order.ready_after_datetime.replace(' ', 'T') : order.ready_after_datetime);
+                            const rel = isNaN(target) ? '' : formatRelativeEs(target.getTime() - Date.now());
+                            const abs = formatDateTimeEs(order.ready_after_datetime);
+                            if (!ready) {
+                                return `
+                                <div class="d-flex justify-content-between align-items-center mt-1">
+                                    <div class="text-xs text-warning" title="Disponible a partir de">
+                                        <i class="fas fa-lock me-1"></i>Disponible en ${rel}${abs ? ` · ${abs}` : ''}
+                                    </div>
+                                </div>`;
+                            } else {
+                                return `
+                                <div class="d-flex justify-content-between align-items-center mt-1">
+                                    <div class="text-xs text-success" title="Disponible desde">
+                                        <i class="fas fa-unlock me-1"></i>Ready desde ${abs}
+                                    </div>
+                                </div>`;
+                            }
+                        })()}
+                        ` : ''}
                         ${order.estimated_start_datetime || order.estimated_end_datetime ? `
                         <div class="d-flex justify-content-between align-items-center mt-1">
                             ${order.estimated_start_datetime ? `
@@ -1543,6 +1606,28 @@
             const minutes = Math.floor((totalSeconds % 3600) / 60);
             const seconds = Math.floor(totalSeconds % 60);
             return [hours, minutes, seconds].map(v => v.toString().padStart(2, '0')).join(':');
+        }
+        // Formatea fecha/hora con tolerancia a cadenas tipo 'YYYY-MM-DD HH:MM:SS'
+        function formatDateTimeEs(dateInput) {
+            if (!dateInput) return '';
+            try {
+                let d = new Date(dateInput);
+                if (isNaN(d)) {
+                    // Intento: reemplazar espacio por 'T' para habilitar parsing local
+                    if (typeof dateInput === 'string') {
+                        const fixed = dateInput.replace(' ', 'T');
+                        d = new Date(fixed);
+                    }
+                }
+                if (isNaN(d)) {
+                    console.warn('[Kanban] Fecha inválida recibida:', dateInput);
+                    return String(dateInput);
+                }
+                return d.toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' });
+            } catch (e) {
+                console.warn('[Kanban] Error formateando fecha:', dateInput, e);
+                return String(dateInput);
+            }
         }
         
         // Función para calcular el tiempo acumulado de las tarjetas por encima
