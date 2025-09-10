@@ -138,6 +138,7 @@
                                 <th>{{ __('Production Line') }}</th>
                                 <th>{{ __('Start') }}</th>
                                 <th>{{ __('End') }}</th>
+                                <th>{{ __('Automation') }}</th>
                                 <th>{{ __('Actions') }}</th>
                             </tr>
                         </thead>
@@ -247,6 +248,11 @@
                             <label for="createEndTime" class="form-label">{{ __('End Time') }}</label>
                             <input type="time" class="form-control" name="end" id="createEndTime" required>
                         </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="createActive" name="active" value="1">
+                            <label class="form-check-label" for="createActive">{{ __('Active') }}</label>
+                            <div class="form-text">{{ __('Al activar esta opción, el sistema iniciará y finalizará automáticamente el turno en los horarios configurados (start/end). Si está desactivado, este horario no se usará para automatización.') }}</div>
+                        </div>
                     </div>
                     <div class="modal-footer">
                         <button type="submit" class="btn btn-primary">{{ __('Save') }}</button>
@@ -285,6 +291,12 @@
                         <div class="mb-3">
                             <label for="editEndTime" class="form-label">{{ __('End Time') }}</label>
                             <input type="time" class="form-control" id="editEndTime" name="end" required>
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="hidden" name="active" value="0">
+                            <input type="checkbox" class="form-check-input" id="editActive" name="active" value="1">
+                            <label class="form-check-label" for="editActive">{{ __('Active') }}</label>
+                            <div class="form-text">{{ __('Al activar esta opción, el sistema iniciará y finalizará automáticamente el turno en los horarios configurados (start/end). Si está desactivado, este horario no se usará para automatización.') }}</div>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -427,6 +439,21 @@
                     { data: 'start', name: 'start' },
                     { data: 'end', name: 'end' },
                     {
+                        data: 'active',
+                        name: 'active',
+                        orderable: true,
+                        searchable: false,
+                        render: function(data, type, row) {
+                            const isActive = Number(row.active) === 1;
+                            if (type === 'display') {
+                                return isActive
+                                    ? '<span class="badge bg-success"><i class="fas fa-robot me-1"></i> {{ __("Auto") }}</span>'
+                                    : '<span class="badge bg-secondary"><i class="fas fa-hand-paper me-1"></i> {{ __("Manual") }}</span>';
+                            }
+                            return isActive ? 'Auto' : 'Manual';
+                        }
+                    },
+                    {
                         data: null,
                         name: 'actions', // Nombre para columna de acciones
                         orderable: false,
@@ -440,6 +467,7 @@
                                     data-production-line-id="${row.production_line_id}"
                                     data-start="${row.start}"
                                     data-end="${row.end}"
+                                    data-active="${row.active ?? 0}"
                                 >
                                     <i class="fa fa-edit"></i> {{-- Icono Editar --}}
                                 </button>
@@ -614,6 +642,7 @@
                 formData.append('production_line_id', $('#createProductionLineId').val());
                 formData.append('start', $('#createStartTime').val());
                 formData.append('end', $('#createEndTime').val());
+                formData.append('active', $('#createActive').is(':checked') ? 1 : 0);
                 
                 // Mostrar modal de carga
                 showLoadingModal();
@@ -718,6 +747,8 @@
                 // Asegurar formato HH:MM para input type="time"
                 $('#editStartTime').val(button.data('start') ? button.data('start').substring(0, 5) : '');
                 $('#editEndTime').val(button.data('end') ? button.data('end').substring(0, 5) : '');
+                const isActive = Number(button.data('active')) === 1;
+                $('#editActive').prop('checked', isActive);
 
                 $('#editShiftModal').modal('show');
             });

@@ -3,12 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\Customer;
-use Illuminate\Http\Request;
-use Yajra\DataTables\DataTables;
-use Illuminate\Support\Facades\Log; // Agrega esta línea para usar Log
-use Illuminate\Support\Facades\DB;
+use App\Models\ProductionLine;
 use App\Models\ProductionOrder;
+use App\Models\Process;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Carbon\Carbon; // Agrega esta línea para usar Carbon
+use Illuminate\Support\Facades\DB;
 use App\Models\Sensor;
+use Yajra\DataTables\Facades\DataTables;
 
 
 class CustomerController extends Controller
@@ -373,6 +376,19 @@ class CustomerController extends Controller
                 'estimated_start_datetime' => $order->estimated_start_datetime,
                 'estimated_end_datetime' => $order->estimated_end_datetime,
                 'ready_after_datetime' => $order->ready_after_datetime,
+                // Flags de readiness precomputados para simplificar el JS
+                'is_ready' => (function() use ($order) {
+                    if (!$order->ready_after_datetime) return true;
+                    $target = Carbon::parse($order->ready_after_datetime, 'Europe/Madrid');
+                    return now('Europe/Madrid')->greaterThanOrEqualTo($target);
+                })(),
+                'ready_in_seconds' => (function() use ($order) {
+                    if (!$order->ready_after_datetime) return 0;
+                    $now = now('Europe/Madrid');
+                    $target = Carbon::parse($order->ready_after_datetime, 'Europe/Madrid');
+                    $diff = $now->diffInSeconds($target, false); // negativo si ya pasó
+                    return $diff > 0 ? $diff : 0;
+                })(),
                 'number_of_pallets' => $order->number_of_pallets ?? 0,
                 ];
             });
@@ -528,6 +544,18 @@ class CustomerController extends Controller
                         'estimated_start_datetime' => $order->estimated_start_datetime,
                         'estimated_end_datetime' => $order->estimated_end_datetime,
                         'ready_after_datetime' => $order->ready_after_datetime,
+                        'is_ready' => (function() use ($order) {
+                            if (!$order->ready_after_datetime) return true;
+                            $target = Carbon::parse($order->ready_after_datetime, 'Europe/Madrid');
+                            return now('Europe/Madrid')->greaterThanOrEqualTo($target);
+                        })(),
+                        'ready_in_seconds' => (function() use ($order) {
+                            if (!$order->ready_after_datetime) return 0;
+                            $now = now('Europe/Madrid');
+                            $target = Carbon::parse($order->ready_after_datetime, 'Europe/Madrid');
+                            $diff = $now->diffInSeconds($target, false);
+                            return $diff > 0 ? $diff : 0;
+                        })(),
                         'number_of_pallets' => $order->number_of_pallets ?? 0,
                         'note' => $order->note,
                     ];

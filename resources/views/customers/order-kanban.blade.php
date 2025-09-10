@@ -21,8 +21,8 @@
                 <i class="ti ti-arrow-left me-1"></i> {{ __('Back to Processes') }}
             </a>
         </div>
-        <div class="d-flex align-items-center gap-3 flex-wrap">
-            <div class="position-relative" style="width: 300px;">
+        <div class="d-flex align-items-center gap-3 flex-wrap flex-grow-1 justify-content-end">
+            <div class="position-relative" style="width: 360px; max-width: 100%;">
                 <i class="fas fa-search position-absolute top-50 start-0 translate-middle-y ms-3 text-gray-400"></i>
                 <input type="text" id="searchInput" placeholder="{{ __('Search by order ID or customer...') }}"
                        class="form-control ps-5" style="width: 100%;">
@@ -34,6 +34,30 @@
             <!-- Botones ocultos para mantener la funcionalidad de autoguardado y actualización automática -->
             <button id="saveChangesBtn" class="d-none"></button>
             <button id="refreshBtn" class="d-none"></button>
+
+            <!-- Segunda línea: filtros rápidos a la derecha -->
+            <div class="w-100 d-flex justify-content-end mt-2">
+                <div class="filters-row d-flex align-items-center">
+                    <div class="form-check form-switch mb-0 me-3 filters-switch">
+                        <input class="form-check-input" type="checkbox" id="readyOnlyToggle">
+                        <label class="form-check-label small mb-0" for="readyOnlyToggle">@lang('Mostrar solo listas')</label>
+                    </div>
+                    <div class="form-check form-switch mb-0 me-3 filters-switch">
+                        <input class="form-check-input" type="checkbox" id="dimNotReadyToggle">
+                        <label class="form-check-label small mb-0" for="dimNotReadyToggle">@lang('Atenuar no listas')</label>
+                    </div>
+                    <div class="form-check form-switch mb-0 me-2 filters-switch">
+                        <input class="form-check-input" type="checkbox" id="autoSortToggle">
+                        <label class="form-check-label small mb-0" for="autoSortToggle">@lang('Auto-orden (toggle)')</label>
+                    </div>
+                    <button id="applyAutoSortBtn" type="button" class="btn btn-primary btn-sm rounded-pill ms-1" onclick="window.handleSaveKanban && window.handleSaveKanban();">
+                        <i class="fas fa-save me-1"></i> @lang('Guardar cambios')
+                    </button>
+                    <button id="assignPendingBtn" type="button" class="btn btn-warning btn-sm rounded-pill ms-2" onclick="window.applyAssignPendingOnly && window.applyAssignPendingOnly();">
+                        <i class="fas fa-route me-1"></i> @lang('Mover pendientes a líneas')
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -190,6 +214,7 @@
             --placeholder-bg: rgba(59, 130, 246, 0.2);
             --progress-bg: #e9ecef; --progress-bar-bg: #28a745;
         }
+        
 
         body.dark {
             --kanban-bg: #0f172a; --column-bg: #1e293b; --column-border: #334155;
@@ -410,37 +435,50 @@
         }
         :fullscreen .kanban-column { height: 100%; }
         .cursor-pointer { cursor: pointer; }
-    /* Estilos para el scheduler */
-    .scheduler-container {
+        
+        .kanban-container {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+            overflow-x: auto;
+        }
+        /* Atenuar tarjetas no listas */
+        .kanban-card.dim-not-ready {
+            opacity: 0.55;
+        }
+    </style>
+    <style>
+    /* Estilo compacto para la fila de filtros (segunda línea) */
+    .filters-row {
+        background: var(--header-bg);
+        border: 1px solid var(--column-border);
+        border-radius: 9999px;
+        padding: 6px 10px;
+        gap: 10px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.04);
         max-width: 100%;
-        padding: 0.5rem;
+        flex-wrap: wrap;
     }
-    .shifts-container.disabled {
-        opacity: 0.6;
-        pointer-events: none;
+    .filters-switch .form-check-input {
+        transform: scale(0.9);
+        margin-right: 6px;
+        cursor: pointer;
     }
-    .day-row {
-        padding: 0.8rem 0;
-        border-bottom: 1px solid #eee;
+    .filters-switch .form-check-label {
+        cursor: pointer;
+        color: var(--text-muted);
     }
-    .day-row:last-child {
-        border-bottom: none;
+    .filters-row #applyAutoSortBtn {
+        height: 30px;
+        line-height: 1;
+        padding: 0 12px;
     }
-    .form-check {
-        margin-bottom: 0.5rem;
-        background-color: #f8f9fa;
-        padding: 0.5rem 1rem;
-        border-radius: 0.25rem;
-        border: 1px solid #e9ecef;
+    @media (max-width: 1200px) {
+        .filters-row { border-radius: 12px; }
     }
-    .form-check:hover {
-        background-color: #e9ecef;
-    }
-    .open-scheduler-btn {
-        color: #3b82f6;
-    }
-    .open-scheduler-btn:hover {
-        color: #2563eb;
+    @media (max-width: 768px) {
+        .filters-row { justify-content: space-between; gap: 8px; }
+        .filters-switch { margin-right: 0 !important; }
     }
     </style>
 @endpush
@@ -467,6 +505,31 @@
         let cachedDropPosition = null; // Cachear posición detectada durante dragOver
         let cachedTargetContainer = null; // Cachear contenedor objetivo
         let isRequestInProgress = false; // Variable para controlar si hay una solicitud en curso
+        let autoSortDirty = false; // Se marca cuando el auto-orden ha cambiado el orden visual
+        // Firma del último estado guardado para detectar cambios reales (orden, línea, estado)
+        let lastSavedSignature = null;
+
+        function computeCurrentSignature() {
+            try {
+                return JSON.stringify(masterOrderList.map((o, idx) => ({
+                    id: Number(o.id),
+                    orden: idx,
+                    line: Number(o.productionLineId ?? o.production_line_id ?? null) || null,
+                    status: o.status
+                })));
+            } catch (e) {
+                console.warn('computeCurrentSignature error', e);
+                return '';
+            }
+        }
+
+        function updateUnsavedFlag() {
+            try {
+                const sig = computeCurrentSignature();
+                hasUnsavedChanges = (lastSavedSignature !== null) && sig !== lastSavedSignature;
+            } catch(_) {}
+        }
+        function scheduleUpdateUnsavedFlag() { setTimeout(updateUnsavedFlag, 0); }
         // Estado para el buscador de la columna Pendientes
         let pendingSearchValue = '';
         let pendingSearchFocused = false;
@@ -508,6 +571,23 @@
             if (isNaN(d)) return true;
             return Date.now() >= d.getTime();
         }
+        // Actualiza estadísticas básicas de una columna (conteo de tarjetas). Seguro si no existe estructura.
+        function updateColumnStats(columnElement, lightweight = false) {
+            try {
+                if (!columnElement) return;
+                const count = columnElement.querySelectorAll('.column-cards > .kanban-card').length;
+                // Intentar actualizar un contador visible si existe
+                const headerCountEl = columnElement.querySelector('.column-header .column-count');
+                if (headerCountEl) {
+                    headerCountEl.textContent = count;
+                }
+                // Si hay atributos data para métricas, actualizarlos
+                columnElement.dataset.cardCount = String(count);
+                // lightweight: por ahora no distingue, pero dejamos el parámetro para compatibilidad
+            } catch (e) {
+                console.debug('updateColumnStats: no-op (estructura no encontrada)', e);
+            }
+        }
         // Formateador específico para ready_after con logs por tarjeta
         function formatReady(dateInput, orderId) {
             if (!dateInput) {
@@ -518,6 +598,451 @@
             console.debug('[Kanban] PO', orderId, 'ready_after_datetime =', dateInput, '=>', out);
             return out;
         }
+        // Determina readiness de una orden usando payload o fallback a fecha
+        function isOrderReadyForFilter(order) {
+            if (!order) return true;
+            if (typeof order.is_ready === 'boolean') return order.is_ready;
+            return isReady(order.ready_after_datetime);
+        }
+        // Devuelve si el autosort está activado desde el toggle
+        function isAutoSortEnabled() {
+            const el = document.getElementById('autoSortToggle');
+            return !!(el && el.checked);
+        }
+        // Comparador de orden inteligente por readiness, prioridad, stock, proximidad
+        function compareOrders(a, b) {
+            // 1) Listas primero
+            const aReady = isOrderReadyForFilter(a) ? 1 : 0;
+            const bReady = isOrderReadyForFilter(b) ? 1 : 0;
+            if (aReady !== bReady) return bReady - aReady; // ready (1) antes que not ready (0)
+
+            // 2) Prioridad primero
+            const aPrio = (a.is_priority === true || a.is_priority === 1) ? 1 : 0;
+            const bPrio = (b.is_priority === true || b.is_priority === 1) ? 1 : 0;
+            if (aPrio !== bPrio) return bPrio - aPrio;
+
+            // 3) Con stock primero (has_stock != 0)
+            const aStock = (a.has_stock === 0) ? 0 : 1;
+            const bStock = (b.has_stock === 0) ? 0 : 1;
+            if (aStock !== bStock) return bStock - aStock;
+
+            // 4) Si no están listas, la que falta menos tiempo primero
+            const aRis = typeof a.ready_in_seconds === 'number' ? a.ready_in_seconds : Number.MAX_SAFE_INTEGER;
+            const bRis = typeof b.ready_in_seconds === 'number' ? b.ready_in_seconds : Number.MAX_SAFE_INTEGER;
+            if (aRis !== bRis) return aRis - bRis;
+
+            // 5) Fecha de entrega más próxima primero
+            const aDel = a.delivery_date ? new Date(String(a.delivery_date).replace(' ', 'T')).getTime() : Number.MAX_SAFE_INTEGER;
+            const bDel = b.delivery_date ? new Date(String(b.delivery_date).replace(' ', 'T')).getTime() : Number.MAX_SAFE_INTEGER;
+            if (aDel !== bDel) return aDel - bDel;
+
+            // 6) Antigüedad de creación
+            const aCreated = a.created_at ? new Date(String(a.created_at).replace(' ', 'T')).getTime() : 0;
+            const bCreated = b.created_at ? new Date(String(b.created_at).replace(' ', 'T')).getTime() : 0;
+            if (aCreated !== bCreated) return aCreated - bCreated;
+
+            // 7) Fallback por 'orden'
+            return (a.orden || 0) - (b.orden || 0);
+        }
+        // Aplica los filtros de "Mostrar solo listas" y "Atenuar no listas"
+        function applyReadinessFilters() {
+            const readyOnlyEl = document.getElementById('readyOnlyToggle');
+            const dimEl = document.getElementById('dimNotReadyToggle');
+            const readyOnly = !!(readyOnlyEl && readyOnlyEl.checked);
+            const dimNotReady = !!(dimEl && dimEl.checked);
+            let processed = 0;
+            document.querySelectorAll('.kanban-card').forEach(card => {
+                const id = Number(card.dataset.id);
+                const order = masterOrderList.find(o => Number(o.id) === id);
+                if (!order) return;
+                const ready = isOrderReadyForFilter(order);
+                // Mostrar solo listas
+                if (readyOnly) {
+                    card.style.display = ready ? '' : 'none';
+                } else {
+                    card.style.display = '';
+                }
+                // Atenuar no listas
+                if (!ready && dimNotReady) {
+                    card.classList.add('dim-not-ready');
+                } else {
+                    card.classList.remove('dim-not-ready');
+                }
+                processed++;
+            });
+            console.debug('[Kanban] applyReadinessFilters -> procesadas:', processed, 'readyOnly:', readyOnly, 'dimNotReady:', dimNotReady);
+        }
+
+        // --- Auto-asignación desde Pendientes hacia Máquinas ---
+        function getProductionLineKeys() {
+            // Columnas cuyo id empiece por 'line_'
+            return Array.from(document.querySelectorAll('.kanban-column[id^="line_"]')).map(el => el.id);
+        }
+        function extractLineIdFromKey(key) {
+            // 'line_12' -> 12 (number)
+            const m = String(key).match(/^line_(\d+)$/);
+            return m ? Number(m[1]) : null;
+        }
+        function getColumnLoadSecondsFromDOM(columnId) {
+            // Suma de tiempo teórico de las tarjetas de la columna (en segundos)
+            const col = document.getElementById(columnId);
+            if (!col) return 0;
+            const cards = col.querySelectorAll('.column-cards .kanban-card');
+            let sum = 0;
+            cards.forEach(card => {
+                const id = Number(card.dataset.id);
+                const order = masterOrderList.find(o => Number(o.id) === id);
+                if (!order) return;
+                // Usar tiempo teórico si existe; fallback a accumulated_time (segundos) si aplica
+                const secTheo = parseTimeToSeconds(order.theoretical_time || '00:00:00');
+                const secAcc = typeof order.accumulated_time === 'number' ? order.accumulated_time : 0;
+                sum += (secTheo || secAcc || 0);
+            });
+            return sum;
+        }
+        function pickLeastLoadedLine(lineKeys) {
+            let bestKey = null;
+            let bestLoad = Number.POSITIVE_INFINITY;
+            lineKeys.forEach(key => {
+                const load = getColumnLoadSecondsFromDOM(key);
+                if (load < bestLoad) {
+                    bestLoad = load;
+                    bestKey = key;
+                }
+            });
+            return bestKey;
+        }
+        function applyAutoAssignAndSort() {
+            // 1) Identificar candidatos en Pendientes Asignación
+            // Aceptar tanto camelCase como snake_case por si el backend envía snake_case
+            const prevUnsaved = !!hasUnsavedChanges;
+            const beforeState = new Map(); // id -> {productionLineId, production_line_id, status}
+            const isUnassigned = (o) => {
+                const a = o.productionLineId;
+                const b = o.production_line_id;
+                return (!a && !b) || String(a || b || '').length === 0;
+            };
+            const pendingOrders = masterOrderList.filter(isUnassigned);
+            if (!pendingOrders.length) {
+                console.log('[Auto-orden] No hay órdenes en Pendientes para asignar.');
+            }
+            console.log('[Auto-orden] Candidatos pendientes:', pendingOrders.map(o => ({ id: o.id, orden: o.orden, prio: o.is_priority, delivery: o.delivery_date })));
+
+            // 2) Asignar TODAS las órdenes en Pendientes (el sistema no genera tarjeta sin stock)
+            const eligible = [...pendingOrders];
+
+            // 3) Ordenar candidatos por compareOrders (mejores primero)
+            eligible.sort(compareOrders);
+            console.log('[Auto-orden] Orden de asignación (mejor primero):', eligible.map(o => o.id));
+
+            // 4) Repartir por menor carga actual
+            const lineKeys = getProductionLineKeys();
+            if (!lineKeys.length) {
+                console.warn('[Auto-orden] No hay columnas de máquinas disponibles.');
+                if (window.Swal && Swal.fire) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Sin líneas de producción',
+                        text: 'No hay columnas de máquinas disponibles para asignar.',
+                    });
+                }
+                return;
+            }
+            console.log('[Auto-orden] Columnas de máquinas detectadas:', lineKeys);
+            let assignedCount = 0;
+            eligible.forEach(order => {
+                if (!beforeState.has(order.id)) {
+                    beforeState.set(order.id, {
+                        productionLineId: order.productionLineId,
+                        production_line_id: order.production_line_id,
+                        status: order.status
+                    });
+                }
+                const key = pickLeastLoadedLine(lineKeys);
+                if (!key) return;
+                const lineId = extractLineIdFromKey(key);
+                if (lineId == null) return;
+                // Actualizar modelo en memoria (normalizar ambos campos)
+                order.productionLineId = lineId;
+                order.production_line_id = lineId;
+                // Si la orden está en progreso no la movemos; en pendientes no debería estar in_progress
+                if (!order.status || order.status === 'pending' || order.status === 'queued') {
+                    order.status = 'queued';
+                }
+                assignedCount++;
+                console.log(`[Auto-orden] Asignada orden ${order.id} a línea ${lineId} (col ${key})`);
+                // Incrementar carga virtual para balanceo siguiente
+                const ghost = document.createElement('div');
+                ghost.className = 'kanban-card ghost-temp';
+                const col = document.getElementById(key)?.querySelector('.column-cards');
+                if (col) col.appendChild(ghost);
+            });
+            // Limpiar ghosts creados para el conteo
+            document.querySelectorAll('.kanban-card.ghost-temp').forEach(n => n.remove());
+
+            console.log('[Auto-orden] Asignadas', assignedCount, 'órdenes desde Pendientes.');
+
+            // Marcar cambios sin guardar para evitar que el auto-refresh revierta inmediatamente
+            hasUnsavedChanges = hasUnsavedChanges || assignedCount > 0;
+            if (hasUnsavedChanges) { console.log('[Auto-orden] Cambios marcados como pendientes de guardar'); }
+
+            // 5) Re-renderizar con auto-sort aplicado si está activo
+            distributeAndRender(true);
+
+            // 6) Preguntar si guardar cambios al backend
+            const doConfirm = async () => {
+                try {
+                    if (window.Swal && Swal.fire) {
+                        const res = await Swal.fire({
+                            title: '{{ __('¿Guardar cambios?') }}',
+                            text: '{{ __('Se asignaron automáticamente órdenes a máquinas. ¿Quieres persistir el cambio?') }}',
+                            icon: 'question',
+                            showCancelButton: true,
+                            confirmButtonText: '{{ __('Sí, guardar') }}',
+                            cancelButtonText: '{{ __('No') }}'
+                        });
+                        return res.isConfirmed;
+                    }
+                } catch(_) {}
+                return window.confirm('{{ __('Se asignaron automáticamente órdenes a máquinas. ¿Guardar cambios?') }}');
+            };
+            doConfirm().then(ok => {
+                if (ok) {
+                    saveKanbanChanges();
+                } else {
+                    // Revertir cambios en memoria
+                    beforeState.forEach((snap, id) => {
+                        const o = masterOrderList.find(x => x.id === id);
+                        if (o) {
+                            o.productionLineId = snap.productionLineId;
+                            o.production_line_id = snap.production_line_id;
+                            o.status = snap.status;
+                        }
+                    });
+                    hasUnsavedChanges = prevUnsaved;
+                    console.log('[Auto-orden] Cancelado por el usuario: cambios revertidos');
+                    distributeAndRender(false);
+                }
+            });
+        }
+        // Exponer globalmente para llamadas inline o desde otros scripts
+        try { window.applyAutoAssignAndSort = applyAutoAssignAndSort; console.log('[Bind] applyAutoAssignAndSort expuesta en window'); } catch(_) {}
+
+        // Primera fase: SOLO mover Pendientes a líneas, sin reordenar tarjetas existentes
+        function applyAssignPendingOnly() {
+            console.log('[Asignación] Fase 1: mover solo Pendientes a líneas (sin reordenar)');
+            const prevUnsaved = !!hasUnsavedChanges;
+            const beforeState = new Map(); // id -> {productionLineId, production_line_id, status}
+            const isUnassigned = (o) => {
+                const a = o.productionLineId;
+                const b = o.production_line_id;
+                return (!a && !b) || String(a || b || '').length === 0;
+            };
+            const pendingOrders = masterOrderList.filter(isUnassigned);
+            console.log('[Asignación] Pendientes detectadas:', pendingOrders.map(o => o.id));
+            const lineKeys = getProductionLineKeys();
+            if (!lineKeys.length) {
+                console.warn('[Asignación] No hay columnas de máquinas disponibles.');
+                if (window.Swal && Swal.fire) {
+                    Swal.fire({
+                        icon: 'warning', title: 'Sin líneas de producción', text: 'No hay columnas de máquinas disponibles para asignar.'
+                    });
+                }
+                return;
+            }
+            console.log('[Asignación] Columnas de máquinas detectadas:', lineKeys);
+            let assignedCount = 0;
+            pendingOrders.forEach(order => {
+                if (!beforeState.has(order.id)) {
+                    beforeState.set(order.id, {
+                        productionLineId: order.productionLineId,
+                        production_line_id: order.production_line_id,
+                        status: order.status
+                    });
+                }
+                const key = pickLeastLoadedLine(lineKeys);
+                if (!key) return;
+                const lineId = extractLineIdFromKey(key);
+                if (lineId == null) return;
+                order.productionLineId = lineId;
+                order.production_line_id = lineId;
+                if (!order.status || order.status === 'pending' || order.status === 'queued') {
+                    order.status = 'queued';
+                }
+                assignedCount++;
+                console.log(`[Asignación] Asignada orden ${order.id} a línea ${lineId}`);
+            });
+            console.log('[Asignación] Total asignadas desde Pendientes:', assignedCount);
+            hasUnsavedChanges = hasUnsavedChanges || assignedCount > 0;
+            if (hasUnsavedChanges) console.log('[Asignación] Cambios marcados como pendientes de guardar');
+            // Re-render SIN ordenar para respetar el orden actual de tarjetas
+            distributeAndRender(false);
+            // Preguntar si guardar
+            const doConfirm = async () => {
+                try {
+                    if (window.Swal && Swal.fire) {
+                        const res = await Swal.fire({
+                            title: '{{ __('¿Guardar cambios?') }}',
+                            text: '{{ __('Se asignaron pedidos pendientes a líneas. ¿Quieres persistir el cambio?') }}',
+                            icon: 'question', showCancelButton: true,
+                            confirmButtonText: '{{ __('Sí, guardar') }}',
+                            cancelButtonText: '{{ __('No') }}'
+                        });
+                        return res.isConfirmed;
+                    }
+                } catch(_) {}
+                return window.confirm('{{ __('Se asignaron pedidos pendientes a líneas. ¿Guardar cambios?') }}');
+            };
+            doConfirm().then(ok => {
+                if (ok) {
+                    saveKanbanChanges();
+                } else {
+                    // Revertir cambios si el usuario no quiere guardar
+                    beforeState.forEach((snap, id) => {
+                        const o = masterOrderList.find(x => x.id === id);
+                        if (o) {
+                            o.productionLineId = snap.productionLineId;
+                            o.production_line_id = snap.production_line_id;
+                            o.status = snap.status;
+                        }
+                    });
+                    hasUnsavedChanges = prevUnsaved;
+                    console.log('[Asignación] Cancelado por el usuario: cambios revertidos');
+                    distributeAndRender(false);
+                }
+            });
+        }
+        try { window.applyAssignPendingOnly = applyAssignPendingOnly; console.log('[Bind] applyAssignPendingOnly expuesta en window'); } catch(_) {}
+        
+        // Lee el orden visual actual del DOM (izq->der por columna y arriba->abajo por tarjeta)
+        function getVisualOrderIds() {
+            try {
+                const board = document.querySelector('.kanban-board');
+                if (!board) return [];
+                const ids = [];
+                const columns = board.querySelectorAll('.kanban-column');
+                columns.forEach(col => {
+                    const cards = col.querySelectorAll('.column-cards .kanban-card');
+                    cards.forEach(card => {
+                        const id = Number(card.dataset.id);
+                        // Solo considerar tarjetas visibles para no reordenar las ocultas por filtros
+                        const isVisible = card.style.display !== 'none';
+                        if (isVisible && !Number.isNaN(id)) ids.push(id);
+                    });
+                });
+                return ids;
+            } catch (e) {
+                console.warn('getVisualOrderIds error', e);
+                return [];
+            }
+        }
+
+        // Aplica el orden visual sobre masterOrderList y marca cambios si varía
+        function applyVisualOrderToMasterList() {
+            try {
+                const ids = getVisualOrderIds();
+                if (!ids.length) return false;
+                // Comprobar si la subsecuencia visible ya coincide con el orden actual
+                const currentVisibleIds = masterOrderList.map(o => Number(o.id)).filter(id => ids.includes(id));
+                const isSameVisibleOrder = currentVisibleIds.length === ids.length && currentVisibleIds.every((id, i) => id === ids[i]);
+                if (isSameVisibleOrder) return false;
+
+                // Reordenar de forma estable: las visibles siguen "ids" y las no visibles mantienen su posición relativa
+                const objById = new Map(masterOrderList.map(o => [Number(o.id), o]));
+                const idSet = new Set(ids);
+                const visibleObjs = ids.map(id => objById.get(id)).filter(Boolean);
+                let v = 0;
+                const newList = masterOrderList.map(o => {
+                    return idSet.has(Number(o.id)) ? visibleObjs[v++] : o;
+                });
+
+                const changed = newList.length === masterOrderList.length && newList.some((o, i) => o !== masterOrderList[i]);
+                if (changed) {
+                    masterOrderList = newList;
+                    hasUnsavedChanges = true;
+                    console.log('[Orden] masterOrderList actualizado desde el orden visual (estable)');
+                    scheduleUpdateUnsavedFlag();
+                }
+                return changed;
+            } catch (e) {
+                console.warn('applyVisualOrderToMasterList error', e);
+                return false;
+            }
+        }
+
+        // Guardar cambios manualmente desde el botón azul
+        function handleSaveKanban() {
+            try {
+                const prevUnsaved = !!hasUnsavedChanges;
+                // Solo sincronizar con el DOM si el auto-orden está activo Y hubo cambio (autoSortDirty)
+                try { if (isAutoSortEnabled() && autoSortDirty) applyVisualOrderToMasterList(); } catch(_) {}
+                if (!hasUnsavedChanges) {
+                    // Permitir guardar aunque no detectemos cambios (por ejemplo, tras auto-orden)
+                    const confirmNoChanges = async () => {
+                        try {
+                            if (window.Swal && Swal.fire) {
+                                const res = await Swal.fire({
+                                    title: '{{ __('¿Guardar ahora?') }}',
+                                    text: '{{ __('No se detectan cambios pendientes, pero puedes forzar el guardado. ¿Deseas continuar?') }}',
+                                    icon: 'question', showCancelButton: true,
+                                    confirmButtonText: '{{ __('Sí, guardar') }}',
+                                    cancelButtonText: '{{ __('No') }}'
+                                });
+                                if (res.isConfirmed) {
+                                    console.log('[Guardar] Forzando guardado sin cambios detectados…');
+                                    saveKanbanChanges();
+                                } else {
+                                    console.log('[Guardar] Cancelado por el usuario (sin cambios detectados)');
+                                    hasUnsavedChanges = prevUnsaved;
+                                }
+                                return;
+                            }
+                        } catch(_) {}
+                        if (window.confirm('{{ __('No se detectan cambios pendientes. ¿Guardar de todas formas?') }}')) {
+                            console.log('[Guardar] Forzando guardado sin cambios detectados…');
+                            saveKanbanChanges();
+                        } else {
+                            console.log('[Guardar] Cancelado por el usuario (sin cambios detectados)');
+                            hasUnsavedChanges = prevUnsaved;
+                        }
+                    };
+                    return void confirmNoChanges();
+                }
+                const confirmAndSave = async () => {
+                    try {
+                        if (window.Swal && Swal.fire) {
+                            const res = await Swal.fire({
+                                title: '{{ __('¿Guardar cambios?') }}',
+                                text: '{{ __('Se aplicaron cambios en el tablero. ¿Quieres persistirlos ahora?') }}',
+                                icon: 'question', showCancelButton: true,
+                                confirmButtonText: '{{ __('Sí, guardar') }}',
+                                cancelButtonText: '{{ __('No') }}'
+                            });
+                            if (res.isConfirmed) {
+                                console.log('[Guardar] Guardando cambios del Kanban…');
+                                saveKanbanChanges();
+                            } else {
+                                console.log('[Guardar] Cancelado por el usuario');
+                                hasUnsavedChanges = prevUnsaved;
+                            }
+                            return;
+                        }
+                    } catch(_) {}
+                    // Fallback sin Swal
+                    if (window.confirm('{{ __('Hay cambios sin guardar. ¿Guardar ahora?') }}')) {
+                        console.log('[Guardar] Guardando cambios del Kanban…');
+                        saveKanbanChanges();
+                    } else {
+                        console.log('[Guardar] Cancelado por el usuario');
+                        hasUnsavedChanges = prevUnsaved;
+                    }
+                };
+                confirmAndSave();
+            } catch (e) {
+                console.error('[Guardar] Error al guardar:', e);
+            }
+        }
+        try { window.handleSaveKanban = handleSaveKanban; console.log('[Bind] handleSaveKanban expuesta en window'); } catch(_) {}
         function restorePendingSearchState() {
             const el = document.querySelector('#pending_assignment .pending-search-input');
             if (el) {
@@ -531,10 +1056,7 @@
                     const el2 = document.querySelector('#pending_assignment .pending-search-input');
                     if (el2) {
                         el2.focus();
-                        try {
-                            const pos = e.target.selectionStart ?? el2.value.length;
-                            el2.setSelectionRange(pos, pos);
-                        } catch(_) {}
+                        try { if (pendingSearchCaret != null) el2.setSelectionRange(pendingSearchCaret, pendingSearchCaret); } catch(_) {}
                     }
                 };
                 // Evitar múltiples listeners: el nodo se recrea en cada render, así que es seguro añadir
@@ -616,23 +1138,38 @@
         
         
         function isOrderUrgent(order) {
-            if (!order.delivery_date || ['completed', 'cancelled'].includes(order.status)) {
+            try {
+                if (!order) return false;
+                // No marcar como urgente si la orden ya está finalizada/cancelada
+                if (['completed', 'cancelled'].includes(order.status)) return false;
+
+                // Urgencia por prioridad explícita
+                const isPriority = order.is_priority === true || order.is_priority === 1;
+
+                // Urgencia por fecha de entrega próxima (<= 5 días)
+                let dueSoon = false;
+                if (order.delivery_date) {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const deliveryDate = new Date(order.delivery_date);
+                    deliveryDate.setHours(0, 0, 0, 0);
+                    if (!isNaN(deliveryDate)) {
+                        const diffTime = deliveryDate - today;
+                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                        dueSoon = diffDays <= 5;
+                    }
+                }
+
+                return isPriority || dueSoon;
+            } catch(_) {
                 return false;
             }
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const deliveryDate = new Date(order.delivery_date);
-            deliveryDate.setHours(0, 0, 0, 0);
-            if (isNaN(deliveryDate)) return false;
-            const diffTime = deliveryDate - today;
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            return diffDays <= 5;
         }
 
         // Función de organización con IA eliminada
 
         // --- 2. LÓGICA PRINCIPAL DE RENDERIZADO ---
-
+        
         function distributeAndRender(shouldSort = true, callback = null) {
             // Capturar estado del input de búsqueda de Pendientes antes de re-renderizar
             capturePendingSearchState();
@@ -667,12 +1204,17 @@
                 }
             });
 
+            const distCounters = { final_states: 0, pending_assignment: 0 };
             ordersToDisplay.forEach(order => {
                 let targetColumnKey = null;
+                // Normalizar id de línea: aceptar camelCase y snake_case
+                const normalizedLineId = (order.productionLineId != null && order.productionLineId !== '')
+                    ? order.productionLineId
+                    : (order.production_line_id != null && order.production_line_id !== '' ? order.production_line_id : null);
                 if (['completed', 'paused', 'cancelled'].includes(order.status)) {
                     targetColumnKey = 'final_states';
-                } else if (order.productionLineId) {
-                    targetColumnKey = `line_${order.productionLineId}`;
+                } else if (normalizedLineId) {
+                    targetColumnKey = `line_${normalizedLineId}`;
                 } else {
                     targetColumnKey = 'pending_assignment';
                 }
@@ -681,11 +1223,27 @@
                     if (targetColumnKey === 'final_states') {
                         const subState = columns.final_states.subStates.find(s => s.id === order.status);
                         if (subState) subState.items.push(order);
+                        distCounters.final_states++;
                     } else {
                         columns[targetColumnKey].items.push(order);
+                        if (targetColumnKey === 'pending_assignment') distCounters.pending_assignment++;
                     }
                 }
+                // Log de diagnóstico para cuando debería ir a línea pero cae en pendientes
+                if (targetColumnKey === 'pending_assignment' && (order.productionLineId || order.production_line_id)) {
+                    console.warn('[Distribución] Orden con lineId pero en pendientes:', {
+                        id: order.id,
+                        status: order.status,
+                        productionLineId: order.productionLineId,
+                        production_line_id: order.production_line_id
+                    });
+                }
             });
+            try {
+                const prodKeys = Object.keys(columns).filter(k => k.startsWith('line_'));
+                const perLine = prodKeys.reduce((acc, k) => { acc[k] = (columns[k].items||[]).length; return acc; }, {});
+                console.log('[Kanban] Distribución:', { final_states: distCounters.final_states, pending: distCounters.pending_assignment, perLine });
+            } catch(_) {}
             
             // Aplicar filtro solo a la columna Pendientes, según pendingSearchValue
             if (pendingSearchValue && columns.pending_assignment) {
@@ -739,14 +1297,34 @@
                     }
                 };
 
+                // Ordenación automática por columna si está activada
+                const sortItemsForColumn = (col, items) => {
+                    let list = Array.isArray(items) ? [...items] : [];
+                    if (isAutoSortEnabled()) {
+                        try {
+                            list.sort(compareOrders);
+                            if (col.type === 'production') {
+                                const idx = list.findIndex(o => o.status === 'in_progress');
+                                if (idx > 0) {
+                                    const [inProg] = list.splice(idx, 1);
+                                    list.unshift(inProg);
+                                }
+                            }
+                        } catch(e) { console.debug('Autosort falló, usando orden original', e); }
+                    }
+                    return list;
+                };
+
                 if (column.type === 'final_states') {
                     column.subStates.forEach(subState => {
                         const subContainer = columnElement.querySelector(`.final-state-section[data-state="${subState.id}"] .column-cards`);
-                        appendCards(subState.items, subContainer);
+                        const items = sortItemsForColumn(column, subState.items);
+                        appendCards(items, subContainer);
                     });
                 } else {
                     const container = columnElement.querySelector('.column-cards');
-                    appendCards(column.items, container);
+                    const items = sortItemsForColumn(column, column.items);
+                    appendCards(items, container);
                 }
                 
                 // Actualizar los tiempos acumulados para esta columna
@@ -754,6 +1332,8 @@
                 fragment.appendChild(columnElement);
             });
             kanbanBoard.appendChild(fragment);
+            // Aplicar filtros de readiness tras renderizar las tarjetas
+            try { applyReadinessFilters(); } catch (_) {}
         }
 
         // --- 3. FUNCIONES DE DRAG & DROP ---
@@ -1607,6 +2187,7 @@
             const seconds = Math.floor(totalSeconds % 60);
             return [hours, minutes, seconds].map(v => v.toString().padStart(2, '0')).join(':');
         }
+        // isOrderUrgent se define más arriba basándose en la fecha de entrega (<= 5 días)
         // Formatea fecha/hora con tolerancia a cadenas tipo 'YYYY-MM-DD HH:MM:SS'
         function formatDateTimeEs(dateInput) {
             if (!dateInput) return '';
@@ -1662,7 +2243,7 @@
                 }
             });
             
-            // También actualizamos para las tarjetas en estados finales si existen
+            // También actualizar en secciones de estados finales
             const finalStateSections = columnElement.querySelectorAll('.final-state-section .column-cards');
             finalStateSections.forEach(section => {
                 let sectionAccumulatedTime = 0;
@@ -1759,7 +2340,7 @@
                         // Forzar actualización de headers siempre
                         updateColumnHeaderStatuses();
                         
-                        // Actualizar estadísticas sin reconstruir el DOM
+                        // Actualizar estadísticas de la columna sin reconstruir el DOM
                         Object.values(columns).forEach(column => {
                             if (!column.productionLineId) return;
                             const columnElement = document.getElementById(column.id);
@@ -1873,6 +2454,10 @@
                         statusText = 'En Pausa';
                         statusClass = 'line-status-paused';
                         iconType = 'pause';
+                    } else if (lineStatus.type === 'shift' && lineStatus.action === 'end') {
+                        statusText = 'Parada';
+                        statusClass = 'line-status-stopped';
+                        iconType = 'stop';
                     }
                     
                     // Actualizar el icono sin cambiar la estructura DOM
@@ -2092,7 +2677,7 @@
         setInterval(fetchProductionLineStatuses, 30000); // Actualizar cada 30 segundos
         
         // --- 6. GUARDADO DE DATOS Y OTROS EVENTOS ---
-
+        
         function saveKanbanChanges() {
             // Evitar múltiples solicitudes simultáneas
             if (isRequestInProgress) {
@@ -2137,7 +2722,17 @@
                 return response.json();
             })
             .then(data => {
+                // Guardado exitoso: actualizar firma y limpiar banderas
+                lastSavedSignature = computeCurrentSignature();
                 hasUnsavedChanges = false;
+                autoSortDirty = false;
+                // Desactivar el toggle de auto-orden tras guardar
+                const autoToggle = document.getElementById('autoSortToggle');
+                if (autoToggle) {
+                    autoToggle.checked = false;
+                }
+                // Re-render sin ordenar adicional para reflejar el estado persistido
+                try { distributeAndRender(false); } catch(_) {}
                 showToast(data.message || translations.changesSaved, 'success');
             })
             .catch(error => {
@@ -2203,7 +2798,7 @@
             const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, timerProgressBar: true });
             Toast.fire({ icon: type, title: message });
         }
-        
+                
         function showCardMenu(orderId) {
             const order = masterOrderList.find(o => o.id == orderId);
             if (!order) return;
@@ -2622,6 +3217,39 @@
         document.getElementById('refreshBtn').addEventListener('click', refreshKanbanData);
         document.getElementById('fullscreenBtn').addEventListener('click', toggleFullscreen);
         // Event listener para botón de IA eliminado
+        // Listeners para filtros de readiness
+        document.getElementById('readyOnlyToggle')?.addEventListener('change', () => applyReadinessFilters());
+        document.getElementById('dimNotReadyToggle')?.addEventListener('change', () => applyReadinessFilters());
+        // Listener para autosort (toggle)
+        document.getElementById('autoSortToggle')?.addEventListener('change', () => { autoSortDirty = true; distributeAndRender(true); });
+        // Listener para botón azul Guardar
+        const btnSave = document.getElementById('applyAutoSortBtn');
+        if (btnSave) {
+            btnSave.addEventListener('click', () => {
+                console.log('[UI] Click en Guardar cambios');
+                (window.handleSaveKanban || handleSaveKanban)?.();
+            });
+        }
+        // Listener para botón mover pendientes
+        const btnAssignPending = document.getElementById('assignPendingBtn');
+        if (btnAssignPending) {
+            btnAssignPending.addEventListener('click', () => {
+                console.log('[UI] Click en Mover pendientes a líneas');
+                (window.applyAssignPendingOnly || applyAssignPendingOnly)?.();
+            });
+        }
+        // Fallback delegado por si el botón se re-renderiza
+        document.addEventListener('click', (ev) => {
+            const t = ev.target;
+            if (t && (t.id === 'applyAutoSortBtn' || t.closest?.('#applyAutoSortBtn'))) {
+                console.log('[UI] Delegado: Click en Guardar cambios');
+                (window.handleSaveKanban || handleSaveKanban)?.();
+            }
+            if (t && (t.id === 'assignPendingBtn' || t.closest?.('#assignPendingBtn'))) {
+                console.log('[UI] Delegado: Click en Mover pendientes a líneas');
+                (window.applyAssignPendingOnly || applyAssignPendingOnly)?.();
+            }
+        });
         
         // Variables globales para almacenar el valor y estado del campo de búsqueda de pendientes
         let lastPendingSearchValue = '';

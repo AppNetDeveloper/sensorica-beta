@@ -73,9 +73,15 @@ class ShiftManagementController extends Controller
             'production_line_id' => 'required|integer',
             'start' => 'required|date_format:H:i',
             'end'   => 'required|date_format:H:i',
+            'active' => 'nullable|boolean',
         ]);
 
-        ShiftList::create($request->all());
+        ShiftList::create([
+            'production_line_id' => (int) $request->input('production_line_id'),
+            'start' => $request->input('start'),
+            'end' => $request->input('end'),
+            'active' => $request->boolean('active') ? 1 : 0,
+        ]);
 
         if ($request->ajax()) {
             return response()->json([
@@ -96,10 +102,16 @@ class ShiftManagementController extends Controller
             'production_line_id' => 'required|integer',
             'start' => 'required|date_format:H:i',
             'end'   => 'required|date_format:H:i',
+            'active' => 'nullable|boolean',
         ]);
 
         $shift = ShiftList::findOrFail($id);
-        $shift->update($request->all());
+        $shift->update([
+            'production_line_id' => (int) $request->input('production_line_id'),
+            'start' => $request->input('start'),
+            'end' => $request->input('end'),
+            'active' => $request->boolean('active') ? 1 : 0,
+        ]);
 
         if ($request->ajax()) {
             return response()->json([

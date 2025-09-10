@@ -112,20 +112,20 @@
                         <p class="text-muted mb-2">@lang('Formato de tarjeta: Código de proceso (número de grupo)')</p>
                         <div class="d-flex flex-wrap gap-3">
                             <div>
-                                <span class="badge bg-success me-1">COR (1)</span> @lang('Proceso finalizado')
+                                <span class="badge bg-success me-1">PRO (1)</span> @lang('Proceso finalizado')
                             </div>
                             <div>
-                                <span class="badge bg-primary me-1">COR (2)</span> @lang('En fabricación')
+                                <span class="badge bg-primary me-1">PRO (2)</span> @lang('En fabricación')
                             </div>
                             <div>
-                                <span class="badge bg-info me-1">COR (3)</span> @lang('Asignado a máquina')
+                                <span class="badge bg-info me-1">PRO (3)</span> @lang('Asignado a máquina')
                             </div>
                             <div>
-                                <span class="badge bg-danger me-1">COR (4)</span> @lang('Con incidencia')
+                                <span class="badge bg-danger me-1">PRO (4)</span> @lang('Con incidencia')
                             </div>
 
                             <div>
-                                <span class="badge bg-secondary me-1">COR (6)</span> @lang('Sin asignar')
+                                <span class="badge bg-secondary me-1">PRO (6)</span> @lang('Sin asignar')
                             </div>
                         </div>
                         
