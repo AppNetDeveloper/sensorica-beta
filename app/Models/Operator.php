@@ -14,6 +14,7 @@ class Operator extends Model
         'client_id',
         'name',
         'password',
+        'pin',
         'email',
         'phone',
         'count_shift',

@@ -1634,7 +1634,8 @@
 
             // --- Inicializar Select2 ---
             workerSelect.select2({ placeholder: "Selecciona un operario...", allowClear: true, language: "es" });
-
+            // --- Datos de operarios (incluye PIN) ---
+            let workersData = [];
             // --- Función para cargar operarios ---
             function loadWorkers() {
                 const workersEndpoint = '/api/workers/list-all2';
@@ -1646,13 +1647,21 @@
                         workerSelect.empty();
                         workerSelect.append(new Option("Selecciona un operario...", "", true, true));
                         if (data && Array.isArray(data.operators) && data.operators.length > 0) {
-                            data.operators.forEach(worker => { if (worker && typeof worker.id !== 'undefined' && typeof worker.name !== 'undefined') { workerSelect.append(new Option(worker.name, worker.id)); } });
-                        } else { workerSelect.append(new Option("No se encontraron operarios", "", false, true)); }
+                            workersData = data.operators; // Guardar operadores con su PIN
+                            data.operators.forEach(worker => {
+                                if (worker && typeof worker.id !== 'undefined' && typeof worker.name !== 'undefined') {
+                                    workerSelect.append(new Option(worker.name, worker.id));
+                                }
+                            });
+                        } else {
+                            workersData = [];
+                            workerSelect.append(new Option("No se encontraron operarios", "", false, true));
+                        }
                         if (currentWorker) { workerSelect.val(currentWorker.id).trigger('change.select2'); }
                         else { workerSelect.val(null).trigger('change'); }
                         console.log("Worker list reloaded.");
                     })
-                    .catch(error => { console.error('Error fetching workers:', error); workerSelect.empty().append(new Option("Error al cargar operarios", "", true, true)); if (typeof Swal === 'function') Swal.fire('Error', 'No se pudo cargar la lista de operarios.', 'error'); });
+                    .catch(error => { console.error('Error fetching workers:', error); workersData = []; workerSelect.empty().append(new Option("Error al cargar operarios", "", true, true)); if (typeof Swal === 'function') Swal.fire('Error', 'No se pudo cargar la lista de operarios.', 'error'); });
             }
 
             // --- Función para cargar y mostrar turnos ---
@@ -3784,9 +3793,6 @@ async function updateOrderStatus(orderId, newStatus) {
                     console.log("DEBUG: Worker deselected. Refreshes stopped.");
                     return;
                 }
-                // Mostrar el selector de turno cuando se selecciona un operario válido
-                shiftSelectContainer.removeClass('hidden');
-                loadAndShowShifts();
                 const selectedName = $(this).find('option:selected').text();
                 if (currentWorker && currentWorker.id != selectedId) {
                     if (typeof Swal === 'function') { Swal.fire({ icon: 'warning', title: 'Cambio de Operario', text: `Para iniciar sesión como ${selectedName}, primero debes finalizar el turno del operario actual (${currentWorker.name}). Usa el botón (X) o el botón 'Finalizar Turno'.`, confirmButtonColor: '#3085d6' }); } else { alert(`Para iniciar sesión como ${selectedName}, primero debes finalizar el turno del operario actual (${currentWorker.name}). Usa el botón (X) o el botón 'Finalizar Turno'.`); }
@@ -3795,8 +3801,65 @@ async function updateOrderStatus(orderId, newStatus) {
                 }
                 if (currentWorker && currentWorker.id == selectedId) { return; }
 
+                // Buscar el operario seleccionado y verificar PIN si corresponde
+                const selectedWorker = workersData.find(w => String(w.id) === String(selectedId));
+                if (!selectedWorker) {
+                    console.error('Worker not found in workersData for id:', selectedId);
+                    workerSelect.val(null).trigger('change.select2');
+                    return;
+                }
+
+                if (selectedWorker.pin && selectedWorker.pin !== '') {
+                    // Solicitar PIN y comparar con el valor de la API
+                    let pinValue = null;
+                    if (typeof Swal === 'function') {
+                        const result = await Swal.fire({
+                            title: `PIN para ${selectedName}`,
+                            input: 'password',
+                            inputPlaceholder: 'Introduce tu PIN',
+                            showCancelButton: true,
+                            confirmButtonText: 'Verificar',
+                            cancelButtonText: 'Cancelar',
+                            inputAttributes: {
+                                autocomplete: 'new-password',
+                                autocapitalize: 'off',
+                                autocorrect: 'off',
+                                name: 'no-pin-save',
+                                inputmode: 'numeric'
+                            },
+                            willOpen: (popup) => {
+                                const input = popup.querySelector('input.swal2-input');
+                                if (input) {
+                                    input.setAttribute('autocomplete', 'new-password');
+                                    input.setAttribute('autocapitalize', 'off');
+                                    input.setAttribute('autocorrect', 'off');
+                                    input.setAttribute('name', 'no-pin-save');
+                                    input.setAttribute('inputmode', 'numeric');
+                                }
+                            },
+                            inputValidator: (value) => { if (!value) return 'Debes introducir tu PIN'; }
+                        });
+                        if (!result.isConfirmed) { workerSelect.val(null).trigger('change.select2'); return; }
+                        pinValue = result.value;
+                    } else {
+                        pinValue = prompt(`PIN para ${selectedName}:`);
+                        if (!pinValue) { workerSelect.val(null).trigger('change.select2'); return; }
+                    }
+
+                    if (String(pinValue) !== String(selectedWorker.pin)) {
+                        if (typeof Swal === 'function') Swal.fire('PIN incorrecto', 'El PIN introducido no es correcto.', 'error');
+                        else alert('PIN incorrecto.');
+                        workerSelect.val(null).trigger('change.select2');
+                        return;
+                    }
+                }
+
+                // Mostrar el selector de turno cuando se selecciona un operario válido (PIN OK o no requerido)
+                shiftSelectContainer.removeClass('hidden');
+                loadAndShowShifts();
+                
                 potentialNewWorker = { id: selectedId, name: selectedName };
-                console.log("DEBUG: Potential worker selected:", potentialNewWorker.name);
+                console.log("DEBUG: Potential worker selected (PIN OK or not required):", potentialNewWorker.name);
 
                 isProcessingLogin = true;
                 if (shiftHistoryTimeoutId) { clearTimeout(shiftHistoryTimeoutId); shiftHistoryTimeoutId = null; }

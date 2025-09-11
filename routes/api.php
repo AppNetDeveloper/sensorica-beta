@@ -221,6 +221,7 @@ Route::get('/workers/{id}', [OperatorController::class, 'show']);
 // Nuevas rutas para reset de contraseña
 Route::post('/workers/reset-password-email', [OperatorController::class, 'resetPasswordByEmail']);
 Route::post('/workers/reset-password-whatsapp', [OperatorController::class, 'resetPasswordByWhatsapp']);
+Route::post('/workers/reset-pin-whatsapp', [OperatorController::class, 'resetPinByWhatsapp']);
 Route::post('/workers/verify-password', [OperatorController::class, 'verifyPassword']);
 // Ruta para eliminar un operador por ID
 Route::delete('/workers/{id}', [OperatorController::class, 'destroy']);

@@ -35,13 +35,20 @@
                                     <th>Nombre</th>
                                     <th>Email</th>
                                     <th>Teléfono</th>
-                                    <th>Contraseña</th>
                                     <th>Acciones</th>
                                 </tr>
                             </thead>
                             <tbody></tbody>
                         </table>
                     </div> {{-- .table-responsive --}}
+
+                    {{-- Leyenda de ayuda sobre PIN y Contraseña --}}
+                    <div class="alert alert-info mt-3" role="alert">
+                        <strong>Información:</strong>
+                        <div>- <strong>PIN</strong>: se usa únicamente en la <em>pantalla de línea de producción</em> para un mini login rápido (fichaje). No es una credencial de acceso al sistema.</div>
+                        <div>- <strong>Contraseña</strong>: se usa para funciones del sistema que requieran autenticación tradicional (cuando aplique). No afecta al fichaje de la línea.</div>
+                        <div>- Puedes <strong>resetear el PIN por WhatsApp</strong> al trabajador si tiene teléfono configurado.</div>
+                    </div>
                 </div> {{-- .card-body --}}
             </div> {{-- .card --}}
         </div> {{-- .col --}}
@@ -70,6 +77,37 @@
         .my-narrow-table {
             max-width: 90%; /* Ajusta este valor según necesites (80%, 900px, etc.) */
             margin: 0 auto; /* Centra horizontalmente el contenido */
+        }
+
+        /* SweetAlert worker modal polishing */
+        .worker-modal .swal2-html-container{ margin: 0 !important; }
+        .worker-modal .wm-grid{
+            display: grid; 
+            grid-template-columns: 200px 1fr; 
+            gap: 10px 16px; 
+            align-items: center; 
+            width: 100%;
+        }
+        .worker-modal label{ 
+            font-weight: 600; 
+            color: #333; 
+            margin: 0; 
+        }
+        .worker-modal .swal2-input{ 
+            width: 100% !important; 
+            margin: 0 !important; 
+            background: #fff !important; 
+            border: 1px solid #ced4da !important; 
+            color: #333 !important; 
+            box-shadow: none !important; 
+            height: 2.4rem; 
+            padding: 0 .75rem; 
+            border-radius: .375rem; 
+        }
+        .worker-modal small { grid-column: 2 / span 1; color: #666; }
+        @media (max-width: 640px){
+            .worker-modal .wm-grid{ grid-template-columns: 1fr; }
+            .worker-modal small{ grid-column: auto; }
         }
     </style>
 @endpush
@@ -118,11 +156,6 @@
                     { data: 'phone', defaultContent: '' },
                     {
                         data: null,
-                        defaultContent: '',
-                        render: () => ''  // No mostramos contraseña
-                    },
-                    {
-                        data: null,
                         render: function (data) {
                             return `
                                 <button class="edit-btn btn btn-sm btn-secondary"
@@ -144,6 +177,11 @@
                                         data-phone="${data.phone || ''}">
                                     Reset Pass WhatsApp
                                 </button>
+                                <button class="reset-pin-whatsapp-btn btn btn-sm btn-info"
+                                        data-phone="${data.phone || ''}"
+                                        data-id="${data.id}">
+                                    Reset PIN WhatsApp
+                                </button>
                             `;
                         }
                     }
@@ -161,65 +199,43 @@
                             Swal.fire({
                                 title: 'Añadir Trabajador',
                                 html: `
-                                    <input id="workerId" class="swal2-input" placeholder="Codigo Trabajador (Obligatorio)" style="
-                                        width: 550px; 
-                                        background: transparent; 
-                                        color: black; 
-                                        text-shadow: 1px 1px 2px white; 
-                                        border: 1px solid #ccc;
-                                        padding: 0.5em;
-                                        border-radius: 4px;
-                                    ">
-                                    <input id="workerName" class="swal2-input" placeholder="Nombre del Trabajador" style="
-                                        width: 550px; 
-                                        background: transparent; 
-                                        color: black; 
-                                        text-shadow: 1px 1px 2px white; 
-                                        border: 1px solid #ccc;
-                                        padding: 0.5em;
-                                        border-radius: 4px;
-                                    ">
-                                    <input id="workerEmail" class="swal2-input" placeholder="Email (Opcional)" style="
-                                        width: 550px; 
-                                        background: transparent; 
-                                        color: black; 
-                                        text-shadow: 1px 1px 2px white; 
-                                        border: 1px solid #ccc;
-                                        padding: 0.5em;
-                                        border-radius: 4px;
-                                    ">
-                                    <input id="workerPhone" class="swal2-input" placeholder="Teléfono (Opcional)" style="
-                                        width: 550px; 
-                                        background: transparent; 
-                                        color: black; 
-                                        text-shadow: 1px 1px 2px white; 
-                                        border: 1px solid #ccc;
-                                        padding: 0.5em;
-                                        border-radius: 4px;
-                                    ">
-                                    <input id="workerPassword" type="password" class="swal2-input" placeholder="Contraseña (Opcional)" style="
-                                        width: 550px; 
-                                        background: transparent; 
-                                        color: black; 
-                                        text-shadow: 1px 1px 2px white; 
-                                        border: 1px solid #ccc;
-                                        padding: 0.5em;
-                                        border-radius: 4px;
-                                    ">
+                                    <div class="wm-grid">
+                                      <label>Código Trabajador <span class="text-danger">*</span></label>
+                                      <input id="workerId" class="swal2-input" placeholder="Ej: 1001" autocomplete="off" inputmode="numeric">
+                                      <label>Nombre <span class="text-danger">*</span></label>
+                                      <input id="workerName" class="swal2-input" placeholder="Nombre y apellidos" autocomplete="off">
+                                      <label>Email (opcional)</label>
+                                      <input id="workerEmail" class="swal2-input" placeholder="email@dominio.com" autocomplete="off">
+                                      <label>Teléfono (opcional)</label>
+                                      <input id="workerPhone" class="swal2-input" placeholder="+34XXXXXXXXX" autocomplete="off" inputmode="tel">
+                                      <label>PIN (opcional, 4–6 dígitos)</label>
+                                      <input id="workerPin" class="swal2-input" placeholder="PIN para fichaje en línea" autocomplete="new-password" inputmode="numeric" maxlength="10">
+                                      <label>Contraseña (opcional)</label>
+                                      <input id="workerPassword" type="password" class="swal2-input" placeholder="Credencial del sistema (si aplica)" autocomplete="new-password">
+                                    </div>
                                 `,
                                 width: '800px', // Aumenta el ancho
                                 padding: '2em', // Aumenta el padding
                                 confirmButtonText: 'Añadir',
                                 showCancelButton: true,
+                                allowOutsideClick: false,
+                                allowEnterKey: true,
+                                customClass: { popup: 'worker-modal' },
+                                didOpen: () => { setTimeout(() => document.getElementById('workerId')?.focus(), 50); },
                                 preConfirm: () => {
                                     const id       = $('#workerId').val();
                                     const name     = $('#workerName').val();
                                     const email    = $('#workerEmail').val();
                                     const phone    = $('#workerPhone').val();
                                     const password = $('#workerPassword').val();
+                                    const pin      = $('#workerPin').val();
 
                                     if (!id || !name) {
-                                        Swal.showValidationMessage('ID y Nombre son obligatorios.');
+                                        Swal.showValidationMessage('Código y Nombre son obligatorios.');
+                                        return false;
+                                    }
+                                    if (pin && (pin.length < 4 || pin.length > 6 || /\D/.test(pin))) {
+                                        Swal.showValidationMessage('El PIN debe tener 4–6 dígitos numéricos.');
                                         return false;
                                     }
                                     return {
@@ -227,17 +243,18 @@
                                         name,
                                         email: email || null,
                                         phone: phone || null,
-                                        password: password || null
+                                        password: password || null,
+                                        pin: pin || null
                                     };
                                 }
                             }).then((result) => {
                                 if (result.isConfirmed) {
-                                    const { id, name, email, phone, password } = result.value;
+                                    const { id, name, email, phone, password, pin } = result.value;
                                     $.ajax({
                                         url: `${workersApiUrl}/update-or-insert`,
                                         method: 'POST',
                                         contentType: 'application/json',
-                                        data: JSON.stringify({ id, name, email, phone, password }),
+                                        data: JSON.stringify({ id, name, email, phone, password, pin }),
                                         success: function () {
                                             Swal.fire('Trabajador añadido o actualizado', '', 'success');
                                             table.ajax.reload();
@@ -308,24 +325,42 @@
                 Swal.fire({
                     title: 'Editar Trabajador',
                     html: `
-                        <input id="workerId" class="swal2-input" value="${currentId}" readonly>
-                        <input id="workerName" class="swal2-input" value="${currentName}">
-                        <input id="workerEmail" class="swal2-input" placeholder="Email (Opcional)" value="${currentEmail}">
-                        <input id="workerPhone" class="swal2-input" placeholder="Teléfono (Opcional)" value="${currentPhone}">
-                        <input id="workerPassword" type="password" class="swal2-input" placeholder="Nueva Contraseña (opcional)">
-                        <small>Deje la contraseña en blanco para no cambiarla</small>
+                        <div class="wm-grid">
+                          <label>Código Trabajador</label>
+                          <input id="workerId" class="swal2-input" value="${currentId}" readonly>
+                          <label>Nombre</label>
+                          <input id="workerName" class="swal2-input" value="${currentName}">
+                          <label>Email (opcional)</label>
+                          <input id="workerEmail" class="swal2-input" placeholder="Email (Opcional)" value="${currentEmail}">
+                          <label>Teléfono (opcional)</label>
+                          <input id="workerPhone" class="swal2-input" placeholder="Teléfono (Opcional)" value="${currentPhone}">
+                          <label>PIN (opcional, 4–6 dígitos)</label>
+                          <input id="workerPinEdit" class="swal2-input" placeholder="PIN (Opcional, 4-6 dígitos)" autocomplete="new-password" inputmode="numeric" maxlength="10">
+                          <label>Nueva Contraseña (opcional)</label>
+                          <input id="workerPassword" type="password" class="swal2-input" placeholder="Nueva Contraseña (opcional)" autocomplete="new-password">
+                          <small>Deje la contraseña en blanco para no cambiarla</small>
+                        </div>
                     `,
                     confirmButtonText: 'Actualizar',
                     showCancelButton: true,
+                    allowOutsideClick: false,
+                    allowEnterKey: true,
+                    customClass: { popup: 'worker-modal' },
+                    didOpen: () => { setTimeout(() => document.getElementById('workerName')?.focus(), 50); },
                     preConfirm: () => {
                         const id       = $('#workerId').val();
                         const name     = $('#workerName').val();
                         const email    = $('#workerEmail').val() || null;
                         const phone    = $('#workerPhone').val() || null;
                         const password = $('#workerPassword').val();
+                        const pin      = $('#workerPinEdit').val();
 
                         if (!id || !name) {
                             Swal.showValidationMessage('ID y Nombre son obligatorios.');
+                            return false;
+                        }
+                        if (pin && (pin.length < 4 || pin.length > 6 || /\D/.test(pin))) {
+                            Swal.showValidationMessage('El PIN debe tener 4–6 dígitos numéricos.');
                             return false;
                         }
                         return {
@@ -333,14 +368,16 @@
                             name,
                             email,
                             phone,
-                            password: password || null
+                            password: password || null,
+                            pin: pin || null
                         };
                     }
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        const { id, name, email, phone, password } = result.value;
+                        const { id, name, email, phone, password, pin } = result.value;
                         const payload = { id, name, email, phone };
                         if (password) payload.password = password;
+                        if (pin) payload.pin = pin;
 
                         $.ajax({
                             url: `${workersApiUrl}/update-or-insert`,
@@ -468,6 +505,39 @@
                                     title: 'Error al Resetear por WhatsApp',
                                     text: `Status: ${xhr.status}. Mensaje: ${xhr.responseJSON?.error || 'Error desconocido'}`
                                 });
+                            }
+                        });
+                    }
+                });
+            });
+
+            // Resetear PIN por WhatsApp (handler fuera del bloque de error y junto al resto de handlers)
+            $('#workersTable tbody').on('click', '.reset-pin-whatsapp-btn', function () {
+                const phone = $(this).data('phone');
+                const operatorId = $(this).data('id');
+                if (!phone && !operatorId) {
+                    Swal.fire({ icon: 'warning', title: 'Datos insuficientes', text: 'No hay teléfono ni ID de operador para enviar el PIN.' });
+                    return;
+                }
+                Swal.fire({
+                    title: 'Resetear PIN por WhatsApp',
+                    text: phone ? `Se generará un nuevo PIN para el teléfono: ${phone}` : `Se generará un nuevo PIN para el operador ID: ${operatorId}`,
+                    icon: 'info',
+                    showCancelButton: true,
+                    confirmButtonText: 'Confirmar',
+                    cancelButtonText: 'Cancelar'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: `${workersApiUrl}/reset-pin-whatsapp`,
+                            method: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify(phone ? { phone } : { operator_id: operatorId }),
+                            success: function () {
+                                Swal.fire('PIN reseteado, se enviará por WhatsApp', '', 'success');
+                            },
+                            error: function (xhr) {
+                                Swal.fire({ icon: 'error', title: 'Error al Resetear PIN', text: `Status: ${xhr.status}. Mensaje: ${xhr.responseJSON?.error || 'Error desconocido'}` });
                             }
                         });
                     }

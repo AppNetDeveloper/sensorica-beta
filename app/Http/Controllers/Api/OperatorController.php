@@ -56,6 +56,7 @@ class OperatorController extends Controller
             'id' => 'required|integer',
             'name' => 'required|string',
             'password' => 'nullable|string',
+            'pin' => 'nullable|string|max:10',
             'email' => 'nullable|string|email',
             'phone' => 'nullable|string'
         ]);
@@ -74,6 +75,10 @@ class OperatorController extends Controller
             $dataToUpdate['email'] = $validated['email'];
         }
 
+        if(isset($validated['pin'])) {
+            $dataToUpdate['pin'] = $validated['pin'];
+        }
+
         if(isset($validated['phone'])) {
             $dataToUpdate['phone'] = $validated['phone'];
         }
@@ -83,6 +88,32 @@ class OperatorController extends Controller
         } else {
             $dataToUpdate['client_id'] = $validated['id'];
             Operator::create($dataToUpdate);
+        }
+
+        // Enviar WhatsApp con datos editados/creados si hay teléfono
+        try {
+            $current = Operator::where('client_id', $validated['id'])->first();
+            if ($current && !empty($current->phone)) {
+                $apiUrl = rtrim(env('LOCAL_SERVER'), '/') . "/api/send-message";
+                $summary  = "Ficha actualizada";
+                $lines = [
+                    "Código: " . $current->client_id,
+                    "Nombre: " . ($current->name ?? ''),
+                    ($current->email ? ("Email: " . $current->email) : null),
+                    ($current->phone ? ("Teléfono: " . $current->phone) : null),
+                    ($current->pin ? ("PIN: " . $current->pin) : null),
+                ];
+                // Filtrar nulos y unir
+                $body = $summary . "\n" . implode("\n", array_values(array_filter($lines)));
+                $payload = [
+                    'jid' => $current->phone . '@s.whatsapp.net',
+                    'message' => $body,
+                ];
+                // Enviar sin verificar certificados (coherente con otros usos en el proyecto)
+                Http::withoutVerifying()->post($apiUrl, $payload);
+            }
+        } catch (\Exception $e) {
+            // Evitar romper la operación principal si falla el envío
         }
 
         return response()->json(['message' => 'Operator updated or inserted successfully'], 200);
@@ -130,6 +161,7 @@ class OperatorController extends Controller
             '*.id' => 'required|integer',
             '*.name' => 'required|string',
             '*.password' => 'nullable|string',
+            '*.pin' => 'nullable|string|max:10',
             '*.email' => 'nullable|string|email',
             '*.phone' => 'nullable|string',
         ]);
@@ -150,7 +182,34 @@ class OperatorController extends Controller
                 $data['password'] = Hash::make($item['password']);
             }
 
-            Operator::create($data);
+            if(isset($item['pin']) && $item['pin']) {
+                $data['pin'] = $item['pin'];
+            }
+
+            $created = Operator::create($data);
+
+            // Notificar por WhatsApp (si tiene teléfono). No interrumpir el proceso si falla.
+            try {
+                if (!empty($created->phone)) {
+                    $apiUrl = rtrim(env('LOCAL_SERVER'), '/') . "/api/send-message";
+                    $summary  = "Ficha creada";
+                    $lines = [
+                        "Código: " . $created->client_id,
+                        "Nombre: " . ($created->name ?? ''),
+                        ($created->email ? ("Email: " . $created->email) : null),
+                        ($created->phone ? ("Teléfono: " . $created->phone) : null),
+                        ($created->pin ? ("PIN: " . $created->pin) : null),
+                    ];
+                    $body = $summary . "\n" . implode("\n", array_values(array_filter($lines)));
+                    $payload = [
+                        'jid' => $created->phone . '@s.whatsapp.net',
+                        'message' => $body,
+                    ];
+                    Http::withoutVerifying()->post($apiUrl, $payload);
+                }
+            } catch (\Exception $e) {
+                // Ignorar fallos de notificación para no interrumpir importación masiva
+            }
         }
 
         return response()->json(['message' => 'All operators replaced successfully'], 200);
@@ -210,7 +269,7 @@ class OperatorController extends Controller
                 ]);
          }])
          ->orderBy('count_shift', 'desc')  // Ordenar por count_shift en orden descendente
-         ->get(['id', 'name', 'email', 'phone', 'count_shift', 'count_order', 'client_id']); // Ahora estamos obteniendo 'id' real del operador
+         ->get(['id', 'name', 'email', 'phone', 'count_shift', 'count_order', 'client_id', 'pin']); // Ahora estamos obteniendo 'id' real del operador
      
          // Modificar los datos para devolver 'client_id' como 'id'
          $operators = $operators->map(function ($operator) {
@@ -221,6 +280,7 @@ class OperatorController extends Controller
                  'phone' => $operator->phone,
                  'count_shift' => $operator->count_shift,
                  'count_order' => $operator->count_order,
+                'pin'         => $operator->pin,
                  'operator_posts' => $operator->operatorPosts->map(function ($post) {
                     return [
                         'rfid_reading_name' => $post->rfidReading->name ?? null, // Nombre de RFID (suponiendo que tiene un campo 'name')
@@ -300,7 +360,7 @@ class OperatorController extends Controller
              }
          ])
          // Elegir campos que necesitamos (incluyendo id real y client_id)
-         ->get(['id', 'name', 'email', 'phone', 'count_shift', 'count_order', 'client_id']);
+         ->get(['id', 'name', 'email', 'phone', 'count_shift', 'count_order', 'client_id', 'pin']);
      
          // Ajustar los datos para mostrar tanto id como client_id por separado
          $operators = $operators->map(function ($operator) {
@@ -312,7 +372,8 @@ class OperatorController extends Controller
                  'phone'       => $operator->phone,
                  'count_shift' => $operator->count_shift,
                  'count_order' => $operator->count_order,
-     
+                 'pin'         => $operator->pin,        // PIN en texto plano para validación en frontend
+
                  // Mapeo de operatorPosts
                  'operator_posts' => $operator->operatorPosts->map(function ($post) {
                      return [
@@ -375,6 +436,62 @@ class OperatorController extends Controller
         } catch (\Exception $e) {
             Log::error('Error al obtener operadores con IDs internos: ' . $e->getMessage());
             return response()->json(['error' => 'Error interno del servidor'], 500);
+        }
+    }
+
+    /**
+     * Reset operator PIN by WhatsApp (sends the new PIN to the operator's phone)
+     */
+    public function resetPinByWhatsapp(Request $request)
+    {
+        // Aceptar operator_id (client_id) o phone. Preferir operator_id si llega.
+        $request->merge([
+            'operator_id' => $request->operator_id !== null ? (int) $request->operator_id : null,
+            'phone' => $request->phone !== null ? (string) $request->phone : null,
+        ]);
+
+        $validated = $request->validate([
+            'operator_id' => 'nullable|integer',
+            'phone' => 'nullable|string',
+        ]);
+
+        $operator = null;
+        if (!empty($validated['operator_id'])) {
+            $operator = Operator::where('client_id', $validated['operator_id'])->first();
+        }
+        if (!$operator && !empty($validated['phone'])) {
+            $phone = trim($validated['phone']);
+            $operator = Operator::where('phone', $phone)->first();
+        }
+        if (!$operator) {
+            return response()->json(['error' => 'Operator not found'], 404);
+        }
+
+        // Generar PIN numérico de 4-6 dígitos
+        $newPin = str_pad((string) random_int(0, 999999), 4, '0', STR_PAD_LEFT);
+        $operator->pin = $newPin;
+        $operator->save();
+
+        // Preparar el mensaje de WhatsApp
+        $phoneNumber = $operator->phone;
+        $message = "Tu PIN se ha reseteado correctamente. Nuevo PIN: $newPin";
+
+        // URL de la API de WhatsApp
+        $apiUrl = rtrim(env('LOCAL_SERVER'), '/') . "/api/send-message";
+
+        $requestData = [
+            'jid' => $phoneNumber . '@s.whatsapp.net',
+            'message' => $message,
+        ];
+
+        try {
+            $response = Http::withoutVerifying()->post($apiUrl, $requestData);
+            if ($response->successful()) {
+                return response()->json(['message' => 'PIN reset successfully and sent via WhatsApp.'], 200);
+            }
+            return response()->json(['error' => 'Failed to send WhatsApp message. Please try again.'], 500);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Error connecting to the WhatsApp API. Please try again later.'], 500);
         }
     }
 
