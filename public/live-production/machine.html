@@ -594,9 +594,126 @@
                 <div>
                     <h1>Máquina no planificada para este turno</h1>
                     <p>Según la planificación de turnos, esta línea no está programada ahora.</p>
+
+                    <!-- Aviso de responsabilidad y botón de desbloqueo -->
+                    <div class="mt-4" style="display:flex; align-items:center; justify-content:center; gap:10px; color:#fbbf24; text-align:center;">
+                        <i class="fas fa-exclamation-triangle" aria-hidden="true" style="font-size: clamp(1.25rem, 3vw, 1.75rem);"></i>
+                        <span style="color:#fef3c7; font-size: clamp(1.1rem, 2.8vw, 1.6rem); font-weight: 700; display: inline-block;">El usuario es responsable de operar fuera de la planificación.</span>
+                    </div>
+                    <button id="unlock-planning-overlay-button"
+                            class="mt-4"
+                            style="
+                                background:#f59e0b; color:#111827; font-weight:600; 
+                                padding:10px 16px; border-radius:8px; border:none; cursor:pointer;
+                                box-shadow:0 2px 6px rgba(0,0,0,0.25);
+                            "
+                            title="Desbloquear temporalmente">
+                        <i class="fas fa-unlock-alt" aria-hidden="true" style="margin-right:6px;"></i>
+                        Desbloquear temporalmente
+                    </button>
+                    <div style="margin-top:6px; color:#cbd5e1; font-size:12px; opacity:0.9;">
+                        Esta acción ocultará esta pantalla bajo su responsabilidad.
+                    </div>
                 </div>
             </div>
         </div>
+        <script>
+            (function() {
+                // --- Configuración de la anulación (override) ---
+                var OVERRIDE_KEY = 'planningOverrideUntil';
+                var OVERRIDE_WINDOW_MS = 30 * 60 * 1000; // 30 minutos
+
+                function nowTs() { return Date.now(); }
+                function getOverrideUntil() {
+                    var raw = localStorage.getItem(OVERRIDE_KEY);
+                    var val = raw ? parseInt(raw, 10) : 0;
+                    return isFinite(val) ? val : 0;
+                }
+                function setOverrideUntil(ts) {
+                    try { localStorage.setItem(OVERRIDE_KEY, String(ts)); } catch (e) { /* ignore */ }
+                }
+                function clearOverride() {
+                    try { localStorage.removeItem(OVERRIDE_KEY); } catch (e) { /* ignore */ }
+                }
+                function isOverrideActive() {
+                    var until = getOverrideUntil();
+                    return until && until > nowTs();
+                }
+                function getRemainingMs() {
+                    var until = getOverrideUntil();
+                    return Math.max(0, until - nowTs());
+                }
+
+                // Exponer banderas globales por si otra lógica las necesita (pausar comprobaciones externas)
+                window.PLANNING_OVERRIDE_ACTIVE = isOverrideActive();
+                window.SUPPRESS_PLANNING_BLOCK_CHECKS = window.PLANNING_OVERRIDE_ACTIVE;
+
+                // Referencias DOM
+                var overlay = document.getElementById('planning-overlay');
+                var btn = document.getElementById('unlock-planning-overlay-button');
+
+                // Función para ocultar el overlay si está activa la anulación
+                function enforceOverlayState() {
+                    try {
+                        window.PLANNING_OVERRIDE_ACTIVE = isOverrideActive();
+                        if (!overlay) return;
+                        if (window.PLANNING_OVERRIDE_ACTIVE) {
+                            if (overlay.style.display !== 'none') {
+                                overlay.style.display = 'none';
+                            }
+                        } else {
+                            // La anulación expiró, limpiar clave
+                            clearOverride();
+                        }
+                    } catch (e) { /* noop */ }
+                }
+
+                try {
+                    // Al cargar, si hay anulación activa, asegurar que permanezca oculto
+                    enforceOverlayState();
+
+                    if (btn && overlay) {
+                        btn.addEventListener('click', function () {
+                            // Crear/renovar anulación por 30 minutos
+                            var untilTs = nowTs() + OVERRIDE_WINDOW_MS;
+                            setOverrideUntil(untilTs);
+                            window.PLANNING_OVERRIDE_ACTIVE = true;
+                            window.SUPPRESS_PLANNING_BLOCK_CHECKS = true;
+                            // Ocultar overlay inmediatamente
+                            overlay.style.display = 'none';
+                        });
+                        // Mostrar tiempo restante en tooltip del botón
+                        setInterval(function(){
+                            if (!btn) return;
+                            var rem = getRemainingMs();
+                            if (rem > 0) {
+                                var min = Math.floor(rem/60000);
+                                var sec = Math.floor((rem%60000)/1000);
+                                btn.title = 'Desbloqueo activo · tiempo restante: ' + String(min).padStart(2,'0') + ':' + String(sec).padStart(2,'0');
+                            } else {
+                                btn.title = 'Desbloquear temporalmente';
+                            }
+                        }, 1000);
+                    }
+
+                    // Intervalo para reforzar el estado (por si otra lógica intenta mostrarlo)
+                    // Usamos un intervalo ligero para no interferir con rendimiento
+                    setInterval(enforceOverlayState, 3000); // cada 3s
+
+                    // Observer para ocultar de inmediato si alguien cambia estilos/clases del overlay
+                    if (overlay && typeof MutationObserver !== 'undefined') {
+                        var obs = new MutationObserver(function(){
+                            if (isOverrideActive()) {
+                                overlay.style.display = 'none';
+                            }
+                        });
+                        obs.observe(overlay, { attributes: true, attributeFilter: ['style', 'class'] });
+                    }
+                } catch (e) {
+                    if (console && console.error) console.error('Error attaching unlock handler:', e);
+                }
+            })();
+        </script>
     <!-- Modal para mostrar detalles de la orden (ahora usado para artículos) -->
     <!-- Este modal se usa para mostrar los artículos de la orden, no las incidencias -->
     <div class="container mx-auto bg-white p-6 rounded-lg shadow-md">
