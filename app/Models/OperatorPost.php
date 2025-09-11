@@ -24,6 +24,10 @@ class OperatorPost extends Model
 
     public $timestamps = true; // Se seguirán manejando created_at y updated_at
 
+    protected $casts = [
+        'finish_at' => 'datetime',
+    ];
+
     /**
      * Relación con Operator.
      */

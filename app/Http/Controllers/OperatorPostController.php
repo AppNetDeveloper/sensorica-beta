@@ -175,8 +175,6 @@ class OperatorPostController extends Controller
         ->where(function($query) use ($tenDaysAgo) {
             // finish_at nulo
             $query->whereNull('finish_at')
-                  // o vacío (si fuera necesario)
-                  ->orWhere('finish_at', '=', '')
                   // o en los últimos 10 días
                   ->orWhere('finish_at', '>=', $tenDaysAgo);
         })

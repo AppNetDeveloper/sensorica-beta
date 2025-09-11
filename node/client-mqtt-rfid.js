@@ -5,6 +5,7 @@ require('dotenv').config({ path: '../.env' });
 const mqtt = require('mqtt');                         // Cliente MQTT para conectarse al broker MQTT
 const mysql = require('mysql2/promise');              // Cliente MySQL con soporte para promesas
 const axios = require('axios');                       // Cliente HTTP para realizar peticiones a la API
+const https = require('https');
 const { promisify } = require('util');                // Permite convertir funciones basadas en callbacks a promesas
 const setIntervalAsync = promisify(setInterval);      // Convierte setInterval a una versión que retorna una promesa
 const environment = 'production'; // O 'local', 'staging', etc.
@@ -16,6 +17,10 @@ const warning  = 'WARNING'; // O podría ser 'ERROR', 'INFO', etc. según el cas
 const mqttServer = process.env.MQTT_SENSORICA_SERVER;
 const mqttPort = process.env.MQTT_SENSORICA_PORT;
 const apiBaseUrl = process.env.LOCAL_SERVER.replace(/\/$/, '');
+
+// Agente HTTPS para ignorar errores de certificado (solución robusta para redirecciones)
+const httpsAgent = new https.Agent({ rejectUnauthorized: false });
+
 const dbConfig = {
     host: process.env.DB_HOST,
     port: process.env.DB_PORT,
@@ -395,7 +400,7 @@ async function processCallApi(topic, data) {
 
             try {
 
-                const response = await axios.post(`${apiBaseUrl}/api/rfid-insert`, dataToSend);
+                const response = await axios.post(`${apiBaseUrl}/api/rfid-insert`, dataToSend, { httpsAgent });
                 console.log(`[${getCurrentTimestamp()}] ${environment}.${info}: ✅ API Respuesta EPC ${epc} TID ${tid} y RSSI ${rssi}: ${JSON.stringify(response.data, null, 2)}`);
 
                 // Define el tiempo durante el cual se ignorará el TID según el éxito de la operación (300000 ms o 180000 ms) OJO ANTEAS EL 1000 era 180000
@@ -404,7 +409,26 @@ async function processCallApi(topic, data) {
                 setTimeout(() => ignoredTIDs.delete(tid), ignoreTime);
                 console.log(`[${getCurrentTimestamp()}] ${environment}.${info}: ⏳ TID ${tid} ignorado por ${ignoreTime / 60000} min.`);
             } catch (error) {
-                console.error(`[${getCurrentTimestamp()}] ${environment}.${error}: ❌ Error API EPC ${epc}: ${error.response?.data?.message || error.message}`);
+                // Log detallado del error
+                const errorTimestamp = getCurrentTimestamp();
+                console.error(`[${errorTimestamp}] ${environment}.ERROR: ❌ Error al llamar a la API para EPC ${epc}.`);
+                console.error(`[${errorTimestamp}] ${environment}.ERROR:   - URL: ${apiBaseUrl}/api/rfid-insert`);
+                console.error(`[${errorTimestamp}] ${environment}.ERROR:   - Datos enviados: ${JSON.stringify(dataToSend)}`);
+
+                if (error.response) {
+                    // El servidor respondió con un código de estado fuera del rango 2xx
+                    console.error(`[${errorTimestamp}] ${environment}.ERROR:   - Status: ${error.response.status}`);
+                    console.error(`[${errorTimestamp}] ${environment}.ERROR:   - Respuesta (Datos): ${JSON.stringify(error.response.data)}`);
+                } else if (error.request) {
+                    // La petición se hizo pero no se recibió respuesta
+                    console.error(`[${errorTimestamp}] ${environment}.ERROR:   - Petición enviada, pero no se recibió respuesta.`);
+                } else {
+                    // Error en la configuración de la petición
+                    console.error(`[${errorTimestamp}] ${environment}.ERROR:   - Mensaje de error: ${error.message}`);
+                }
+                // Para un diagnóstico completo, se muestra el objeto de error entero
+                console.error(`[${errorTimestamp}] ${environment}.ERROR:   - Objeto de error completo:`, error);
+
                 updateBlockedEPCs();
             }
         });

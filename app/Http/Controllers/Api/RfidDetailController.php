@@ -106,9 +106,17 @@ class RfidDetailController extends Controller
             // 3. Obtener el rfid_reading usando el EPC (grupo único para varias TID)
             $epcInput = $request->input('epc');
             // Eliminar los ceros iniciales
-            $epcInput = ltrim($epcInput, '0');
-
             $rfidReading = RfidReading::where('epc', $epcInput)->first();
+
+            // Si no se encuentra, intentar sin los ceros iniciales
+            if (!$rfidReading) {
+                $epcTrimmed = ltrim($epcInput, '0');
+                $rfidReading = RfidReading::where('epc', $epcTrimmed)->first();
+                // Si se encuentra, usamos la versión sin ceros para el resto del script
+                if ($rfidReading) {
+                    $epcInput = $epcTrimmed;
+                }
+            }
 
             if (!$rfidReading) {
                 Log::info("RFID reading no encontrado para el EPC: " . $epcInput);
