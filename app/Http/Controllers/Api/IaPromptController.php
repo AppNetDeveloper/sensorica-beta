@@ -26,12 +26,22 @@ class IaPromptController extends Controller
             return response()->json(['message' => 'Prompt no encontrado o inactivo.'], 404);
         }
 
-        // Devuelve solo los campos que el frontend necesita, por ejemplo:
+        // Preparar ai_url y ai_token desde .env
+        $aiUrl = rtrim(env('AI_URL', ''), '/');
+        $rawToken = env('AI_TOKEN', '');
+        $aiToken = $rawToken;
+        if (!empty($rawToken) && stripos($rawToken, 'bearer ') !== 0) {
+            $aiToken = 'Bearer ' . $rawToken;
+        }
+
+        // Devuelve los campos que el frontend necesita, incluyendo ai_url y ai_token desde .env
         return response()->json([
             'key' => $prompt->key,
             'name' => $prompt->name,
             'content' => $prompt->content,
             'model_name' => $prompt->model_name,
+            'ai_url' => $aiUrl,
+            'ai_token' => $aiToken,
         ]);
     }
 

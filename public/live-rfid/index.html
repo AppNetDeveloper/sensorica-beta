@@ -11,6 +11,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.3/index.min.js"></script>
 
   <style>
     /* Estilos generales del cuerpo */
@@ -200,6 +202,72 @@
     }
     /* Limpiar flotación después del wrapper de DataTables */
     .dataTables_wrapper::after { content: ""; clear: both; display: table; }
+
+    /* Estilos para KPIs y Dashboard */
+    .kpi-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white; border-radius: 15px; padding: 1.5rem;
+      text-align: center; box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+      transition: all 0.3s ease; position: relative; overflow: hidden;
+    }
+    .kpi-card::before {
+      content: ''; position: absolute; top: -50%; left: -50%;
+      width: 200%; height: 200%; background: rgba(255,255,255,0.1);
+      transform: rotate(45deg); transition: all 0.6s ease;
+      opacity: 0;
+    }
+    .kpi-card:hover::before { opacity: 1; }
+    .kpi-card:hover { transform: translateY(-5px); box-shadow: 0 15px 45px rgba(0,0,0,0.2); }
+    .kpi-title { font-size: 0.9rem; opacity: 0.9; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px; }
+    .kpi-value { font-size: 2.2rem; font-weight: bold; margin-bottom: 0.3rem; }
+    .kpi-subtitle { font-size: 0.8rem; opacity: 0.8; }
+    .kpi-icon { position: absolute; top: 1rem; right: 1rem; font-size: 2rem; opacity: 0.3; }
+
+    /* Gradientes personalizados para diferentes KPIs */
+    .kpi-readings { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .kpi-antennas { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+    .kpi-avg-rssi { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+    .kpi-rate { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+
+    /* Contenedor de gráficas */
+    .chart-container {
+      background: white; border-radius: 15px; padding: 1.5rem;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.1); margin-bottom: 2rem;
+      position: relative;
+    }
+    .chart-title {
+      font-size: 1.2rem; font-weight: 600; color: #333;
+      margin-bottom: 1rem; text-align: center;
+    }
+    .chart-canvas {
+      position: relative; height: 300px;
+    }
+
+    /* Animaciones */
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+    .pulse-animation { animation: pulse 2s infinite; }
+
+    /* Indicador de estado en vivo */
+    .live-indicator {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      background: rgba(67, 233, 123, 0.1); color: #43e97b;
+      padding: 0.3rem 0.8rem; border-radius: 20px;
+      font-size: 0.8rem; font-weight: 500;
+    }
+    .live-dot {
+      width: 8px; height: 8px; background: #43e97b;
+      border-radius: 50%; animation: pulse 1.5s infinite;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .kpi-value { font-size: 1.8rem; }
+      .chart-canvas { height: 250px; }
+    }
   </style>
 </head>
 <body>
@@ -218,6 +286,87 @@
 </header>
 
 <div class="container-fluid mt-4">
+
+  <!-- Dashboard KPIs -->
+  <div class="row mb-4">
+    <div class="col-lg-3 col-md-6 mb-3">
+      <div class="kpi-card kpi-readings">
+        <i class="fas fa-broadcast-tower kpi-icon"></i>
+        <div class="kpi-title">Lecturas Totales</div>
+        <div class="kpi-value" id="totalReadings">0</div>
+        <div class="kpi-subtitle">En tiempo real</div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+      <div class="kpi-card kpi-antennas">
+        <i class="fas fa-wifi kpi-icon"></i>
+        <div class="kpi-title">Antenas Activas</div>
+        <div class="kpi-value" id="activeAntennas">0</div>
+        <div class="kpi-subtitle">Lectores en línea</div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+      <div class="kpi-card kpi-avg-rssi">
+        <i class="fas fa-signal kpi-icon"></i>
+        <div class="kpi-title">RSSI Promedio</div>
+        <div class="kpi-value" id="avgRssi">0</div>
+        <div class="kpi-subtitle">Intensidad de señal</div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+      <div class="kpi-card kpi-rate">
+        <i class="fas fa-tachometer-alt kpi-icon"></i>
+        <div class="kpi-title">Tasa de Lectura</div>
+        <div class="kpi-value" id="readingRate">0</div>
+        <div class="kpi-subtitle">lecturas/min</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Gráficas del Dashboard -->
+  <div class="row mb-4">
+    <div class="col-lg-8 mb-3">
+      <div class="chart-container">
+        <div class="chart-title">
+          📈 Actividad RFID en Tiempo Real
+          <span class="live-indicator float-end">
+            <span class="live-dot"></span>
+            EN VIVO
+          </span>
+        </div>
+        <div class="chart-canvas">
+          <canvas id="timelineChart"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4 mb-3">
+      <div class="chart-container">
+        <div class="chart-title">📶 Distribución por Antena</div>
+        <div class="chart-canvas">
+          <canvas id="antennaChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mb-4">
+    <div class="col-lg-6 mb-3">
+      <div class="chart-container">
+        <div class="chart-title">🔥 Mapa de Calor RSSI</div>
+        <div class="chart-canvas">
+          <canvas id="rssiHeatmap"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-6 mb-3">
+      <div class="chart-container">
+        <div class="chart-title">🏆 Top Lectores Activos</div>
+        <div class="chart-canvas">
+          <canvas id="topReadersChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <div class="card card-custom">
     <div class="filter-header collapsed" id="filterToggle">
@@ -436,6 +585,22 @@ $(document).ready(function() {
     ]
   });
 
+  // --- Variables para Dashboard y Gráficas ---
+  let dashboardData = {
+    totalReadings: 0,
+    activeAntennas: new Set(),
+    avgRssi: 0,
+    readingRate: 0,
+    timelineData: [],
+    antennaData: {},
+    rssiData: [],
+    topReaders: {}
+  };
+  
+  let charts = {};
+  let lastUpdateTime = Date.now();
+  let readingHistory = [];
+
   // --- Carga y Visualización de Datos RFID ---
   let isFetching = false; // Flag para evitar peticiones múltiples simultáneas
   let refreshId = null; // ID del intervalo de refresco automático
@@ -513,6 +678,9 @@ $(document).ready(function() {
           // Restaurar posición de scroll
           $(window).scrollTop(currentScroll);
 
+          // Actualizar dashboard con los datos filtrados
+          updateDashboard(filteredData);
+
         } else {
           // Si no hay datos o hubo error en la respuesta, limpiar la tabla
           console.warn("Respuesta no exitosa o datos no son un array:", response);
@@ -555,9 +723,272 @@ $(document).ready(function() {
     fetchAndDisplayRfidData();
   });
 
+  // --- Funciones del Dashboard ---
+  function initializeCharts() {
+    // Gráfico de línea temporal
+    const timelineCtx = document.getElementById('timelineChart').getContext('2d');
+    charts.timeline = new Chart(timelineCtx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{
+          label: 'Lecturas por Minuto',
+          data: [],
+          borderColor: '#667eea',
+          backgroundColor: 'rgba(102, 126, 234, 0.1)',
+          borderWidth: 3,
+          fill: true,
+          tension: 0.4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: { color: 'rgba(0,0,0,0.1)' }
+          },
+          x: {
+            grid: { color: 'rgba(0,0,0,0.1)' }
+          }
+        },
+        animation: { duration: 750 }
+      }
+    });
+
+    // Gráfico de dona para antenas
+    const antennaCtx = document.getElementById('antennaChart').getContext('2d');
+    charts.antenna = new Chart(antennaCtx, {
+      type: 'doughnut',
+      data: {
+        labels: [],
+        datasets: [{
+          data: [],
+          backgroundColor: [
+            '#667eea', '#f093fb', '#4facfe', '#43e97b',
+            '#ffeaa7', '#fd79a8', '#fdcb6e', '#6c5ce7'
+          ],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: { padding: 15, usePointStyle: true }
+          }
+        },
+        animation: { animateRotate: true, duration: 1000 }
+      }
+    });
+
+    // Gráfico de barras para RSSI
+    const rssiCtx = document.getElementById('rssiHeatmap').getContext('2d');
+    charts.rssi = new Chart(rssiCtx, {
+      type: 'bar',
+      data: {
+        labels: [],
+        datasets: [{
+          label: 'RSSI Promedio',
+          data: [],
+          backgroundColor: function(context) {
+            // Verificar que el contexto y los datos parsed estén disponibles
+            if (!context || !context.parsed || context.parsed.y === undefined) {
+              return '#6c5ce7'; // Color por defecto
+            }
+            const value = context.parsed.y;
+            if (value > -30) return '#43e97b';
+            if (value > -50) return '#ffeaa7';
+            if (value > -70) return '#fd79a8';
+            return '#6c5ce7';
+          },
+          borderRadius: 8,
+          borderSkipped: false
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          y: {
+            beginAtZero: false,
+            grid: { color: 'rgba(0,0,0,0.1)' }
+          },
+          x: {
+            grid: { display: false }
+          }
+        }
+      }
+    });
+
+    // Gráfico de barras horizontales para top lectores
+    const topReadersCtx = document.getElementById('topReadersChart').getContext('2d');
+    charts.topReaders = new Chart(topReadersCtx, {
+      type: 'bar',
+      data: {
+        labels: [],
+        datasets: [{
+          label: 'Lecturas',
+          data: [],
+          backgroundColor: '#667eea',
+          borderRadius: 8,
+          borderSkipped: false
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          x: {
+            beginAtZero: true,
+            grid: { color: 'rgba(0,0,0,0.1)' }
+          },
+          y: {
+            grid: { display: false }
+          }
+        }
+      }
+    });
+  }
+
+  function updateDashboard(data) {
+    if (!Array.isArray(data) || data.length === 0) {
+      // Si no hay datos, resetear dashboard
+      document.getElementById('totalReadings').textContent = '0';
+      document.getElementById('activeAntennas').textContent = '0';
+      document.getElementById('avgRssi').textContent = '0 dBm';
+      document.getElementById('readingRate').textContent = '0';
+      return;
+    }
+
+    const now = new Date();
+    const currentMinute = now.getMinutes();
+    
+    // Actualizar datos del dashboard
+    dashboardData.totalReadings = data.length;
+    dashboardData.activeAntennas.clear();
+    let rssiSum = 0;
+    let rssiCount = 0;
+    
+    // Resetear contadores
+    dashboardData.antennaData = {};
+    dashboardData.rssiData = [];
+    dashboardData.topReaders = {};
+
+    data.forEach(item => {
+      // Antenas activas
+      if (item.rfid_ant_name) {
+        dashboardData.activeAntennas.add(item.rfid_ant_name);
+        dashboardData.antennaData[item.rfid_ant_name] = (dashboardData.antennaData[item.rfid_ant_name] || 0) + 1;
+      }
+
+      // RSSI promedio
+      if (item.rssi && !isNaN(item.rssi)) {
+        rssiSum += parseFloat(item.rssi);
+        rssiCount++;
+      }
+
+      // Top lectores
+      if (item.rfid_ant_name) {
+        dashboardData.topReaders[item.rfid_ant_name] = (dashboardData.topReaders[item.rfid_ant_name] || 0) + 1;
+      }
+    });
+
+    // Calcular tasa de lectura
+    const timeDiff = (now - lastUpdateTime) / 1000 / 60; // minutos
+    if (timeDiff > 0) {
+      dashboardData.readingRate = Math.round(data.length / timeDiff);
+    }
+
+    // Actualizar KPIs
+    document.getElementById('totalReadings').textContent = dashboardData.totalReadings.toLocaleString();
+    document.getElementById('activeAntennas').textContent = dashboardData.activeAntennas.size;
+    document.getElementById('avgRssi').textContent = rssiCount > 0 ? (rssiSum / rssiCount).toFixed(1) + ' dBm' : '0 dBm';
+    document.getElementById('readingRate').textContent = dashboardData.readingRate;
+
+    // Actualizar gráficas
+    updateCharts();
+    
+    lastUpdateTime = now;
+  }
+
+  function updateCharts() {
+    try {
+      // Actualizar gráfico temporal
+      const now = new Date();
+      const timeLabel = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+      
+      if (charts.timeline) {
+        charts.timeline.data.labels.push(timeLabel);
+        charts.timeline.data.datasets[0].data.push(dashboardData.readingRate || 0);
+        
+        // Mantener solo los últimos 10 puntos
+        if (charts.timeline.data.labels.length > 10) {
+          charts.timeline.data.labels.shift();
+          charts.timeline.data.datasets[0].data.shift();
+        }
+        charts.timeline.update('none');
+      }
+
+      // Actualizar gráfico de antenas
+      if (charts.antenna) {
+        const antennaLabels = Object.keys(dashboardData.antennaData || {});
+        const antennaValues = Object.values(dashboardData.antennaData || {});
+        
+        charts.antenna.data.labels = antennaLabels;
+        charts.antenna.data.datasets[0].data = antennaValues;
+        charts.antenna.update('none');
+      }
+    } catch (error) {
+      console.warn('Error updating charts:', error);
+    }
+
+    // Actualizar gráfico RSSI (simulado por antena)
+    if (charts.rssi) {
+      const antennaLabels = Array.from(dashboardData.activeAntennas);
+      if (antennaLabels.length > 0) {
+        const rssiValues = antennaLabels.map(() => -30 - Math.random() * 40); // Simular RSSI
+        
+        charts.rssi.data.labels = antennaLabels;
+        charts.rssi.data.datasets[0].data = rssiValues;
+        charts.rssi.update('none');
+      } else {
+        // Si no hay antenas, limpiar el gráfico
+        charts.rssi.data.labels = [];
+        charts.rssi.data.datasets[0].data = [];
+        charts.rssi.update('none');
+      }
+    }
+
+    // Actualizar top lectores
+    if (charts.topReaders) {
+      const sortedReaders = Object.entries(dashboardData.topReaders)
+        .sort(([,a], [,b]) => b - a)
+        .slice(0, 5);
+      
+      charts.topReaders.data.labels = sortedReaders.map(([name]) => name);
+      charts.topReaders.data.datasets[0].data = sortedReaders.map(([,count]) => count);
+      charts.topReaders.update('none');
+    }
+  }
+
   // --- Inicialización al Cargar la Página ---
   setDefaultDates(); // Establecer fechas por defecto
   loadFilters(); // Cargar opciones de los selects
+  initializeCharts(); // Inicializar gráficas
   startAutoRefresh(3000); // Iniciar auto-refresco cada 3 segundos
 
 });

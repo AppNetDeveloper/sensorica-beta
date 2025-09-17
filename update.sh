@@ -48,6 +48,20 @@ cd /var/www/html || { echo "Error: No se pudo cambiar al directorio /var/www/htm
 #echo "Deteniendo todos los procesos de Supervisor..."
 #sudo supervisorctl stop all
 
+# Realizar backup de seguridad antes de cambios críticos
+echo "Realizando backup de seguridad antes de la actualización..."
+if [ -f "/var/www/html/backup_direct.sh" ]; then
+    echo "Ejecutando backup directo de seguridad..."
+    /bin/bash /var/www/html/backup_direct.sh
+    if [ $? -eq 0 ]; then
+        echo "✅ Backup de seguridad completado exitosamente."
+    else
+        echo "⚠️ ADVERTENCIA: Falló el backup de seguridad, pero continuando..."
+    fi
+else
+    echo "⚠️ Script de backup directo no encontrado, continuando sin backup..."
+fi
+
 # Actualizar el repositorio: DESCARTAR cambios locales y sincronizar con origin/main
 echo "Actualizando el repositorio (descartando cambios locales)..."
 git fetch --all --prune || { echo "Error: Falló git fetch."; exit 1; }
@@ -148,6 +162,15 @@ declare -A ENV_VARS=(
     ["REPLICA_DB_USERNAME"]=""
     ["REPLICA_DB_PASSWORD"]=""
     
+    ["MAIL_MAILER"]="smtp"
+    ["MAIL_HOST"]="smtpdm-ap-southeast-1.aliyuncs.com"
+    ["MAIL_PORT"]="465"
+    ["MAIL_USERNAME"]="info@aixmart.net"
+
+    ["MAIL_ENCRYPTION"]="ssl"
+    ["MAIL_FROM_ADDRESS"]="info@aixmart.net"
+    ["MAIL_FROM_NAME"]="Xmart Notificaciones"
+    
     ["RFID_READER_IP"]=""
     ["RFID_READER_PORT"]="1080"
     ["RFID_MONITOR_URL"]=""
@@ -243,9 +266,11 @@ fi
 
 
 # Define las entradas de cron que deseas agregar:
-# En este ejemplo, se ejecuta el script clean_and_backup.sh a las 00:00 y a las 14:30.
+# Backups: 00:00 (diario) y 14:30 (backup adicional)
 CRON_ENTRY1="0 0 * * * /bin/bash /var/www/html/clean_and_backup.sh >> /var/www/html/storage/logs/clean_and_backup.log 2>&1"
 CRON_ENTRY2="30 14 * * * /bin/bash /var/www/html/clean_and_backup.sh >> /var/www/html/storage/logs/clean_and_backup.log 2>&1"
+# Backup directo de emergencia cada 6 horas
+CRON_BACKUP_EMERGENCY="0 */6 * * * /bin/bash /var/www/html/backup_direct.sh >> /var/www/html/storage/logs/backup_direct.log 2>&1"
 CRON_ENTRY3="30 0 * * * python3 /var/www/html/python/entrena_shift.py >> /var/www/html/storage/logs/entrena_shift.log 2>&1"
 CRON_ENTRY4="*/10 * * * * find /var/www/html/storage/app/mqtt/server2 -type f -mmin +5 -delete"
 CRON_ENTRY5="*/10 * * * * find /var/www/html/storage/app/mqtt/server1 -type f -mmin +5 -delete"
@@ -253,30 +278,9 @@ CRON_ENTRY6="40 0 * * * python3 /var/www/html/python/entrenar_produccion.py >> /
 CRON_ENTRY7="30 3 * * * /usr/bin/php /var/www/html/artisan db:replicate-nightly >> /var/www/html/storage/logs/db_replicate.log 2>&1"
 CRON_ENTRY8="0 * * * * /bin/bash /var/www/html/scripts/clean_lock_files.sh >> /var/www/html/storage/logs/clean_locks.log 2>&1"
 CRON_ENTRY9="0 2 * * * /var/www/html/scripts/clean_logs.sh >> /var/www/html/storage/logs/clean_logs.log 2>&1"
-CRON_ENTRY10="0 0 * * * /bin/bash /var/www/html/fix_log_permissions.sh"
-CRON_ENTRY11="1 0 * * * /bin/bash /var/www/html/fix_log_permissions.sh"
-CRON_ENTRY12="2 0 * * * /bin/bash /var/www/html/fix_log_permissions.sh"
-CRON_ENTRY13="3 0 * * * /bin/bash /var/www/html/fix_log_permissions.sh"
-CRON_ENTRY14="4 0 * * * /bin/bash /var/www/html/fix_log_permissions.sh"
-CRON_ENTRY15="5 0 * * * /bin/bash /var/www/html/fix_log_permissions.sh"
-CRON_ENTRY16="6 0 * * * /bin/bash /var/www/html/fix_log_permissions.sh"
-CRON_ENTRY17="7 0 * * * /bin/bash /var/www/html/fix_log_permissions.sh"
-CRON_ENTRY18="8 0 * * * /bin/bash /var/www/html/fix_log_permissions.sh"
-CRON_ENTRY19="9 0 * * * /bin/bash /var/www/html/fix_log_permissions.sh"
-CRON_ENTRY20="10 0 * * * /bin/bash /var/www/html/fix_log_permissions.sh"
-CRON_ENTRY21="11 0 * * * /bin/bash /var/www/html/fix_log_permissions.sh"
-CRON_ENTRY22="12 0 * * * /bin/bash /var/www/html/fix_log_permissions.sh"
-CRON_ENTRY23="13 0 * * * /bin/bash /var/www/html/fix_log_permissions.sh"
-CRON_ENTRY24="14 0 * * * /bin/bash /var/www/html/fix_log_permissions.sh"
-CRON_ENTRY25="15 0 * * * /bin/bash /var/www/html/fix_log_permissions.sh"
-CRON_ENTRY26="16 0 * * * /bin/bash /var/www/html/fix_log_permissions.sh"
-CRON_ENTRY27="17 0 * * * /bin/bash /var/www/html/fix_log_permissions.sh"
-CRON_ENTRY28="18 0 * * * /bin/bash /var/www/html/fix_log_permissions.sh"
-CRON_ENTRY29="19 0 * * * /bin/bash /var/www/html/fix_log_permissions.sh"
-CRON_ENTRY30="20 0 * * * /bin/bash /var/www/html/fix_log_permissions.sh"
-CRON_ENTRY31="21 0 * * * /bin/bash /var/www/html/fix_log_permissions.sh"
-CRON_ENTRY32="22 0 * * * /bin/bash /var/www/html/fix_log_permissions.sh"
-CRON_ENTRY33="23 0 * * * /bin/bash /var/www/html/fix_log_permissions.sh"
+# Permisos de logs - optimizado para ejecutar cada 5 minutos en lugar de 24 entradas separadas
+CRON_ENTRY10="*/5 * * * * /bin/bash /var/www/html/fix_log_permissions.sh >/dev/null 2>&1"
+CRON_ENTRY34="0 1 * * * /usr/bin/php /var/www/html/artisan db:replicate-nightly >> /var/www/html/storage/logs/db_replicate.log 2>&1"
 
 # Obtiene la lista de cron actual
 CURRENT_CRON=$(crontab -l 2>/dev/null)
@@ -296,6 +300,7 @@ function add_cron_entry {
 
 add_cron_entry "$CRON_ENTRY1"
 add_cron_entry "$CRON_ENTRY2"
+add_cron_entry "$CRON_BACKUP_EMERGENCY"
 add_cron_entry "$CRON_ENTRY3"
 add_cron_entry "$CRON_ENTRY4"
 add_cron_entry "$CRON_ENTRY5"
@@ -304,29 +309,7 @@ add_cron_entry "$CRON_ENTRY7"
 add_cron_entry "$CRON_ENTRY8"
 add_cron_entry "$CRON_ENTRY9"
 add_cron_entry "$CRON_ENTRY10"
-add_cron_entry "$CRON_ENTRY11"
-add_cron_entry "$CRON_ENTRY12"
-add_cron_entry "$CRON_ENTRY13"
-add_cron_entry "$CRON_ENTRY14"
-add_cron_entry "$CRON_ENTRY15"
-add_cron_entry "$CRON_ENTRY16"
-add_cron_entry "$CRON_ENTRY17"
-add_cron_entry "$CRON_ENTRY18"
-add_cron_entry "$CRON_ENTRY19"
-add_cron_entry "$CRON_ENTRY20"
-add_cron_entry "$CRON_ENTRY21"
-add_cron_entry "$CRON_ENTRY22"
-add_cron_entry "$CRON_ENTRY23"
-add_cron_entry "$CRON_ENTRY24"
-add_cron_entry "$CRON_ENTRY25"
-add_cron_entry "$CRON_ENTRY26"
-add_cron_entry "$CRON_ENTRY27"
-add_cron_entry "$CRON_ENTRY28"
-add_cron_entry "$CRON_ENTRY29"
-add_cron_entry "$CRON_ENTRY30"
-add_cron_entry "$CRON_ENTRY31"
-add_cron_entry "$CRON_ENTRY32"
-add_cron_entry "$CRON_ENTRY33"
+add_cron_entry "$CRON_ENTRY34"
 
 # Instala la nueva lista de cron
 echo "$CURRENT_CRON" | crontab -
@@ -422,6 +405,19 @@ echo 'limpiar cache'
 
 
     chmod +x /var/www/html/update.sh
+    
+    # Asegurar que los scripts de backup tengan permisos de ejecución
+    echo "Configurando permisos de scripts de backup..."
+    chmod +x /var/www/html/clean_and_backup.sh 2>/dev/null || echo "clean_and_backup.sh no encontrado"
+    chmod +x /var/www/html/backup_direct.sh 2>/dev/null || echo "backup_direct.sh no encontrado"
+    chmod +x /var/www/html/check_backups.sh 2>/dev/null || echo "check_backups.sh no encontrado"
+    
+    # Crear directorios de logs si no existen
+    mkdir -p /var/www/html/storage/logs
+    touch /var/www/html/storage/logs/backup.log
+    touch /var/www/html/storage/logs/backup_direct.log
+    touch /var/www/html/storage/logs/clean_and_backup.log
+    chown -R www-data:www-data /var/www/html/storage/logs
 
     php artisan db:seed --class=DatabaseSeeder --force -n
     php artisan db:seed --class=ProductionLineProcessesPermissionSeeder --force -n

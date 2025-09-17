@@ -1,0 +1,1336 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tabla Trabajadores Ordenada por Primer Puesto</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        @media print {
+            .no-print { display: none !important; }
+            body { padding: 0; }
+            .container { box-shadow: none; margin: 0; max-width: 100%; }
+            .modal { display: none !important; }
+        }
+        .live-cajas-hora {
+            /* font-style: italic; */
+            /* color: #2563eb; */
+        }
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 1rem;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 600px; 
+        }
+        #chartModal .modal-content {
+            max-width: 800px; 
+        }
+        .edit-icon, .analyze-icon {
+            cursor: pointer;
+            margin-left: 8px;
+            color: #3b82f6; 
+            display: inline-flex; 
+            align-items: center;
+        }
+        .edit-icon:hover, .analyze-icon:hover {
+            color: #2563eb; 
+        }
+        .hidden {
+            display: none;
+        }
+        .icon {
+            width: 24px;
+            height: 24px;
+            fill: currentColor;
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #09f;
+            animation: spin 1s ease infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .chart-container {
+            width: 100%;
+            height: 450px; 
+            overflow-x: auto; 
+        }
+        .chart-container svg {
+            display: block;
+            margin: auto;
+        }
+        .bar {
+            fill: steelblue;
+        }
+        .bar:hover {
+            fill: #2563eb;
+        }
+        .axis-label {
+            font-size: 0.8rem;
+        }
+        .tooltip {
+            position: absolute;
+            text-align: center;
+            padding: 6px;
+            font: 12px sans-serif;
+            background: lightsteelblue;
+            border: 0px;
+            border-radius: 8px;
+            pointer-events: none;
+            opacity: 0;
+            z-index: 1010; 
+        }
+        .pie-slice text {
+            font-size: 10px;
+            fill: white;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-4 md:p-8">
+
+<div class="container mx-auto bg-white rounded-lg shadow-md overflow-hidden">
+    <div class="p-4 md:p-6 border-b border-gray-200">
+        <div class="flex flex-col sm:flex-row justify-between sm:items-center mb-4 gap-4">
+             <div class="flex items-center gap-3">
+                <h1 class="text-2xl font-bold text-gray-700">Listado de Trabajadores</h1>
+                <div id="lockButton" class="no-print cursor-pointer text-gray-600 hover:text-blue-600 transition-colors">
+                    <svg id="lockIcon" class="icon" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6zm-1.5-1a.5.5 0 00-.5-.5h-2a.5.5 0 00-.5.5v1a.5.5 0 00.5.5h2a.5.5 0 00.5-.5v-1z" clip-rule="evenodd" />
+                    </svg>
+                    <svg id="unlockIcon" class="icon hidden" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h1.5a.5.5 0 00.5-.5V8a.5.5 0 00-.5-.5h-2a.5.5 0 00-.5.5v.5a.5.5 0 00.5.5H9v1h4z" clip-rule="evenodd" />
+                         <path d="M9 5.5a3 3 0 00-3 3V9h1.5a.5.5 0 01.5.5v1a.5.5 0 01-.5.5H5v.5a3 3 0 003 3h.5a.5.5 0 00.5-.5V12a.5.5 0 00-.5-.5H8a.5.5 0 00-.5.5v.5a.5.5 0 00.5.5h.5a1.5 1.5 0 001.5-1.5v-.5a.5.5 0 00-.5-.5H9V9h1V5.5z"/>
+                    </svg>
+                </div>
+            </div>
+             <div class="flex flex-col sm:flex-row sm:items-center gap-4 no-print">
+                 <div class="flex items-center space-x-2">
+                     <label for="dateRangeSelect" class="text-sm font-medium text-gray-700">Periodo:</label>
+                     <select id="dateRangeSelect" name="dateRange" class="block w-full sm:w-auto pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 rounded-md shadow-sm">
+                         <option value="today" selected>Hoy</option>
+                         <option value="yesterday">Ayer</option>
+                         <option value="day_minus_2">Hace 2 días</option>
+                         <option value="day_minus_3">Hace 3 días</option>
+                         <option value="day_minus_4">Hace 4 días</option>
+                         <option value="day_minus_5">Hace 5 días</option>
+                         <option value="day_minus_6">Hace 6 días</option>
+                         <option value="day_minus_7">Hace 7 días</option>
+                         <option value="last7days">Últimos 7 días (rango)</option>
+                         <option value="last30days">Últimos 30 días (rango)</option>
+                     </select>
+                 </div>
+                  <div class="flex items-center">
+                    <input id="filterPostsCheckbox" type="checkbox" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" checked>
+                    <label for="filterPostsCheckbox" class="ml-2 block text-sm text-gray-900">
+                        Solo operarios con asignaciones
+                    </label>
+                </div>
+             </div>
+        </div>
+         <div class="flex justify-end space-x-2 no-print">
+            <button id="viewWorkerChartBtn" class="bg-teal-500 hover:bg-teal-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-150 ease-in-out hidden">
+                📊 Cajas/Trabajador
+            </button>
+            <button id="viewPostChartBtn" class="bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-150 ease-in-out hidden">
+                📊 Cajas/Puesto (Barras)
+            </button>
+            <button id="viewPostPieChartBtn" class="bg-sky-500 hover:bg-sky-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-150 ease-in-out hidden">
+                📊 Cajas/Puesto (Circular)
+            </button>
+            <button id="analizarTodosBtn" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-150 ease-in-out hidden">
+                ✨ Analizar Todos con IA
+            </button>
+            <button id="exportExcelBtn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed">
+                Exportar a Excel
+            </button>
+            <button id="printBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-150 ease-in-out">
+                Imprimir
+            </button>
+        </div>
+    </div>
+
+    <div class="overflow-x-auto p-4 md:p-6">
+        <table id="workersTable" class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Codigo</th>
+                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
+                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Unidades (Turno) <span id="totalUnidadesTurnoHeader" class="font-bold"></span>
+                    </th>
+                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Puesto</th>
+                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Inicio Puesto</th>
+                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fin Puesto</th>
+                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cantidad</th>
+                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cajas/Hora</th>
+                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Confeccion</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200" id="workersTableBody">
+                <tr id="loadingRow">
+                    <td colspan="9" class="px-4 py-4 text-center text-gray-500">Cargando datos...</td>
+                </tr>
+                <tr id="errorRow" class="hidden">
+                     <td colspan="9" class="px-4 py-4 text-center text-red-500"></td>
+                </tr>
+                 <tr id="noDataRow" class="hidden">
+                     <td colspan="9" class="px-4 py-4 text-center text-gray-500">No se encontraron datos para el periodo seleccionado.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="passwordModal" class="modal hidden no-print">
+    <div class="modal-content">
+        <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4">Introducir Contraseña</h3>
+        <div>
+            <input type="password" id="passwordInput" class="block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2 mb-2" placeholder="Contraseña">
+            <p id="passwordError" class="text-red-500 text-sm mb-4 hidden">Contraseña incorrecta.</p>
+        </div>
+        <div class="mt-4 flex justify-end space-x-2">
+            <button type="button" id="cancelPasswordBtn" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 border border-gray-300 rounded-md shadow-sm">Cancelar</button>
+            <button type="button" id="submitPasswordBtn" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 border border-transparent rounded-md shadow-sm">Desbloquear</button>
+        </div>
+    </div>
+</div>
+
+<div id="editQuantityModal" class="modal hidden no-print">
+    <div class="modal-content">
+        <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4">Editar Cantidad</h3>
+        <div>
+            <label for="editQuantityInput" class="block text-sm font-medium text-gray-700">Nueva cantidad:</label>
+            <input type="number" id="editQuantityInput" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2 mb-2" placeholder="Cantidad">
+            <p id="editQuantityError" class="text-red-500 text-sm mb-4 hidden">Valor inválido.</p>
+            <p id="editApiStatus" class="text-sm mt-2"></p> 
+        </div>
+        <div class="mt-4 flex justify-end space-x-2">
+            <button type="button" id="cancelEditBtn" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 border border-gray-300 rounded-md shadow-sm">Cancelar</button>
+            <button type="button" id="saveEditBtn" class="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 border border-transparent rounded-md shadow-sm">Guardar</button>
+        </div>
+    </div>
+</div>
+
+<div id="geminiAnalysisModal" class="modal hidden no-print">
+    <div class="modal-content">
+        <div class="flex justify-between items-center mb-4">
+            <h3 id="geminiModalTitle" class="text-lg font-medium leading-6 text-gray-900">✨ Análisis de Rendimiento</h3>
+            <button type="button" id="closeGeminiAnalysisBtn" class="text-gray-400 hover:text-gray-600">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+        <div id="geminiAnalysisContent" class="text-sm text-gray-700 whitespace-pre-wrap overflow-y-auto" style="max-height: 60vh;">
+            </div>
+        <div id="geminiAnalysisStatus" class="mt-3 text-sm text-gray-500"></div>
+        <div class="mt-4 flex justify-end">
+            <button type="button" id="okGeminiAnalysisBtn" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 border border-transparent rounded-md shadow-sm">OK</button>
+        </div>
+    </div>
+</div>
+
+<div id="chartModal" class="modal hidden no-print">
+    <div class="modal-content"> 
+        <div class="flex justify-between items-center mb-4">
+            <h3 id="chartModalTitle" class="text-lg font-medium leading-6 text-gray-900">📊 Gráfico de Producción</h3>
+            <button type="button" id="closeChartModalBtn" class="text-gray-400 hover:text-gray-600">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+        <div id="chartContainer" class="chart-container">
+        </div>
+        <div class="mt-4 flex justify-end">
+            <button type="button" id="okChartModalBtn" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 border border-transparent rounded-md shadow-sm">OK</button>
+        </div>
+    </div>
+</div>
+<div id="tooltip" class="tooltip"></div>
+
+
+<script>
+    const apiBaseUrl = '/api/workers/all-list/completed'; 
+    const apiEditPostUrl = '/api/operator-post/update-count'; 
+    const tableBody = document.getElementById('workersTableBody');
+    const loadingRow = document.getElementById('loadingRow');
+    const errorRow = document.getElementById('errorRow');
+    const errorCell = errorRow.querySelector('td');
+    const noDataRow = document.getElementById('noDataRow');
+    const exportExcelBtn = document.getElementById('exportExcelBtn');
+    const printBtn = document.getElementById('printBtn');
+    const dateRangeSelect = document.getElementById('dateRangeSelect');
+    const filterPostsCheckbox = document.getElementById('filterPostsCheckbox');
+    const analizarTodosBtn = document.getElementById('analizarTodosBtn'); 
+    const viewWorkerChartBtn = document.getElementById('viewWorkerChartBtn'); 
+    const viewPostChartBtn = document.getElementById('viewPostChartBtn');
+    const viewPostPieChartBtn = document.getElementById('viewPostPieChartBtn'); 
+    const totalUnidadesTurnoHeader = document.getElementById('totalUnidadesTurnoHeader'); 
+
+    const lockButton = document.getElementById('lockButton');
+    const lockIcon = document.getElementById('lockIcon');
+    const unlockIcon = document.getElementById('unlockIcon');
+    const passwordModal = document.getElementById('passwordModal');
+    const passwordInput = document.getElementById('passwordInput');
+    const passwordError = document.getElementById('passwordError');
+    const cancelPasswordBtn = document.getElementById('cancelPasswordBtn');
+    const submitPasswordBtn = document.getElementById('submitPasswordBtn');
+
+    const editQuantityModal = document.getElementById('editQuantityModal');
+    const editQuantityInput = document.getElementById('editQuantityInput');
+    const editQuantityError = document.getElementById('editQuantityError');
+    const editApiStatus = document.getElementById('editApiStatus'); 
+    const cancelEditBtn = document.getElementById('cancelEditBtn');
+    const saveEditBtn = document.getElementById('saveEditBtn');
+
+    const geminiAnalysisModal = document.getElementById('geminiAnalysisModal');
+    const geminiModalTitle = document.getElementById('geminiModalTitle'); 
+    const geminiAnalysisContent = document.getElementById('geminiAnalysisContent');
+    const geminiAnalysisStatus = document.getElementById('geminiAnalysisStatus');
+    const closeGeminiAnalysisBtn = document.getElementById('closeGeminiAnalysisBtn');
+    const okGeminiAnalysisBtn = document.getElementById('okGeminiAnalysisBtn');
+
+    const chartModal = document.getElementById('chartModal');
+    const chartModalTitle = document.getElementById('chartModalTitle');
+    const chartContainer = document.getElementById('chartContainer');
+    const closeChartModalBtn = document.getElementById('closeChartModalBtn');
+    const okChartModalBtn = document.getElementById('okChartModalBtn');
+    const tooltip = d3.select("#tooltip");
+
+
+    let originalWorkersData = [];
+    let displayedPostRowsCount = 0;
+    let liveUpdateIntervalId = null; 
+    let isLocked = true;
+    let currentEditContext = null; 
+
+
+    const dateTimeFormatOptions = {
+        year: 'numeric', month: 'numeric', day: 'numeric',
+        hour: 'numeric', minute: 'numeric', second: 'numeric',
+        hour12: false
+    };
+    const dateFormatter = new Intl.DateTimeFormat(navigator.language || 'es-ES', dateTimeFormatOptions);
+
+    function showPasswordModal() {
+        passwordInput.value = '';
+        passwordError.classList.add('hidden');
+        passwordModal.classList.remove('hidden');
+        passwordInput.focus();
+    }
+
+    function hidePasswordModal() {
+        passwordModal.classList.add('hidden');
+    }
+
+    function toggleLockState(locked) {
+        isLocked = locked;
+        const hasData = originalWorkersData && originalWorkersData.length > 0 && displayedPostRowsCount > 0;
+
+        if (isLocked) {
+            lockIcon.classList.remove('hidden');
+            unlockIcon.classList.add('hidden');
+            analizarTodosBtn.classList.add('hidden'); 
+            viewWorkerChartBtn.classList.add('hidden'); 
+            viewPostChartBtn.classList.add('hidden');
+            viewPostPieChartBtn.classList.add('hidden'); 
+        } else {
+            lockIcon.classList.add('hidden');
+            unlockIcon.classList.remove('hidden');
+            if (hasData) {
+                analizarTodosBtn.classList.remove('hidden'); 
+                viewWorkerChartBtn.classList.remove('hidden'); 
+                viewPostChartBtn.classList.remove('hidden');
+                viewPostPieChartBtn.classList.remove('hidden'); 
+            } else {
+                analizarTodosBtn.classList.add('hidden');
+                viewWorkerChartBtn.classList.add('hidden');
+                viewPostChartBtn.classList.add('hidden');
+                viewPostPieChartBtn.classList.add('hidden');
+            }
+        }
+        
+        analizarTodosBtn.disabled = isLocked || !hasData;
+        viewWorkerChartBtn.disabled = isLocked || !hasData;
+        viewPostChartBtn.disabled = isLocked || !hasData;
+        viewPostPieChartBtn.disabled = isLocked || !hasData; 
+
+        populateTable(originalWorkersData); 
+    }
+
+    lockButton.addEventListener('click', () => {
+        if (isLocked) {
+            showPasswordModal();
+        } else {
+            toggleLockState(true); 
+        }
+    });
+
+    cancelPasswordBtn.addEventListener('click', hidePasswordModal);
+
+    submitPasswordBtn.addEventListener('click', () => {
+        if (passwordInput.value === 'boisolo') { // Ensure this password is secure or managed appropriately
+            hidePasswordModal();
+            toggleLockState(false); 
+        } else {
+            passwordError.classList.remove('hidden');
+            passwordInput.select();
+        }
+    });
+    
+    passwordInput.addEventListener('keypress', (event) => {
+        if (event.key === 'Enter') {
+            submitPasswordBtn.click();
+        }
+    });
+
+    function showEditQuantityModal(workerClientId, postIndex, currentQuantity, quantityCell, cajasHoraCell, workerUnitsCell) {
+        currentEditContext = { workerClientId, postIndex, currentQuantity, quantityCell, cajasHoraCell, workerUnitsCell }; 
+        editQuantityInput.value = currentQuantity;
+        editQuantityError.classList.add('hidden');
+        editApiStatus.textContent = ''; 
+        editApiStatus.classList.remove('text-red-500', 'text-green-500');
+        editQuantityModal.classList.remove('hidden');
+        editQuantityInput.focus();
+        editQuantityInput.select();
+        saveEditBtn.disabled = false; 
+        saveEditBtn.textContent = 'Guardar';
+    }
+
+    function hideEditQuantityModal() {
+        editQuantityModal.classList.add('hidden');
+        currentEditContext = null;
+    }
+
+    cancelEditBtn.addEventListener('click', hideEditQuantityModal);
+
+    saveEditBtn.addEventListener('click', async () => { 
+        const newQuantity = parseFloat(editQuantityInput.value);
+        if (isNaN(newQuantity) || newQuantity < 0) {
+            editQuantityError.textContent = 'Por favor, introduce un número válido (0 o mayor).';
+            editQuantityError.classList.remove('hidden');
+            editApiStatus.textContent = '';
+            return;
+        }
+        editQuantityError.classList.add('hidden'); 
+
+        if (currentEditContext) {
+            const { workerClientId, postIndex, quantityCell, cajasHoraCell, workerUnitsCell, currentQuantity } = currentEditContext;
+            
+            const worker = originalWorkersData.find(w => w.client_id === workerClientId);
+            if (!worker || !worker.operator_posts || !worker.operator_posts[postIndex]) {
+                editApiStatus.textContent = 'Error: No se encontró el trabajador o el puesto.';
+                editApiStatus.classList.add('text-red-500');
+                return;
+            }
+            
+            const post = worker.operator_posts[postIndex];
+            const postId = post.id; 
+
+            if (typeof postId === 'undefined') {
+                editApiStatus.textContent = 'Error: Falta el ID del puesto para la actualización.';
+                editApiStatus.classList.add('text-red-500');
+                console.error("Post ID is undefined for post:", post);
+                return;
+            }
+
+            saveEditBtn.disabled = true;
+            saveEditBtn.textContent = 'Guardando...';
+            editApiStatus.textContent = 'Actualizando cantidad en el servidor...';
+            editApiStatus.classList.remove('text-red-500', 'text-green-500');
+
+            const formData = new URLSearchParams();
+            formData.append('id', postId);
+            formData.append('count', newQuantity);
+
+            try {
+                const response = await fetch(apiEditPostUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Authorization': 'Bearer 915afe8b7fabc2ca8d759761b0fe159f88bf0f064be7e4cd6a1f99021eff4e3b', // Replace with your actual token or secure method
+                    },
+                    body: formData 
+                });
+
+                if (!response.ok) {
+                    let errorMessage = `Error del servidor: ${response.status} ${response.statusText}`;
+                    try {
+                        const errorData = await response.json();
+                        errorMessage = errorData.message || errorMessage;
+                    } catch (e) {
+                        const textError = await response.text();
+                        if (textError) errorMessage = textError;
+                    }
+                    throw new Error(errorMessage);
+                }
+
+                const result = await response.json();
+
+                if (result.status === 'success') { 
+                    post.count = newQuantity; 
+
+                    quantityCell.childNodes[0].nodeValue = newQuantity + ' '; 
+                    const newCajasHora = calculateCajasHora(post.count, post.created_at, post.finish_at);
+                    cajasHoraCell.textContent = newCajasHora;
+
+                    if (cajasHoraCell.classList.contains('live-cajas-hora')) {
+                        cajasHoraCell.dataset.count = newQuantity;
+                    }
+
+                    const totalQuantitySum = worker.operator_posts.reduce((sum, p) => {
+                        const count = p.count ?? 0;
+                        return sum + (count > 0 ? count : 0);
+                    }, 0);
+                    workerUnitsCell.textContent = totalQuantitySum;
+                    
+                    editApiStatus.textContent = result.message || 'Cantidad actualizada correctamente.'; 
+                    editApiStatus.classList.remove('text-red-500'); 
+                    editApiStatus.classList.add('text-green-500');
+                    setTimeout(hideEditQuantityModal, 1500); 
+                    
+                    updateGrandTotalUnidades();
+
+                } else {
+                    throw new Error(result.message || 'La API indicó un fallo pero no proporcionó un mensaje de estado "success".');
+                }
+
+            } catch (error) {
+                console.error('Error al actualizar el puesto del operador:', error);
+                editApiStatus.textContent = `Error al guardar: ${error.message}`;
+                editApiStatus.classList.remove('text-green-500'); 
+                editApiStatus.classList.add('text-red-500');
+            } finally {
+                saveEditBtn.disabled = false;
+                saveEditBtn.textContent = 'Guardar';
+            }
+        }
+    });
+
+    editQuantityInput.addEventListener('keypress', (event) => {
+        if (event.key === 'Enter') {
+            saveEditBtn.click();
+        }
+    });
+
+    function showGeminiAnalysisModal(title = "✨ Análisis de Rendimiento") {
+        geminiModalTitle.textContent = title;
+        geminiAnalysisContent.innerHTML = '<div class="spinner"></div>'; 
+        geminiAnalysisStatus.textContent = 'Generando análisis...';
+        geminiAnalysisStatus.classList.remove('text-red-500');
+        geminiAnalysisModal.classList.remove('hidden');
+    }
+
+    function hideGeminiAnalysisModal() {
+        geminiAnalysisModal.classList.add('hidden');
+    }
+
+    closeGeminiAnalysisBtn.addEventListener('click', hideGeminiAnalysisModal);
+    okGeminiAnalysisBtn.addEventListener('click', hideGeminiAnalysisModal);
+
+    async function fetchWorkerAnalysis(worker) {
+        showGeminiAnalysisModal(`✨ Análisis de Rendimiento: ${worker.name || 'Desconocido'}`);
+
+        const workerName = worker.name || 'Desconocido';
+        let postsDetails = "Este trabajador no tiene puestos registrados en este periodo o ninguno con cantidad > 0.";
+
+        if (worker.operator_posts && worker.operator_posts.length > 0) {
+            const activePosts = worker.operator_posts.filter(post => (post.count ?? 0) > 0);
+            if (activePosts.length > 0) {
+                postsDetails = activePosts.map(post => {
+                    const startDate = post.created_at ? dateFormatter.format(new Date(post.created_at)) : 'N/A';
+                    const endDate = post.finish_at ? dateFormatter.format(new Date(post.finish_at)) : 'Activo';
+                    const cajasHora = calculateCajasHora(post.count, post.created_at, post.finish_at);
+                    return `- Puesto: ${post.rfid_reading?.name || 'N/A'}\n  Confección: ${post.product_list?.name || 'N/A'}\n  Inicio: ${startDate}\n  Fin: ${endDate}\n  Cantidad: ${post.count || 0}\n  Cajas/Hora: ${cajasHora}`;
+                }).join('\n\n');
+            }
+        }
+        
+        const prompt = `
+Por favor, analiza el rendimiento del siguiente trabajador y proporciona un resumen conciso en español.
+Destaca sus puntos fuertes, posibles áreas de mejora si los datos lo sugieren, y cualquier patrón notable en su productividad o eficiencia.
+El análisis debe ser profesional y constructivo.
+
+Nombre del Trabajador: ${workerName}
+
+Detalles de sus puestos asignados en el periodo seleccionado (solo puestos con cantidad > 0):
+${postsDetails}
+
+Basándote en estos datos, genera el análisis. Si no hay suficientes datos para un análisis detallado, indícalo.
+Formatea la respuesta para que sea fácil de leer, usando párrafos y quizás listas si es apropiado.
+No incluyas frases como "Basándome en estos datos" o "Aquí está el análisis". Simplemente proporciona el análisis.
+`;
+
+        await callGeminiAPI(prompt);
+    }
+
+    async function fetchOverallAnalysis() {
+        showGeminiAnalysisModal("✨ Análisis Global de Trabajadores");
+        const workersToAnalyze = filterDataByCheckbox(JSON.parse(JSON.stringify(originalWorkersData)));
+
+        if (workersToAnalyze.length === 0) {
+            geminiAnalysisContent.textContent = 'No hay trabajadores que cumplan los criterios actuales para generar un análisis global.';
+            geminiAnalysisStatus.textContent = 'Análisis no disponible.';
+            return;
+        }
+
+        let overallSummary = `Análisis global para ${workersToAnalyze.length} trabajador(es) en el periodo seleccionado:\n\n`;
+        let totalCajasGlobal = 0;
+        let totalHorasTrabajadas = 0;
+        let puestosConteo = {};
+
+        workersToAnalyze.forEach(worker => {
+            let workerCajas = 0;
+            overallSummary += `Trabajador: ${worker.name || 'Desconocido'} (ID: ${worker.client_id || 'N/A'})\n`;
+            if (worker.operator_posts && worker.operator_posts.length > 0) {
+                const activePosts = worker.operator_posts.filter(p => (p.count ?? 0) > 0);
+                if (activePosts.length > 0) {
+                    activePosts.forEach(post => {
+                        const cantidad = post.count || 0;
+                        workerCajas += cantidad;
+                        totalCajasGlobal += cantidad;
+                        if(post.rfid_reading?.name) {
+                            puestosConteo[post.rfid_reading.name] = (puestosConteo[post.rfid_reading.name] || 0) + cantidad;
+                        }
+                        if (post.created_at && post.finish_at) {
+                            const start = new Date(post.created_at);
+                            const end = new Date(post.finish_at);
+                            if (end > start) {
+                                totalHorasTrabajadas += (end - start) / (1000 * 60 * 60);
+                            }
+                        } else if (post.created_at && !post.finish_at) { 
+                             const start = new Date(post.created_at);
+                             const now = new Date();
+                             if (now > start) {
+                                 totalHorasTrabajadas += (now - start) / (1000 * 60 * 60);
+                             }
+                        }
+                    });
+                    overallSummary += `  - Cajas totales del trabajador: ${workerCajas}\n`;
+                } else {
+                    overallSummary += `  - Sin puestos con producción en este periodo.\n`;
+                }
+            } else {
+                overallSummary += `  - Sin puestos asignados en este periodo.\n`;
+            }
+            overallSummary += "\n";
+        });
+
+        overallSummary += `Resumen General:\n`;
+        overallSummary += `- Total de Cajas Producidas (todos los trabajadores seleccionados): ${totalCajasGlobal}\n`;
+        if (totalHorasTrabajadas > 0) {
+            overallSummary += `- Cajas por Hora Promedio Global: ${(totalCajasGlobal / totalHorasTrabajadas).toFixed(2)}\n`;
+        }
+        if(Object.keys(puestosConteo).length > 0) {
+            overallSummary += `- Distribución de Cajas por Puesto:\n`;
+            for(const puesto in puestosConteo) {
+                overallSummary += `  - ${puesto}: ${puestosConteo[puesto]} cajas\n`;
+            }
+        }
+
+
+        const prompt = `
+Por favor, realiza un análisis GLOBAL del rendimiento para el conjunto de trabajadores basado en los siguientes datos resumidos.
+El objetivo es obtener una visión general de la productividad del equipo, identificar tendencias, eficiencias, y posibles cuellos de botella o áreas de mejora a nivel de grupo.
+
+Datos Resumidos del Periodo:
+${overallSummary}
+
+Consideraciones para tu análisis:
+- Productividad general del equipo.
+- Eficiencia promedio (Cajas/Hora Global si está disponible).
+- Puestos más productivos o con mayor volumen.
+- Posibles disparidades entre trabajadores (si el resumen lo sugiere, aunque no tienes datos individuales detallados aquí).
+- Cualquier tendencia o patrón general que puedas inferir de los totales y promedios.
+- Sugerencias generales para optimizar el rendimiento del equipo.
+
+Proporciona el análisis en español, de forma profesional y constructiva.
+Formatea la respuesta para que sea fácil de leer. No incluyas frases como "Basándome en estos datos".
+`;
+        await callGeminiAPI(prompt);
+    }
+    
+    async function callGeminiAPI(prompt) {
+        let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
+        const payload = { contents: chatHistory };
+        const apiKey = ""; // IMPORTANT: Replace with your actual API key or use a secure method to provide it.
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+        try {
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errorBody = await response.text();
+                throw new Error(`Api AppNetDebeloper no disponible : ${response.status} ${response.statusText}. Respuesta: ${errorBody}`);
+            }
+
+            const result = await response.json();
+
+            if (result.candidates && result.candidates.length > 0 &&
+                result.candidates[0].content && result.candidates[0].content.parts &&
+                result.candidates[0].content.parts.length > 0) {
+                const text = result.candidates[0].content.parts[0].text;
+                geminiAnalysisContent.textContent = text;
+                geminiAnalysisStatus.textContent = 'Análisis completado.';
+            } else {
+                geminiAnalysisContent.textContent = 'No se pudo obtener un análisis. La respuesta de la API no tuvo el formato esperado.';
+                geminiAnalysisStatus.textContent = 'Error en la respuesta.';
+                geminiAnalysisStatus.classList.add('text-red-500');
+            }
+        } catch (error) {
+            console.error('Error llamando a Gemini API:', error);
+            geminiAnalysisContent.textContent = `No se pudo generar el análisis debido a un error:\n${error.message}`;
+            geminiAnalysisStatus.textContent = 'Error de conexión o procesamiento.';
+            geminiAnalysisStatus.classList.add('text-red-500');
+        }
+    }
+
+    function showChartModal(chartType) {
+        chartModal.classList.remove('hidden');
+        if (chartType === 'workers') {
+            chartModalTitle.textContent = '📊 Producción Total por Trabajador';
+            renderProductionByWorkerChart();
+        } else if (chartType === 'postsBar') { 
+            chartModalTitle.textContent = '📊 Producción Total por Puesto (Barras)';
+            renderProductionByPostBarChart();
+        } else if (chartType === 'postsPie') { 
+            chartModalTitle.textContent = '📊 Distribución de Cajas por Puesto (Circular)';
+            renderPostDistributionPieChart();
+        }
+    }
+
+    function hideChartModal() {
+        chartModal.classList.add('hidden');
+        d3.select("#chartContainer svg").remove(); 
+    }
+
+    closeChartModalBtn.addEventListener('click', hideChartModal);
+    okChartModalBtn.addEventListener('click', hideChartModal);
+
+    function renderProductionByWorkerChart() {
+        d3.select("#chartContainer svg").remove(); 
+
+        const dataForChart = filterDataByCheckbox(JSON.parse(JSON.stringify(originalWorkersData)))
+            .map(worker => {
+                const totalCajas = (worker.operator_posts || []).reduce((sum, post) => {
+                    return sum + (post.count || 0);
+                }, 0);
+                return { name: worker.name || `ID: ${worker.client_id || 'N/A'}`, value: totalCajas };
+            })
+            .filter(d => d.value > 0) 
+            .sort((a, b) => b.value - a.value); 
+
+        drawBarChart(dataForChart, "Total de Cajas Producidas por Trabajador", "Trabajadores", "Total de Cajas");
+    }
+
+    function renderProductionByPostBarChart() { 
+        d3.select("#chartContainer svg").remove();
+        const postCounts = {};
+        const dataToProcess = filterDataByCheckbox(JSON.parse(JSON.stringify(originalWorkersData)));
+
+        dataToProcess.forEach(worker => {
+            (worker.operator_posts || []).forEach(post => {
+                if ((post.count || 0) > 0 && post.rfid_reading?.name) {
+                    const postName = post.rfid_reading.name;
+                    postCounts[postName] = (postCounts[postName] || 0) + post.count;
+                }
+            });
+        });
+
+        const dataForChart = Object.entries(postCounts)
+            .map(([name, value]) => ({ name, value }))
+            .filter(d => d.value > 0)
+            .sort((a,b) => b.value - a.value);
+
+        drawBarChart(dataForChart, "Total de Cajas Producidas por Puesto", "Puestos de Trabajo", "Total de Cajas");
+    }
+    
+    function drawBarChart(chartData, titleText, xAxisLabelText, yAxisLabelText) {
+        if (chartData.length === 0) {
+            chartContainer.innerHTML = '<p class="text-center text-gray-500 p-4">No hay datos de producción para mostrar en el gráfico.</p>';
+            return;
+        }
+        chartContainer.innerHTML = ''; 
+
+
+        const containerWidth = chartContainer.clientWidth;
+        const containerHeight = 400; 
+        const margin = {top: 40, right: 30, bottom: 120, left: 70}; 
+        const width = Math.max(containerWidth - margin.left - margin.right, chartData.length * 40); 
+        const height = containerHeight - margin.top - margin.bottom;
+
+        const svg = d3.select("#chartContainer")
+            .append("svg")
+              .attr("width", width + margin.left + margin.right)
+              .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+              .attr("transform", `translate(${margin.left},${margin.top})`);
+
+        const x = d3.scaleBand()
+          .range([ 0, width ])
+          .domain(chartData.map(d => d.name))
+          .padding(0.3); 
+        
+        svg.append("g")
+          .attr("transform", `translate(0,${height})`)
+          .call(d3.axisBottom(x))
+          .selectAll("text")
+            .attr("transform", "translate(-10,5)rotate(-45)")
+            .style("text-anchor", "end")
+            .style("font-size", "10px"); 
+
+        const y = d3.scaleLinear()
+          .domain([0, d3.max(chartData, d => d.value) || 10]) 
+          .nice() 
+          .range([ height, 0]);
+        svg.append("g")
+          .call(d3.axisLeft(y).ticks(Math.min(10, d3.max(chartData, d => d.value) || 10))); 
+
+        svg.selectAll(".bar") 
+          .data(chartData)
+          .join("rect")
+            .attr("class", "bar")
+            .attr("x", d => x(d.name))
+            .attr("y", d => y(d.value))
+            .attr("width", x.bandwidth())
+            .attr("height", d => height - y(d.value))
+            .on("mouseover", function(event, d) {
+                tooltip.transition().duration(200).style("opacity", .9);
+                tooltip.html(`<strong>${d.name}</strong><br/>Cajas: ${d.value}`)
+                    .style("left", (event.pageX + 10) + "px") 
+                    .style("top", (event.pageY - 15) + "px");
+                d3.select(this).style("fill", "#1d4ed8"); 
+            })
+            .on("mouseout", function(d) {
+                tooltip.transition().duration(500).style("opacity", 0);
+                d3.select(this).style("fill", "steelblue"); 
+            });
+        
+        svg.append("text")
+            .attr("x", width / 2)
+            .attr("y", 0 - (margin.top / 2) - 5) 
+            .attr("text-anchor", "middle")
+            .style("font-size", "16px")
+            .style("font-weight", "bold")
+            .text(titleText);
+
+        svg.append("text")
+            .attr("transform", "rotate(-90)")
+            .attr("y", 0 - margin.left + 15) 
+            .attr("x",0 - (height / 2))
+            .attr("dy", "1em")
+            .style("text-anchor", "middle")
+            .attr("class", "axis-label")
+            .text(yAxisLabelText);
+
+        svg.append("text")             
+            .attr("transform", `translate(${width/2}, ${height + margin.bottom - 10})`) 
+            .style("text-anchor", "middle")
+            .attr("class", "axis-label")
+            .text(xAxisLabelText);
+    }
+
+    function renderPostDistributionPieChart() {
+        d3.select("#chartContainer svg").remove();
+        const postCounts = {};
+        const dataToProcess = filterDataByCheckbox(JSON.parse(JSON.stringify(originalWorkersData)));
+
+        dataToProcess.forEach(worker => {
+            (worker.operator_posts || []).forEach(post => {
+                if ((post.count || 0) > 0 && post.rfid_reading?.name) {
+                    const postName = post.rfid_reading.name;
+                    postCounts[postName] = (postCounts[postName] || 0) + post.count;
+                }
+            });
+        });
+
+        const dataForChart = Object.entries(postCounts)
+            .map(([name, value]) => ({ name, value }))
+            .filter(d => d.value > 0)
+            .sort((a,b) => b.value - a.value);
+
+        if (dataForChart.length === 0) {
+            chartContainer.innerHTML = '<p class="text-center text-gray-500 p-4">No hay datos de producción por puesto para mostrar.</p>';
+            return;
+        }
+        chartContainer.innerHTML = ''; 
+
+        const containerWidth = chartContainer.clientWidth;
+        const containerHeight = 400;
+        const margin = 40;
+        const radius = Math.min(containerWidth, containerHeight) / 2 - margin;
+
+        const svg = d3.select("#chartContainer")
+            .append("svg")
+                .attr("width", containerWidth)
+                .attr("height", containerHeight)
+            .append("g")
+                .attr("transform", `translate(${containerWidth / 2}, ${containerHeight / 2})`);
+
+        const color = d3.scaleOrdinal(d3.schemeCategory10);
+
+        const pie = d3.pie()
+            .value(d => d.value)
+            .sort(null); 
+
+        const data_ready = pie(dataForChart);
+
+        const arc = d3.arc()
+            .innerRadius(0)
+            .outerRadius(radius);
+        
+        const outerArc = d3.arc()
+            .innerRadius(radius * 0.9)
+            .outerRadius(radius * 0.9);
+
+
+        svg.selectAll('allSlices')
+            .data(data_ready)
+            .join('path')
+            .attr('d', arc)
+            .attr('fill', d => color(d.data.name))
+            .attr("stroke", "white")
+            .style("stroke-width", "2px")
+            .style("opacity", 0.7)
+            .on("mouseover", function(event, d) {
+                d3.select(this).style("opacity", 1);
+                tooltip.transition().duration(200).style("opacity", .9);
+                const percent = (d.data.value / d3.sum(dataForChart, item => item.value) * 100).toFixed(1);
+                tooltip.html(`<strong>${d.data.name}</strong><br/>Cajas: ${d.data.value}<br/>(${percent}%)`)
+                    .style("left", (event.pageX + 10) + "px")
+                    .style("top", (event.pageY - 15) + "px");
+            })
+            .on("mouseout", function(d) {
+                d3.select(this).style("opacity", 0.7);
+                tooltip.transition().duration(500).style("opacity", 0);
+            });
+
+        svg.selectAll('allLabels')
+            .data(data_ready)
+            .join('text')
+            .attr('class', 'pie-slice')
+            .text(d => { 
+                const percent = (d.data.value / d3.sum(dataForChart, item => item.value) * 100);
+                return percent > 5 ? `${d.data.name.substring(0,10)}... (${percent.toFixed(1)}%)` : ''; 
+            }) 
+            .attr('transform', d => {
+                const pos = outerArc.centroid(d);
+                const midangle = d.startAngle + (d.endAngle - d.startAngle) / 2;
+                pos[0] = radius * 0.95 * (midangle < Math.PI ? 1 : -1); 
+                return `translate(${pos})`;
+            })
+            .style('text-anchor', d => {
+                const midangle = d.startAngle + (d.endAngle - d.startAngle) / 2;
+                return (midangle < Math.PI ? 'start' : 'end');
+            })
+            .style('font-size', '9px')
+            .style('fill', '#333');
+    }
+
+
+    function formatDateForAPI(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    function getDateRange(selectedValue) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        let fromDate = new Date(today);
+        let endDate = new Date(today);
+
+        switch (selectedValue) {
+            case 'today': break;
+            case 'yesterday': fromDate.setDate(today.getDate() - 1); endDate.setDate(today.getDate() - 1); break;
+            case 'day_minus_2': fromDate.setDate(today.getDate() - 2); endDate.setDate(today.getDate() - 2); break;
+            case 'day_minus_3': fromDate.setDate(today.getDate() - 3); endDate.setDate(today.getDate() - 3); break;
+            case 'day_minus_4': fromDate.setDate(today.getDate() - 4); endDate.setDate(today.getDate() - 4); break;
+            case 'day_minus_5': fromDate.setDate(today.getDate() - 5); endDate.setDate(today.getDate() - 5); break;
+            case 'day_minus_6': fromDate.setDate(today.getDate() - 6); endDate.setDate(today.getDate() - 6); break;
+            case 'day_minus_7': fromDate.setDate(today.getDate() - 7); endDate.setDate(today.getDate() - 7); break;
+            case 'last7days': fromDate.setDate(today.getDate() - 6); break;
+            case 'last30days': fromDate.setDate(today.getDate() - 29); break;
+            default: break;
+        }
+        let apiToDate = new Date(endDate);
+        apiToDate.setDate(endDate.getDate() + 1);
+        return { from: formatDateForAPI(fromDate), to: formatDateForAPI(apiToDate) };
+    }
+
+    function calculateCajasHora(count, startTimeStr, endTimeStr) {
+        const quantity = parseFloat(count) || 0;
+        if (!startTimeStr) return 'N/A';
+        const startTime = new Date(startTimeStr);
+        if (isNaN(startTime.getTime())) return 'N/A';
+        const endTime = endTimeStr ? new Date(endTimeStr) : new Date();
+        if (isNaN(endTime.getTime())) return 'N/A';
+        if (endTime <= startTime) return quantity > 0 ? 'N/A' : '0.00';
+        const diffMs = endTime.getTime() - startTime.getTime();
+        const diffHours = diffMs / (1000 * 60 * 60);
+        if (diffHours <= 0) return quantity > 0 ? 'N/A' : '0.00';
+        if (quantity === 0) return '0.00';
+        const rate = quantity / diffHours;
+        return rate.toFixed(2);
+    }
+
+    function updateLiveCajasHoraCells() {
+        document.querySelectorAll('.live-cajas-hora').forEach(cell => {
+            cell.textContent = calculateCajasHora(cell.dataset.count, cell.dataset.startTime, null);
+        });
+    }
+
+    function filterDataByCheckbox(data) {
+        if (filterPostsCheckbox.checked) {
+            return data.filter(worker =>
+                worker.operator_posts && worker.operator_posts.some(post => (post.count ?? 0) > 0)
+            );
+        }
+        return data;
+    }
+    
+    function updateGrandTotalUnidades() {
+        const dataToDisplay = filterDataByCheckbox(originalWorkersData);
+        let grandTotal = 0;
+        dataToDisplay.forEach(worker => {
+            const totalQuantitySum = (worker.operator_posts || []).reduce((sum, post) => {
+                const count = post.count ?? 0;
+                return sum + (count > 0 ? count : 0);
+            }, 0);
+            grandTotal += totalQuantitySum;
+        });
+        totalUnidadesTurnoHeader.textContent = `(${grandTotal})`;
+    }
+
+
+    function populateTable(data) {
+        if (liveUpdateIntervalId) clearInterval(liveUpdateIntervalId);
+        liveUpdateIntervalId = null;
+
+        tableBody.querySelectorAll('tr:not(#loadingRow):not(#errorRow):not(#noDataRow)').forEach(row => row.remove());
+        displayedPostRowsCount = 0;
+        const dataToDisplay = filterDataByCheckbox(data);
+        
+        updateGrandTotalUnidades(); 
+
+        const hasDataForActions = dataToDisplay.length > 0;
+
+
+        if (!hasDataForActions) {
+            noDataRow.querySelector('td').textContent = (filterPostsCheckbox.checked && data.length > 0) ?
+                'Ningún trabajador con puestos asignados (con cantidad > 0) en este periodo.' :
+                'No se encontraron datos para el periodo seleccionado.';
+            noDataRow.classList.remove('hidden');
+            exportExcelBtn.disabled = true;
+            analizarTodosBtn.disabled = true; 
+            viewWorkerChartBtn.disabled = true; 
+            viewPostChartBtn.disabled = true;
+            viewPostPieChartBtn.disabled = true;
+            totalUnidadesTurnoHeader.textContent = '(0)'; 
+            return;
+        }
+
+        noDataRow.classList.add('hidden');
+        exportExcelBtn.disabled = false;
+        
+        analizarTodosBtn.disabled = isLocked; 
+        viewWorkerChartBtn.disabled = isLocked;
+        viewPostChartBtn.disabled = isLocked;
+        viewPostPieChartBtn.disabled = isLocked;
+
+
+        let workersWithVisiblePosts = 0;
+        let hasLiveCells = false;
+
+        dataToDisplay.forEach((worker) => {
+            const totalQuantitySum = (worker.operator_posts || []).reduce((sum, post) => sum + ((post.count ?? 0) > 0 ? (post.count ?? 0) : 0), 0);
+            const hasVisiblePosts = worker.operator_posts && worker.operator_posts.some(post => (post.count ?? 0) > 0);
+
+            if (filterPostsCheckbox.checked && !hasVisiblePosts) return;
+            workersWithVisiblePosts++;
+
+            const workerRow = tableBody.insertRow();
+            workerRow.classList.add('bg-blue-50', 'hover:bg-blue-100', 'transition-colors', 'duration-150', 'ease-in-out');
+            
+            workerRow.insertCell().textContent = worker.client_id ?? '-';
+            
+            const nameCell = workerRow.insertCell();
+            nameCell.textContent = worker.name ?? 'Sin Nombre';
+            
+            if (!isLocked) { 
+                const analyzeBtn = document.createElement('button');
+                analyzeBtn.classList.add('analyze-icon', 'ml-2', 'text-purple-600', 'hover:text-purple-800');
+                analyzeBtn.title = "✨ Analizar Rendimiento con IA";
+                analyzeBtn.innerHTML = `<svg class="icon" style="width:18px; height:18px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v2h-2v-2zm0 4h2v6h-2v-6z"></path><path d="M12.5 8.5h-1V7h1v1.5zm0 2.5h-1V10h1v1zm0 2.5h-1V12.5h1v1zm0 2.5h-1V15h1v1zM10 17.5c.83 0 1.5-.67 1.5-1.5h-3c0 .83.67 1.5 1.5 1.5zM18 12.5c0 .83-.67 1.5-1.5 1.5S15 13.33 15 12.5s.67-1.5 1.5-1.5.5.17.5.42l.5-.84c-.3-.47-.82-.88-1.5-.88-1.38 0-2.5 1.12-2.5 2.5s1.12 2.5 2.5 2.5 2.5-1.12 2.5-2.5h-1zM6 12.5c0 .83.67 1.5 1.5 1.5S9 13.33 9 12.5s-.67-1.5-1.5-1.5c-.68 0-1.2.41-1.5.88l.5.84c0-.25.5-.42.5-.42s1.5-.67 1.5-1.5-1.12-2.5-2.5-2.5-2.5 1.12-2.5 2.5h1z"></path></svg> <span class="ml-1 text-xs">Analizar ✨</span>`; 
+                analyzeBtn.addEventListener('click', (e) => {
+                    e.stopPropagation(); 
+                    fetchWorkerAnalysis(worker);
+                });
+                nameCell.appendChild(analyzeBtn);
+            }
+
+
+            const workerUnitsCell = workerRow.insertCell(); 
+            workerUnitsCell.textContent = totalQuantitySum;
+            workerRow.insertCell(); workerRow.insertCell(); workerRow.insertCell(); workerRow.insertCell(); workerRow.insertCell(); workerRow.insertCell();
+            Array.from(workerRow.cells).forEach(cell => cell.classList.add('px-4', 'py-3', 'text-sm', 'font-medium', 'text-gray-900', 'whitespace-nowrap'));
+
+             if (worker.operator_posts && worker.operator_posts.length > 0) {
+                 const sortedPosts = [...worker.operator_posts].sort((a, b) => (new Date(a.created_at) || 0) - (new Date(b.created_at) || 0));
+                sortedPosts.forEach((post, postIndex) => {
+                    const postCount = post.count ?? 0;
+                    if (postCount === 0 && filterPostsCheckbox.checked) return;
+                    
+                    displayedPostRowsCount++;
+                    const postRow = tableBody.insertRow();
+                    postRow.classList.add(displayedPostRowsCount % 2 === 0 ? 'bg-white' : 'bg-gray-50', 'hover:bg-gray-100');
+
+                    postRow.insertCell(); postRow.insertCell(); postRow.insertCell(); 
+                    postRow.insertCell().textContent = post.rfid_reading?.name ?? 'N/A';
+                    postRow.insertCell().textContent = post.created_at ? dateFormatter.format(new Date(post.created_at)) : '-';
+                    postRow.insertCell().textContent = post.finish_at ? dateFormatter.format(new Date(post.finish_at)) : '-';
+                    
+                    const quantityCell = postRow.insertCell();
+                    quantityCell.textContent = postCount + ' '; 
+                    const cajasHoraCell = postRow.insertCell();
+                    cajasHoraCell.textContent = calculateCajasHora(postCount, post.created_at, post.finish_at);
+
+                    if (!isLocked) {
+                        const editIconSpan = document.createElement('span');
+                        editIconSpan.classList.add('edit-icon');
+                        editIconSpan.innerHTML = `<svg class="icon" style="width:16px; height:16px;" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828zM16 5l-1.5-1.5L13 5l1.5 1.5L16 5zM5 14H3v2h12v-2H5z"/></svg>`;
+                        editIconSpan.addEventListener('click', () => showEditQuantityModal(worker.client_id, postIndex, postCount, quantityCell, cajasHoraCell, workerUnitsCell));
+                        quantityCell.appendChild(editIconSpan);
+                    }
+
+                    if (!post.finish_at && post.created_at) {
+                        cajasHoraCell.classList.add('live-cajas-hora');
+                        cajasHoraCell.dataset.startTime = post.created_at;
+                        cajasHoraCell.dataset.count = postCount;
+                        hasLiveCells = true;
+                    }
+                    postRow.insertCell().textContent = post.product_list?.name ?? 'N/A';
+                    Array.from(postRow.cells).forEach(cell => cell.classList.add('px-4', 'py-3', 'text-sm', 'text-gray-600', 'whitespace-nowrap'));
+                    postRow.cells[3].classList.add('pl-8'); // Indent post details
+                });
+            }
+        });
+        const actuallyDisplayedSomething = workersWithVisiblePosts > 0 || (displayedPostRowsCount > 0 && !filterPostsCheckbox.checked);
+        if (!actuallyDisplayedSomething) {
+             noDataRow.querySelector('td').textContent = filterPostsCheckbox.checked ? 
+                'Ningún trabajador cumple los criterios de filtro (con puestos y cantidad > 0).' : 
+                'No se encontraron datos para el periodo seleccionado.';
+             noDataRow.classList.remove('hidden');
+             exportExcelBtn.disabled = true;
+             analizarTodosBtn.disabled = true;
+             viewWorkerChartBtn.disabled = true;
+             viewPostChartBtn.disabled = true;
+             viewPostPieChartBtn.disabled = true;
+             totalUnidadesTurnoHeader.textContent = '(0)';
+        } else {
+             exportExcelBtn.disabled = false;
+             analizarTodosBtn.disabled = isLocked; 
+             viewWorkerChartBtn.disabled = isLocked;
+             viewPostChartBtn.disabled = isLocked;
+             viewPostPieChartBtn.disabled = isLocked;
+        }
+
+
+        if (hasLiveCells) liveUpdateIntervalId = setInterval(updateLiveCajasHoraCells, 5000);
+    }
+
+    function exportToExcel() {
+        const dataFilteredByCheckbox = filterDataByCheckbox(JSON.parse(JSON.stringify(originalWorkersData)));
+        if (!dataFilteredByCheckbox || dataFilteredByCheckbox.length === 0) {
+            const noDataModal = document.createElement('div'); 
+            noDataModal.innerHTML = `<div class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-[2000]"><div class="bg-white rounded-lg shadow-xl p-6"><h3 class="text-lg font-medium">Sin Datos</h3><p class="mt-2">No hay datos para exportar.</p><button onclick="this.closest('.fixed').remove()" class="mt-4 px-3 py-1 bg-blue-500 text-white rounded">OK</button></div></div>`;
+            document.body.appendChild(noDataModal);
+            return;
+        }
+
+        const flattenedData = [];
+        dataFilteredByCheckbox.forEach(worker => {
+            const totalQuantitySum = (worker.operator_posts || []).reduce((sum, post) => sum + ((post.count ?? 0) > 0 ? (post.count ?? 0) : 0), 0);
+            if (filterPostsCheckbox.checked && !((worker.operator_posts || []).some(post => (post.count ?? 0) > 0))) return;
+
+            (worker.operator_posts || []).filter(post => (post.count ?? 0) > 0).forEach(post => {
+                flattenedData.push({
+                    'Codigo': worker.client_id ?? '-', 'Nombre Trabajador': worker.name ?? 'Sin Nombre',
+                    'Unidades Turno': totalQuantitySum, 'Puesto': post.rfid_reading?.name ?? 'N/A',
+                    'Inicio Puesto': post.created_at ? dateFormatter.format(new Date(post.created_at)) : '-',
+                    'Fin Puesto': post.finish_at ? dateFormatter.format(new Date(post.finish_at)) : '-',
+                    'Cantidad Puesto': post.count ?? 0, 'Cajas/Hora': calculateCajasHora(post.count, post.created_at, post.finish_at),
+                    'Confeccion': post.product_list?.name ?? 'N/A'
+                });
+            });
+        });
+
+        if (flattenedData.length === 0) {
+            const noDetailsModal = document.createElement('div'); 
+            noDetailsModal.innerHTML = `<div class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-[2000]"><div class="bg-white rounded-lg shadow-xl p-6"><h3 class="text-lg font-medium">Sin Detalles</h3><p class="mt-2">No hay detalles de puestos con cantidad > 0 para exportar.</p><button onclick="this.closest('.fixed').remove()" class="mt-4 px-3 py-1 bg-blue-500 text-white rounded">OK</button></div></div>`;
+            document.body.appendChild(noDetailsModal);
+            return;
+        }
+
+        const columnOrder = ['Codigo', 'Nombre Trabajador', 'Unidades Turno', 'Puesto', 'Inicio Puesto', 'Fin Puesto', 'Cantidad Puesto', 'Cajas/Hora', 'Confeccion'];
+        const worksheet = XLSX.utils.json_to_sheet(flattenedData.map(row => Object.fromEntries(columnOrder.map(col => [col, row[col] ?? '']))), { header: columnOrder });
+        worksheet["!cols"] = columnOrder.map(key => ({ wch: flattenedData.reduce((w, r) => Math.max(w, (r[key]?.toString() ?? '').length), key.length) + 2 }));
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "TrabajadoresDetalle");
+        XLSX.writeFile(workbook, `Informe_Trabajadores_${dateRangeSelect.options[dateRangeSelect.selectedIndex].text.replace(/ /g, '_')}${filterPostsCheckbox.checked ? '_ConPuestos' : ''}.xlsx`);
+    }
+
+    function printTable() { window.print(); }
+
+    // Helper function to get details of the first post (earliest created_at)
+    function getFirstPostDetails(worker) {
+        if (!worker.operator_posts || worker.operator_posts.length === 0) {
+            return { time: Infinity, name: null };
+        }
+
+        let earliestPost = null;
+        let minTime = Infinity;
+
+        for (const post of worker.operator_posts) {
+            if (post.created_at) {
+                const postTime = new Date(post.created_at).getTime();
+                if (!isNaN(postTime) && postTime < minTime) {
+                    minTime = postTime;
+                    earliestPost = post;
+                }
+            }
+        }
+
+        if (earliestPost) {
+            return {
+                time: minTime,
+                name: earliestPost.rfid_reading?.name ?? null
+            };
+        }
+        return { time: Infinity, name: null };
+    }
+
+
+    function fetchData(fromDate, toDate) {
+        const apiUrl = `${apiBaseUrl}?from_date=${fromDate}&to_date=${toDate}`;
+        loadingRow.classList.remove('hidden');
+        errorRow.classList.add('hidden');
+        noDataRow.classList.add('hidden');
+        tableBody.querySelectorAll('tr:not(#loadingRow):not(#errorRow):not(#noDataRow)').forEach(row => row.remove());
+        exportExcelBtn.disabled = true;
+        analizarTodosBtn.disabled = true; 
+        viewWorkerChartBtn.disabled = true; 
+        viewPostChartBtn.disabled = true;
+        viewPostPieChartBtn.disabled = true;
+        totalUnidadesTurnoHeader.textContent = ''; 
+        if (liveUpdateIntervalId) clearInterval(liveUpdateIntervalId);
+        liveUpdateIntervalId = null;
+
+        fetch(apiUrl)
+            .then(response => response.ok ? response.json() : response.text().then(text => { throw new Error(`Error HTTP ${response.status}: ${text}`); }))
+            .then(apiResponse => {
+                loadingRow.classList.add('hidden');
+                if (apiResponse.success && Array.isArray(apiResponse.data)) { 
+                    originalWorkersData = apiResponse.data.sort((a, b) => {
+                        const detailsA = getFirstPostDetails(a);
+                        const detailsB = getFirstPostDetails(b);
+
+                        // Primary criterion: Post Name
+                        const nameA = detailsA.name;
+                        const nameB = detailsB.name;
+
+                        if (nameA && nameB) { // Both workers have a first post with a name
+                            const nameComparison = nameA.localeCompare(nameB);
+                            if (nameComparison !== 0) return nameComparison;
+                            // If post names are the same, then sort by their start times
+                            if (detailsA.time !== Infinity && detailsB.time !== Infinity) {
+                                 if (detailsA.time < detailsB.time) return -1;
+                                 if (detailsA.time > detailsB.time) return 1;
+                            }
+                        } else if (nameA && !nameB) { // Worker A has a post name, B doesn't
+                            return -1; 
+                        } else if (!nameA && nameB) { // Worker B has a post name, A doesn't
+                            return 1;  
+                        }
+                        // If names are the same (or both null), or one is null (handled above)
+                        // then proceed to sort by time if names didn't resolve it.
+
+                        // Secondary criterion: Post Start Time (if names were equal or both null)
+                        if (detailsA.time < detailsB.time) return -1;
+                        if (detailsA.time > detailsB.time) return 1;
+                        // This handles Infinity correctly: Infinity is not less than a finite number.
+                        // If detailsA.time is Infinity and detailsB.time is finite, A will be > B.
+                        // If detailsA.time is finite and detailsB.time is Infinity, A will be < B.
+
+                        // Tertiary criterion: Worker Name (if post names and times are identical or both lack posts)
+                        return (a.name ?? '').localeCompare(b.name ?? '');
+                    });
+                    populateTable(originalWorkersData);
+                } else if (apiResponse.success && (!Array.isArray(apiResponse.data) || apiResponse.data.length === 0)) {
+                    originalWorkersData = [];
+                    populateTable(originalWorkersData);
+                }
+                else { 
+                    originalWorkersData = [];
+                    populateTable([]); 
+                    throw new Error(apiResponse.message || "Error en la respuesta de la API al obtener datos iniciales.");
+                }
+            })
+            .catch(error => {
+                console.error("Error en fetch:", error);
+                loadingRow.classList.add('hidden');
+                errorCell.textContent = `Error al cargar: ${error.message}`;
+                errorRow.classList.remove('hidden');
+                totalUnidadesTurnoHeader.textContent = '(Error)';
+            });
+    }
+
+    // --- Event Listeners ---
+    exportExcelBtn.addEventListener('click', exportToExcel);
+    printBtn.addEventListener('click', printTable);
+    analizarTodosBtn.addEventListener('click', fetchOverallAnalysis); 
+    viewWorkerChartBtn.addEventListener('click', () => showChartModal('workers')); 
+    viewPostChartBtn.addEventListener('click', () => showChartModal('postsBar'));
+    viewPostPieChartBtn.addEventListener('click', () => showChartModal('postsPie')); 
+    dateRangeSelect.addEventListener('change', (e) => { const {from, to} = getDateRange(e.target.value); fetchData(from, to); });
+    filterPostsCheckbox.addEventListener('change', () => populateTable(originalWorkersData));
+    
+    document.addEventListener('DOMContentLoaded', () => { 
+        const {from, to} = getDateRange(dateRangeSelect.value); 
+        fetchData(from, to);
+        toggleLockState(isLocked); 
+    });
+</script>
+
+</body>
+</html>
