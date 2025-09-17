@@ -78,12 +78,28 @@
                     {
                         className: 'control', // Clave para que DataTables sepa que aquí va el "+"
                         orderable: false,
+                        searchable: false,
                         data:  null,
                         defaultContent: ''
                     },
-                    { data: 'id', name: 'id' },
-                    { data: 'name', name: 'name' },
-                    { data: 'token', name: 'token' },
+                    { 
+                        data: 'id', 
+                        name: 'id',
+                        searchable: true,
+                        orderable: true
+                    },
+                    { 
+                        data: 'name', 
+                        name: 'name',
+                        searchable: true,
+                        orderable: true
+                    },
+                    { 
+                        data: 'token', 
+                        name: 'token',
+                        searchable: true,
+                        orderable: true
+                    },
                     {
                         data: 'action',
                         name: 'action',

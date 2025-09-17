@@ -553,14 +553,153 @@
 
         function collectAiContext() {
             const table = $('#controlWeightTable').DataTable();
-            const rows = table ? table.rows({ page: 'current' }).data().toArray() : [];
+            
+            // Obtener información de la estructura de la tabla
+            const tableInfo = {
+                totalRecords: table ? table.page.info().recordsTotal : 0,
+                filteredRecords: table ? table.page.info().recordsDisplay : 0,
+                currentPage: table ? table.page.info().page + 1 : 1,
+                totalPages: table ? table.page.info().pages : 0
+            };
+            
+            // Obtener los datos reales de la tabla
+            let tableData = [];
+            let columnNames = [];
+            
+            if (table) {
+                // Obtener nombres de columnas excluyendo "Acciones"
+                table.columns().header().each(function(header) {
+                    const colName = $(header).text().trim();
+                    // Excluir columnas que no son útiles para el análisis
+                    if (colName && !colName.toLowerCase().includes('acciones') && !colName.toLowerCase().includes('actions')) {
+                        columnNames.push(colName);
+                    }
+                });
+                
+                // Obtener datos de todas las filas visibles (filtradas) usando nodes() para acceder al DOM
+                table.rows({search: 'applied'}).nodes().each(function(rowNode, index) {
+                    const row = {};
+                    const $row = $(rowNode);
+                    let colIndexForData = 0;
+                    
+                    // Iterar por cada celda de la fila
+                    $row.find('td').each(function(colIndex) {
+                        // Obtener el nombre de la columna correspondiente del header
+                        const headerText = $(table.columns().header()[colIndex]).text().trim();
+                        
+                        // Solo procesar si no es columna de acciones
+                        if (headerText && !headerText.toLowerCase().includes('acciones') && !headerText.toLowerCase().includes('actions')) {
+                            if (colIndexForData < columnNames.length) {
+                                let cellValue = $(this).text().trim();
+                                // Si la celda está vacía, intentar obtener el valor del atributo data-sort
+                                if (!cellValue) {
+                                    cellValue = $(this).attr('data-sort') || '';
+                                }
+                                row[columnNames[colIndexForData]] = cellValue;
+                                colIndexForData++;
+                            }
+                        }
+                    });
+                    
+                    // Solo agregar si la fila tiene datos
+                    if (Object.keys(row).length > 0) {
+                        tableData.push(row);
+                    }
+                });
+                
+                // Si no hay datos con el método anterior, intentar método alternativo
+                if (tableData.length === 0) {
+                    console.log('[AI] Intentando método alternativo para extraer datos...');
+                    
+                    // Reconstruir columnNames excluyendo acciones para el método alternativo
+                    const allColumnNames = [];
+                    table.columns().header().each(function(header) {
+                        allColumnNames.push($(header).text().trim());
+                    });
+                    
+                    table.rows({search: 'applied'}).data().each(function(rowData, index) {
+                        const row = {};
+                        if (Array.isArray(rowData)) {
+                            let dataColIndex = 0;
+                            rowData.forEach((cellValue, colIndex) => {
+                                const headerText = allColumnNames[colIndex] || '';
+                                // Solo procesar si no es columna de acciones
+                                if (headerText && !headerText.toLowerCase().includes('acciones') && !headerText.toLowerCase().includes('actions')) {
+                                    if (dataColIndex < columnNames.length) {
+                                        // Limpiar datos HTML y obtener texto plano
+                                        if (typeof cellValue === 'string') {
+                                            cellValue = cellValue.replace(/<[^>]*>/g, '').trim();
+                                        }
+                                        row[columnNames[dataColIndex]] = cellValue || '';
+                                        dataColIndex++;
+                                    }
+                                }
+                            });
+                        } else if (typeof rowData === 'object') {
+                            // Si rowData es un objeto, usar las claves
+                            let dataColIndex = 0;
+                            Object.keys(rowData).forEach((key, colIndex) => {
+                                const headerText = allColumnNames[colIndex] || key;
+                                // Solo procesar si no es columna de acciones
+                                if (headerText && !headerText.toLowerCase().includes('acciones') && !headerText.toLowerCase().includes('actions')) {
+                                    if (dataColIndex < columnNames.length) {
+                                        let cellValue = rowData[key];
+                                        if (typeof cellValue === 'string') {
+                                            cellValue = cellValue.replace(/<[^>]*>/g, '').trim();
+                                        }
+                                        row[columnNames[dataColIndex]] = cellValue || '';
+                                        dataColIndex++;
+                                    }
+                                }
+                            });
+                        }
+                        
+                        if (Object.keys(row).length > 0) {
+                            tableData.push(row);
+                        }
+                    });
+                }
+                
+                // Limitar a máximo 50 filas para evitar payload muy grande
+                if (tableData.length > 50) {
+                    tableData = tableData.slice(0, 50);
+                    tableInfo.note = `Mostrando solo las primeras 50 filas de ${tableInfo.filteredRecords} registros filtrados`;
+                }
+                
+                console.log('[AI] Datos extraídos:', tableData.length, 'filas');
+                console.log('[AI] Columnas:', columnNames);
+                if (tableData.length > 0) {
+                    console.log('[AI] Primera fila de ejemplo:', tableData[0]);
+                }
+            }
+            
+            // Obtener resúmenes de las métricas mostradas en las tarjetas
+            const metrics = {
+                avgOEE: $('#avgOEE').text() || '0%',
+                totalDuration: $('#totalDuration').text() || '00:00:00',
+                totalTheoretical: $('#totalTheoretical').text() || '00:00:00',
+                totalPrepairTime: $('#totalPrepairTime').text() || '00:00:00',
+                totalSlowTime: $('#totalSlowTime').text() || '00:00:00',
+                totalProductionStopsTime: $('#totalProductionStopsTime').text() || '00:00:00',
+                totalDownTime: $('#totalDownTime').text() || '00:00:00'
+            };
+            
             const filters = {
                 lines: $('#modbusSelect').val() || [],
                 operators: $('#operatorSelect').val() || [],
                 startDate: $('#startDate').val(),
                 endDate: $('#endDate').val()
             };
-            return { rows, filters, page: 'productionlines/liststats' };
+            
+            return { 
+                tableInfo, 
+                tableData,
+                columnNames,
+                metrics, 
+                filters, 
+                page: 'productionlines/liststats',
+                description: 'Vista de estadísticas de líneas de producción con métricas OEE, tiempos de producción, paradas y filtros por línea, operador y fechas'
+            };
         }
 
         function showAiLoading(show) {
@@ -574,7 +713,7 @@
             try {
                 showAiLoading(true);
                 const payload = collectAiContext();
-                console.log('[AI][Prod Lines] Context rows:', payload.rows.length, 'Filters:', payload.filters);
+                console.log('[AI][Prod Lines] Context:', payload.tableInfo, 'Filters:', payload.filters);
                 let combinedPrompt;
                 try {
                     combinedPrompt = `${prompt}\n\n=== Datos para analizar (JSON) ===\n${JSON.stringify(payload, null, 2)}`;
@@ -599,26 +738,64 @@
                 const taskId = (created && (created.id || created.task_id || created.taskId)) || created;
                 if (!taskId) throw new Error('No task id');
 
-                let done = false; let last;
+                console.log('[AI] Tarea creada con ID:', taskId);
+                console.log('[AI] Iniciando polling cada 5 segundos...');
+
+                let done = false; let last; let pollCount = 0;
                 while (!done) {
+                    pollCount++;
+                    console.log(`[AI] Polling #${pollCount} - Esperando 5 segundos...`);
                     await new Promise(r => setTimeout(r, 5000));
+                    
+                    console.log(`[AI] Polling #${pollCount} - Verificando estado de la tarea...`);
                     const pollResp = await fetch(`${AI_URL.replace(/\/$/, '')}/api/ollama-tasks/${encodeURIComponent(taskId)}`, {
                         headers: { 'Authorization': `Bearer ${AI_TOKEN}` }
                     });
+                    
                     if (pollResp.status === 404) {
+                        console.log('[AI] Error: Tarea no encontrada (404)');
                         try { const nf = await pollResp.json(); alert(nf?.error || 'Task not found'); } catch {}
                         return;
                     }
-                    if (!pollResp.ok) throw new Error('poll failed');
-                    last = await pollResp.json();
-                    const task = last && last.task ? last.task : null;
-                    if (!task) continue;
-                    if (task.response == null) {
-                        if (task.error && /processing/i.test(task.error)) { continue; }
-                        if (task.error == null) { continue; }
+                    if (!pollResp.ok) {
+                        console.log('[AI] Error en polling:', pollResp.status, pollResp.statusText);
+                        throw new Error(`poll failed: ${pollResp.status}`);
                     }
-                    if (task.error && !/processing/i.test(task.error)) { alert(task.error); return; }
-                    if (task.response != null) { done = true; }
+                    
+                    last = await pollResp.json();
+                    console.log(`[AI] Polling #${pollCount} - Respuesta recibida:`, last);
+                    
+                    const task = last && last.task ? last.task : null;
+                    if (!task) {
+                        console.log(`[AI] Polling #${pollCount} - No hay objeto task, continuando...`);
+                        continue;
+                    }
+                    
+                    console.log(`[AI] Polling #${pollCount} - Estado de la tarea:`, {
+                        hasResponse: task.response != null,
+                        hasError: task.error != null,
+                        error: task.error
+                    });
+                    
+                    if (task.response == null) {
+                        if (task.error && /processing/i.test(task.error)) { 
+                            console.log(`[AI] Polling #${pollCount} - Tarea aún procesando...`);
+                            continue; 
+                        }
+                        if (task.error == null) { 
+                            console.log(`[AI] Polling #${pollCount} - Sin respuesta ni error, continuando...`);
+                            continue; 
+                        }
+                    }
+                    if (task.error && !/processing/i.test(task.error)) { 
+                        console.log('[AI] Error en la tarea:', task.error);
+                        alert(task.error); 
+                        return; 
+                    }
+                    if (task.response != null) { 
+                        console.log('[AI] ¡Respuesta recibida! Finalizando polling...');
+                        done = true; 
+                    }
                 }
 
                 $('#aiResultPrompt').text(prompt);

@@ -18,7 +18,8 @@ class ProductionLineController extends Controller
     public function getProductionLines(Request $request, $customer_id, DataTables $dataTables)
     {
         $query = ProductionLine::withCount('processes')
-            ->where('customer_id', $customer_id);
+            ->where('customer_id', $customer_id)
+            ->select(['id', 'name', 'token', 'customer_id']);
     
         return $dataTables->eloquent($query)
             ->addColumn('action', function ($line) {
@@ -26,6 +27,24 @@ class ProductionLineController extends Controller
             })
             ->addColumn('processes_count', function($line) {
                 return $line->processes_count;
+            })
+            ->editColumn('id', function($line) {
+                return $line->id;
+            })
+            ->editColumn('name', function($line) {
+                return $line->name;
+            })
+            ->editColumn('token', function($line) {
+                return $line->token;
+            })
+            ->filterColumn('name', function($query, $keyword) {
+                $query->where('name', 'like', "%{$keyword}%");
+            })
+            ->filterColumn('token', function($query, $keyword) {
+                $query->where('token', 'like', "%{$keyword}%");
+            })
+            ->filterColumn('id', function($query, $keyword) {
+                $query->where('id', 'like', "%{$keyword}%");
             })
             ->rawColumns(['action']) // Permitir HTML en la columna 'action'
             ->make(true);

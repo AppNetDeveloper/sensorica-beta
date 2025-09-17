@@ -356,18 +356,34 @@ class SensorController extends Controller
                     $orderStats->increment('units_made_real', 1);
                     $orderStats->increment('units_made', 1);
                     if ($orderStats->units_made_real === 1) {
-                        $orderStats->prepair_time = Carbon::now()->diffInSeconds($orderStats->created_at);
-                         //obtenemos el ultimos regustro del shift_history por linea y con type= shift y action=start
+                        // Calcular prepair_time como la suma de down_time + production_stops_time
+                        $orderDownTime = ($orderStats->down_time ?? 0);
+                        $orderProductionStopsTime = ($orderStats->production_stops_time ?? 0);
+                        $totalPrepairTime = $orderDownTime + $orderProductionStopsTime;
+                        
+                        $orderStats->prepair_time = $totalPrepairTime;
+                        
+                        // Obtener el último registro del shift_history por línea y con type=shift y action=start
                         $shiftHistory = ShiftHistory::where('production_line_id', $orderStats->production_line_id)
                             ->where('type', 'shift')
                             ->where('action', 'start')
                             ->orderBy('id', 'desc')
                             ->first();
 
-                            if($shiftHistory){
-                                $shiftHistory->prepair_time = Carbon::now()->diffInSeconds($orderStats->created_at);
-                                $shiftHistory->save();
-                            }
+                        if($shiftHistory){
+                            // Sumar el prepair_time al shift_history
+                            $shiftHistory->prepair_time = ($shiftHistory->prepair_time ?? 0) + $totalPrepairTime;
+                            
+                            // Restar de los tiempos de parada del shift_history lo que ahora es prepair_time
+                            $shiftHistory->down_time = max(0, ($shiftHistory->down_time ?? 0) - $orderDownTime);
+                            $shiftHistory->production_stops_time = max(0, ($shiftHistory->production_stops_time ?? 0) - $orderProductionStopsTime);
+                            
+                            $shiftHistory->save();
+                        }
+                        
+                        // Resetear los tiempos que ahora forman parte del prepair_time (después de usarlos)
+                        $orderStats->down_time = 0;
+                        $orderStats->production_stops_time = 0;
                     }
                     $unitsPending = $units - $orderStats->units_made_real - 1;
                     if($unitsPending<1){

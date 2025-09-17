@@ -384,6 +384,9 @@ Route::post('/supplier-order/store', [SupplierOrderController::class, 'store']);
 //api para downtime calculate
 Route::match(['get', 'post'], '/calculate-production-downtime', [CalculateProductionDowntimeController::class, 'calculateDowntime']);
 
+//api para production monitor oee calculate
+Route::match(['get', 'post'], '/calculate-production-monitor-oee', [\App\Http\Controllers\Api\CalculateProductionMonitorOeeController::class, 'calculateOee']);
+
 // Ruta para generar Excel (existente)
 // (Actualizado para coincidir con tu último comentario)
 Route::get('/workers-export/generate-excel', [WorkerController::class, 'generateExcelStandalone'])->name('workers-export.generate-excel');
