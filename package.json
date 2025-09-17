@@ -39,7 +39,7 @@
     "https-agent": "^1.0.0",
     "mqtt": "^5.14.1",
     "multer": "^1.4.5-lts.2",
-    "mysql2": "^3.14.5",
+    "mysql2": "^3.15.0",
     "node-cache": "^5.1.2",
     "node-cron": "^3.0.3",
     "pino": "^9.9.5",

@@ -97,13 +97,27 @@
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .chart-container { width: 100%; height: 450px; overflow-x: auto; flex-shrink: 0; }
         .chart-container svg { display: block; margin: auto; }
-        .bar { fill: steelblue; }
-        .bar:hover { fill: #2563eb; }
+        .bar { 
+            fill: steelblue; 
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .bar:hover { 
+            fill: #1d4ed8;
+            transform: scale(1.02);
+        }
         .axis-label { font-size: 0.8rem; }
         .tooltip {
-            position: absolute; text-align: center; padding: 6px; font: 12px sans-serif;
-            background: lightsteelblue; border: 0px; border-radius: 8px;
+            position: absolute; text-align: center; padding: 12px; font: 13px sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: 2px solid rgba(255,255,255,0.2);
+            border-radius: 12px;
             pointer-events: none; opacity: 0; z-index: 1010;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            backdrop-filter: blur(10px);
+            transform: translateY(-5px);
+            transition: all 0.3s ease;
         }
         .pie-slice-label { /* Estilo para etiquetas del gráfico circular */
             font-size: 9px;
@@ -616,9 +630,30 @@
         svg.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(x)).selectAll("text").attr("transform", "translate(-10,5)rotate(-45)").style("text-anchor", "end").style("font-size", "10px");
         const y = d3.scaleLinear().domain([0, d3.max(chartData, d => d.value) || 10]).nice().range([height, 0]);
         svg.append("g").call(d3.axisLeft(y).ticks(Math.min(10, d3.max(chartData, d => d.value) || 10)));
-        svg.selectAll(".bar").data(chartData).join("rect").attr("class", "bar").attr("x", d => x(d.name)).attr("y", d => y(d.value)).attr("width", x.bandwidth()).attr("height", d => Math.max(0, height - y(d.value)))
-            .on("mouseover", function(event, d) { if(tooltip){tooltip.transition().duration(200).style("opacity", .9); tooltip.html(`<strong>${d.name}</strong><br/>Cajas: ${d.value}`).style("left", (event.pageX + 10) + "px").style("top", (event.pageY - 15) + "px");} d3.select(this).style("fill", "#1d4ed8"); })
-            .on("mouseout", function() { if(tooltip)tooltip.transition().duration(500).style("opacity", 0); d3.select(this).style("fill", "steelblue"); });
+        const bars = svg.selectAll(".bar").data(chartData).join("rect")
+            .attr("class", "bar")
+            .attr("x", d => x(d.name))
+            .attr("y", height)
+            .attr("width", x.bandwidth())
+            .attr("height", 0)
+            .on("mouseover", function(event, d) { 
+                tooltip.transition().duration(200).style("opacity", .9);
+                tooltip.html(`<strong>${d.name}</strong><br/>Cajas: ${d.value}<br/>Porcentaje: ${((d.value / d3.sum(chartData, item => item.value)) * 100).toFixed(1)}%`)
+                    .style("left", (event.pageX + 10) + "px")
+                    .style("top", (event.pageY - 15) + "px");
+                d3.select(this).style("fill", "#1d4ed8").style("stroke", "#ffffff").style("stroke-width", "2px");
+            })
+            .on("mouseout", function() { 
+                tooltip.transition().duration(500).style("opacity", 0);
+                d3.select(this).style("fill", "steelblue").style("stroke", "none");
+            });
+        
+        // Animación de entrada
+        bars.transition()
+            .duration(800)
+            .delay((d, i) => i * 50)
+            .attr("y", d => y(d.value))
+            .attr("height", d => Math.max(0, height - y(d.value)));
         svg.append("text").attr("x", width / 2).attr("y", 0 - (margin.top / 2) - 5).attr("text-anchor", "middle").style("font-size", "16px").style("font-weight", "bold").text(titleText);
         svg.append("text").attr("transform", "rotate(-90)").attr("y", 0 - margin.left + 15).attr("x",0 - (height / 2)).attr("dy", "1em").style("text-anchor", "middle").attr("class", "axis-label").text(yAxisLabelText);
         svg.append("text").attr("transform", `translate(${width/2}, ${height + margin.bottom - 10})`).style("text-anchor", "middle").attr("class", "axis-label").text(xAxisLabelText);
@@ -668,19 +703,29 @@
         const arcGenerator = d3.arc().innerRadius(0).outerRadius(radius); // Pie chart normal (no donut)
         const outerArcForLabels = d3.arc().innerRadius(radius * 1.05).outerRadius(radius * 1.05); // Para las líneas de las etiquetas
 
-        svg.selectAll('allSlices').data(data_ready).join('path')
-            .attr('d', arcGenerator)
+        const slices = svg.selectAll('allSlices').data(data_ready).join('path')
+            .attr('d', d3.arc().innerRadius(0).outerRadius(0))
             .attr('fill', d => color(d.data.name))
             .attr("stroke", "white").style("stroke-width", "2px").style("opacity", 0.8)
             .on("mouseover",function(e,d){
-                d3.select(this).style("opacity", 1); 
-                if(tooltip){
-                    tooltip.transition().duration(200).style("opacity", .9);
-                    const percent = (d.data.value/d3.sum(dataForChart,i=>i.value)*100).toFixed(1);
-                    tooltip.html(`<strong>${d.data.name}</strong><br/>Cajas: ${d.data.value}<br/>(${percent}%)`).style("left",(e.pageX+10)+"px").style("top",(e.pageY-15)+"px");
-                }
+                d3.select(this).style("opacity", 1).style("stroke", "#ffffff").style("stroke-width", "3px"); 
+                tooltip.transition().duration(200).style("opacity", .9);
+                const percent = (d.data.value/d3.sum(dataForChart,i=>i.value)*100).toFixed(1);
+                const totalCajas = d3.sum(dataForChart, i => i.value);
+                tooltip.html(`<strong>${d.data.name}</strong><br/>Cajas: ${d.data.value}<br/>Porcentaje: ${percent}%<br/>Total general: ${totalCajas}`)
+                    .style("left",(e.pageX+10)+"px")
+                    .style("top",(e.pageY-15)+"px");
             })
-            .on("mouseout",function(){d3.select(this).style("opacity", 0.8); if(tooltip)tooltip.transition().duration(500).style("opacity", 0);});
+            .on("mouseout",function(){
+                d3.select(this).style("opacity", 0.8).style("stroke", "white").style("stroke-width", "2px");
+                tooltip.transition().duration(500).style("opacity", 0);
+            });
+        
+        // Animación de entrada para el gráfico circular
+        slices.transition()
+            .duration(800)
+            .delay((d, i) => i * 100)
+            .attr('d', arcGenerator);
 
         // Añadir polilíneas y etiquetas fuera del gráfico
         svg.selectAll('allPolylines')
@@ -772,18 +817,37 @@
         const y = d3.scaleLinear().domain([0,d3.max(series,d=>d3.max(d,d=>d[1]))||10]).nice().range([height,0]);
         const color = d3.scaleOrdinal(d3.schemeCategory10).domain(confeccionKeys);
 
-        svg.append("g").selectAll("g").data(series).join("g").attr("fill",d=>color(d.key))
+        const stackedBars = svg.append("g").selectAll("g").data(series).join("g").attr("fill",d=>color(d.key))
             .selectAll("rect").data(d=>d).join("rect")
             .attr("x",d=>x(d.data.trabajador))
-            .attr("y",d=>y(d[1]))
-            .attr("height",d=>Math.max(0,y(d[0])-y(d[1])))
+            .attr("y",height)
+            .attr("height",0)
             .attr("width",x.bandwidth())
+            .style("cursor", "pointer")
             .on("mouseover",function(e,d){
-                const parentData=d3.select(this.parentNode).datum(); const confeccionName=parentData.key; const value=d.data[confeccionName];
-                if(tooltip){tooltip.transition().duration(200).style("opacity",.9);tooltip.html(`<strong>Trabajador:</strong> ${d.data.trabajador}<br/><strong>Confección:</strong> ${confeccionName}<br/><strong>Cajas:</strong> ${value}`).style("left",(e.pageX+10)+"px").style("top",(e.pageY-15)+"px");}
-                d3.select(this).style("stroke","black").style("stroke-width",0.5).style("opacity", 0.7);
+                const parentData=d3.select(this.parentNode).datum(); 
+                const confeccionName=parentData.key; 
+                const value=d.data[confeccionName];
+                const totalTrabajador = confeccionKeys.reduce((sum, key) => sum + (d.data[key] || 0), 0);
+                const percentOfWorker = totalTrabajador > 0 ? ((value / totalTrabajador) * 100).toFixed(1) : '0';
+                
+                tooltip.transition().duration(200).style("opacity",.9);
+                tooltip.html(`<strong>Trabajador:</strong> ${d.data.trabajador}<br/><strong>Confección:</strong> ${confeccionName}<br/><strong>Cajas:</strong> ${value}<br/><strong>% del trabajador:</strong> ${percentOfWorker}%<br/><strong>Total trabajador:</strong> ${totalTrabajador}`)
+                    .style("left",(e.pageX+10)+"px")
+                    .style("top",(e.pageY-15)+"px");
+                d3.select(this).style("stroke","#ffffff").style("stroke-width","2px").style("opacity", 0.8);
             })
-            .on("mouseout",function(){if(tooltip)tooltip.transition().duration(500).style("opacity",0);d3.select(this).style("stroke","none").style("opacity", 1);});
+            .on("mouseout",function(){
+                tooltip.transition().duration(500).style("opacity",0);
+                d3.select(this).style("stroke","none").style("opacity", 1);
+            });
+        
+        // Animación de entrada para gráfico apilado
+        stackedBars.transition()
+            .duration(800)
+            .delay((d, i) => i * 30)
+            .attr("y",d=>y(d[1]))
+            .attr("height",d=>Math.max(0,y(d[0])-y(d[1])));
         svg.append("g").attr("transform",`translate(0,${height})`).call(d3.axisBottom(x)).selectAll("text").attr("transform","translate(-10,5)rotate(-45)").style("text-anchor","end");
         svg.append("g").call(d3.axisLeft(y).ticks(Math.min(10,d3.max(series,d=>d3.max(d,d=>d[1]))||10)));
         
@@ -977,7 +1041,7 @@
         chartModal = document.getElementById('chartModal');
         chartModalTitleEl = document.getElementById('chartModalTitle');
         chartContainerEl = document.getElementById('chartContainer');
-        tooltip = document.getElementById('tooltip');
+        tooltip = d3.select('#tooltip');
         kpiCardContainer = document.getElementById('kpiCardContainer');
         kpiTotalCajas = document.getElementById('kpiTotalCajas');
         kpiTrabajadoresActivos = document.getElementById('kpiTrabajadoresActivos');
