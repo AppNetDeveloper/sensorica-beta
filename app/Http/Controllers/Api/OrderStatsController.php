@@ -233,6 +233,11 @@ class OrderStatsController extends Controller
         $selectedOperators = $request->input('operators');
         \Log::info('OrderStats - Operadores seleccionados:', ['operators' => $selectedOperators]);
         
+        // Obtener los filtros de OEE
+        $hideZeroOEE = $request->input('hide_zero_oee', false);
+        $hide100OEE = $request->input('hide_100_oee', false);
+        \Log::info('OrderStats - Filtros OEE:', ['hide_zero' => $hideZeroOEE, 'hide_100' => $hide100OEE]);
+        
         // Procesar los operadores seleccionados si vienen como string
         $operatorIds = [];
         if ($selectedOperators) {
@@ -405,6 +410,36 @@ class OrderStatsController extends Controller
             
             return $orderStatArray;
         });
+
+        // Aplicar filtros de OEE si están activados
+        if ($hideZeroOEE || $hide100OEE) {
+            $response = $response->filter(function ($orderStat) use ($hideZeroOEE, $hide100OEE) {
+                $oee = $orderStat['oee'] ?? 0;
+                
+                // Convertir a número si viene como string
+                if (is_string($oee)) {
+                    $oee = (float) $oee;
+                }
+                
+                // Aplicar filtros
+                if ($hideZeroOEE && $oee == 0) {
+                    return false; // Excluir líneas con 0% OEE
+                }
+                
+                if ($hide100OEE && $oee == 100) {
+                    return false; // Excluir líneas con 100% OEE
+                }
+                
+                return true; // Incluir la línea
+            })->values(); // Reindexar el array después del filtrado
+            
+            \Log::info('OrderStats - Filtros OEE aplicados:', [
+                'original_count' => $orderStats->count(),
+                'filtered_count' => count($response),
+                'hide_zero' => $hideZeroOEE,
+                'hide_100' => $hide100OEE
+            ]);
+        }
         
         \Log::info('OrderStats - Respuesta generada con éxito:', ['count' => count($response)]);
     

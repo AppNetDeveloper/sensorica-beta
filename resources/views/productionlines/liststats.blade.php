@@ -272,10 +272,24 @@
         <div class="card">
             <div class="card-header bg-white py-3 border-bottom">
                 <div class="d-flex justify-content-between align-items-center">
-                    <h6 Hideclass="mb-0">
-                        <i class="fas fa-table me-2 text-primary" hidden></i>
-                        
-                    </h6>
+                    <div class="d-flex align-items-center gap-3">
+                        <h6 class="mb-0">
+                            <i class="fas fa-table me-2 text-primary"></i>
+                            Filtros OEE
+                        </h6>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="hideZeroOEE">
+                            <label class="form-check-label" for="hideZeroOEE">
+                                Ocultar 0% OEE
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="hide100OEE">
+                            <label class="form-check-label" for="hide100OEE">
+                                Ocultar 100% OEE
+                            </label>
+                        </div>
+                    </div>
                     <div class="btn-toolbar" role="toolbar" aria-label="Toolbar">
                         @php($aiUrl = config('services.ai.url'))
                         @php($aiToken = config('services.ai.token'))
@@ -976,6 +990,17 @@
                     url += `&filter_mode=${filterMode}`;
                 }
                 
+                // Añadir filtros de OEE si están activados
+                const hideZeroOEE = $('#hideZeroOEE').is(':checked');
+                const hide100OEE = $('#hide100OEE').is(':checked');
+                
+                if (hideZeroOEE) {
+                    url += `&hide_zero_oee=1`;
+                }
+                if (hide100OEE) {
+                    url += `&hide_100_oee=1`;
+                }
+                
                 const fullUrl = window.location.origin + url;
                 console.log("URL COMPLETA de la API:", fullUrl);
                 console.log("==================================================");
@@ -985,7 +1010,7 @@
                 const response = await fetch(url);
                 if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
                 const data = await response.json();
-                console.log("Datos de estadísticas recibidos:", data);
+                console.log("Datos de estadísticas recibidos (ya filtrados por backend):", data);
 
                 // Procesar los datos para asegurar que tienen la estructura correcta
                 const processedData = data.map(item => {
@@ -1012,7 +1037,7 @@
                         prepair_time: item.prepair_time || null
                     }});
                 
-                // Actualizar los KPIs
+                // Actualizar los KPIs con los datos ya filtrados del backend
                 updateKPIs(processedData);
                 
                 // Limpiar cualquier estado de carga previo
@@ -1124,6 +1149,13 @@
                         $('.dataTables_length select').addClass('form-select form-select-sm');
                     }
                 });
+
+                // Configurar event listeners para los checkboxes de filtrado OEE
+                $('#hideZeroOEE, #hide100OEE').off('change').on('change', function() {
+                    // Recargar datos cuando cambien los filtros de OEE
+                    $('#fetchData').click();
+                });
+
             } catch (error) {
                 console.error("Error al cargar datos:", error);
             }
@@ -1131,6 +1163,8 @@
 
         // Función para actualizar los KPIs
         function updateKPIs(data) {
+            console.log('Actualizando KPIs con', data.length, 'registros filtrados');
+            
             // Total de duración (suma de on_time)
             let totalDurationSeconds = 0;
             data.forEach(item => {
@@ -1156,6 +1190,12 @@
             });
             
             const avgOEE = validOEECount > 0 ? totalOEE / validOEECount : 0;
+            console.log('Cálculo OEE:', {
+                totalOEE: totalOEE,
+                validOEECount: validOEECount,
+                avgOEE: avgOEE,
+                roundedAvgOEE: Math.round(avgOEE)
+            });
             $('#avgOEE').text(`${Math.round(avgOEE)}%`);
             
             // Cambiar color según el valor
@@ -1817,5 +1857,6 @@
                     break;
             }
         }
+
     </script>
 @endpush
