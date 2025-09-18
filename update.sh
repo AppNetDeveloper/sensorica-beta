@@ -424,4 +424,4 @@ echo 'limpiar cache'
     php artisan db:seed --class=ProductionLineOrdersKanbanPermissionSeeder --force -n
     php artisan db:seed --class=WorkCalendarPermissionSeeder --force -n
     php artisan db:seed --class=OriginalOrderFilePermissionSeeder --force -n
-    echo "Proceso completado con éxito."
+    echo "Proceso completado con éxito..."
