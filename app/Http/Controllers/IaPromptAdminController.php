@@ -6,6 +6,7 @@ use App\Models\IaPrompt;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\Artisan;
 
 class IaPromptAdminController extends Controller
 {
@@ -60,5 +61,28 @@ class IaPromptAdminController extends Controller
 
         return redirect()->route('ia_prompts.index') // Asume que esta ruta no tiene el prefijo 'admin.'
                          ->with('success', 'Prompt actualizado correctamente.');
+    }
+
+    /**
+     * Ejecuta el comando Artisan para regenerar las plantillas por cada descripción única.
+     */
+    public function regenerate(Request $request): RedirectResponse
+    {
+        $modelName = $request->input('model_name');
+        $activate = $request->boolean('activate', true);
+        $update = $request->boolean('update', true);
+
+        $params = ['--activate' => $activate ? '1' : '0', '--update' => $update ? '1' : '0'];
+        if (!empty($modelName)) {
+            $params['--model_name'] = $modelName;
+        }
+
+        Artisan::call('ia:ensure-process-group-prompts', $params);
+        $output = Artisan::output();
+
+        return redirect()
+            ->route('ia_prompts.index')
+            ->with('success', 'Plantillas regeneradas correctamente.')
+            ->with('artisan_output', $output);
     }
 }

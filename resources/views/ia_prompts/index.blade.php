@@ -41,14 +41,29 @@
         @endif
 
         <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">{{ __('Listado de Prompts de IA') }}</h3>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h3 class="card-title mb-0">{{ __('Listado de Prompts de IA') }}</h3>
+                <form action="{{ route('ia_prompts.regenerate') }}" method="POST" onsubmit="return confirm('{{ __('¿Regenerar/actualizar plantillas para todos los grupos de procesos?') }}')">
+                    @csrf
+                    <input type="hidden" name="activate" value="1">
+                    <input type="hidden" name="update" value="1">
+                    <button type="submit" class="btn btn-sm btn-outline-secondary">
+                        <i class="ti ti-reload"></i> {{ __('Regenerar plantillas') }}
+                    </button>
+                </form>
             </div>
             <div class="card-body">
                 {{-- Se usa $prompts (plural) para la colección --}}
                 @if($prompts->isEmpty())
                     <p class="text-muted">{{ __('No hay prompts configurados.') }}</p>
                 @else
+                    @if (session('artisan_output'))
+                        <div class="alert alert-info alert-dismissible fade show" role="alert" style="white-space: pre-wrap;">
+                            <strong>{{ __('Resultado de Artisan') }}:</strong>
+                            <div class="mt-2">{{ session('artisan_output') }}</div>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    @endif
                     <div class="row">
                         {{-- El bucle define $prompt (singular) para cada iteración --}}
                         @foreach($prompts as $prompt)

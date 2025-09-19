@@ -519,6 +519,8 @@ Route::prefix('ia-prompts')->name('ia_prompts.')->group(function () {
     Route::get('/', [IaPromptAdminController::class, 'index'])->name('index');
     Route::get('/{iaPrompt}/edit', [IaPromptAdminController::class, 'edit'])->name('edit');
     Route::put('/{iaPrompt}', [IaPromptAdminController::class, 'update'])->name('update');
+    // Ejecutar Artisan para regenerar plantillas desde la UI
+    Route::post('/regenerate', [IaPromptAdminController::class, 'regenerate'])->name('regenerate');
 });
 
 // Vista principal de usuarios (Blade con DataTables manual)
