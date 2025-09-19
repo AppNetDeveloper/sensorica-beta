@@ -36,6 +36,7 @@ class Kernel extends ConsoleKernel
         Commands\ClearOldRecords::class,
         Commands\CheckHostMonitor::class,
         Commands\UpdateAccumulatedTimes::class,
+        Commands\CleanOldSensorCounts::class,
     ];
 
     /**

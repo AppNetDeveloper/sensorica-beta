@@ -183,6 +183,7 @@ declare -A ENV_VARS=(
     ["READY_AFTER_SAFETY_HOURS"]="6"
     ["AI_URL"]=""
     ["AI_TOKEN"]=""
+    ["CALLBACK_MAX_ATTEMPTS"]="20"
 )
 
 ENV_FILE=".env"
@@ -281,6 +282,7 @@ CRON_ENTRY9="0 2 * * * /var/www/html/scripts/clean_logs.sh >> /var/www/html/stor
 # Permisos de logs - optimizado para ejecutar cada 5 minutos en lugar de 24 entradas separadas
 CRON_ENTRY10="*/5 * * * * /bin/bash /var/www/html/fix_log_permissions.sh >/dev/null 2>&1"
 CRON_ENTRY34="0 1 * * * /usr/bin/php /var/www/html/artisan db:replicate-nightly >> /var/www/html/storage/logs/db_replicate.log 2>&1"
+CRON_ENTRY_SENSORCOUNTS="30 3 * * * /usr/bin/php /var/www/html/artisan sensorcounts:clean --days=30 >> /var/www/html/storage/logs/sensorcounts_clean.log 2>&1"
 
 # Obtiene la lista de cron actual
 CURRENT_CRON=$(crontab -l 2>/dev/null)
@@ -310,6 +312,7 @@ add_cron_entry "$CRON_ENTRY8"
 add_cron_entry "$CRON_ENTRY9"
 add_cron_entry "$CRON_ENTRY10"
 add_cron_entry "$CRON_ENTRY34"
+add_cron_entry "$CRON_ENTRY_SENSORCOUNTS"
 
 # Instala la nueva lista de cron
 echo "$CURRENT_CRON" | crontab -

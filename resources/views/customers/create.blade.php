@@ -403,6 +403,149 @@
             });
         }
         
+        // ========== SECCIÓN PARA CALLBACK CONFIGURATION ==========
+        
+        // Manejar el toggle del callback
+        const callbackCheckbox = document.getElementById('callback_finish_process');
+        const callbackUrlContainer = document.getElementById('callback-url-container');
+        const callbackMappingsSection = document.getElementById('callback-mappings-section');
+        
+        if (callbackCheckbox) {
+            callbackCheckbox.addEventListener('change', function() {
+                const isChecked = this.checked;
+                
+                if (callbackUrlContainer) {
+                    callbackUrlContainer.style.display = isChecked ? 'block' : 'none';
+                }
+                
+                if (callbackMappingsSection) {
+                    callbackMappingsSection.style.display = isChecked ? 'block' : 'none';
+                }
+                
+                // Si se desactiva, limpiar la URL
+                if (!isChecked) {
+                    const callbackUrlInput = document.getElementById('callback_url');
+                    if (callbackUrlInput) {
+                        callbackUrlInput.value = '';
+                    }
+                }
+            });
+        }
+        
+        // ========== SECCIÓN PARA MAPEOS DE CALLBACK ==========
+        
+        // Inicializar el índice para nuevos mapeos de callback
+        let callbackMappingIndex = 0;
+        const callbackMappingsContainer = document.getElementById('callback-mappings-container');
+        const addCallbackMappingBtn = document.getElementById('add-callback-mapping');
+        
+        // Agregar nuevo mapeo de callback
+        if (addCallbackMappingBtn) {
+            addCallbackMappingBtn.addEventListener('click', function() {
+                const newRow = document.createElement('div');
+                newRow.className = 'mapping-row mb-3 p-3 border rounded';
+                newRow.setAttribute('data-index', callbackMappingIndex);
+                
+                newRow.innerHTML = `
+                    <input type="hidden" name="callback_field_mappings[${callbackMappingIndex}][id]" value="">
+                    <div class="row g-3">
+                        <div class="col-md-5">
+                            <label class="form-label">Campo de ProductionOrder</label>
+                            <select name="callback_field_mappings[${callbackMappingIndex}][source_field]" class="form-select source-field" required>
+                                <option value="">-- Seleccionar campo --</option>
+                                @foreach($callbackStandardFields as $value => $label)
+                                    <option value="{{ $value }}">{{ $label }} ({{ $value }})</option>
+                                @endforeach
+                            </select>
+                            <small class="text-muted">Campo de la tabla production_orders que se enviará.</small>
+                        </div>
+                        
+                        <div class="col-md-5">
+                            <label class="form-label">Nombre en el JSON del Callback</label>
+                            <input type="text" 
+                                   name="callback_field_mappings[${callbackMappingIndex}][target_field]" 
+                                   class="form-control target-field" 
+                                   placeholder="ej: order_id, production_line, status"
+                                   required>
+                            <small class="text-muted">Nombre que tendrá este campo en el JSON enviado al ERP.</small>
+                        </div>
+                        
+                        <div class="col-md-2 d-flex align-items-end">
+                            <div class="form-check form-switch mb-3">
+                                <input type="hidden" name="callback_field_mappings[${callbackMappingIndex}][is_required]" value="0">
+                                <input type="checkbox" 
+                                       name="callback_field_mappings[${callbackMappingIndex}][is_required]" 
+                                       class="form-check-input" 
+                                       value="1"
+                                       checked>
+                                <label class="form-check-label">Requerido</label>
+                            </div>
+                            
+                            <div class="ms-auto">
+                                <button type="button" class="btn btn-sm btn-outline-danger remove-mapping">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="transformations-container mt-2">
+                        <label class="form-label small">Transformaciones:</label>
+                        <div class="d-flex flex-wrap gap-2">
+                            @foreach($transformationOptions as $value => $label)
+                                <div class="form-check form-check-inline">
+                                    <input type="checkbox" 
+                                           name="callback_field_mappings[${callbackMappingIndex}][transformations][]" 
+                                           class="form-check-input" 
+                                           value="{{ $value }}"
+                                           id="callback_transformation_${callbackMappingIndex}_{{ $value }}">
+                                    <label class="form-check-label small" for="callback_transformation_${callbackMappingIndex}_{{ $value }}">
+                                        {{ $label }}
+                                    </label>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                `;
+                
+                // Remover el mensaje de "no hay mapeos" si existe
+                const noMappingsAlert = callbackMappingsContainer.querySelector('.alert-info');
+                if (noMappingsAlert) {
+                    noMappingsAlert.remove();
+                }
+                
+                callbackMappingsContainer.appendChild(newRow);
+                callbackMappingIndex++;
+                showToast('Nuevo mapeo de callback agregado', 'success');
+            });
+        }
+        
+        // Manejar eventos de callback (eliminar)
+        if (callbackMappingsContainer) {
+            callbackMappingsContainer.addEventListener('click', function(e) {
+                const row = e.target.closest('.mapping-row');
+                if (!row) return;
+                
+                // Eliminar mapeo
+                if (e.target.closest('.remove-mapping')) {
+                    if (confirm('¿Estás seguro de que quieres eliminar este mapeo de callback?')) {
+                        row.remove();
+                        
+                        // Si no quedan mapeos, mostrar el mensaje
+                        if (callbackMappingsContainer.querySelectorAll('.mapping-row').length === 0) {
+                            const alertDiv = document.createElement('div');
+                            alertDiv.className = 'alert alert-info';
+                            alertDiv.textContent = 'No hay mapeos de callback definidos. Haz clic en "Añadir Mapeo de Callback" para crear uno nuevo.';
+                            callbackMappingsContainer.appendChild(alertDiv);
+                        }
+                        
+                        showToast('Mapeo de callback eliminado', 'success');
+                    }
+                    return;
+                }
+            });
+        }
+        
         // Generar token al cargar la página si no hay valor
         const tokenField = document.getElementById('token');
         if (tokenField && !tokenField.value) {
@@ -482,6 +625,73 @@
                                 <input type="url" name="order_detail_url" id="order_detail_url" class="form-control" 
                                        placeholder="https://ejemplo.com/api/orders/{order_id}" value="{{ old('order_detail_url') }}">
                                 <small class="form-text text-muted">{{ __('URL para obtener el detalle de un pedido. Usar {order_id} como marcador') }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Sección de Configuración de Callback -->
+                    <div class="card mt-4">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">{{ __('Configuración de Callback de Finalización') }}</h6>
+                            <small class="text-muted">{{ __('Configuración para notificar al ERP cuando una orden se finaliza') }}</small>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-check form-switch mb-3">
+                                <input type="hidden" name="callback_finish_process" value="0">
+                                <input type="checkbox" 
+                                       name="callback_finish_process" 
+                                       class="form-check-input" 
+                                       id="callback_finish_process"
+                                       value="1"
+                                       {{ old('callback_finish_process') ? 'checked' : '' }}>
+                                <label class="form-check-label" for="callback_finish_process">
+                                    {{ __('Activar callback de finalización') }}
+                                </label>
+                                <small class="form-text text-muted d-block">
+                                    {{ __('Cuando se active, se enviará una notificación HTTP al ERP cada vez que una orden se finalice') }}
+                                </small>
+                            </div>
+                            
+                            <div class="form-group mb-3" id="callback-url-container" style="{{ old('callback_finish_process') ? '' : 'display: none;' }}">
+                                <label for="callback_url" class="form-label">{{ __('URL del Callback') }}</label>
+                                <input type="url" 
+                                       name="callback_url" 
+                                       id="callback_url" 
+                                       class="form-control" 
+                                       value="{{ old('callback_url') }}" 
+                                       placeholder="https://ejemplo.com/api/production-finished">
+                                <small class="form-text text-muted">
+                                    {{ __('URL donde se enviará la notificación cuando una orden se finalice') }}
+                                </small>
+                                @error('callback_url')
+                                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Sección de Mapeo de Campos para Callback -->
+                    <div class="card mt-4" id="callback-mappings-section" style="{{ old('callback_finish_process') ? '' : 'display: none;' }}">
+                        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-0">{{ __('Mapeo de Campos para Callback') }}</h6>
+                                <small class="text-muted">
+                                    {{ __('Define qué campos de production_orders se envían en el callback y cómo se nombran') }}
+                                </small>
+                            </div>
+                            <button type="button" id="add-callback-mapping" class="btn btn-sm btn-warning">
+                                <i class="fas fa-plus me-1"></i> {{ __('Añadir Mapeo de Callback') }}
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small">
+                                Define cómo se mapean los campos de production_orders al JSON que se enviará al callback del ERP.
+                            </p>
+                            
+                            <div id="callback-mappings-container">
+                                <div class="alert alert-info">
+                                    No hay mapeos de callback definidos. Haz clic en "Añadir Mapeo de Callback" para crear uno nuevo.
+                                </div>
                             </div>
                         </div>
                     </div>

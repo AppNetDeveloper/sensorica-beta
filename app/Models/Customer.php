@@ -10,6 +10,7 @@ use App\Models\OrderFieldMapping;
 use App\Models\ProductionLine;
 use App\Models\ProcessFieldMapping;
 use App\Models\ArticleFieldMapping;
+use App\Models\CustomerCallbackMapping;
 
 class Customer extends Model
 {
@@ -25,7 +26,9 @@ class Customer extends Model
         'token',
         'token_zerotier',
         'order_listing_url',
-        'order_detail_url'
+        'order_detail_url',
+        'callback_finish_process',
+        'callback_url'
     ];
 
     /**
@@ -53,12 +56,29 @@ class Customer extends Model
     }
 
     /**
+     * Obtiene los mapeos de campos de callback para este cliente
+     */
+    public function callbackFieldMappings(): HasMany
+    {
+        return $this->hasMany(CustomerCallbackMapping::class);
+    }
+
+    /**
      * Los atributos que deberían estar ocultos para los arrays.
      *
      * @var array<int, string>
      */
     protected $hidden = [
         'token', // Normalmente no querrás exponer el token públicamente
+    ];
+
+    /**
+     * Los atributos que deberían ser convertidos a tipos nativos.
+     *
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'callback_finish_process' => 'boolean',
     ];
 
     public function originalOrders()

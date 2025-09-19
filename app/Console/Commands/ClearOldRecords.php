@@ -32,7 +32,7 @@ class ClearOldRecords extends Command
         $this->info('Starting cleanup process in a loop...');
 
         // Get the number of days from the environment variable
-        $days = env('CLEAR_DB_DAY', 30); // Default to 30 days if not set
+        $days = env('CLEAR_DB_DAY', 33); // Default to 30 days if not set
 
         while (true) {
             $this->info('Running cleanup cycle...');

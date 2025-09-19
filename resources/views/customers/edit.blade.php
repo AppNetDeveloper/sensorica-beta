@@ -662,6 +662,214 @@
         if (articleMappingsContainer) {
             updateArticleMoveButtons();
         }
+        
+        // ========== SECCIÓN PARA CALLBACK CONFIGURATION ==========
+        
+        // Manejar el toggle del callback
+        const callbackCheckbox = document.getElementById('callback_finish_process');
+        const callbackUrlContainer = document.getElementById('callback-url-container');
+        const callbackMappingsSection = document.getElementById('callback-mappings-section');
+        
+        if (callbackCheckbox) {
+            callbackCheckbox.addEventListener('change', function() {
+                const isChecked = this.checked;
+                
+                if (callbackUrlContainer) {
+                    callbackUrlContainer.style.display = isChecked ? 'block' : 'none';
+                }
+                
+                if (callbackMappingsSection) {
+                    callbackMappingsSection.style.display = isChecked ? 'block' : 'none';
+                }
+                
+                // Si se desactiva, limpiar la URL
+                if (!isChecked) {
+                    const callbackUrlInput = document.getElementById('callback_url');
+                    if (callbackUrlInput) {
+                        callbackUrlInput.value = '';
+                    }
+                }
+            });
+        }
+        
+        // ========== SECCIÓN PARA MAPEOS DE CALLBACK ==========
+        
+        // Inicializar el índice para nuevos mapeos de callback
+        let callbackMappingIndex = {{ $customer->callbackFieldMappings->count() }};
+        const callbackMappingsContainer = document.getElementById('callback-mappings-container');
+        const addCallbackMappingBtn = document.getElementById('add-callback-mapping');
+        
+        // Función para actualizar los índices de los mapeos de callback
+        function updateCallbackMappingIndexes() {
+            const rows = callbackMappingsContainer.querySelectorAll('.mapping-row');
+            rows.forEach((row, index) => {
+                // Actualizar el atributo data-index
+                row.setAttribute('data-index', index);
+                
+                // Actualizar los nombres de los campos del formulario
+                const inputs = row.querySelectorAll('[name^="callback_field_mappings["]');
+                inputs.forEach(input => {
+                    const name = input.getAttribute('name');
+                    const newName = name.replace(/callback_field_mappings\[\d+\]/g, `callback_field_mappings[${index}]`);
+                    input.setAttribute('name', newName);
+                });
+                
+                // Actualizar los IDs de los checkboxes de transformaciones
+                const checkboxes = row.querySelectorAll('input[type="checkbox"][id^="callback_transformation_"]');
+                checkboxes.forEach(checkbox => {
+                    const id = checkbox.getAttribute('id');
+                    const newId = id.replace(/callback_transformation_\d+_/, `callback_transformation_${index}_`);
+                    checkbox.setAttribute('id', newId);
+                    
+                    // Actualizar el for del label asociado
+                    const label = document.querySelector(`label[for="${id}"]`);
+                    if (label) {
+                        label.setAttribute('for', newId);
+                    }
+                });
+            });
+            
+            // Actualizar el contador para nuevos mapeos
+            callbackMappingIndex = rows.length;
+        }
+        
+        // Función para actualizar los botones de mover de callback
+        function updateCallbackMoveButtons() {
+            const rows = callbackMappingsContainer.querySelectorAll('.mapping-row');
+            rows.forEach((row, index) => {
+                const upBtn = row.querySelector('.move-up');
+                const downBtn = row.querySelector('.move-down');
+                
+                if (upBtn) {
+                    upBtn.style.visibility = index === 0 ? 'hidden' : 'visible';
+                }
+                
+                if (downBtn) {
+                    downBtn.style.visibility = index === rows.length - 1 ? 'hidden' : 'visible';
+                }
+            });
+            
+            // Actualizar los índices después de mover
+            updateCallbackMappingIndexes();
+        }
+        
+        // Agregar nuevo mapeo de callback
+        if (addCallbackMappingBtn) {
+            addCallbackMappingBtn.addEventListener('click', function() {
+                // Deshabilitar el botón para evitar múltiples clics
+                const originalText = addCallbackMappingBtn.innerHTML;
+                addCallbackMappingBtn.disabled = true;
+                addCallbackMappingBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Cargando...';
+
+                fetch(`{{ route('customers.field-mapping-row', $customer->id) }}?type=callback&index=${callbackMappingIndex}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Error en la respuesta del servidor');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            const div = document.createElement('div');
+                            div.className = 'mapping-row mb-3 p-3 border rounded';
+                            div.setAttribute('data-index', callbackMappingIndex);
+                            div.innerHTML = data.html;
+                            
+                            // Remover el mensaje de "no hay mapeos" si existe
+                            const noMappingsAlert = callbackMappingsContainer.querySelector('.alert-info');
+                            if (noMappingsAlert) {
+                                noMappingsAlert.remove();
+                            }
+                            
+                            callbackMappingsContainer.appendChild(div);
+                            callbackMappingIndex++;
+                            
+                            // Actualizar botones de movimiento
+                            updateCallbackMoveButtons();
+                            
+                            // Animación de entrada
+                            setTimeout(() => {
+                                div.style.transition = 'box-shadow 0.3s';
+                                div.style.boxShadow = '0 0 0 2px var(--bs-warning)';
+                                setTimeout(() => {
+                                    div.style.boxShadow = 'none';
+                                }, 1000);
+                            }, 100);
+                            
+                            // Mostrar notificación de éxito
+                            showToast('Nuevo mapeo de callback agregado correctamente', 'success');
+                        } else {
+                            throw new Error(data.message || 'Error al crear el mapeo de callback');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        showToast('Error: ' + error.message, 'danger');
+                    })
+                    .finally(() => {
+                        // Restaurar el botón
+                        addCallbackMappingBtn.disabled = false;
+                        addCallbackMappingBtn.innerHTML = originalText;
+                    });
+            });
+        }
+        
+        // Manejar eventos de callback (eliminar y mover)
+        if (callbackMappingsContainer) {
+            callbackMappingsContainer.addEventListener('click', function(e) {
+                const row = e.target.closest('.mapping-row');
+                if (!row) return;
+                
+                // Eliminar mapeo
+                if (e.target.closest('.remove-mapping')) {
+                    if (confirm('¿Estás seguro de que quieres eliminar este mapeo de callback?')) {
+                        row.remove();
+                        updateCallbackMoveButtons();
+                        
+                        // Si no quedan mapeos, mostrar el mensaje
+                        if (callbackMappingsContainer.querySelectorAll('.mapping-row').length === 0) {
+                            const alertDiv = document.createElement('div');
+                            alertDiv.className = 'alert alert-info';
+                            alertDiv.textContent = 'No hay mapeos de callback definidos. Haz clic en "Añadir Mapeo de Callback" para crear uno nuevo.';
+                            callbackMappingsContainer.appendChild(alertDiv);
+                        }
+                        
+                        showToast('Mapeo de callback eliminado', 'success');
+                    }
+                    return;
+                }
+                
+                // Mover hacia arriba
+                if (e.target.closest('.move-up')) {
+                    const prevRow = row.previousElementSibling;
+                    if (prevRow && prevRow.classList.contains('mapping-row')) {
+                        row.parentNode.insertBefore(row, prevRow);
+                        updateCallbackMoveButtons();
+                        showToast('Mapeo movido hacia arriba', 'success');
+                    }
+                    return;
+                }
+                
+                // Mover hacia abajo
+                if (e.target.closest('.move-down')) {
+                    const nextRow = row.nextElementSibling;
+                    if (nextRow && nextRow.classList.contains('mapping-row')) {
+                        row.parentNode.insertBefore(nextRow, row);
+                        updateCallbackMoveButtons();
+                        showToast('Mapeo movido hacia abajo', 'success');
+                    }
+                    return;
+                }
+            });
+            
+            // Actualizar índices después de mover
+            updateCallbackMappingIndexes();
+        }
+        
+        // Inicializar botones de movimiento de callback
+        if (callbackMappingsContainer) {
+            updateCallbackMoveButtons();
+        }
     });
 </script>
 @endpush
@@ -753,6 +961,86 @@
                                 @error('order_detail_url')
                                     <div class="invalid-feedback d-block">{{ $message }}</div>
                                 @enderror
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Sección de Configuración de Callback -->
+                    <div class="card mt-4">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">{{ __('Configuración de Callback de Finalización') }}</h6>
+                            <small class="text-muted">{{ __('Configuración para notificar al ERP cuando una orden se finaliza') }}</small>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-check form-switch mb-3">
+                                <input type="hidden" name="callback_finish_process" value="0">
+                                <input type="checkbox" 
+                                       name="callback_finish_process" 
+                                       class="form-check-input" 
+                                       id="callback_finish_process"
+                                       value="1"
+                                       {{ old('callback_finish_process', $customer->callback_finish_process) ? 'checked' : '' }}>
+                                <label class="form-check-label" for="callback_finish_process">
+                                    {{ __('Activar callback de finalización') }}
+                                </label>
+                                <small class="form-text text-muted d-block">
+                                    {{ __('Cuando se active, se enviará una notificación HTTP al ERP cada vez que una orden se finalice') }}
+                                </small>
+                            </div>
+                            
+                            <div class="form-group mb-3" id="callback-url-container" style="{{ old('callback_finish_process', $customer->callback_finish_process) ? '' : 'display: none;' }}">
+                                <label for="callback_url" class="form-label">{{ __('URL del Callback') }}</label>
+                                <input type="url" 
+                                       name="callback_url" 
+                                       id="callback_url" 
+                                       class="form-control" 
+                                       value="{{ old('callback_url', $customer->callback_url) }}" 
+                                       placeholder="https://ejemplo.com/api/production-finished">
+                                <small class="form-text text-muted">
+                                    {{ __('URL donde se enviará la notificación cuando una orden se finalice') }}
+                                </small>
+                                @error('callback_url')
+                                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Sección de Mapeo de Campos para Callback -->
+                    <div class="card mt-4" id="callback-mappings-section" style="{{ old('callback_finish_process', $customer->callback_finish_process) ? '' : 'display: none;' }}">
+                        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-0">{{ __('Mapeo de Campos para Callback') }}</h6>
+                                <small class="text-muted">
+                                    {{ __('Define qué campos de production_orders se envían en el callback y cómo se nombran') }}
+                                </small>
+                            </div>
+                            <button type="button" id="add-callback-mapping" class="btn btn-sm btn-warning">
+                                <i class="fas fa-plus me-1"></i> {{ __('Añadir Mapeo de Callback') }}
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small">
+                                Define cómo se mapean los campos de production_orders al JSON que se enviará al callback del ERP.
+                            </p>
+                            
+                            <div id="callback-mappings-container">
+                                @if($customer->callbackFieldMappings->count() > 0)
+                                    @foreach($customer->callbackFieldMappings as $index => $mapping)
+                                        @include('customers.partials.callback_field_mappings', [
+                                            'index' => $index,
+                                            'mapping' => $mapping,
+                                            'callbackStandardFields' => $callbackStandardFields,
+                                            'transformationOptions' => $transformationOptions,
+                                            'isFirst' => $loop->first,
+                                            'isLast' => $loop->last
+                                        ])
+                                    @endforeach
+                                @else
+                                    <div class="alert alert-info">
+                                        No hay mapeos de callback definidos. Haz clic en "Añadir Mapeo de Callback" para crear uno nuevo.
+                                    </div>
+                                @endif
                             </div>
                         </div>
                     </div>

@@ -6,6 +6,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log; // Asegúrate de importar la clase Log
 use Illuminate\Support\Facades\DB; // Importar Facade DB para la consulta
+use App\Models\ProductionLine;
+use App\Models\Customer;
+use App\Models\ProductionOrderCallback;
 use Illuminate\Support\Facades\Cache;
 use App\Models\Barcode; // Importar el modelo Barcode
 
@@ -227,6 +230,41 @@ class ProductionOrder extends Model
                     $originalOrderProcess->finished = 1;
                     $originalOrderProcess->finished_at = now();
                     $originalOrderProcess->save();
+
+                    // Encolar callback para ERP si el cliente lo tiene activado
+                    try {
+                        // Obtener el cliente a partir de la línea de producción
+                        $productionLine = $model->productionLine()->with('customer')->first();
+                        $customer = $productionLine?->customer ?: (function() use ($productionLine) {
+                            return $productionLine && isset($productionLine->customer_id)
+                                ? Customer::find($productionLine->customer_id)
+                                : null;
+                        })();
+
+                        if ($customer && ($customer->callback_finish_process ?? false) && !empty($customer->callback_url)) {
+                            // Generar payload según los mappings definidos por el cliente
+                            $payload = ProductionOrderCallback::generatePayload($model, $customer);
+
+                            // Crear registro pendiente de callback
+                            ProductionOrderCallback::create([
+                                'production_order_id' => $model->id,
+                                'customer_id' => $customer->id,
+                                'callback_url' => $customer->callback_url,
+                                'payload' => $payload,
+                                'status' => 0, // 0: pendiente
+                                'attempts' => 0,
+                            ]);
+                            Log::info('Callback de finalización encolado', [
+                                'production_order_id' => $model->id,
+                                'customer_id' => $customer->id,
+                            ]);
+                        }
+                    } catch (\Throwable $e) {
+                        Log::error('Error encolando callback de finalización', [
+                            'production_order_id' => $model->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
                 } else {
                     // Si la orden deja de estar finalizada, comprobar si quedan otras POs finalizadas
                     $hasOtherFinished = $originalOrderProcess->productionOrders()

@@ -605,6 +605,9 @@ class CustomerController extends Controller
                 },
                 'articleFieldMappings' => function($query) {
                     $query->orderBy('id');
+                },
+                'callbackFieldMappings' => function($query) {
+                    $query->orderBy('id');
                 }
             ])->findOrFail($id);
             
@@ -645,12 +648,47 @@ class CustomerController extends Controller
                 'in_stock' => 'En Stock (1/0)'
             ];
             
+            // Define callback standard fields (campos de production_orders)
+            $callbackStandardFields = [
+                'id' => 'ID de la Orden de Producción',
+                'order_id' => 'ID del Pedido',
+                'production_line_id' => 'ID de Línea de Producción',
+                'status' => 'Estado (0=Pendiente, 1=En Curso, 2=Finalizada)',
+                'box' => 'Número de Cajas',
+                'units_box' => 'Unidades por Caja',
+                'units' => 'Total de Unidades',
+                'orden' => 'Orden de Fabricación',
+                'theoretical_time' => 'Tiempo Teórico (segundos)',
+                'accumulated_time' => 'Tiempo Acumulado (segundos)',
+                'process_category' => 'Categoría del Proceso',
+                'delivery_date' => 'Fecha de Entrega',
+                'customerId' => 'ID del Cliente',
+                'original_order_id' => 'ID de Orden Original',
+                'original_order_process_id' => 'ID de Proceso de Orden Original',
+                'processes_code' => 'Código del Proceso (desde original_order_process_id → processes.code)',
+                'grupo_numero' => 'Número de Grupo',
+                'processes_to_do' => 'Procesos por Hacer',
+                'processes_done' => 'Procesos Completados',
+                'is_priority' => 'Es Prioritaria (1/0)',
+                'fecha_pedido_erp' => 'Fecha del Pedido en ERP',
+                'estimated_start_datetime' => 'Fecha/Hora Estimada de Inicio',
+                'estimated_end_datetime' => 'Fecha/Hora Estimada de Fin',
+                'ready_after_datetime' => 'Disponible Después de',
+                'finished_at' => 'Fecha/Hora de Finalización',
+                'created_at' => 'Fecha de Creación',
+                'updated_at' => 'Fecha de Actualización',
+                'number_of_pallets' => 'Número de Palets',
+                'note' => 'Notas'
+            ];
+            
             return view('customers.edit', compact(
                 'customer', 
                 'standardFields', 
                 'processStandardFields', 
                 'articleStandardFields',
-                'transformationOptions'
+                'callbackStandardFields',
+                'callbackStandardFields',
+            'transformationOptions'
             ));
             
         } catch (\Exception $e) {
@@ -697,6 +735,8 @@ class CustomerController extends Controller
                 }
             }],
             'token' => 'nullable|string|max:255',
+            'callback_finish_process' => 'nullable|boolean',
+            'callback_url' => 'nullable|url|required_if:callback_finish_process,1',
             'field_mappings' => 'nullable|array',
             'field_mappings.*.source_field' => 'required_with:field_mappings|string',
             'field_mappings.*.target_field' => 'required_with:field_mappings|string',
@@ -714,7 +754,13 @@ class CustomerController extends Controller
             'article_field_mappings.*.target_field' => 'required_with:article_field_mappings|string',
             'article_field_mappings.*.transformations' => 'nullable|array',
             'article_field_mappings.*.transformations.*' => 'string',
-            'article_field_mappings.*.is_required' => 'nullable|boolean'
+            'article_field_mappings.*.is_required' => 'nullable|boolean',
+            'callback_field_mappings' => 'nullable|array',
+            'callback_field_mappings.*.source_field' => 'required_with:callback_field_mappings|string',
+            'callback_field_mappings.*.target_field' => 'required_with:callback_field_mappings|string',
+            'callback_field_mappings.*.transformations' => 'nullable|array',
+            'callback_field_mappings.*.transformations.*' => 'string',
+            'callback_field_mappings.*.is_required' => 'nullable|boolean'
         ]);
 
         // Validar la solicitud
@@ -727,6 +773,18 @@ class CustomerController extends Controller
         // Obtener los datos validados
         $validatedData = $validator->validated();
 
+        // DEBUG: registrar qué llega desde el frontend para callback_field_mappings y qué pasa la validación
+        try {
+            \Log::info('Customers.update incoming callback_field_mappings (raw input)', [
+                'callback_field_mappings' => $request->input('callback_field_mappings')
+            ]);
+            \Log::info('Customers.update validated callback_field_mappings', [
+                'callback_field_mappings' => $validatedData['callback_field_mappings'] ?? null
+            ]);
+        } catch (\Throwable $e) {
+            // evitar romper flujo de actualización por fallo de log
+        }
+
         try {
             // Iniciar transacción para asegurar la integridad de los datos
             DB::beginTransaction();
@@ -737,6 +795,8 @@ class CustomerController extends Controller
                 'order_listing_url' => $validatedData['order_listing_url'] ?? null,
                 'order_detail_url' => $validatedData['order_detail_url'] ?? null,
                 'token' => $validatedData['token'] ?? null,
+                'callback_finish_process' => $validatedData['callback_finish_process'] ?? false,
+                'callback_url' => $validatedData['callback_url'] ?? null,
             ]);
 
             // Sincronizar los mapeos de campos de orders si existen
@@ -862,6 +922,51 @@ class CustomerController extends Controller
                 $customer->articleFieldMappings()->delete();
             }
 
+            // Sincronizar los mapeos de campos de callback si existen (SIEMPRE ejecutar, independientemente de artículos)
+            if (isset($validatedData['callback_field_mappings'])) {
+                $updatedCallbackMappingIds = [];
+                
+                // Procesar cada mapeo de callback
+                foreach ($validatedData['callback_field_mappings'] as $mappingData) {
+                    $mappingId = $mappingData['id'] ?? null;
+                    
+                    if ($mappingId) {
+                        // Actualizar mapeo existente
+                        $mapping = $customer->callbackFieldMappings()->find($mappingId);
+                        if ($mapping) {
+                            $mapping->update([
+                                'source_field' => $mappingData['source_field'],
+                                'target_field' => $mappingData['target_field'],
+                                'transformation' => (isset($mappingData['transformations']) && is_array($mappingData['transformations']))
+                                    ? implode(',', $mappingData['transformations'])
+                                    : ($mappingData['transformations'] ?? null),
+                                'is_required' => $mappingData['is_required'] ?? false,
+                            ]);
+                            $updatedCallbackMappingIds[] = $mapping->id;
+                        }
+                    } else {
+                        // Crear nuevo mapeo
+                        $mapping = $customer->callbackFieldMappings()->create([
+                            'source_field' => $mappingData['source_field'],
+                            'target_field' => $mappingData['target_field'],
+                            'transformation' => (isset($mappingData['transformations']) && is_array($mappingData['transformations']))
+                                ? implode(',', $mappingData['transformations'])
+                                : ($mappingData['transformations'] ?? null),
+                            'is_required' => $mappingData['is_required'] ?? false,
+                        ]);
+                        $updatedCallbackMappingIds[] = $mapping->id;
+                    }
+                }
+                
+                // Eliminar mapeos que no están en la lista actualizada
+                if (!empty($updatedCallbackMappingIds)) {
+                    $customer->callbackFieldMappings()->whereNotIn('id', $updatedCallbackMappingIds)->delete();
+                }
+            } else {
+                // Si no hay mapeos, eliminar todos los existentes
+                $customer->callbackFieldMappings()->delete();
+            }
+
             // Confirmar la transacción
             DB::commit();
 
@@ -955,6 +1060,58 @@ class CustomerController extends Controller
                     'mapping' => null
                 ])->render();
                 
+            } else if ($type === 'callback') {
+                // Campos estándar para callback (campos de production_orders)
+                $standardFields = [
+                    'id' => 'ID de la Orden de Producción',
+                    'order_id' => 'ID del Pedido',
+                    'production_line_id' => 'ID de Línea de Producción',
+                    'status' => 'Estado (0=Pendiente, 1=En Curso, 2=Finalizada)',
+                    'box' => 'Número de Cajas',
+                    'units_box' => 'Unidades por Caja',
+                    'units' => 'Total de Unidades',
+                    'orden' => 'Orden de Fabricación',
+                    'theoretical_time' => 'Tiempo Teórico (segundos)',
+                    'accumulated_time' => 'Tiempo Acumulado (segundos)',
+                    'process_category' => 'Categoría del Proceso',
+                    'delivery_date' => 'Fecha de Entrega',
+                    'customerId' => 'ID del Cliente',
+                    'original_order_id' => 'ID de Orden Original',
+                    'original_order_process_id' => 'ID de Proceso de Orden Original',
+                    'processes_code' => 'Código del Proceso (desde original_order_process_id → processes.code)',
+                    'grupo_numero' => 'Número de Grupo',
+                    'processes_to_do' => 'Procesos por Hacer',
+                    'processes_done' => 'Procesos Completados',
+                    'is_priority' => 'Es Prioritaria (1/0)',
+                    'fecha_pedido_erp' => 'Fecha del Pedido en ERP',
+                    'estimated_start_datetime' => 'Fecha/Hora Estimada de Inicio',
+                    'estimated_end_datetime' => 'Fecha/Hora Estimada de Fin',
+                    'ready_after_datetime' => 'Disponible Después de',
+                    'finished_at' => 'Fecha/Hora de Finalización',
+                    'created_at' => 'Fecha de Creación',
+                    'updated_at' => 'Fecha de Actualización',
+                    'number_of_pallets' => 'Número de Palets',
+                    'note' => 'Notas'
+                ];
+                
+                // Opciones de transformaciones disponibles
+                $transformationOptions = [
+                    'trim' => 'Eliminar espacios',
+                    'uppercase' => 'Convertir a mayúsculas',
+                    'lowercase' => 'Convertir a minúsculas',
+                    'to_integer' => 'Convertir a entero',
+                    'to_float' => 'Convertir a decimal',
+                    'to_boolean' => 'Convertir a booleano (1/0)'
+                ];
+                
+                // Renderizar la vista parcial para la fila de mapeo de callback
+                $html = view('customers.partials.callback_field_mappings', [
+                    'index' => $index,
+                    'callbackStandardFields' => $standardFields,
+                    'transformationOptions' => $transformationOptions,
+                    'mapping' => null
+                ])->render();
+                
             } else {
                 // Usar el mismo array de campos estándar que en create/edit para orders
                 $standardFields = [
@@ -1037,10 +1194,44 @@ class CustomerController extends Controller
             'to_boolean' => 'Convertir a booleano (1/0)'
         ];
         
+        // Define callback standard fields (campos de production_orders)
+        $callbackStandardFields = [
+            'id' => 'ID de la Orden de Producción',
+            'order_id' => 'ID del Pedido',
+            'production_line_id' => 'ID de Línea de Producción',
+            'status' => 'Estado (0=Pendiente, 1=En Curso, 2=Finalizada)',
+            'box' => 'Número de Cajas',
+            'units_box' => 'Unidades por Caja',
+            'units' => 'Total de Unidades',
+            'orden' => 'Orden de Fabricación',
+            'theoretical_time' => 'Tiempo Teórico (segundos)',
+            'accumulated_time' => 'Tiempo Acumulado (segundos)',
+            'process_category' => 'Categoría del Proceso',
+            'delivery_date' => 'Fecha de Entrega',
+            'customerId' => 'ID del Cliente',
+            'original_order_id' => 'ID de Orden Original',
+            'original_order_process_id' => 'ID de Proceso de Orden Original',
+            'processes_code' => 'Código del Proceso (desde original_order_process_id → processes.code)',
+            'grupo_numero' => 'Número de Grupo',
+            'processes_to_do' => 'Procesos por Hacer',
+            'processes_done' => 'Procesos Completados',
+            'is_priority' => 'Es Prioritaria (1/0)',
+            'fecha_pedido_erp' => 'Fecha del Pedido en ERP',
+            'estimated_start_datetime' => 'Fecha/Hora Estimada de Inicio',
+            'estimated_end_datetime' => 'Fecha/Hora Estimada de Fin',
+            'ready_after_datetime' => 'Disponible Después de',
+            'finished_at' => 'Fecha/Hora de Finalización',
+            'created_at' => 'Fecha de Creación',
+            'updated_at' => 'Fecha de Actualización',
+            'number_of_pallets' => 'Número de Palets',
+            'note' => 'Notas'
+        ];
+        
         return view('customers.create', compact(
             'standardFields', 
             'processStandardFields',
             'articleStandardFields',
+            'callbackStandardFields',
             'transformationOptions'
         ));
     }
@@ -1061,6 +1252,8 @@ class CustomerController extends Controller
                     $fail('El formato de la URL de detalle de pedido no es válido.');
                 }
             }],
+            'callback_finish_process' => 'nullable|boolean',
+            'callback_url' => 'nullable|url|required_if:callback_finish_process,1',
             'field_mappings' => 'nullable|array',
             'field_mappings.*.source_field' => 'required_with:field_mappings|string',
             'field_mappings.*.target_field' => 'required_with:field_mappings|string',
@@ -1078,7 +1271,13 @@ class CustomerController extends Controller
             'article_field_mappings.*.target_field' => 'required_with:article_field_mappings|string',
             'article_field_mappings.*.transformations' => 'nullable|array',
             'article_field_mappings.*.transformations.*' => 'string',
-            'article_field_mappings.*.is_required' => 'nullable|boolean'
+            'article_field_mappings.*.is_required' => 'nullable|boolean',
+            'callback_field_mappings' => 'nullable|array',
+            'callback_field_mappings.*.source_field' => 'required_with:callback_field_mappings|string',
+            'callback_field_mappings.*.target_field' => 'required_with:callback_field_mappings|string',
+            'callback_field_mappings.*.transformations' => 'nullable|array',
+            'callback_field_mappings.*.transformations.*' => 'string',
+            'callback_field_mappings.*.is_required' => 'nullable|boolean'
         ]);
 
         // Validar la solicitud
@@ -1105,6 +1304,8 @@ class CustomerController extends Controller
                 'token' => $token,
                 'order_listing_url' => $validatedData['order_listing_url'] ?? null,
                 'order_detail_url' => $validatedData['order_detail_url'] ?? null,
+                'callback_finish_process' => $validatedData['callback_finish_process'] ?? false,
+                'callback_url' => $validatedData['callback_url'] ?? null,
             ]);
 
             // Sincronizar los mapeos de campos si existen
@@ -1138,6 +1339,41 @@ class CustomerController extends Controller
                         'source_field' => $mappingData['source_field'],
                         'target_field' => $mappingData['target_field'],
                         'transformations' => $mappingData['transformations'] ?? [],
+                        'is_required' => $mappingData['is_required'] ?? false,
+                    ]);
+                }
+            }
+            // Sincronizar los mapeos de campos de procesos si existen
+            if (isset($validatedData['process_field_mappings'])) {
+                foreach ($validatedData['process_field_mappings'] as $mappingData) {
+                    $customer->processFieldMappings()->create([
+                        'source_field' => $mappingData['source_field'],
+                        'target_field' => $mappingData['target_field'],
+                        'transformations' => $mappingData['transformations'] ?? [],
+                        'is_required' => $mappingData['is_required'] ?? false,
+                    ]);
+                }
+            }
+
+            // Sincronizar los mapeos de campos de artículos si existen
+            if (isset($validatedData['article_field_mappings'])) {
+                foreach ($validatedData['article_field_mappings'] as $mappingData) {
+                    $customer->articleFieldMappings()->create([
+                        'source_field' => $mappingData['source_field'],
+                        'target_field' => $mappingData['target_field'],
+                        'transformations' => $mappingData['transformations'] ?? [],
+                        'is_required' => $mappingData['is_required'] ?? false,
+                    ]);
+                }
+            }
+
+            // Sincronizar los mapeos de campos de callback si existen
+            if (isset($validatedData['callback_field_mappings'])) {
+                foreach ($validatedData['callback_field_mappings'] as $mappingData) {
+                    $customer->callbackFieldMappings()->create([
+                        'source_field' => $mappingData['source_field'],
+                        'target_field' => $mappingData['target_field'],
+                        'transformation' => is_array($mappingData['transformations'] ?? []) ? implode(',', $mappingData['transformations']) : ($mappingData['transformations'] ?? null),
                         'is_required' => $mappingData['is_required'] ?? false,
                     ]);
                 }
