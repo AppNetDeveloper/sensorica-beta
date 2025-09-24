@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
+use App\Models\CustomerClient;
+use App\Models\RouteName;
 
 class OriginalOrder extends Model
 {
@@ -13,11 +15,15 @@ class OriginalOrder extends Model
     protected $fillable = [
         'order_id',
         'customer_id',
+        'customer_client_id',
+        'route_name_id',
         'client_number',
         'order_details',
         'processed',
         'finished_at',
         'delivery_date',
+        'estimated_delivery_date',
+        'actual_delivery_date',
         'in_stock',
         'fecha_pedido_erp',
     ];
@@ -26,6 +32,10 @@ class OriginalOrder extends Model
         'order_details' => 'json',
         'processed' => 'boolean',
         'finished_at' => 'datetime',
+        'delivery_date' => 'date',
+        'estimated_delivery_date' => 'date',
+        'actual_delivery_date' => 'date',
+        'fecha_pedido_erp' => 'date',
     ];
     
     protected $dates = [
@@ -33,6 +43,8 @@ class OriginalOrder extends Model
         'updated_at',
         'finished_at',
         'delivery_date',
+        'estimated_delivery_date',
+        'actual_delivery_date',
         'fecha_pedido_erp'
     ];
 
@@ -52,6 +64,16 @@ class OriginalOrder extends Model
     public function customer()
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function customerClient()
+    {
+        return $this->belongsTo(CustomerClient::class);
+    }
+
+    public function routeName()
+    {
+        return $this->belongsTo(RouteName::class);
     }
     
     public function articles()

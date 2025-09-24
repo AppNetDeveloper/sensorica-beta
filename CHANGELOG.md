@@ -1,3 +1,37 @@
+## 2025-09-24
+
+### Nuevas funcionalidades y cambios de esquema
+- original_orders: nuevos campos `estimated_delivery_date` y `actual_delivery_date` (nullable, date)
+- original_orders: nuevos campos relacionales `customer_client_id` (FK nullable a `customer_clients`) y `route_name_id` (FK nullable a `route_names`)
+- Observer `OriginalOrderObserver`: al crear una orden, busca/crea `CustomerClient` usando `client_number` y/o `order_details` y asigna `customer_client_id`
+
+### UI y Controladores
+- Formulario de Órdenes Originales (`resources/views/customers/original-orders/form.blade.php`): añadido input `route_name`
+- `CustomerOriginalOrderController`: soporte para `route_name` en `store()` y `update()` resolviendo/creando `RouteName` y guardando `route_name_id`
+
+### Integración por mapeos (Customers)
+- `CustomerController`: se añadió `route_name` a los `$standardFields` de mapeos de órdenes para poder mapearlo desde APIs externas en el comando
+
+### Comando de importación desde APIs
+- `orders:check` (`app/Console/Commands/CheckOrdersFromApi.php`): ahora interpreta `route_name` si está presente en los datos mapeados, resuelve/crea `RouteName` y guarda `route_name_id`
+
+### API de Webhooks Entrantes
+- `IncomingOrdersController`: acepta `route_name` en el payload, resuelve/crea `RouteName` y asigna `route_name_id` en `original_orders`
+
+### Documentación
+- `README.md` y `docs/incoming_orders_api.md` actualizados para incluir `route_name` y describir su comportamiento
+
+### Migraciones nuevas
+- `2025_09_24_095700_add_delivery_dates_to_original_orders_table.php`
+- `2025_09_24_100600_add_customer_client_and_route_name_to_original_orders_table.php`
+
+### Pasos de actualización
+1. Ejecutar migraciones:
+   ```bash
+   php artisan migrate
+   ```
+2. (Opcional) Configurar mapeos de `route_name` en edición de cliente para que el comando `orders:check` lo interprete.
+
 # Release Notes
 
 ## [Unreleased](https://github.com/laravel/laravel/compare/v8.5.20...8.x)

@@ -179,6 +179,137 @@ paths:
                 type: object
         '404':
           description: 'Token no encontrado'
+  /api/bluetooth/insert:
+    post:
+      tags:
+        - Bluetooth
+      summary: 'Insertar lectura de Bluetooth'
+      description: 'Inserta una nueva lectura de Bluetooth y actualiza contadores relacionados.'
+      operationId: b8f3965e98a27743380ebef36358e07d
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - mac
+                - rssi
+                - change
+                - antenna_name
+              properties:
+                mac:
+                  type: string
+                  example: 'AA:BB:CC:DD:EE:FF'
+                rssi:
+                  type: integer
+                  example: -65
+                change:
+                  type: string
+                  example: connected
+                antenna_name:
+                  type: string
+                  example: ANT-01
+              type: object
+      responses:
+        '201':
+          description: 'Registro insertado correctamente'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean, example: true }
+                  message: { type: string, example: 'Registro insertado en Bluetooth list con éxito' }
+                  bluetooth_list: { type: object }
+                type: object
+        '404':
+          description: 'Antena o MAC no encontrada'
+        '422':
+          description: 'Datos inválidos'
+        '500':
+          description: 'Error del servidor'
+  /api/bluetooth/history:
+    get:
+      tags:
+        - Bluetooth
+      summary: 'Historial de lecturas Bluetooth'
+      description: 'Obtiene el historial de lecturas Bluetooth con filtros opcionales.'
+      operationId: ecdf5f9482c9b9a53799eb1aab9c5cfa
+      parameters:
+        -
+          name: antenna_name
+          in: query
+          required: false
+          schema:
+            type: string
+        -
+          name: mac
+          in: query
+          required: false
+          schema:
+            type: string
+        -
+          name: change
+          in: query
+          required: false
+          schema:
+            type: string
+            example: connected
+        -
+          name: date_start
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        -
+          name: date_end
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        -
+          name: show
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - all
+              - '10'
+              - latest
+      responses:
+        '200':
+          description: 'Listado filtrado'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean, example: true }
+                  message: { type: string, example: 'Listado de Bluetooth filtrado con éxito' }
+                  data: { type: array, items: { type: object } }
+                type: object
+        '422':
+          description: 'Datos inválidos'
+  /api/bluetooth/filters:
+    get:
+      tags:
+        - Bluetooth
+      summary: 'Filtros disponibles Bluetooth'
+      description: 'Devuelve listas de antenas y MACs disponibles para filtrar.'
+      operationId: a8355498a50b5a322b1e817fda20de29
+      responses:
+        '200':
+          description: 'Filtros disponibles'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean, example: true }
+                  message: { type: string, example: 'Filtros disponibles obtenidos con éxito' }
+                  antennas: { type: array, items: { type: object } }
+                  macs: { type: array, items: { type: string } }
+                type: object
   '/api/control-weight/{token}':
     get:
       tags:
@@ -615,6 +746,169 @@ paths:
               schema:
                 properties:
                   error: { type: string, example: 'Production line not found or no order stats found for the specified dates' }
+                type: object
+  /api/rfid-insert:
+    post:
+      tags:
+        - RFID
+      summary: 'Insertar lectura RFID'
+      description: 'Valida e inserta un evento RFID en la lista, actualiza contadores y puede disparar alertas.'
+      operationId: a0dd85a1f3c869211249fc8fbd94cc3a
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - epc
+                - rssi
+                - serialno
+                - tid
+                - antenna_name
+              properties:
+                epc:
+                  type: string
+                  example: 300833B2DDD9014000000000
+                rssi:
+                  type: integer
+                  example: -45
+                serialno:
+                  type: string
+                  example: READER-ABC-123
+                tid:
+                  type: string
+                  example: E2003412012345678900ABCD
+                antenna_name:
+                  type: string
+                  example: ANTENA-1
+              type: object
+      responses:
+        '201':
+          description: 'Registro insertado en RFID list con éxito'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean, example: true }
+                  message: { type: string, example: 'Registro insertado en RFID list con éxito' }
+                type: object
+        '404':
+          description: 'Antena o RFID reading no encontrado; o creación automática deshabilitada'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean, example: false }
+                  message: { type: string, example: 'Antena RFID no encontrada' }
+                type: object
+        '422':
+          description: 'Datos inválidos'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean, example: false }
+                  message: { type: string, example: 'Datos inválidos' }
+                type: object
+        '500':
+          description: 'Error interno al procesar la solicitud'
+  '/api/scada/{token}/modbuses':
+    get:
+      tags:
+        - SCADA
+      summary: 'Obtener líneas Modbus por token de SCADA'
+      description: 'Devuelve todas las líneas Modbus asociadas a un token de SCADA específico, incluyendo información sobre materiales y niveles de llenado.'
+      operationId: bdddd544b1cd955a95e1bfd0abf488fa
+      parameters:
+        -
+          name: token
+          in: path
+          description: 'Token único de la línea SCADA'
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 'Lista de líneas Modbus con información detallada'
+          content:
+            application/json:
+              schema:
+                properties:
+                  scada_name: { type: string, example: 'Línea 1' }
+                  scada_order: { type: string, example: ORD-123 }
+                  scada_order_id: { type: string, example: '1' }
+                  scada_order_update_time: { type: string, format: date-time, example: '2023-07-15 10:30:00' }
+                  modbus_lines: { type: array, items: { properties: { id: { type: integer, example: 1 }, name: { type: string, example: 'Silo 1' }, mqtt_topic_modbus: { type: string, example: modbus/line/1 }, dimension: { type: string, example: kg }, token: { type: string, example: abc123 }, max_kg: { type: number, format: float, example: 1000 }, last_kg: { type: number, format: float, example: 750.5 }, rec_box: { type: string, example: A1 }, last_value: { type: string, example: '750.5' }, fillinglevels: { type: string, example: 75% }, material_type: { type: string, example: Cemento }, density: { type: string, example: '1.5' }, m3: { type: string, example: '0.5' }, tara: { type: string, example: '0' } }, type: object } }
+                type: object
+        '404':
+          description: 'SCADA no encontrada o sin líneas Modbus asociadas'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string, example: 'Scada not found' }
+                type: object
+  '/api/modbus/{modbusId}/material':
+    put:
+      tags:
+        - SCADA
+      summary: 'Actualizar material para línea Modbus'
+      description: 'Actualiza el tipo de material asociado a una línea Modbus específica y publica un mensaje MQTT con la información actualizada.'
+      operationId: e190824ed42df636434351ab7c346f18
+      parameters:
+        -
+          name: modbusId
+          in: path
+          description: 'ID de la línea Modbus'
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - material_type_id
+              properties:
+                material_type_id:
+                  description: 'ID del tipo de material'
+                  type: integer
+                  example: 1
+              type: object
+      responses:
+        '200':
+          description: 'Material actualizado correctamente'
+          content:
+            application/json:
+              schema:
+                properties:
+                  message: { type: string, example: 'Material updated successfully' }
+                type: object
+        '404':
+          description: 'ScadaList o material no encontrado'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string, example: 'ScadaList not found for the given Modbus ID' }
+                type: object
+        '422':
+          description: 'Datos de validación inválidos'
+          content:
+            application/json:
+              schema:
+                properties:
+                  message: { type: string, example: 'The given data was invalid.' }
+                  errors: { properties: { material_type_id: { type: array, items: { type: string, example: 'The selected material type id is invalid.' } } }, type: object }
+                type: object
+        '500':
+          description: 'Error interno del servidor'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string, example: 'Error retrieving material: [error message]' }
                 type: object
   '/api/scada-material/{token}':
     get:
@@ -1109,6 +1403,29 @@ paths:
                   success: { type: boolean, example: false }
                   message: { type: string, example: 'Línea de producción no encontrada con el token proporcionado' }
                 type: object
+  /api/calculate-production-downtime:
+    get:
+      tags:
+        - Downtime
+      summary: 'Calcular downtime de producción'
+      description: 'Dispara el cálculo de tiempos de inactividad y actualiza métricas asociadas.'
+      operationId: 6cb2d05ce8dcd2946e0f0468e6fe1dbf
+      responses:
+        '200':
+          description: 'Downtime calculated successfully'
+        '500':
+          description: 'Error processing downtime calculation'
+    post:
+      tags:
+        - Downtime
+      summary: 'Calcular downtime de producción'
+      description: 'Dispara el cálculo de tiempos de inactividad y actualiza métricas asociadas.'
+      operationId: 87a08116b05ebd56f042efab0dce28a1
+      responses:
+        '200':
+          description: 'Downtime calculated successfully'
+        '500':
+          description: 'Error processing downtime calculation'
   '/api/control_weight/{supplierOrderId}':
     get:
       tags:
@@ -1145,6 +1462,228 @@ paths:
               schema:
                 properties:
                   error: { type: string, example: 'Supplier order not found.' }
+                type: object
+  /api/incoming/original-orders:
+    post:
+      tags:
+        - 'Incoming Orders'
+      summary: 'Crear o actualizar una OriginalOrder (webhook)'
+      description: "Crea o actualiza (upsert) una OriginalOrder y sus hijos a partir de un JSON estándar.\nSi reprocess=true y la orden existe, se elimina totalmente y se vuelve a crear con el payload."
+      operationId: e835ca905e3dd11c0aacb9b77a4ef3f5
+      parameters:
+        -
+          name: reprocess
+          in: query
+          description: 'Si true, borra la orden existente y la recrea desde cero'
+          required: false
+          schema:
+            type: boolean
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - order_id
+                - grupos
+              properties:
+                order_id:
+                  type: string
+                client_number:
+                  type: string
+                delivery_date:
+                  type: string
+                  format: date
+                fecha_pedido_erp:
+                  type: string
+                  format: date
+                in_stock:
+                  type: integer
+                  enum: [0, 1]
+                grupos:
+                  type: array
+                  items: { properties: { grupoNum: { type: string }, servicios: { type: array, items: { required: [process_code, time_seconds], properties: { process_code: { type: string }, time_seconds: { type: integer }, box: { type: integer }, units_box: { type: integer }, number_of_pallets: { type: integer } }, type: object } }, articulos: { type: array, items: { required: [codigo_articulo], properties: { codigo_articulo: { type: string }, descripcion_articulo: { type: string }, in_stock: { type: integer, enum: [0, 1] } }, type: object } } }, type: object }
+              type: object
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: 'Bad request'
+        '401':
+          description: Unauthorized
+      security:
+        -
+          bearerAuth: []
+  '/api/incoming/original-orders/{order_id}':
+    delete:
+      tags:
+        - 'Incoming Orders'
+      summary: 'Borrar una OriginalOrder por order_id'
+      description: 'Elimina una OriginalOrder por order_id (y todos sus hijos)'
+      operationId: acbfefabc65cd16c17f5a74f7a5fcd5f
+      parameters:
+        -
+          name: order_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deleted
+        '401':
+          description: Unauthorized
+        '404':
+          description: 'Not found'
+      security:
+        -
+          bearerAuth: []
+  '/api/production-lines/{id}/availability':
+    post:
+      tags:
+        - 'Production Lines'
+      summary: 'Guardar disponibilidad por línea y día (ruta con parámetro)'
+      description: 'Acepta la misma estructura de datos que la ruta sin parámetro. El cuerpo debe incluir production_line_id, customer_id y el mapa days.'
+      operationId: 0f8d5ccc1ac9b166e7f52b18d2705962
+      parameters:
+        -
+          name: id
+          in: path
+          description: 'ID de la línea (solo para la ruta con parámetro; el cuerpo igualmente debe incluir production_line_id)'
+          required: false
+          schema:
+            type: integer
+            example: 12
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - production_line_id
+                - customer_id
+                - days
+              properties:
+                production_line_id:
+                  type: integer
+                  example: 12
+                customer_id:
+                  type: integer
+                  example: 7
+                days:
+                  description: 'Mapa día->lista de IDs de turnos'
+                  type: object
+                  example: { '1': [1, 2], '2': [3] }
+              type: object
+      responses:
+        '200':
+          description: 'Disponibilidad guardada correctamente'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean, example: true }
+                type: object
+        '403':
+          description: 'Cliente no tiene acceso a esta línea'
+        '404':
+          description: 'Línea de producción no encontrada'
+        '422':
+          description: 'Datos inválidos'
+        '500':
+          description: 'Error al guardar la disponibilidad'
+  /api/production-lines/availability:
+    post:
+      tags:
+        - 'Production Lines'
+      summary: 'Guardar disponibilidad por línea y día (ruta sin parámetro)'
+      operationId: 3c6ae7cf3c8fd9a0a1366943f663f56c
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - production_line_id
+                - customer_id
+                - days
+              properties:
+                production_line_id:
+                  type: integer
+                  example: 12
+                customer_id:
+                  type: integer
+                  example: 7
+                days:
+                  description: 'Mapa día->lista de IDs de turnos'
+                  type: object
+                  example: { '1': [1, 2], '2': [3] }
+              type: object
+      responses:
+        '200':
+          description: 'Disponibilidad guardada correctamente'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean, example: true }
+                type: object
+        '403':
+          description: 'Cliente no tiene acceso a esta línea'
+        '404':
+          description: 'Línea de producción no encontrada'
+        '422':
+          description: 'Datos inválidos'
+        '500':
+          description: 'Error al guardar la disponibilidad'
+  '/api/modbus/recalculate-dosing-process/{id}':
+    post:
+      tags:
+        - Modbus
+      summary: 'Recalcular proceso de dosificación'
+      description: 'Recalcula automáticamente el proceso de dosificación cuando el material en tolva es insuficiente. Divide la orden en dos partes: una con el material disponible y otra con el remanente.'
+      operationId: 4df95accb7bc2eb7d0ec4cc380333dc3
+      parameters:
+        -
+          name: id
+          in: path
+          description: 'ID del registro en scada_order_list_process que dispara el recálculo'
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 'Recálculo completado o detenido por condiciones específicas'
+          content:
+            application/json:
+              schema:
+                properties:
+                  status: { type: string, enum: [success, stopped_due_to_process_value, no_usable_material_above_residue], example: success }
+                  message: { type: string, example: 'Material insuficiente en tolva para el requerimiento original. La orden ha sido ajustada al 75% de lo disponible y se ha creado una orden de trabajo restante.' }
+                  process_id: { type: integer, example: 123 }
+                  current_total_weight_in_hopper: { type: number, format: float, example: 150.5 }
+                  usable_weight_in_hopper: { type: number, format: float, example: 100.5 }
+                  residue_configured: { type: number, format: float, example: 50 }
+                  original_order_list_id: { type: integer, example: 45 }
+                  new_order_list_id: { type: integer, example: 46 }
+                type: object
+        '404':
+          description: 'Proceso original o configuración no encontrada'
+          content:
+            application/json:
+              schema:
+                properties:
+                  status: { type: string, example: error }
+                  message: { type: string, example: 'Registro del proceso original no encontrado con ID: 123' }
+                type: object
+        '500':
+          description: 'Error interno del servidor durante el recálculo'
+          content:
+            application/json:
+              schema:
+                properties:
+                  status: { type: string, example: error }
+                  message: { type: string, example: 'Error durante el recálculo: [mensaje de error]' }
                 type: object
   /api/modbus/cancel:
     post:
@@ -1274,6 +1813,37 @@ paths:
                 properties:
                   error: { type: string }
                 type: object
+  /api/modbus-process-data-mqtt:
+    post:
+      tags:
+        - Modbus
+      summary: 'Procesar datos MQTT de Modbus'
+      description: 'Procesa datos recibidos desde MQTT para líneas de Modbus (peso/altura) y publica resultados.'
+      operationId: 4a54118fe2ba4476409bf1a84edc73a6
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - id
+                - data
+              properties:
+                id:
+                  description: 'ID del Modbus'
+                  type: integer
+                  example: 12
+                data:
+                  type: object
+                  example: { value: 12.34 }
+              type: object
+      responses:
+        '200':
+          description: 'Datos procesados correctamente'
+        '404':
+          description: 'Modbus no encontrado'
+        '422':
+          description: 'Datos inválidos'
   /api/workers/update-or-insert:
     post:
       tags:
@@ -1395,6 +1965,30 @@ paths:
                 type: array
                 items:
                   properties: { id: { description: 'Client ID', type: integer }, name: { description: 'Operator Name', type: string }, email: { description: 'Operator Email', type: string }, phone: { description: 'Operator Phone', type: string }, operator_posts: { description: 'Operator Assignments', type: array, items: { properties: { rfid_reading_id: { description: 'RFID Reading ID', type: integer }, sensor_id: { description: 'Sensor ID', type: integer }, modbus_id: { description: 'Modbus ID', type: integer }, count: { description: Count, type: integer }, product_list_id: { description: 'Product List ID', type: integer } }, type: object } } }
+                  type: object
+        '500':
+          description: 'Internal server error'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string }
+                type: object
+  /api/operators/internal:
+    get:
+      tags:
+        - Workers
+      summary: 'Get all operators with internal IDs'
+      operationId: 3b998627ccc35d31678f4a0de60327f5
+      responses:
+        '200':
+          description: 'Returns all operators with internal IDs'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  properties: { id: { description: 'Internal ID', type: integer }, name: { description: 'Operator Name', type: string } }
                   type: object
         '500':
           description: 'Internal server error'
@@ -1768,6 +2362,176 @@ paths:
                   status: { type: string, example: error }
                   message: { type: object }
                 type: object
+  /api/process-files/upload:
+    post:
+      tags:
+        - ProcessFiles
+      summary: 'Subir archivo de proceso por token de cliente'
+      description: 'Permite subir un archivo (imagen o PDF) asociado a un OriginalOrderProcess validando el token del cliente propietario del pedido.'
+      operationId: 1580ad00e1783bd2943b4fb4c43f3523
+      parameters:
+        -
+          name: X-Customer-Token
+          in: header
+          description: "Token del cliente (alternativa al campo 'token' en el body)"
+          required: false
+          schema:
+            type: string
+            example: cust_abcdef123456
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - token
+                - original_order_process_id
+                - file
+              properties:
+                token:
+                  type: string
+                  description: 'Token único del cliente'
+                  example: cust_abcdef123456
+                original_order_process_id:
+                  type: integer
+                  description: 'ID del proceso original al que se asocia el archivo'
+                  example: 12345
+                file:
+                  type: string
+                  format: binary
+                  description: 'Archivo a subir (jpg, jpeg, png, gif, webp, pdf) máx 10MB'
+      responses:
+        '201':
+          description: 'Archivo subido correctamente'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean, example: true }
+                  file: { properties: { id: { type: integer, example: 10 }, token: { type: string, example: f5f7a0fb-6b5b-4a7a-9ec6-8c8b1f9a2f0d }, original_name: { type: string, example: Plano_123.pdf }, mime_type: { type: string, example: application/pdf }, size: { type: integer, example: 284233 }, extension: { type: string, example: pdf }, disk: { type: string, example: public }, path: { type: string, example: oop-files/f5f7a0fb-6b5b-4a7a-9ec6-8c8b1f9a2f0d.pdf }, public_url: { type: string, example: /storage/oop-files/f5f7a0fb-6b5b-4a7a-9ec6-8c8b1f9a2f0d.pdf }, created_at: { type: string, format: date-time } }, type: object }
+                type: object
+        '401':
+          description: 'Token inválido'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean, example: false }
+                  message: { type: string, example: 'Invalid token' }
+                type: object
+        '403':
+          description: 'El proceso no pertenece al cliente'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean, example: false }
+                  message: { type: string, example: 'Process does not belong to the provided customer' }
+                type: object
+        '404':
+          description: 'Proceso no encontrado'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean, example: false }
+                  message: { type: string, example: 'Process not found' }
+                type: object
+        '422':
+          description: 'Error de validación / Límite de archivos alcanzado'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean, example: false }
+                  message: { type: string, example: 'Validation failed' }
+                  errors: { type: object }
+                type: object
+        '500':
+          description: 'Fallo en la subida'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean, example: false }
+                  message: { type: string, example: 'Upload failed' }
+                type: object
+      security:
+        -
+          CustomerToken: []
+  '/api/process-files/{id}':
+    delete:
+      tags:
+        - ProcessFiles
+      summary: 'Eliminar un archivo de proceso por ID'
+      description: "Elimina un archivo asociado a un proceso verificando que el token del cliente propietario del pedido sea válido. Se acepta el token por header (X-Customer-Token) o por query/body como 'token'."
+      operationId: 5e980344ba7fd4c4f0965b6c0371c42f
+      parameters:
+        -
+          name: id
+          in: path
+          description: 'ID del archivo de proceso'
+          required: true
+          schema:
+            type: integer
+            example: 10
+        -
+          name: X-Customer-Token
+          in: header
+          description: "Token del cliente (alternativa al parámetro 'token')"
+          required: false
+          schema:
+            type: string
+            example: cust_abcdef123456
+        -
+          name: token
+          in: query
+          description: 'Token del cliente (alternativa al header)'
+          required: false
+          schema:
+            type: string
+            example: cust_abcdef123456
+      responses:
+        '200':
+          description: 'Archivo eliminado correctamente'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean, example: true }
+                  message: { type: string, example: 'File deleted' }
+                type: object
+        '401':
+          description: 'Token inválido'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean, example: false }
+                  message: { type: string, example: 'Invalid token' }
+                type: object
+        '403':
+          description: 'El archivo no pertenece al cliente'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean, example: false }
+                  message: { type: string, example: 'File does not belong to the provided customer' }
+                type: object
+        '404':
+          description: 'Archivo no encontrado'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean, example: false }
+                  message: { type: string, example: 'File not found' }
+                type: object
+      security:
+        -
+          CustomerToken: []
   /api/product-lists:
     get:
       tags:
@@ -1902,6 +2666,50 @@ paths:
                 properties:
                   error: { type: string }
                 type: object
+  /api/production-line-info:
+    get:
+      tags:
+        - 'Production Lines'
+      summary: 'Información de línea de producción y hora del servidor'
+      description: 'Obtiene información básica de la línea de producción identificada por token y la hora actual del servidor.'
+      operationId: d4a34326fd19aa6f8ed3ec38cdb9fff5
+      parameters:
+        -
+          name: token
+          in: query
+          description: 'Token de la línea de producción'
+          required: true
+          schema:
+            type: string
+            example: abcd1234
+      responses:
+        '200':
+          description: 'Información obtenida correctamente'
+          content:
+            application/json:
+              schema:
+                properties:
+                  production_line: { properties: { id: { type: integer, example: 7 }, name: { type: string, example: 'Línea A' } }, type: object }
+                  server_time: { type: string, example: '2025-08-11 12:30:00' }
+                type: object
+        '400':
+          description: 'Token no proporcionado'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string, example: 'Token no proporcionado' }
+                  server_time: { type: string, example: '2025-08-11 12:30:00' }
+                type: object
+        '404':
+          description: 'Línea de producción no encontrada'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string, example: 'Línea de producción no encontrada' }
+                  server_time: { type: string, example: '2025-08-11 12:30:00' }
+                type: object
   '/api/production-line/status/{token}':
     get:
       tags:
@@ -1946,6 +2754,60 @@ paths:
                   error: { type: string, example: 'An error occurred: Internal server error.' }
                   searched_token: { type: string, example: abcd1234 }
                 type: object
+  '/api/production-orders/{id}/articles':
+    get:
+      tags:
+        - ProductionOrders
+      summary: 'Obtener artículos asociados a una orden de producción'
+      operationId: 5d3341305d4e46c99c986939fd58cce6
+      parameters:
+        -
+          name: id
+          in: path
+          description: 'ID de la orden de producción'
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 'Lista de artículos asociados a la orden de producción'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean, example: true }
+                  data: { type: array, items: { properties: { id: { type: integer }, codigo_articulo: { type: string }, descripcion_articulo: { type: string }, grupo_articulo: { type: string } }, type: object } }
+                type: object
+        '404':
+          description: 'Orden no encontrada'
+  /api/production-orders/active-note:
+    get:
+      tags:
+        - ProductionOrders
+      summary: 'Obtener la anotación de la orden en curso'
+      operationId: 6a8251dc931db42fa6de895426d8ee11
+      parameters:
+        -
+          name: token
+          in: query
+          description: 'Token único de la línea de producción'
+          required: true
+          schema:
+            type: string
+            example: abcd1234
+      responses:
+        '200':
+          description: 'Anotación de la orden en curso'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean, example: true }
+                  note: { type: string, example: 'Esta es una anotación de ejemplo' }
+                  order_id: { type: string, example: ORD123 }
+                type: object
+        '404':
+          description: 'No hay orden en curso o no se encontró la línea de producción'
   /api/production-orders:
     get:
       tags:
@@ -2064,7 +2926,7 @@ paths:
             application/json:
               schema:
                 properties:
-                  data: { type: array, items: { properties: { id: { type: integer }, status: { type: string }, updated_at: { type: string, format: date-time } }, type: object } }
+                  data: { type: array, items: { properties: { id: { type: integer }, status: { type: string }, updated_at: { type: string, format: date-time }, fecha_pedido_erp: { type: string, format: date-time, nullable: true } }, type: object } }
                 type: object
   '/api/production-orders/{id}':
     get:
@@ -2169,6 +3031,58 @@ paths:
                   success: { type: boolean, example: false }
                   message: { type: string, example: 'Orden no encontrada.' }
                 type: object
+  '/api/production-orders/{order}/incidents':
+    post:
+      tags:
+        - 'Production Orders'
+        - Incidents
+      summary: 'Crear incidencia para una orden de producción'
+      description: 'Registra una incidencia asociada a la orden indicada.'
+      operationId: 58910becfa7f8669bc1524c751411cab
+      parameters:
+        -
+          name: order
+          in: path
+          description: 'ID de la orden de producción'
+          required: true
+          schema:
+            type: integer
+            example: 123
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - reason
+              properties:
+                reason:
+                  type: string
+                  maxLength: 255
+                  example: 'Rotura de máquina'
+                notes:
+                  type: string
+                  example: 'Se detuvo a las 10:35'
+                  nullable: true
+                operator_id:
+                  description: 'ID del operador que registra la incidencia. Por defecto 1 si no se envía.'
+                  type: integer
+                  example: 42
+                  nullable: true
+              type: object
+      responses:
+        '201':
+          description: 'Incidencia creada correctamente'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean, example: true }
+                  message: { type: string, example: 'Incidencia registrada correctamente' }
+                  data: { properties: { id: { type: integer, example: 10 }, production_order_id: { type: integer, example: 123 }, reason: { type: string, example: 'Rotura de máquina' }, notes: { type: string, example: 'Se detuvo a las 10:35', nullable: true }, created_by: { type: integer, example: 42 }, customer_id: { type: integer, example: 5 }, created_at: { type: string, format: date-time }, updated_at: { type: string, format: date-time } }, type: object }
+                type: object
+        '404':
+          description: 'Orden o línea de producción no encontrada'
   /api/topflow-production-order:
     post:
       tags:
@@ -2940,6 +3854,66 @@ paths:
                 type: object
         '422':
           description: 'Error de validación'
+  /api/publish-shift-event:
+    post:
+      tags:
+        - Shifts
+      summary: 'Publicar evento de cambio de turno o pausa'
+      description: 'Registra y publica un evento de inicio/fin de turno o pausa para una línea de producción, usando el token de línea y el operador.'
+      operationId: 0c0900b42281614fc156221e6a1167e3
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - production_line_token
+                - event
+                - operator_id
+              properties:
+                production_line_token:
+                  type: string
+                  example: abc123token
+                event:
+                  type: string
+                  enum: [inicio_trabajo, final_trabajo, inicio_pausa, final_pausa]
+                  example: inicio_trabajo
+                operator_id:
+                  type: integer
+                  example: 1
+                shift_id:
+                  type: integer
+                  example: 10
+                  nullable: true
+              type: object
+      responses:
+        '200':
+          description: 'Cambio en turno registrado con éxito'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean, example: true }
+                  message: { type: string, example: 'Cambio en turno registrado con éxito' }
+                type: object
+        '404':
+          description: 'Production Line o Barcode no encontrado'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean, example: false }
+                  message: { type: string, example: 'Production Line not found' }
+                type: object
+        '422':
+          description: 'Evento inválido o validación fallida'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean, example: false }
+                  message: { type: string, example: 'Invalid event' }
+                type: object
   /api/shift-history:
     get:
       tags:
@@ -3009,6 +3983,113 @@ paths:
                 type: object
         '404':
           description: 'No se encontró la línea de producción, el historial de turnos o un inicio de turno previo.'
+  /api/shift-lists:
+    get:
+      tags:
+        - Shifts
+      summary: 'Listar turnos por línea de producción'
+      description: 'Devuelve la lista de turnos para la línea de producción identificada por el token.'
+      operationId: 4955e4c77fa2bcc2960be9bb2b46ac3e
+      parameters:
+        -
+          name: token
+          in: query
+          description: 'Token de la línea de producción'
+          required: true
+          schema:
+            type: string
+            example: abc123token
+      responses:
+        '200':
+          description: 'Lista de turnos obtenida correctamente'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  properties: { id: { type: integer, example: 1 }, production_line_id: { type: integer, example: 3 }, name: { type: string, example: 'Turno Mañana' }, start_time: { type: string, example: '06:00:00' }, end_time: { type: string, example: '14:00:00' } }
+                  type: object
+        '400':
+          description: 'Token de línea de producción no proporcionado'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string, example: 'Token de línea de producción no proporcionado' }
+                type: object
+        '404':
+          description: 'No se encontró la línea de producción asociada al token'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string, example: 'No se encontró la línea de producción asociada al token' }
+                type: object
+  /api/shift-process-events:
+    post:
+      tags:
+        - Shifts
+      summary: 'Registrar evento de proceso de turno'
+      description: 'Registra un evento de proceso de turno y actualiza sensores, modbus y contadores relacionados con la línea de producción.'
+      operationId: 9928e00db9bfb70627777f7c29da8796
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - topic
+                - payload
+              properties:
+                topic:
+                  type: string
+                  example: production/line/123/timeline_event
+                payload:
+                  properties: { type: { type: string, enum: [shift, stop], example: shift }, action: { type: string, enum: [start, end], example: start }, description: { type: string, example: Manual }, operator_id: { type: integer, example: 1 }, shift_list_id: { type: integer, example: 3, nullable: true } }
+                  type: object
+              type: object
+      responses:
+        '202':
+          description: 'Evento aceptado y procesado'
+          content:
+            application/json:
+              schema:
+                properties:
+                  status: { type: string, example: accepted }
+                type: object
+        '400':
+          description: 'Datos inválidos o error en la solicitud'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string, example: 'Datos inválidos' }
+                type: object
+        '404':
+          description: 'Topic desconocido o barcode no encontrado'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string, example: 'Topic desconocido' }
+                type: object
+  /api/shift/statuses:
+    get:
+      tags:
+        - Shifts
+      summary: 'Obtener el estado actual de turnos por línea de producción'
+      description: 'Retorna, para cada línea de producción, el último evento de turno registrado (tipo y acción).'
+      operationId: 2a15db0deffdac4348c1dba2e1e7e4f2
+      responses:
+        '200':
+          description: 'Listado de estados de turno por línea'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  properties: { line_id: { type: integer, example: 3 }, last_shift: { properties: { type: { type: string, example: DAY }, action: { type: string, example: START } }, type: object, nullable: true } }
+                  type: object
   /api/supplier-order/store:
     post:
       tags:
@@ -3692,6 +4773,89 @@ paths:
       security:
         -
           bearerAuth: []
+  /api/restart-mysql:
+    post:
+      tags:
+        - Sistema
+      summary: 'Reiniciar el servicio MySQL/Percona'
+      operationId: 9bd2c59735032c326e9d2055bc28259f
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                token:
+                  description: 'Token de autorización'
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'El servicio MySQL/Percona se está reiniciando.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  status: { type: string }
+                  message: { type: string }
+                type: object
+        '403':
+          description: 'Token de autorización inválido.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string }
+                type: object
+        '500':
+          description: 'Error al intentar reiniciar MySQL/Percona.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: { type: string }
+                type: object
+      security:
+        -
+          bearerAuth: []
+  /api/fix-logs:
+    post:
+      tags:
+        - Sistema
+      summary: 'Corregir permisos de logs'
+      operationId: 975ea52efe3bc30a8ff1f9ba41788dd1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                token:
+                  description: 'Token de autorización'
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'Permisos de logs corregidos con éxito'
+          content:
+            application/json:
+              schema:
+                properties:
+                  status: { type: string, example: success }
+                  message: { type: string, example: 'Permisos de logs corregidos con éxito' }
+                type: object
+        '500':
+          description: 'Error al corregir permisos de logs'
+          content:
+            application/json:
+              schema:
+                properties:
+                  status: { type: string, example: error }
+                  message: { type: string, example: 'Error al corregir permisos de logs' }
+                type: object
+      security:
+        -
+          bearerAuth: []
   /api/publish-message:
     post:
       tags:
@@ -4119,6 +5283,11 @@ components:
         refer:
           $ref: '#/components/schemas/Refer'
       type: object
+  securitySchemes:
+    bearerAuth:
+      type: http
+      bearerFormat: token
+      scheme: bearer
 tags:
   -
     name: 'Barcode Scans'
@@ -4132,6 +5301,9 @@ tags:
   -
     name: 'Barcode Info'
     description: 'Barcode Info'
+  -
+    name: Bluetooth
+    description: Bluetooth
   -
     name: 'Control Weight'
     description: 'Control Weight'
@@ -4148,6 +5320,12 @@ tags:
     name: OrderStats
     description: OrderStats
   -
+    name: RFID
+    description: RFID
+  -
+    name: SCADA
+    description: SCADA
+  -
     name: 'Scada Materials'
     description: 'Scada Materials'
   -
@@ -4160,8 +5338,14 @@ tags:
     name: WhatsApp
     description: WhatsApp
   -
+    name: Downtime
+    description: Downtime
+  -
     name: 'Supplier Order'
     description: 'Supplier Order'
+  -
+    name: 'Incoming Orders'
+    description: 'Incoming Orders'
   -
     name: Workers
     description: Workers
@@ -4172,6 +5356,9 @@ tags:
     name: OrderNotice
     description: OrderNotice
   -
+    name: ProcessFiles
+    description: ProcessFiles
+  -
     name: 'Product Lists'
     description: 'Product Lists'
   -
@@ -4180,6 +5367,12 @@ tags:
   -
     name: ProductionOrders
     description: ProductionOrders
+  -
+    name: 'Production Orders'
+    description: 'Production Orders'
+  -
+    name: Incidents
+    description: Incidents
   -
     name: ProductionOrder-Topflow
     description: ProductionOrder-Topflow
@@ -4198,6 +5391,9 @@ tags:
   -
     name: 'Server Registration'
     description: 'Server Registration'
+  -
+    name: Shifts
+    description: Shifts
   -
     name: 'Shift History'
     description: 'Shift History'

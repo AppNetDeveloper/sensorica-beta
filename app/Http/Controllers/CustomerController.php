@@ -61,11 +61,31 @@ class CustomerController extends Controller
                     $maintenancesUrl = route('customers.maintenances.index', $customer->id);
                     $basicActions[] = "<a href='{$maintenancesUrl}' class='btn btn-sm btn-outline-secondary me-1 mb-1' title='" . __('Maintenances') . "'><i class='fas fa-wrench'></i> " . __('Mantenimiento') . "</a>";
                 }
+                // Flota (vehículos)
+                if (auth()->user()->can('fleet-view')) {
+                    $fleetUrl = route('customers.fleet-vehicles.index', $customer->id);
+                    $basicActions[] = "<a href='{$fleetUrl}' class='btn btn-sm btn-outline-secondary me-1 mb-1' title='" . __('Fleet') . "'><i class='fas fa-truck'></i> " . __('Fleet') . "</a>";
+                }
                 if (auth()->user()->can('productionline-edit')) {
                     $basicActions[] = "<a href='{$editUrl}' class='btn btn-sm btn-info me-1 mb-1' title='" . __('Edit') . "'><i class='fas fa-edit'></i> " . __('Edit') . "</a>";
                 }
                 if (auth()->user()->can('productionline-show')) {
                     $basicActions[] = "<a href='{$productionLinesUrl}' class='btn btn-sm btn-secondary me-1 mb-1' title='" . __('Production Lines') . "'><i class='fas fa-sitemap'></i> " . __('Lineas') . "</a>";
+                }
+                // Subclientes (Clientes del Customer)
+                if (auth()->user()->can('customer-clients-view')) {
+                    $clientsUrl = route('customers.clients.index', $customer->id);
+                    $basicActions[] = "<a href='{$clientsUrl}' class='btn btn-sm btn-outline-secondary me-1 mb-1' title='" . __('Clientes') . "'><i class='fas fa-user-friends'></i> " . __('Clientes') . "</a>";
+                }
+                // Rutas (RoutePlan)
+                if (auth()->user()->can('routes-view')) {
+                    $routesUrl = route('customers.routes.index', $customer->id);
+                    $basicActions[] = "<a href='{$routesUrl}' class='btn btn-sm btn-outline-secondary me-1 mb-1' title='" . __('Rutas') . "'><i class='fas fa-route'></i> " . __('Rutas') . "</a>";
+                }
+                // Nombres de Rutas (RouteName)
+                if (auth()->user()->can('route-names-view')) {
+                    $routeNamesUrl = route('customers.route-names.index', $customer->id);
+                    $basicActions[] = "<a href='{$routeNamesUrl}' class='btn btn-sm btn-outline-secondary me-1 mb-1' title='" . __('Nombres de Rutas') . "'><i class='fas fa-list'></i> " . __('Nombres de Rutas') . "</a>";
                 }
                 
                 // Grupo 2: Órdenes y procesos
@@ -107,6 +127,13 @@ class CustomerController extends Controller
                 if (auth()->user()->can('productionline-production-stats')) {
                     $statsActions[] = "<a href='{$customerSensorsUrl}' class='btn btn-sm btn-outline-success me-1 mb-1' title='" . __('Sensors') . "'><i class='fas fa-microchip'></i> " . __('Sensors') . "</a>";
                 }
+
+                // Grupo 6: Callbacks ERP
+                $callbackActions = [];
+                if (auth()->user()->can('callbacks.view')) {
+                    $callbacksUrl = route('customers.callbacks.index', $customer->id);
+                    $callbackActions[] = "<a href='{$callbacksUrl}' class='btn btn-sm btn-outline-dark me-1 mb-1' title='Historial de Callbacks'><i class='fas fa-plug'></i> " . __('Historial de Callbacks') . "</a>";
+                }
                 
                 // Grupo 5: Acciones peligrosas
                 $dangerActions = [];
@@ -134,6 +161,9 @@ class CustomerController extends Controller
                 }
                 if (!empty($dangerActions)) {
                     $allButtons .= "<div class='btn-group-section'>" . implode('', $dangerActions) . "</div>";
+                }
+                if (!empty($callbackActions)) {
+                    $allButtons .= "<div class='btn-group-section'>" . implode('', $callbackActions) . "</div>";
                 }
                 
                 return "<div class='action-buttons-row d-flex flex-wrap' style='display: none; gap: 6px; padding: 10px; background-color: #f8f9fa; border-radius: 5px; margin-top: 5px;'>" . $allButtons . "</div>";
@@ -615,6 +645,7 @@ class CustomerController extends Controller
             $standardFields = [
                 'order_id' => 'ID del Pedido',
                 'client_number' => 'Número de Cliente',
+                'route_name' => 'Nombre de Ruta',
                 'created_at' => 'Fecha de Creación',
                 'delivery_date' => 'Fecha de Entrega',
                 'fecha_pedido_erp' => 'Fecha de Creación en ERP',
@@ -1117,6 +1148,7 @@ class CustomerController extends Controller
                 $standardFields = [
                     'order_id' => 'ID del Pedido',
                     'client_number' => 'Número de Cliente',
+                    'route_name' => 'Nombre de Ruta',
                     'created_at' => 'Fecha de Creación',
                     'delivery_date' => 'Fecha de Entrega',
                     'fecha_pedido_erp' => 'Fecha de Creación en ERP',
@@ -1162,8 +1194,10 @@ class CustomerController extends Controller
         $standardFields = [
             'order_id' => 'ID del Pedido',
             'client_number' => 'Número de Cliente',
+            'route_name' => 'Nombre de Ruta',
             'created_at' => 'Fecha de Creación',
             'delivery_date' => 'Fecha de Entrega',
+            'fecha_pedido_erp' => 'Fecha de Creación en ERP',
             'in_stock' => 'En Stock (1/0)'
         ];
         

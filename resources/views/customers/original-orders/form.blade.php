@@ -47,6 +47,17 @@
                                     @enderror
                                 </div>
                                 <div class="form-group">
+                                    <label for="route_name">@lang('Route Name')</label>
+                                    <input type="text" name="route_name" id="route_name" 
+                                           class="form-control @error('route_name') is-invalid @enderror"
+                                           value="{{ old('route_name', isset($originalOrder->routeName) ? $originalOrder->routeName->name : '') }}"
+                                           placeholder="@lang('Enter route name to assign/create')">
+                                    @error('route_name')
+                                        <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
+                                    @enderror
+                                    <small class="form-text text-muted">@lang('If the route name does not exist, it will be created automatically for this customer.')</small>
+                                </div>
+                                <div class="form-group">
                                     <label for="delivery_date">@lang('Delivery Date')</label>
                                     <input type="datetime-local" name="delivery_date" id="delivery_date" 
                                            class="form-control @error('delivery_date') is-invalid @enderror"

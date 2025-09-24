@@ -102,10 +102,20 @@ COMMANDS=(
     "/bin/systemctl enable 485.service"
     "/bin/systemctl start 485.service"
     "/bin/systemctl restart mysql"
+    "/bin/systemctl restart cloudflared.service"
+    "/bin/systemctl start cloudflared.service"
+    "/bin/systemctl stop cloudflared.service"
+    "/bin/systemctl enable cloudflared.service"
+    "/bin/systemctl is-active cloudflared.service"
+    "/bin/systemctl enable cloudflare-tunnel-monitor.timer"
+    "/bin/systemctl start cloudflare-tunnel-monitor.timer"
+    "/bin/systemctl stop cloudflare-tunnel-monitor.timer"
+    "/bin/systemctl is-active cloudflare-tunnel-monitor.timer"
     "/var/www/html/verne.sh"
     "/var/www/html/reset-sensor.sh"
     "/var/www/html/node/*.js"
     "/var/www/html/fix_log_permissions.sh"
+    "/var/www/html/scripts/cloudflare-tunnel-monitor.sh"
 )
 
 
@@ -184,6 +194,7 @@ declare -A ENV_VARS=(
     ["AI_URL"]=""
     ["AI_TOKEN"]=""
     ["CALLBACK_MAX_ATTEMPTS"]="20"
+    ["ORDER_MIN_ACTIVE_SECONDS"]="60"
 )
 
 ENV_FILE=".env"
@@ -401,6 +412,44 @@ echo 'limpiar cache'
     sudo supervisorctl update
     sudo supervisorctl restart all
 
+    # Configurar y arrancar el monitor de túnel Cloudflare
+    echo "Configurando monitor de túnel Cloudflare..."
+    
+    # Verificar si el script de monitoreo existe
+    if [ -f "/var/www/html/scripts/cloudflare-tunnel-monitor.sh" ]; then
+        echo "✅ Script de monitoreo encontrado"
+        chmod +x /var/www/html/scripts/cloudflare-tunnel-monitor.sh
+        
+        # Verificar si el timer está habilitado
+        if systemctl is-enabled cloudflare-tunnel-monitor.timer >/dev/null 2>&1; then
+            echo "✅ Timer de monitoreo ya está habilitado"
+        else
+            echo "🔧 Habilitando timer de monitoreo..."
+            sudo systemctl daemon-reload
+            sudo systemctl enable cloudflare-tunnel-monitor.timer
+        fi
+        
+        # Verificar si el timer está ejecutándose
+        if systemctl is-active cloudflare-tunnel-monitor.timer >/dev/null 2>&1; then
+            echo "✅ Timer de monitoreo ya está ejecutándose"
+        else
+            echo "🚀 Iniciando timer de monitoreo..."
+            sudo systemctl start cloudflare-tunnel-monitor.timer
+        fi
+        
+        # Verificar estado final
+        if systemctl is-active cloudflare-tunnel-monitor.timer >/dev/null 2>&1; then
+            echo "✅ Monitor de túnel Cloudflare configurado y ejecutándose correctamente"
+            echo "📊 Estado del monitor:"
+            /var/www/html/scripts/cloudflare-tunnel-monitor.sh status
+        else
+            echo "⚠️ ADVERTENCIA: No se pudo iniciar el monitor de túnel Cloudflare"
+        fi
+    else
+        echo "⚠️ ADVERTENCIA: Script de monitoreo de Cloudflare no encontrado en /var/www/html/scripts/"
+        echo "💡 El monitor se puede instalar manualmente después de la actualización"
+    fi
+
 
 
 
@@ -427,4 +476,9 @@ echo 'limpiar cache'
     php artisan db:seed --class=ProductionLineOrdersKanbanPermissionSeeder --force -n
     php artisan db:seed --class=WorkCalendarPermissionSeeder --force -n
     php artisan db:seed --class=OriginalOrderFilePermissionSeeder --force -n
+    php artisan db:seed --class=ProductionOrderCallbackPermissionsSeeder --force -n
+    php artisan db:seed --class=FleetPermissionsSeeder --force -n
+    php artisan db:seed --class=CustomerClientsPermissionsSeeder --force -n
+    php artisan db:seed --class=RoutePlanPermissionsSeeder --force -n
+    php artisan db:seed --class=RouteNamePermissionsSeeder --force -n
     echo "Proceso completado con éxito..."

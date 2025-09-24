@@ -29,6 +29,7 @@ class WhatsAppController extends Controller
                 'qrCode' => $qrCode,
                 'phoneNumber' => env('WHATSAPP_PHONE_NOT'),
                 'phoneNumberMaintenance' => env('WHATSAPP_PHONE_MANTENIMIENTO'),
+                'phoneNumberIncident' => env('WHATSAPP_PHONE_ORDEN_INCIDENCIA'),
             ]);
         } catch (\Exception $e) {
             return view('whatsapp.notification', [
@@ -36,6 +37,7 @@ class WhatsAppController extends Controller
                 'qrCode' => null,
                 'phoneNumber' => env('WHATSAPP_PHONE_NOT'),
                 'phoneNumberMaintenance' => env('WHATSAPP_PHONE_MANTENIMIENTO'),
+                'phoneNumberIncident' => env('WHATSAPP_PHONE_ORDEN_INCIDENCIA'),
             ]);
         }
     }
@@ -110,6 +112,34 @@ class WhatsAppController extends Controller
         file_put_contents($envPath, $envContent);
 
         return redirect()->route('whatsapp.notifications')->with('status', 'Teléfonos de mantenimiento actualizados correctamente.');
+    }
+
+    /**
+     * Actualizar los números de incidencias de orden (separados por coma) en .env.
+     */
+    public function updateIncidentPhones(Request $request)
+    {
+        $request->validate([
+            'incident_phones' => 'required|string|max:200',
+        ]);
+
+        $newPhones = trim($request->input('incident_phones'));
+        $envPath = base_path('.env');
+        $envContent = file_get_contents($envPath);
+
+        if (preg_match('/^WHATSAPP_PHONE_ORDEN_INCIDENCIA=.*/m', $envContent)) {
+            $envContent = preg_replace(
+                '/^WHATSAPP_PHONE_ORDEN_INCIDENCIA=.*$/m',
+                "WHATSAPP_PHONE_ORDEN_INCIDENCIA={$newPhones}",
+                $envContent
+            );
+        } else {
+            $envContent .= (str_ends_with($envContent, "\n") ? '' : "\n") . "WHATSAPP_PHONE_ORDEN_INCIDENCIA={$newPhones}\n";
+        }
+
+        file_put_contents($envPath, $envContent);
+
+        return redirect()->route('whatsapp.notifications')->with('status', 'Teléfonos de incidencias de orden actualizados correctamente.');
     }
 
     /**

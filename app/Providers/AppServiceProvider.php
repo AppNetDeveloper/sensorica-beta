@@ -7,6 +7,8 @@ use Illuminate\Support\ServiceProvider;
 use App\Services\MqttService;
 use App\Models\ProductionOrder;
 use App\Observers\ProductionOrderObserver;
+use App\Models\OriginalOrder;
+use App\Observers\OriginalOrderObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -35,5 +37,8 @@ class AppServiceProvider extends ServiceProvider
         
         // Registrar el observer para ProductionOrder
         ProductionOrder::observe(ProductionOrderObserver::class);
+
+        // Registrar el observer para OriginalOrder
+        OriginalOrder::observe(OriginalOrderObserver::class);
     }
 }

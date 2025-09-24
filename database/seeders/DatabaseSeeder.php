@@ -93,6 +93,11 @@ class DatabaseSeeder extends Seeder
         $this->call([
             IaPromptsTableSeeder::class,
             OriginalOrderPermissionsTableSeeder::class,
+            ProductionOrderCallbackPermissionsSeeder::class,
+            FleetPermissionsSeeder::class,
+            CustomerClientsPermissionsSeeder::class,
+            RoutePlanPermissionsSeeder::class,
+            RouteNamePermissionsSeeder::class,
             // Otros seeders que puedas tener...
         ]);
     }

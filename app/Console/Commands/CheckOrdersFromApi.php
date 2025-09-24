@@ -8,6 +8,7 @@ use App\Models\OrderFieldMapping;
 use App\Models\Process;
 use App\Models\OriginalOrderProcess;
 use App\Models\OriginalOrderArticle;
+use App\Models\RouteName;
 use App\Concerns\ConsoleLoggableCommand;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
@@ -325,6 +326,15 @@ class CheckOrdersFromApi extends Command
                                         $mappedData['fecha_pedido_erp'] = null;
                                     } else {
                                         $this->logLine("  ✅ Campo fecha_pedido_erp encontrado: '{$mappedData['fecha_pedido_erp']}'", 'info');
+                                    }
+                                    
+                                    // Resolver route_name_id si se proporciona en los datos mapeados
+                                    if (isset($mappedData['route_name']) && !empty($mappedData['route_name'])) {
+                                        $this->logLine("  🛣️ Procesando route_name: '{$mappedData['route_name']}'");
+                                        $routeNameId = $this->resolveRouteName($customer, $mappedData['route_name']);
+                                        $mappedData['route_name_id'] = $routeNameId;
+                                        // Remover route_name del array ya que no es un campo de la tabla
+                                        unset($mappedData['route_name']);
                                     }
                                     
                                     // Crear el nuevo pedido en la base de datos
@@ -1185,5 +1195,37 @@ class CheckOrdersFromApi extends Command
             $this->logLine("        📝 Trace: " . $e->getTraceAsString());
             return false;
         }
+    }
+
+    /**
+     * Resuelve o crea un RouteName basado en el nombre proporcionado
+     */
+    private function resolveRouteName(Customer $customer, ?string $routeName): ?int
+    {
+        if (empty($routeName)) {
+            return null;
+        }
+
+        // Buscar ruta existente para este cliente
+        $route = RouteName::where('customer_id', $customer->id)
+            ->where('name', $routeName)
+            ->first();
+
+        if (!$route) {
+            // Crear nueva ruta
+            $route = RouteName::create([
+                'customer_id' => $customer->id,
+                'name' => $routeName,
+                'note' => 'Creada automáticamente desde comando CheckOrdersFromApi',
+                'days_mask' => 0, // Sin días específicos por defecto
+                'active' => true,
+            ]);
+
+            $this->logLine("  ✅ Nueva ruta creada: '{$routeName}' (ID: {$route->id})");
+        } else {
+            $this->logLine("  ✓ Ruta existente encontrada: '{$routeName}' (ID: {$route->id})");
+        }
+
+        return $route->id;
     }
 }

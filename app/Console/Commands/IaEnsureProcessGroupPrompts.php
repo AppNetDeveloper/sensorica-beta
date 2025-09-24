@@ -48,30 +48,30 @@ class IaEnsureProcessGroupPrompts extends Command
 
             // Plantilla base editable
             $content = <<<TPL
- Debes asignar órdenes no planificadas del grupo "{{description}}" a las líneas de producción más adecuadas.
+Planifica la fábrica: organiza los pedidos del grupo "{{description}}" asignándolos a las líneas de producción, cumpliendo las reglas.
 
 Datos de entrada (JSON):
 {{json}}
 
 Reglas obligatorias:
-- No asignes una orden a una línea que no tenga el código de proceso requerido por esa orden (process_code debe existir en process_codes_present de la línea).
-- Evita saturar una sola línea. Reparte la carga intentando equilibrar las horas planificadas entre líneas, considerando:
-  - Carga actual planificada de cada línea en segundos: lines[].planned_theoretical_time
-  - Tiempo teórico de cada orden en segundos: unplanned_orders[].theoretical_time
-- Si varias líneas son válidas, elige la que deje el reparto de carga lo más equilibrado posible.
-- Si ninguna línea cumple (por ausencia de process_code), marca esa orden como no asignable con una causa.
+- Usa únicamente la información provista. No pidas datos adicionales.
+- Cada orden ya incluye su tiempo teórico en segundos: unplanned_orders[].theoretical_time.
+- Solo asigna una orden a una línea que tenga el código de proceso requerido (process_code debe existir en process_codes_present de la línea).
+- Asigna todas las órdenes compatibles; si una orden no es compatible con ninguna línea, inclúyela en unassignable con una causa breve.
+- No existe un límite máximo de tiempo ni de número de órdenes por línea. Asigna todas las órdenes posibles.
+- Equilibra la carga de forma aproximada: intenta que la suma (lines[].planned_theoretical_time + órdenes asignadas) quede razonablemente similar entre líneas, sin buscar perfección ni imponer límites duros; pequeñas desviaciones son aceptables.
+- No uses siempre la misma línea de producción: distribuye las órdenes entre todas las líneas válidas.
+- Si varias líneas son válidas, elige la que deje el reparto más equilibrado en términos generales.
 
 Salida requerida:
-Responde ÚNICAMENTE con el JSON limpio, sin presentaciones, comentarios ni explicaciones adicionales. Solo el JSON:
+Responde ÚNICAMENTE con el JSON limpio, sin preguntas, sin presentaciones, sin comentarios ni explicaciones adicionales. No añadas claves adicionales; usa exactamente la estructura y claves indicadas. Solo el JSON:
 
 {
   "assignments": [
-    { "id": <production_order_id>, "production_line_id": <id_linea> },
-    ...
+    { "id": <production_order_id>, "production_line_id": <id_linea> }
   ],
   "unassignable": [
-    { "id": <production_order_id>, "reason": "<motivo de no asignación>" },
-    ...
+    { "id": <production_order_id>, "reason": "<motivo de no asignación>" }
   ]
 }
 TPL;

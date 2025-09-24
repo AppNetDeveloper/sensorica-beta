@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\GetTokenController;
+use App\Http\Controllers\Api\IncomingOrdersController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\ApiBarcoderController;
@@ -426,3 +427,7 @@ Route::post('/barcode-scans', [BarcodeScansController::class, 'store']);
 
 // Ruta para obtener los artículos asociados a una orden de producción
 Route::get('/production-orders/{id}/articles', [ProductionOrderArticlesController::class, 'getArticles']);
+
+// Webhooks para recibir órdenes desde sistemas externos
+Route::post('/incoming/original-orders', [IncomingOrdersController::class, 'store']);
+Route::delete('/incoming/original-orders/{order_id}', [IncomingOrdersController::class, 'destroy']);

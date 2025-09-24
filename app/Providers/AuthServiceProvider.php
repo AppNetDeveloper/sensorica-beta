@@ -4,6 +4,8 @@ namespace App\Providers;
 
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 use Illuminate\Support\Facades\Gate;
+use App\Models\ProductionOrderCallback;
+use App\Policies\ProductionOrderCallbackPolicy;
 
 class AuthServiceProvider extends ServiceProvider
 {
@@ -13,7 +15,7 @@ class AuthServiceProvider extends ServiceProvider
      * @var array
      */
     protected $policies = [
-        // 'App\Models\Model' => 'App\Policies\ModelPolicy',
+        ProductionOrderCallback::class => ProductionOrderCallbackPolicy::class,
     ];
 
     /**
@@ -25,6 +27,10 @@ class AuthServiceProvider extends ServiceProvider
     {
         $this->registerPolicies();
 
-        //
+        // Define basic gates if permissions package isn't handling them
+        Gate::define('callbacks.view', fn($user) => $user->hasRole('admin') || $user->hasPermissionTo('callbacks.view'));
+        Gate::define('callbacks.update', fn($user) => $user->hasRole('admin') || $user->hasPermissionTo('callbacks.update'));
+        Gate::define('callbacks.delete', fn($user) => $user->hasRole('admin') || $user->hasPermissionTo('callbacks.delete'));
+        Gate::define('callbacks.force', fn($user) => $user->hasRole('admin') || $user->hasPermissionTo('callbacks.force'));
     }
 }

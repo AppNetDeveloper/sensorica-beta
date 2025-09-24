@@ -52,6 +52,7 @@ use App\Http\Controllers\IaPromptAdminController;
 use App\Http\Controllers\Api\ProductionLineInfoController;
 use App\Http\Controllers\WorkCalendarController;
 use App\Http\Controllers\OriginalOrderProcessFileController;
+use App\Http\Controllers\ProductionOrderCallbackController;
 
 
 // Maintenance Causes & Parts (by customer)
@@ -148,12 +149,38 @@ Route::prefix('customers')->name('customers.')->group(function () {
             ->name('order-kanban')
             ->where('process', '[0-9]+');
             
-
-            
         // Rutas para mantenimientos
         Route::resource('maintenances', MaintenanceController::class)
             ->names('maintenances')
             ->parameters(['maintenances' => 'maintenance']);
+
+        // Rutas para Clientes del Customer (export/import primero para evitar colisiones con resource)
+        Route::get('clients/export', [\App\Http\Controllers\CustomerClientController::class, 'export'])->name('clients.export');
+        Route::post('clients/import', [\App\Http\Controllers\CustomerClientController::class, 'import'])->name('clients.import');
+        Route::resource('clients', \App\Http\Controllers\CustomerClientController::class)
+            ->names('clients')
+            ->parameters(['clients' => 'client']);
+
+        // Rutas para Flota (export/import primero para evitar colisiones con resource)
+        Route::get('fleet-vehicles/export', [\App\Http\Controllers\FleetVehicleController::class, 'export'])->name('fleet-vehicles.export');
+        Route::post('fleet-vehicles/import', [\App\Http\Controllers\FleetVehicleController::class, 'import'])->name('fleet-vehicles.import');
+        Route::resource('fleet-vehicles', \App\Http\Controllers\FleetVehicleController::class)
+            ->names('fleet-vehicles')
+            ->parameters(['fleet-vehicles' => 'fleet_vehicle']);
+
+        // Rutas para Listado de Rutas (RoutePlan) - Kanban semanal (solo index)
+        Route::get('routes', [\App\Http\Controllers\RoutePlanController::class, 'index'])->name('routes.index');
+        Route::post('routes/assign-vehicle', [\App\Http\Controllers\RoutePlanController::class, 'assignVehicle'])->name('routes.assign-vehicle');
+        Route::delete('routes/remove-vehicle', [\App\Http\Controllers\RoutePlanController::class, 'removeVehicle'])->name('routes.remove-vehicle');
+        Route::post('routes/assign-client-vehicle', [\App\Http\Controllers\RoutePlanController::class, 'assignClientToVehicle'])->name('routes.assign-client-vehicle');
+        Route::post('routes/reorder-clients', [\App\Http\Controllers\RoutePlanController::class, 'reorderClients'])->name('routes.reorder-clients');
+        Route::post('routes/move-client', [\App\Http\Controllers\RoutePlanController::class, 'moveClientAssignment'])->name('routes.move-client');
+        Route::delete('routes/remove-client-vehicle', [\App\Http\Controllers\RoutePlanController::class, 'removeClientFromVehicle'])->name('routes.remove-client-vehicle');
+
+        // Nombres de Rutas (RouteName)
+        Route::resource('route-names', \App\Http\Controllers\RouteNameController::class)
+            ->names('route-names')
+            ->parameters(['route-names' => 'route_name']);
 
         // Finalizar mantenimiento (formulario y acción)
         Route::get('maintenances/{maintenance}/finish', [MaintenanceController::class, 'finishForm'])
@@ -205,6 +232,16 @@ Route::prefix('customers')->name('customers.')->group(function () {
             ->name('work-calendars.bulk-update');
         Route::post('work-calendars/import-holidays', [WorkCalendarController::class, 'importHolidays'])->name('work-calendars.import-holidays');
 
+        // Callbacks history (by customer)
+        Route::prefix('callbacks')->name('callbacks.')->group(function(){
+            Route::get('/', [ProductionOrderCallbackController::class, 'index'])->name('index');
+            Route::get('{callback}/edit', [ProductionOrderCallbackController::class, 'edit'])->name('edit');
+            Route::put('{callback}', [ProductionOrderCallbackController::class, 'update'])->name('update');
+            Route::delete('{callback}', [ProductionOrderCallbackController::class, 'destroy'])->name('destroy');
+            Route::post('{callback}/force', [ProductionOrderCallbackController::class, 'force'])->name('force');
+        });
+
+
         // Archivos públicos por proceso de orden original
         Route::prefix('original-orders/{originalOrder}/processes/{originalOrderProcess}/files')
             ->name('original-orders.processes.files.')
@@ -222,6 +259,7 @@ Route::prefix('customers')->name('customers.')->group(function () {
             ->name('sensors.index');
     });
 });
+
 
 // Ruta para obtener datos del Kanban mediante AJAX (para actualización automática)
 Route::get('kanban-data', [CustomerController::class, 'getKanbanData'])
@@ -486,6 +524,7 @@ Route::get('whatsapp/notifications', [App\Http\Controllers\WhatsAppController::c
 Route::post('whatsapp/disconnect', [App\Http\Controllers\WhatsAppController::class, 'disconnect'])->name('whatsapp.disconnect');
 Route::post('whatsapp/update-phone', [App\Http\Controllers\WhatsAppController::class, 'updatePhoneNumber'])->name('whatsapp.updatePhone');
 Route::post('whatsapp/update-maintenance-phones', [App\Http\Controllers\WhatsAppController::class, 'updateMaintenancePhones'])->name('whatsapp.updateMaintenancePhones');
+Route::post('whatsapp/update-incident-phones', [App\Http\Controllers\WhatsAppController::class, 'updateIncidentPhones'])->name('whatsapp.updateIncidentPhones');
 Route::post('whatsapp/send-test-message', [App\Http\Controllers\WhatsAppController::class, 'sendTestMessage'])->name('whatsapp.sendTestMessage');
 Route::get('/whatsapp-status', [WhatsAppController::class, 'getStatus'])->name('whatsapp.status');
 

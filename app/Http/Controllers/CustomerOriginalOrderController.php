@@ -10,6 +10,7 @@ use App\Models\OriginalOrderProcess;
 use App\Models\OriginalOrderArticle;
 use Illuminate\Support\Facades\DB;
 use App\Models\ProductionOrder;
+use App\Models\RouteName;
 use Symfony\Component\Process\Process as SymfonyProcess;
 use Illuminate\Support\Facades\Log;
 
@@ -487,6 +488,7 @@ class CustomerOriginalOrderController extends Controller
         $validated = $request->validate([
             'order_id' => 'required|unique:original_orders,order_id',
             'client_number' => 'nullable|string|max:255',
+            'route_name' => 'nullable|string|max:255',
             'delivery_date' => 'nullable|date',
             'in_stock' => 'sometimes|boolean',
             'order_details' => 'required|json',
@@ -494,9 +496,13 @@ class CustomerOriginalOrderController extends Controller
             'processes.*' => 'exists:processes,id',
         ]);
 
+        // Resolver route_name_id si se proporciona
+        $routeNameId = $this->resolveRouteName($customer, $validated['route_name'] ?? null);
+
         $originalOrder = $customer->originalOrders()->create([
             'order_id' => $validated['order_id'],
             'client_number' => $validated['client_number'] ?? null,
+            'route_name_id' => $routeNameId,
             'delivery_date' => $validated['delivery_date'] ?? null,
             'in_stock' => $request->boolean('in_stock'),
             'order_details' => $validated['order_details'],
@@ -744,6 +750,7 @@ class CustomerOriginalOrderController extends Controller
         $validated = $request->validate([
             'order_id' => 'required|unique:original_orders,order_id,' . $originalOrder->id,
             'client_number' => 'nullable|string|max:255',
+            'route_name' => 'nullable|string|max:255',
             'delivery_date' => 'nullable|date',
             'in_stock' => 'sometimes|boolean',
             'order_details' => 'required|json',
@@ -756,10 +763,14 @@ class CustomerOriginalOrderController extends Controller
             'finished_at' => 'nullable|date',
         ]);
 
-        // 2. Actualizar los campos principales de la orden.
+        // 2. Resolver route_name_id si se proporciona
+        $routeNameId = $this->resolveRouteName($customer, $validated['route_name'] ?? null);
+
+        // 3. Actualizar los campos principales de la orden.
         $originalOrder->update([
             'order_id' => $validated['order_id'],
             'client_number' => $validated['client_number'] ?? null,
+            'route_name_id' => $routeNameId,
             'delivery_date' => $validated['delivery_date'] ?? null,
             'in_stock' => $request->boolean('in_stock'),
             'order_details' => $validated['order_details'],
@@ -964,5 +975,33 @@ class CustomerOriginalOrderController extends Controller
                 'message' => __('Error al crear tarjetas: ') . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Resuelve o crea un RouteName basado en el nombre proporcionado
+     */
+    private function resolveRouteName(Customer $customer, ?string $routeName): ?int
+    {
+        if (empty($routeName)) {
+            return null;
+        }
+
+        // Buscar ruta existente para este cliente
+        $route = RouteName::where('customer_id', $customer->id)
+            ->where('name', $routeName)
+            ->first();
+
+        if (!$route) {
+            // Crear nueva ruta
+            $route = RouteName::create([
+                'customer_id' => $customer->id,
+                'name' => $routeName,
+                'note' => 'Creada automáticamente desde orden original',
+                'days_mask' => 0, // Sin días específicos por defecto
+                'active' => true,
+            ]);
+        }
+
+        return $route->id;
     }
 }

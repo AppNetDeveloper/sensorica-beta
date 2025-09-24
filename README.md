@@ -35,6 +35,7 @@
   - [Base de datos: Percona Server for MySQL](#base-de-datos-percona-server-for-mysql)
   - [Servidor web: Caddy](#servidor-web-caddy)
   - [Red y acceso seguro: ZeroTier + Cloudflare Tunnels](#red-y-acceso-seguro-zerotier--cloudflare-tunnels)
+  - [🔧 Sistema de Monitoreo de Cloudflare Tunnel](#🔧-sistema-de-monitoreo-de-cloudflare-tunnel)
 - [Licencia](#licencia)
  - [🤖 Integración IA (Análisis con Ollama)](#🤖-integración-ia-análisis-con-ollama)
 
@@ -56,6 +57,7 @@ Diseñado para entornos industriales exigentes, Sensorica ofrece una interfaz in
 - **Calendario Laboral**: Configuración de días laborables y turnos para cálculos precisos de producción.
 - **Integración con ERPs**: Conexión bidireccional con sistemas ERP externos.
 - **Panel de Control en Tiempo Real**: Visualización de estadísticas y KPIs de producción.
+- **🚚 Sistema de Planificación de Rutas**: Módulo completo para la gestión de rutas de entrega y asignación de vehículos.
 
 ## 🏗️ Arquitectura del Sistema
 
@@ -139,6 +141,100 @@ Sistema flexible para la integración con sistemas externos:
 - **Validación de Datos**: Verificación de integridad y formato de los datos.
 - **Procesamiento por Lotes**: Importación eficiente de grandes volúmenes de datos.
 - **Registro Detallado**: Logs completos de todas las operaciones de integración.
+
+#### API de Webhooks Entrantes (sin mapeos)
+
+Para clientes que prefieren notificar por HTTP cuando crean/actualizan/borran pedidos en su ERP, Sensorica expone una API de webhooks que crea `original_orders` y sus hijos directamente con un contrato JSON estándar, sin mapeos por cliente.
+
+- Endpoint crear/actualizar: `POST /api/incoming/original-orders`
+- Endpoint borrar: `DELETE /api/incoming/original-orders/{order_id}`
+- Autenticación: `Authorization: Bearer <customer.token>` (también soporta `X-Customer-Token` o `?token=`)
+- Reproceso: `?reprocess=true` borra por completo la orden existente y la recrea desde cero con el payload recibido
+
+Campos principales del payload (POST):
+- `order_id` (string, requerido)
+- `client_number` (string, opcional)
+- `route_name` (string, opcional) → si existe en `route_names.name` para el cliente, se usa su ID; si no existe, se crea automáticamente y se guarda su id en `original_orders.route_name_id`
+- `delivery_date` (YYYY-MM-DD, opcional)
+- `fecha_pedido_erp` (YYYY-MM-DD, opcional)
+- `in_stock` (0|1, opcional)
+- `grupos[]` (array):
+  - `grupoNum` (string|number)
+  - `servicios[]`: procesos a crear (real manufacturing steps)
+    - `process_code` (string, requerido; debe existir en `processes.code`)
+    - `time_seconds` (int, requerido; se multiplica por `processes.factor_correccion`)
+    - `box`, `units_box`, `number_of_pallets` (int, opcionales)
+  - `articulos[]`: materiales vinculados al grupo/proceso
+    - `codigo_articulo` (string, requerido)
+    - `descripcion_articulo` (string, opcional)
+    - `in_stock` (0|1, opcional; por defecto 1)
+
+Ejemplo mínimo (1 grupo, 1 servicio y 1 artículo) con route_name:
+
+```json
+{
+  "order_id": "A-12345",
+  "client_number": "C-777",
+  "route_name": "Ruta Centro",
+  "delivery_date": "2025-09-30",
+  "fecha_pedido_erp": "2025-09-20",
+  "in_stock": 1,
+  "grupos": [
+    {
+      "grupoNum": "1",
+      "servicios": [
+        { "process_code": "S.201", "time_seconds": 1800, "box": 0, "units_box": 0, "number_of_pallets": 0 }
+      ],
+      "articulos": [
+        { "codigo_articulo": "2.H3710ST12.19", "descripcion_articulo": "Tablero H3710", "in_stock": 1 }
+      ]
+    }
+  ]
+}
+```
+
+Ejemplo avanzado (2 grupos, varios servicios por grupo):
+
+```json
+{
+  "order_id": "B-98765",
+  "client_number": "CLI-42",
+  "route_name": "Ruta Norte",
+  "delivery_date": "2025-10-05",
+  "grupos": [
+    {
+      "grupoNum": 1,
+      "servicios": [
+        { "process_code": "S.101", "time_seconds": 1200 },
+        { "process_code": "S.201", "time_seconds": 2700, "box": 2, "units_box": 6 }
+      ],
+      "articulos": [
+        { "codigo_articulo": "MAT-0001", "descripcion_articulo": "Tablero Roble A" },
+        { "codigo_articulo": "MAT-0002", "descripcion_articulo": "Tornillería M4", "in_stock": 1 }
+      ]
+    },
+    {
+      "grupoNum": 2,
+      "servicios": [
+        { "process_code": "S.305", "time_seconds": 900 },
+        { "process_code": "S.450", "time_seconds": 600, "number_of_pallets": 1 }
+      ],
+      "articulos": [
+        { "codigo_articulo": "MAT-1001", "descripcion_articulo": "Barniz Satinado" }
+      ]
+    }
+  ]
+}
+```
+
+Comportamiento por defecto (óptimo): si la orden ya existe, se actualizan los campos ligeros y se guarda el payload como `order_details`, pero no se reprocesan procesos. Con `?reprocess=true`, se borra totalmente y se vuelve a crear con los procesos y artículos del JSON.
+
+Notas sobre `route_name`:
+- Si el payload incluye `route_name`, la API buscará una ruta del cliente por `name`. Si no existe, creará una nueva en `route_names` con `active=true` y `days_mask=0`.
+- El ID resultante se guarda en `original_orders.route_name_id`.
+- Si no se envía `route_name`, el campo `route_name_id` permanecerá `null` (columna nullable).
+
+Para detalles extendidos, ver `docs/incoming_orders_api.md`.
 
 ### Control de Calidad (QC): Incidencias y Confirmaciones
 
@@ -314,11 +410,135 @@ El módulo de Mantenimientos permite registrar, iniciar y finalizar incidencias 
   4. Observa las tarjetas de resumen; se actualizan automáticamente según los filtros.
   5. Finaliza un mantenimiento seleccionando múltiples causas y piezas; verifica que el índice muestra las listas y que los totales se recalculan.
 
-### Sistemas de Control y Transformación de Datos
+### Sistema de Callbacks ERP (Historial de Callbacks)
+
+El sistema de Callbacks ERP permite registrar, monitorear y gestionar las notificaciones automáticas enviadas a sistemas ERP externos cuando las órdenes de producción alcanzan ciertos estados o hitos. Este módulo integra completamente la funcionalidad de callbacks con el resto del sistema Sensorica, incluyendo permisos, políticas de autorización, interfaces de usuario y gestión de errores.
+
+#### Características principales
+
+- **Gestión de Callbacks HTTP**: Envío automático de notificaciones HTTP a URLs externas configuradas
+- **Mapeo de Campos Configurable**: Sistema de mapeos para transformar datos de órdenes de producción a formatos ERP
+- **Transformaciones Dinámicas**: Soporte para transformaciones de datos (trim, uppercase, lowercase, number, date, to_boolean)
+- **Mecanismo de Reintentos**: Sistema robusto de reintentos con backoff exponencial para fallos de conectividad
+- **Historial y Auditoría**: Registro completo de todos los callbacks enviados con estados y respuestas
+- **Interfaz de Usuario Completa**: Gestión visual de callbacks por cliente con edición y eliminación
+- **Permisos Granulares**: Control de acceso basado en roles para operaciones de callbacks
+- **Detección Automática**: Creación automática de callbacks cuando órdenes alcanzan estados específicos
+
+#### Flujo de trabajo
+
+1. **Creación de Callback**: Se crea un registro de callback cuando una orden de producción alcanza un estado que requiere notificación
+2. **Procesamiento**: El comando `callbacks:process` procesa callbacks pendientes cada 10 segundos
+3. **Mapeo de Datos**: Se aplican las transformaciones configuradas en `CustomerCallbackMapping`
+4. **Envío HTTP**: Se realiza la petición HTTP POST a la URL configurada
+5. **Gestión de Respuestas**: Se registra el resultado (éxito/error) con detalles completos
+6. **Reintentos**: En caso de error, se reintenta con backoff hasta el límite configurado
+
+#### Componentes del Sistema
+
+**Modelos:**
+
+- **`ProductionOrderCallback`**: Modelo principal que representa cada callback individual
+  - Campos: `production_order_id`, `customer_id`, `callback_url`, `payload`, `status`, `attempts`, `last_attempt_at`, `success_at`, `error_message`
+  - Estados: 0=Pendiente, 1=Éxito, 2=Error/Reintento
+
+- **`CustomerCallbackMapping`**: Configuración de mapeos de campos por cliente
+  - Campos: `customer_id`, `source_field`, `target_field`, `transformation`, `is_required`
+  - Transformaciones soportadas: trim, uppercase, lowercase, number, date, to_boolean
+
+**Controladores:**
+
+- **`ProductionOrderCallbackController`**: Gestión CRUD de callbacks
+  - Métodos: index, edit, update, destroy, force (reintento manual)
+  - Permisos: callbacks.view, callbacks.update, callbacks.delete, callbacks.force
+
+- **`ProcessProductionOrderCallbacks`**: Comando Artisan para procesamiento
+  - Ejecuta cada 10 segundos vía Supervisor
+  - Configuración: `CALLBACK_MAX_ATTEMPTS` (por defecto: 20)
+
+**Vistas Blade:**
+
+- **`resources/views/customers/callbacks/index.blade.php`**: Listado de callbacks con filtros
+- **`resources/views/customers/callbacks/edit.blade.php`**: Edición de configuración de callback
+
+**Rutas:**
+
+```php
+Route::prefix('customers/{customer}/callbacks')->name('customers.callbacks.')->group(function(){
+    Route::get('/', [ProductionOrderCallbackController::class, 'index'])->name('index');
+    Route::get('{callback}/edit', [ProductionOrderCallbackController::class, 'edit'])->name('edit');
+    Route::put('{callback}', [ProductionOrderCallbackController::class, 'update'])->name('update');
+    Route::delete('{callback}', [ProductionOrderCallbackController::class, 'destroy'])->name('destroy');
+    Route::post('{callback}/force', [ProductionOrderCallbackController::class, 'force'])->name('force');
+});
+```
+
+#### Configuración
+
+**Variables de Entorno:**
+
+- `CALLBACK_MAX_ATTEMPTS`: Número máximo de intentos antes de marcar como fallido (por defecto: 20)
+
+**Configuración por Cliente:**
+
+Cada cliente puede configurar:
+- URL del endpoint ERP para recibir callbacks
+- Mapeos de campos entre datos de Sensorica y formato ERP
+- Transformaciones a aplicar a cada campo
+- Estados de órdenes que activan callbacks
+
+**Ejemplo de Payload:**
+
+```json
+{
+    "order_id": "ORD-001",
+    "processes_code": "PROC-001",
+    "status": "COMPLETED",
+    "finished_at": "2024-01-15 14:30:00"
+}
+```
+
+#### Monitoreo y Mantenimiento
+
+**Comando de Procesamiento:**
+
+```bash
+php artisan callbacks:process [--once]
+```
+
+- `--once`: Procesa un ciclo único y termina
+- Sin parámetros: Ejecuta indefinidamente (para Supervisor)
+
+**Configuración de Supervisor:**
+
+```ini
+[program:laravel-callbacks-process]
+process_name=%(program_name)s_%(process_num)02d
+command=php /var/www/html/artisan callbacks:process
+autostart=true
+autorestart=true
+numprocs=1
+```
+
+**Logs:**
+
+- Los callbacks exitosos y errores se registran en `storage/logs/laravel.log`
+- Información detallada de cada callback incluye URL, payload, respuesta HTTP y errores
+
+#### Integración con el Sistema
+
+El sistema de callbacks se integra automáticamente con:
+
+- **Observer de Órdenes**: Crea callbacks automáticamente cuando órdenes cambian de estado
+- **Sistema de Permisos**: Controla el acceso a funciones de callback
+- **Interfaz de Cliente**: Gestión visual integrada en la sección de clientes
+- **API de Reportes**: Los callbacks pueden activarse desde cambios en la API
+
+Este sistema asegura que los sistemas ERP externos reciban notificaciones en tiempo real sobre el progreso de las órdenes de producción, manteniendo la integridad de los datos y proporcionando mecanismos robustos de recuperación de fallos.
 
 #### Transformación de Sensores
 
-El componente `sensor-transformer.js` es un servicio Node.js crítico para el procesamiento y transformación de datos de sensores en tiempo real. Este servicio actúa como un middleware entre los sensores físicos y la aplicación, permitiendo la normalización y transformación de valores según reglas configurables.
+El componente `sensor-transformer.js` es un servicio Node.js crítico para el procesamiento de sensores en tiempo real. Este servicio actúa como un middleware entre los sensores físicos y la aplicación, permitiendo la normalización y transformación de valores según reglas configurables.
 
 **Características principales:**
 
@@ -383,6 +603,170 @@ El componente `mqtt-rfid-to-api.js` es un gateway que conecta el sistema RFID f�
 
 Este componente es fundamental para la funcionalidad de seguimiento RFID en tiempo real, permitiendo el monitoreo de productos y operarios equipados con tags RFID a lo largo del proceso de producción.
 
+### 🚚 Sistema de Planificación de Rutas
+
+El Sistema de Planificación de Rutas es un módulo completo para la gestión de rutas de entrega, asignación de vehículos y planificación de clientes. Este sistema permite optimizar las operaciones logísticas mediante una interfaz visual intuitiva con funcionalidades avanzadas de drag & drop.
+
+#### Características principales
+
+- **Gestión Visual de Rutas**: Interfaz tipo calendario semanal para visualizar y planificar rutas por días
+- **Asignación Multi-Vehículo**: Soporte para múltiples vehículos por ruta/día sin restricciones
+- **Drag & Drop Avanzado**: Arrastrar clientes entre vehículos y reordenar dentro de cada vehículo
+- **Auto-Refresh Inteligente**: Sistema que actualiza automáticamente la vista respetando interacciones del usuario
+- **Gestión de Órdenes Ficticias**: Sistema de mini-tarjetas de pedidos dentro de cada cliente
+- **Notificaciones Toast**: Feedback visual inmediato para todas las operaciones
+- **Modales de Confirmación**: Confirmaciones elegantes que no interrumpen el flujo de trabajo
+- **Búsqueda y Filtros**: Sistema de filtros avanzados para clientes y vehículos
+- **Responsive Design**: Interfaz adaptativa para dispositivos móviles y desktop
+
+#### Componentes del Sistema
+
+**Modelos:**
+
+- **`RouteName`**: Rutas configuradas por cliente (ej. "Ruta Centro", "Ruta Norte")
+- **`RouteDayAssignment`**: Asignaciones de vehículos a rutas específicas por día
+- **`RouteClientVehicleAssignment`**: Asignaciones de clientes a vehículos específicos
+- **`FleetVehicle`**: Vehículos disponibles con tipos y capacidades
+- **`CustomerClient`**: Clientes del sistema con información de contacto
+
+**Controlador Principal:**
+
+- **`RoutePlanController`**: Gestión completa de la planificación de rutas
+  - `index()`: Vista principal con calendario semanal
+  - `assignVehicle()`: Asignación de vehículos a rutas/días
+  - `removeVehicle()`: Eliminación de asignaciones de vehículos
+  - `assignClientToVehicle()`: Asignación de clientes a vehículos específicos
+  - `removeClientFromVehicle()`: Eliminación de clientes de vehículos
+  - `moveClient()`: Movimiento de clientes entre vehículos
+  - `reorderClients()`: Reordenación de clientes dentro de un vehículo
+
+**Vistas Blade:**
+
+- **`customers/routes/index.blade.php`**: Vista principal del planificador
+- **`components/routes/day-cell.blade.php`**: Celda individual de día con clientes y vehículos
+- **`components/routes/vehicle-card.blade.php`**: Tarjeta de vehículo con clientes asignados
+
+#### Funcionalidades Avanzadas
+
+**Sistema de Auto-Refresh Inteligente:**
+
+- **Detección de Modals**: Pausa el refresh cuando hay modals abiertos
+- **Detección de Drag & Drop**: Pausa el refresh durante operaciones de arrastre
+- **Refresh Programado**: Actualización automática después de cambios (1.5-3 segundos)
+- **Cancelación Inteligente**: Cancela refreshes programados cuando es necesario
+
+**Gestión de Múltiples Vehículos:**
+
+- **Sin Restricciones**: Permite asignar múltiples vehículos a la misma ruta/día
+- **Constraint Único Correcto**: `unique_customer_route_vehicle_day` evita duplicados exactos
+- **Migración Automática**: Sistema que migró desde constraint restrictivo a permisivo
+
+**Sistema de Órdenes Ficticias:**
+
+- **Mini-Tarjetas**: Pedidos ficticios ("pedido-test1", "pedido-test2") dentro de cada cliente
+- **Visualización en Hover**: Las mini-tarjetas aparecen al pasar el ratón sobre el cliente
+- **Diseño Consistente**: Tanto clientes renderizados como añadidos dinámicamente usan la misma estructura
+
+#### Flujo de Trabajo Típico
+
+1. **Configuración Inicial**:
+   - Crear rutas por cliente (`route_names`)
+   - Registrar vehículos de la flota (`fleet_vehicles`)
+   - Configurar clientes (`customer_clients`)
+
+2. **Planificación Semanal**:
+   - Seleccionar semana en el calendario
+   - Asignar vehículos a rutas específicas por día
+   - Arrastrar clientes desde la lista disponible a vehículos
+
+3. **Optimización**:
+   - Reordenar clientes dentro de cada vehículo
+   - Mover clientes entre vehículos del mismo día
+   - Añadir o quitar vehículos según demanda
+
+4. **Gestión de Cambios**:
+   - Eliminar clientes de vehículos (vuelven a lista disponible)
+   - Eliminar vehículos completos de rutas
+   - Modificar asignaciones en tiempo real
+
+#### Tecnologías y Patrones
+
+**Frontend:**
+
+- **JavaScript Vanilla**: Sin dependencias externas para máximo rendimiento
+- **Bootstrap 5**: Framework CSS para componentes y responsive design
+- **Drag & Drop API**: API nativa del navegador para funcionalidad de arrastre
+- **Fetch API**: Comunicación asíncrona con el backend
+- **Event Delegation**: Patrón para manejar elementos dinámicos
+
+**Backend:**
+
+- **Laravel Eloquent**: ORM para gestión de datos
+- **Validation**: Validación robusta de datos de entrada
+- **Transactions**: Transacciones de base de datos para operaciones complejas
+- **Logging**: Sistema completo de logs para debugging y auditoría
+
+**Base de Datos:**
+
+- **Constraints Únicos**: Prevención de duplicados con constraints específicos
+- **Foreign Keys**: Integridad referencial entre todas las tablas
+- **Indexes**: Optimización de consultas para rendimiento
+- **Migrations**: Versionado de esquema de base de datos
+
+#### Configuración y Despliegue
+
+**Variables de Entorno:**
+
+No requiere configuración especial, utiliza la configuración estándar de Laravel.
+
+**Permisos Requeridos:**
+
+- Acceso a la sección de clientes
+- Permisos de lectura/escritura en tablas de rutas
+- Acceso a gestión de vehículos y clientes
+
+**Rutas del Sistema:**
+
+```php
+Route::prefix('customers/{customer}/routes')->name('customers.routes.')->group(function(){
+    Route::get('/', [RoutePlanController::class, 'index'])->name('index');
+    Route::post('assign-vehicle', [RoutePlanController::class, 'assignVehicle'])->name('assign-vehicle');
+    Route::delete('remove-vehicle', [RoutePlanController::class, 'removeVehicle'])->name('remove-vehicle');
+    Route::post('assign-client-vehicle', [RoutePlanController::class, 'assignClientToVehicle'])->name('assign-client-vehicle');
+    Route::delete('remove-client-vehicle', [RoutePlanController::class, 'removeClientFromVehicle'])->name('remove-client-vehicle');
+    Route::post('move-client', [RoutePlanController::class, 'moveClient'])->name('move-client');
+    Route::post('reorder-clients', [RoutePlanController::class, 'reorderClients'])->name('reorder-clients');
+});
+```
+
+#### Mejoras Implementadas (2025-09-24)
+
+**Resolución de Problemas de Múltiples Vehículos:**
+
+- **Problema**: Constraint único `unique_route_day_assignment` impedía múltiples vehículos por ruta/día
+- **Solución**: Migración que recreó la tabla con constraint correcto `unique_customer_route_vehicle_day`
+- **Resultado**: Soporte completo para múltiples vehículos sin restricciones
+
+**Sistema de Auto-Refresh Mejorado:**
+
+- **Problema**: Refresh interrumpía modals y operaciones de drag & drop
+- **Solución**: Sistema inteligente que detecta y respeta interacciones del usuario
+- **Características**: Pausa automática durante modals y drag & drop, reprogramación inteligente
+
+**Interfaz de Usuario Optimizada:**
+
+- **Problema**: Clientes eliminados no reaparecían en lista disponible
+- **Solución**: Sistema robusto de reposición con múltiples estrategias de búsqueda
+- **Mejoras**: Creación dinámica de listas cuando no existen, logs detallados para debugging
+
+**Gestión de Errores Mejorada:**
+
+- **Toasts Globales**: Sistema de notificaciones accesible desde cualquier script
+- **Manejo de Errores HTTP**: Gestión específica de errores 500 y constraints de base de datos
+- **Logs Detallados**: Información completa para debugging y auditoría
+
+Este sistema representa una solución completa y robusta para la planificación de rutas en entornos industriales y logísticos, proporcionando una experiencia de usuario intuitiva y funcionalidades avanzadas para optimizar las operaciones de entrega.
+
 #### Sistema de Control SCADA/Modbus
 
 El componente `client-modbus.js` es un servicio Node.js especializado que gestiona la comunicación con sistemas industriales SCADA (Supervisory Control And Data Acquisition) mediante el protocolo Modbus, enfocado principalmente en el control de pesaje y dosificación industrial.
@@ -419,8 +803,6 @@ El componente `client-modbus.js` es un servicio Node.js especializado que gestio
 - **API REST**: Envía los datos filtrados a endpoints específicos de la API de Sensorica.
 
 Este componente es crucial para la integración con maquinaria industrial, permitiendo un control preciso de sistemas de pesaje, dosificación y medición en entornos de producción.
-
-#### Comandos Gestionados por Supervisor
 
 Sensorica utiliza Supervisor para gestionar y mantener en ejecución una serie de procesos críticos para el funcionamiento del sistema. Estos procesos incluyen comandos Artisan de Laravel y servidores Node.js que realizan tareas específicas de monitoreo, comunicación y procesamiento de datos.
 
@@ -508,6 +890,45 @@ Sensorica utiliza Supervisor para gestionar y mantener en ejecución una serie d
      - Gestiona la calibración virtual de sensores
 
 Todos estos comandos son gestionados por Supervisor, que garantiza su ejecución continua, reinicio automático en caso de fallo, y registro adecuado de su actividad en archivos de log dedicados. La configuración de cada comando se encuentra en archivos `.conf` individuales en el directorio raíz del proyecto.
+
+### 📣 Notificaciones WhatsApp y Alertas de Incidencias (Cambios recientes)
+
+- **Nuevo campo en módulo WhatsApp/Notifications**
+  - Vista: `resources/views/whatsapp/notification.blade.php`
+  - Se añadió la tarjeta “Teléfonos de Incidencias de Orden” con un formulario para gestionar teléfonos separados por comas.
+  - Variable de entorno utilizada: `WHATSAPP_PHONE_ORDEN_INCIDENCIA`.
+  - Rutas web añadidas:
+    - `POST whatsapp/update-incident-phones` → `App\Http\Controllers\WhatsAppController@updateIncidentPhones`.
+  - Controlador actualizado: `app/Http/Controllers/WhatsAppController.php`
+    - `sendNotification()` ahora inyecta `phoneNumberIncident` con `env('WHATSAPP_PHONE_ORDEN_INCIDENCIA')`.
+    - `updateIncidentPhones()` guarda la lista en `.env` editando/insertando la línea `WHATSAPP_PHONE_ORDEN_INCIDENCIA=...`.
+
+- **Observer de órdenes de producción (alertas automáticas)**
+  - Archivo: `app/Observers/ProductionOrderObserver.php`
+  - Registrado en: `app/Providers/AppServiceProvider.php` (`ProductionOrder::observe(ProductionOrderObserver::class);`)
+  - Envía notificaciones WhatsApp a los teléfonos definidos en `WHATSAPP_PHONE_ORDEN_INCIDENCIA` mediante el endpoint Laravel `LOCAL_SERVER/api/send-message` (con `jid=<tel>@s.whatsapp.net`).
+  - Todas las notificaciones están protegidas con `try/catch` y registran únicamente errores en logs (`Log::error`).
+  - Mensajes implementados:
+    - **Tarjeta pasada a incidencias**: cuando el `status` cambia a un valor distinto de `0`, `1` o `2`.
+      - Título: “ALERTA ORDEN (tarjeta pasada a incidencias):”
+      - Contenido: Centro de producción (nombre de `customer`), Línea, OrderID, Status, Fecha.
+    - **Finalizada sin iniciarse**: cuando el `status` cambia a `2` y el estado anterior NO era `1`.
+      - Título: “ALERTA ORDEN (finalizada sin iniciarse):”
+      - Contenido: Centro de producción, Línea, OrderID, Status, Fecha.
+    - **Posible incidencia: menos de N segundos en curso**: cuando el `status` cambia de `1` → `2` y el tiempo transcurrido es menor que el umbral configurado.
+      - Umbral configurable con `ORDER_MIN_ACTIVE_SECONDS` (por defecto `60`).
+      - Título: “ALERTA ORDEN (posible incidencia - menos de N s en curso):”
+      - Contenido: Centro de producción, Línea, OrderID, Status, Tiempo en curso (segundos), Fecha.
+
+- **Variables de entorno relevantes**
+  - `WHATSAPP_PHONE_MANTENIMIENTO`: lista separada por comas para notificaciones de mantenimientos.
+  - `WHATSAPP_PHONE_ORDEN_INCIDENCIA`: lista separada por comas para alertas de incidencias de órdenes.
+  - `LOCAL_SERVER`: base URL del backend Laravel (usado para `.../api/send-message`).
+  - `ORDER_MIN_ACTIVE_SECONDS`: umbral en segundos para detectar finalizaciones “demasiado rápidas” desde estado en curso (por defecto `60`).
+
+- **Notas**
+  - El texto “Centro de producción” en los mensajes corresponde al `name` del `Customer` vinculado a la línea (`ProductionLine->customer->name`).
+  - El botón “Desconectar WhatsApp” llama a `WhatsAppController@disconnect`, que debe apuntar al endpoint de logout válido en API (`/api/whatsapp/logout`). Verificar correspondencia de rutas si se cambia el endpoint.
 
 #### Servidores Node.js
 
@@ -2057,6 +2478,137 @@ Notas:
 - Segmentar por redes ZeroTier por cliente/línea; aplicar ACLs de mínimo privilegio.
 - Rotar tokens/identidades de ZeroTier y credenciales de `cloudflared`; registrar y auditar accesos.
 - Mantener Caddy con TLS y headers de seguridad; deshabilitar HTTP sin TLS.
+
+### 🔧 Sistema de Monitoreo de Cloudflare Tunnel
+
+Sensorica incluye un sistema automático de monitoreo y recuperación para el túnel de Cloudflare que garantiza la disponibilidad continua del acceso remoto al sistema.
+
+#### Características principales
+
+- **Monitoreo Automático**: Verificación cada 30 segundos del estado del túnel Cloudflare
+- **Recuperación Automática**: Reinicio automático del servicio en caso de fallo
+- **Logs Detallados**: Registro completo de todas las operaciones de monitoreo
+- **Integración con Systemd**: Gestión nativa del sistema operativo
+- **Rotación de Logs**: Gestión automática del tamaño de archivos de log
+- **Configuración Automática**: Integración completa con el script de actualización
+
+#### Componentes del sistema
+
+**Script de Monitoreo**: `/var/www/html/scripts/cloudflare-tunnel-monitor.sh`
+
+Funcionalidades del script:
+- `monitor`: Verificación y reinicio automático (modo por defecto)
+- `status`: Mostrar estado actual del túnel
+- `restart`: Forzar reinicio del túnel
+- `enable`: Habilitar el servicio si no está activo
+
+**Servicio Systemd**: `cloudflare-tunnel-monitor.service`
+- Ejecuta el script de monitoreo como servicio del sistema
+- Configurado para ejecutarse con permisos de root
+- Logs integrados con journald
+
+**Timer Systemd**: `cloudflare-tunnel-monitor.timer`
+- Ejecuta el monitoreo cada 30 segundos
+- Configuración de alta precisión (AccuracySec=1sec)
+- Inicio automático después del arranque del sistema
+
+#### Verificaciones realizadas
+
+1. **Estado del Servicio**: Verifica que `cloudflared.service` esté activo
+2. **Proceso en Ejecución**: Confirma que el proceso cloudflared esté ejecutándose
+3. **Habilitación del Servicio**: Asegura que el servicio esté habilitado para arranque automático
+4. **Conectividad**: Verificación básica de que el proceso responde
+
+#### Logs y monitoreo
+
+**Archivo de Logs**: `/var/log/cloudflare-tunnel-monitor.log`
+- Registro de todas las verificaciones y acciones
+- Rotación automática cuando supera 10MB
+- Formato con timestamp y nivel de log
+
+**Logs del Sistema**: `journalctl -u cloudflare-tunnel-monitor.service`
+- Integración con el sistema de logs del sistema operativo
+- Acceso a logs históricos y en tiempo real
+
+#### Comandos útiles
+
+```bash
+# Ver estado del timer
+systemctl status cloudflare-tunnel-monitor.timer
+
+# Ver logs del monitoreo
+tail -f /var/log/cloudflare-tunnel-monitor.log
+
+# Ver logs del sistema
+journalctl -u cloudflare-tunnel-monitor.service -f
+
+# Ejecutar verificación manual
+/var/www/html/scripts/cloudflare-tunnel-monitor.sh status
+
+# Forzar reinicio del túnel
+/var/www/html/scripts/cloudflare-tunnel-monitor.sh restart
+```
+
+#### Configuración automática
+
+El sistema se configura automáticamente durante la ejecución del script `update.sh`:
+
+1. **Verificación de Archivos**: Comprueba que el script de monitoreo existe
+2. **Permisos**: Asigna permisos de ejecución al script
+3. **Habilitación del Timer**: Habilita el timer systemd si no está activo
+4. **Inicio del Servicio**: Inicia el timer si no está ejecutándose
+5. **Verificación Final**: Confirma que el sistema está funcionando correctamente
+
+#### Integración con sudoers
+
+El script `update.sh` configura automáticamente los permisos necesarios en sudoers para que el usuario `www-data` pueda ejecutar comandos relacionados con Cloudflare:
+
+```bash
+# Comandos permitidos para www-data sin contraseña
+/bin/systemctl restart cloudflared.service
+/bin/systemctl start cloudflared.service
+/bin/systemctl stop cloudflared.service
+/bin/systemctl enable cloudflared.service
+/bin/systemctl is-active cloudflared.service
+/bin/systemctl enable cloudflare-tunnel-monitor.timer
+/bin/systemctl start cloudflare-tunnel-monitor.timer
+/bin/systemctl stop cloudflare-tunnel-monitor.timer
+/bin/systemctl is-active cloudflare-tunnel-monitor.timer
+/var/www/html/scripts/cloudflare-tunnel-monitor.sh
+```
+
+#### Solución de problemas
+
+**El timer no se ejecuta**:
+```bash
+# Verificar estado
+systemctl status cloudflare-tunnel-monitor.timer
+
+# Recargar configuración
+sudo systemctl daemon-reload
+sudo systemctl enable cloudflare-tunnel-monitor.timer
+sudo systemctl start cloudflare-tunnel-monitor.timer
+```
+
+**Logs no se generan**:
+```bash
+# Verificar permisos del directorio de logs
+sudo mkdir -p /var/log
+sudo touch /var/log/cloudflare-tunnel-monitor.log
+sudo chmod 644 /var/log/cloudflare-tunnel-monitor.log
+```
+
+**El túnel no se reinicia automáticamente**:
+```bash
+# Verificar permisos en sudoers
+sudo visudo
+# Buscar las líneas relacionadas con www-data y cloudflared
+
+# Probar reinicio manual
+sudo /var/www/html/scripts/cloudflare-tunnel-monitor.sh restart
+```
+
+Este sistema garantiza que el túnel de Cloudflare permanezca siempre disponible, proporcionando acceso continuo y confiable al sistema Sensorica desde ubicaciones remotas.
 
 ## 📝 Licencia
 

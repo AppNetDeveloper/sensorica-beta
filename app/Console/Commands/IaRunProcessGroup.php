@@ -151,12 +151,12 @@ class IaRunProcessGroup extends Command
             $presentCodes = array_values(array_intersect($processCodes, $presentCodes));
             $plannedSeconds = (int)($plannedByLine[$line->id] ?? 0);
             return [
-                'id' => $line->id, // Abreviado: line_id → id
+                'line_id' => $line->id,
                 // Mantenemos line_name y customer_id en el comando pero no los enviamos a la IA
                 // 'line_name' => $line->name,
                 // 'customer_id' => $line->customer_id,
-                'pc' => $presentCodes, // Abreviado: process_codes_present → pc
-                'pt' => $plannedSeconds, // Abreviado: planned_theoretical_time → pt (segundos ya planificados)
+                'process_codes_present' => $presentCodes,
+                'planned_theoretical_time' => $plannedSeconds, // segundos ya planificados (status=0)
             ];
         })->values()->all();
 
@@ -165,6 +165,7 @@ class IaRunProcessGroup extends Command
         $unplannedOrders = ProductionOrder::query()
             ->whereNull('production_line_id')
             ->where('process_category', $description)
+            ->where('status', 0) // Solo órdenes pendientes de iniciar
             ->orderBy('id') // Orden consistente para procesamiento por lotes
             ->limit($limit)
             ->get(['id', 'order_id', 'process_category', 'original_order_process_id', 'theoretical_time', 'production_line_id']);
@@ -172,6 +173,7 @@ class IaRunProcessGroup extends Command
         $totalUnplanned = ProductionOrder::query()
             ->whereNull('production_line_id')
             ->where('process_category', $description)
+            ->where('status', 0) // Solo contar las que realmente necesitan planificación
             ->count();
 
         if ($totalUnplanned > $limit) {

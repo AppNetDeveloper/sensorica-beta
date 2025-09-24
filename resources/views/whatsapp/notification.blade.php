@@ -75,6 +75,24 @@
             </div>
         </div>
 
+        {{-- Teléfonos de Incidencias de Orden --}}
+        <div class="card shadow-lg mb-4">
+            <div class="card-body">
+                <h3 class="h5 mb-3 text-center"><i class="bi bi-exclamation-octagon"></i> {{ __('Teléfonos de Incidencias de Orden') }}</h3>
+                <form action="{{ route('whatsapp.updateIncidentPhones') }}" method="POST">
+                    @csrf
+                    <div class="mb-3">
+                        <label for="incident_phones" class="form-label">{{ __('Números (separados por coma)') }}</label>
+                        <input type="text" name="incident_phones" id="incident_phones" class="form-control" value="{{ $phoneNumberIncident }}" placeholder="346XXXXXXXX, 346YYYYYYYY">
+                        <div class="form-text">{{ __('Ejemplo: 34611111111,34622222222') }}</div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-save"></i> {{ __('Guardar teléfonos') }}
+                    </button>
+                </form>
+            </div>
+        </div>
+
         {{-- Actualizar Número de Notificación --}}
         <div class="card shadow-lg mb-4">
             <div class="card-body">
