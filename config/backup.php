@@ -166,10 +166,10 @@ return [
         'notifiable' => \Spatie\Backup\Notifications\Notifiable::class,
 
         'mail' => [
-            'to' => 'dev@boisolo.dev',
+            'to' => 'dev@aixmart.net',
 
             'from' => [
-                'address' => env('MAIL_FROM_ADDRESS', 'dev@boisolo.com'),
+                'address' => env('MAIL_FROM_ADDRESS', 'dev@aixmart.net'),
                 'name' => env('MAIL_FROM_NAME', 'Backup'),
             ],
         ],

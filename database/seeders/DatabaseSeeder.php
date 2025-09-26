@@ -72,9 +72,9 @@ class DatabaseSeeder extends Seeder
 
         // Crear o encontrar el usuario admin
         $user = User::firstOrCreate(
-            ['email' => 'dev@boisolo.com'], // criterio para buscar el usuario
+            ['email' => 'dev@aixmart.net'], // criterio para buscar el usuario
             [
-                'name'       => 'Boisolo Developer',
+                'name'       => 'Xmart Developer',
                 'password'   => Hash::make('@BSLserveriot***'),
                 'avatar'     => 'avatar.png',
                 'type'       => 'admin',

@@ -26,7 +26,7 @@ class RfidDeviceImport implements ToCollection
      * Procesa la colección de filas del Excel.
      *
      * Se asume que el archivo tiene dos filas iniciales:
-     *   - Fila 1: Título (por ejemplo: "RFID Dispositivos | Boisolo Developer")
+     *   - Fila 1: Título (por ejemplo: "RFID Dispositivos | Xmart Developer")
      *   - Fila 2: Encabezados con las siguientes columnas:
      *       Nombre, RFID Lectura EPC, RFID Tipo, MQTT Topic 1, Función Modelo 0, 
      *       Función Modelo 1, Invers Sensors, Tiempo óptimo de producción, 

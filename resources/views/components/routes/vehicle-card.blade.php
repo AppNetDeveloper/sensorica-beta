@@ -63,12 +63,22 @@
         <span class="badge bg-light text-dark ms-1" style="font-size: 0.7em;">{{ $clientCount }}</span>
       @endif
     </span>
-    <button class="btn btn-sm p-0 text-white remove-vehicle-btn"
-            style="background: none; border: none; font-size: 12px;"
-            data-assignment-id="{{ $assignment->id }}"
-            title="{{ __('Remove vehicle') }}">
-      <i class="fas fa-times"></i>
-    </button>
+    <div class="d-flex align-items-center gap-1">
+      <button class="btn btn-sm p-0 text-white vehicle-print-btn"
+              type="button"
+              style="background: none; border: none; font-size: 12px;"
+              data-assignment-id="{{ $assignment->id }}"
+              data-vehicle-plate="{{ $assignment->fleetVehicle->plate }}"
+              title="{{ __('Print route sheet') }}">
+        <i class="fas fa-print"></i>
+      </button>
+      <button class="btn btn-sm p-0 text-white remove-vehicle-btn"
+              style="background: none; border: none; font-size: 12px;"
+              data-assignment-id="{{ $assignment->id }}"
+              title="{{ __('Remove vehicle') }}">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
   </div>
 
   {{-- Client List --}}

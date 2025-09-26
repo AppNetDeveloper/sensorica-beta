@@ -6,11 +6,11 @@ use App\Http\Controllers\Controller;
 
 /**
  * @OA\Info(
- *     title="Boisolo Api",
+ *     title="Xmart Api",
  *     version="1.0.1",
  *     description="This is a sample API documentation",
  *     @OA\Contact(
- *         email="dev@boisolo.com"
+ *         email="dev@aixmart.net"
  *     ),
  *     @OA\License(
  *         name="Apache 2.0",

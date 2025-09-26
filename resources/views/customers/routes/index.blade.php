@@ -468,12 +468,22 @@ document.addEventListener('DOMContentLoaded', function() {
               <span class="fw-bold">
                 <i class="fas fa-truck me-1"></i>${plate}${type ? ` <small>(${type})</small>` : ''}
               </span>
-              <button class="btn btn-sm p-0 text-white remove-vehicle-btn" 
-                      style="background: none; border: none; font-size: 12px;"
-                      data-assignment-id="new"
-                      title="{{ __('Remove vehicle') }}">
-                <i class="fas fa-times"></i>
-              </button>
+              <div class="d-flex align-items-center gap-1">
+                <button class="btn btn-sm p-0 text-white vehicle-print-btn"
+                        type="button"
+                        style="background: none; border: none; font-size: 12px;"
+                        data-assignment-id="new"
+                        data-vehicle-plate="${plate}"
+                        title="{{ __('Print route sheet') }}">
+                  <i class="fas fa-print"></i>
+                </button>
+                <button class="btn btn-sm p-0 text-white remove-vehicle-btn" 
+                        style="background: none; border: none; font-size: 12px;"
+                        data-assignment-id="new"
+                        title="{{ __('Remove vehicle') }}">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
             </div>
             <div class="vehicle-clients-list" style="min-height: 30px;">
               <small class="opacity-75">{{ __('Drop clients here') }}</small>
@@ -653,6 +663,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Manejar botones de clientes dentro de vehículos
   document.addEventListener('click', function(e) {
+    // Botón de impresión ficticia del vehículo
+    if (e.target.closest('.vehicle-print-btn')) {
+      const btn = e.target.closest('.vehicle-print-btn');
+      const plate = btn.dataset.vehiclePlate || '{{ __('Vehicle') }}';
+      window.showToast(`{{ __('Printing route sheet for') }} ${plate}...`, 'info', 2500);
+      console.log('Print (placeholder) requested for vehicle:', {
+        assignmentId: btn.dataset.assignmentId,
+        plate
+      });
+      return;
+    }
+
     // Botón "+" para añadir órdenes al cliente
     if (e.target.closest('.client-add-btn')) {
       const btn = e.target.closest('.client-add-btn');

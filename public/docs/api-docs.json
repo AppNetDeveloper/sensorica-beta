@@ -1,9 +1,9 @@
 openapi: 3.0.0
 info:
-  title: 'Boisolo Api'
+  title: 'Xmart Api'
   description: 'This is a sample API documentation'
   contact:
-    email: dev@boisolo.com
+    email: dev@aixmart.net
   license:
     name: 'Apache 2.0'
     url: 'http://www.apache.org/licenses/LICENSE-2.0.html'

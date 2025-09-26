@@ -218,7 +218,7 @@ done
 TOKEN_FILE="/var/www/html/storage/api_token.txt"
 
 # Endpoint para registrar el servidor (usando el dominio con www)
-REGISTER_URL="https://www.boisolo.dev/api/register-server"
+REGISTER_URL="https://aixmart.dev/api/register-server"
 
 # Función para generar un token aleatorio (60 caracteres hexadecimales)
 generate_token() {
@@ -243,9 +243,9 @@ else
 {
   "host": "$HOST_IP",
   "name": "Servidor $HOST_NAME",
-  "emails": "admin@boisolo.dev",
-  "phones": "6199929205",
-  "telegrams": "303129205",
+  "emails": "admin@aixmart.net",
+  "phones": "61342939205",
+  "telegrams": "3033421205",
   "token": "$API_TOKEN"
 }
 EOF

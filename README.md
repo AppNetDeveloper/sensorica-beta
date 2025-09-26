@@ -2612,7 +2612,4 @@ Este sistema garantiza que el túnel de Cloudflare permanezca siempre disponible
 
 ## 📝 Licencia
 
-AiXmart es un software propietario. Todos los derechos reservados BOISOLO www.boisolo.com AiXmart www.boisolo.com.
-
-{{ ... }}
-Desarrollado por el equipo de AppNet Developer, Boisolo Y AiXmart 2025
+ Xmart 2025
