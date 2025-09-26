@@ -43,6 +43,7 @@ html, body { margin: 0; padding: 0; font-family: 'Inter', system-ui, -apple-syst
     box-shadow: 0 18px 36px rgba(0,0,0,.35);
     max-height: calc(100vh - 120px);
     overflow-y: auto;
+    backdrop-filter: blur(14px);
   }
   .nav a {
     padding: 10px 12px;
@@ -70,6 +71,8 @@ html, body { margin: 0; padding: 0; font-family: 'Inter', system-ui, -apple-syst
 .hero-copy p { margin: 0 0 18px; color: var(--muted); font-size: 18px; }
 .cta-row { display: flex; gap: 12px; flex-wrap: wrap; margin: 12px 0 10px; }
 .trust { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; padding: 0; margin: 18px 0 0; list-style: none; color: var(--muted); font-size: 14px; }
+.trust li { position: relative; padding-left: 16px; }
+.trust li::before { content: "•"; position: absolute; left: 0; top: 0; color: var(--accent); }
 .hero-visual { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .card.demo { background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02)); border: 1px solid rgba(255,255,255,.08); border-radius: 16px; padding: 16px; backdrop-filter: blur(6px); }
 .card.demo.alt { transform: translateY(12px); }
@@ -87,9 +90,13 @@ html, body { margin: 0; padding: 0; font-family: 'Inter', system-ui, -apple-syst
   .hero { padding: 56px 0 32px; }
   .hero-copy h1 { font-size: 32px; }
   .hero-copy p { font-size: 16px; }
-  .trust { grid-template-columns: 1fr; gap: 6px; }
+  .trust { grid-template-columns: 1fr; gap: 4px; margin-top: 14px; }
   .hero-visual { grid-template-columns: 1fr; }
-  .section { padding: 48px 0; }
+  .section { padding: 52px 0; }
+  .section + .section { margin-top: 12px; }
+  .card.demo { padding: 14px; border-radius: 14px; }
+  .card.demo h3 { font-size: 18px; }
+  .card.demo ul { font-size: 13px; }
 }
 
 /* Sections */
@@ -241,6 +248,40 @@ html, body { margin: 0; padding: 0; font-family: 'Inter', system-ui, -apple-syst
 .service-item { font-size: 9px; background: rgba(34,197,94,.08); border: 1px solid rgba(34,197,94,.25); padding: 4px 6px; border-radius: 4px; display: flex; align-items: center; gap: 4px; }
 .service-item.active::before { content: "🟢"; }
 
+.oee-demo { background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02)); border: 1px solid rgba(34,211,238,.25); border-radius: 16px; padding: 18px; box-shadow: 0 16px 44px rgba(34,211,238,.18); display: flex; flex-direction: column; gap: 16px; }
+.oee-header { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.oee-title { font-weight: 700; font-size: 16px; }
+.oee-shift { font-size: 12px; color: var(--muted); }
+.oee-gauges { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; }
+.gauge { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.14); border-radius: 12px; padding: 10px; text-align: center; }
+.gauge .label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+.gauge strong { font-size: 18px; color: var(--text); }
+.oee-events { display: grid; gap: 8px; }
+.event { background: rgba(124,58,237,.12); border: 1px solid rgba(124,58,237,.28); border-radius: 10px; padding: 10px; font-size: 12px; }
+.event .time { display: block; font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+.shift-widget { background: rgba(34,197,94,.12); border: 1px solid rgba(34,197,94,.32); border-radius: 12px; padding: 12px; }
+.widget-title { font-weight: 600; font-size: 13px; margin-bottom: 6px; }
+.widget-body { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; }
+.widget-body .label { display: block; font-size: 11px; color: var(--muted); }
+.widget-body strong { font-size: 16px; color: var(--text); }
+
+.incidents-demo { background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02)); border: 1px solid rgba(239,68,68,.25); border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 16px; box-shadow: 0 16px 44px rgba(239,68,68,.18); }
+.incidents-header { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.incidents-title { font-weight: 700; font-size: 16px; }
+.incidents-meta { font-size: 12px; color: var(--muted); }
+.incident-timeline { display: grid; gap: 10px; }
+.incident-card { border-radius: 14px; padding: 12px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.06); display: grid; gap: 6px; }
+.incident-card .badge { font-size: 10px; padding: 2px 6px; border-radius: 999px; background: rgba(124,58,237,.25); color: #ede9fe; }
+.incident-card .status { font-size: 10px; color: var(--muted); }
+.incident-head { display: flex; justify-content: space-between; align-items: center; }
+.incident-card.critical { border-color: rgba(239,68,68,.4); }
+.incident-card.medium { border-color: rgba(245,158,11,.4); }
+.incident-card.low { border-color: rgba(59,130,246,.4); }
+.incident-meta { font-size: 11px; color: var(--muted); }
+.incident-footer { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.12); border-radius: 12px; padding: 10px; text-align: center; }
+.incident-footer .label { display: block; font-size: 11px; color: var(--muted); }
+.incident-footer strong { font-size: 16px; }
+
 @media (min-width: 900px) {
   .logistics-calendar { grid-template-columns: 1fr 1fr 1fr; }
   .maintenance-cards { grid-template-columns: 1fr 1fr; }
@@ -341,9 +382,19 @@ html, body { margin: 0; padding: 0; font-family: 'Inter', system-ui, -apple-syst
   .maintenance-summary { grid-template-columns: 1fr; }
   .quality-cards { grid-template-columns: 1fr; }
   .quality-summary { grid-template-columns: 1fr; }
+  .oee-gauges { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .widget-body { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .incident-footer { grid-template-columns: 1fr; }
   .erp-flow { gap: 12px; }
   .config-item { grid-template-columns: 1fr; gap: 4px; }
   .architecture-diagram { grid-template-columns: 1fr; }
   .architecture-services { grid-template-columns: 1fr; }
   .footer-inner { flex-direction: column; text-align: center; }
+}
+
+@media (max-width: 480px){
+  .widget-body { grid-template-columns: 1fr; }
+  .oee-header, .incidents-header { flex-direction: column; align-items: flex-start; }
+  .oee-gauges { grid-template-columns: 1fr 1fr; }
+  .incident-timeline { gap: 8px; }
 }

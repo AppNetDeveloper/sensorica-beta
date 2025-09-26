@@ -43,7 +43,12 @@
           <a class="btn btn-primary" href="#contacto">Solicitar presupuesto</a>
           <a class="btn btn-secondary" href="#solucion">Cómo funciona</a>
         </div>
-- Gestión de rutas de entrega y flota de vehículos
+        <ul class="trust">
+          <li>Organiza pedidos y órdenes</li>
+          <li>Control de máquinas y operarios</li>
+          <li>Producción en tiempo real</li>
+          <li>Gestión de rutas y flota logística</li>
+        </ul>
       </div>
       <div class="hero-visual" aria-hidden="true">
         <div class="card demo">
@@ -503,6 +508,252 @@
         <div class="cta-row">
           <a class="btn btn-primary" href="#contacto">Mejorar calidad</a>
           <a class="btn btn-secondary" href="#solucion">Ver proceso</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="monitor-oee" class="section alt">
+    <div class="container">
+      <div class="ia-intro">
+        <h2>📊 Monitor OEE en planta</h2>
+        <p class="subtitle">Dashboards en vivo para cada línea de producción. Controla disponibilidad, rendimiento y calidad por turno con widgets diseñados para la planta.</p>
+      </div>
+
+      <div class="ia-grid">
+        <div class="ia-content">
+          <div class="features-grid">
+            <div class="feature">
+              <h3>KPIs por línea</h3>
+              <p>OEE, disponibilidad, rendimiento y calidad en tiempo real para cada línea.</p>
+            </div>
+            <div class="feature">
+              <h3>Widgets de turno</h3>
+              <p>Widgets configurables por turno, con objetivos y responsables visibles.</p>
+            </div>
+            <div class="feature">
+              <h3>Alarmas visuales</h3>
+              <p>Colores y alertas cuando los KPIs caen bajo los umbrales definidos.</p>
+            </div>
+            <div class="feature">
+              <h3>Históricos comparables</h3>
+              <p>Comparación de turnos y días anteriores para detectar tendencias.</p>
+            </div>
+          </div>
+
+          <div class="stats-grid">
+            <div class="stat-card"><div class="value">+14 pts</div><div class="label">Incremento medio OEE</div></div>
+            <div class="stat-card"><div class="value">-22%</div><div class="label">Paradas imprevistas</div></div>
+            <div class="stat-card"><div class="value">+18%</div><div class="label">Cumplimiento de objetivos</div></div>
+            <div class="stat-card"><div class="value">+3x</div><div class="label">Velocidad de reacción</div></div>
+          </div>
+
+          <div class="feature-list">
+            <div class="feature-item"><span class="dot"></span><div>Dashboards independientes por cliente, línea y centro de trabajo.</div></div>
+            <div class="feature-item"><span class="dot"></span><div>Widgets por turno con control de objetivos, responsables y comentarios.</div></div>
+            <div class="feature-item"><span class="dot"></span><div>Modo planta: fuente grande, contraste alto y actualización constante.</div></div>
+            <div class="feature-item"><span class="dot"></span><div>Logs detallados de cálculo en `CalculateProductionMonitorOeev2.php`.</div></div>
+            <div class="feature-item"><span class="dot"></span><div>Integración con sensores y MQTT para refresco cada pocos segundos.</div></div>
+            <div class="feature-item"><span class="dot"></span><div>Exportación de datos para auditorías y reporting directivo.</div></div>
+          </div>
+
+          <div class="accordion">
+            <div class="acc-item open">
+              <div class="acc-header">¿Cómo se calculan los KPIs?</div>
+              <div class="acc-content">Tomamos señales en tiempo real (disponible, en marcha, parada), producción real vs teórica y calidad aceptada. Los cálculos se ejecutan por proceso y se agregan por turno.</div>
+            </div>
+            <div class="acc-item">
+              <div class="acc-header">¿Se adapta a distintos turnos?</div>
+              <div class="acc-content">Sí. Define turnos personalizados, objetivos específicos y widgets visibles sólo para ese turno. Cada supervisor ve lo que necesita.</div>
+            </div>
+            <div class="acc-item">
+              <div class="acc-header">¿Qué pasa si se cae un servicio?</div>
+              <div class="acc-content">Supervisor reinicia automáticamente los servicios críticos y tenemos reconexión MQTT. Los dashboards muestran estado de conexión.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="ia-demo">
+          <div class="oee-demo">
+            <div class="oee-header">
+              <div class="oee-title">Monitor OEE - Línea 2</div>
+              <div class="oee-shift">Turno Tarde · 14:00 - 22:00</div>
+            </div>
+            <div class="oee-gauges">
+              <div class="gauge">
+                <span class="label">OEE</span>
+                <strong>84.6%</strong>
+              </div>
+              <div class="gauge">
+                <span class="label">Disponibilidad</span>
+                <strong>91.2%</strong>
+              </div>
+              <div class="gauge">
+                <span class="label">Rendimiento</span>
+                <strong>87.0%</strong>
+              </div>
+              <div class="gauge">
+                <span class="label">Calidad</span>
+                <strong>97.5%</strong>
+              </div>
+            </div>
+            <div class="oee-events">
+              <div class="event">
+                <span class="time">16:25</span>
+                <p>Alerta: Disponibilidad &lt; 85% · Revisar Dosificación</p>
+              </div>
+              <div class="event">
+                <span class="time">15:40</span>
+                <p>Objetivo turno alcanzado (Producción)</p>
+              </div>
+              <div class="event">
+                <span class="time">15:05</span>
+                <p>Operario confirmó incidencia resuelta</p>
+              </div>
+            </div>
+            <div class="shift-widget">
+              <div class="widget-title">Objetivo turno</div>
+              <div class="widget-body">
+                <div>
+                  <span class="label">Esperado</span>
+                  <strong>420 uds</strong>
+                </div>
+                <div>
+                  <span class="label">Real</span>
+                  <strong>398 uds</strong>
+                </div>
+                <div>
+                  <span class="label">Faltan</span>
+                  <strong>22 uds</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ia-footer">
+        <div class="cta-row">
+          <a class="btn btn-primary" href="#contacto">Ver monitor en acción</a>
+          <a class="btn btn-secondary" href="#solucion">Conocer KPIs</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="incidencias" class="section">
+    <div class="container">
+      <div class="ia-intro">
+        <h2>🛠️ Sistema de incidencias de órdenes</h2>
+        <p class="subtitle">Workflow completo para registrar, gestionar y cerrar incidencias desde el Kanban hasta el histórico de aprendizaje.</p>
+      </div>
+
+      <div class="ia-grid">
+        <div class="ia-content">
+          <div class="features-grid">
+            <div class="feature">
+              <h3>Registro inmediato</h3>
+              <p>Un clic en el Kanban para mover la tarjeta a incidencias y capturar el contexto.</p>
+            </div>
+            <div class="feature">
+              <h3>Workflow guiado</h3>
+              <p>Asignación de responsable, notas, seguimiento y cierre documentado.</p>
+            </div>
+            <div class="feature">
+              <h3>Histórico auditable</h3>
+              <p>Todos los eventos quedan en `production_order_incidents` con trazabilidad total.</p>
+            </div>
+            <div class="feature">
+              <h3>Alertas multicanal</h3>
+              <p>WhatsApp, tablero y correo notifican estados críticos automáticamente.</p>
+            </div>
+          </div>
+
+          <div class="stats-grid">
+            <div class="stat-card"><div class="value">-45%</div><div class="label">Tiempo medio de resolución</div></div>
+            <div class="stat-card"><div class="value">+70%</div><div class="label">Incidencias documentadas</div></div>
+            <div class="stat-card"><div class="value">-30%</div><div class="label">Reincidencias</div></div>
+            <div class="stat-card"><div class="value">+100%</div><div class="label">Trazabilidad</div></div>
+          </div>
+
+          <div class="feature-list">
+            <div class="feature-item"><span class="dot"></span><div>Vista histórica por cliente con filtros de fecha, línea y severidad.</div></div>
+            <div class="feature-item"><span class="dot"></span><div>Timeline de eventos por incidencia: creación, notas, cambios de estado.</div></div>
+            <div class="feature-item"><span class="dot"></span><div>Integración con `ProductionOrderIncidentController` y políticas de permisos.</div></div>
+            <div class="feature-item"><span class="dot"></span><div>Notas internas y documentación adjunta para auditorías.</div></div>
+            <div class="feature-item"><span class="dot"></span><div>KPI automático: tiempo detenido, downtime y total por incidencia.</div></div>
+            <div class="feature-item"><span class="dot"></span><div>Acceso directo desde paneles OEE y Kanban para cerrar el ciclo.</div></div>
+          </div>
+
+          <div class="accordion">
+            <div class="acc-item open">
+              <div class="acc-header">¿Cómo es el flujo?</div>
+              <div class="acc-content">1) Tarjeta pasa a incidencias desde Kanban · 2) Se asigna responsable y prioridad · 3) Se añaden notas/fotos · 4) Resolución y confirmación · 5) Incidencia queda en histórico para análisis.</div>
+            </div>
+            <div class="acc-item">
+              <div class="acc-header">¿Quién puede verlas?</div>
+              <div class="acc-content">Roles configurables: producción, calidad, mantenimiento y dirección. Cada uno con permisos específicos para crear, editar o cerrar incidencias.</div>
+            </div>
+            <div class="acc-item">
+              <div class="acc-header">¿Cómo se analiza?</div>
+              <div class="acc-content">Dashboard con filtros dinámicos, exportación a Excel y top incidencias por causa. Facilita planes de acción y seguimiento.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="ia-demo">
+          <div class="incidents-demo">
+            <div class="incidents-header">
+              <div class="incidents-title">Incidencias · Cliente NovaTextil</div>
+              <div class="incidents-meta">Semana 39 · 8 abiertas · 21 cerradas</div>
+            </div>
+            <div class="incident-timeline">
+              <div class="incident-card critical">
+                <div class="incident-head">
+                  <span class="badge">Alta</span>
+                  <span class="status">En curso</span>
+                </div>
+                <h4>Orden PO-2024-210 · Línea 3</h4>
+                <p>Fallo detectado en corte. Operario reporta vibración anormal.</p>
+                <div class="incident-meta">Responsable: M. Gómez · Hace 12 min</div>
+              </div>
+              <div class="incident-card medium">
+                <div class="incident-head">
+                  <span class="badge">Media</span>
+                  <span class="status">Resuelta</span>
+                </div>
+                <h4>Orden PO-2024-205 · Línea 1</h4>
+                <p>Retraso en etiquetado. Se reprogramó turno extra.</p>
+                <div class="incident-meta">Cierre: 2h 15m · Responsable: L. Pérez</div>
+              </div>
+              <div class="incident-card low">
+                <div class="incident-head">
+                  <span class="badge">Baja</span>
+                  <span class="status">Pendiente validación</span>
+                </div>
+                <h4>Orden PO-2024-198 · Línea 2</h4>
+                <p>Solicitud de confirmación de notas adicionales por calidad.</p>
+                <div class="incident-meta">Último evento: 09:40</div>
+              </div>
+            </div>
+            <div class="incident-footer">
+              <div>
+                <span class="label">Tiempo medio resolución</span>
+                <strong>3h 42m</strong>
+              </div>
+              <div>
+                <span class="label">Incidencias críticas</span>
+                <strong>2 activas</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ia-footer">
+        <div class="cta-row">
+          <a class="btn btn-primary" href="#contacto">Gestionar incidencias</a>
+          <a class="btn btn-secondary" href="#solucion">Ver flujo</a>
         </div>
       </div>
     </div>
