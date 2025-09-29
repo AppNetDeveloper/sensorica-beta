@@ -41,6 +41,9 @@ class RoutePlanController extends Controller
             ->orderBy('plate')
             ->get(['id','plate','vehicle_type','default_route_name_id']);
 
+        // Obtener usuarios disponibles para asignar como conductores
+        $availableDrivers = \App\Models\User::orderBy('name')->get(['id','name','email']);
+
         // Cargar asignaciones específicas para la semana actual
         $weekParam = request()->get('week');
         $monday = $weekParam ? \Carbon\Carbon::parse($weekParam)->startOfWeek(\Carbon\Carbon::MONDAY) : now()->startOfWeek(\Carbon\Carbon::MONDAY);
@@ -48,7 +51,7 @@ class RoutePlanController extends Controller
         
         $routeAssignments = RouteDayAssignment::where('customer_id', $customer->id)
             ->whereBetween('assignment_date', [$monday, $sunday])
-            ->with(['fleetVehicle'])
+            ->with(['fleetVehicle', 'driver'])
             ->get();
 
         // Cargar asignaciones cliente-vehículo para la semana
@@ -75,26 +78,52 @@ class RoutePlanController extends Controller
             'client_vehicle_assignments_count' => $clientVehicleAssignments->count()
         ]);
 
-        return view('customers.routes.index', compact('customer', 'routeNames', 'customerClients', 'fleetVehicles', 'routeAssignments', 'clientVehicleAssignments'));
+        return view('customers.routes.index', compact(
+            'customer',
+            'routeNames',
+            'customerClients',
+            'fleetVehicles',
+            'availableDrivers',
+            'routeAssignments',
+            'clientVehicleAssignments'
+        ));
     }
 
     public function assignVehicle(Request $request, Customer $customer)
     {
         try {
-            \Log::info('AssignVehicle request received', [
+            \Log::info('Attempting to assign vehicle', [
                 'customer_id' => $customer->id,
                 'request_data' => $request->all()
             ]);
 
             $data = $request->validate([
-                'route_name_id' => 'required|exists:route_names,id',
-                'fleet_vehicle_id' => 'required|exists:fleet_vehicles,id',
-                'day_index' => 'required|integer|min:0|max:6',
-                'week' => 'required|date_format:Y-m-d',
+                'assignment_id' => 'nullable|exists:route_day_assignments,id',
+                'route_name_id' => 'nullable|exists:route_names,id',
+                'fleet_vehicle_id' => 'nullable|exists:fleet_vehicles,id',
+                'user_id' => 'nullable|exists:users,id',
+                'day_index' => 'nullable|integer|min:0|max:6',
+                'week' => 'nullable|date_format:Y-m-d',
             ]);
 
             \Log::info('Validation passed', ['validated_data' => $data]);
 
+            // Si viene assignment_id, solo actualizar el conductor
+            if (isset($data['assignment_id'])) {
+                $assignment = RouteDayAssignment::where('customer_id', $customer->id)
+                    ->where('id', $data['assignment_id'])
+                    ->firstOrFail();
+                
+                $assignment->update([
+                    'user_id' => $data['user_id'] ?? null,
+                ]);
+
+                \Log::info('Driver updated', ['assignment_id' => $assignment->id, 'user_id' => $data['user_id']]);
+
+                return response()->json(['success' => true, 'message' => __('Driver updated successfully')]);
+            }
+
+            // Si no, crear/actualizar asignación completa
             $monday = \Carbon\Carbon::parse($data['week'])->startOfWeek(\Carbon\Carbon::MONDAY);
             $assignmentDate = (clone $monday)->addDays($data['day_index']);
 
@@ -114,7 +143,10 @@ class RoutePlanController extends Controller
             
             if ($existingAssignment) {
                 // Ya existe, solo actualizar
-                $existingAssignment->update(['active' => true]);
+                $existingAssignment->update([
+                    'active' => true,
+                    'user_id' => $data['user_id'] ?? null,
+                ]);
                 $assignment = $existingAssignment;
             } else {
                 // No existe, crear nuevo
@@ -122,6 +154,7 @@ class RoutePlanController extends Controller
                     'customer_id' => $customer->id,
                     'route_name_id' => $data['route_name_id'],
                     'fleet_vehicle_id' => $data['fleet_vehicle_id'],
+                    'user_id' => $data['user_id'] ?? null,
                     'assignment_date' => $assignmentDate,
                     'day_of_week' => $data['day_index'],
                     'active' => true,

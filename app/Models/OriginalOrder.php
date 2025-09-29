@@ -21,9 +21,9 @@ class OriginalOrder extends Model
         'order_details',
         'processed',
         'finished_at', //fecha de pedido finalizado cuando el pedido se completa
-        'delivery_date', //fecha de pedido programada
-        'estimated_delivery_date', //fecha de pedido estimada
-        'actual_delivery_date', //fecha de pedido real
+        'delivery_date', //fecha de de entrega pedido programada por erp
+        'estimated_delivery_date', //fecha de entrega pedido estimada
+        'actual_delivery_date', //fecha de entrega pedido real
         'in_stock',
         'fecha_pedido_erp', //fecha de pedido en ERP
     ];

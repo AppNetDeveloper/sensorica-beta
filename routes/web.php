@@ -54,6 +54,12 @@ use App\Http\Controllers\WorkCalendarController;
 use App\Http\Controllers\OriginalOrderProcessFileController;
 use App\Http\Controllers\ProductionOrderCallbackController;
 
+// Rutas para transportistas/conductores (fuera del grupo de customers)
+Route::middleware(['auth', 'XSS'])->group(function () {
+    Route::get('/my-deliveries', [\App\Http\Controllers\DeliveryController::class, 'myDeliveries'])->name('deliveries.my-deliveries');
+    Route::post('/deliveries/mark-delivered', [\App\Http\Controllers\DeliveryController::class, 'markAsDelivered'])->name('deliveries.mark-delivered');
+    Route::get('/deliveries/order-details/{orderId}', [\App\Http\Controllers\DeliveryController::class, 'getOrderDetails'])->name('deliveries.order-details');
+});
 
 // Maintenance Causes & Parts (by customer)
 Route::middleware(['auth', 'XSS'])->group(function () {
@@ -184,7 +190,9 @@ Route::prefix('customers')->name('customers.')->group(function () {
         Route::get('routes/print-entire-route', [\App\Http\Controllers\RoutePlanController::class, 'printEntireRoute'])->name('routes.print-entire-route');
         Route::get('routes/export-excel', [\App\Http\Controllers\RoutePlanController::class, 'exportToExcel'])->name('routes.export-excel');
         Route::get('routes/export-entire-route-excel', [\App\Http\Controllers\RoutePlanController::class, 'exportEntireRouteToExcel'])->name('routes.export-entire-route-excel');
+    });
 
+    Route::prefix('customers/{customer}')->middleware(['auth'])->group(function () {
         // Nombres de Rutas (RouteName)
         Route::resource('route-names', \App\Http\Controllers\RouteNameController::class)
             ->names('route-names')

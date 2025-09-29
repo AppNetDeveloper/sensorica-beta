@@ -56,14 +56,34 @@
 
   {{-- Card Header --}}
   <div class="d-flex justify-content-between align-items-start mb-1">
-    <span class="fw-bold">
-      <span class="{{ $vehicleIcon }}"></span>
-      {{ $assignment->fleetVehicle->plate }}
-      @if($clientCount > 0)
-        <span class="badge bg-light text-dark ms-1" style="font-size: 0.7em;">{{ $clientCount }}</span>
+    <div class="flex-grow-1">
+      <span class="fw-bold">
+        <span class="{{ $vehicleIcon }}"></span>
+        {{ $assignment->fleetVehicle->plate }}
+        @if($clientCount > 0)
+          <span class="badge bg-light text-dark ms-1" style="font-size: 0.7em;">{{ $clientCount }}</span>
+        @endif
+      </span>
+      @if($assignment->driver)
+        <div style="font-size: 0.75em; opacity: 0.9; margin-top: 2px;">
+          <i class="ti ti-user"></i> {{ $assignment->driver->name }}
+        </div>
+      @else
+        <div style="font-size: 0.75em; opacity: 0.7; margin-top: 2px;">
+          <i class="ti ti-user"></i> {{ __('No driver') }}
+        </div>
       @endif
-    </span>
+    </div>
     <div class="d-flex align-items-center gap-1">
+      <button class="btn btn-sm p-0 text-white vehicle-assign-driver-btn"
+              type="button"
+              style="background: rgba(255,255,255,0.2); border: none; font-size: 13px; padding: 4px 6px !important; border-radius: 4px;"
+              data-assignment-id="{{ $assignment->id }}"
+              data-current-driver-id="{{ $assignment->user_id ?? '' }}"
+              data-vehicle-plate="{{ $assignment->fleetVehicle->plate }}"
+              title="{{ __('Assign/Change driver') }}">
+        <i class="fas fa-user-edit"></i>
+      </button>
       <button class="btn btn-sm p-0 text-white vehicle-copy-prev-week-btn"
               type="button"
               style="background: none; border: none; font-size: 12px;"

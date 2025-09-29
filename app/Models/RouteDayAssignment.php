@@ -13,6 +13,7 @@ class RouteDayAssignment extends Model
         'customer_id',
         'route_name_id',
         'fleet_vehicle_id',
+        'user_id',
         'assignment_date',
         'day_of_week',
         'notes',
@@ -38,5 +39,10 @@ class RouteDayAssignment extends Model
     public function fleetVehicle()
     {
         return $this->belongsTo(FleetVehicle::class);
+    }
+
+    public function driver()
+    {
+        return $this->belongsTo(User::class, 'user_id');
     }
 }

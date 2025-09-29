@@ -98,6 +98,7 @@ class DatabaseSeeder extends Seeder
             CustomerClientsPermissionsSeeder::class,
             RoutePlanPermissionsSeeder::class,
             RouteNamePermissionsSeeder::class,
+            DeliveryPermissionsSeeder::class,
             // Otros seeders que puedas tener...
         ]);
     }

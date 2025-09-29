@@ -321,10 +321,56 @@
           </select>
           <div class="form-text">{{ __('Choose a vehicle from your fleet to assign to this route and day.') }}</div>
         </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">{{ __('Assign Driver') }} <span class="text-muted">({{ __('Optional') }})</span></label>
+          <select id="driverSelect" class="form-select">
+            <option value="">-- {{ __('No driver assigned') }} --</option>
+            @foreach(($availableDrivers ?? []) as $driver)
+              <option value="{{ $driver->id }}">
+                {{ $driver->name }}
+                @if($driver->email) ({{ $driver->email }}) @endif
+              </option>
+            @endforeach
+          </select>
+          <div class="form-text">{{ __('Optionally assign a driver/transporter to this vehicle for this route.') }}</div>
+        </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
         <button type="button" class="btn btn-primary" id="assignVehicleBtn">{{ __('Assign') }}</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para asignar/cambiar conductor -->
+<div class="modal fade" id="driverModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">{{ __('Assign/Change Driver') }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <div class="text-muted small" id="modalDriverVehicleInfo"></div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">{{ __('Select Driver') }}</label>
+          <select id="driverModalSelect" class="form-select">
+            <option value="">-- {{ __('No driver assigned') }} --</option>
+            @foreach(($availableDrivers ?? []) as $driver)
+              <option value="{{ $driver->id }}">
+                {{ $driver->name }}
+                @if($driver->email) ({{ $driver->email }}) @endif
+              </option>
+            @endforeach
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
+        <button type="button" class="btn btn-primary" id="saveDriverBtn">{{ __('Save') }}</button>
       </div>
     </div>
   </div>
@@ -470,7 +516,9 @@ document.addEventListener('DOMContentLoaded', function() {
   // Manejar asignación de vehículo
   document.getElementById('assignVehicleBtn').addEventListener('click', function() {
     const vehicleSelect = document.getElementById('vehicleSelect');
+    const driverSelect = document.getElementById('driverSelect');
     const vehicleId = vehicleSelect.value;
+    const driverId = driverSelect.value || null;
     
     if (!vehicleId) {
       showToast('{{ __('Please select a vehicle') }}','warning');
@@ -495,6 +543,7 @@ document.addEventListener('DOMContentLoaded', function() {
       body: JSON.stringify({
         route_name_id: currentRouteId,
         fleet_vehicle_id: vehicleId,
+        user_id: driverId,
         day_index: parseInt(currentDayIndex),
         week: currentWeek
       })
@@ -741,8 +790,65 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
+  // Variables globales para modal de conductor
+  let currentAssignmentId = null;
+
+  // Guardar conductor
+  document.getElementById('saveDriverBtn').addEventListener('click', function() {
+    const driverId = document.getElementById('driverModalSelect').value || null;
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    
+    fetch('{{ route("customers.routes.assign-vehicle", $customer->id) }}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': csrfToken,
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        assignment_id: currentAssignmentId,
+        user_id: driverId
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        window.showToast('{{ __('Driver updated successfully') }}', 'success', 2000);
+        const modal = bootstrap.Modal.getInstance(document.getElementById('driverModal'));
+        modal.hide();
+        setTimeout(() => window.location.reload(), 1000);
+      } else {
+        window.showToast('{{ __('Error') }}: ' + (data.message || 'Unknown error'), 'danger', 3000);
+      }
+    })
+    .catch(error => {
+      console.error('Error updating driver:', error);
+      window.showToast('{{ __('Error updating driver') }}', 'danger', 3000);
+    });
+  });
+
   // Manejar botones de clientes dentro de vehículos
   document.addEventListener('click', function(e) {
+    // Botón de asignar/cambiar conductor
+    if (e.target.closest('.vehicle-assign-driver-btn')) {
+      const btn = e.target.closest('.vehicle-assign-driver-btn');
+      currentAssignmentId = btn.dataset.assignmentId;
+      const currentDriverId = btn.dataset.currentDriverId;
+      const vehiclePlate = btn.dataset.vehiclePlate;
+      
+      // Actualizar info del modal
+      document.getElementById('modalDriverVehicleInfo').textContent = 
+        `{{ __('Vehicle') }}: ${vehiclePlate}`;
+      
+      // Seleccionar conductor actual si existe
+      document.getElementById('driverModalSelect').value = currentDriverId || '';
+      
+      // Mostrar modal
+      const modal = new bootstrap.Modal(document.getElementById('driverModal'));
+      modal.show();
+      return;
+    }
+
     // Botón de copiar RUTA COMPLETA de semana anterior
     if (e.target.closest('.route-copy-prev-week-btn')) {
       const btn = e.target.closest('.route-copy-prev-week-btn');

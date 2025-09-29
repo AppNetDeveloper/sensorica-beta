@@ -704,6 +704,143 @@ El Sistema de Planificación de Rutas es un módulo completo para la gestión de
 - **Laravel Eloquent**: ORM para gestión de datos
 - **Validation**: Validación robusta de datos de entrada
 - **Transactions**: Transacciones de base de datos para operaciones complejas
+
+#### Sistema de Transportistas y Entregas
+
+El sistema incluye un módulo completo para la gestión de transportistas (conductores) y sus entregas diarias, permitiendo asignar conductores a vehículos y proporcionarles una vista móvil-friendly para gestionar sus entregas.
+
+**Características principales:**
+
+- **Asignación de Conductores**: Asignar usuarios como conductores a vehículos específicos
+- **Vista para Transportistas**: Interfaz dedicada para que los conductores vean sus entregas del día
+- **Gestión de Entregas**: Marcar pedidos como entregados desde dispositivos móviles
+- **Control de Permisos**: Sistema de roles y permisos para controlar acceso
+- **KPIs en Tiempo Real**: Métricas visuales de entregas pendientes y completadas
+
+**Componentes del Sistema:**
+
+**Base de Datos:**
+- Campo `user_id` en tabla `route_day_assignments` para vincular conductor con vehículo
+- Relación `driver()` en modelo `RouteDayAssignment`
+- Foreign key y índice para optimización de consultas
+
+**Modelos:**
+- **`RouteDayAssignment`**: Incluye relación `driver()` con modelo `User`
+- **`DeliveryController`**: Controlador dedicado para gestión de entregas
+
+**Vistas:**
+- **`deliveries/my-deliveries.blade.php`**: Vista principal para transportistas
+  - Diseño móvil-friendly con gradientes modernos
+  - 4 KPIs visuales: Total paradas, Entregados, Pendientes, Vehículos
+  - Selector de fecha para ver entregas de otros días
+  - Tarjetas por cliente con información de contacto
+  - Botón para llamar directamente al cliente
+  - Lista de pedidos con botón "✓ Entregar"
+  - Actualización en tiempo real sin recargar página
+
+**Funcionalidades:**
+
+1. **Asignación de Conductores**:
+   - Dropdown en modal de asignación de vehículo
+   - Botón 👤 en cada vehículo para cambiar conductor
+   - Muestra nombre del conductor o "No driver"
+   - Modal para editar conductor después de asignar
+
+2. **Vista del Transportista** (`/my-deliveries`):
+   - Acceso mediante enlace en sidebar (🚚 Mis Entregas)
+   - Filtrado automático por usuario autenticado
+   - Selector de fecha para planificación
+   - Información de cliente: nombre, dirección, teléfono
+   - Estado visual de pedidos (pendiente/entregado)
+   - Actualización de contadores en tiempo real
+
+3. **Gestión de Entregas**:
+   - Botón "✓ Entregar" por cada pedido
+   - Confirmación antes de marcar
+   - Actualiza `actual_delivery_date` en base de datos
+   - Feedback visual inmediato
+   - Toast de confirmación
+
+**Permisos y Roles:**
+
+- **Permiso**: `deliveries-view` - Controla acceso a vista de entregas
+- **Rol**: `driver` - Rol específico para transportistas
+- **Seeder**: `DeliveryPermissionsSeeder` - Crea permiso y rol automáticamente
+- Asignado por defecto a roles `admin` y `driver`
+- Enlace en navbar solo visible con permiso
+
+**Rutas:**
+```php
+Route::get('/my-deliveries', [DeliveryController::class, 'myDeliveries'])
+    ->name('deliveries.my-deliveries');
+Route::post('/deliveries/mark-delivered', [DeliveryController::class, 'markAsDelivered'])
+    ->name('deliveries.mark-delivered');
+```
+
+**Controlador:**
+- **`DeliveryController@myDeliveries`**: Lista entregas del usuario autenticado
+- **`DeliveryController@markAsDelivered`**: Marca pedido como entregado
+- Seguridad: Solo ve sus propias entregas filtradas por `user_id`
+
+**Flujo de Trabajo:**
+
+1. **Administrador asigna conductor**:
+   - Al crear vehículo: selecciona conductor en dropdown
+   - Después de crear: click en botón 👤 para cambiar
+
+2. **Asignar rol al usuario**:
+   - Ir a gestión de usuarios
+   - Asignar rol "driver" al usuario
+   - O asignar permiso "deliveries-view" directamente
+
+3. **Transportista accede**:
+   - Login con sus credenciales
+   - Ve enlace "🚚 Mis Entregas" en sidebar
+   - Accede a `/my-deliveries`
+
+4. **Gestión de entregas**:
+   - Ve lista de clientes asignados
+   - Puede llamar directamente desde la app
+   - Marca pedidos como entregados
+   - Contadores se actualizan automáticamente
+
+**Archivos Clave:**
+- `database/migrations/2025_09_29_212242_add_user_id_to_route_day_assignments_table.php`
+- `app/Models/RouteDayAssignment.php`
+- `app/Http/Controllers/DeliveryController.php`
+- `resources/views/deliveries/my-deliveries.blade.php`
+- `database/seeders/DeliveryPermissionsSeeder.php`
+- `resources/views/partial/nav-builder.blade.php`
+- `resources/views/components/routes/vehicle-card.blade.php`
+
+**Mejoras de Rutas Implementadas:**
+
+1. **Búsqueda Global de Pedidos**:
+   - Campo de búsqueda específico para números de pedido
+   - Resalta pedidos encontrados con outline azul
+   - Scroll automático al pedido
+   - Toast con cantidad de resultados
+
+2. **Copiar de Semana Anterior**:
+   - Botón por vehículo: Copia solo ese vehículo
+   - Botón por ruta: Copia toda la ruta con todos los vehículos
+   - Usa pedidos ACTUALES del cliente
+   - Solo copia clientes con pedidos pendientes
+   - Mantiene orden original (sort_order)
+
+3. **Exportación e Impresión**:
+   - Botón imprimir: PDF individual por vehículo
+   - Botón Excel: Exporta a .xlsx con formato profesional
+   - Impresión de ruta completa: PDF con todos los vehículos
+   - Excel de ruta completa: Archivo con separadores por vehículo
+   - Nombres descriptivos: `hoja_ruta_{matricula}_{fecha}.xlsx`
+
+4. **Gestión de Pedidos**:
+   - Toggle activo/inactivo por pedido (click en X)
+   - Drag & drop para reordenar pedidos
+   - Contador de pedidos activos por cliente
+   - Estado visual (activo/inactivo)
+   - Actualización automática de `estimated_delivery_date`
 - **Logging**: Sistema completo de logs para debugging y auditoría
 
 **Base de Datos:**

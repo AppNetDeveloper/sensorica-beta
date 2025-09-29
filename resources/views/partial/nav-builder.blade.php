@@ -45,6 +45,16 @@ $settings = Utility::settings();
                     </a>
                 </li>
 
+                {{-- Enlace para transportistas --}}
+                @can('deliveries-view')
+                    <li class="dash-item dash-hasmenu {{ request()->is('my-deliveries*') ? 'active' : '' }}">
+                        <a class="dash-link" href="{{ route('deliveries.my-deliveries') }}" title="{{ __('My Deliveries') }}">
+                            <span class="dash-micon"><i class="fas fa-truck-loading"></i></span>
+                            <span class="dash-mtext custom-weight">{{ __('My Deliveries') }}</span>
+                        </a>
+                    </li>
+                @endcan
+
                 @role('admin')
                     <li class="dash-item dash-hasmenu {{ request()->is('settings*') ? 'active' : '' }}">
                         <a class="dash-link" title="{{ __('Settings') }}" href="{{ route('settings.index') }}">
