@@ -676,4 +676,197 @@ class RoutePlanController extends Controller
             abort(500, 'Error generating Excel file');
         }
     }
+
+    public function copyEntireRouteFromPreviousWeek(Request $request, Customer $customer)
+    {
+        try {
+            $data = $request->validate([
+                'route_name_id' => 'required|exists:route_names,id',
+                'day_index' => 'required|integer|min:0|max:6',
+                'week' => 'required|date_format:Y-m-d',
+            ]);
+
+            $currentMonday = \Carbon\Carbon::parse($data['week'])->startOfWeek(\Carbon\Carbon::MONDAY);
+            $previousMonday = (clone $currentMonday)->subWeek();
+            
+            $currentDate = (clone $currentMonday)->addDays($data['day_index']);
+            $previousDate = (clone $previousMonday)->addDays($data['day_index']);
+
+            // Buscar TODAS las asignaciones de esa ruta en la semana anterior (todos los vehículos)
+            $previousAssignments = RouteClientVehicleAssignment::where('customer_id', $customer->id)
+                ->where('route_name_id', $data['route_name_id'])
+                ->whereDate('assignment_date', $previousDate)
+                ->with('customerClient', 'fleetVehicle')
+                ->orderBy('fleet_vehicle_id')
+                ->orderBy('sort_order')
+                ->get();
+
+            if ($previousAssignments->isEmpty()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('No assignments found for this route in the previous week')
+                ], 404);
+            }
+
+            $copiedCount = 0;
+            $vehiclesProcessed = [];
+
+            foreach ($previousAssignments as $index => $prevAssignment) {
+                // Verificar que el cliente tenga pedidos pendientes ACTUALES
+                $hasPendingOrders = \App\Models\OriginalOrder::where('customer_client_id', $prevAssignment->customer_client_id)
+                    ->whereNotNull('finished_at')
+                    ->whereNull('actual_delivery_date')
+                    ->exists();
+
+                if (!$hasPendingOrders) {
+                    continue;
+                }
+
+                // Asegurar que el vehículo esté asignado a la ruta este día
+                $vehicleAssignment = RouteDayAssignment::firstOrCreate(
+                    [
+                        'customer_id' => $customer->id,
+                        'route_name_id' => $data['route_name_id'],
+                        'fleet_vehicle_id' => $prevAssignment->fleet_vehicle_id,
+                        'assignment_date' => $currentDate,
+                    ],
+                    [
+                        'day_of_week' => $data['day_index'],
+                        'active' => true,
+                    ]
+                );
+
+                $vehiclesProcessed[$prevAssignment->fleet_vehicle_id] = true;
+
+                // Crear nueva asignación cliente-vehículo
+                $newAssignment = RouteClientVehicleAssignment::updateOrCreate(
+                    [
+                        'customer_id' => $customer->id,
+                        'customer_client_id' => $prevAssignment->customer_client_id,
+                        'fleet_vehicle_id' => $prevAssignment->fleet_vehicle_id,
+                        'assignment_date' => $currentDate,
+                    ],
+                    [
+                        'route_name_id' => $data['route_name_id'],
+                        'day_of_week' => $data['day_index'],
+                        'sort_order' => $prevAssignment->sort_order,
+                        'active' => true,
+                    ]
+                );
+
+                // Obtener y asignar pedidos pendientes ACTUALES
+                $pendingOrders = \App\Models\OriginalOrder::where('customer_client_id', $prevAssignment->customer_client_id)
+                    ->whereNotNull('finished_at')
+                    ->whereNull('actual_delivery_date')
+                    ->get();
+
+                foreach ($pendingOrders as $orderIndex => $order) {
+                    \App\Models\RouteOrderAssignment::updateOrCreate(
+                        [
+                            'route_client_vehicle_assignment_id' => $newAssignment->id,
+                            'original_order_id' => $order->id,
+                        ],
+                        [
+                            'active' => true,
+                            'sort_order' => $orderIndex + 1,
+                        ]
+                    );
+
+                    $order->estimated_delivery_date = $currentDate;
+                    $order->save();
+                }
+
+                $copiedCount++;
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => __('Copied :count client(s) and :vehicles vehicle(s) from previous week', [
+                    'count' => $copiedCount,
+                    'vehicles' => count($vehiclesProcessed)
+                ]),
+                'copied_count' => $copiedCount,
+                'vehicles_count' => count($vehiclesProcessed)
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error in copyEntireRouteFromPreviousWeek', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function printEntireRoute(Request $request, Customer $customer)
+    {
+        try {
+            $data = $request->validate([
+                'route_name_id' => 'required|exists:route_names,id',
+                'day_date' => 'required|date_format:Y-m-d',
+            ]);
+
+            $routeName = RouteName::findOrFail($data['route_name_id']);
+            $dayDate = \Carbon\Carbon::parse($data['day_date']);
+
+            // Obtener todos los vehículos asignados a esta ruta en este día
+            $vehicleAssignments = RouteDayAssignment::where('customer_id', $customer->id)
+                ->where('route_name_id', $data['route_name_id'])
+                ->whereDate('assignment_date', $dayDate)
+                ->with('fleetVehicle')
+                ->get();
+
+            // Obtener todos los clientes asignados
+            $clientAssignments = RouteClientVehicleAssignment::where('customer_id', $customer->id)
+                ->where('route_name_id', $data['route_name_id'])
+                ->whereDate('assignment_date', $dayDate)
+                ->with([
+                    'customerClient',
+                    'fleetVehicle',
+                    'orderAssignments' => function ($query) {
+                        $query->where('active', true)->orderBy('sort_order', 'asc');
+                    },
+                    'orderAssignments.originalOrder'
+                ])
+                ->orderBy('fleet_vehicle_id')
+                ->orderBy('sort_order', 'asc')
+                ->get();
+
+            return view('customers.routes.print-route', compact('customer', 'routeName', 'dayDate', 'vehicleAssignments', 'clientAssignments'));
+
+        } catch (\Exception $e) {
+            \Log::error('Error in printEntireRoute', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            abort(500, 'Error generating route print');
+        }
+    }
+
+    public function exportEntireRouteToExcel(Request $request, Customer $customer)
+    {
+        try {
+            $data = $request->validate([
+                'route_name_id' => 'required|exists:route_names,id',
+                'day_date' => 'required|date_format:Y-m-d',
+            ]);
+
+            $routeName = RouteName::findOrFail($data['route_name_id']);
+            $dayDate = \Carbon\Carbon::parse($data['day_date']);
+
+            $fileName = 'ruta_completa_' . \Str::slug($routeName->name) . '_' . $dayDate->format('Y-m-d') . '.xlsx';
+
+            return \Maatwebsite\Excel\Facades\Excel::download(
+                new \App\Exports\EntireRouteExport($data['route_name_id'], $data['day_date'], $customer->id),
+                $fileName
+            );
+
+        } catch (\Exception $e) {
+            \Log::error('Error in exportEntireRouteToExcel', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            abort(500, 'Error generating Excel file');
+        }
+    }
 }

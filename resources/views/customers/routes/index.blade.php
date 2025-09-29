@@ -743,7 +743,52 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Manejar botones de clientes dentro de vehículos
   document.addEventListener('click', function(e) {
-    // Botón de copiar de semana anterior
+    // Botón de copiar RUTA COMPLETA de semana anterior
+    if (e.target.closest('.route-copy-prev-week-btn')) {
+      const btn = e.target.closest('.route-copy-prev-week-btn');
+      const routeId = btn.dataset.routeId;
+      const dayIndex = btn.dataset.dayIndex;
+      const currentWeek = new URLSearchParams(window.location.search).get('week') || '{{ now()->startOfWeek()->format("Y-m-d") }}';
+      
+      if (confirm('{{ __('Copy ENTIRE route (all vehicles) from last week? Current orders will be assigned.') }}')) {
+        copyEntireRouteFromPreviousWeek(routeId, dayIndex, currentWeek);
+      }
+      return;
+    }
+
+    // Botón de imprimir RUTA COMPLETA
+    if (e.target.closest('.route-print-btn')) {
+      const btn = e.target.closest('.route-print-btn');
+      const routeId = btn.dataset.routeId;
+      const routeName = btn.dataset.routeName;
+      const dayDate = btn.dataset.dayDate;
+      
+      console.log('Opening print for entire route:', { routeId, routeName, dayDate });
+      
+      const printUrl = '{{ route("customers.routes.print-entire-route", $customer->id) }}?route_name_id=' + routeId + '&day_date=' + dayDate;
+      window.open(printUrl, '_blank', 'width=900,height=800');
+      
+      window.showToast(`{{ __('Opening route sheet for') }} ${routeName}...`, 'info', 2000);
+      return;
+    }
+
+    // Botón de Excel RUTA COMPLETA
+    if (e.target.closest('.route-excel-btn')) {
+      const btn = e.target.closest('.route-excel-btn');
+      const routeId = btn.dataset.routeId;
+      const routeName = btn.dataset.routeName;
+      const dayDate = btn.dataset.dayDate;
+      
+      console.log('Exporting entire route to Excel:', { routeId, routeName, dayDate });
+      
+      const excelUrl = '{{ route("customers.routes.export-entire-route-excel", $customer->id) }}?route_name_id=' + routeId + '&day_date=' + dayDate;
+      window.location.href = excelUrl;
+      
+      window.showToast(`{{ __('Downloading Excel for') }} ${routeName}...`, 'success', 2000);
+      return;
+    }
+
+    // Botón de copiar de semana anterior (vehículo individual)
     if (e.target.closest('.vehicle-copy-prev-week-btn')) {
       const btn = e.target.closest('.vehicle-copy-prev-week-btn');
       const routeId = btn.dataset.routeId;
@@ -847,7 +892,43 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
-  // Función para copiar de semana anterior
+  // Función para copiar RUTA COMPLETA de semana anterior
+  function copyEntireRouteFromPreviousWeek(routeId, dayIndex, currentWeek) {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    
+    window.showToast('{{ __('Copying entire route from previous week') }}...', 'info', 2000);
+    
+    fetch('{{ route("customers.routes.copy-entire-route-previous-week", $customer->id) }}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': csrfToken,
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        route_name_id: routeId,
+        day_index: parseInt(dayIndex),
+        week: currentWeek
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        window.showToast(data.message, 'success', 3000);
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } else {
+        window.showToast('{{ __('Error') }}: ' + (data.message || 'Unknown error'), 'danger', 3000);
+      }
+    })
+    .catch(error => {
+      console.error('Error copying entire route:', error);
+      window.showToast('{{ __('Error copying route') }}: ' + error.message, 'danger', 3000);
+    });
+  }
+
+  // Función para copiar de semana anterior (vehículo individual)
   function copyFromPreviousWeek(routeId, vehicleId, dayIndex, currentWeek) {
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
     

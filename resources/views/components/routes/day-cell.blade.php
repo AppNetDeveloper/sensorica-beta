@@ -8,12 +8,30 @@
 
 <td class="align-top position-relative">
   @if($isRouteActive)
-    {{-- Botón para añadir vehículo --}}
-    <div class="d-flex justify-content-between align-items-start mb-2 gap-2">
-      <div class="flex-grow-1 d-flex align-items-center gap-2">
-        <small class="text-muted">{{ __('Clients') }}:</small>
-        <input type="search" class="form-control form-control-sm clients-search" placeholder="{{ __('Search client...') }}" style="max-width: 200px;">
-      </div>
+    {{-- Botones de acción de ruta --}}
+    <div class="d-flex justify-content-end align-items-center mb-2 gap-1">
+      <button class="btn btn-sm btn-outline-secondary route-copy-prev-week-btn"
+              data-route-id="{{ $route->id }}"
+              data-day-index="{{ $dayIndex }}"
+              title="{{ __('Copy entire route from last week') }}">
+        <i class="fas fa-copy"></i>
+      </button>
+      <button class="btn btn-sm btn-outline-info route-print-btn"
+              data-route-id="{{ $route->id }}"
+              data-route-name="{{ $route->name }}"
+              data-day-index="{{ $dayIndex }}"
+              data-day-date="{{ $dayDate }}"
+              title="{{ __('Print entire route') }}">
+        <i class="fas fa-print"></i>
+      </button>
+      <button class="btn btn-sm btn-outline-success route-excel-btn"
+              data-route-id="{{ $route->id }}"
+              data-route-name="{{ $route->name }}"
+              data-day-index="{{ $dayIndex }}"
+              data-day-date="{{ $dayDate }}"
+              title="{{ __('Export route to Excel') }}">
+        <i class="fas fa-file-excel"></i>
+      </button>
       <button class="btn btn-outline-primary btn-add-vehicle"
               data-bs-toggle="modal"
               data-bs-target="#vehicleModal"
@@ -26,6 +44,14 @@
         <i class="ti ti-truck"></i>
         <i class="ti ti-plus plus-badge"></i>
       </button>
+    </div>
+
+    {{-- Búsqueda de clientes --}}
+    <div class="mb-2">
+      <div class="d-flex align-items-center gap-2">
+        <small class="text-muted">{{ __('Clients') }}:</small>
+        <input type="search" class="form-control form-control-sm clients-search" placeholder="{{ __('Search client...') }}">
+      </div>
     </div>
 
     {{-- Lista de clientes disponibles --}}

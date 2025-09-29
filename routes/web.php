@@ -179,8 +179,11 @@ Route::prefix('customers')->name('customers.')->group(function () {
         Route::post('routes/toggle-order-active', [\App\Http\Controllers\RoutePlanController::class, 'toggleOrderActive'])->name('routes.toggle-order-active');
         Route::post('routes/reorder-orders', [\App\Http\Controllers\RoutePlanController::class, 'reorderOrders'])->name('routes.reorder-orders');
         Route::post('routes/copy-previous-week', [\App\Http\Controllers\RoutePlanController::class, 'copyFromPreviousWeek'])->name('routes.copy-previous-week');
+        Route::post('routes/copy-entire-route-previous-week', [\App\Http\Controllers\RoutePlanController::class, 'copyEntireRouteFromPreviousWeek'])->name('routes.copy-entire-route-previous-week');
         Route::get('routes/print-sheet', [\App\Http\Controllers\RoutePlanController::class, 'printRouteSheet'])->name('routes.print-sheet');
+        Route::get('routes/print-entire-route', [\App\Http\Controllers\RoutePlanController::class, 'printEntireRoute'])->name('routes.print-entire-route');
         Route::get('routes/export-excel', [\App\Http\Controllers\RoutePlanController::class, 'exportToExcel'])->name('routes.export-excel');
+        Route::get('routes/export-entire-route-excel', [\App\Http\Controllers\RoutePlanController::class, 'exportEntireRouteToExcel'])->name('routes.export-entire-route-excel');
 
         // Nombres de Rutas (RouteName)
         Route::resource('route-names', \App\Http\Controllers\RouteNameController::class)
