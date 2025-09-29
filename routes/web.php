@@ -178,7 +178,9 @@ Route::prefix('customers')->name('customers.')->group(function () {
         Route::delete('routes/remove-client-vehicle', [\App\Http\Controllers\RoutePlanController::class, 'removeClientFromVehicle'])->name('routes.remove-client-vehicle');
         Route::post('routes/toggle-order-active', [\App\Http\Controllers\RoutePlanController::class, 'toggleOrderActive'])->name('routes.toggle-order-active');
         Route::post('routes/reorder-orders', [\App\Http\Controllers\RoutePlanController::class, 'reorderOrders'])->name('routes.reorder-orders');
+        Route::post('routes/copy-previous-week', [\App\Http\Controllers\RoutePlanController::class, 'copyFromPreviousWeek'])->name('routes.copy-previous-week');
         Route::get('routes/print-sheet', [\App\Http\Controllers\RoutePlanController::class, 'printRouteSheet'])->name('routes.print-sheet');
+        Route::get('routes/export-excel', [\App\Http\Controllers\RoutePlanController::class, 'exportToExcel'])->name('routes.export-excel');
 
         // Nombres de Rutas (RouteName)
         Route::resource('route-names', \App\Http\Controllers\RouteNameController::class)

@@ -508,6 +508,107 @@ class RoutePlanController extends Controller
         }
     }
 
+    public function copyFromPreviousWeek(Request $request, Customer $customer)
+    {
+        try {
+            $data = $request->validate([
+                'route_name_id' => 'required|exists:route_names,id',
+                'fleet_vehicle_id' => 'required|exists:fleet_vehicles,id',
+                'day_index' => 'required|integer|min:0|max:6',
+                'week' => 'required|date_format:Y-m-d',
+            ]);
+
+            $currentMonday = \Carbon\Carbon::parse($data['week'])->startOfWeek(\Carbon\Carbon::MONDAY);
+            $previousMonday = (clone $currentMonday)->subWeek();
+            
+            $currentDate = (clone $currentMonday)->addDays($data['day_index']);
+            $previousDate = (clone $previousMonday)->addDays($data['day_index']);
+
+            // Buscar asignaciones de la semana anterior
+            $previousAssignments = RouteClientVehicleAssignment::where('customer_id', $customer->id)
+                ->where('route_name_id', $data['route_name_id'])
+                ->where('fleet_vehicle_id', $data['fleet_vehicle_id'])
+                ->whereDate('assignment_date', $previousDate)
+                ->with('customerClient')
+                ->orderBy('sort_order')
+                ->get();
+
+            if ($previousAssignments->isEmpty()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('No assignments found for this route in the previous week')
+                ], 404);
+            }
+
+            $copiedCount = 0;
+            foreach ($previousAssignments as $index => $prevAssignment) {
+                // Verificar que el cliente tenga pedidos pendientes ACTUALES
+                $hasPendingOrders = \App\Models\OriginalOrder::where('customer_client_id', $prevAssignment->customer_client_id)
+                    ->whereNotNull('finished_at')
+                    ->whereNull('actual_delivery_date')
+                    ->exists();
+
+                if (!$hasPendingOrders) {
+                    continue; // Saltar si no tiene pedidos pendientes
+                }
+
+                // Crear nueva asignación
+                $newAssignment = RouteClientVehicleAssignment::updateOrCreate(
+                    [
+                        'customer_id' => $customer->id,
+                        'customer_client_id' => $prevAssignment->customer_client_id,
+                        'fleet_vehicle_id' => $data['fleet_vehicle_id'],
+                        'assignment_date' => $currentDate,
+                    ],
+                    [
+                        'route_name_id' => $data['route_name_id'],
+                        'day_of_week' => $data['day_index'],
+                        'sort_order' => $index + 1,
+                        'active' => true,
+                    ]
+                );
+
+                // Obtener pedidos pendientes ACTUALES del cliente
+                $pendingOrders = \App\Models\OriginalOrder::where('customer_client_id', $prevAssignment->customer_client_id)
+                    ->whereNotNull('finished_at')
+                    ->whereNull('actual_delivery_date')
+                    ->get();
+
+                // Crear route_order_assignments y actualizar estimated_delivery_date
+                foreach ($pendingOrders as $orderIndex => $order) {
+                    \App\Models\RouteOrderAssignment::updateOrCreate(
+                        [
+                            'route_client_vehicle_assignment_id' => $newAssignment->id,
+                            'original_order_id' => $order->id,
+                        ],
+                        [
+                            'active' => true,
+                            'sort_order' => $orderIndex + 1,
+                        ]
+                    );
+
+                    $order->estimated_delivery_date = $currentDate;
+                    $order->save();
+                }
+
+                $copiedCount++;
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => __('Copied :count client(s) from previous week', ['count' => $copiedCount]),
+                'copied_count' => $copiedCount
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error in copyFromPreviousWeek', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
+        }
+    }
+
     public function printRouteSheet(Request $request, Customer $customer)
     {
         try {
@@ -546,6 +647,33 @@ class RoutePlanController extends Controller
                 'trace' => $e->getTraceAsString()
             ]);
             abort(500, 'Error generating route sheet');
+        }
+    }
+
+    public function exportToExcel(Request $request, Customer $customer)
+    {
+        try {
+            $data = $request->validate([
+                'assignment_id' => 'required|exists:route_day_assignments,id',
+            ]);
+
+            $assignment = RouteDayAssignment::where('customer_id', $customer->id)
+                ->where('id', $data['assignment_id'])
+                ->firstOrFail();
+
+            $fileName = 'hoja_ruta_' . $assignment->fleetVehicle->plate . '_' . $assignment->assignment_date->format('Y-m-d') . '.xlsx';
+
+            return \Maatwebsite\Excel\Facades\Excel::download(
+                new \App\Exports\RouteSheetExport($data['assignment_id'], $customer->id),
+                $fileName
+            );
+
+        } catch (\Exception $e) {
+            \Log::error('Error in exportToExcel', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            abort(500, 'Error generating Excel file');
         }
     }
 }

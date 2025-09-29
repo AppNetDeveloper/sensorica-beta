@@ -184,6 +184,7 @@
           <h6 class="text-muted mb-2">{{ __('Filters') }}</h6>
           <div class="filters-bar">
           <input type="search" id="clientSearch" placeholder="{{ __('Search client...') }}" class="form-control">
+          <input type="search" id="orderSearch" placeholder="{{ __('🔍 Search order number...') }}" class="form-control" style="border: 2px solid #0d6efd;">
           <select id="vehicleTypeFilter" class="form-select">
             <option value="">{{ __('All vehicles') }}</option>
             <option value="furgoneta">🚐 {{ __('Van') }}</option>
@@ -742,6 +743,41 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Manejar botones de clientes dentro de vehículos
   document.addEventListener('click', function(e) {
+    // Botón de copiar de semana anterior
+    if (e.target.closest('.vehicle-copy-prev-week-btn')) {
+      const btn = e.target.closest('.vehicle-copy-prev-week-btn');
+      const routeId = btn.dataset.routeId;
+      const vehicleId = btn.dataset.vehicleId;
+      const dayIndex = btn.dataset.dayIndex;
+      const currentWeek = new URLSearchParams(window.location.search).get('week') || '{{ now()->startOfWeek()->format("Y-m-d") }}';
+      
+      if (confirm('{{ __('Copy clients from this route last week? Current orders will be assigned.') }}')) {
+        copyFromPreviousWeek(routeId, vehicleId, dayIndex, currentWeek);
+      }
+      return;
+    }
+
+    // Botón de Excel
+    if (e.target.closest('.vehicle-excel-btn')) {
+      const btn = e.target.closest('.vehicle-excel-btn');
+      const assignmentId = btn.dataset.assignmentId;
+      const plate = btn.dataset.vehiclePlate || '{{ __('Vehicle') }}';
+      
+      if (!assignmentId || assignmentId === 'new') {
+        window.showToast('{{ __('Please save the vehicle assignment first') }}', 'warning', 3000);
+        return;
+      }
+      
+      console.log('Exporting to Excel for vehicle:', { assignmentId, plate });
+      
+      // Descargar Excel
+      const excelUrl = '{{ route("customers.routes.export-excel", $customer->id) }}?assignment_id=' + assignmentId;
+      window.location.href = excelUrl;
+      
+      window.showToast(`{{ __('Downloading Excel for') }} ${plate}...`, 'success', 2000);
+      return;
+    }
+
     // Botón de impresión del vehículo
     if (e.target.closest('.vehicle-print-btn')) {
       const btn = e.target.closest('.vehicle-print-btn');
@@ -810,6 +846,44 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
   });
+
+  // Función para copiar de semana anterior
+  function copyFromPreviousWeek(routeId, vehicleId, dayIndex, currentWeek) {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    
+    window.showToast('{{ __('Copying from previous week') }}...', 'info', 2000);
+    
+    fetch('{{ route("customers.routes.copy-previous-week", $customer->id) }}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': csrfToken,
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        route_name_id: routeId,
+        fleet_vehicle_id: vehicleId,
+        day_index: parseInt(dayIndex),
+        week: currentWeek
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        window.showToast(data.message, 'success', 3000);
+        // Recargar página para mostrar los cambios
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } else {
+        window.showToast('{{ __('Error') }}: ' + (data.message || 'Unknown error'), 'danger', 3000);
+      }
+    })
+    .catch(error => {
+      console.error('Error copying from previous week:', error);
+      window.showToast('{{ __('Error copying from previous week') }}: ' + error.message, 'danger', 3000);
+    });
+  }
 
   // Función para actualizar contador de pedidos activos
   function updateOrderCounter(chipElement) {
@@ -1108,13 +1182,42 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Funcionalidad de filtros
   const clientSearch = document.getElementById('clientSearch');
+  const orderSearch = document.getElementById('orderSearch');
   const vehicleTypeFilter = document.getElementById('vehicleTypeFilter');
   const routeStatusFilter = document.getElementById('routeStatusFilter');
 
   function applyFilters() {
     const searchTerm = clientSearch.value.toLowerCase();
+    const orderSearchTerm = orderSearch ? orderSearch.value.toLowerCase() : '';
     const vehicleType = vehicleTypeFilter.value;
     const routeStatus = routeStatusFilter.value;
+
+    // Limpiar highlights previos
+    document.querySelectorAll('.order-chip').forEach(chip => {
+      chip.style.outline = '';
+      chip.style.backgroundColor = '';
+    });
+
+    // Búsqueda de pedidos
+    if (orderSearchTerm) {
+      let foundOrders = 0;
+      document.querySelectorAll('.order-chip').forEach(chip => {
+        const orderId = chip.dataset.orderId || chip.textContent.trim().split(' ')[0];
+        if (orderId.toLowerCase().includes(orderSearchTerm)) {
+          chip.style.outline = '3px solid #0d6efd';
+          chip.style.backgroundColor = '#e7f1ff';
+          chip.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          foundOrders++;
+        }
+      });
+      
+      if (foundOrders === 0) {
+        window.showToast('{{ __('Order not found') }}: ' + orderSearchTerm, 'warning', 2000);
+      } else {
+        window.showToast(`{{ __('Found') }} ${foundOrders} {{ __('order(s)') }}`, 'success', 2000);
+      }
+      return; // Si busca pedido, no aplicar otros filtros
+    }
 
     // Filtrar clientes
     document.querySelectorAll('.draggable-client, [data-client-name]').forEach(client => {
@@ -1170,6 +1273,9 @@ document.addEventListener('DOMContentLoaded', function() {
   if (clientSearch) {
     clientSearch.addEventListener('input', applyFilters);
   }
+  if (orderSearch) {
+    orderSearch.addEventListener('input', applyFilters);
+  }
   if (vehicleTypeFilter) {
     vehicleTypeFilter.addEventListener('change', applyFilters);
   }
@@ -1180,6 +1286,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Función global para limpiar filtros
   window.clearFilters = function() {
     if (clientSearch) clientSearch.value = '';
+    if (orderSearch) orderSearch.value = '';
     if (vehicleTypeFilter) vehicleTypeFilter.value = '';
     if (routeStatusFilter) routeStatusFilter.value = '';
     applyFilters();

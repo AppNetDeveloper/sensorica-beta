@@ -64,6 +64,16 @@
       @endif
     </span>
     <div class="d-flex align-items-center gap-1">
+      <button class="btn btn-sm p-0 text-white vehicle-copy-prev-week-btn"
+              type="button"
+              style="background: none; border: none; font-size: 12px;"
+              data-assignment-id="{{ $assignment->id }}"
+              data-route-id="{{ $assignment->route_name_id }}"
+              data-vehicle-id="{{ $assignment->fleet_vehicle_id }}"
+              data-day-index="{{ $assignment->assignment_date->dayOfWeekIso - 1 }}"
+              title="{{ __('Copy from last week') }}">
+        <i class="fas fa-copy"></i>
+      </button>
       <button class="btn btn-sm p-0 text-white vehicle-print-btn"
               type="button"
               style="background: none; border: none; font-size: 12px;"
@@ -71,6 +81,14 @@
               data-vehicle-plate="{{ $assignment->fleetVehicle->plate }}"
               title="{{ __('Print route sheet') }}">
         <i class="fas fa-print"></i>
+      </button>
+      <button class="btn btn-sm p-0 text-white vehicle-excel-btn"
+              type="button"
+              style="background: none; border: none; font-size: 12px;"
+              data-assignment-id="{{ $assignment->id }}"
+              data-vehicle-plate="{{ $assignment->fleetVehicle->plate }}"
+              title="{{ __('Export to Excel') }}">
+        <i class="fas fa-file-excel"></i>
       </button>
       <button class="btn btn-sm p-0 text-white remove-vehicle-btn"
               style="background: none; border: none; font-size: 12px;"
