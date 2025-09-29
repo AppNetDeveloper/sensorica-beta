@@ -33,4 +33,12 @@ class CustomerClient extends Model
     {
         return $this->belongsTo(RouteName::class);
     }
+
+    public function pendingDeliveries()
+    {
+        return $this->hasMany(OriginalOrder::class)
+            ->whereNotNull('finished_at')
+            ->whereNull('actual_delivery_date')
+            ->orderByDesc('finished_at');
+    }
 }

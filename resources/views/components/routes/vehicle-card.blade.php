@@ -85,6 +85,11 @@
   <div class="vehicle-clients-list" style="min-height: 30px;">
     @if($vehicleClients->count() > 0)
       @foreach($vehicleClients as $clientAssignment)
+        @php
+          $orderAssignments = $clientAssignment->orderAssignments ?? collect();
+          $activeCount = $orderAssignments->where('active', true)->count();
+          $totalCount = $orderAssignments->count();
+        @endphp
         <div class="badge bg-light text-dark me-1 mb-1 d-flex flex-column vehicle-client-item"
              style="min-width: 140px; cursor: grab; padding: 8px;"
              draggable="true"
@@ -93,13 +98,45 @@
           <div class="d-flex align-items-center justify-content-between w-100">
             <span class="drag-handle me-2 text-muted" title="{{ __('Drag to reorder') }}">⋮⋮</span>
             <span class="flex-grow-1">{{ $clientAssignment->customerClient->name }}</span>
-            <button class="btn btn-sm p-0 text-danger client-remove-btn" style="background: none; border: none; font-size: 10px; line-height: 1;" data-client-assignment-id="{{ $clientAssignment->id }}" title="{{ __('Remove client from vehicle') }}">
+            @if($totalCount > 0)
+              <span class="badge {{ $activeCount === $totalCount ? 'bg-success' : ($activeCount > 0 ? 'bg-warning' : 'bg-secondary') }} ms-1" 
+                    style="font-size: 0.65em;"
+                    title="{{ __('Active orders') }}: {{ $activeCount }} / {{ $totalCount }}">
+                {{ $activeCount }}/{{ $totalCount }}
+              </span>
+            @endif
+            <button class="btn btn-sm p-0 text-danger client-remove-btn ms-1" style="background: none; border: none; font-size: 10px; line-height: 1;" data-client-assignment-id="{{ $clientAssignment->id }}" title="{{ __('Remove client from vehicle') }}">
               <i class="fas fa-times"></i>
             </button>
           </div>
           <div class="client-orders d-flex flex-wrap gap-1 mt-2">
-            <span class="order-chip">pedido-test1 <i class="ti ti-x ms-1"></i></span>
-            <span class="order-chip">pedido-test2 <i class="ti ti-x ms-1"></i></span>
+            @if($orderAssignments->count() > 0)
+              @foreach($orderAssignments as $orderAssignment)
+                @php
+                  $order = $orderAssignment->originalOrder;
+                  $isActive = $orderAssignment->active;
+                @endphp
+                <span class="order-chip {{ $isActive ? 'order-active' : 'order-inactive' }}" 
+                      draggable="true"
+                      data-order-assignment-id="{{ $orderAssignment->id }}"
+                      data-order-id="{{ $order->order_id }}"
+                      data-active="{{ $isActive ? '1' : '0' }}"
+                      data-sort-order="{{ $orderAssignment->sort_order }}"
+                      style="cursor: move; {{ !$isActive ? 'opacity: 0.5; text-decoration: line-through;' : '' }}"
+                      title="{{ __('Drag to reorder') }} | {{ $isActive ? __('Click to deactivate') : __('Click to activate') }}">
+                  <span class="drag-handle" style="cursor: grab; margin-right: 4px;">⋮</span>
+                  {{ $order->order_id }}
+                  @if($order->delivery_date)
+                    <small class="ms-1 text-muted">{{ $order->delivery_date->format('d/m') }}</small>
+                  @elseif($order->estimated_delivery_date)
+                    <small class="ms-1 text-muted">~{{ $order->estimated_delivery_date->format('d/m') }}</small>
+                  @endif
+                  <i class="ti ti-x ms-1" style="font-size: 10px;"></i>
+                </span>
+              @endforeach
+            @else
+              <span class="text-muted small">{{ __('No pending orders') }}</span>
+            @endif
           </div>
         </div>
       @endforeach

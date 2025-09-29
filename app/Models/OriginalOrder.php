@@ -20,12 +20,12 @@ class OriginalOrder extends Model
         'client_number',
         'order_details',
         'processed',
-        'finished_at',
-        'delivery_date',
-        'estimated_delivery_date',
-        'actual_delivery_date',
+        'finished_at', //fecha de pedido finalizado cuando el pedido se completa
+        'delivery_date', //fecha de pedido programada
+        'estimated_delivery_date', //fecha de pedido estimada
+        'actual_delivery_date', //fecha de pedido real
         'in_stock',
-        'fecha_pedido_erp',
+        'fecha_pedido_erp', //fecha de pedido en ERP
     ];
 
     protected $casts = [

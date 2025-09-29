@@ -3,6 +3,57 @@
 @section('title', __('Listado de Rutas') . ' - ' . $customer->name)
 @section('page-title', __('Listado de Rutas'))
 
+@push('styles')
+<style>
+  .kpi-card {
+    cursor: pointer;
+    overflow: hidden;
+    position: relative;
+  }
+  
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    transition: left 0.5s;
+  }
+  
+  .kpi-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2) !important;
+  }
+  
+  .kpi-card:hover::before {
+    left: 100%;
+  }
+  
+  .kpi-icon-wrapper {
+    transition: all 0.3s ease;
+  }
+  
+  .kpi-card:hover .kpi-icon-wrapper {
+    transform: scale(1.1) rotate(5deg);
+  }
+  
+  @keyframes pulse {
+    0%, 100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.05);
+    }
+  }
+  
+  .kpi-card:active {
+    animation: pulse 0.3s ease;
+  }
+</style>
+@endpush
+
 @section('breadcrumb')
 <div class="mb-4">
   <ul class="breadcrumb">
@@ -40,59 +91,87 @@
           $totalClients = collect($clientVehicleAssignments ?? [])->count();
           $totalRoutes = collect($routeNames ?? [])->count();
           $activeRoutes = collect($routeAssignments ?? [])->pluck('route_name_id')->unique()->count();
+          
+          // Calcular pedidos en camiones
+          $totalOrdersInTrucks = collect($clientVehicleAssignments ?? [])->sum(function($assignment) {
+              return $assignment->orderAssignments->where('active', true)->count();
+          });
         @endphp
         
         <div>
           <h6 class="text-muted mb-2">{{ __('Statistics') }}</h6>
           <div id="routes-summary" class="row g-3">
-          <div class="col-md-3">
-            <div class="card h-100">
+          <div class="col">
+            <div class="card h-100 border-0 shadow-sm kpi-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); transition: all 0.3s ease;">
               <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
-                  <div>
-                    <div class="text-muted small">{{ __('Vehicles Assigned') }}</div>
-                    <div class="fs-4 fw-bold">{{ $totalVehicles }}</div>
+                  <div class="text-white">
+                    <div class="small mb-1" style="opacity: 0.9;">{{ __('Vehicles Assigned') }}</div>
+                    <div class="fs-3 fw-bold">{{ $totalVehicles }}</div>
                   </div>
-                  <i class="ti ti-truck fs-2 text-primary"></i>
+                  <div class="kpi-icon-wrapper" style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 12px;">
+                    <i class="ti ti-truck fs-1 text-white"></i>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-          <div class="col-md-3">
-            <div class="card h-100">
+          <div class="col">
+            <div class="card h-100 border-0 shadow-sm kpi-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); transition: all 0.3s ease;">
               <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
-                  <div>
-                    <div class="text-muted small">{{ __('Clients Planned') }}</div>
-                    <div class="fs-4 fw-bold">{{ $totalClients }}</div>
+                  <div class="text-white">
+                    <div class="small mb-1" style="opacity: 0.9;">{{ __('Clients Planned') }}</div>
+                    <div class="fs-3 fw-bold">{{ $totalClients }}</div>
                   </div>
-                  <i class="ti ti-users fs-2 text-info"></i>
+                  <div class="kpi-icon-wrapper" style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 12px;">
+                    <i class="ti ti-users fs-1 text-white"></i>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-          <div class="col-md-3">
-            <div class="card h-100">
+          <div class="col">
+            <div class="card h-100 border-0 shadow-sm kpi-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); transition: all 0.3s ease;">
               <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
-                  <div>
-                    <div class="text-muted small">{{ __('Active Routes') }}</div>
-                    <div class="fs-4 fw-bold">{{ $activeRoutes }}/{{ $totalRoutes }}</div>
+                  <div class="text-white">
+                    <div class="small mb-1" style="opacity: 0.9;">{{ __('Active Routes') }}</div>
+                    <div class="fs-3 fw-bold">{{ $activeRoutes }}/{{ $totalRoutes }}</div>
                   </div>
-                  <i class="ti ti-route fs-2 text-success"></i>
+                  <div class="kpi-icon-wrapper" style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 12px;">
+                    <i class="ti ti-route fs-1 text-white"></i>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-          <div class="col-md-3">
-            <div class="card h-100">
+          <div class="col">
+            <div class="card h-100 border-0 shadow-sm kpi-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); transition: all 0.3s ease;">
               <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
-                  <div>
-                    <div class="text-muted small">{{ __('Week') }}</div>
-                    <div class="fs-4 fw-bold">{{ now()->format('W') }}</div>
+                  <div class="text-white">
+                    <div class="small mb-1" style="opacity: 0.9;">{{ __('Orders in Trucks') }}</div>
+                    <div class="fs-3 fw-bold" id="orders-in-trucks-count">{{ $totalOrdersInTrucks }}</div>
                   </div>
-                  <i class="ti ti-calendar-week fs-2 text-warning"></i>
+                  <div class="kpi-icon-wrapper" style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 12px;">
+                    <i class="ti ti-package fs-1 text-white"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col">
+            <div class="card h-100 border-0 shadow-sm kpi-card" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); transition: all 0.3s ease;">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div class="text-white">
+                    <div class="small mb-1" style="opacity: 0.9;">{{ __('Week') }}</div>
+                    <div class="fs-3 fw-bold">{{ now()->format('W') }}</div>
+                  </div>
+                  <div class="kpi-icon-wrapper" style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 12px;">
+                    <i class="ti ti-calendar-week fs-1 text-white"></i>
+                  </div>
                 </div>
               </div>
             </div>
@@ -663,27 +742,37 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Manejar botones de clientes dentro de vehículos
   document.addEventListener('click', function(e) {
-    // Botón de impresión ficticia del vehículo
+    // Botón de impresión del vehículo
     if (e.target.closest('.vehicle-print-btn')) {
       const btn = e.target.closest('.vehicle-print-btn');
+      const assignmentId = btn.dataset.assignmentId;
       const plate = btn.dataset.vehiclePlate || '{{ __('Vehicle') }}';
-      window.showToast(`{{ __('Printing route sheet for') }} ${plate}...`, 'info', 2500);
-      console.log('Print (placeholder) requested for vehicle:', {
-        assignmentId: btn.dataset.assignmentId,
-        plate
-      });
+      
+      if (!assignmentId || assignmentId === 'new') {
+        window.showToast('{{ __('Please save the vehicle assignment first') }}', 'warning', 3000);
+        return;
+      }
+      
+      console.log('Opening print sheet for vehicle:', { assignmentId, plate });
+      
+      // Abrir ventana de impresión
+      const printUrl = '{{ route("customers.routes.print-sheet", $customer->id) }}?assignment_id=' + assignmentId;
+      window.open(printUrl, '_blank', 'width=900,height=800');
+      
+      window.showToast(`{{ __('Opening route sheet for') }} ${plate}...`, 'info', 2000);
       return;
     }
 
-    // Botón "+" para añadir órdenes al cliente
-    if (e.target.closest('.client-add-btn')) {
-      const btn = e.target.closest('.client-add-btn');
-      const clientName = btn.dataset.clientName;
-      const assignmentId = btn.dataset.clientAssignmentId;
+    // Click en pedido (order-chip) para toggle active/inactive
+    if (e.target.closest('.order-chip')) {
+      const chip = e.target.closest('.order-chip');
+      const orderAssignmentId = chip.dataset.orderAssignmentId;
+      const orderId = chip.dataset.orderId;
+      const currentActive = chip.dataset.active === '1';
       
-      console.log('Add orders to client:', clientName, 'Assignment ID:', assignmentId);
-      // TODO: Implementar funcionalidad para añadir órdenes
-      alert(`{{ __('Add orders functionality for') }} ${clientName} {{ __('will be implemented') }}`);
+      console.log('Toggle order:', orderId, 'Assignment ID:', orderAssignmentId, 'Current active:', currentActive);
+      
+      toggleOrderActive(orderAssignmentId, orderId, chip);
       return;
     }
     
@@ -721,6 +810,83 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
   });
+
+  // Función para actualizar contador de pedidos activos
+  function updateOrderCounter(chipElement) {
+    const clientItem = chipElement.closest('.vehicle-client-item');
+    if (!clientItem) return;
+    
+    const orderChips = clientItem.querySelectorAll('.order-chip');
+    const activeChips = Array.from(orderChips).filter(chip => chip.dataset.active === '1');
+    const totalChips = orderChips.length;
+    const activeCount = activeChips.length;
+    
+    const counterBadge = clientItem.querySelector('.badge.bg-success, .badge.bg-warning, .badge.bg-secondary');
+    if (counterBadge && totalChips > 0) {
+      counterBadge.textContent = `${activeCount}/${totalChips}`;
+      counterBadge.title = `{{ __('Active orders') }}: ${activeCount} / ${totalChips}`;
+      
+      // Cambiar color según estado
+      counterBadge.classList.remove('bg-success', 'bg-warning', 'bg-secondary');
+      if (activeCount === totalChips) {
+        counterBadge.classList.add('bg-success');
+      } else if (activeCount > 0) {
+        counterBadge.classList.add('bg-warning');
+      } else {
+        counterBadge.classList.add('bg-secondary');
+      }
+    }
+  }
+
+  // Función para toggle active/inactive de un pedido
+  function toggleOrderActive(orderAssignmentId, orderId, chipElement) {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    
+    fetch('{{ route("customers.routes.toggle-order-active", $customer->id) }}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': csrfToken,
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        order_assignment_id: orderAssignmentId
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Actualizar estado visual del chip
+        const newActive = data.active;
+        chipElement.dataset.active = newActive ? '1' : '0';
+        
+        if (newActive) {
+          chipElement.classList.remove('order-inactive');
+          chipElement.classList.add('order-active');
+          chipElement.style.opacity = '1';
+          chipElement.style.textDecoration = 'none';
+          chipElement.title = '{{ __('Click to deactivate') }}';
+        } else {
+          chipElement.classList.remove('order-active');
+          chipElement.classList.add('order-inactive');
+          chipElement.style.opacity = '0.5';
+          chipElement.style.textDecoration = 'line-through';
+          chipElement.title = '{{ __('Click to activate') }}';
+        }
+        
+        // Actualizar contador de pedidos activos
+        updateOrderCounter(chipElement);
+        
+        window.showToast(data.message, 'success', 2000);
+      } else {
+        window.showToast('{{ __('Error toggling order status') }}: ' + (data.message || 'Unknown error'), 'danger', 3000);
+      }
+    })
+    .catch(error => {
+      console.error('Error toggling order:', error);
+      window.showToast('{{ __('Error toggling order status') }}: ' + error.message, 'danger', 3000);
+    });
+  }
 
   // Función para remover cliente del vehículo
   function removeClientFromVehicle(assignmentId, clientName) {
@@ -1051,6 +1217,110 @@ document.addEventListener('DOMContentLoaded', function() {
     } catch (error) {
       console.warn('Error updating stats:', error);
     }
+  }
+
+  // ===== DRAG & DROP DE PEDIDOS =====
+  let draggedOrder = null;
+  let draggedOrderContainer = null;
+
+  document.addEventListener('dragstart', function(e) {
+    const orderChip = e.target.closest('.order-chip');
+    if (orderChip && orderChip.classList.contains('order-chip')) {
+      // Solo permitir drag si es el handle
+      if (!e.target.closest('.drag-handle') && !orderChip.draggable) {
+        e.preventDefault();
+        return;
+      }
+      
+      draggedOrder = orderChip;
+      draggedOrderContainer = orderChip.closest('.client-orders');
+      orderChip.style.opacity = '0.4';
+      console.log('Dragging order:', orderChip.dataset.orderId);
+    }
+  });
+
+  document.addEventListener('dragend', function(e) {
+    const orderChip = e.target.closest('.order-chip');
+    if (orderChip) {
+      orderChip.style.opacity = '';
+      
+      // Guardar nuevo orden
+      if (draggedOrderContainer) {
+        saveOrdersOrder(draggedOrderContainer);
+      }
+      
+      draggedOrder = null;
+      draggedOrderContainer = null;
+    }
+  });
+
+  document.addEventListener('dragover', function(e) {
+    if (!draggedOrder) return;
+    
+    const clientOrders = e.target.closest('.client-orders');
+    if (!clientOrders || clientOrders !== draggedOrderContainer) return;
+    
+    e.preventDefault();
+    
+    const afterElement = getDragAfterElementOrder(clientOrders, e.clientY);
+    if (afterElement == null) {
+      clientOrders.appendChild(draggedOrder);
+    } else {
+      clientOrders.insertBefore(draggedOrder, afterElement);
+    }
+  });
+
+  function getDragAfterElementOrder(container, y) {
+    const draggableElements = [...container.querySelectorAll('.order-chip:not([style*="opacity: 0.4"])')];
+    
+    return draggableElements.reduce((closest, child) => {
+      const box = child.getBoundingClientRect();
+      const offset = y - box.top - box.height / 2;
+      
+      if (offset < 0 && offset > closest.offset) {
+        return { offset: offset, element: child };
+      } else {
+        return closest;
+      }
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
+  }
+
+  function saveOrdersOrder(clientOrdersContainer) {
+    const clientItem = clientOrdersContainer.closest('.vehicle-client-item');
+    if (!clientItem) return;
+    
+    const clientAssignmentId = clientItem.dataset.clientAssignmentId;
+    const orderChips = clientOrdersContainer.querySelectorAll('.order-chip');
+    const orderedIds = Array.from(orderChips).map(chip => parseInt(chip.dataset.orderAssignmentId));
+    
+    console.log('Saving new order:', orderedIds);
+    
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    
+    fetch('{{ route("customers.routes.reorder-orders", $customer->id) }}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': csrfToken,
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        client_assignment_id: clientAssignmentId,
+        ordered_ids: orderedIds
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        console.log('Orders reordered successfully');
+        // No mostrar toast para no molestar al usuario
+      } else {
+        window.showToast('{{ __('Error reordering') }}: ' + (data.message || 'Unknown error'), 'warning', 2000);
+      }
+    })
+    .catch(error => {
+      console.error('Error reordering orders:', error);
+    });
   }
 
   // Actualizar estadísticas cada 30 segundos

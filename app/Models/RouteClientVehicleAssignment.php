@@ -47,4 +47,9 @@ class RouteClientVehicleAssignment extends Model
     {
         return $this->belongsTo(FleetVehicle::class);
     }
+
+    public function orderAssignments()
+    {
+        return $this->hasMany(RouteOrderAssignment::class);
+    }
 }

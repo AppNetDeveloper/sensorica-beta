@@ -48,6 +48,9 @@
       <div class="clients-wrapper">
       <ul class="list-unstyled mb-2 small clients-list">
         @foreach($availableClients as $c)
+          @php
+            $pendingOrdersCount = ($c->pendingDeliveries ?? collect())->count();
+          @endphp
           <li class="mb-1">
             <span class="badge bg-light text-dark border draggable-client"
                   draggable="true"
@@ -57,6 +60,9 @@
                   data-day-index="{{ $dayIndex }}"
                   style="cursor: grab;">
               {{ $c->name }}
+              @if($pendingOrdersCount > 0)
+                <span class="badge bg-primary ms-1" style="font-size: 0.7em;">{{ $pendingOrdersCount }}</span>
+              @endif
             </span>
           </li>
         @endforeach
