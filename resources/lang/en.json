@@ -1038,5 +1038,16 @@
     "Description": "Description",
     "No articles found": "No articles found",
     "Error loading order details": "Error loading order details",
-    "Close": "Close"
+    "Close": "Close",
+    "Delivery Proof": "Delivery Proof",
+    "Customer Signature": "Customer Signature",
+    "Clear Signature": "Clear Signature",
+    "Delivery Photos": "Delivery Photos",
+    "You can select multiple photos": "You can select multiple photos",
+    "Max": "Max",
+    "each": "each",
+    "Delivery Notes": "Delivery Notes",
+    "Optional notes about the delivery...": "Optional notes about the delivery...",
+    "Cancel": "Cancel",
+    "Confirm Delivery": "Confirm Delivery"
 }

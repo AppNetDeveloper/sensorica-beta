@@ -14,6 +14,7 @@
 
 @push('style')
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
 <style>
   .delivery-card {
     background: white;
@@ -289,8 +290,8 @@
               </div>
               <div>
                 @if(!$isDelivered)
-                  <button class="btn-deliver mark-delivered-btn" data-order-id="{{ $order->id }}">
-                    ✓ {{ __('Deliver') }}
+                  <button class="btn-deliver open-proof-modal" data-order-id="{{ $order->id }}">
+                    <i class="fas fa-clipboard-check"></i> {{ __('Deliver') }}
                   </button>
                 @else
                   <span class="badge bg-success">✓ {{ __('Delivered') }}</span>
@@ -308,6 +309,55 @@
       <p class="text-muted">{{ __('Select another date or contact your supervisor') }}</p>
     </div>
   @endif
+  </div>
+</div>
+
+{{-- Modal de Firma y Fotos --}}
+<div class="modal fade" id="deliveryProofModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title"><i class="fas fa-clipboard-check"></i> {{ __('Delivery Proof') }}</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="proofOrderId">
+        
+        {{-- Firma Digital --}}
+        <div class="mb-4">
+          <label class="form-label fw-bold"><i class="fas fa-signature"></i> {{ __('Customer Signature') }}</label>
+          <div style="border: 2px solid #dee2e6; border-radius: 8px; background: #f8f9fa;">
+            <canvas id="signaturePad" width="700" height="300" style="width: 100%; height: 300px; cursor: crosshair;"></canvas>
+          </div>
+          <div class="mt-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="clearSignature">
+              <i class="fas fa-eraser"></i> {{ __('Clear Signature') }}
+            </button>
+          </div>
+        </div>
+
+        {{-- Fotos --}}
+        <div class="mb-4">
+          <label class="form-label fw-bold"><i class="fas fa-camera"></i> {{ __('Delivery Photos') }}</label>
+          <input type="file" class="form-control" id="deliveryPhotos" accept="image/*" multiple capture="environment">
+          <small class="text-muted">{{ __('You can select multiple photos') }} ({{ __('Max') }}: 5MB {{ __('each') }})</small>
+          <div id="photoPreview" class="mt-3 d-flex flex-wrap gap-2"></div>
+        </div>
+
+        {{-- Notas --}}
+        <div class="mb-3">
+          <label class="form-label fw-bold"><i class="fas fa-sticky-note"></i> {{ __('Delivery Notes') }}</label>
+          <textarea class="form-control" id="deliveryNotes" rows="3" placeholder="{{ __('Optional notes about the delivery...') }}" maxlength="1000"></textarea>
+          <small class="text-muted"><span id="notesCount">0</span>/1000</small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
+        <button type="button" class="btn btn-success" id="confirmDelivery">
+          <i class="fas fa-check"></i> {{ __('Confirm Delivery') }}
+        </button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -337,6 +387,98 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+  // Inicializar SignaturePad
+  const canvas = document.getElementById('signaturePad');
+  let signaturePad = null;
+
+  // Función para inicializar el canvas correctamente
+  function initSignaturePad() {
+    const ratio = Math.max(window.devicePixelRatio || 1, 1);
+    const rect = canvas.getBoundingClientRect();
+    
+    canvas.width = rect.width * ratio;
+    canvas.height = rect.height * ratio;
+    canvas.style.width = rect.width + 'px';
+    canvas.style.height = rect.height + 'px';
+    
+    const ctx = canvas.getContext("2d");
+    ctx.scale(ratio, ratio);
+    
+    signaturePad = new SignaturePad(canvas, {
+      backgroundColor: 'rgb(255, 255, 255)',
+      penColor: 'rgb(0, 0, 0)',
+      minWidth: 1,
+      maxWidth: 3
+    });
+  }
+
+  // Inicializar cuando se abre el modal
+  document.getElementById('deliveryProofModal').addEventListener('shown.bs.modal', function() {
+    if (!signaturePad) {
+      initSignaturePad();
+    }
+  });
+
+  window.addEventListener("resize", function() {
+    if (signaturePad) {
+      const data = signaturePad.toData();
+      initSignaturePad();
+      signaturePad.fromData(data);
+    }
+  });
+
+  // Limpiar firma
+  document.getElementById('clearSignature').addEventListener('click', function() {
+    if (signaturePad) {
+      signaturePad.clear();
+    }
+  });
+
+  // Preview de fotos
+  document.getElementById('deliveryPhotos').addEventListener('change', function(e) {
+    const preview = document.getElementById('photoPreview');
+    preview.innerHTML = '';
+    
+    Array.from(e.target.files).forEach((file, index) => {
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const div = document.createElement('div');
+          div.style.cssText = 'position: relative; width: 100px; height: 100px;';
+          div.innerHTML = `
+            <img src="${e.target.result}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px; border: 2px solid #dee2e6;">
+            <button type="button" class="btn btn-sm btn-danger remove-photo" data-index="${index}" style="position: absolute; top: -5px; right: -5px; border-radius: 50%; width: 25px; height: 25px; padding: 0;">
+              <i class="fas fa-times"></i>
+            </button>
+          `;
+          preview.appendChild(div);
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+  });
+
+  // Remover foto
+  document.addEventListener('click', function(e) {
+    if (e.target.closest('.remove-photo')) {
+      const index = parseInt(e.target.closest('.remove-photo').dataset.index);
+      const input = document.getElementById('deliveryPhotos');
+      const dt = new DataTransfer();
+      
+      Array.from(input.files).forEach((file, i) => {
+        if (i !== index) dt.items.add(file);
+      });
+      
+      input.files = dt.files;
+      input.dispatchEvent(new Event('change'));
+    }
+  });
+
+  // Contador de caracteres en notas
+  document.getElementById('deliveryNotes').addEventListener('input', function() {
+    document.getElementById('notesCount').textContent = this.value.length;
+  });
+
   // Cambio de fecha
   document.getElementById('dateSelector').addEventListener('change', function() {
     const newDate = this.value;
@@ -490,52 +632,84 @@ document.addEventListener('DOMContentLoaded', function() {
       });
   }
 
-  // Marcar como entregado
-  document.querySelectorAll('.mark-delivered-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-      const orderId = this.dataset.orderId;
-      const orderItem = this.closest('.order-item');
+  // Abrir modal de firma y fotos
+  document.addEventListener('click', function(e) {
+    if (e.target.closest('.open-proof-modal')) {
+      const btn = e.target.closest('.open-proof-modal');
+      const orderId = btn.dataset.orderId;
       
-      if (confirm('{{ __('Mark this order as delivered?') }}')) {
-        this.disabled = true;
-        this.textContent = '{{ __('Processing...') }}';
-        
-        fetch('{{ route("deliveries.mark-delivered") }}', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}',
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify({ order_id: orderId })
-        })
-        .then(response => response.json())
-        .then(data => {
-          if (data.success) {
-            orderItem.classList.add('delivered');
-            this.outerHTML = '<span class="badge bg-success">✓ {{ __('Delivered') }}</span>';
-            
-            // Actualizar contadores
-            const deliveredCount = document.getElementById('deliveredCount');
-            const pendingCount = document.getElementById('pendingCount');
-            deliveredCount.textContent = parseInt(deliveredCount.textContent) + 1;
-            pendingCount.textContent = parseInt(pendingCount.textContent) - 1;
-            
-            // Toast o notificación
-            alert('✓ ' + data.message);
-          } else {
-            alert('Error: ' + data.message);
-            this.disabled = false;
-            this.textContent = '✓ {{ __('Deliver') }}';
-          }
-        })
-        .catch(error => {
-          console.error('Error:', error);
-          alert('Error al marcar como entregado');
-          this.disabled = false;
-          this.textContent = '✓ {{ __('Deliver') }}';
-        });
+      // Guardar el ID del pedido
+      document.getElementById('proofOrderId').value = orderId;
+      
+      // Limpiar el modal
+      if (signaturePad) {
+        signaturePad.clear();
       }
+      document.getElementById('deliveryPhotos').value = '';
+      document.getElementById('photoPreview').innerHTML = '';
+      document.getElementById('deliveryNotes').value = '';
+      document.getElementById('notesCount').textContent = '0';
+      
+      // Abrir modal
+      const modal = new bootstrap.Modal(document.getElementById('deliveryProofModal'));
+      modal.show();
+    }
+  });
+
+  // Confirmar entrega con firma yotos
+  document.getElementById('confirmDelivery').addEventListener('click', function() {
+    const orderId = document.getElementById('proofOrderId').value;
+    const notes = document.getElementById('deliveryNotes').value;
+    const photosInput = document.getElementById('deliveryPhotos');
+    
+    // Crear FormData
+    const formData = new FormData();
+    formData.append('order_id', orderId);
+    formData.append('notes', notes);
+    
+    // Añadir firma si existe
+    if (!signaturePad.isEmpty()) {
+      formData.append('signature', signaturePad.toDataURL());
+    }
+    
+    // Añadir fotos si existen
+    if (photosInput.files.length > 0) {
+      Array.from(photosInput.files).forEach((file, index) => {
+        formData.append(`photos[${index}]`, file);
+      });
+    }
+    
+    // Deshabilitar botón
+    this.disabled = true;
+    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> {{ __('Processing...') }}';
+    
+    // Enviar
+    fetch('{{ route("deliveries.mark-delivered") }}', {
+      method: 'POST',
+      headers: {
+        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+      },
+      body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Cerrar modal
+        bootstrap.Modal.getInstance(document.getElementById('deliveryProofModal')).hide();
+        
+        // Recargar página para actualizar
+        location.reload();
+      } else {
+        alert(data.message);
+        this.disabled = false;
+        this.innerHTML = '<i class="fas fa-check"></i> {{ __('Confirm Delivery') }}';
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Error al confirmar entrega');
+      this.disabled = false;
+      this.innerHTML = '<i class="fas fa-check"></i> {{ __('Confirm Delivery') }}';
     });
   });
 });

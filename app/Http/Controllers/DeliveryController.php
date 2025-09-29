@@ -60,20 +60,24 @@ class DeliveryController extends Controller
 
         return view('deliveries.my-deliveries', compact('user', 'date', 'assignments', 'deliveries'));
     }
-
     /**
      * Marcar un pedido como entregado
      */
     public function markAsDelivered(Request $request)
     {
-        $data = $request->validate([
+        $request->validate([
             'order_id' => 'required|exists:original_orders,id',
+            'signature' => 'nullable|string',
+            'photos' => 'nullable|array',
+            'photos.*' => 'nullable|image|max:5120', // 5MB max por foto
+            'notes' => 'nullable|string|max:1000',
         ]);
 
-        $order = \App\Models\OriginalOrder::findOrFail($data['order_id']);
-        
+        $orderId = $request->input('order_id');
+        $order = \App\Models\OriginalOrder::findOrFail($orderId);
+
         // Verificar que el usuario tiene acceso a este pedido
-        $hasAccess = RouteDayAssignment::where('user_id', auth()->id())
+        $hasAccess = \App\Models\RouteDayAssignment::where('user_id', auth()->id())
             ->whereHas('customer.clientVehicleAssignments', function($q) use ($order) {
                 $q->whereHas('orderAssignments', function($q2) use ($order) {
                     $q2->where('original_order_id', $order->id);
@@ -85,8 +89,30 @@ class DeliveryController extends Controller
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
+        // Actualizar fechas de entrega
         $order->actual_delivery_date = now();
-        $order->delivery_date = now(); // También actualizar delivery_date
+        $order->delivery_date = now();
+
+        // Guardar firma si existe
+        if ($request->has('signature') && !empty($request->signature)) {
+            $order->delivery_signature = $request->signature;
+        }
+
+        // Guardar fotos si existen
+        if ($request->hasFile('photos')) {
+            $photoPaths = [];
+            foreach ($request->file('photos') as $photo) {
+                $path = $photo->store('deliveries/' . $order->id, 'public');
+                $photoPaths[] = $path;
+            }
+            $order->delivery_photos = $photoPaths;
+        }
+
+        // Guardar notas si existen
+        if ($request->has('notes') && !empty($request->notes)) {
+            $order->delivery_notes = $request->notes;
+        }
+
         $order->save();
 
         return response()->json([

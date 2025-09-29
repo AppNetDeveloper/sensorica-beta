@@ -1130,5 +1130,16 @@
     "No articles found": "No se encontraron artículos",
     "Error loading order details": "Error al cargar detalles del pedido",
     "Close": "Cerrar",
-    "No address": "Sin dirección"
+    "No address": "Sin dirección",
+    "Delivery Proof": "Prueba de Entrega",
+    "Customer Signature": "Firma del Cliente",
+    "Clear Signature": "Limpiar Firma",
+    "Delivery Photos": "Fotos de Entrega",
+    "You can select multiple photos": "Puedes seleccionar varias fotos",
+    "Max": "Máx",
+    "each": "cada una",
+    "Delivery Notes": "Notas de Entrega",
+    "Optional notes about the delivery...": "Notas opcionales sobre la entrega...",
+    "Cancel": "Cancelar",
+    "Confirm Delivery": "Confirmar Entrega"
 }

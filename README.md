@@ -841,6 +841,105 @@ Route::post('/deliveries/mark-delivered', [DeliveryController::class, 'markAsDel
    - Contador de pedidos activos por cliente
    - Estado visual (activo/inactivo)
    - Actualización automática de `estimated_delivery_date`
+
+5. **Hoja de Ruta con Detalles Completos**:
+   - Muestra procesos de cada pedido (grupo, código, nombre, cajas, pallets)
+   - Muestra artículos agrupados por grupo
+   - Estado de stock por artículo (✓/✗)
+   - Formato profesional para impresión
+   - Información completa para verificación de entrega
+
+#### Sistema de Firma Digital y Fotos de Entrega
+
+El sistema permite a los transportistas capturar pruebas de entrega mediante firma digital, fotos y notas.
+
+**Características:**
+
+1. **Firma Digital del Cliente**:
+   - Canvas interactivo para firmar con dedo/ratón
+   - Tamaño: 700x300px (optimizado para móvil)
+   - Librería: SignaturePad.js 4.1.7
+   - Guardado en base64 en campo `delivery_signature`
+   - Botón para limpiar y volver a firmar
+   - Inicialización diferida al abrir modal
+
+2. **Fotos de Entrega**:
+   - Captura múltiple de fotos desde cámara o galería
+   - Atributo `capture="environment"` para cámara trasera
+   - Validación: máximo 5MB por foto
+   - Preview de miniaturas antes de enviar
+   - Botón X para eliminar fotos individuales
+   - Guardado en `storage/deliveries/{order_id}/`
+   - Rutas almacenadas en JSON en campo `delivery_photos`
+
+3. **Notas de Entrega**:
+   - Campo de texto libre (máximo 1000 caracteres)
+   - Contador de caracteres en tiempo real
+   - Guardado en campo `delivery_notes`
+   - Ejemplos: "Cliente ausente", "Dejado en recepción", etc.
+
+4. **Modal de Prueba de Entrega**:
+   - Header verde con icono de clipboard
+   - Tres secciones: Firma, Fotos, Notas
+   - Botón "Confirmar Entrega" envía todo
+   - Validación opcional: puede entregar sin firma/fotos
+   - Loading spinner durante envío
+   - Recarga automática al confirmar
+
+**Base de Datos:**
+
+Campos añadidos a tabla `original_orders`:
+```sql
+delivery_signature TEXT NULL COMMENT 'Firma digital del cliente en base64'
+delivery_photos JSON NULL COMMENT 'Array de rutas de fotos de entrega'
+delivery_notes TEXT NULL COMMENT 'Notas del transportista sobre la entrega'
+```
+
+**Controlador:**
+
+`DeliveryController@markAsDelivered` actualizado para:
+- Validar firma (string), fotos (array de imágenes), notas (string max 1000)
+- Guardar firma en base64
+- Subir fotos a storage con `store('deliveries/{order_id}', 'public')`
+- Guardar notas
+- Actualizar `actual_delivery_date` y `delivery_date`
+
+**Vista:**
+
+Modal `#deliveryProofModal` con:
+- Canvas `#signaturePad` con SignaturePad
+- Input file `#deliveryPhotos` con `multiple` y `accept="image/*"`
+- Textarea `#deliveryNotes` con maxlength 1000
+- Preview dinámico de fotos con miniaturas
+- JavaScript para gestión completa
+
+**Flujo de Uso:**
+
+1. Transportista hace click en botón "Entregar"
+2. Se abre modal con canvas de firma, input de fotos y campo de notas
+3. Cliente firma en el canvas (opcional)
+4. Transportista toma/selecciona fotos (opcional)
+5. Añade notas si necesario (opcional)
+6. Click en "Confirmar Entrega"
+7. Se envía FormData con firma, fotos y notas
+8. Backend guarda todo y marca como entregado
+9. Vista se recarga mostrando pedido entregado
+
+**Archivos Clave:**
+- `database/migrations/2025_09_29_222422_add_delivery_proof_to_original_orders_table.php`
+- `app/Http/Controllers/DeliveryController.php` (método markAsDelivered actualizado)
+- `app/Models/OriginalOrder.php` (fillable y casts actualizados)
+- `resources/views/deliveries/my-deliveries.blade.php` (modal y JavaScript)
+- CDN: `https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js`
+
+**Traducciones:**
+- "Delivery Proof" / "Prueba de Entrega"
+- "Customer Signature" / "Firma del Cliente"
+- "Clear Signature" / "Limpiar Firma"
+- "Delivery Photos" / "Fotos de Entrega"
+- "Delivery Notes" / "Notas de Entrega"
+- "Confirm Delivery" / "Confirmar Entrega"
+
 - **Logging**: Sistema completo de logs para debugging y auditoría
 
 **Base de Datos:**

@@ -24,6 +24,9 @@ class OriginalOrder extends Model
         'delivery_date', //fecha de de entrega pedido programada por erp
         'estimated_delivery_date', //fecha de entrega pedido estimada
         'actual_delivery_date', //fecha de entrega pedido real
+        'delivery_signature', //firma digital del cliente en base64
+        'delivery_photos', //array de rutas de fotos de entrega
+        'delivery_notes', //notas del transportista
         'in_stock',
         'fecha_pedido_erp', //fecha de pedido en ERP
     ];
@@ -35,6 +38,7 @@ class OriginalOrder extends Model
         'delivery_date' => 'date',
         'estimated_delivery_date' => 'date',
         'actual_delivery_date' => 'date',
+        'delivery_photos' => 'json',
         'fecha_pedido_erp' => 'date',
     ];
     

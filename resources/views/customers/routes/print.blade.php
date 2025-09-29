@@ -307,39 +307,109 @@
                     @endif
 
                     @if($orders->count() > 0)
-                        <table class="orders-table">
-                            <thead>
-                                <tr>
-                                    <th style="width: 40px;">#</th>
-                                    <th>Pedido</th>
-                                    <th>Fecha Entrega</th>
-                                    <th style="width: 60px; text-align: center;">✓</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($orders as $orderIndex => $orderAssignment)
-                                    @php
-                                        $order = $orderAssignment->originalOrder;
-                                    @endphp
-                                    <tr>
-                                        <td style="color: #6c757d; font-weight: 600;">{{ $orderIndex + 1 }}</td>
-                                        <td class="order-id">{{ $order->order_id }}</td>
-                                        <td>
-                                            @if($order->delivery_date)
-                                                <span class="date-badge">{{ $order->delivery_date->format('d/m/Y') }}</span>
-                                            @elseif($order->estimated_delivery_date)
-                                                <span class="date-badge" style="background: #fff3cd; color: #856404;">~{{ $order->estimated_delivery_date->format('d/m/Y') }}</span>
-                                            @else
-                                                <span style="color: #6c757d; font-size: 12px;">Sin fecha</span>
+                        @foreach($orders as $orderIndex => $orderAssignment)
+                            @php
+                                $order = $orderAssignment->originalOrder;
+                                $order->load('processes');
+                                $processesWithArticles = \App\Models\OriginalOrderProcess::where('original_order_id', $order->id)
+                                    ->with('articles')
+                                    ->orderBy('grupo_numero')
+                                    ->get();
+                            @endphp
+                            <div style="margin-bottom: 20px; border: 1px solid #dee2e6; border-radius: 6px; padding: 12px; background: #f8f9fa;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 2px solid #0d6efd;">
+                                    <div>
+                                        <strong style="font-size: 16px; color: #0d6efd;">{{ $orderIndex + 1 }}. Pedido: {{ $order->order_id }}</strong>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 15px;">
+                                        @if($order->delivery_date)
+                                            <span class="date-badge">{{ $order->delivery_date->format('d/m/Y') }}</span>
+                                        @elseif($order->estimated_delivery_date)
+                                            <span class="date-badge" style="background: #fff3cd; color: #856404;">~{{ $order->estimated_delivery_date->format('d/m/Y') }}</span>
+                                        @endif
+                                        <span class="checkbox"></span>
+                                    </div>
+                                </div>
+
+                                @if($order->processes->count() > 0)
+                                    <div style="margin-top: 10px;">
+                                        <div style="font-size: 12px; font-weight: 600; color: #6c757d; margin-bottom: 8px; text-transform: uppercase;">Procesos:</div>
+                                        <table style="width: 100%; font-size: 11px; border-collapse: collapse;">
+                                            <thead style="background: #e9ecef;">
+                                                <tr>
+                                                    <th style="padding: 6px; text-align: left; border: 1px solid #dee2e6;">Grupo</th>
+                                                    <th style="padding: 6px; text-align: left; border: 1px solid #dee2e6;">Código</th>
+                                                    <th style="padding: 6px; text-align: left; border: 1px solid #dee2e6;">Proceso</th>
+                                                    <th style="padding: 6px; text-align: center; border: 1px solid #dee2e6;">Cajas</th>
+                                                    <th style="padding: 6px; text-align: center; border: 1px solid #dee2e6;">Uds/Caja</th>
+                                                    <th style="padding: 6px; text-align: center; border: 1px solid #dee2e6;">Pallets</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach($order->processes as $process)
+                                                    <tr>
+                                                        <td style="padding: 5px; border: 1px solid #dee2e6; background: #fff;"><span style="background: #6c757d; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px;">{{ $process->pivot->grupo_numero }}</span></td>
+                                                        <td style="padding: 5px; border: 1px solid #dee2e6; background: #fff;"><code style="background: #e9ecef; padding: 2px 4px; border-radius: 3px;">{{ $process->code }}</code></td>
+                                                        <td style="padding: 5px; border: 1px solid #dee2e6; background: #fff;">{{ $process->name }}</td>
+                                                        <td style="padding: 5px; text-align: center; border: 1px solid #dee2e6; background: #fff;">{{ $process->pivot->box ?? 0 }}</td>
+                                                        <td style="padding: 5px; text-align: center; border: 1px solid #dee2e6; background: #fff;">{{ $process->pivot->units_box ?? 0 }}</td>
+                                                        <td style="padding: 5px; text-align: center; border: 1px solid #dee2e6; background: #fff;">{{ $process->pivot->number_of_pallets ?? 0 }}</td>
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                @endif
+
+                                @php
+                                    $articlesByGroup = $processesWithArticles->groupBy('grupo_numero');
+                                @endphp
+
+                                @if($articlesByGroup->count() > 0)
+                                    <div style="margin-top: 12px;">
+                                        <div style="font-size: 12px; font-weight: 600; color: #6c757d; margin-bottom: 8px; text-transform: uppercase;">Artículos:</div>
+                                        @foreach($articlesByGroup as $grupoNum => $processes)
+                                            @php
+                                                $allArticles = collect();
+                                                foreach ($processes as $proc) {
+                                                    $allArticles = $allArticles->merge($proc->articles);
+                                                }
+                                                $uniqueArticles = $allArticles->unique('codigo_articulo');
+                                            @endphp
+                                            @if($uniqueArticles->count() > 0)
+                                                <div style="margin-bottom: 8px;">
+                                                    <div style="font-size: 10px; font-weight: 600; color: #0d6efd; margin-bottom: 4px;">Grupo {{ $grupoNum }}:</div>
+                                                    <table style="width: 100%; font-size: 10px; border-collapse: collapse;">
+                                                        <thead style="background: #e9ecef;">
+                                                            <tr>
+                                                                <th style="padding: 4px; text-align: left; border: 1px solid #dee2e6;">Código</th>
+                                                                <th style="padding: 4px; text-align: left; border: 1px solid #dee2e6;">Descripción</th>
+                                                                <th style="padding: 4px; text-align: center; border: 1px solid #dee2e6; width: 60px;">Stock</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            @foreach($uniqueArticles as $article)
+                                                                <tr>
+                                                                    <td style="padding: 4px; border: 1px solid #dee2e6; background: #fff;"><code style="background: #e9ecef; padding: 2px 4px; border-radius: 3px; font-size: 9px;">{{ $article->codigo_articulo }}</code></td>
+                                                                    <td style="padding: 4px; border: 1px solid #dee2e6; background: #fff;">{{ $article->descripcion_articulo ?? '-' }}</td>
+                                                                    <td style="padding: 4px; text-align: center; border: 1px solid #dee2e6; background: #fff;">
+                                                                        @if($article->in_stock)
+                                                                            <span style="color: #28a745; font-weight: 600;">✓</span>
+                                                                        @else
+                                                                            <span style="color: #dc3545; font-weight: 600;">✗</span>
+                                                                        @endif
+                                                                    </td>
+                                                                </tr>
+                                                            @endforeach
+                                                        </tbody>
+                                                    </table>
+                                                </div>
                                             @endif
-                                        </td>
-                                        <td class="checkbox-col">
-                                            <span class="checkbox"></span>
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
+                                        @endforeach
+                                    </div>
+                                @endif
+                            </div>
+                        @endforeach
                     @else
                         <div class="no-orders">No hay pedidos activos para este cliente</div>
                     @endif
