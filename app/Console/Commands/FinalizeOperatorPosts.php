@@ -59,32 +59,15 @@ class FinalizeOperatorPosts extends Command
                     ->latest('created_at')
                     ->first();
 
-                // Buscar los posts no finalizados creados antes del inicio de turno actual
-                $operatorPosts = OperatorPost::whereNull('finish_at')
-                    ->where('created_at', '<', $todayShiftStart)
-                    ->get();
+                $lastShiftEndTime = $lastShiftEnd ? Carbon::parse($lastShiftEnd->created_at) : null;
 
-                foreach ($operatorPosts as $post) {
-
-                    // Determinar finish_at usando el último fin de turno o, si no existe, el inicio de turno actual
-                    $finishAt = $lastShiftEnd
-                        ? Carbon::parse($lastShiftEnd->created_at)
-                        : $todayShiftStart;
-
-                    // Actualizar finish_at del registro original
-                    $post->update(['finish_at' => $finishAt]);
-
-                    // Preparar y crear nuevo registro duplicado para el turno actual
-                    $data = $post->toArray();
-                    unset($data['id']);
-                    $data['count']     = 0;
-                    $data['finish_at'] = null;
-                    $data['created_at'] = $todayShiftStart;
-
-                    OperatorPost::create($data);
-
-                    $this->info("[{$now->toDateTimeString()}] Post ID {$post->id} cerrado a {$finishAt} y duplicado con created_at={$todayShiftStart}.");
+                // 1) Gestión inmediata tras fin de turno (ventana de 20s)
+                if ($lastShiftEndTime && $now->diffInSeconds($lastShiftEndTime) <= 20) {
+                    $this->handleShiftEndWindow($todayShiftStart, $lastShiftEndTime);
                 }
+
+                // 2) Cierre clásico al detectar nuevo inicio de turno
+                $this->handleShiftStart($todayShiftStart, $lastShiftEndTime);
 
                 $this->info("[{$now->toDateTimeString()}] Ciclo completado sin errores.");
 
@@ -94,5 +77,50 @@ class FinalizeOperatorPosts extends Command
 
             usleep(20000000);
         }
+    }
+
+    private function handleShiftEndWindow(Carbon $todayShiftStart, Carbon $lastShiftEndTime): void
+    {
+        $postsToClose = OperatorPost::whereNull('finish_at')
+            ->where('created_at', '<=', $lastShiftEndTime)
+            ->get();
+
+        foreach ($postsToClose as $post) {
+            $post->update(['finish_at' => $lastShiftEndTime]);
+
+            $data = $post->toArray();
+            unset($data['id']);
+            $data['count']      = 0;
+            $data['finish_at']  = null;
+            $data['created_at'] = Carbon::now();
+
+            OperatorPost::create($data);
+
+            $this->info("[" . Carbon::now()->toDateTimeString() . "] [shift-end] Post ID {$post->id} cerrado a {$lastShiftEndTime} y duplicado con created_at=" . $data['created_at'] . ".");
+        }
+    }
+
+    private function handleShiftStart(Carbon $todayShiftStart, ?Carbon $lastShiftEndTime): void
+    {
+        $operatorPosts = OperatorPost::whereNull('finish_at')
+            ->where('created_at', '<', $todayShiftStart)
+            ->get();
+
+        foreach ($operatorPosts as $post) {
+            $finishAt = $lastShiftEndTime ?? $todayShiftStart;
+
+            $post->update(['finish_at' => $finishAt]);
+
+            $data = $post->toArray();
+            unset($data['id']);
+            $data['count']      = 0;
+            $data['finish_at']  = null;
+            $data['created_at'] = $todayShiftStart;
+
+            OperatorPost::create($data);
+
+            $this->info("[" . Carbon::now()->toDateTimeString() . "] [shift-start] Post ID {$post->id} cerrado a {$finishAt} y duplicado con created_at={$todayShiftStart}.");
+        }
+
     }
 }
