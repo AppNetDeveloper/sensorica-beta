@@ -51,6 +51,7 @@ use App\Http\Controllers\Api\LineAvailabilityController;
 use App\Http\Controllers\Api\OriginalOrderProcessFileApiController;
 use App\Http\Controllers\Api\QualityIssueController;
 use App\Http\Controllers\Api\QcConfirmationController;
+use App\Http\Controllers\Api\OriginalOrderApiController;
 
 
 
@@ -431,3 +432,7 @@ Route::get('/production-orders/{id}/articles', [ProductionOrderArticlesControlle
 // Webhooks para recibir órdenes desde sistemas externos
 Route::post('/incoming/original-orders', [IncomingOrdersController::class, 'store']);
 Route::delete('/incoming/original-orders/{order_id}', [IncomingOrdersController::class, 'destroy']);
+
+// API para obtener pedidos originales con procesos y artículos usando token de cliente
+Route::get('/original-orders', [OriginalOrderApiController::class, 'index'])->name('api.original-orders.index');
+Route::get('/original-orders/{order_id}', [OriginalOrderApiController::class, 'show'])->name('api.original-orders.show');
