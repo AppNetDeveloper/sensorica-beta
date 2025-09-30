@@ -1161,5 +1161,7 @@
     "PDF library not loaded": "Librería PDF no cargada",
     "Error generating PDF": "Error al generar PDF",
     "Export PDF": "Exportar PDF",
-    "Has orders pending completion": "Tiene pedidos pendientes de finalizar"
+    "Has orders pending completion": "Tiene pedidos pendientes de finalizar",
+    "Finished": "Finalizado",
+    "Not completed": "Sin realizar"
 }

@@ -437,6 +437,21 @@
   }
   .client-detail-card .card-header {
     background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    color: #0f172a;
+  }
+
+  .client-detail-card .card-header .modal-order-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .client-detail-card .card-header .modal-order-subtitle {
+    font-size: 0.9rem;
+    color: rgba(15, 23, 42, 0.75);
+  }
+
+  #clientDetailsModal .modal-header .modal-title {
     color: #fff;
   }
   .client-process-item {
@@ -646,26 +661,29 @@ document.addEventListener('DOMContentLoaded', function() {
           <div class="client-article-row">
             <div>
               <code>${article.codigo_articulo || '-'}</code>
-              <div class="text-muted">${article.descripcion_articulo || ''}</div>
+              <div class="text-muted small">${article.descripcion_articulo || ''}</div>
             </div>
-            <div class="text-end">
-              <div class="client-article-stock ${article.in_stock ? 'text-success' : 'text-danger'}">
-                <i class="ti ${article.in_stock ? 'ti-check' : 'ti-alert-triangle'}"></i>
-                ${article.in_stock ? '{{ __('In stock') }}' : '{{ __('No stock') }}'}
-              </div>
-              <div class="text-muted small">${article.grupo_articulo || ''}</div>
+            <div class="text-end text-muted small">
+              ${article.grupo_articulo || ''}
             </div>
           </div>
         `).join('');
 
+        // Determinar estado del proceso
+        const processStatus = process.finished 
+          ? `<span class="badge bg-success"><i class="ti ti-check"></i> {{ __('Finished') }}</span>${process.finished_at ? ` <span class="text-muted small">${process.finished_at}</span>` : ''}`
+          : `<span class="badge bg-warning text-dark"><i class="ti ti-clock"></i> {{ __('Not completed') }}</span>`;
+
         return `
           <div class="client-process-item">
             <div class="d-flex justify-content-between align-items-center mb-2">
-              <div>
+              <div class="flex-grow-1">
                 <strong>#${process.grupo_numero || '-'} · ${process.name || '{{ __('Process') }}'}</strong>
                 <div class="text-muted small">{{ __('Time') }}: ${process.time || '—'} · {{ __('Boxes') }}: ${process.box ?? '0'} · {{ __('Units/Box') }}: ${process.units_box ?? '0'} · {{ __('Pallets') }}: ${process.number_of_pallets ?? '0'}</div>
               </div>
-              <span class="badge ${process.in_stock ? 'bg-success' : 'bg-danger'}">${process.in_stock ? '{{ __('Stock ready') }}' : '{{ __('Awaiting stock') }}'}</span>
+              <div class="text-end">
+                ${processStatus}
+              </div>
             </div>
             ${articlesHtml ? `<div class="client-articles-list">${articlesHtml}</div>` : `<div class="text-muted small">{{ __('No articles linked to this process') }}</div>`}
           </div>
@@ -674,26 +692,26 @@ document.addEventListener('DOMContentLoaded', function() {
 
       // Determinar badge y estado según si está finalizado o no
       let badgeClass = 'bg-success';
-      let badgeText = '{{ __('Ready') }}';
+      let badgeText = '{{ __('Finished') }}';
       
       if (!order.is_finished) {
-        // Pedido NO finalizado
+        // Pedido NO finalizado - usar color según urgencia
         badgeClass = order.is_overdue ? 'bg-danger' : 'bg-warning text-dark';
         badgeText = '{{ __('Pending completion') }}';
-      } else if (!order.in_stock) {
-        // Pedido finalizado pero sin stock completo
-        badgeClass = 'bg-warning text-dark';
-        badgeText = '{{ __('Pending stock') }}';
       }
+      // Si está finalizado (finished_at existe), siempre es "Finished" en verde
 
       return `
         <div class="client-detail-card ${!order.is_finished ? 'border-warning' : ''}">
           <div class="card-header d-flex justify-content-between align-items-center">
-            <div>
-              <div class="fw-bold">{{ __('Order') }} #${order.order_id}</div>
-              <div class="small">${order.delivery_date ? `{{ __('Delivery') }}: ${order.delivery_date}` : order.estimated_delivery_date ? `{{ __('Estimated') }}: ${order.estimated_delivery_date}` : '{{ __('No delivery date') }}'}</div>
+            <div class="flex-grow-1">
+              <div class="modal-order-title">{{ __('Order') }} #${order.order_id}</div>
+              <div class="modal-order-subtitle">
+                ${order.delivery_date ? `{{ __('Delivery') }}: ${order.delivery_date}` : order.estimated_delivery_date ? `{{ __('Estimated') }}: ${order.estimated_delivery_date}` : '{{ __('No delivery date') }}'}
+                ${order.finished_at ? ` · {{ __('Finished') }}: ${order.finished_at}` : ''}
+              </div>
             </div>
-            <div>
+            <div class="text-end">
               <span class="badge ${badgeClass}">
                 ${badgeText}
               </span>

@@ -2860,7 +2860,7 @@ El sistema maneja dos tipos de pedidos pendientes de entrega:
 - **Condición**: `finished_at IS NOT NULL` AND `actual_delivery_date IS NULL`
 - **Descripción**: Pedidos que han completado todos sus procesos de producción y están listos para ser entregados.
 - **Badge en UI**: Verde con texto "Ready" / "Listo"
-- **Stock**: Si `in_stock = 1`, el pedido tiene todo el material disponible. Si `in_stock = 0`, se muestra "Pending stock" / "Pendiente de stock" en amarillo.
+- **Criterio**: Se usa `finished_at` como indicador definitivo de que el pedido está completo, independientemente del estado de stock individual de artículos.
 
 #### 2. Pedidos Pendientes de Finalizar (Pending Completion)
 - **Condición**: `finished_at IS NULL` AND `delivery_date IS NOT NULL` AND `actual_delivery_date IS NULL`

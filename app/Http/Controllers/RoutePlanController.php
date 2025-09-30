@@ -252,14 +252,14 @@ class RoutePlanController extends Controller
                         'units_box' => $process->units_box,
                         'number_of_pallets' => $process->number_of_pallets,
                         'time' => $process->time,
-                        'in_stock' => $process->in_stock,
+                        'finished' => $process->finished,
+                        'finished_at' => $process->finished_at?->format('Y-m-d H:i'),
                         'articles' => $process->articles->map(function ($article) {
                             return [
                                 'id' => $article->id,
                                 'codigo_articulo' => $article->codigo_articulo,
                                 'descripcion_articulo' => $article->descripcion_articulo,
                                 'grupo_articulo' => $article->grupo_articulo,
-                                'in_stock' => $article->in_stock,
                             ];
                         })->values(),
                     ];

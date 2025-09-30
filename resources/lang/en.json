@@ -1069,5 +1069,7 @@
     "PDF library not loaded": "PDF library not loaded",
     "Error generating PDF": "Error generating PDF",
     "Export PDF": "Export PDF",
-    "Has orders pending completion": "Has orders pending completion"
+    "Has orders pending completion": "Has orders pending completion",
+    "Finished": "Finished",
+    "Not completed": "Not completed"
 }
