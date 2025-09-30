@@ -429,67 +429,202 @@
     font-size: 0.75em;
   }
   .client-detail-card {
-    border: 1px solid #dee2e6;
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
-    margin-bottom: 1rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+    margin-bottom: 1.25rem;
     overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
   }
+
+  .client-detail-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 26px rgba(15, 23, 42, 0.12);
+  }
+
+  .client-detail-card.client-detail-card-finished {
+    border-color: #34d399;
+  }
+
+  .client-detail-card.client-detail-card-pending {
+    border-color: #facc15;
+  }
+
+  .client-detail-card.client-detail-card-overdue {
+    border-color: #ef4444;
+    box-shadow: 0 14px 32px rgba(239, 68, 68, 0.25);
+  }
+
   .client-detail-card .card-header {
     background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
     color: #0f172a;
   }
 
   .client-detail-card .card-header .modal-order-title {
-    font-size: 1.1rem;
+    font-size: 1.15rem;
     font-weight: 700;
     color: #0f172a;
   }
 
   .client-detail-card .card-header .modal-order-subtitle {
-    font-size: 0.9rem;
-    color: rgba(15, 23, 42, 0.75);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 0.8rem;
+    margin-top: 0.35rem;
+  }
+
+  .modal-order-subtitle .modal-info-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.8rem;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.1);
+    color: #0f172a;
+    font-size: 0.85rem;
   }
 
   #clientDetailsModal .modal-header .modal-title {
     color: #fff;
   }
-  .client-process-item {
-    border-left: 4px solid #0d6efd;
-    padding-left: 12px;
-    margin-bottom: 12px;
-  }
-  .client-process-item .badge {
-    font-size: 0.7rem;
-  }
-  .client-articles-list {
-    border-radius: 8px;
-    background: #f8fafc;
-    padding: 10px;
-    margin-top: 8px;
-  }
-  .client-article-row {
-    display: flex;
-    justify-content: space-between;
+
+  .badge-status {
+    border-radius: 999px;
+    font-weight: 600;
+    padding: 0.45rem 0.9rem;
+    display: inline-flex;
     align-items: center;
-    padding: 6px 0;
-    border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+    gap: 0.35rem;
     font-size: 0.85rem;
   }
+
+  .badge-status i {
+    font-size: 1rem;
+  }
+
+  .badge-status.badge-finished {
+    background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+    color: #ffffff;
+  }
+
+  .badge-status.badge-pending {
+    background: #facc15;
+    color: #1f2937;
+  }
+
+  .badge-status.badge-overdue {
+    background: #ef4444;
+    color: #ffffff;
+  }
+
+  .client-process-item {
+    border-left: 4px solid #0d6efd;
+    padding-left: 16px;
+    margin-bottom: 18px;
+    position: relative;
+  }
+
+  .client-process-item + .client-process-item {
+    margin-top: 18px;
+    padding-top: 18px;
+    border-top: 1px dashed #cbd5f5;
+  }
+
+  .client-process-item::before {
+    content: '';
+    position: absolute;
+    left: -12px;
+    top: 8px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #0d6efd;
+    box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.15);
+  }
+
+  .client-process-item .badge {
+    font-size: 0.75rem;
+  }
+
+  .process-status {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .badge-process {
+    border-radius: 999px;
+    font-weight: 600;
+    padding: 0.3rem 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.78rem;
+  }
+
+  .badge-process-finished {
+    background: #dcfce7;
+    color: #047857;
+  }
+
+  .badge-process-pending {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  .process-status-time {
+    font-size: 0.75rem;
+    color: #64748b;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .client-articles-list {
+    border-radius: 12px;
+    background-color: #f8fafc;
+    padding: 0.85rem;
+    border: 1px dashed #e2e8f0;
+    margin-top: 0.75rem;
+  }
+
+  .client-article-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.45rem 0;
+    border-bottom: 1px dashed #e2e8f0;
+  }
+
   .client-article-row:last-child {
     border-bottom: none;
   }
+
   .client-article-row code {
-    background: rgba(71, 85, 105, 0.1);
+    font-size: 0.85rem;
+    color: #1f2937;
+    background: rgba(15, 23, 42, 0.08);
     padding: 2px 6px;
     border-radius: 6px;
-    font-size: 0.75rem;
   }
-  .client-article-stock {
-    display: inline-flex;
+
+  .client-article-row .article-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #e0f2fe;
+    color: #0369a1;
+    display: flex;
     align-items: center;
-    gap: 4px;
-    font-weight: 600;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 1rem;
+  }
+
+  .client-article-row .article-info {
+    flex: 1;
   }
 </style>
 @endpush
@@ -659,29 +794,30 @@ document.addEventListener('DOMContentLoaded', function() {
       const processesHtml = (order.processes || []).map(process => {
         const articlesHtml = (process.articles || []).map(article => `
           <div class="client-article-row">
-            <div>
-              <code>${article.codigo_articulo || '-'}</code>
-              <div class="text-muted small">${article.descripcion_articulo || ''}</div>
+            <span class="article-icon"><i class="ti ti-package"></i></span>
+            <div class="article-info">
+              <div class="fw-semibold">${article.descripcion_articulo || '{{ __('No articles linked to this process') }}'}</div>
+              <div class="text-muted small">${article.grupo_articulo || ''}</div>
             </div>
             <div class="text-end text-muted small">
-              ${article.grupo_articulo || ''}
+              <code>${article.codigo_articulo || '-'}</code>
             </div>
           </div>
         `).join('');
 
-        // Determinar estado del proceso
-        const processStatus = process.finished 
-          ? `<span class="badge bg-success"><i class="ti ti-check"></i> {{ __('Finished') }}</span>${process.finished_at ? ` <span class="text-muted small">${process.finished_at}</span>` : ''}`
-          : `<span class="badge bg-warning text-dark"><i class="ti ti-clock"></i> {{ __('Not completed') }}</span>`;
+        // Estado del proceso
+        const processStatus = process.finished
+          ? `<span class="badge-process badge-process-finished"><i class="ti ti-check"></i> {{ __('Finished') }}</span>${process.finished_at ? `<span class="process-status-time"><i class="ti ti-clock-check"></i> ${process.finished_at}</span>` : ''}`
+          : `<span class="badge-process badge-process-pending"><i class="ti ti-clock"></i> {{ __('Not completed') }}</span>`;
 
         return `
           <div class="client-process-item">
-            <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="d-flex justify-content-between align-items-start mb-2">
               <div class="flex-grow-1">
                 <strong>#${process.grupo_numero || '-'} · ${process.name || '{{ __('Process') }}'}</strong>
                 <div class="text-muted small">{{ __('Time') }}: ${process.time || '—'} · {{ __('Boxes') }}: ${process.box ?? '0'} · {{ __('Units/Box') }}: ${process.units_box ?? '0'} · {{ __('Pallets') }}: ${process.number_of_pallets ?? '0'}</div>
               </div>
-              <div class="text-end">
+              <div class="process-status">
                 ${processStatus}
               </div>
             </div>
@@ -690,30 +826,48 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
       }).join('');
 
-      // Determinar badge y estado según si está finalizado o no
-      let badgeClass = 'bg-success';
+      // Badge principal del pedido
+      let badgeClass = 'badge-status badge-finished';
+      let badgeIcon = 'ti ti-flag-checkered';
       let badgeText = '{{ __('Finished') }}';
-      
+
       if (!order.is_finished) {
-        // Pedido NO finalizado - usar color según urgencia
-        badgeClass = order.is_overdue ? 'bg-danger' : 'bg-warning text-dark';
+        badgeClass = order.is_overdue ? 'badge-status badge-overdue' : 'badge-status badge-pending';
+        badgeIcon = order.is_overdue ? 'ti ti-alert-triangle' : 'ti ti-clock';
         badgeText = '{{ __('Pending completion') }}';
       }
-      // Si está finalizado (finished_at existe), siempre es "Finished" en verde
+
+      const cardStateClass = order.is_finished
+        ? 'client-detail-card-finished'
+        : order.is_overdue
+          ? 'client-detail-card-overdue'
+          : 'client-detail-card-pending';
+
+      const infoChips = [];
+      if (order.delivery_date) {
+        infoChips.push(`<span class="modal-info-chip"><i class="ti ti-calendar-event"></i> {{ __('Delivery') }}: ${order.delivery_date}</span>`);
+      } else if (order.estimated_delivery_date) {
+        infoChips.push(`<span class="modal-info-chip"><i class="ti ti-calendar-event"></i> {{ __('Estimated') }}: ${order.estimated_delivery_date}</span>`);
+      } else {
+        infoChips.push(`<span class="modal-info-chip"><i class="ti ti-calendar-off"></i> {{ __('No delivery date') }}</span>`);
+      }
+
+      if (order.finished_at) {
+        infoChips.push(`<span class="modal-info-chip"><i class="ti ti-clock-check"></i> {{ __('Finished') }}: ${order.finished_at}</span>`);
+      }
 
       return `
-        <div class="client-detail-card ${!order.is_finished ? 'border-warning' : ''}">
+        <div class="client-detail-card ${cardStateClass}">
           <div class="card-header d-flex justify-content-between align-items-center">
             <div class="flex-grow-1">
               <div class="modal-order-title">{{ __('Order') }} #${order.order_id}</div>
               <div class="modal-order-subtitle">
-                ${order.delivery_date ? `{{ __('Delivery') }}: ${order.delivery_date}` : order.estimated_delivery_date ? `{{ __('Estimated') }}: ${order.estimated_delivery_date}` : '{{ __('No delivery date') }}'}
-                ${order.finished_at ? ` · {{ __('Finished') }}: ${order.finished_at}` : ''}
+                ${infoChips.join(' ')}
               </div>
             </div>
             <div class="text-end">
-              <span class="badge ${badgeClass}">
-                ${badgeText}
+              <span class="${badgeClass}">
+                <i class="${badgeIcon}"></i> ${badgeText}
               </span>
             </div>
           </div>
