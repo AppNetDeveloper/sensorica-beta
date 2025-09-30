@@ -386,6 +386,9 @@
           <small class="d-block opacity-75" id="clientDetailsSubtitle"></small>
         </div>
         <div class="d-flex align-items-center gap-2">
+          <button type="button" class="btn btn-warning btn-sm" id="toggleLegendBtn" title="{{ __('Show/Hide user guide') }}">
+            <i class="ti ti-help"></i> {{ __('Help') }}
+          </button>
           <button type="button" class="btn btn-light btn-sm" id="printClientDetailsBtn">
             <i class="ti ti-printer"></i> {{ __('Print') }}
           </button>
@@ -517,6 +520,65 @@
     color: #ffffff;
   }
 
+  .client-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1rem;
+  }
+
+  .summary-card {
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 0.95rem;
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.05);
+  }
+
+  .summary-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .summary-value {
+    font-size: 1.65rem;
+    font-weight: 700;
+    display: block;
+    margin-top: 0.4rem;
+  }
+
+  .client-filter .btn {
+    border-radius: 999px;
+    padding: 0.45rem 1.1rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .client-filter .btn.active {
+    color: #fff;
+  }
+
+  .client-filter .btn[data-filter="all"].active {
+    background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
+    border-color: #4338ca;
+  }
+
+  .client-filter .btn[data-filter="finished"].active {
+    background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+    border-color: #10b981;
+  }
+
+  .client-filter .btn[data-filter="pending"].active {
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    border-color: #f59e0b;
+  }
+
   .client-process-item {
     border-left: 4px solid #0d6efd;
     padding-left: 16px;
@@ -626,12 +688,76 @@
   .client-article-row .article-info {
     flex: 1;
   }
+
+  .client-legend {
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    background: #ffffff;
+    padding: 1.25rem;
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
+  }
+
+  .client-legend .legend-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    color: #0f172a;
+  }
+
+  .client-legend-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+  }
+
+  .client-legend-item {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+    background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+  }
+
+  .client-legend-item .legend-visual {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .client-legend-item .legend-label {
+    font-weight: 600;
+    color: #0f172a;
+    font-size: 0.9rem;
+  }
+
+  .client-legend-item .legend-desc {
+    font-size: 0.8rem;
+    color: #64748b;
+    margin-top: 0.2rem;
+  }
+
+  .client-legend .legend-note {
+    margin-top: 1rem;
+    font-size: 0.8rem;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
 </style>
 @endpush
 
 @push('scripts')
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha512-0NRoNbVc5hVW0Qwd4uKZgdKzac8AjtKoa6HgMHqmpYyqn1nVbWcv16O3Qe9n3VWeItPxX2VINeodIZ6T2fCk7w==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNaLb2xY1jBJOCa/MEGLjm+rXhN3kLBXjg5eQof8I4eAbOe+tfLOcAfeUeawuO/7dBDEuDfSUdifYEsaJ2P0hA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   // Toast helper function (global)
@@ -790,6 +916,43 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
 
+    // KPI y filtros
+    const totalOrders = orders.length;
+    const totalProcesses = orders.reduce((acc, order) => acc + (order.processes?.length || 0), 0);
+    const finishedProcesses = orders.reduce((acc, order) => acc + (order.processes?.filter(p => p.finished).length || 0), 0);
+    const pendingProcesses = totalProcesses - finishedProcesses;
+
+    const summaryHtml = `
+      <div class="client-summary mb-4">
+        <div class="summary-card">
+          <span class="summary-label"><i class="ti ti-list-details"></i> {{ __('Orders') }}</span>
+          <span class="summary-value">${totalOrders}</span>
+        </div>
+        <div class="summary-card">
+          <span class="summary-label text-success"><i class="ti ti-check"></i> {{ __('Finished processes') }}</span>
+          <span class="summary-value text-success">${finishedProcesses}</span>
+        </div>
+        <div class="summary-card">
+          <span class="summary-label text-warning"><i class="ti ti-clock"></i> {{ __('Pending processes') }}</span>
+          <span class="summary-value text-warning">${pendingProcesses}</span>
+        </div>
+        <div class="summary-card">
+          <span class="summary-label text-primary"><i class="ti ti-packages"></i> {{ __('Articles') }}</span>
+          <span class="summary-value text-primary">${orders.reduce((acc, order) => acc + order.processes.reduce((a, p) => a + (p.articles?.length || 0), 0), 0)}</span>
+        </div>
+      </div>
+    `;
+
+    let activeFilter = 'all';
+
+    const filterHtml = `
+      <div class="btn-group mb-4 client-filter" role="group">
+        <button type="button" class="btn btn-outline-primary btn-sm filter-btn active" data-filter="all"><i class="ti ti-list"></i> {{ __('All processes') }}</button>
+        <button type="button" class="btn btn-outline-success btn-sm filter-btn" data-filter="finished"><i class="ti ti-check"></i> {{ __('Only finished') }}</button>
+        <button type="button" class="btn btn-outline-warning btn-sm filter-btn" data-filter="pending"><i class="ti ti-clock"></i> {{ __('Only pending') }}</button>
+      </div>
+    `;
+
     const ordersHtml = orders.map(order => {
       const processesHtml = (order.processes || []).map(process => {
         const articlesHtml = (process.articles || []).map(article => `
@@ -811,14 +974,16 @@ document.addEventListener('DOMContentLoaded', function() {
           : `<span class="badge-process badge-process-pending"><i class="ti ti-clock"></i> {{ __('Not completed') }}</span>`;
 
         return `
-          <div class="client-process-item">
+          <div class="client-process-item" data-process-status="${process.finished ? 'finished' : 'pending'}">
             <div class="d-flex justify-content-between align-items-start mb-2">
               <div class="flex-grow-1">
                 <strong>#${process.grupo_numero || '-'} · ${process.name || '{{ __('Process') }}'}</strong>
                 <div class="text-muted small">{{ __('Time') }}: ${process.time || '—'} · {{ __('Boxes') }}: ${process.box ?? '0'} · {{ __('Units/Box') }}: ${process.units_box ?? '0'} · {{ __('Pallets') }}: ${process.number_of_pallets ?? '0'}</div>
               </div>
-              <div class="process-status">
-                ${processStatus}
+              <div class="text-end">
+                <div class="process-status">
+                  ${processStatus}
+                </div>
               </div>
             </div>
             ${articlesHtml ? `<div class="client-articles-list">${articlesHtml}</div>` : `<div class="text-muted small">{{ __('No articles linked to this process') }}</div>`}
@@ -878,8 +1043,81 @@ document.addEventListener('DOMContentLoaded', function() {
       `;
     }).join('');
 
-    container.innerHTML = headerHtml + ordersHtml;
+    const legendHtml = `
+      <div class="client-legend mt-4 d-none" id="clientLegend">
+        <div class="legend-title"><i class="ti ti-info-circle"></i> ${'{{ __('How to read this module') }}'}</div>
+        <div class="client-legend-grid">
+          <div class="client-legend-item">
+            <div class="legend-visual"><span class="badge-status badge-finished"><i class="ti ti-flag-checkered"></i> ${'{{ __('Finished') }}'}</span></div>
+            <div>
+              <div class="legend-label">${'{{ __('Order status') }}'}</div>
+              <div class="legend-desc">${'{{ __('Uses the finished_at field to confirm that the order is ready to load. Yellow or red indicates pending completion or overdue.') }}'}</div>
+            </div>
+          </div>
+          <div class="client-legend-item">
+            <div class="legend-visual"><span class="badge-process badge-process-finished"><i class="ti ti-check"></i></span></div>
+            <div>
+              <div class="legend-label">${'{{ __('Process badges') }}'}</div>
+              <div class="legend-desc">${'{{ __('Green means the process is finished. Amber means it is still pending in production.') }}'}</div>
+            </div>
+          </div>
+          <div class="client-legend-item">
+            <div class="legend-visual"><span class="modal-info-chip"><i class="ti ti-calendar-event"></i> ${'{{ __('Delivery') }}'}</span></div>
+            <div>
+              <div class="legend-label">${'{{ __('Info chips') }}'}</div>
+              <div class="legend-desc">${'{{ __('Show scheduled delivery dates or finished timestamps so logistics can plan loading priorities.') }}'}</div>
+            </div>
+          </div>
+          <div class="client-legend-item">
+            <div class="legend-visual"><span class="article-icon"><i class="ti ti-package"></i></span></div>
+            <div>
+              <div class="legend-label">${'{{ __('Articles list') }}'}</div>
+              <div class="legend-desc">${'{{ __('Displays item codes and descriptions included in the order for quick verification at the warehouse.') }}'}</div>
+            </div>
+          </div>
+        </div>
+        <div class="legend-note"><i class="ti ti-filter"></i> ${'{{ __('Use the filters above to focus on pending processes when coordinating with production.') }}'}</div>
+      </div>
+    `;
+
+    container.innerHTML = `${headerHtml}${summaryHtml}${filterHtml}${ordersHtml}${legendHtml}`;
+
+    container.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', (event) => {
+        const filter = event.currentTarget.dataset.filter;
+        activeFilter = filter;
+
+        container.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        event.currentTarget.classList.add('active');
+
+        container.querySelectorAll('.client-process-item').forEach(item => {
+          const status = item.dataset.processStatus;
+          if (filter === 'all' || status === filter) {
+            item.classList.remove('d-none');
+          } else {
+            item.classList.add('d-none');
+          }
+        });
+      });
+    });
+
+    // Mantener botón de impresión/export activo
+    container.dataset.kpiReady = 'true';
   }
+
+  // Toggle legend visibility
+  document.getElementById('toggleLegendBtn')?.addEventListener('click', function() {
+    const legend = document.getElementById('clientLegend');
+    if (legend) {
+      legend.classList.toggle('d-none');
+      const icon = this.querySelector('i');
+      if (legend.classList.contains('d-none')) {
+        icon.className = 'ti ti-help';
+      } else {
+        icon.className = 'ti ti-help-circle-filled';
+      }
+    }
+  });
 
   function printClientDetails() {
     const contentEl = document.getElementById('clientDetailsContent');
@@ -899,7 +1137,7 @@ document.addEventListener('DOMContentLoaded', function() {
       })
       .join('\n');
 
-    printWindow.document.write(`<!DOCTYPE html><html><head><title>{{ __('Client details') }}</title>${styles}<style>body{font-family: Arial, sans-serif; padding:20px;} .client-detail-card{page-break-inside:avoid;}</style></head><body>${contentEl.innerHTML}</body></html>`);
+    printWindow.document.write(`<!DOCTYPE html><html><head><title>{{ __('Client details') }}</title>${styles}<style>body{font-family: Arial, sans-serif; padding:20px;} .client-detail-card{page-break-inside:avoid;margin-bottom:1.25rem;} .client-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1rem;margin-bottom:1.5rem;} .summary-card{border:1px solid #e2e8f0;border-radius:14px;padding:0.95rem;} .client-filter{margin-bottom:1.2rem;} .client-filter .btn{border-radius:999px;padding:0.35rem 0.9rem;} .client-process-item{margin-bottom:1.2rem;padding-left:12px;border-left:4px solid #0d6efd;} .client-articles-list{border:1px dashed #e2e8f0;border-radius:12px;padding:0.85rem;margin-top:0.75rem;} .client-article-row{display:flex;gap:0.75rem;padding:0.45rem 0;border-bottom:1px dashed #e2e8f0;} .client-article-row:last-child{border-bottom:none;} .article-icon{display:none;} .client-legend{border:1px solid #e2e8f0;border-radius:14px;padding:1rem;margin-top:1.5rem;} .client-legend-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0.75rem;} .client-legend-item{display:flex;gap:0.6rem;border:1px solid #e2e8f0;border-radius:10px;padding:0.6rem;background:#fff;} .client-legend-item .legend-label{font-weight:600;font-size:0.78rem;} .client-legend-item .legend-desc{font-size:0.72rem;color:#475569;} .client-legend .legend-title{font-weight:700;font-size:0.82rem;margin-bottom:0.6rem;} .client-legend .legend-note{margin-top:0.8rem;font-size:0.72rem;color:#475569;display:flex;align-items:center;gap:0.3rem;}</style></head><body>${contentEl.innerHTML}</body></html>`);
     printWindow.document.close();
     printWindow.focus();
     printWindow.print();
@@ -1251,8 +1489,7 @@ document.addEventListener('DOMContentLoaded', function() {
             </button>
           </div>
           <div class="client-orders d-flex flex-wrap gap-1 mt-2">
-            <span class="order-chip">pedido-test1 <i class="ti ti-x ms-1"></i></span>
-            <span class="order-chip">pedido-test2 <i class="ti ti-x ms-1"></i></span>
+            <span class="text-muted small">{{ __('Loading orders...') }}</span>
           </div>
         `;
         clientsList.appendChild(clientBadge);

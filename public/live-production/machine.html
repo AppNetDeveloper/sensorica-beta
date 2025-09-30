@@ -2821,6 +2821,14 @@
                                     };
                                     ta.addEventListener('input', updateCounts);
                                     updateCounts();
+                                    
+                                    // Mostrar teclado virtual al hacer focus en el textarea
+                                    ta.addEventListener('focus', () => {
+                                        showVirtualKeyboard(ta);
+                                    });
+                                    
+                                    // Auto-focus en el textarea para que aparezca el teclado inmediatamente
+                                    setTimeout(() => ta.focus(), 100);
                                 }
                             }).then((result) => {
                                 const ta = document.getElementById('qualityInput');
@@ -5936,7 +5944,7 @@ async function updateOrderStatus(orderId, newStatus) {
             
             // Agregar evento click a todos los campos de entrada para mostrar el teclado
             document.addEventListener('click', function(e) {
-                if (e.target.tagName === 'INPUT' && e.target.type === 'text') {
+                if ((e.target.tagName === 'INPUT' && e.target.type === 'text') || e.target.tagName === 'TEXTAREA') {
                     showVirtualKeyboard(e.target);
                 } else if (!document.getElementById('virtual-keyboard').contains(e.target)) {
                     // Si se hace clic fuera del teclado y no en un campo de entrada, ocultar el teclado
