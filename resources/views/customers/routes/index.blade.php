@@ -381,8 +381,19 @@
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <div class="modal-content">
       <div class="modal-header bg-primary text-white">
-        <h5 class="modal-title"><i class="ti ti-clipboard-text"></i> {{ __('Client details') }}</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        <div>
+          <h5 class="modal-title mb-0"><i class="ti ti-clipboard-text"></i> {{ __('Client details') }}</h5>
+          <small class="d-block opacity-75" id="clientDetailsSubtitle"></small>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <button type="button" class="btn btn-light btn-sm" id="printClientDetailsBtn">
+            <i class="ti ti-printer"></i> {{ __('Print') }}
+          </button>
+          <button type="button" class="btn btn-light btn-sm" id="exportClientDetailsBtn">
+            <i class="ti ti-file-download"></i> {{ __('Export PDF') }}
+          </button>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
       </div>
       <div class="modal-body">
         <div id="clientDetailsLoading" class="text-center py-5">
@@ -469,6 +480,8 @@
 @endpush
 
 @push('scripts')
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha512-0NRoNbVc5hVW0Qwd4uKZgdKzac8AjtKoa6HgMHqmpYyqn1nVbWcv16O3Qe9n3VWeItPxX2VINeodIZ6T2fCk7w==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNaLb2xY1jBJOCa/MEGLjm+rXhN3kLBXjg5eQof8I4eAbOe+tfLOcAfeUeawuO/7dBDEuDfSUdifYEsaJ2P0hA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   // Toast helper function (global)
@@ -539,6 +552,19 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   // Doble click para ver detalles de cliente
+  const printClientDetailsBtn = document.getElementById('printClientDetailsBtn');
+  const exportClientDetailsBtn = document.getElementById('exportClientDetailsBtn');
+
+  function setClientDetailsActionsEnabled(enabled) {
+    [printClientDetailsBtn, exportClientDetailsBtn].forEach(btn => {
+      if (!btn) return;
+      btn.disabled = !enabled;
+      btn.classList.toggle('disabled', !enabled);
+    });
+  }
+
+  setClientDetailsActionsEnabled(false);
+
   document.addEventListener('dblclick', function(e) {
     const clientTag = e.target.closest('.draggable-client, .vehicle-client-item');
     if (!clientTag) return;
@@ -582,10 +608,16 @@ document.addEventListener('DOMContentLoaded', function() {
         renderClientDetails(data, contentEl, clientName);
         loadingEl.classList.add('d-none');
         contentEl.classList.remove('d-none');
+        const subtitle = [];
+        if (data.client?.address) subtitle.push(data.client.address);
+        if (data.orders?.length) subtitle.push(`{{ __('Orders') }}: ${data.orders.length}`);
+        document.getElementById('clientDetailsSubtitle').textContent = subtitle.join(' · ');
+        setClientDetailsActionsEnabled(true);
       })
       .catch(error => {
         console.error('Error fetching client details:', error);
         loadingEl.innerHTML = `<div class="alert alert-danger">{{ __('Error loading details') }}: ${error.message}</div>`;
+        setClientDetailsActionsEnabled(false);
       });
   }
 
@@ -662,6 +694,88 @@ document.addEventListener('DOMContentLoaded', function() {
 
     container.innerHTML = headerHtml + ordersHtml;
   }
+
+  function printClientDetails() {
+    const contentEl = document.getElementById('clientDetailsContent');
+    if (!contentEl || contentEl.classList.contains('d-none')) return;
+
+    const printWindow = window.open('', '_blank', 'width=900,height=800');
+    const styles = Array.from(document.styleSheets)
+      .map(sheet => {
+        try {
+          if (sheet.href) {
+            return `<link rel="stylesheet" href="${sheet.href}">`;
+          }
+        } catch (err) {
+          return '';
+        }
+        return '';
+      })
+      .join('\n');
+
+    printWindow.document.write(`<!DOCTYPE html><html><head><title>{{ __('Client details') }}</title>${styles}<style>body{font-family: Arial, sans-serif; padding:20px;} .client-detail-card{page-break-inside:avoid;}</style></head><body>${contentEl.innerHTML}</body></html>`);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  }
+
+  async function exportClientDetailsPdf() {
+    const contentEl = document.getElementById('clientDetailsContent');
+    if (!contentEl || contentEl.classList.contains('d-none')) return;
+    if (!window.jspdf || !window.jspdf.jsPDF || typeof html2canvas === 'undefined') {
+      window.showToast('{{ __('PDF library not loaded') }}', 'danger', 3000);
+      return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const canvas = await html2canvas(contentEl, { scale: 2, useCORS: true, windowWidth: contentEl.scrollWidth });
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF('p', 'pt', 'a4');
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const imgWidth = pageWidth - 40;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    let position = 20;
+
+    if (imgHeight < pageHeight - 40) {
+      pdf.addImage(imgData, 'PNG', 20, position, imgWidth, imgHeight);
+    } else {
+      let remainingHeight = imgHeight;
+      let y = 20;
+      const canvasPageHeight = ((pageHeight - 40) * canvas.width) / imgWidth;
+      while (remainingHeight > 0) {
+        const canvasElement = document.createElement('canvas');
+        canvasElement.width = canvas.width;
+        canvasElement.height = Math.min(canvasPageHeight, canvas.height - (canvas.height - remainingHeight * canvas.width / imgWidth));
+        const ctx = canvasElement.getContext('2d');
+        ctx.drawImage(canvas, 0, canvas.height - remainingHeight * canvas.width / imgWidth, canvas.width, canvasElement.height, 0, 0, canvas.width, canvasElement.height);
+        const pageData = canvasElement.toDataURL('image/png');
+        if (y !== 20) {
+          pdf.addPage();
+          y = 20;
+        }
+        const pageImgHeight = (canvasElement.height * imgWidth) / canvasElement.width;
+        pdf.addImage(pageData, 'PNG', 20, y, imgWidth, pageImgHeight);
+        remainingHeight -= pageImgHeight;
+        if (remainingHeight > 0) {
+          pdf.addPage();
+        }
+      }
+    }
+
+    const modalEl = document.getElementById('clientDetailsModal');
+    const clientName = modalEl.dataset.clientName || 'client';
+    const clientId = modalEl.dataset.clientId || 'details';
+    pdf.save(`client-${clientId}-${clientName.replace(/\s+/g, '_')}.pdf`);
+  }
+
+  printClientDetailsBtn?.addEventListener('click', printClientDetails);
+  exportClientDetailsBtn?.addEventListener('click', () => {
+    exportClientDetailsPdf().catch(err => {
+      console.error('PDF export error:', err);
+      window.showToast('{{ __('Error generating PDF') }}', 'danger', 3000);
+    });
+  });
   
   // Listeners para detectar drag & drop
   document.addEventListener('dragstart', function(e) {
@@ -937,6 +1051,7 @@ document.addEventListener('DOMContentLoaded', function() {
         clientBadge.setAttribute('draggable', 'true');
         clientBadge.setAttribute('data-client-name', clientName);
         clientBadge.setAttribute('data-client-assignment-id', 'new');
+        clientBadge.setAttribute('data-client-id', clientId);
         clientBadge.innerHTML = `
           <div class="d-flex align-items-center justify-content-between w-100">
             <span class="drag-handle me-2 text-muted" title="{{ __('Drag to reorder') }}">⋮⋮</span>
