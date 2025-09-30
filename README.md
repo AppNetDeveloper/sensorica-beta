@@ -2846,6 +2846,209 @@ sudo /var/www/html/scripts/cloudflare-tunnel-monitor.sh restart
 
 Este sistema garantiza que el túnel de Cloudflare permanezca siempre disponible, proporcionando acceso continuo y confiable al sistema Sensorica desde ubicaciones remotas.
 
+## 🚚 Sistema de Gestión de Rutas y Entregas
+
+### Descripción General
+
+El sistema de rutas permite planificar, gestionar y ejecutar entregas a clientes de forma eficiente. Incluye funcionalidades de asignación de vehículos, conductores, y seguimiento en tiempo real del estado de los pedidos.
+
+### Estados de Pedidos en el Sistema de Rutas
+
+El sistema maneja dos tipos de pedidos pendientes de entrega:
+
+#### 1. Pedidos Finalizados (Ready)
+- **Condición**: `finished_at IS NOT NULL` AND `actual_delivery_date IS NULL`
+- **Descripción**: Pedidos que han completado todos sus procesos de producción y están listos para ser entregados.
+- **Badge en UI**: Verde con texto "Ready" / "Listo"
+- **Stock**: Si `in_stock = 1`, el pedido tiene todo el material disponible. Si `in_stock = 0`, se muestra "Pending stock" / "Pendiente de stock" en amarillo.
+
+#### 2. Pedidos Pendientes de Finalizar (Pending Completion)
+- **Condición**: `finished_at IS NULL` AND `delivery_date IS NOT NULL` AND `actual_delivery_date IS NULL`
+- **Descripción**: Pedidos que tienen una fecha de entrega programada pero aún no han completado su producción.
+- **Badge en UI**: 
+  - Amarillo con texto "Pending completion" / "Pendiente de finalizar" si la fecha de entrega no ha pasado
+  - Rojo con texto "Pending completion" / "Pendiente de finalizar" si la fecha de entrega ya pasó (`is_overdue = true`)
+- **Propósito**: Permite a los planificadores visualizar pedidos que deben priorizarse para cumplir con fechas de entrega comprometidas.
+
+### Funcionalidades Principales
+
+#### Planificador de Rutas (`/customers/{customer}/routes`)
+- **Vista semanal**: Organización por días y rutas con navegación entre semanas
+- **KPIs en tiempo real**: Vehículos asignados, clientes planificados, rutas activas, pedidos en camiones
+- **Drag & Drop**: Arrastrar clientes a vehículos para asignar entregas
+- **Búsqueda global**: Buscar pedidos específicos en todos los vehículos
+- **Acciones por vehículo**:
+  - Copiar asignaciones de semana anterior
+  - Imprimir hoja de ruta (PDF)
+  - Exportar a Excel
+  - Asignar/cambiar conductor
+  - Eliminar vehículo
+- **Acciones por ruta completa**:
+  - Copiar toda la ruta (todos los vehículos) de semana anterior
+  - Imprimir ruta completa agrupada por vehículos
+  - Exportar ruta completa a Excel
+
+#### Modal de Detalles de Cliente (Doble Click)
+- **Activación**: Doble click sobre cualquier cliente (disponible o asignado)
+- **Información mostrada**:
+  - Datos del cliente (nombre, dirección, teléfono)
+  - Lista de pedidos pendientes con estado visual
+  - Procesos de cada pedido con información de stock
+  - Artículos por proceso con códigos y descripciones
+- **Acciones disponibles**:
+  - **Imprimir**: Abre ventana de impresión con formato optimizado
+  - **Export PDF**: Genera PDF del contenido usando jsPDF + html2canvas
+
+#### Vista de Transportista (`/my-deliveries`)
+- **Diseño móvil-friendly**: Optimizado para tablets y smartphones
+- **KPIs del día**: Total paradas, entregados, pendientes, vehículos asignados
+- **Selector de fecha**: Ver entregas de otros días
+- **Tarjetas por cliente**:
+  - Información de contacto con botón de llamada directa
+  - Lista de pedidos activos
+  - Botón "Entregar" por pedido
+- **Actualización en tiempo real**: Marca `actual_delivery_date` al confirmar entrega
+
+### Modelos y Relaciones
+
+#### `CustomerClient`
+```php
+// Relación que retorna pedidos pendientes de entrega
+public function pendingDeliveries()
+{
+    return $this->hasMany(OriginalOrder::class)
+        ->where(function ($query) {
+            // Caso 1: Pedidos finalizados pero no entregados
+            $query->whereNotNull('finished_at')
+                  ->whereNull('actual_delivery_date');
+        })
+        ->orWhere(function ($query) {
+            // Caso 2: Pedidos no finalizados con delivery_date programada
+            $query->whereNull('finished_at')
+                  ->whereNull('actual_delivery_date')
+                  ->whereNotNull('delivery_date');
+        })
+        ->orderByRaw('CASE WHEN finished_at IS NOT NULL THEN 0 ELSE 1 END')
+        ->orderByDesc('finished_at')
+        ->orderBy('delivery_date');
+}
+```
+
+#### `RouteDayAssignment`
+- Asigna un vehículo (`fleet_vehicle_id`) a una ruta (`route_name_id`) en un día específico
+- Incluye campo `user_id` para asignar conductor
+- Relación `driver()` para acceder a datos del transportista
+
+#### `RouteClientVehicleAssignment`
+- Asigna un cliente a un vehículo específico en una fecha
+- Relación con `RouteOrderAssignment` para gestionar pedidos individuales
+- Permite reordenar clientes y pedidos con `sort_order`
+
+### Endpoints Principales
+
+#### Rutas Web
+- `GET /customers/{customer}/routes` - Vista principal del planificador
+- `GET /customers/{customer}/routes/client-details/{client}` - Detalles de cliente (JSON)
+- `POST /customers/{customer}/routes/assign-vehicle` - Asignar vehículo a ruta
+- `POST /customers/{customer}/routes/assign-client-vehicle` - Asignar cliente a vehículo
+- `POST /customers/{customer}/routes/copy-previous-week` - Copiar vehículo de semana anterior
+- `POST /customers/{customer}/routes/copy-entire-route-previous-week` - Copiar ruta completa
+- `GET /customers/{customer}/routes/print-sheet` - Imprimir hoja de ruta de vehículo
+- `GET /customers/{customer}/routes/print-entire-route` - Imprimir ruta completa
+- `GET /customers/{customer}/routes/export-excel` - Exportar vehículo a Excel
+- `GET /customers/{customer}/routes/export-entire-route-excel` - Exportar ruta completa a Excel
+- `GET /my-deliveries` - Vista de transportista
+- `POST /deliveries/mark-delivered` - Marcar pedido como entregado
+
+### Permisos y Roles
+
+#### Permiso: `deliveries-view`
+- Permite acceso a la vista de transportista (`/my-deliveries`)
+- Asignado por defecto a roles `admin` y `driver`
+
+#### Rol: `driver` (Transportista)
+- Acceso limitado a sus propias entregas
+- Solo ve pedidos asignados a vehículos donde es conductor (`user_id`)
+
+### Archivos Clave
+
+#### Controladores
+- `app/Http/Controllers/RoutePlanController.php` - Lógica del planificador
+- `app/Http/Controllers/DeliveryController.php` - Vista de transportista
+
+#### Modelos
+- `app/Models/CustomerClient.php` - Clientes con relación `pendingDeliveries()`
+- `app/Models/RouteDayAssignment.php` - Asignaciones de vehículos
+- `app/Models/RouteClientVehicleAssignment.php` - Asignaciones cliente-vehículo
+- `app/Models/OriginalOrder.php` - Pedidos con estados de entrega
+
+#### Vistas
+- `resources/views/customers/routes/index.blade.php` - Planificador principal
+- `resources/views/customers/routes/print.blade.php` - Impresión de vehículo
+- `resources/views/customers/routes/print-route.blade.php` - Impresión de ruta completa
+- `resources/views/deliveries/my-deliveries.blade.php` - Vista de transportista
+- `resources/views/components/routes/day-cell.blade.php` - Celda de día en planificador
+- `resources/views/components/routes/vehicle-card.blade.php` - Tarjeta de vehículo
+
+#### Exports
+- `app/Exports/RouteSheetExport.php` - Excel de vehículo individual
+- `app/Exports/EntireRouteExport.php` - Excel de ruta completa
+
+#### Seeders
+- `database/seeders/DeliveryPermissionsSeeder.php` - Permisos y roles de entregas
+
+### Traducciones
+
+Todas las cadenas de texto utilizan el sistema de traducción de Laravel (`__('key')`). Las traducciones están disponibles en:
+- `resources/lang/en.json` - Inglés
+- `resources/lang/es.json` - Español
+
+Claves de traducción específicas del módulo de rutas:
+- `Pending completion` - Estado de pedido no finalizado
+- `Pending stock` - Pedido finalizado sin stock completo
+- `Ready` - Pedido listo para entrega
+- `Client details` - Título del modal de detalles
+- `In stock` / `No stock` - Estado de disponibilidad de artículos
+- `Stock ready` / `Awaiting stock` - Estado de stock de procesos
+
+### Flujo de Trabajo Típico
+
+1. **Planificación**:
+   - Administrador accede a `/customers/{id}/routes`
+   - Selecciona semana y día
+   - Asigna vehículos a rutas usando el botón "+"
+   - Arrastra clientes desde lista disponible a vehículos
+   - Sistema automáticamente asigna pedidos pendientes del cliente
+
+2. **Revisión de Detalles**:
+   - Doble click sobre cliente para ver modal con pedidos
+   - Verifica estado de cada pedido (Ready / Pending completion)
+   - Imprime o exporta PDF si es necesario
+
+3. **Asignación de Conductor**:
+   - Click en botón 👤 del vehículo
+   - Selecciona conductor del dropdown
+   - Conductor recibe acceso a `/my-deliveries`
+
+4. **Ejecución de Entrega**:
+   - Conductor accede desde dispositivo móvil
+   - Ve lista de clientes asignados para el día
+   - Marca pedidos como entregados con botón "✓"
+   - Sistema actualiza `actual_delivery_date` automáticamente
+
+5. **Copiar Semana Anterior**:
+   - Para repetir rutas recurrentes
+   - Opción por vehículo individual o ruta completa
+   - Sistema asigna pedidos ACTUALES (no históricos)
+
+### Consideraciones Técnicas
+
+- **Auto-refresh**: La vista del planificador se recarga automáticamente después de cambios, con detección inteligente de modals abiertos y drag & drop en progreso
+- **Librerías externas**: jsPDF y html2canvas para generación de PDFs desde el navegador
+- **Optimización de consultas**: Uso de `with()` y `whereHas()` para eager loading y evitar N+1
+- **Seguridad**: Validación de pertenencia de cliente a customer en todos los endpoints
+- **Ordenamiento**: Los pedidos se ordenan primero por finalizados, luego por fecha de finalización y fecha de entrega
+
 ## 📝 Licencia
 
  Xmart 2025

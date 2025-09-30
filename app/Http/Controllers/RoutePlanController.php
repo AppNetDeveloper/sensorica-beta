@@ -184,6 +184,12 @@ class RoutePlanController extends Controller
     /**
      * Devuelve los pedidos pendientes del cliente con procesos y artículos para el modal de detalle.
      */
+    /**
+     * Devuelve los pedidos pendientes del cliente con procesos y artículos para el modal de detalle.
+     * Incluye:
+     * - Pedidos finalizados (finished_at != null) sin entregar (actual_delivery_date = null)
+     * - Pedidos NO finalizados (finished_at = null) con delivery_date programada
+     */
     public function clientDetails(Customer $customer, CustomerClient $client, Request $request): JsonResponse
     {
         abort_unless($client->customer_id === $customer->id, 404);
@@ -191,6 +197,19 @@ class RoutePlanController extends Controller
         $orders = OriginalOrder::where('customer_id', $customer->id)
             ->where('customer_client_id', $client->id)
             ->whereNull('actual_delivery_date')
+            ->where(function ($query) {
+                // Caso 1: Pedidos finalizados pero no entregados
+                $query->whereNotNull('finished_at')
+                    ->whereNull('actual_delivery_date');
+            })
+            ->orWhere(function ($query) use ($customer, $client) {
+                // Caso 2: Pedidos no finalizados con delivery_date programada
+                $query->where('customer_id', $customer->id)
+                    ->where('customer_client_id', $client->id)
+                    ->whereNull('finished_at')
+                    ->whereNull('actual_delivery_date')
+                    ->whereNotNull('delivery_date');
+            })
             ->with([
                 'routeName:id,name',
                 'orderProcesses' => function ($query) {
@@ -201,10 +220,15 @@ class RoutePlanController extends Controller
                         ->orderBy('grupo_numero');
                 }
             ])
+            ->orderByRaw('CASE WHEN finished_at IS NOT NULL THEN 0 ELSE 1 END')
             ->orderByDesc('finished_at')
+            ->orderBy('delivery_date')
             ->get();
 
         $mappedOrders = $orders->map(function (OriginalOrder $order) {
+            $isFinished = !is_null($order->finished_at);
+            $isOverdue = !$isFinished && $order->delivery_date && $order->delivery_date->isPast();
+            
             return [
                 'id' => $order->id,
                 'order_id' => $order->order_id,
@@ -216,6 +240,8 @@ class RoutePlanController extends Controller
                 'estimated_delivery_date' => $order->estimated_delivery_date?->format('Y-m-d'),
                 'finished_at' => $order->finished_at?->format('Y-m-d H:i'),
                 'in_stock' => $order->in_stock,
+                'is_finished' => $isFinished,
+                'is_overdue' => $isOverdue,
                 'processes' => $order->orderProcesses->map(function ($process) {
                     return [
                         'id' => $process->id,

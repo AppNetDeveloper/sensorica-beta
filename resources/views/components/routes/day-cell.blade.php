@@ -75,19 +75,33 @@
       <ul class="list-unstyled mb-2 small clients-list">
         @foreach($availableClients as $c)
           @php
-            $pendingOrdersCount = ($c->pendingDeliveries ?? collect())->count();
+            $pendingOrders = ($c->pendingDeliveries ?? collect());
+            $pendingOrdersCount = $pendingOrders->count();
+            // Verificar si tiene pedidos no finalizados (problemáticos)
+            $hasUnfinishedOrders = $pendingOrders->filter(function($order) {
+                return is_null($order->finished_at) && !is_null($order->delivery_date);
+            })->count() > 0;
+            
+            // Determinar color del badge según estado
+            $badgeClass = 'bg-light text-dark border';
+            $badgeCountClass = 'bg-primary';
+            if ($hasUnfinishedOrders) {
+                $badgeClass = 'bg-danger text-white border-danger';
+                $badgeCountClass = 'bg-white text-danger';
+            }
           @endphp
           <li class="mb-1">
-            <span class="badge bg-light text-dark border draggable-client"
+            <span class="badge {{ $badgeClass }} draggable-client"
                   draggable="true"
                   data-client-id="{{ $c->id }}"
                   data-client-name="{{ $c->name }}"
                   data-route-id="{{ $route->id }}"
                   data-day-index="{{ $dayIndex }}"
-                  style="cursor: grab;">
+                  style="cursor: grab;"
+                  title="{{ $hasUnfinishedOrders ? __('Has orders pending completion') : '' }}">
               {{ $c->name }}
               @if($pendingOrdersCount > 0)
-                <span class="badge bg-primary ms-1" style="font-size: 0.7em;">{{ $pendingOrdersCount }}</span>
+                <span class="badge {{ $badgeCountClass }} ms-1" style="font-size: 0.7em;">{{ $pendingOrdersCount }}</span>
               @endif
             </span>
           </li>

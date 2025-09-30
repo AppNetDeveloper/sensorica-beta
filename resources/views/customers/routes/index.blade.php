@@ -672,16 +672,30 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
       }).join('');
 
+      // Determinar badge y estado según si está finalizado o no
+      let badgeClass = 'bg-success';
+      let badgeText = '{{ __('Ready') }}';
+      
+      if (!order.is_finished) {
+        // Pedido NO finalizado
+        badgeClass = order.is_overdue ? 'bg-danger' : 'bg-warning text-dark';
+        badgeText = '{{ __('Pending completion') }}';
+      } else if (!order.in_stock) {
+        // Pedido finalizado pero sin stock completo
+        badgeClass = 'bg-warning text-dark';
+        badgeText = '{{ __('Pending stock') }}';
+      }
+
       return `
-        <div class="client-detail-card">
+        <div class="client-detail-card ${!order.is_finished ? 'border-warning' : ''}">
           <div class="card-header d-flex justify-content-between align-items-center">
             <div>
               <div class="fw-bold">{{ __('Order') }} #${order.order_id}</div>
               <div class="small">${order.delivery_date ? `{{ __('Delivery') }}: ${order.delivery_date}` : order.estimated_delivery_date ? `{{ __('Estimated') }}: ${order.estimated_delivery_date}` : '{{ __('No delivery date') }}'}</div>
             </div>
             <div>
-              <span class="badge ${order.in_stock ? 'bg-success' : 'bg-warning text-dark'}">
-                ${order.in_stock ? '{{ __('Ready') }}' : '{{ __('Pending') }}'}
+              <span class="badge ${badgeClass}">
+                ${badgeText}
               </span>
             </div>
           </div>
