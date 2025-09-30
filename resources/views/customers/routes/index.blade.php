@@ -375,6 +375,30 @@
     </div>
   </div>
 </div>
+
+<!-- Modal detalle de cliente -->
+<div class="modal fade" id="clientDetailsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title"><i class="ti ti-clipboard-text"></i> {{ __('Client details') }}</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="clientDetailsLoading" class="text-center py-5">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          <p class="mt-3 text-muted">{{ __('Loading client orders...') }}</p>
+        </div>
+        <div id="clientDetailsContent" class="d-none"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('Close') }}</button>
+      </div>
+    </div>
+  </div>
+</div>
 @endsection
 
 @push('style')
@@ -392,6 +416,54 @@
   }
   .badge {
     font-size: 0.75em;
+  }
+  .client-detail-card {
+    border: 1px solid #dee2e6;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+    margin-bottom: 1rem;
+    overflow: hidden;
+  }
+  .client-detail-card .card-header {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    color: #fff;
+  }
+  .client-process-item {
+    border-left: 4px solid #0d6efd;
+    padding-left: 12px;
+    margin-bottom: 12px;
+  }
+  .client-process-item .badge {
+    font-size: 0.7rem;
+  }
+  .client-articles-list {
+    border-radius: 8px;
+    background: #f8fafc;
+    padding: 10px;
+    margin-top: 8px;
+  }
+  .client-article-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+    font-size: 0.85rem;
+  }
+  .client-article-row:last-child {
+    border-bottom: none;
+  }
+  .client-article-row code {
+    background: rgba(71, 85, 105, 0.1);
+    padding: 2px 6px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+  }
+  .client-article-stock {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 600;
   }
 </style>
 @endpush
@@ -465,6 +537,131 @@ document.addEventListener('DOMContentLoaded', function() {
       window.scheduleRefresh(2000);
     }
   });
+
+  // Doble click para ver detalles de cliente
+  document.addEventListener('dblclick', function(e) {
+    const clientTag = e.target.closest('.draggable-client, .vehicle-client-item');
+    if (!clientTag) return;
+
+    const clientId = clientTag.dataset.clientId;
+    const clientName = clientTag.dataset.clientName || clientTag.querySelector('.flex-grow-1')?.textContent?.trim();
+    if (!clientId) {
+      console.warn('Client ID not found on element for details modal');
+      return;
+    }
+
+    openClientDetailsModal(clientId, clientName);
+  });
+
+  function openClientDetailsModal(clientId, clientName) {
+    const modalEl = document.getElementById('clientDetailsModal');
+    const loadingEl = document.getElementById('clientDetailsLoading');
+    const contentEl = document.getElementById('clientDetailsContent');
+
+    loadingEl.classList.remove('d-none');
+    contentEl.classList.add('d-none');
+    contentEl.innerHTML = '';
+
+    const modal = new bootstrap.Modal(modalEl);
+    modal.show();
+
+    const detailsUrl = '{{ route("customers.routes.client-details", [$customer->id, ':clientId']) }}'.replace(':clientId', clientId);
+
+    fetch(detailsUrl, {
+      headers: {
+        'Accept': 'application/json'
+      }
+    })
+      .then(response => {
+        if (!response.ok) throw new Error('Network error');
+        return response.json();
+      })
+      .then(data => {
+        if (!data.success) throw new Error(data.message || 'Unknown error');
+
+        renderClientDetails(data, contentEl, clientName);
+        loadingEl.classList.add('d-none');
+        contentEl.classList.remove('d-none');
+      })
+      .catch(error => {
+        console.error('Error fetching client details:', error);
+        loadingEl.innerHTML = `<div class="alert alert-danger">{{ __('Error loading details') }}: ${error.message}</div>`;
+      });
+  }
+
+  function renderClientDetails(data, container, fallbackName) {
+    const client = data.client || {};
+    const orders = data.orders || [];
+
+    const headerHtml = `
+      <div class="mb-4">
+        <h4 class="mb-1">${client.name || fallbackName || '{{ __('Client') }}'}</h4>
+        <div class="text-muted small">
+          ${client.address ? `<div><i class="ti ti-map-pin"></i> ${client.address}</div>` : ''}
+          ${client.phone ? `<div><i class="ti ti-phone"></i> ${client.phone}</div>` : ''}
+        </div>
+      </div>
+    `;
+
+    if (orders.length === 0) {
+      container.innerHTML = `${headerHtml}<div class="alert alert-info">{{ __('No pending orders for this client') }}</div>`;
+      return;
+    }
+
+    const ordersHtml = orders.map(order => {
+      const processesHtml = (order.processes || []).map(process => {
+        const articlesHtml = (process.articles || []).map(article => `
+          <div class="client-article-row">
+            <div>
+              <code>${article.codigo_articulo || '-'}</code>
+              <div class="text-muted">${article.descripcion_articulo || ''}</div>
+            </div>
+            <div class="text-end">
+              <div class="client-article-stock ${article.in_stock ? 'text-success' : 'text-danger'}">
+                <i class="ti ${article.in_stock ? 'ti-check' : 'ti-alert-triangle'}"></i>
+                ${article.in_stock ? '{{ __('In stock') }}' : '{{ __('No stock') }}'}
+              </div>
+              <div class="text-muted small">${article.grupo_articulo || ''}</div>
+            </div>
+          </div>
+        `).join('');
+
+        return `
+          <div class="client-process-item">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div>
+                <strong>#${process.grupo_numero || '-'} · ${process.name || '{{ __('Process') }}'}</strong>
+                <div class="text-muted small">{{ __('Time') }}: ${process.time || '—'} · {{ __('Boxes') }}: ${process.box ?? '0'} · {{ __('Units/Box') }}: ${process.units_box ?? '0'} · {{ __('Pallets') }}: ${process.number_of_pallets ?? '0'}</div>
+              </div>
+              <span class="badge ${process.in_stock ? 'bg-success' : 'bg-danger'}">${process.in_stock ? '{{ __('Stock ready') }}' : '{{ __('Awaiting stock') }}'}</span>
+            </div>
+            ${articlesHtml ? `<div class="client-articles-list">${articlesHtml}</div>` : `<div class="text-muted small">{{ __('No articles linked to this process') }}</div>`}
+          </div>
+        `;
+      }).join('');
+
+      return `
+        <div class="client-detail-card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <div>
+              <div class="fw-bold">{{ __('Order') }} #${order.order_id}</div>
+              <div class="small">${order.delivery_date ? `{{ __('Delivery') }}: ${order.delivery_date}` : order.estimated_delivery_date ? `{{ __('Estimated') }}: ${order.estimated_delivery_date}` : '{{ __('No delivery date') }}'}</div>
+            </div>
+            <div>
+              <span class="badge ${order.in_stock ? 'bg-success' : 'bg-warning text-dark'}">
+                ${order.in_stock ? '{{ __('Ready') }}' : '{{ __('Pending') }}'}
+              </span>
+            </div>
+          </div>
+          <div class="card-body">
+            ${processesHtml || `<div class="text-muted small">{{ __('No processes associated to this order') }}</div>`}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    container.innerHTML = headerHtml + ordersHtml;
+  }
   
   // Listeners para detectar drag & drop
   document.addEventListener('dragstart', function(e) {

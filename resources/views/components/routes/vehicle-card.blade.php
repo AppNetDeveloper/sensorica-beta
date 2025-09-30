@@ -132,7 +132,8 @@
              style="min-width: 140px; cursor: grab; padding: 8px;"
              draggable="true"
              data-client-name="{{ $clientAssignment->customerClient->name }}"
-             data-client-assignment-id="{{ $clientAssignment->id }}">
+             data-client-assignment-id="{{ $clientAssignment->id }}"
+             data-client-id="{{ $clientAssignment->customer_client_id }}">
           <div class="d-flex align-items-center justify-content-between w-100">
             <span class="drag-handle me-2 text-muted" title="{{ __('Drag to reorder') }}">⋮⋮</span>
             <span class="flex-grow-1">{{ $clientAssignment->customerClient->name }}</span>

@@ -179,6 +179,7 @@ Route::prefix('customers')->name('customers.')->group(function () {
         Route::post('routes/assign-vehicle', [\App\Http\Controllers\RoutePlanController::class, 'assignVehicle'])->name('routes.assign-vehicle');
         Route::delete('routes/remove-vehicle', [\App\Http\Controllers\RoutePlanController::class, 'removeVehicle'])->name('routes.remove-vehicle');
         Route::post('routes/assign-client-vehicle', [\App\Http\Controllers\RoutePlanController::class, 'assignClientToVehicle'])->name('routes.assign-client-vehicle');
+        Route::get('routes/client-details/{client}', [\App\Http\Controllers\RoutePlanController::class, 'clientDetails'])->name('routes.client-details');
         Route::post('routes/reorder-clients', [\App\Http\Controllers\RoutePlanController::class, 'reorderClients'])->name('routes.reorder-clients');
         Route::post('routes/move-client', [\App\Http\Controllers\RoutePlanController::class, 'moveClientAssignment'])->name('routes.move-client');
         Route::delete('routes/remove-client-vehicle', [\App\Http\Controllers\RoutePlanController::class, 'removeClientFromVehicle'])->name('routes.remove-client-vehicle');

@@ -7,6 +7,8 @@ use App\Models\RouteName;
 use App\Models\CustomerClient;
 use App\Models\RouteDayAssignment;
 use App\Models\RouteClientVehicleAssignment;
+use App\Models\OriginalOrder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class RoutePlanController extends Controller
@@ -177,6 +179,78 @@ class RoutePlanController extends Controller
             ]);
             return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * Devuelve los pedidos pendientes del cliente con procesos y artículos para el modal de detalle.
+     */
+    public function clientDetails(Customer $customer, CustomerClient $client, Request $request): JsonResponse
+    {
+        abort_unless($client->customer_id === $customer->id, 404);
+
+        $orders = OriginalOrder::where('customer_id', $customer->id)
+            ->where('customer_client_id', $client->id)
+            ->whereNull('actual_delivery_date')
+            ->with([
+                'routeName:id,name',
+                'orderProcesses' => function ($query) {
+                    $query->with(['process:id,name'])
+                        ->with(['articles' => function ($articlesQuery) {
+                            $articlesQuery->select('id', 'original_order_process_id', 'codigo_articulo', 'descripcion_articulo', 'grupo_articulo', 'in_stock');
+                        }])
+                        ->orderBy('grupo_numero');
+                }
+            ])
+            ->orderByDesc('finished_at')
+            ->get();
+
+        $mappedOrders = $orders->map(function (OriginalOrder $order) {
+            return [
+                'id' => $order->id,
+                'order_id' => $order->order_id,
+                'route' => $order->routeName ? [
+                    'id' => $order->routeName->id,
+                    'name' => $order->routeName->name,
+                ] : null,
+                'delivery_date' => $order->delivery_date?->format('Y-m-d'),
+                'estimated_delivery_date' => $order->estimated_delivery_date?->format('Y-m-d'),
+                'finished_at' => $order->finished_at?->format('Y-m-d H:i'),
+                'in_stock' => $order->in_stock,
+                'processes' => $order->orderProcesses->map(function ($process) {
+                    return [
+                        'id' => $process->id,
+                        'process_id' => $process->process_id,
+                        'name' => $process->process?->name,
+                        'grupo_numero' => $process->grupo_numero,
+                        'box' => $process->box,
+                        'units_box' => $process->units_box,
+                        'number_of_pallets' => $process->number_of_pallets,
+                        'time' => $process->time,
+                        'in_stock' => $process->in_stock,
+                        'articles' => $process->articles->map(function ($article) {
+                            return [
+                                'id' => $article->id,
+                                'codigo_articulo' => $article->codigo_articulo,
+                                'descripcion_articulo' => $article->descripcion_articulo,
+                                'grupo_articulo' => $article->grupo_articulo,
+                                'in_stock' => $article->in_stock,
+                            ];
+                        })->values(),
+                    ];
+                })->values(),
+            ];
+        })->values();
+
+        return response()->json([
+            'success' => true,
+            'client' => [
+                'id' => $client->id,
+                'name' => $client->name,
+                'address' => $client->address,
+                'phone' => $client->phone,
+            ],
+            'orders' => $mappedOrders,
+        ]);
     }
 
     public function removeVehicle(Request $request, Customer $customer)
