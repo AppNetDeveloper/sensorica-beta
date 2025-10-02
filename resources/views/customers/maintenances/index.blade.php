@@ -18,6 +18,11 @@
   <div class="card-header d-flex justify-content-between align-items-center">
     <h5 class="mb-0">{{ __('Maintenances') }}</h5>
     <div class="btn-toolbar" role="toolbar" aria-label="Toolbar">
+      <div class="btn-group btn-group-sm me-2" role="group" aria-label="Dashboard">
+        <a href="{{ route('customers.maintenances.dashboard', $customer->id) }}" class="btn btn-outline-info" data-bs-toggle="tooltip" title="{{ __('Dashboard de Métricas') }}">
+          <i class="ti ti-chart-line me-1"></i><span class="d-none d-sm-inline">{{ __('Dashboard') }}</span>
+        </a>
+      </div>
       <div class="btn-group btn-group-sm me-2" role="group" aria-label="Catálogos">
         <a href="{{ route('customers.maintenance-causes.index', $customer->id) }}" class="btn btn-outline-secondary" data-bs-toggle="tooltip" title="{{ __('Operaciones de mantenimiento') }}">
           <i class="ti ti-flag-3 me-1"></i><span class="d-none d-sm-inline">{{ __('Operaciones') }}</span>
@@ -25,6 +30,14 @@
         <a href="{{ route('customers.maintenance-parts.index', $customer->id) }}" class="btn btn-outline-secondary" data-bs-toggle="tooltip" title="{{ __('Repuestos de mantenimiento') }}">
           <i class="ti ti-tools me-1"></i><span class="d-none d-sm-inline">{{ __('Repuestos') }}</span>
         </a>
+      </div>
+      <div class="btn-group btn-group-sm me-2" role="group" aria-label="Exportar">
+        <button type="button" class="btn btn-outline-success" id="btn-export-excel" data-bs-toggle="tooltip" title="{{ __('Exportar a Excel') }}">
+          <i class="ti ti-file-spreadsheet me-1"></i><span class="d-none d-sm-inline">Excel</span>
+        </button>
+        <button type="button" class="btn btn-outline-danger" id="btn-export-pdf" data-bs-toggle="tooltip" title="{{ __('Exportar a PDF') }}">
+          <i class="ti ti-file-type-pdf me-1"></i><span class="d-none d-sm-inline">PDF</span>
+        </button>
       </div>
       <div class="btn-group btn-group-sm me-2" role="group" aria-label="Crear">
         @can('maintenance-create')
@@ -103,6 +116,32 @@
       </div>
     </form>
 
+    <!-- Leyenda de Estados -->
+    <div class="alert alert-light border mb-3" role="alert">
+      <div class="d-flex align-items-center mb-2">
+        <i class="ti ti-info-circle me-2"></i>
+        <strong>{{ __('Leyenda de Estados') }}:</strong>
+      </div>
+      <div class="d-flex flex-wrap gap-3">
+        <div class="d-flex align-items-center">
+          <span class="badge bg-secondary me-2"><i class="ti ti-clock me-1"></i>{{ __('Pendiente') }}</span>
+          <small class="text-muted">{{ __('Sin iniciar') }}</small>
+        </div>
+        <div class="d-flex align-items-center">
+          <span class="badge bg-warning me-2"><i class="ti ti-tool me-1"></i>{{ __('En Curso') }}</span>
+          <small class="text-muted">{{ __('< 24 horas') }}</small>
+        </div>
+        <div class="d-flex align-items-center">
+          <span class="badge bg-danger me-2"><i class="ti ti-alert-triangle me-1"></i>{{ __('En Curso') }}</span>
+          <small class="text-muted">{{ __('> 24 horas (crítico)') }}</small>
+        </div>
+        <div class="d-flex align-items-center">
+          <span class="badge bg-success me-2"><i class="ti ti-check me-1"></i>{{ __('Finalizado') }}</span>
+          <small class="text-muted">{{ __('Completado') }}</small>
+        </div>
+      </div>
+    </div>
+
     <!-- Summary cards -->
     <div class="row g-3 mb-3" id="maint-summary">
       <div class="col-md-4">
@@ -151,6 +190,7 @@
         <thead>
           <tr>
             <th>#</th>
+            <th>{{ __('Status') }}</th>
             <th>{{ __('Production Line') }}</th>
             <th>{{ __('Created') }}</th>
             <th>{{ __('Start') }}</th>
@@ -188,6 +228,18 @@
               <div class="col-12">
                 <label class="form-label fw-bold">{{ __('Operator Annotation') }}</label>
                 <div id="md-operator-annotations" class="form-control" style="min-height: 60px"></div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-bold">{{ __('Production Line') }}</label>
+                <div id="md-production-line" class="form-control"></div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-bold">{{ __('Operator') }}</label>
+                <div id="md-operator-name" class="form-control"></div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-bold">{{ __('User') }}</label>
+                <div id="md-user-name" class="form-control"></div>
               </div>
               <div class="col-md-6">
                 <label class="form-label fw-bold">{{ __('Causes') }}</label>
@@ -315,12 +367,13 @@
       processing: true,
       serverSide: true,
       responsive: true,
-      order: [[2, 'desc']], // created_at desc
+      order: [[3, 'desc']], // created_at desc
       columnDefs: [
         { targets: -1, responsivePriority: 1 }, // Actions column highest priority
         { targets: 0, responsivePriority: 100 }, // ID lowest priority
-        { targets: [2,3,4], responsivePriority: 2 }, // Created/Start/End
-        { targets: [5,6,7], responsivePriority: 3 } // Stopped/Downtime/Total
+        { targets: 1, responsivePriority: 2 }, // Status badge
+        { targets: [3,4,5], responsivePriority: 3 }, // Created/Start/End
+        { targets: [6,7,8], responsivePriority: 4 } // Stopped/Downtime/Total
       ],
       ajax: {
         url: "{{ route('customers.maintenances.index', $customer->id) }}",
@@ -339,6 +392,7 @@
       },
       columns: [
         { data: 'id', name: 'id' },
+        { data: 'status_badge', name: 'status_badge', orderable: false, searchable: false },
         { data: 'production_line', name: 'production_line', orderable: false, searchable: true },
         { data: 'created_at', name: 'created_at' },
         { data: 'start_datetime', name: 'start_datetime' },
@@ -376,6 +430,7 @@
         dataOut.push({
           id: rowData.id,
           production_line: rowData.production_line,
+          production_line_name: rowData.production_line,
           created_at: rowData.created_at,
           start_datetime: rowData.start_datetime,
           end_datetime: rowData.end_datetime,
@@ -385,7 +440,9 @@
           causes_list: rowData.causes_list,
           parts_list: rowData.parts_list,
           operator_name: rowData.operator_name,
+          operator_role: 'Maquinista',
           user_name: rowData.user_name,
+          user_role: 'Mecánico',
           annotations_short: rowData.annotations_short,
           operator_annotations_short: rowData.operator_annotations_short,
           details: details
@@ -452,8 +509,18 @@
       const opAnn = btn.getAttribute('data-operator-annotations') || '';
       const causes = btn.getAttribute('data-causes') || '';
       const parts = btn.getAttribute('data-parts') || '';
+      let rowData = table.row($(btn).closest('tr')).data();
+      if (!rowData) {
+        rowData = table.row($(btn).closest('tr').prev()).data();
+      }
+      const lineName = rowData?.production_line || btn.getAttribute('data-production-line') || '';
+      const operatorName = rowData?.operator_name || btn.getAttribute('data-operator-name') || '';
+      const userName = rowData?.user_name || btn.getAttribute('data-user-name') || '';
       document.getElementById('md-annotations').textContent = annotations || '-';
       document.getElementById('md-operator-annotations').textContent = opAnn || '-';
+      document.getElementById('md-production-line').textContent = lineName || '-';
+      document.getElementById('md-operator-name').textContent = operatorName || '-';
+      document.getElementById('md-user-name').textContent = userName || '-';
       document.getElementById('md-causes').textContent = causes || '-';
       document.getElementById('md-parts').textContent = parts || '-';
     });
@@ -580,6 +647,39 @@
     $('#btn-ai-send').on('click', function(){
       const prompt = $aiPromptTextarea.val() || defaultPrompt;
       startAiTask(prompt);
+    });
+
+    // Export buttons
+    $('#btn-export-excel').on('click', function(){
+      const form = document.querySelector('form[action="{{ route('customers.maintenances.index', $customer->id) }}"]');
+      const params = new URLSearchParams({
+        production_line_id: form.production_line_id.value || '',
+        operator_id: form.operator_id.value || '',
+        user_id: form.user_id.value || '',
+        created_from: form.created_from.value || '',
+        created_to: form.created_to.value || '',
+        start_from: form.start_from.value || '',
+        start_to: form.start_to.value || '',
+        end_from: form.end_from.value || '',
+        end_to: form.end_to.value || ''
+      });
+      window.location.href = "{{ route('customers.maintenances.export.excel', $customer->id) }}?" + params.toString();
+    });
+
+    $('#btn-export-pdf').on('click', function(){
+      const form = document.querySelector('form[action="{{ route('customers.maintenances.index', $customer->id) }}"]');
+      const params = new URLSearchParams({
+        production_line_id: form.production_line_id.value || '',
+        operator_id: form.operator_id.value || '',
+        user_id: form.user_id.value || '',
+        created_from: form.created_from.value || '',
+        created_to: form.created_to.value || '',
+        start_from: form.start_from.value || '',
+        start_to: form.start_to.value || '',
+        end_from: form.end_from.value || '',
+        end_to: form.end_to.value || ''
+      });
+      window.location.href = "{{ route('customers.maintenances.export.pdf', $customer->id) }}?" + params.toString();
     });
   });
   </script>

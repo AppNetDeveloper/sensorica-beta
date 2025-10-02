@@ -72,6 +72,43 @@
             @enderror
           </div>
 
+          @if($checklistTemplate && $checklistTemplate->items->count() > 0)
+          <div class="mb-3">
+            <label class="form-label fw-bold">
+              <i class="ti ti-checklist me-1"></i>{{ __('Checklist de finalización') }}
+              @if($checklistTemplate->description)
+                <small class="text-muted d-block">{{ $checklistTemplate->description }}</small>
+              @endif
+            </label>
+            <div class="card">
+              <div class="card-body">
+                @foreach($checklistTemplate->items as $item)
+                <div class="form-check mb-2">
+                  <input 
+                    class="form-check-input" 
+                    type="checkbox" 
+                    name="checklist[{{ $item->id }}]" 
+                    id="checklist_{{ $item->id }}" 
+                    value="1"
+                    {{ isset($existingResponses[$item->id]) && $existingResponses[$item->id] ? 'checked' : '' }}
+                    {{ $item->required ? 'required' : '' }}
+                  >
+                  <label class="form-check-label" for="checklist_{{ $item->id }}">
+                    {{ $item->description }}
+                    @if($item->required)
+                      <span class="badge bg-danger ms-1">{{ __('Obligatorio') }}</span>
+                    @endif
+                  </label>
+                </div>
+                @endforeach
+              </div>
+            </div>
+            @error('checklist')
+              <div class="text-danger small mt-2">{{ $message }}</div>
+            @enderror
+          </div>
+          @endif
+
           <div class="d-flex gap-2">
             <a href="{{ route('customers.maintenances.index', $customer->id) }}" class="btn btn-secondary">{{ __('Cancelar') }}</a>
             <button type="submit" class="btn btn-warning">{{ __('Finalizar mantenimiento ahora') }}</button>

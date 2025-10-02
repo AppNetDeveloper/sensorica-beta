@@ -31,4 +31,9 @@ class MaintenancePart extends Model
     {
         return $this->belongsTo(ProductionLine::class);
     }
+
+    public function maintenances()
+    {
+        return $this->belongsToMany(Maintenance::class, 'maintenance_part_maintenance', 'maintenance_part_id', 'maintenance_id');
+    }
 }

@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class MaintenanceCause extends Model
+class MaintenanceChecklistTemplate extends Model
 {
     use HasFactory;
 
@@ -13,7 +13,6 @@ class MaintenanceCause extends Model
         'customer_id',
         'production_line_id',
         'name',
-        'code',
         'description',
         'active',
     ];
@@ -32,8 +31,8 @@ class MaintenanceCause extends Model
         return $this->belongsTo(ProductionLine::class);
     }
 
-    public function maintenances()
+    public function items()
     {
-        return $this->belongsToMany(Maintenance::class, 'maintenance_cause_maintenance', 'maintenance_cause_id', 'maintenance_id');
+        return $this->hasMany(MaintenanceChecklistItem::class, 'template_id')->orderBy('sort_order');
     }
 }

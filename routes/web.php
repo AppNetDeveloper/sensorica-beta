@@ -209,6 +209,20 @@ Route::prefix('customers')->name('customers.')->group(function () {
         Route::post('maintenances/{maintenance}/start', [MaintenanceController::class, 'start'])
             ->name('maintenances.start');
 
+        // Exportar mantenimientos
+        Route::get('maintenances-export/excel', [MaintenanceController::class, 'exportExcel'])
+            ->name('maintenances.export.excel');
+        Route::get('maintenances-export/pdf', [MaintenanceController::class, 'exportPdf'])
+            ->name('maintenances.export.pdf');
+        
+        // Historial de auditoría
+        Route::get('maintenances/{maintenance}/audit', [MaintenanceController::class, 'auditHistory'])
+            ->name('maintenances.audit');
+        
+        // Dashboard de métricas
+        Route::get('maintenances-dashboard', [MaintenanceController::class, 'dashboard'])
+            ->name('maintenances.dashboard');
+
         // Rutas para las incidencias de órdenes de producción
         Route::get('production-order-incidents', [ProductionOrderIncidentController::class, 'index'])
             ->name('production-order-incidents.index');

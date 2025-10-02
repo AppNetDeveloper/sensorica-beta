@@ -20,10 +20,10 @@ return new class extends Migration {
             $table->boolean('active')->default(true);
             $table->timestamps();
             
-            // Índices para optimizar consultas
-            $table->index(['customer_id', 'assignment_date']);
-            $table->index(['route_name_id', 'assignment_date']);
-            $table->index(['fleet_vehicle_id', 'assignment_date']);
+            // Índices para optimizar consultas (nombres cortos para evitar exceder 64 caracteres)
+            $table->index(['customer_id', 'assignment_date'], 'rcva_customer_date_idx');
+            $table->index(['route_name_id', 'assignment_date'], 'rcva_route_date_idx');
+            $table->index(['fleet_vehicle_id', 'assignment_date'], 'rcva_vehicle_date_idx');
         });
     }
 

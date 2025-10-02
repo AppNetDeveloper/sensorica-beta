@@ -62,4 +62,44 @@ class Maintenance extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function checklistResponses()
+    {
+        return $this->hasMany(MaintenanceChecklistResponse::class);
+    }
+
+    public function auditLogs()
+    {
+        return $this->hasMany(MaintenanceAuditLog::class)->orderByDesc('created_at');
+    }
+
+    protected static function booted()
+    {
+        static::created(function ($maintenance) {
+            MaintenanceAuditLog::logAction($maintenance, 'created', 'Mantenimiento creado');
+        });
+
+        static::updating(function ($maintenance) {
+            $changes = $maintenance->getDirty();
+            if (!empty($changes)) {
+                $oldValues = [];
+                $newValues = [];
+                foreach ($changes as $key => $newValue) {
+                    $oldValues[$key] = $maintenance->getOriginal($key);
+                    $newValues[$key] = $newValue;
+                }
+                MaintenanceAuditLog::logAction(
+                    $maintenance, 
+                    'updated', 
+                    'Mantenimiento actualizado', 
+                    $oldValues, 
+                    $newValues
+                );
+            }
+        });
+
+        static::deleting(function ($maintenance) {
+            MaintenanceAuditLog::logAction($maintenance, 'deleted', 'Mantenimiento eliminado');
+        });
+    }
 }
