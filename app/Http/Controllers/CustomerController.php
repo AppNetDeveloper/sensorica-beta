@@ -82,7 +82,7 @@ $warehouseActions = [];
 if (auth()->user()->can('assets-view')) {
     $assetsUrl = route('customers.assets.index', $customer->id);
     $inventoryUrl = route('customers.assets.inventory', $customer->id);
-    $warehouseActions[] = "<a href='{$assetsUrl}' class='btn btn-sm btn-outline-secondary me-1 mb-1'><i class='fas fa-box'></i> " . __('Activos') . "</a>";
+    $warehouseActions[] = "<a href='{$assetsUrl}' class='btn btn-sm btn-outline-secondary me-1 mb-1'><i class='fas fa-box'></i> " . __('Activos disponibles') . "</a>";
     $warehouseActions[] = "<a href='{$inventoryUrl}' class='btn btn-sm btn-outline-primary me-1 mb-1'><i class='fas fa-chart-column'></i> " . __('Inventario') . "</a>";
 }
 if (auth()->user()->can('asset-categories-view')) {
