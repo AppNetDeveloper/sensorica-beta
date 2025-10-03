@@ -23,9 +23,14 @@
       <h5 class="mb-0">{{ __('Listado de activos') }}</h5>
       <small class="text-muted">{{ __('Visualiza y filtra los activos del cliente, incluyendo estado y ubicación.') }}</small>
     </div>
-    <a href="{{ route('customers.assets.create', $customer) }}" class="btn btn-sm btn-primary">
-      <i class="ti ti-plus"></i> {{ __('Nuevo activo') }}
-    </a>
+    <div class="d-flex flex-column flex-sm-row gap-2">
+      <a href="{{ route('customers.assets.inventory', $customer) }}" class="btn btn-sm btn-outline-secondary">
+        <i class="ti ti-chart-bar"></i> {{ __('Vista inventario') }}
+      </a>
+      <a href="{{ route('customers.assets.create', $customer) }}" class="btn btn-sm btn-primary">
+        <i class="ti ti-plus"></i> {{ __('Nuevo activo') }}
+      </a>
+    </div>
   </div>
   <div class="card-body">
     <div class="row g-3 mb-4">

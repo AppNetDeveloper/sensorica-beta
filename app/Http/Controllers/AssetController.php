@@ -21,6 +21,116 @@ class AssetController extends Controller
         'quality_issue',
     ];
 
+    public function inventory(Customer $customer)
+    {
+        $this->authorize('viewAny', [Asset::class, $customer]);
+
+        $assetsQuery = $customer->assets()->select([
+            'id',
+            'asset_category_id',
+            'asset_location_id',
+            'status',
+            'has_rfid_tag',
+        ]);
+
+        $categoriesMap = $customer->assetCategories()->pluck('name', 'id');
+        $locationsMap = $customer->assetLocations()->pluck('name', 'id');
+
+        $totals = [
+            'total' => (clone $assetsQuery)->count(),
+            'available' => (clone $assetsQuery)->whereIn('status', ['active', 'inactive'])->count(),
+            'in_use' => (clone $assetsQuery)->where('status', 'active')->count(),
+            'maintenance' => (clone $assetsQuery)->where('status', 'maintenance')->count(),
+            'issues' => (clone $assetsQuery)->whereIn('status', ['consumed', 'damaged', 'quality_issue'])->count(),
+            'missing' => (clone $assetsQuery)->whereIn('status', ['lost'])->count(),
+        ];
+
+        $totals['available_percent'] = $totals['total'] > 0 ? round(($totals['available'] / $totals['total']) * 100, 1) : 0.0;
+        $totals['issues_percent'] = $totals['total'] > 0 ? round(($totals['issues'] / $totals['total']) * 100, 1) : 0.0;
+        $totals['missing_percent'] = $totals['total'] > 0 ? round(($totals['missing'] / $totals['total']) * 100, 1) : 0.0;
+
+        $byCategory = (clone $assetsQuery)
+            ->selectRaw('asset_category_id, status, COUNT(*) as total')
+            ->groupBy('asset_category_id', 'status')
+            ->get()
+            ->groupBy('asset_category_id')
+            ->map(function ($group) use ($categoriesMap) {
+                $categoryId = $group->first()->asset_category_id;
+
+                $counts = [
+                    'total' => $group->sum('total'),
+                    'active' => $group->firstWhere('status', 'active')?->total ?? 0,
+                    'inactive' => $group->firstWhere('status', 'inactive')?->total ?? 0,
+                    'maintenance' => $group->firstWhere('status', 'maintenance')?->total ?? 0,
+                    'consumed' => $group->firstWhere('status', 'consumed')?->total ?? 0,
+                    'damaged' => $group->firstWhere('status', 'damaged')?->total ?? 0,
+                    'quality_issue' => $group->firstWhere('status', 'quality_issue')?->total ?? 0,
+                    'lost' => $group->firstWhere('status', 'lost')?->total ?? 0,
+                ];
+
+                $counts['available'] = $counts['active'] + $counts['inactive'];
+
+                $name = $categoryId ? ($categoriesMap[$categoryId] ?? __('Sin categoría')) : __('Sin categoría');
+
+                return [
+                    'name' => $name,
+                    'counts' => $counts,
+                ];
+            })->values();
+
+        $byLocation = (clone $assetsQuery)
+            ->selectRaw('asset_location_id, status, COUNT(*) as total')
+            ->groupBy('asset_location_id', 'status')
+            ->get()
+            ->groupBy('asset_location_id')
+            ->map(function ($group) use ($locationsMap) {
+                $locationId = $group->first()->asset_location_id;
+
+                $counts = [
+                    'total' => $group->sum('total'),
+                    'active' => $group->firstWhere('status', 'active')?->total ?? 0,
+                    'inactive' => $group->firstWhere('status', 'inactive')?->total ?? 0,
+                    'maintenance' => $group->firstWhere('status', 'maintenance')?->total ?? 0,
+                    'lost' => $group->firstWhere('status', 'lost')?->total ?? 0,
+                    'consumed' => $group->firstWhere('status', 'consumed')?->total ?? 0,
+                    'quality_issue' => $group->firstWhere('status', 'quality_issue')?->total ?? 0,
+                ];
+
+                $counts['available'] = $counts['active'] + $counts['inactive'];
+
+                $name = $locationId ? ($locationsMap[$locationId] ?? __('Sin ubicación')) : __('Sin ubicación');
+
+                return [
+                    'name' => $name,
+                    'counts' => $counts,
+                ];
+            })->values();
+
+        $statusBreakdown = $customer->assets()
+            ->selectRaw('status, COUNT(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        $statuses = collect(self::STATUSES)->map(function ($status) use ($statusBreakdown, $totals) {
+            $count = $statusBreakdown[$status] ?? 0;
+            $percent = $totals['total'] > 0 ? round(($count / $totals['total']) * 100, 1) : 0.0;
+
+            return [
+                'key' => $status,
+                'count' => $count,
+                'percent' => $percent,
+            ];
+        });
+
+        return view('customers.assets.warehouse', compact(
+            'customer',
+            'totals',
+            'byCategory',
+            'byLocation',
+            'statuses'
+        ));
+    }
+
     public function index(Request $request, Customer $customer)
     {
         $this->authorize('viewAny', [Asset::class, $customer]);

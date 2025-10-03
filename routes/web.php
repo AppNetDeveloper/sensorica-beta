@@ -199,6 +199,8 @@ Route::prefix('customers')->name('customers.')->group(function () {
             ->names('asset-locations')
             ->parameters(['asset-locations' => 'assetLocation']);
 
+        Route::get('assets/inventory', [AssetController::class, 'inventory'])
+            ->name('assets.inventory');
         Route::get('assets/{asset}/label', [AssetController::class, 'printLabel'])
             ->name('assets.print-label');
         Route::resource('assets', AssetController::class)
