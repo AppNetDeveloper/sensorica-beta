@@ -340,7 +340,10 @@ class AssetSeeder extends Seeder
         ];
 
         foreach ($assets as $assetData) {
-            Asset::create($assetData);
+            Asset::firstOrCreate(
+                ['article_code' => $assetData['article_code'], 'customer_id' => $assetData['customer_id']],
+                $assetData
+            );
         }
 
         $this->command->info('✓ Asset seeder ejecutado correctamente');

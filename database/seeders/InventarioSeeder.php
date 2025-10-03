@@ -568,7 +568,10 @@ class InventarioSeeder extends Seeder
         ];
 
         foreach ($inventoryAssets as $assetData) {
-            Asset::create($assetData);
+            Asset::firstOrCreate(
+                ['article_code' => $assetData['article_code'], 'customer_id' => $assetData['customer_id']],
+                $assetData
+            );
         }
 
         $this->command->info('✓ InventarioSeeder ejecutado correctamente');
