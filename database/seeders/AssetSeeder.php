@@ -9,6 +9,8 @@ use App\Models\AssetLocation;
 use App\Models\Customer;
 use Illuminate\Database\Seeder;
 
+use Illuminate\Support\Str;
+
 class AssetSeeder extends Seeder
 {
     /**
@@ -21,6 +23,7 @@ class AssetSeeder extends Seeder
             [
                 'customer_id' => 1,
                 'name' => 'Herramientas',
+                'slug' => Str::slug('Herramientas'),
                 'description' => 'Herramientas manuales y eléctricas',
                 'metadata' => [
                     'color' => '#FF6B6B',
@@ -30,6 +33,7 @@ class AssetSeeder extends Seeder
             [
                 'customer_id' => 1,
                 'name' => 'Maquinaria',
+                'slug' => Str::slug('Maquinaria'),
                 'description' => 'Maquinaria pesada y equipos industriales',
                 'metadata' => [
                     'color' => '#4ECDC4',
@@ -39,6 +43,7 @@ class AssetSeeder extends Seeder
             [
                 'customer_id' => 1,
                 'name' => 'Mobiliario',
+                'slug' => Str::slug('Mobiliario'),
                 'description' => 'Muebles y equipamiento de oficina',
                 'metadata' => [
                     'color' => '#45B7D1',
@@ -48,6 +53,7 @@ class AssetSeeder extends Seeder
             [
                 'customer_id' => 1,
                 'name' => 'Electrónica',
+                'slug' => Str::slug('Electrónica'),
                 'description' => 'Equipos electrónicos y de computación',
                 'metadata' => [
                     'color' => '#96CEB4',

@@ -9,6 +9,8 @@ use App\Models\AssetLocation;
 use App\Models\Customer;
 use Illuminate\Database\Seeder;
 
+use Illuminate\Support\Str;
+
 class InventarioSeeder extends Seeder
 {
     /**
@@ -21,6 +23,7 @@ class InventarioSeeder extends Seeder
             [
                 'customer_id' => 1,
                 'name' => 'Materias Primas',
+                'slug' => Str::slug('Materias Primas'),
                 'description' => 'Materiales básicos para producción',
                 'metadata' => [
                     'color' => '#E74C3C',
@@ -30,6 +33,7 @@ class InventarioSeeder extends Seeder
             [
                 'customer_id' => 1,
                 'name' => 'Productos Semielaborados',
+                'slug' => Str::slug('Productos Semielaborados'),
                 'description' => 'Productos en proceso de fabricación',
                 'metadata' => [
                     'color' => '#F39C12',
@@ -39,6 +43,7 @@ class InventarioSeeder extends Seeder
             [
                 'customer_id' => 1,
                 'name' => 'Productos Terminados',
+                'slug' => Str::slug('Productos Terminados'),
                 'description' => 'Productos listos para venta',
                 'metadata' => [
                     'color' => '#27AE60',
@@ -48,6 +53,7 @@ class InventarioSeeder extends Seeder
             [
                 'customer_id' => 1,
                 'name' => 'Envases y Embalajes',
+                'slug' => Str::slug('Envases y Embalajes'),
                 'description' => 'Materiales para empaquetado',
                 'metadata' => [
                     'color' => '#8E44AD',
@@ -57,6 +63,7 @@ class InventarioSeeder extends Seeder
             [
                 'customer_id' => 1,
                 'name' => 'Repuestos y Consumibles',
+                'slug' => Str::slug('Repuestos y Consumibles'),
                 'description' => 'Piezas de recambio y materiales consumibles',
                 'metadata' => [
                     'color' => '#3498DB',
