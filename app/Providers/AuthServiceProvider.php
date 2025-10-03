@@ -5,7 +5,23 @@ namespace App\Providers;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 use Illuminate\Support\Facades\Gate;
 use App\Models\ProductionOrderCallback;
+use App\Models\VendorItem;
+use App\Models\VendorOrder;
+use App\Models\VendorSupplier;
+use App\Models\AssetCostCenter;
+use App\Models\AssetCategory;
+use App\Models\AssetLocation;
+use App\Models\Asset;
+use App\Models\AssetReceipt;
 use App\Policies\ProductionOrderCallbackPolicy;
+use App\Policies\VendorItemPolicy;
+use App\Policies\VendorOrderPolicy;
+use App\Policies\VendorSupplierPolicy;
+use App\Policies\AssetCostCenterPolicy;
+use App\Policies\AssetCategoryPolicy;
+use App\Policies\AssetLocationPolicy;
+use App\Policies\AssetPolicy;
+use App\Policies\AssetReceiptPolicy;
 
 class AuthServiceProvider extends ServiceProvider
 {
@@ -16,6 +32,14 @@ class AuthServiceProvider extends ServiceProvider
      */
     protected $policies = [
         ProductionOrderCallback::class => ProductionOrderCallbackPolicy::class,
+        VendorSupplier::class => VendorSupplierPolicy::class,
+        VendorItem::class => VendorItemPolicy::class,
+        VendorOrder::class => VendorOrderPolicy::class,
+        AssetCostCenter::class => AssetCostCenterPolicy::class,
+        AssetCategory::class => AssetCategoryPolicy::class,
+        AssetLocation::class => AssetLocationPolicy::class,
+        Asset::class => AssetPolicy::class,
+        AssetReceipt::class => AssetReceiptPolicy::class,
     ];
 
     /**

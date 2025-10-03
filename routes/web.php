@@ -53,6 +53,14 @@ use App\Http\Controllers\Api\ProductionLineInfoController;
 use App\Http\Controllers\WorkCalendarController;
 use App\Http\Controllers\OriginalOrderProcessFileController;
 use App\Http\Controllers\ProductionOrderCallbackController;
+use App\Http\Controllers\VendorSupplierController;
+use App\Http\Controllers\VendorItemController;
+use App\Http\Controllers\VendorOrderController;
+use App\Http\Controllers\AssetCostCenterController;
+use App\Http\Controllers\AssetCategoryController;
+use App\Http\Controllers\AssetLocationController;
+use App\Http\Controllers\AssetController;
+use App\Http\Controllers\AssetReceiptController;
 
 // Rutas para transportistas/conductores (fuera del grupo de customers)
 Route::middleware(['auth', 'XSS'])->group(function () {
@@ -159,6 +167,51 @@ Route::prefix('customers')->name('customers.')->group(function () {
         Route::resource('maintenances', MaintenanceController::class)
             ->names('maintenances')
             ->parameters(['maintenances' => 'maintenance']);
+
+        // Proveedores, productos y pedidos de compra
+        Route::resource('vendor-suppliers', VendorSupplierController::class)
+            ->except(['show'])
+            ->names('vendor-suppliers')
+            ->parameters(['vendor-suppliers' => 'vendorSupplier']);
+
+        Route::resource('vendor-items', VendorItemController::class)
+            ->except(['show'])
+            ->names('vendor-items')
+            ->parameters(['vendor-items' => 'vendorItem']);
+
+        Route::resource('vendor-orders', VendorOrderController::class)
+            ->names('vendor-orders')
+            ->parameters(['vendor-orders' => 'vendorOrder']);
+
+        // Gestión de activos
+        Route::resource('asset-cost-centers', AssetCostCenterController::class)
+            ->except(['show'])
+            ->names('asset-cost-centers')
+            ->parameters(['asset-cost-centers' => 'assetCostCenter']);
+
+        Route::resource('asset-categories', AssetCategoryController::class)
+            ->except(['show'])
+            ->names('asset-categories')
+            ->parameters(['asset-categories' => 'assetCategory']);
+
+        Route::resource('asset-locations', AssetLocationController::class)
+            ->except(['show'])
+            ->names('asset-locations')
+            ->parameters(['asset-locations' => 'assetLocation']);
+
+        Route::get('assets/{asset}/label', [AssetController::class, 'printLabel'])
+            ->name('assets.print-label');
+        Route::resource('assets', AssetController::class)
+            ->names('assets')
+            ->parameters(['assets' => 'asset']);
+
+        Route::prefix('vendor-orders/{vendorOrder}')
+            ->name('vendor-orders.')
+            ->group(function () {
+                Route::get('receipts/create', [AssetReceiptController::class, 'create'])->name('receipts.create');
+                Route::post('receipts', [AssetReceiptController::class, 'store'])->name('receipts.store');
+                Route::get('receipts/{receipt}', [AssetReceiptController::class, 'show'])->name('receipts.show');
+            });
 
         // Rutas para Clientes del Customer (export/import primero para evitar colisiones con resource)
         Route::get('clients/export', [\App\Http\Controllers\CustomerClientController::class, 'export'])->name('clients.export');

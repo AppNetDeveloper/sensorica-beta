@@ -90,6 +90,7 @@ class DatabaseSeeder extends Seeder
         foreach ($modules as $module) {
             Modual::firstOrCreate(['name' => $module]);
         }
+
         $this->call([
             IaPromptsTableSeeder::class,
             OriginalOrderPermissionsTableSeeder::class,
@@ -97,9 +98,9 @@ class DatabaseSeeder extends Seeder
             FleetPermissionsSeeder::class,
             CustomerClientsPermissionsSeeder::class,
             RoutePlanPermissionsSeeder::class,
-            RouteNamePermissionsSeeder::class,
             DeliveryPermissionsSeeder::class,
-            // Otros seeders que puedas tener...
+            VendorProcurementPermissionsSeeder::class,
+            AssetManagementPermissionsSeeder::class,
         ]);
     }
 }

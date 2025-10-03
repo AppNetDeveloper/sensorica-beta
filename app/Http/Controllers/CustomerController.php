@@ -103,6 +103,21 @@ class CustomerController extends Controller
                     $orderActions[] = "<a href='{$workCalendarUrl}' class='btn btn-sm btn-info me-1 mb-1' title='" . __('Work Calendar') . "'><i class='fas fa-calendar-alt'></i> " . __('Calendario') . "</a>";
                 }
                 
+                // Grupo 2b: Compras a proveedores
+                $procurementActions = [];
+                if (auth()->user()->can('vendor-suppliers-view')) {
+                    $supplierUrl = route('customers.vendor-suppliers.index', $customer->id);
+                    $procurementActions[] = "<a href='{$supplierUrl}' class='btn btn-sm btn-outline-secondary me-1 mb-1' title='" . __('Proveedores') . "'><i class='fas fa-industry'></i> " . __('Proveedores') . "</a>";
+                }
+                if (auth()->user()->can('vendor-items-view')) {
+                    $itemsUrl = route('customers.vendor-items.index', $customer->id);
+                    $procurementActions[] = "<a href='{$itemsUrl}' class='btn btn-sm btn-outline-secondary me-1 mb-1' title='" . __('Productos de compra') . "'><i class='fas fa-boxes-stacked'></i> " . __('Productos de compra') . "</a>";
+                }
+                if (auth()->user()->can('vendor-orders-view')) {
+                    $ordersUrl = route('customers.vendor-orders.index', $customer->id);
+                    $procurementActions[] = "<a href='{$ordersUrl}' class='btn btn-sm btn-outline-secondary me-1 mb-1' title='" . __('Pedidos a proveedor') . "'><i class='fas fa-file-invoice-dollar'></i> " . __('Pedidos proveedor') . "</a>";
+                }
+                
                 // Grupo 3: Calidad e incidencias
                 $qualityActions = [];
                 if (auth()->user()->can('productionline-incidents')) {
@@ -152,6 +167,29 @@ class CustomerController extends Controller
                 }
                 if (!empty($orderActions)) {
                     $allButtons .= "<div class='btn-group-section'>" . implode('', $orderActions) . "</div>";
+                }
+                if (!empty($procurementActions)) {
+                    $allButtons .= "<div class='btn-group-section'>" . implode('', $procurementActions) . "</div>";
+                }
+                $assetActions = [];
+                if (auth()->user()->can('assets-view')) {
+                    $assetsUrl = route('customers.assets.index', $customer->id);
+                    $assetActions[] = "<a href='{$assetsUrl}' class='btn btn-sm btn-outline-secondary me-1 mb-1' title='" . __('Activos') . "'><i class='fas fa-box'></i> " . __('Activos') . "</a>";
+                }
+                if (auth()->user()->can('asset-categories-view')) {
+                    $assetCategoriesUrl = route('customers.asset-categories.index', $customer->id);
+                    $assetActions[] = "<a href='{$assetCategoriesUrl}' class='btn btn-sm btn-outline-secondary me-1 mb-1' title='" . __('Categorías de Activos') . "'><i class='fas fa-layer-group'></i> " . __('Categorías de activos') . "</a>";
+                }
+                if (auth()->user()->can('asset-cost-centers-view')) {
+                    $assetCostCentersUrl = route('customers.asset-cost-centers.index', $customer->id);
+                    $assetActions[] = "<a href='{$assetCostCentersUrl}' class='btn btn-sm btn-outline-secondary me-1 mb-1' title='" . __('Centros de coste de activos') . "'><i class='fas fa-coins'></i> " . __('Centros de coste') . "</a>";
+                }
+                if (auth()->user()->can('asset-locations-view')) {
+                    $assetLocationsUrl = route('customers.asset-locations.index', $customer->id);
+                    $assetActions[] = "<a href='{$assetLocationsUrl}' class='btn btn-sm btn-outline-secondary me-1 mb-1' title='" . __('Ubicaciones de activos') . "'><i class='fas fa-warehouse'></i> " . __('Ubicaciones de activos') . "</a>";
+                }
+                if (!empty($assetActions)) {
+                    $allButtons .= "<div class='btn-group-section'>" . implode('', $assetActions) . "</div>";
                 }
                 if (!empty($qualityActions)) {
                     $allButtons .= "<div class='btn-group-section'>" . implode('', $qualityActions) . "</div>";

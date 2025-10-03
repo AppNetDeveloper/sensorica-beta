@@ -1,3 +1,13 @@
+### Gestión de Pedidos a Proveedor
+
+Módulo dedicado a la gestión de compras por fábrica (`customer_id`). Incluye catálogos de proveedores, productos de compra y pedidos.
+
+- **Documentación detallada**: ver `docs/vendor-procurement.md`
+- **Rutas**: `customers/{customer}/vendor-suppliers`, `vendor-items`, `vendor-orders`
+- **Permisos**: `vendor-suppliers-*`, `vendor-items-*`, `vendor-orders-*` (Seeder `VendorProcurementPermissionsSeeder`)
+- **Recepciones de almacén**: desde la vista del pedido (`vendor-orders.show`) se pueden registrar entradas con pestaña **Recepciones**, generar KPIs de avance y crear activos automáticamente (requiere permisos `asset-receipts-*`).
+- **Vista de acciones**: accesos rápidos desde `customers/index`
+
 # SENSORICA - Sistema Integral de Gestión de Producción Industrial
 
 <p align="center">
@@ -8,19 +18,19 @@
 
 - [Descripción General](#descripción-general)
 - [Características Principales](#características-principales)
-- [Arquitectura del Sistema](#arquitectura-del-sistema)
-- [Módulos Principales](#módulos-principales)
   - [Sistema Kanban](#sistema-kanban)
   - [Monitoreo OEE](#monitoreo-oee)
   - [Gestión de Sensores](#gestión-de-sensores)
   - [Integración con APIs Externas](#integración-con-apis-externas)
   - [Gestión de Incidencias](#gestión-de-incidencias)
   - [Control de Calidad (QC): Incidencias y Confirmaciones](#control-de-calidad-qc-incidencias-y-confirmaciones)
-- [Tecnologías Utilizadas](#tecnologías-utilizadas)
-- [Requisitos del Sistema](#requisitos-del-sistema)
-- [Instalación y Configuración](#instalación-y-configuración)
-- [Estructura de la Base de Datos](#estructura-de-la-base-de-datos)
-- [Servicios en Segundo Plano](#servicios-en-segundo-plano)
+  - [Control de Activos e Inventario](#control-de-activos-e-inventario)
+  - [Gestión de Pedidos a Proveedor](#gestión-de-pedidos-a-proveedor)
+  - [Tecnologías Utilizadas](#tecnologías-utilizadas)
+  - [Requisitos del Sistema](#requisitos-del-sistema)
+  - [Instalación y Configuración](#instalación-y-configuración)
+  - [Estructura de la Base de Datos](#estructura-de-la-base-de-datos)
+  - [Servicios en Segundo Plano](#servicios-en-segundo-plano)
 - [🧭 Mapa de funcionalidades](#🧭-mapa-de-funcionalidades-qué-puede-hacer-la-app)
 - [📚 Dónde está cada cosa](#📚-dónde-está-cada-cosa-mapa-de-código)
 - [🔄 Flujos clave](#🔄-flujos-clave)

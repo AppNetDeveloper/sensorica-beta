@@ -11,6 +11,14 @@ use App\Models\ProductionLine;
 use App\Models\ProcessFieldMapping;
 use App\Models\ArticleFieldMapping;
 use App\Models\CustomerCallbackMapping;
+use App\Models\VendorSupplier;
+use App\Models\VendorItem;
+use App\Models\VendorOrder;
+use App\Models\AssetCostCenter;
+use App\Models\AssetCategory;
+use App\Models\AssetLocation;
+use App\Models\Asset;
+use App\Models\AssetReceipt;
 
 class Customer extends Model
 {
@@ -90,5 +98,45 @@ class Customer extends Model
     public function productionLines()
     {
         return $this->hasMany(ProductionLine::class);
+    }
+
+    public function vendorSuppliers(): HasMany
+    {
+        return $this->hasMany(VendorSupplier::class);
+    }
+
+    public function vendorItems(): HasMany
+    {
+        return $this->hasMany(VendorItem::class);
+    }
+
+    public function vendorOrders(): HasMany
+    {
+        return $this->hasMany(VendorOrder::class);
+    }
+
+    public function assetCostCenters(): HasMany
+    {
+        return $this->hasMany(AssetCostCenter::class);
+    }
+
+    public function assetCategories(): HasMany
+    {
+        return $this->hasMany(AssetCategory::class);
+    }
+
+    public function assetLocations(): HasMany
+    {
+        return $this->hasMany(AssetLocation::class);
+    }
+
+    public function assets(): HasMany
+    {
+        return $this->hasMany(Asset::class);
+    }
+
+    public function assetReceipts(): HasMany
+    {
+        return $this->hasMany(AssetReceipt::class);
     }
 }
