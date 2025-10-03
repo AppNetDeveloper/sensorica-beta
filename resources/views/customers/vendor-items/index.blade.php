@@ -31,8 +31,8 @@
     @if($items->isEmpty())
       <div class="alert alert-info mb-0">{{ __('No hay productos registrados todavía.') }}</div>
     @else
-      <div class="table-responsive">
-        <table class="table table-striped align-middle" id="itemsTable">
+      <div class="table-responsive" style="width: 100%; margin: 0 auto;">
+        <table class="table table-striped align-middle" id="itemsTable" style="width: 100%;">
           <thead>
             <tr>
               <th>{{ __('Nombre') }}</th>
@@ -104,15 +104,6 @@
         padding: 1.25rem;
     }
     #itemsTable_wrapper {
-        width: 100%;
-    }
-    .container-fluid.px-0 {
-        width: 100%;
-        max-width: 100%;
-    }
-    .row.mx-0 {
-        margin-left: 0;
-        margin-right: 0;
         width: 100%;
     }
     .dataTables_paginate {
