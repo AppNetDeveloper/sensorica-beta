@@ -106,7 +106,6 @@
       <div class="card-body">
         <div class="row g-3 align-items-center">
           <div class="col-lg-5">
-            <label for="quick-scan-input" class="form-label mb-1">{{ __('Escanear activo') }}</label>
             <input type="text" id="quick-scan-input" class="form-control" placeholder="{{ __('Escanea o ingresa el código de la etiqueta') }}" autocomplete="off">
           </div>
           <div class="col-lg-3 col-md-6 d-grid">

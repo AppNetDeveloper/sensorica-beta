@@ -302,6 +302,15 @@
             margin-bottom: 5px;
         }
         
+        .btn-group-label {
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: #6c757d;
+            margin-bottom: 4px;
+            letter-spacing: 0.5px;
+        }
+        
         .action-buttons-row {
             background-color: #f8f9fa;
             border-radius: 5px;
