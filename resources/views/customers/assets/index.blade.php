@@ -179,8 +179,8 @@
     @if($assets->isEmpty())
       <div class="alert alert-info mb-0">{{ __('No hay activos registrados con los filtros actuales.') }}</div>
     @else
-      <div class="table-responsive">
-        <table class="table table-striped align-middle" id="assetsTable">
+      <div class="table-responsive" style="width: 100%; margin: 0 auto;">
+        <table class="table table-striped align-middle" id="assetsTable" style="width: 100%;">
           <thead>
             <tr>
               <th>{{ __('Código etiqueta') }}</th>
@@ -264,6 +264,40 @@
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css"/>
 <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css"/>
 <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css"/>
+<style>
+    .table th, .table td {
+        vertical-align: middle;
+    }
+    .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
+    #assetsTable_wrapper .dt-buttons {
+        margin-bottom: 10px;
+    }
+    .dataTables_wrapper .dataTables_filter {
+        margin-bottom: 10px;
+    }
+    .table th {
+        background-color: #f8f9fa;
+        font-weight: bold;
+    }
+    .card-body {
+        padding: 1.25rem;
+    }
+    #assetsTable_wrapper {
+        width: 100%;
+    }
+    .dataTables_paginate {
+        float: right !important;
+        width: 100%;
+        text-align: right !important;
+    }
+    .dataTables_info {
+        padding-top: 8px;
+        margin-bottom: 10px;
+    }
+</style>
 @endpush
 
 @push('scripts')
@@ -283,7 +317,7 @@
   $(function(){
     $('#assetsTable').DataTable({
       responsive: true,
-      dom: '<"d-flex justify-content-between align-items-center mb-3"<"btn-toolbar"B><"flex-grow-1"f>>rtip',
+      dom: '<"row mb-3"<"col-sm-12 col-md-6"B><"col-sm-12 col-md-6"f>><"row"<"col-sm-12"tr>><"row mt-3"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7 text-end"p>>',
       buttons: [
         {
           extend: 'excelHtml5',

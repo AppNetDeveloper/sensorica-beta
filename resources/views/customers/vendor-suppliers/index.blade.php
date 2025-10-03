@@ -15,19 +15,24 @@
 @endsection
 
 @section('content')
-<div class="card">
-  <div class="card-header d-flex justify-content-between align-items-center">
-    <h5 class="mb-0">{{ __('Listado de proveedores') }}</h5>
-    <a href="{{ route('customers.vendor-suppliers.create', $customer) }}" class="btn btn-sm btn-primary">
-      <i class="ti ti-plus"></i> {{ __('Nuevo proveedor') }}
-    </a>
+<div class="container-fluid px-0">
+    <div class="row mt-3 mx-0">
+        <div class="col-12 px-0">
+            <div class="card border-0 shadow" style="width: 100%;">
+  <div class="card-header bg-transparent">
+    <div class="d-flex justify-content-between align-items-center">
+      <h5 class="mb-0">{{ __('Listado de proveedores') }}</h5>
+      <a href="{{ route('customers.vendor-suppliers.create', $customer) }}" class="btn btn-sm btn-primary">
+        <i class="ti ti-plus"></i> {{ __('Nuevo proveedor') }}
+      </a>
+    </div>
   </div>
   <div class="card-body">
     @if($suppliers->isEmpty())
       <div class="alert alert-info mb-0">{{ __('No hay proveedores registrados todavía.') }}</div>
     @else
-      <div class="table-responsive">
-        <table class="table table-striped align-middle" id="suppliersTable">
+      <div class="table-responsive" style="width: 100%; margin: 0 auto;">
+        <table class="table table-striped align-middle" id="suppliersTable" style="width: 100%;">
           <thead>
             <tr>
               <th>{{ __('Nombre') }}</th>
@@ -67,6 +72,9 @@
       </div>
     @endif
   </div>
+            </div>
+        </div>
+    </div>
 </div>
 @endsection
 
@@ -74,6 +82,40 @@
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css"/>
 <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css"/>
 <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css"/>
+<style>
+    .table th, .table td {
+        vertical-align: middle;
+    }
+    .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
+    #suppliersTable_wrapper .dt-buttons {
+        margin-bottom: 10px;
+    }
+    .dataTables_wrapper .dataTables_filter {
+        margin-bottom: 10px;
+    }
+    .table th {
+        background-color: #f8f9fa;
+        font-weight: bold;
+    }
+    .card-body {
+        padding: 1.25rem;
+    }
+    #suppliersTable_wrapper {
+        width: 100%;
+    }
+    .dataTables_paginate {
+        float: right !important;
+        width: 100%;
+        text-align: right !important;
+    }
+    .dataTables_info {
+        padding-top: 8px;
+        margin-bottom: 10px;
+    }
+</style>
 @endpush
 
 @push('scripts')
@@ -92,7 +134,7 @@
   $(function(){
     $('#suppliersTable').DataTable({
       responsive: true,
-      dom: '<"d-flex justify-content-between align-items-center mb-3"<"btn-toolbar"B><"flex-grow-1"f>>rtip',
+      dom: '<"row mb-3"<"col-sm-12 col-md-6"B><"col-sm-12 col-md-6"f>><"row"<"col-sm-12"tr>><"row mt-3"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7 text-end"p>>',
       buttons: [
         {
           extend: 'excelHtml5',
