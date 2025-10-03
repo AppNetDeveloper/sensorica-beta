@@ -24,6 +24,7 @@ class AssetSeeder extends Seeder
                 'customer_id' => 1,
                 'name' => 'Herramientas',
                 'slug' => Str::slug('Herramientas'),
+                'label_code' => 'CAT-HERR-001',
                 'description' => 'Herramientas manuales y eléctricas',
                 'metadata' => [
                     'color' => '#FF6B6B',
@@ -34,6 +35,7 @@ class AssetSeeder extends Seeder
                 'customer_id' => 1,
                 'name' => 'Maquinaria',
                 'slug' => Str::slug('Maquinaria'),
+                'label_code' => 'CAT-MAQUI-001',
                 'description' => 'Maquinaria pesada y equipos industriales',
                 'metadata' => [
                     'color' => '#4ECDC4',
@@ -44,6 +46,7 @@ class AssetSeeder extends Seeder
                 'customer_id' => 1,
                 'name' => 'Mobiliario',
                 'slug' => Str::slug('Mobiliario'),
+                'label_code' => 'CAT-MOBIL-001',
                 'description' => 'Muebles y equipamiento de oficina',
                 'metadata' => [
                     'color' => '#45B7D1',
@@ -54,6 +57,7 @@ class AssetSeeder extends Seeder
                 'customer_id' => 1,
                 'name' => 'Electrónica',
                 'slug' => Str::slug('Electrónica'),
+                'label_code' => 'CAT-ELECT-001',
                 'description' => 'Equipos electrónicos y de computación',
                 'metadata' => [
                     'color' => '#96CEB4',

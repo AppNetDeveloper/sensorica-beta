@@ -24,6 +24,7 @@ class InventarioSeeder extends Seeder
                 'customer_id' => 1,
                 'name' => 'Materias Primas',
                 'slug' => Str::slug('Materias Primas'),
+                'label_code' => 'CAT-MATPR-001',
                 'description' => 'Materiales básicos para producción',
                 'metadata' => [
                     'color' => '#E74C3C',
@@ -34,6 +35,7 @@ class InventarioSeeder extends Seeder
                 'customer_id' => 1,
                 'name' => 'Productos Semielaborados',
                 'slug' => Str::slug('Productos Semielaborados'),
+                'label_code' => 'CAT-PSEMI-001',
                 'description' => 'Productos en proceso de fabricación',
                 'metadata' => [
                     'color' => '#F39C12',
@@ -44,6 +46,7 @@ class InventarioSeeder extends Seeder
                 'customer_id' => 1,
                 'name' => 'Productos Terminados',
                 'slug' => Str::slug('Productos Terminados'),
+                'label_code' => 'CAT-PTERM-001',
                 'description' => 'Productos listos para venta',
                 'metadata' => [
                     'color' => '#27AE60',
@@ -54,6 +57,7 @@ class InventarioSeeder extends Seeder
                 'customer_id' => 1,
                 'name' => 'Envases y Embalajes',
                 'slug' => Str::slug('Envases y Embalajes'),
+                'label_code' => 'CAT-ENVAS-001',
                 'description' => 'Materiales para empaquetado',
                 'metadata' => [
                     'color' => '#8E44AD',
@@ -64,6 +68,7 @@ class InventarioSeeder extends Seeder
                 'customer_id' => 1,
                 'name' => 'Repuestos y Consumibles',
                 'slug' => Str::slug('Repuestos y Consumibles'),
+                'label_code' => 'CAT-REPUE-001',
                 'description' => 'Piezas de recambio y materiales consumibles',
                 'metadata' => [
                     'color' => '#3498DB',
