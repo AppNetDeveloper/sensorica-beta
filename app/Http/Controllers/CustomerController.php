@@ -12,6 +12,7 @@ use Carbon\Carbon; // Agrega esta línea para usar Carbon
 use Illuminate\Support\Facades\DB;
 use App\Models\Sensor;
 use Yajra\DataTables\Facades\DataTables;
+use App\Models\BarcodeScanAfter;
 
 
 class CustomerController extends Controller
@@ -400,6 +401,20 @@ return "<div class='action-buttons-row d-flex flex-wrap' style='display: none; g
                     $articlesDescriptions = $articles;
                 }
                 
+                // Build AFTER info for this order
+                $afterItems = ($afterByOrder[$order->id] ?? collect())->map(function($a){
+                    return [
+                        'id' => $a->id,
+                        'barcode_scan_id' => $a->barcode_scan_id,
+                        'production_line_id' => $a->production_line_id,
+                        'barcoder_id' => $a->barcoder_id,
+                        'order_id' => $a->order_id,
+                        'grupo_numero' => $a->grupo_numero,
+                        'scanned_at' => $a->scanned_at,
+                        'barcode' => $a->barcode ?? null,
+                    ];
+                })->values();
+
                 return [
                     'id' => $order->id,
                     'order_id' => $order->order_id,
@@ -442,6 +457,9 @@ return "<div class='action-buttons-row d-flex flex-wrap' style='display: none; g
                     return $diff > 0 ? $diff : 0;
                 })(),
                 'number_of_pallets' => $order->number_of_pallets ?? 0,
+                // AFTER aggregation for UI usage
+                'after' => $afterItems,
+                'after_count' => $afterItems->count(),
                 ];
             });
         
@@ -516,10 +534,26 @@ return "<div class='action-buttons-row d-flex flex-wrap' style='display: none; g
 
         // Unimos los resultados
         $processOrders = $mainOrders->merge($status2Query);
+
+        // Prefetch BarcodeScanAfter entries (with barcode) grouped by target production_order_id
+        try {
+            $afterByOrder = BarcodeScanAfter::leftJoin('barcode_scans', 'barcode_scans.id', '=', 'barcode_scans_after.barcode_scan_id')
+                ->whereIn('barcode_scans_after.production_order_id', $processOrders->pluck('id')->all())
+                ->select(
+                    'barcode_scans_after.*',
+                    DB::raw('barcode_scans.barcode as barcode')
+                )
+                ->orderBy('barcode_scans_after.id','desc')
+                ->get()
+                ->groupBy('production_order_id');
+        } catch (\Throwable $e) {
+            $afterByOrder = collect();
+            Log::warning('showOrderKanban: error preloading BarcodeScanAfter: '.$e->getMessage());
+        }
         
         // Ordenamos los resultados combinados
         $processOrders = $processOrders->sortBy('orden')->values()
-                ->map(function($order){
+                ->map(function($order) use ($afterByOrder){
                     // Determinar el estado y color según el código de status
                     $statusName = 'pending';
                     $statusColor = '#6b7280'; // Gris por defecto
@@ -569,6 +603,19 @@ return "<div class='action-buttons-row d-flex flex-wrap' style='display: none; g
                         $articlesDescriptions = $articles;
                     }
                     
+                    $afterItems = ($afterByOrder[$order->id] ?? collect())->map(function($a){
+                        return [
+                            'id' => $a->id,
+                            'barcode_scan_id' => $a->barcode_scan_id,
+                            'production_line_id' => $a->production_line_id,
+                            'barcoder_id' => $a->barcoder_id,
+                            'order_id' => $a->order_id,
+                            'grupo_numero' => $a->grupo_numero,
+                            'scanned_at' => $a->scanned_at,
+                            'barcode' => $a->barcode ?? null,
+                        ];
+                    })->values();
+
                     return [
                         'id' => $order->id,
                         'order_id' => $order->order_id,
@@ -609,6 +656,8 @@ return "<div class='action-buttons-row d-flex flex-wrap' style='display: none; g
                             return $diff > 0 ? $diff : 0;
                         })(),
                         'number_of_pallets' => $order->number_of_pallets ?? 0,
+                        'after' => $afterItems,
+                        'after_count' => $afterItems->count(),
                         'note' => $order->note,
                     ];
                 });

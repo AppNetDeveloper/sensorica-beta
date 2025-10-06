@@ -46,6 +46,10 @@
                         <input class="form-check-input" type="checkbox" id="dimNotReadyToggle" checked>
                         <label class="form-check-label small mb-0" for="dimNotReadyToggle">@lang('Atenuar no listas')</label>
                     </div>
+                    <div class="form-check form-switch mb-0 me-3 filters-switch">
+                        <input class="form-check-input" type="checkbox" id="groupByCarToggle">
+                        <label class="form-check-label small mb-0" for="groupByCarToggle">@lang('Agrupar por carro')</label>
+                    </div>
                     <div class="form-check form-switch mb-0 me-2 filters-switch">
                         <input class="form-check-input" type="checkbox" id="autoSortToggle">
                         <label class="form-check-label small mb-0" for="autoSortToggle">@lang('Auto-orden (toggle)')</label>
@@ -604,6 +608,98 @@
             if (typeof order.is_ready === 'boolean') return order.is_ready;
             return isReady(order.ready_after_datetime);
         }
+        
+        // --- FUNCIONES DE AGRUPACIÓN POR CARRO ---
+        function isGroupByCarEnabled() {
+            const el = document.getElementById('groupByCarToggle');
+            return !!(el && el.checked);
+        }
+        
+        function getLatestAfterItem(order) {
+            try {
+                const after = Array.isArray(order && order.after) ? order.after : [];
+                if (!after.length) return null;
+                const sorted = after.slice().sort(function(a,b){
+                    const da = a && a.scanned_at ? new Date(String(a.scanned_at).replace(' ','T')).getTime() : 0;
+                    const db = b && b.scanned_at ? new Date(String(b.scanned_at).replace(' ','T')).getTime() : 0;
+                    return db - da;
+                });
+                return sorted[0] || null;
+            } catch(e) { return null; }
+        }
+        
+        function getOrderBarcoderId(order) {
+            const latest = getLatestAfterItem(order);
+            return latest ? (latest.barcoder_id || null) : null;
+        }
+        
+        function getLatestAfterTimestamp(order) {
+            const latest = getLatestAfterItem(order);
+            if (!latest) return -1;
+            try {
+                return latest.scanned_at ? new Date(String(latest.scanned_at).replace(' ','T')).getTime() : -1;
+            } catch(e) { return -1; }
+        }
+        
+        function compactByCar(items, colType) {
+            try {
+                const list = Array.isArray(items) ? items.slice() : [];
+                const newList = [];
+                const added = new Set();
+                const getId = function(o) { return Number(o && o.id); };
+                
+                if (colType === 'production' && list.length) {
+                    const top = list[0];
+                    if (top && top.status === 'in_progress') {
+                        newList.push(top);
+                        added.add(getId(top));
+                    }
+                }
+                
+                for (let i = 0; i < list.length; i++) {
+                    const cur = list[i];
+                    const curId = getId(cur);
+                    if (added.has(curId)) continue;
+                    
+                    const carVal = getOrderBarcoderId(cur);
+                    if (carVal === null || carVal === undefined || carVal === '') {
+                        newList.push(cur);
+                        added.add(curId);
+                        continue;
+                    }
+                    
+                    const car = String(carVal);
+                    const group = [];
+                    
+                    for (let j = i; j < list.length; j++) {
+                        const cand = list[j];
+                        const candId = getId(cand);
+                        if (added.has(candId)) continue;
+                        const cVal = getOrderBarcoderId(cand);
+                        if (cVal !== null && cVal !== undefined && cVal !== '' && String(cVal) === car) {
+                            group.push(cand);
+                            added.add(candId);
+                        }
+                    }
+                    
+                    group.sort(function(a, b) {
+                        return getLatestAfterTimestamp(b) - getLatestAfterTimestamp(a);
+                    });
+                    
+                    if (newList.length && colType === 'production' && newList[0] && newList[0].status === 'in_progress') {
+                        const topId = getId(newList[0]);
+                        group.forEach(function(o) {
+                            if (getId(o) !== topId) newList.push(o);
+                        });
+                    } else {
+                        newList.push.apply(newList, group);
+                    }
+                }
+                
+                return newList;
+            } catch(e) { return items || []; }
+        }
+        
         // Devuelve si el autosort está activado desde el toggle
         function isAutoSortEnabled() {
             const el = document.getElementById('autoSortToggle');
@@ -672,6 +768,10 @@
             });
             console.debug('[Kanban] applyReadinessFilters -> procesadas:', processed, 'readyOnly:', readyOnly, 'dimNotReady:', dimNotReady);
         }
+        
+        document.getElementById('groupByCarToggle') && document.getElementById('groupByCarToggle').addEventListener('change', function() {
+            distributeAndRender(true);
+        });
 
         // --- Auto-asignación desde Pendientes hacia Máquinas ---
         function getProductionLineKeys() {
@@ -1312,6 +1412,9 @@
                             }
                         } catch(e) { console.debug('Autosort falló, usando orden original', e); }
                     }
+                    if (isGroupByCarEnabled()) {
+                        try { list = compactByCar(list, col.type); } catch(e) { console.debug('Agrupación por carro falló', e); }
+                    }
                     return list;
                 };
 
@@ -1334,6 +1437,17 @@
             kanbanBoard.appendChild(fragment);
             // Aplicar filtros de readiness tras renderizar las tarjetas
             try { applyReadinessFilters(); } catch (_) {}
+            // Si la agrupación está activa, sincronizar a masterOrderList para permitir guardar
+            if (isGroupByCarEnabled()) {
+                setTimeout(function() {
+                    try {
+                        if (applyVisualOrderToMasterList()) {
+                            hasUnsavedChanges = true;
+                            scheduleUpdateUnsavedFlag();
+                        }
+                    } catch(e) {}
+                }, 0);
+            }
         }
 
         // --- 3. FUNCIONES DE DRAG & DROP ---
@@ -2090,11 +2204,15 @@
             }
 
             const statusBadgeHtml = `<span class="badge" style="background-color: ${order.statusColor || '#6b7280'}; color: white;">${(order.status || 'PENDING').replace(/_/g, ' ').toUpperCase()}</span>`;
+            
+            const latestAfter = getLatestAfterItem(order);
+            const carIconHtml = latestAfter ? `<span class="ms-2" title="Carro ${latestAfter.barcoder_id || ''}"><i class="fas fa-dolly"></i></span>` : '';
+            const barcodeBadgeHtml = (latestAfter && latestAfter.barcode) ? `<span class="badge bg-light text-dark border ms-2"><i class="fas fa-barcode me-1"></i>${latestAfter.barcode}</span>` : '';
 
             card.innerHTML = `
                 <div class="kanban-card-header" onclick="this.parentElement.classList.toggle('collapsed')">
                     <div class="me-2" style="flex-grow: 1;">
-                        <div class="fw-bold text-sm d-flex align-items-center">#${order.order_id}${urgencyIconHtml}${stockIconHtml}${priorityIconHtml}</div>
+                        <div class="fw-bold text-sm d-flex align-items-center">#${order.order_id}${urgencyIconHtml}${stockIconHtml}${priorityIconHtml}${carIconHtml}${barcodeBadgeHtml}</div>
                         <div class="text-xs fw-bold text-muted mt-1">${order.customerId || translations.noCustomer}</div>
                         ${processDescription ? `<div class="text-xs text-muted mt-1">${processDescription}</div>` : ''}
                         <div class="d-flex justify-content-between align-items-center mt-1">

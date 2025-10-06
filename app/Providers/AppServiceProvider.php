@@ -9,6 +9,8 @@ use App\Models\ProductionOrder;
 use App\Observers\ProductionOrderObserver;
 use App\Models\OriginalOrder;
 use App\Observers\OriginalOrderObserver;
+use App\Models\BarcodeScan;
+use App\Observers\BarcodeScanObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -40,5 +42,8 @@ class AppServiceProvider extends ServiceProvider
 
         // Registrar el observer para OriginalOrder
         OriginalOrder::observe(OriginalOrderObserver::class);
+
+        // Registrar el observer para BarcodeScan
+        BarcodeScan::observe(BarcodeScanObserver::class);
     }
 }
