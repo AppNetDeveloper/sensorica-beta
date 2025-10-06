@@ -111,6 +111,8 @@ Route::match(['get', 'post'], '/barcode-info-by-customer/{customerToken}', [GetT
 Route::get('/production-lines/statuses/{customerId?}', [ProductionLineController::class, 'getStatuses'])->name('api.production-lines.statuses');
 // Ruta para obtener el estado de planificación actual por token de línea
 Route::get('/production-lines/schedule-status/{token}', [ProductionLineController::class, 'getScheduleStatusByToken'])->name('api.production-lines.schedule-status');
+// Ruta para obtener líneas que compartan procesos por descripción
+Route::get('/production-lines/{token}/related-by-process', [ProductionLineController::class, 'getLinesByProcessDescription'])->name('api.production-lines.related-by-process');
 
 // Rutas para la disponibilidad de líneas de producción
 Route::get('/production-lines/{id}/availability', [LineAvailabilityController::class, 'getAvailability']);
@@ -299,6 +301,7 @@ Route::prefix('production-orders')->group(function () {
     Route::get('/{id}', [ProductionOrderController::class, 'show']); // Obtener una orden específica
     Route::patch('/{id}', [ProductionOrderController::class, 'updateOrder']); // Actualizar una orden
     Route::post('/', [ProductionOrderController::class, 'store']); // Crear una nueva orden
+    Route::post('/{id}/change-line', [ProductionOrderController::class, 'changeProductionLine']); // Cambiar línea de producción
     Route::delete('/{id}', [ProductionOrderController::class, 'destroy']); // Eliminar una orden
 });
 

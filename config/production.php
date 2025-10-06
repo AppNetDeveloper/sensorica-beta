@@ -47,4 +47,16 @@ return [
     | seguridad. Configurable vía env READY_AFTER_SAFETY_HOURS.
     */
     'ready_after_safety_hours' => env('READY_AFTER_SAFETY_HOURS', 6),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Filtro de órdenes no listas en Kanban de máquina
+    |--------------------------------------------------------------------------
+    |
+    | Controla si el Kanban industrial (machine.html) debe ocultar las órdenes
+    | pendientes cuyo proceso previo aún no ha finalizado (ready_after_datetime
+    | en el futuro). Se habilita/deshabilita mediante env
+    | PRODUCTION_FILTER_NOT_READY_KANBAN (true por defecto).
+    */
+    'filter_not_ready_machine_kanban' => env('PRODUCTION_FILTER_NOT_READY_KANBAN', true),
 ];

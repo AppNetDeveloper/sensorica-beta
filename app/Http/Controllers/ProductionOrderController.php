@@ -7,7 +7,9 @@ use App\Models\ProductionOrder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Config;
 use App\Models\Barcode;
+use Carbon\Carbon;
 
 class ProductionOrderController extends Controller
 {
@@ -289,15 +291,21 @@ class ProductionOrderController extends Controller
     private function activateNextOrder($prodductionLineId, $barcoder)
     {
         Log::info("Llamada a activateNextOrder ejecutada.");
-        // ¡CORREGIDO! Usamos el modelo ProductionOrder, no 'self'. y donde pone where status = 0 
-        $nextOrderInLine = ProductionOrder::where('production_line_id', $prodductionLineId)
-                    //->where('orden', '>', $finishedOrder->orden)
-                    ->where('status', 0)
-                    ->orderBy('orden', 'asc')
-                    ->first();
+        $baseQuery = ProductionOrder::where('production_line_id', $prodductionLineId)
+            ->where('status', 0);
+
+        if (Config::get('production.filter_not_ready_machine_kanban', true)) {
+            $nowMadrid = Carbon::now('Europe/Madrid');
+            $baseQuery->where(function ($query) use ($nowMadrid) {
+                $query->whereNull('ready_after_datetime')
+                    ->orWhere('ready_after_datetime', '<=', $nowMadrid);
+            });
+        }
+
+        $nextOrderInLine = $baseQuery->orderBy('orden', 'asc')->first();
 
         if ($nextOrderInLine) {
-            Log::info("Orden para la línea [{$prodductionLineId}] finalizada. Lógica para activar la siguiente orden [{$nextOrderInLine->id}] se ejecutaría aquí.");
+            Log::info("Activando siguiente orden pendiente [{$nextOrderInLine->id}] en la línea [{$prodductionLineId}].");
             $topic = $barcoder->mqtt_topic_barcodes . '/prod_order_mac';
             $messagePayload = json_encode([
                 "action"    => 0, 
@@ -310,7 +318,7 @@ class ProductionOrderController extends Controller
             sleep(0.5);
             $this->publishMqttMessage($topic, $messagePayload);
         } else {
-            Log::info("No hay más órdenes en la cola para la línea [{$prodductionLineId}].");
+            Log::info("No hay órdenes pendientes disponibles (según configuración) en la línea [{$prodductionLineId}].");
         }
     }
         /**

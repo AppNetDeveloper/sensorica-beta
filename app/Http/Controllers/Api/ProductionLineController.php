@@ -254,4 +254,98 @@ class ProductionLineController extends Controller
             'status' => $status,
         ]);
     }
+
+    /**
+     * Devuelve las líneas de producción del mismo cliente que comparten al menos
+     * un proceso con la descripción proporcionada.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @param string $token Token público de la línea base
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getLinesByProcessDescription(Request $request, string $token)
+    {
+        $baseLine = ProductionLine::with(['processes' => function ($query) {
+            $query->orderBy('production_line_process.order');
+        }])->where('token', $token)->first();
+        if (!$baseLine) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Línea de producción no encontrada.'
+            ], 404);
+        }
+
+        $firstProcess = $baseLine->processes->first();
+        if (!$firstProcess) {
+            return response()->json([
+                'success' => false,
+                'message' => 'La línea de producción no tiene procesos configurados.'
+            ], 422);
+        }
+
+        $description = trim((string) $firstProcess->description);
+        if ($description === '') {
+            return response()->json([
+                'success' => false,
+                'message' => 'El primer proceso no tiene descripción definida.'
+            ], 422);
+        }
+
+        $normalizedDescription = mb_strtolower($description, 'UTF-8');
+
+        $baseMatchingProcesses = $baseLine->processes
+            ->filter(function ($process) use ($normalizedDescription) {
+                return mb_strtolower((string) $process->description, 'UTF-8') === $normalizedDescription;
+            })
+            ->map(function ($process) {
+                return [
+                    'id' => $process->id,
+                    'name' => $process->name,
+                    'description' => $process->description,
+                    'pivot_order' => $process->pivot->order ?? null,
+                ];
+            });
+
+        $matchingLines = ProductionLine::where('customer_id', $baseLine->customer_id)
+            ->where('id', '!=', $baseLine->id)
+            ->whereHas('processes', function ($query) use ($normalizedDescription) {
+                $query->whereRaw('LOWER(description) = ?', [$normalizedDescription]);
+            })
+            ->with(['processes' => function ($query) use ($normalizedDescription) {
+                $query->whereRaw('LOWER(description) = ?', [$normalizedDescription])
+                    ->withPivot('order');
+            }])
+            ->orderBy('name')
+            ->get()
+            ->map(function ($line) {
+                return [
+                    'id' => $line->id,
+                    'name' => $line->name,
+                    'token' => $line->token,
+                    'customer_id' => $line->customer_id,
+                    'processes' => $line->processes->map(function ($process) {
+                        return [
+                            'id' => $process->id,
+                            'name' => $process->name,
+                            'description' => $process->description,
+                            'pivot_order' => $process->pivot->order ?? null,
+                        ];
+                    })->values(),
+                ];
+            })
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'description' => $description,
+            'base_line' => [
+                'id' => $baseLine->id,
+                'name' => $baseLine->name,
+                'token' => $baseLine->token,
+                'customer_id' => $baseLine->customer_id,
+                'matching_processes' => $baseMatchingProcesses,
+            ],
+            'lines' => $matchingLines,
+        ]);
+    }
 }

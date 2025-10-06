@@ -5,10 +5,12 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\ProductionLine;
 use App\Models\ProductionOrder;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB; // Importar Facade DB para la consulta
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Config;
 
 class ProductionOrderController extends Controller
 {
@@ -261,6 +263,17 @@ class ProductionOrderController extends Controller
             }])
             ->orderBy('orden', 'asc')
             ->get();
+
+        if (Config::get('production.filter_not_ready_machine_kanban', true)) {
+            $nowMadrid = Carbon::now('Europe/Madrid');
+            $activeOrders = $activeOrders->filter(function ($order) use ($nowMadrid) {
+                if ((int) $order->status === 0 && !empty($order->ready_after_datetime)) {
+                    $readyAfter = Carbon::parse($order->ready_after_datetime, 'Europe/Madrid');
+                    return $nowMadrid->greaterThanOrEqualTo($readyAfter);
+                }
+                return true;
+            })->values();
+        }
 
         // 2. Órdenes finalizadas (status 2) solo de las últimas 8 horas
         $eightHoursAgo = now()->subHours(8);
@@ -642,23 +655,137 @@ class ProductionOrderController extends Controller
             'data' => $order,
         ]);
     }
+
+    /**
+     * Cambia la línea de producción asociada a una orden pendiente.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @param int $id ID de la orden de producción
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function changeProductionLine(Request $request, int $id)
+    {
+        $validated = $request->validate([
+            'token' => 'required|string',
+            'new_production_line_id' => 'required|integer|exists:production_lines,id',
+        ]);
+
+        $baseLine = ProductionLine::with(['processes' => function ($query) {
+            $query->orderBy('production_line_process.order');
+        }])->where('token', $validated['token'])->first();
+
+        if (!$baseLine) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Token inválido o línea de producción no encontrada.'
+            ], 404);
+        }
+
+        $order = ProductionOrder::with('productionLine')->find($id);
+        if (!$order) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Orden no encontrada.'
+            ], 404);
+        }
+
+        if ((int) $order->status !== 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Solo se pueden reasignar órdenes en estado pendiente.'
+            ], 422);
+        }
+
+        if ((int) $order->production_line_id !== (int) $baseLine->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'La orden no pertenece a la línea seleccionada por el token.'
+            ], 403);
+        }
+
+        $newLine = ProductionLine::with(['processes' => function ($query) {
+            $query->orderBy('production_line_process.order');
+        }])->find($validated['new_production_line_id']);
+
+        if (!$newLine) {
+            return response()->json([
+                'success' => false,
+                'message' => 'La nueva línea de producción no existe.'
+            ], 404);
+        }
+
+        if ((int) $newLine->customer_id !== (int) $baseLine->customer_id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'La línea seleccionada pertenece a otro cliente.'
+            ], 403);
+        }
+
+        $firstProcess = $baseLine->processes->first();
+        if (!$firstProcess || trim((string) $firstProcess->description) === '') {
+            return response()->json([
+                'success' => false,
+                'message' => 'La línea base no tiene un proceso válido para comparar.'
+            ], 422);
+        }
+
+        $normalizedDescription = mb_strtolower((string) $firstProcess->description, 'UTF-8');
+
+        $newLineMatches = $newLine->processes->first(function ($process) use ($normalizedDescription) {
+            return mb_strtolower((string) $process->description, 'UTF-8') === $normalizedDescription;
+        });
+
+        if (!$newLineMatches) {
+            return response()->json([
+                'success' => false,
+                'message' => 'La línea seleccionada no comparte la misma categoría de proceso.'
+            ], 422);
+        }
+
+        $maxOrder = ProductionOrder::where('production_line_id', $newLine->id)
+            ->where('status', $order->status)
+            ->max('orden');
+
+        $order->production_line_id = $newLine->id;
+        $order->process_category = $firstProcess->description;
+        $order->orden = $maxOrder !== null ? ($maxOrder + 1) : 0;
+
+        if (!$order->original_production_line_id) {
+            $order->original_production_line_id = $baseLine->id;
+        }
+
+        $order->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Línea de producción actualizada correctamente.',
+            'data' => $order,
+        ]);
+    }
     private function activateNextOrder(ProductionOrder $finishedOrder, $barcoder)
     {
         // ¡CORREGIDO! Usamos el modelo ProductionOrder, no 'self'.
-        $nextOrderInLine = ProductionOrder::where('production_line_id', $finishedOrder->production_line_id)
-                   // ->where('orden', '>', $finishedOrder->orden)
-                    ->where('status', 0)
-                    ->orderBy('orden', 'asc')
-                    ->first();
+        $baseQuery = ProductionOrder::where('production_line_id', $finishedOrder->production_line_id)
+            ->where('status', 0);
+
+        if (Config::get('production.filter_not_ready_machine_kanban', true)) {
+            $nowMadrid = Carbon::now('Europe/Madrid');
+            $baseQuery->where(function ($query) use ($nowMadrid) {
+                $query->whereNull('ready_after_datetime')
+                    ->orWhere('ready_after_datetime', '<=', $nowMadrid);
+            });
+        }
+
+        $nextOrderInLine = $baseQuery->orderBy('orden', 'asc')->first();
 
         if ($nextOrderInLine) {
-            Log::info("Orden [{$finishedOrder->id}] finalizada. Lógica para activar la siguiente orden [{$nextOrderInLine->id}] se ejecutaría aquí.");
+            Log::info("Orden [{$finishedOrder->id}] finalizada. Activando siguiente orden pendiente [{$nextOrderInLine->id}] en la línea [{$finishedOrder->production_line_id}].");
             $topic = $barcoder->mqtt_topic_barcodes . '/prod_order_mac';
             $messagePayload = json_encode([
                 "action"    => 0, 
                 "orderId"   => $nextOrderInLine->order_id,
                 "quantity"  => 0,
-                "machineId" => $barcoder->machine_id ?? "", 
+                "machineId" => $barcoder->machine_id ?? "",
                 "opeId" => $barcoder->ope_id ?? "",
             ]);
             //ponemos un sleep de 1 segundo para dar tiempo a que el sistema se actualice
@@ -668,7 +795,7 @@ class ProductionOrderController extends Controller
             Log::info("Orden [{$finishedOrder->id}] finalizada. No hay más órdenes en la cola para la línea [{$finishedOrder->production_line_id}].");
         }
     }
-    /**
+/**
      * @OA\Post(
      *     path="/api/production-orders",
      *     summary="Crear una nueva orden de producción",

@@ -43,7 +43,7 @@
                         <label class="form-check-label small mb-0" for="readyOnlyToggle">@lang('Mostrar solo listas')</label>
                     </div>
                     <div class="form-check form-switch mb-0 me-3 filters-switch">
-                        <input class="form-check-input" type="checkbox" id="dimNotReadyToggle">
+                        <input class="form-check-input" type="checkbox" id="dimNotReadyToggle" checked>
                         <label class="form-check-label small mb-0" for="dimNotReadyToggle">@lang('Atenuar no listas')</label>
                     </div>
                     <div class="form-check form-switch mb-0 me-2 filters-switch">

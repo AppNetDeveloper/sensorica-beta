@@ -195,6 +195,7 @@ declare -A ENV_VARS=(
     ["AI_TOKEN"]=""
     ["CALLBACK_MAX_ATTEMPTS"]="20"
     ["ORDER_MIN_ACTIVE_SECONDS"]="60"
+    ["PRODUCTION_FILTER_NOT_READY_KANBAN"]="true"
 )
 
 ENV_FILE=".env"

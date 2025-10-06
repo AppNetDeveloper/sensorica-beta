@@ -949,6 +949,33 @@
         </div>
     </div>
 
+    <!-- Modal de Cambio de Máquina -->
+    <div id="machineChangeModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] hidden">
+        <div class="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 class="text-xl font-semibold mb-4">Cambio de Máquina</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Máquina actual</label>
+                    <input id="currentMachineName" type="text" readonly class="w-full p-2 border rounded bg-gray-100 text-gray-700" value="">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Selecciona nueva máquina</label>
+                    <select id="newMachineSelect" class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">Selecciona una máquina...</option>
+                    </select>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end space-x-3">
+                <button id="cancelMachineChange" type="button" class="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+                    Cancelar
+                </button>
+                <button id="confirmMachineChange" type="button" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" disabled>
+                    Confirmar Cambio
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal de Detalles de la Orden -->
     <div id="orderDetailsModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
         <div class="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -2405,6 +2432,147 @@
 
             // --- NUEVO: Funciones para cargar y procesar Órdenes de Producción ---
             
+            // Función para mostrar modal de cambio de máquina
+            async function showMachineChangeModal({ baseLine, lines, token, order }) {
+                const modal = document.getElementById('machineChangeModal');
+                const currentMachineInput = document.getElementById('currentMachineName');
+                const newMachineSelect = document.getElementById('newMachineSelect');
+                const confirmBtn = document.getElementById('confirmMachineChange');
+                const cancelBtn = document.getElementById('cancelMachineChange');
+
+                if (!modal || !currentMachineInput || !newMachineSelect || !confirmBtn || !cancelBtn) {
+                    console.error('Elementos del modal de cambio de máquina no encontrados');
+                    return;
+                }
+
+                // Configurar máquina actual
+                currentMachineInput.value = baseLine.name || 'N/A';
+
+                // Limpiar y poblar select
+                newMachineSelect.innerHTML = '<option value="">Selecciona una máquina...</option>';
+                
+                if (lines && lines.length > 0) {
+                    lines.forEach(line => {
+                        const option = document.createElement('option');
+                        option.value = line.id;
+                        option.textContent = line.name;
+                        newMachineSelect.appendChild(option);
+                    });
+                } else {
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.textContent = 'No hay máquinas compatibles disponibles';
+                    option.disabled = true;
+                    newMachineSelect.appendChild(option);
+                }
+
+                // Habilitar/deshabilitar botón de confirmación según selección
+                newMachineSelect.addEventListener('change', () => {
+                    confirmBtn.disabled = !newMachineSelect.value;
+                });
+
+                // Manejar cancelación
+                const handleCancel = () => {
+                    modal.classList.add('hidden');
+                    newMachineSelect.value = '';
+                    confirmBtn.disabled = true;
+                };
+
+                cancelBtn.onclick = handleCancel;
+
+                // Manejar confirmación
+                const handleConfirm = async () => {
+                    const selectedLineId = parseInt(newMachineSelect.value, 10);
+                    if (!selectedLineId) return;
+
+                    const selectedLine = lines.find(l => l.id === selectedLineId);
+                    if (!selectedLine) {
+                        console.error('Línea seleccionada no encontrada');
+                        return;
+                    }
+
+                    // Mostrar loading
+                    if (window.Swal && typeof window.Swal.fire === 'function') {
+                        window.Swal.fire({
+                            title: 'Cambiando máquina...',
+                            text: `Moviendo orden a ${selectedLine.name}`,
+                            allowOutsideClick: false,
+                            didOpen: () => window.Swal.showLoading()
+                        });
+                    }
+
+                    try {
+                        const response = await fetch(`${API_BASE_URL}/api/production-orders/${order.id}/change-line`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                            },
+                            body: JSON.stringify({
+                                token: token,
+                                new_production_line_id: selectedLineId
+                            })
+                        });
+
+                        const result = await response.json();
+
+                        if (!response.ok || !result.success) {
+                            throw new Error(result.message || `Error ${response.status}`);
+                        }
+
+                        // Cerrar modal
+                        modal.classList.add('hidden');
+
+                        // Mostrar éxito
+                        if (window.Swal && typeof window.Swal.fire === 'function') {
+                            window.Swal.fire({
+                                icon: 'success',
+                                title: 'Cambio exitoso',
+                                text: `La orden se movió a ${selectedLine.name}`,
+                                timer: 2000,
+                                showConfirmButton: false
+                            });
+                        }
+
+                        // Refrescar tablero
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const currentToken = urlParams.get('token');
+                        if (currentToken && typeof fetchProductionOrders === 'function') {
+                            fetchProductionOrders(currentToken);
+                        }
+                        if (currentToken && typeof fetchOrderStats === 'function') {
+                            fetchOrderStats(currentToken);
+                        }
+                    } catch (err) {
+                        console.error('Error al cambiar máquina:', err);
+                        if (window.Swal && typeof window.Swal.fire === 'function') {
+                            window.Swal.fire({
+                                icon: 'error',
+                                title: 'Error al cambiar máquina',
+                                text: err.message || 'No se pudo completar el cambio. Intenta nuevamente.',
+                                confirmButtonColor: '#ef4444'
+                            });
+                        } else {
+                            alert('Error al cambiar máquina: ' + (err.message || 'Intenta nuevamente'));
+                        }
+                    }
+                };
+
+                confirmBtn.onclick = handleConfirm;
+
+                // Mostrar modal
+                modal.classList.remove('hidden');
+
+                // Si estamos en fullscreen, mover el modal dentro del kanban-board
+                if (typeof isFullScreen !== 'undefined' && isFullScreen) {
+                    const kanbanBoard = document.getElementById('kanban-board');
+                    if (kanbanBoard && modal.parentElement !== kanbanBoard) {
+                        kanbanBoard.appendChild(modal);
+                    }
+                }
+            }
+
             // Función para mostrar los detalles de una orden y sus incidencias
             async function showOrderDetails(orderId) {
                 console.log('Mostrando detalles de orden e incidencias para ID:', orderId);
@@ -2688,6 +2856,9 @@
                                 <button class="card-menu-incident w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 flex items-center">
                                     <i class="fas fa-exclamation-triangle text-yellow-500 mr-2"></i> Incidencias
                                 </button>
+                                <button class="card-menu-machine w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 flex items-center hidden">
+                                    <i class="fas fa-industry text-slate-500 mr-2"></i> Cambio de máquina
+                                </button>
                                 <button class="card-menu-top w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 flex items-center">
                                     <i class="fas fa-arrow-up text-blue-500 mr-2"></i> Primera
                                 </button>
@@ -2739,6 +2910,7 @@
                 const menu = card.querySelector('.card-menu');
                 const qualityBtn = card.querySelector('.card-menu-quality');
                 const incidentBtn = card.querySelector('.card-menu-incident');
+                const machineBtn = card.querySelector('.card-menu-machine');
                 const topBtn = card.querySelector('.card-menu-top');
                 const detailsBtn = card.querySelector('.card-menu-details');
                 
@@ -2937,6 +3109,91 @@
                         });
                     }
                     
+                    if (machineBtn) {
+                        if (order.status === 0) {
+                            machineBtn.classList.remove('hidden');
+                            machineBtn.addEventListener('click', async (e) => {
+                                e.stopPropagation();
+                                menu.classList.add('hidden');
+
+                                if (!currentWorker) {
+                                    showWorkerRequiredAlert();
+                                    return;
+                                }
+
+                                const urlParams = new URLSearchParams(window.location.search);
+                                const tokenFromUrl = urlParams.get('token');
+                                const token = productionLineToken || tokenFromUrl;
+
+                                if (!token) {
+                                    console.error('Token de línea de producción no encontrado para cambio de máquina');
+                                    if (window.Swal && typeof window.Swal.fire === 'function') {
+                                        window.Swal.fire({
+                                            icon: 'error',
+                                            title: 'Cambio de máquina',
+                                            text: 'No se encontró el token de la línea de producción.',
+                                            confirmButtonColor: '#ef4444'
+                                        });
+                                    } else {
+                                        alert('No se encontró el token de la línea de producción.');
+                                    }
+                                    return;
+                                }
+
+                                if (window.Swal && typeof window.Swal.fire === 'function') {
+                                    window.Swal.fire({
+                                        title: 'Cargando líneas disponibles...',
+                                        allowOutsideClick: false,
+                                        didOpen: () => window.Swal.showLoading()
+                                    });
+                                }
+
+                                try {
+                                    const response = await fetch(`${API_BASE_URL}/api/production-lines/${token}/related-by-process`, {
+                                        headers: {
+                                            'Accept': 'application/json'
+                                        }
+                                    });
+
+                                    if (!response.ok) {
+                                        throw new Error(`Error ${response.status}`);
+                                    }
+
+                                    const data = await response.json();
+
+                                    if (!data.success || !Array.isArray(data.lines)) {
+                                        throw new Error('Respuesta inválida de la API de líneas relacionadas');
+                                    }
+
+                                    await showMachineChangeModal({
+                                        baseLine: data.base_line,
+                                        lines: data.lines,
+                                        token,
+                                        order
+                                    });
+                                } catch (err) {
+                                    console.error('Error al cargar líneas relacionadas:', err);
+                                    if (window.Swal && typeof window.Swal.fire === 'function') {
+                                        window.Swal.fire({
+                                            icon: 'error',
+                                            title: 'Cambio de máquina',
+                                            text: 'No se pudieron cargar las líneas disponibles. Intenta nuevamente.',
+                                            confirmButtonColor: '#ef4444'
+                                        });
+                                    } else {
+                                        alert('No se pudieron cargar las líneas disponibles. Intenta nuevamente.');
+                                    }
+                                } finally {
+                                    if (window.Swal && typeof window.Swal.close === 'function') {
+                                        window.Swal.close();
+                                    }
+                                }
+                            });
+                        } else {
+                            machineBtn.remove();
+                        }
+                    }
+
                     // Opción 2: Primera - Mover la tarjeta al principio de su columna
                     if (topBtn) {
                         topBtn.addEventListener('click', (e) => {
