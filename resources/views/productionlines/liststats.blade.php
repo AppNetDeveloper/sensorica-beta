@@ -1164,31 +1164,57 @@
         // Función para actualizar los KPIs
         function updateKPIs(data) {
             console.log('Actualizando KPIs con', data.length, 'registros filtrados');
-            
-            // Total de duración (suma de on_time)
+
+            const hasNumericValue = (value) => value !== null && value !== undefined && !isNaN(value);
+
             let totalDurationSeconds = 0;
-            data.forEach(item => {
-                if (item.on_time && !isNaN(item.on_time)) {
-                    totalDurationSeconds += parseInt(item.on_time);
-                }
-            });
-            
-            // Formatear la duración total en formato HH:MM:SS
-            $('#totalDuration').text(formatTime(totalDurationSeconds));
-            
-            // Promedio de OEE
             let totalOEE = 0;
             let validOEECount = 0;
-            
+            let totalFastTime = 0;
+            let totalOutTime = 0;
+            let totalDownTime = 0;
+            let totalProductionStopsTime = 0;
+            let totalPrepairTime = 0;
+            let totalSlowTime = 0;
+
             data.forEach(item => {
-                if (item.oee && !isNaN(item.oee)) {
+                if (hasNumericValue(item.on_time)) {
+                    totalDurationSeconds += Number(item.on_time);
+                }
+
+                if (hasNumericValue(item.oee)) {
                     const oeeValue = parseFloat(item.oee);
-                    // Verificar si el valor ya es un porcentaje (>1) o decimal (<1)
                     totalOEE += oeeValue > 1 ? oeeValue : oeeValue * 100;
                     validOEECount++;
                 }
+
+                if (hasNumericValue(item.fast_time)) {
+                    totalFastTime += Number(item.fast_time);
+                }
+
+                if (hasNumericValue(item.out_time)) {
+                    totalOutTime += Number(item.out_time);
+                }
+
+                if (hasNumericValue(item.down_time)) {
+                    totalDownTime += Number(item.down_time);
+                }
+
+                if (hasNumericValue(item.production_stops_time)) {
+                    totalProductionStopsTime += Number(item.production_stops_time);
+                }
+
+                if (hasNumericValue(item.prepair_time)) {
+                    totalPrepairTime += Number(item.prepair_time);
+                }
+
+                if (hasNumericValue(item.slow_time)) {
+                    totalSlowTime += Number(item.slow_time);
+                }
             });
-            
+
+            $('#totalDuration').text(formatTime(totalDurationSeconds));
+
             const avgOEE = validOEECount > 0 ? totalOEE / validOEECount : 0;
             console.log('Cálculo OEE:', {
                 totalOEE: totalOEE,
@@ -1197,8 +1223,7 @@
                 roundedAvgOEE: Math.round(avgOEE)
             });
             $('#avgOEE').text(`${Math.round(avgOEE)}%`);
-            
-            // Cambiar color según el valor
+
             if (avgOEE >= 80) {
                 $('#avgOEE').removeClass('text-danger text-warning').addClass('text-success');
             } else if (avgOEE >= 60) {
@@ -1206,92 +1231,20 @@
             } else {
                 $('#avgOEE').removeClass('text-success text-warning').addClass('text-danger');
             }
-            
-            // Calcular suma teórica neta (tiempo ganado vs. tiempo de más)
-            let totalFastTime = 0;
-            let totalOutTime = 0; // Tiempo de más
-            let totalDownTime = 0;
-            let totalProductionStopsTime = 0;
-            
-            // Calcular por separado los tiempos de parada y falta material
-            data.forEach(item => {
-                if (item.down_time) {
-                    totalDownTime += parseInt(item.down_time);
-                }
-                if (item.production_stops_time) {
-                    totalProductionStopsTime += parseInt(item.production_stops_time);
-                }
-                if (item.out_time) {
-                    totalOutTime += parseInt(item.out_time);
-                }
-                if (item.fast_time) {
-                    totalFastTime += parseInt(item.fast_time);
-                }
-            });
-            
-            // Actualizar los valores en las tarjetas separadas (invertido según requerimiento)
-            // Paradas => down_time, Falta Material => production_stops_time
-            $('#totalProductionStopsTime').text(formatTime(totalDownTime));
-            $('#totalDownTime').text(formatTime(totalProductionStopsTime));
-            
-            let netTheoreticalTime = 0;
-            let isPositive = false;
-            
+
             if (totalFastTime >= totalOutTime) {
-                netTheoreticalTime = totalFastTime - totalOutTime;
-                isPositive = true;
                 $('#totalTheoretical').removeClass('text-danger').addClass('text-success');
             } else {
-                netTheoreticalTime = totalOutTime - totalFastTime;
-                isPositive = false;
                 $('#totalTheoretical').removeClass('text-success').addClass('text-danger');
             }
-            
-            // Mostrar el resultado formateado
+
+            const netTheoreticalTime = Math.abs(totalFastTime - totalOutTime);
             $('#totalTheoretical').text(formatTime(netTheoreticalTime));
-            
-            // Calcular suma total de tiempos de preparación
-            let totalPrepairTime = 0;
-            data.forEach(item => {
-                if (item.prepair_time && !isNaN(item.prepair_time)) {
-                    totalPrepairTime += parseInt(item.prepair_time);
-                }
-            });
-            
-            // Mostrar el total de tiempo de preparación
+
             $('#totalPrepairTime').text(formatTime(totalPrepairTime));
-            
-            // Calcular suma total de tiempo lento
-            let totalSlowTime = 0;
-            data.forEach(item => {
-                if (item.slow_time && !isNaN(item.slow_time)) {
-                    totalSlowTime += parseInt(item.slow_time);
-                }
-            });
-            
-            // Mostrar el total de tiempo lento
             $('#totalSlowTime').text(formatTime(totalSlowTime));
-            
-            // Calcular suma total de tiempos de paradas y falta de material por separado
-            // Reutilizamos las variables ya declaradas anteriormente
-            
-            // Reiniciamos los contadores para asegurar cálculos correctos
-            totalDownTime = 0;
-            totalProductionStopsTime = 0;
-            
-            data.forEach(item => {
-                // Calcular falta material (down_time)
-                if (item.down_time && !isNaN(item.down_time)) {
-                    totalDownTime += parseInt(item.down_time);
-                }
-                // Calcular paradas no justificadas (production_stops_time)
-                if (item.production_stops_time && !isNaN(item.production_stops_time)) {
-                    totalProductionStopsTime += parseInt(item.production_stops_time);
-                }
-            });
-            
-            // Mostrar los totales en tarjetas separadas (invertido según requerimiento)
-            // Paradas => down_time, Falta Material => production_stops_time
+
+            // Paradas => down_time, Falta Material => production_stops_time (requerimiento previo)
             $('#totalProductionStopsTime').text(formatTime(totalDownTime));
             $('#totalDownTime').text(formatTime(totalProductionStopsTime));
         }
