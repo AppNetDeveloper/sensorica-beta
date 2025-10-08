@@ -75,11 +75,11 @@
                             <h4>@lang('Order Information')</h4>
                             <table class="table table-bordered table-striped">
                                 <tr>
-                                    <th class="bg-light">@lang('Customer')</th>
+                                    <th class="bg-light">@lang('Centro')</th>
                                     <td>{{ $customer->name }}</td>
                                 </tr>
                                 <tr>
-                                    <th class="bg-light">@lang('Order Status')</th>
+                                    <th class="bg-light">@lang('Estado de orden')</th>
                                     <td>
                                         @if($incident->productionOrder->finished)
                                             <span class="badge bg-success">@lang('Finished')</span>
@@ -109,7 +109,7 @@
                                     </td>
                                 </tr>
                                 <tr>
-                                    <th class="bg-light">@lang('Order Created')</th>
+                                    <th class="bg-light">@lang('Creado en ERP')</th>
                                     <td>{{ $incident->productionOrder->created_at->format('Y-m-d H:i:s') }}</td>
                                 </tr>
                             </table>

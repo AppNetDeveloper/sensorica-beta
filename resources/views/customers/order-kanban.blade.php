@@ -52,7 +52,7 @@
                     </div>
                     <div class="form-check form-switch mb-0 me-2 filters-switch">
                         <input class="form-check-input" type="checkbox" id="autoSortToggle">
-                        <label class="form-check-label small mb-0" for="autoSortToggle">@lang('Auto-orden (toggle)')</label>
+                        <label class="form-check-label small mb-0" for="autoSortToggle">@lang('Auto-orden')</label>
                     </div>
                     <button id="applyAutoSortBtn" type="button" class="btn btn-primary btn-sm rounded-pill ms-1" onclick="window.handleSaveKanban && window.handleSaveKanban();">
                         <i class="fas fa-save me-1"></i> @lang('Guardar cambios')
@@ -142,7 +142,7 @@
             
             <!-- Indicadores de cantidades -->
             <h6 class="mt-3 mb-2">@lang('Indicadores de cantidades')</h6>
-            <div class="d-flex flex-wrap gap-4">
+            <div class="d-flex flex-wrap gap-4 mb-3">
                 <div class="d-flex align-items-center">
                     <span class="me-2"><i class="fas fa-box text-muted"></i></span>
                     <span>@lang('Número de cajas')</span>
@@ -154,6 +154,19 @@
                 <div class="d-flex align-items-center">
                     <span class="me-2"><i class="fas fa-pallet text-muted"></i></span>
                     <span>@lang('Número de palets')</span>
+                </div>
+            </div>
+            
+            <!-- Indicadores de trazabilidad -->
+            <h6 class="mt-3 mb-2">@lang('Indicadores de trazabilidad')</h6>
+            <div class="d-flex flex-wrap gap-4">
+                <div class="d-flex align-items-center">
+                    <span class="me-2"><i class="fas fa-dolly text-muted"></i></span>
+                    <span>@lang('Carro asignado (último escaneo)')</span>
+                </div>
+                <div class="d-flex align-items-center">
+                    <span class="badge bg-light text-dark border me-2"><i class="fas fa-barcode"></i></span>
+                    <span>@lang('Código de barras del proceso siguiente')</span>
                 </div>
             </div>
         </div>
@@ -2206,7 +2219,7 @@
             const statusBadgeHtml = `<span class="badge" style="background-color: ${order.statusColor || '#6b7280'}; color: white;">${(order.status || 'PENDING').replace(/_/g, ' ').toUpperCase()}</span>`;
             
             const latestAfter = getLatestAfterItem(order);
-            const carIconHtml = latestAfter ? `<span class="ms-2" title="Carro ${latestAfter.barcoder_id || ''}"><i class="fas fa-dolly"></i></span>` : '';
+            const carIconHtml = latestAfter && latestAfter.barcode ? `<span class="ms-2" title="${latestAfter.barcode}"><i class="fas fa-dolly"></i></span>` : '';
             const barcodeBadgeHtml = (latestAfter && latestAfter.barcode) ? `<span class="badge bg-light text-dark border ms-2"><i class="fas fa-barcode me-1"></i>${latestAfter.barcode}</span>` : '';
 
             card.innerHTML = `

@@ -70,7 +70,7 @@
         </select>
       </div>
       <div class="col-md-3">
-        <label class="form-label">{{ __('Operator') }}</label>
+        <label class="form-label">{{ __('Trabajador') }}</label>
         <select name="operator_id" class="form-select">
           <option value="">{{ __('All') }}</option>
           @foreach($operators as $op)
@@ -79,7 +79,7 @@
         </select>
       </div>
       <div class="col-md-3">
-        <label class="form-label">{{ __('User') }}</label>
+        <label class="form-label">{{ __('Mecanico') }}</label>
         <select name="user_id" class="form-select">
           <option value="">{{ __('All') }}</option>
           @foreach($users as $u)
@@ -200,8 +200,8 @@
             <th>{{ __('Total Time') }}</th>
             <th>{{ __('Causes') }}</th>
             <th>{{ __('Parts') }}</th>
-            <th>{{ __('Operator') }}</th>
-            <th>{{ __('User') }}</th>
+            <th>{{ __('Trabajador') }}</th>
+            <th>{{ __('Mecanico') }}</th>
             <th>{{ __('Annotations') }}</th>
             <th>{{ __('Operator Annotation') }}</th>
             <th>{{ __('Actions') }}</th>
@@ -234,11 +234,11 @@
                 <div id="md-production-line" class="form-control"></div>
               </div>
               <div class="col-md-4">
-                <label class="form-label fw-bold">{{ __('Operator') }}</label>
+                <label class="form-label fw-bold">{{ __('Trabajador') }}</label>
                 <div id="md-operator-name" class="form-control"></div>
               </div>
               <div class="col-md-4">
-                <label class="form-label fw-bold">{{ __('User') }}</label>
+                <label class="form-label fw-bold">{{ __('Mecanico') }}</label>
                 <div id="md-user-name" class="form-control"></div>
               </div>
               <div class="col-md-6">

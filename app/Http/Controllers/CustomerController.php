@@ -83,8 +83,8 @@ $warehouseActions = [];
 if (auth()->user()->can('assets-view')) {
     $assetsUrl = route('customers.assets.index', $customer->id);
     $inventoryUrl = route('customers.assets.inventory', $customer->id);
-    $warehouseActions[] = "<a href='{$assetsUrl}' class='btn btn-sm btn-outline-secondary me-1 mb-1'><i class='fas fa-box'></i> " . __('Activos disponibles') . "</a>";
-    $warehouseActions[] = "<a href='{$inventoryUrl}' class='btn btn-sm btn-outline-primary me-1 mb-1'><i class='fas fa-chart-column'></i> " . __('Inventario') . "</a>";
+    $warehouseActions[] = "<a href='{$assetsUrl}' class='btn btn-sm btn-primary me-1 mb-1'><i class='fas fa-box'></i> " . __('Inventario') . "</a>";
+    $warehouseActions[] = "<a href='{$inventoryUrl}' class='btn btn-sm btn-outline-primary me-1 mb-1'><i class='fas fa-chart-column'></i> " . __('Activos disponibles') . "</a>";
 }
 if (auth()->user()->can('asset-categories-view')) {
     $assetCategoriesUrl = route('customers.asset-categories.index', $customer->id);
@@ -114,23 +114,18 @@ if (!empty($warehouseActions)) {
     $allButtons .= "<div class='btn-group-section'><div class='btn-group-label'><i class='fas fa-warehouse me-1'></i>" . __('Almacén') . "</div>" . implode('', $warehouseActions) . "</div>";
 }
 
-// ⚙️ AJUSTES: Configuración
-$settingsActions = [];
-if (auth()->user()->can('productionline-edit')) {
-    $settingsActions[] = "<a href='{$editUrl}' class='btn btn-sm btn-info me-1 mb-1'><i class='fas fa-edit'></i> " . __('Editar') . "</a>";
-}
-if (!empty($settingsActions)) {
-    $allButtons .= "<div class='btn-group-section'><div class='btn-group-label'><i class='fas fa-sliders-h me-1'></i>" . __('Ajustes') . "</div>" . implode('', $settingsActions) . "</div>";
-}
-
 // 🔧 MANTENIMIENTO
 if (auth()->user()->can('maintenance-show')) {
     $maintenancesUrl = route('customers.maintenances.index', $customer->id);
-    $allButtons .= "<div class='btn-group-section'><div class='btn-group-label'><i class='fas fa-wrench me-1'></i>" . __('Mantenimiento') . "</div><a href='{$maintenancesUrl}' class='btn btn-sm btn-outline-secondary me-1 mb-1'><i class='fas fa-wrench'></i> " . __('Mantenimiento') . "</a></div>";
+    $allButtons .= "<div class='btn-group-section'><div class='btn-group-label'><i class='fas fa-wrench me-1'></i>" . __('Mantenimiento') . "</div><a href='{$maintenancesUrl}' class='btn btn-sm btn-primary me-1 mb-1'><i class='fas fa-wrench'></i> " . __('Mantenimiento') . "</a></div>";
 }
 
 // 🚚 LOGÍSTICA: Flota, clientes y rutas
 $logisticsActions = [];
+if (auth()->user()->can('routes-view')) {
+    $routesUrl = route('customers.routes.index', $customer->id);
+    $logisticsActions[] = "<a href='{$routesUrl}' class='btn btn-sm btn-primary me-1 mb-1'><i class='fas fa-route'></i> " . __('Rutas') . "</a>";
+}
 if (auth()->user()->can('fleet-view')) {
     $fleetUrl = route('customers.fleet-vehicles.index', $customer->id);
     $logisticsActions[] = "<a href='{$fleetUrl}' class='btn btn-sm btn-outline-secondary me-1 mb-1'><i class='fas fa-truck'></i> " . __('Flota') . "</a>";
@@ -138,10 +133,6 @@ if (auth()->user()->can('fleet-view')) {
 if (auth()->user()->can('customer-clients-view')) {
     $clientsUrl = route('customers.clients.index', $customer->id);
     $logisticsActions[] = "<a href='{$clientsUrl}' class='btn btn-sm btn-outline-secondary me-1 mb-1'><i class='fas fa-user-friends'></i> " . __('Clientes') . "</a>";
-}
-if (auth()->user()->can('routes-view')) {
-    $routesUrl = route('customers.routes.index', $customer->id);
-    $logisticsActions[] = "<a href='{$routesUrl}' class='btn btn-sm btn-outline-secondary me-1 mb-1'><i class='fas fa-route'></i> " . __('Rutas') . "</a>";
 }
 if (auth()->user()->can('route-names-view')) {
     $routeNamesUrl = route('customers.route-names.index', $customer->id);
@@ -170,18 +161,27 @@ if (auth()->user()->can('productionline-incidents')) {
     $incidentsUrl = route('customers.production-order-incidents.index', $customer->id);
     $qualityActions[] = "<a href='{$incidentsUrl}' class='btn btn-sm btn-danger me-1 mb-1'><i class='fas fa-exclamation-triangle'></i> " . __('Incidencias') . "</a>";
     $qcIncidentsUrl = route('customers.quality-incidents.index', $customer->id);
-    $qualityActions[] = "<a href='{$qcIncidentsUrl}' class='btn btn-sm btn-outline-danger me-1 mb-1'><i class='fas fa-vial'></i> " . __('QC') . "</a>";
+    $qualityActions[] = "<a href='{$qcIncidentsUrl}' class='btn btn-sm btn-outline-danger me-1 mb-1'><i class='fas fa-vial'></i> " . __('Incidencias Calidad') . "</a>";
     $qcConfirmationsUrl = route('customers.qc-confirmations.index', $customer->id);
-    $qualityActions[] = "<a href='{$qcConfirmationsUrl}' class='btn btn-sm btn-outline-primary me-1 mb-1'><i class='fas fa-clipboard-check'></i> " . __('QC Confirmations') . "</a>";
+    $qualityActions[] = "<a href='{$qcConfirmationsUrl}' class='btn btn-sm btn-outline-primary me-1 mb-1'><i class='fas fa-clipboard-check'></i> " . __('Control calidad') . "</a>";
 }
 if (!empty($qualityActions)) {
-    $allButtons .= "<div class='btn-group-section'><div class='btn-group-label'><i class='fas fa-exclamation-circle me-1'></i>" . __('Incidencias') . "</div>" . implode('', $qualityActions) . "</div>";
+    $allButtons .= "<div class='btn-group-section'><div class='btn-group-label'><i class='fas fa-exclamation-circle me-1'></i>" . __('Incidencias y control de calidad') . "</div>" . implode('', $qualityActions) . "</div>";
 }
 
 // 🔌 INTEGRACIONES
 if (auth()->user()->can('callbacks.view')) {
     $callbacksUrl = route('customers.callbacks.index', $customer->id);
     $allButtons .= "<div class='btn-group-section'><div class='btn-group-label'><i class='fas fa-plug me-1'></i>" . __('Integraciones') . "</div><a href='{$callbacksUrl}' class='btn btn-sm btn-outline-dark me-1 mb-1'><i class='fas fa-plug'></i> " . __('Callbacks') . "</a></div>";
+}
+
+// ⚙️ AJUSTES: Configuración
+$settingsActions = [];
+if (auth()->user()->can('productionline-edit')) {
+    $settingsActions[] = "<a href='{$editUrl}' class='btn btn-sm btn-info me-1 mb-1'><i class='fas fa-edit'></i> " . __('Editar') . "</a>";
+}
+if (!empty($settingsActions)) {
+    $allButtons .= "<div class='btn-group-section'><div class='btn-group-label'><i class='fas fa-sliders-h me-1'></i>" . __('Ajustes') . "</div>" . implode('', $settingsActions) . "</div>";
 }
 
 // ☠️ CRÍTICO

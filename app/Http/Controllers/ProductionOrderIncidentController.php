@@ -25,18 +25,47 @@ class ProductionOrderIncidentController extends Controller
      * @param  \App\Models\Customer  $customer
      * @return \Illuminate\Http\Response
      */
-    public function index(Customer $customer)
+    public function index(Customer $customer, Request $request)
     {
-        // Obtener todas las incidencias relacionadas con órdenes de producción del cliente
-        $incidents = ProductionOrderIncident::where('customer_id', $customer->id)
-            ->with(['productionOrder.productionLine', 'createdBy', 'customer'])
-            ->latest()
-            ->get();
-        // Listas distintas para filtros de UI
-        $lines = $incidents->pluck('productionOrder.productionLine')->filter()->unique('id')->values();
-        $operators = $incidents->pluck('createdBy')->filter()->unique('id')->values();
+        $baseQuery = ProductionOrderIncident::with(['productionOrder.productionLine', 'createdBy', 'customer'])
+            ->where('customer_id', $customer->id);
 
-        return view('customers.production-order-incidents.index', compact('customer', 'incidents', 'lines', 'operators'));
+        // Opciones para filtros (todas las incidencias del cliente)
+        $allIncidents = (clone $baseQuery)->get();
+        $lines = $allIncidents->pluck('productionOrder.productionLine')->filter()->unique('id')->values();
+        $operators = $allIncidents->pluck('createdBy')->filter()->unique('id')->values();
+
+        // Aplicar filtros en base a la petición
+        $incidentsQuery = (clone $baseQuery);
+
+        if ($request->filled('date_from')) {
+            $incidentsQuery->whereDate('created_at', '>=', $request->input('date_from'));
+        }
+
+        if ($request->filled('date_to')) {
+            $incidentsQuery->whereDate('created_at', '<=', $request->input('date_to'));
+        }
+
+        if ($request->filled('line_id')) {
+            $incidentsQuery->whereHas('productionOrder', function ($query) use ($request) {
+                $query->where('production_line_id', $request->input('line_id'));
+            });
+        }
+
+        if ($request->filled('operator_id')) {
+            $incidentsQuery->where('created_by', $request->input('operator_id'));
+        }
+
+        $incidents = $incidentsQuery->latest()->get();
+
+        $filters = [
+            'date_from' => $request->input('date_from'),
+            'date_to' => $request->input('date_to'),
+            'line_id' => $request->input('line_id'),
+            'operator_id' => $request->input('operator_id'),
+        ];
+
+        return view('customers.production-order-incidents.index', compact('customer', 'incidents', 'lines', 'operators', 'filters'));
     }
 
     /**

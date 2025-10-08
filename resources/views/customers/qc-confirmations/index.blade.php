@@ -21,7 +21,7 @@
             <div class="card border-0 shadow" style="width: 100%;">
                 <div class="card-header bg-success text-white">
                     <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">@lang('Confirmaciones QC') - {{ $customer->name }}</h5>
+                        <h5 class="mb-0 text-white">@lang('Confirmaciones QC') - {{ $customer->name }}</h5>
                         <div class="btn-toolbar" role="toolbar" aria-label="Toolbar">
                             @php($aiUrl = config('services.ai.url'))
                             @php($aiToken = config('services.ai.token'))
@@ -53,35 +53,39 @@
                     @endif
 
                     <!-- Filtros -->
-                    <div class="row g-2 mb-3">
+                    <form method="GET" class="row g-2 mb-3">
                         <div class="col-12 col-md-4">
                             <label class="form-label mb-1">@lang('Fecha desde')</label>
-                            <input type="date" class="form-control form-control-sm" id="filter-date-from">
+                            <input type="date" name="date_from" id="filter-date-from" class="form-control form-control-sm" value="{{ $filters['date_from'] ?? '' }}">
                         </div>
                         <div class="col-12 col-md-4">
                             <label class="form-label mb-1">@lang('Fecha hasta')</label>
-                            <input type="date" class="form-control form-control-sm" id="filter-date-to">
+                            <input type="date" name="date_to" id="filter-date-to" class="form-control form-control-sm" value="{{ $filters['date_to'] ?? '' }}">
                         </div>
                         <div class="col-12 col-md-4">
                             <label class="form-label mb-1">@lang('Línea de producción')</label>
-                            <select id="filter-line" class="form-select form-select-sm">
+                            <select name="line_id" id="filter-line" class="form-select form-select-sm">
                                 <option value="">@lang('Todas')</option>
                                 @foreach($lines as $line)
-                                    <option value="{{ $line->id }}">{{ $line->name ?? ('#'.$line->id) }}</option>
+                                    <option value="{{ $line->id }}" @selected(($filters['line_id'] ?? '') == $line->id)>{{ $line->name ?? ('#'.$line->id) }}</option>
                                 @endforeach
                             </select>
                         </div>
                         <div class="col-12 col-md-4">
                             <label class="form-label mb-1">@lang('Operador')</label>
-                            <select id="filter-operator" class="form-select form-select-sm">
+                            <select name="operator_id" id="filter-operator" class="form-select form-select-sm">
                                 <option value="">@lang('Todos')</option>
                                 @foreach($operators as $op)
-                                    <option value="{{ $op->id }}">{{ $op->name ?? ('#'.$op->id) }}</option>
+                                    <option value="{{ $op->id }}" @selected(($filters['operator_id'] ?? '') == $op->id)>{{ $op->name ?? ('#'.$op->id) }}</option>
                                 @endforeach
                             </select>
                         </div>
-                        
-                    </div>
+                        <div class="col-12 col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary btn-sm w-100">
+                                <i class="fas fa-filter me-1"></i>@lang('Aplicar filtros')
+                            </button>
+                        </div>
+                    </form>
 
                     <div class="table-responsive" style="width: 100%; margin: 0 auto;">
                         <table id="qc-confirmations-table" class="table table-striped table-hover" style="width: 100%;">
@@ -140,6 +144,35 @@
             </div>
         </div>
     </div>
+    <div class="row mt-3 mx-0">
+        <div class="col-12 px-0">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body py-3">
+                    <h6 class="text-uppercase text-muted fw-semibold mb-3">
+                        <i class="fas fa-info-circle me-1"></i>@lang('Leyenda de colores Estado de pedido')
+                    </h6>
+                    <div class="d-flex flex-wrap gap-3">
+                        <div class="d-flex align-items-center">
+                            <span class="legend-swatch bg-danger me-2"></span>
+                            <span class="fw-semibold">@lang('Incidencia (status 3)')</span>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <span class="legend-swatch bg-success me-2"></span>
+                            <span class="fw-semibold">@lang('Finalizadas (status 2)')</span>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <span class="legend-swatch bg-warning me-2"></span>
+                            <span class="fw-semibold">@lang('En curso (status 1)')</span>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <span class="legend-swatch bg-light border me-2"></span>
+                            <span class="fw-semibold">@lang('Pendientes (status 0)')</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 @endsection
 
@@ -163,46 +196,16 @@
             // Enable Bootstrap tooltips
             const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
             tooltipTriggerList.map(function (tooltipTriggerEl) { return new bootstrap.Tooltip(tooltipTriggerEl); });
-            // Set default date range to last 7 days
-            const to = new Date();
-            const from = new Date(to);
-            from.setDate(from.getDate() - 7);
-            const fmt = d => d.toISOString().slice(0,10);
-            if (!$('#filter-date-from').val()) $('#filter-date-from').val(fmt(from));
-            if (!$('#filter-date-to').val()) $('#filter-date-to').val(fmt(to));
-            // Custom filter by date range, line, and operator
-            $.fn.dataTable.ext.search.push(function(settings, data, dataIndex, rowData, counter) {
-                const tr = $(settings.aoData[dataIndex].nTr);
-                const lineFilter = $('#filter-line').val();
-                const operatorFilter = $('#filter-operator').val();
-                const dateFrom = $('#filter-date-from').val();
-                const dateTo = $('#filter-date-to').val();
-
-                const lineId = (tr.data('line-id') || '').toString();
-                const operatorId = (tr.data('operator-id') || '').toString();
-                const createdAt = (tr.data('created-at') || '').toString(); // 'YYYY-MM-DD'
-
-                if (lineFilter && lineId !== lineFilter) return false;
-                if (operatorFilter && operatorId !== operatorFilter) return false;
-                if (dateFrom && createdAt < dateFrom) return false;
-                if (dateTo && createdAt > dateTo) return false;
-                return true;
-            });
-
             const table = $('#qc-confirmations-table').DataTable({
                 responsive: true,
                 language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json' },
                 order: [[5, 'desc']],
-                dom: 'Bfrtip',
+                dom: 'Bfrt<"row mt-3"<"col-12 d-flex justify-content-between align-items-center flex-wrap gap-3 info-pagination-container"ip>>',
                 buttons: [
                     { extend: 'csv', text: 'CSV', className: 'btn btn-sm btn-outline-secondary' },
                     { extend: 'excel', text: 'Excel', className: 'btn btn-sm btn-outline-success' },
                     { extend: 'print', text: 'Imprimir', className: 'btn btn-sm btn-outline-primary' },
                 ]
-            });
-
-            $('#filter-line, #filter-operator, #filter-date-from, #filter-date-to').on('change keyup', function() {
-                table.draw();
             });
 
             // === AI integration for QC Confirmations ===
@@ -238,6 +241,7 @@
 
             function showLoading(show) {
                 $('#btn-ai-send').prop('disabled', !!show).toggleClass('disabled', !!show);
+                $('#aiLoadingIndicator').toggleClass('d-none', !show);
             }
 
             async function startAiTask(prompt) {
@@ -307,7 +311,7 @@
             }
 
             // Default prompt + reset
-            const defaultPromptQC = {!! json_encode(__('Analiza las confirmaciones QC mostradas, identificando líneas, operadores y posibles patrones en los últimos días.')) !!};
+            const defaultPromptQC = {!! json_encode(__('Actúa como supervisor de control de calidad. Sintetiza las confirmaciones listadas destacando líneas y operadores con mayor actividad, variaciones inusuales en tiempos de confirmación y notas relevantes. Sugiere alertas o acciones preventivas basadas en los hallazgos.')) !!};
             $('#aiPromptModal').on('shown.bs.modal', function(){
                 const $ta = $('#aiPrompt');
                 if (!$ta.val()) $ta.val(defaultPromptQC);
@@ -324,6 +328,28 @@
             });
         });
     </script>
+    <style>
+        .legend-swatch {
+            width: 18px;
+            height: 18px;
+            border-radius: 3px;
+            display: inline-block;
+        }
+
+        .info-pagination-container {
+            gap: 1rem;
+        }
+
+        .info-pagination-container .dataTables_info {
+            margin-bottom: 0;
+            white-space: nowrap;
+        }
+
+        .info-pagination-container .dataTables_paginate {
+            margin-left: auto;
+            margin-bottom: 0;
+        }
+    </style>
     <!-- AI Prompt Modal -->
     <div class="modal fade" id="aiPromptModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-scrollable">
@@ -337,6 +363,10 @@
                     <textarea class="form-control" id="aiPrompt" rows="4" placeholder="@lang('Describe qué análisis quieres sobre las confirmaciones mostradas')"></textarea>
                 </div>
                 <div class="modal-footer">
+                    <div id="aiLoadingIndicator" class="d-none me-auto d-flex align-items-center text-primary small">
+                        <div class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></div>
+                        <span>{{ __('Analizando con IA...') }}</span>
+                    </div>
                     <button type="button" class="btn btn-outline-secondary" id="btn-ai-reset">@lang('Limpiar prompt por defecto')</button>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@lang('Close')</button>
                     <button type="button" class="btn btn-primary" id="btn-ai-send">@lang('Enviar a IA')</button>
