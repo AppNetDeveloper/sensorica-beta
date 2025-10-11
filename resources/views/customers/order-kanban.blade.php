@@ -13,29 +13,50 @@
 @endsection
 
 @section('content')
+@can('hourly-totals-view')
+<div class="mb-3" id="kanbanHourlyPanel">
+    <div class="card">
+        <div class="card-header d-flex flex-wrap justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+                <h5 class="mb-0"><i class="fas fa-chart-line me-2 text-primary"></i>{{ __('Carga horaria de líneas activas') }}</h5>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="kanbanHourlyToggle">
+                    <i class="fas fa-chevron-up"></i>
+                </button>
+            </div>
+            <div class="btn-group btn-group-sm" id="kanbanHourlyRange">
+                <button class="btn btn-outline-primary active" data-range="1d">{{ __('1 día') }}</button>
+                <button class="btn btn-outline-primary" data-range="1w">{{ __('1 semana') }}</button>
+                <button class="btn btn-outline-primary" data-range="1m">{{ __('1 mes') }}</button>
+                <button class="btn btn-outline-primary" data-range="6m">{{ __('6 meses') }}</button>
+            </div>
+        </div>
+        <div class="card-body" id="kanbanHourlyBody">
+            <div class="small text-muted mb-2" id="kanbanHourlySubtitle"></div>
+            <div id="kanbanHourlyChart" style="min-height: 360px;"></div>
+            <div class="text-end mt-2 text-muted small" id="kanbanHourlyUpdated"></div>
+        </div>
+    </div>
+</div>
+@endcan
+
 <!-- Barra de Filtros y Controles -->
 <div class="mb-3 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md">
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
-        <div class="d-flex flex-wrap align-items-center gap-3">
-            <a href="{{ route('customers.order-organizer', $customer) }}" class="btn btn-secondary me-2" id="backToProcessesBtn">
+        <div class="d-flex align-items-center gap-3 flex-wrap flex-grow-1 justify-content-end">
+            <a href="{{ route('customers.order-organizer', $customer) }}" class="btn btn-secondary" id="backToProcessesBtn">
                 <i class="ti ti-arrow-left me-1"></i> {{ __('Back to Processes') }}
             </a>
-        </div>
-        <div class="d-flex align-items-center gap-3 flex-wrap flex-grow-1 justify-content-end">
             <div class="position-relative" style="width: 360px; max-width: 100%;">
                 <i class="fas fa-search position-absolute top-50 start-0 translate-middle-y ms-3 text-gray-400"></i>
                 <input type="text" id="searchInput" placeholder="{{ __('Search by order ID or customer...') }}"
                        class="form-control ps-5" style="width: 100%;">
             </div>
-            <!-- Botón de IA eliminado -->
             <button id="fullscreenBtn" class="btn btn-light" title="{{ __('Fullscreen') }}">
                 <i class="fas fa-expand-arrows-alt text-primary"></i>
             </button>
-            <!-- Botones ocultos para mantener la funcionalidad de autoguardado y actualización automática -->
             <button id="saveChangesBtn" class="d-none"></button>
             <button id="refreshBtn" class="d-none"></button>
 
-            <!-- Segunda línea: filtros rápidos a la derecha -->
             <div class="w-100 d-flex justify-content-end mt-2">
                 <div class="filters-row d-flex align-items-center">
                     <div class="form-check form-switch mb-0 me-3 filters-switch">
@@ -70,27 +91,6 @@
 <div id="kanbanContainer" class="position-relative">
     <div class="kanban-board" role="list" aria-label="{{ __('Kanban Board') }}"></div>
 </div>
-
-@can('hourly-totals-view')
-<div class="mt-4">
-    <div class="card">
-        <div class="card-header d-flex flex-wrap justify-content-between align-items-center">
-            <h5 class="mb-0"><i class="fas fa-chart-line me-2 text-primary"></i>{{ __('Carga horaria de líneas activas') }}</h5>
-            <div class="btn-group btn-group-sm" id="kanbanHourlyRange">
-                <button class="btn btn-outline-primary active" data-range="1d">{{ __('1 día') }}</button>
-                <button class="btn btn-outline-primary" data-range="1w">{{ __('1 semana') }}</button>
-                <button class="btn btn-outline-primary" data-range="1m">{{ __('1 mes') }}</button>
-                <button class="btn btn-outline-primary" data-range="6m">{{ __('6 meses') }}</button>
-            </div>
-        </div>
-        <div class="card-body">
-            <div class="small text-muted mb-2" id="kanbanHourlySubtitle"></div>
-            <div id="kanbanHourlyChart" style="min-height: 360px;"></div>
-            <div class="text-end mt-2 text-muted small" id="kanbanHourlyUpdated"></div>
-        </div>
-    </div>
-</div>
-@endcan
 
 <!-- Leyenda visual para los iconos utilizados en las tarjetas -->
 <div class="container-fluid mt-4 mb-4">
@@ -532,10 +532,14 @@
     <script>
     document.addEventListener('DOMContentLoaded', function() {
         @can('hourly-totals-view')
+        const kanbanHourlyPanel = document.querySelector('#kanbanHourlyPanel');
         const kanbanHourlyChartEl = document.querySelector('#kanbanHourlyChart');
         const kanbanHourlyRange = document.querySelector('#kanbanHourlyRange');
         const kanbanHourlySubtitle = document.querySelector('#kanbanHourlySubtitle');
         const kanbanHourlyUpdated = document.querySelector('#kanbanHourlyUpdated');
+        const kanbanHourlyToggle = document.querySelector('#kanbanHourlyToggle');
+        const kanbanHourlyBody = document.querySelector('#kanbanHourlyBody');
+        const hourlyPanelStorageKey = `kanbanHourlyPanelCollapsed_{{ $customer->id }}`;
         const activeLineIds = new Set();
         let hourlyChart = null;
         let hourlyRefreshTimer = null;
@@ -545,6 +549,45 @@
             '1m': { label: '{{ __('Últimos 30 días') }}', durationMs: 30 * 24 * 60 * 60 * 1000 },
             '6m': { label: '{{ __('Últimos 6 meses') }}', durationMs: 182 * 24 * 60 * 60 * 1000 },
         };
+
+        const setHourlyPanelCollapsed = (collapsed) => {
+            if (!kanbanHourlyBody || !kanbanHourlyToggle) {
+                return;
+            }
+            if (collapsed) {
+                kanbanHourlyBody.classList.add('d-none');
+                kanbanHourlyToggle.querySelector('i').classList.remove('fa-chevron-up');
+                kanbanHourlyToggle.querySelector('i').classList.add('fa-chevron-down');
+            } else {
+                kanbanHourlyBody.classList.remove('d-none');
+                kanbanHourlyToggle.querySelector('i').classList.remove('fa-chevron-down');
+                kanbanHourlyToggle.querySelector('i').classList.add('fa-chevron-up');
+            }
+            try {
+                localStorage.setItem(hourlyPanelStorageKey, collapsed ? '1' : '0');
+            } catch (_) {}
+        };
+
+        if (kanbanHourlyToggle) {
+            const storedValue = (() => {
+                try {
+                    return localStorage.getItem(hourlyPanelStorageKey);
+                } catch (_) {
+                    return null;
+                }
+            })();
+
+            const initialCollapsed = storedValue === '1';
+            setHourlyPanelCollapsed(initialCollapsed);
+
+            kanbanHourlyToggle.addEventListener('click', () => {
+                const isCollapsed = kanbanHourlyBody?.classList.contains('d-none');
+                setHourlyPanelCollapsed(!isCollapsed);
+                if (!isCollapsed && hourlyChart) {
+                    setTimeout(() => hourlyChart?.updateOptions({}), 150);
+                }
+            });
+        }
 
         function computeLineIdsFromColumns() {
             activeLineIds.clear();
