@@ -37,14 +37,17 @@
                                 {{ __('Selecciona un rango para analizar la carga horaria') }}
                             </div>
                             <div class="btn-group btn-group-sm flex-wrap" role="group" id="hourlyRangeSelector">
-                                <button type="button" class="btn btn-outline-primary active" data-range="1w">{{ __('1 semana') }}</button>
-                                <button type="button" class="btn btn-outline-primary" data-range="1d">{{ __('1 día') }}</button>
+                                <button type="button" class="btn btn-outline-primary active" data-range="1d">{{ __('1 día') }}</button>
+                                <button type="button" class="btn btn-outline-primary" data-range="1w">{{ __('1 semana') }}</button>
                                 <button type="button" class="btn btn-outline-primary" data-range="1m">{{ __('1 mes') }}</button>
                                 <button type="button" class="btn btn-outline-primary" data-range="6m">{{ __('6 meses') }}</button>
                                 <button type="button" class="btn btn-outline-primary" data-range="1y">{{ __('1 año') }}</button>
                             </div>
                         </div>
                         <div id="hourlyTotalsChart" style="min-height: 460px;"></div>
+                        <div class="text-end mt-2 text-muted small" id="hourlyTotalsUpdated">
+                            {{ $lastCapture ? __('Última captura') . ': ' . $lastCapture : __('Sin capturas disponibles') }}
+                        </div>
                     @endif
                 </div>
             </div>
@@ -59,150 +62,136 @@
         document.addEventListener('DOMContentLoaded', function () {
             const chartContainer = document.querySelector('#hourlyTotalsChart');
             const rangeSelector = document.querySelector('#hourlyRangeSelector');
-            const rawSeries = @json($series);
-            const lastCapture = @json($lastCapture);
+            const updatedLabel = document.querySelector('#hourlyTotalsUpdated');
+            const seedSeries = @json($series);
 
-            if (!chartContainer || !Array.isArray(rawSeries) || rawSeries.length === 0) {
+            if (!chartContainer || !Array.isArray(seedSeries) || seedSeries.length === 0) {
                 return;
             }
 
-            const referenceDate = lastCapture ? new Date(lastCapture.replace(' ', 'T')) : new Date();
-
-            const timeRanges = {
-                '1d': { label: '{{ __('1 día') }}', duration: 24 * 60 * 60 * 1000 },
-                '1w': { label: '{{ __('1 semana') }}', duration: 7 * 24 * 60 * 60 * 1000 },
-                '1m': { label: '{{ __('1 mes') }}', duration: 30 * 24 * 60 * 60 * 1000 },
-                '6m': { label: '{{ __('6 meses') }}', duration: 182 * 24 * 60 * 60 * 1000 },
-                '1y': { label: '{{ __('1 año') }}', duration: 365 * 24 * 60 * 60 * 1000 }
+            const hourlyRanges = {
+                '1d': { label: '{{ __('Últimas 24 horas') }}', durationMs: 24 * 60 * 60 * 1000 },
+                '1w': { label: '{{ __('Últimos 7 días') }}', durationMs: 7 * 24 * 60 * 60 * 1000 },
+                '1m': { label: '{{ __('Últimos 30 días') }}', durationMs: 30 * 24 * 60 * 60 * 1000 },
+                '6m': { label: '{{ __('Últimos 6 meses') }}', durationMs: 182 * 24 * 60 * 60 * 1000 },
+                '1y': { label: '{{ __('Últimos 12 meses') }}', durationMs: 365 * 24 * 60 * 60 * 1000 },
             };
 
-            const baseSeries = rawSeries
-                .filter(series => Array.isArray(series.data) && series.data.length > 0)
-                .map((series) => {
-                    const points = series.data
-                        .map(point => {
-                            const timestamp = new Date(point.x.replace(' ', 'T')).getTime();
-                            const value = Number(point.y ?? 0);
-                            if (Number.isNaN(timestamp) || Number.isNaN(value)) {
-                                return null;
-                            }
-                            return { x: timestamp, y: value };
-                        })
-                        .filter(Boolean)
-                        .sort((a, b) => a.x - b.x);
+            let chartInstance = null;
+            let refreshTimer = null;
 
-                    return {
+            const buildColorPalette = (length) => {
+                if (!length) {
+                    return ['#3b82f6'];
+                }
+                return Array.from({ length }, (_, index) => {
+                    const hue = Math.floor((index / length) * 360);
+                    return `hsl(${hue}, 65%, 48%)`;
+                });
+            };
+
+            const renderChart = (series, lastCapture) => {
+                if (!chartInstance) {
+                    chartInstance = new ApexCharts(chartContainer, {
+                        chart: {
+                            type: 'area',
+                            height: 460,
+                            animations: { enabled: true, easing: 'easeinout', speed: 600 },
+                            toolbar: { show: true },
+                            zoom: { enabled: true },
+                        },
+                        stroke: { curve: 'smooth', width: 2 },
+                        dataLabels: { enabled: false },
+                        markers: { size: 0, hover: { size: 6 } },
+                        fill: {
+                            type: 'gradient',
+                            gradient: {
+                                shadeIntensity: 1,
+                                opacityFrom: 0.45,
+                                opacityTo: 0.05,
+                                stops: [0, 100, 100],
+                            },
+                        },
+                        xaxis: { type: 'datetime', labels: { datetimeUTC: false } },
+                        yaxis: {
+                            labels: { formatter: (val) => val.toFixed(0) },
+                            title: { text: '{{ __('Minutos acumulados') }}' },
+                        },
+                        tooltip: {
+                            shared: true,
+                            x: { format: 'dd MMM yyyy HH:mm' },
+                            y: { formatter: (val) => `${val.toLocaleString(undefined, { maximumFractionDigits: 2 })} {{ __('min') }}` },
+                        },
+                        legend: { position: 'top', horizontalAlign: 'left' },
+                        series,
+                        colors: buildColorPalette(series.length),
+                        noData: { text: '{{ __('Sin datos para mostrar') }}' },
+                    });
+                    chartInstance.render();
+                } else {
+                    chartInstance.updateOptions({ colors: buildColorPalette(series.length) });
+                    chartInstance.updateSeries(series);
+                }
+
+                if (updatedLabel) {
+                    updatedLabel.textContent = lastCapture
+                        ? `{{ __('Última captura') }}: ${lastCapture} · {{ __('Líneas activas') }}: ${series.length}`
+                        : `{{ __('Sin capturas disponibles') }} · {{ __('Líneas activas') }}: ${series.length}`;
+                }
+            };
+
+            const normalizeSeedSeries = () => {
+                return seedSeries
+                    .filter(series => Array.isArray(series.data) && series.data.length > 0)
+                    .map(series => ({
                         name: series.name,
-                        data: points,
-                    };
+                        data: series.data.map(point => ({
+                            x: new Date(point.x.replace(' ', 'T')).getTime(),
+                            y: Number(point.y ?? 0)
+                        })).filter(point => !Number.isNaN(point.x) && !Number.isNaN(point.y))
+                            .sort((a, b) => a.x - b.x),
+                    }));
+            };
+
+            const fetchData = (rangeKey = '1d') => {
+                const range = hourlyRanges[rangeKey] || hourlyRanges['1d'];
+                const now = new Date();
+                const rangeStart = new Date(now.getTime() - range.durationMs);
+
+                const params = new URLSearchParams({
+                    range_start: rangeStart.toISOString(),
                 });
 
-            if (baseSeries.length === 0) {
-                chartContainer.innerHTML = '<div class="alert alert-info">{{ __('Sin datos válidos para mostrar en la gráfica.') }}</div>';
-                return;
-            }
+                return fetch(`{{ route('customers.hourly-totals.data', [$customer->id]) }}?${params.toString()}`, {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        const series = Array.isArray(data.series) ? data.series : [];
 
-            const colorPalette = baseSeries.map((_, index) => {
-                const hue = Math.floor((index / baseSeries.length) * 360);
-                return `hsl(${hue}, 65%, 48%)`;
-            });
+                        const normalized = series.map(serie => ({
+                            name: serie.name,
+                            data: (serie.data || []).map(point => ({
+                                x: new Date(String(point.x).replace(' ', 'T')).getTime(),
+                                y: Number(point.y ?? 0),
+                            })).filter(point => !Number.isNaN(point.x) && !Number.isNaN(point.y))
+                                .sort((a, b) => a.x - b.x),
+                        }));
 
-            const chartOptions = {
-                chart: {
-                    type: 'line',
-                    height: 460,
-                    toolbar: {
-                        show: true,
-                        tools: {
-                            download: true,
-                            selection: true,
-                            zoom: true,
-                            zoomin: true,
-                            zoomout: true,
-                            pan: true,
-                            reset: true
-                        }
-                    }
-                },
-                stroke: {
-                    curve: 'smooth',
-                    width: 2
-                },
-                dataLabels: {
-                    enabled: false
-                },
-                markers: {
-                    size: 0,
-                    hover: {
-                        size: 6
-                    }
-                },
-                colors: colorPalette,
-                series: baseSeries,
-                xaxis: {
-                    type: 'datetime',
-                    labels: {
-                        datetimeUTC: false
-                    }
-                },
-                yaxis: {
-                    title: {
-                        text: '{{ __('Minutos acumulados') }}'
-                    },
-                    labels: {
-                        formatter: (val) => val.toFixed(0)
-                    }
-                },
-                tooltip: {
-                    shared: true,
-                    x: {
-                        format: 'dd MMM yyyy HH:mm'
-                    },
-                    y: {
-                        formatter: (val) => `${val.toLocaleString(undefined, { maximumFractionDigits: 2 })} {{ __('min') }}`
-                    }
-                },
-                legend: {
-                    position: 'top',
-                    horizontalAlign: 'left',
-                    fontSize: '13px',
-                    markers: {
-                        width: 12,
-                        height: 12,
-                        radius: 12
-                    },
-                    itemMargin: {
-                        horizontal: 10,
-                        vertical: 5
-                    }
-                },
-                grid: {
-                    borderColor: '#e5e7eb',
-                    strokeDashArray: 4
-                },
-                noData: {
-                    text: '{{ __('Sin datos para mostrar') }}'
-                }
+                        renderChart(normalized, data.lastCapture || null);
+                    })
+                    .catch(() => {
+                        const normalizedSeed = normalizeSeedSeries();
+                        renderChart(normalizedSeed, @json($lastCapture));
+                    });
             };
 
-            const chart = new ApexCharts(chartContainer, chartOptions);
-            chart.render();
-
-            const applyRange = (rangeKey) => {
-                const range = timeRanges[rangeKey];
-                if (!range) {
-                    chart.updateSeries(baseSeries);
-                    return;
+            const scheduleRefresh = (rangeKey) => {
+                if (refreshTimer) {
+                    clearInterval(refreshTimer);
                 }
-
-                const cutoff = referenceDate.getTime() - range.duration;
-
-                const filteredSeries = baseSeries.map(series => ({
-                    name: series.name,
-                    data: series.data.filter(point => point.x >= cutoff)
-                }));
-
-                chart.updateSeries(filteredSeries);
+                fetchData(rangeKey);
+                refreshTimer = setInterval(() => fetchData(rangeKey), 60 * 60 * 1000);
             };
 
             if (rangeSelector) {
@@ -211,19 +200,21 @@
                     if (!button) {
                         return;
                     }
-
                     rangeSelector.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
                     button.classList.add('active');
-
-                    applyRange(button.dataset.range);
+                    scheduleRefresh(button.dataset.range);
                 });
 
-                // Inicializar con la opción activa por defecto
                 const defaultButton = rangeSelector.querySelector('button.active');
-                if (defaultButton) {
-                    applyRange(defaultButton.dataset.range);
-                }
+                const defaultRange = defaultButton ? defaultButton.dataset.range : '1d';
+                scheduleRefresh(defaultRange);
             }
+
+            window.addEventListener('beforeunload', () => {
+                if (refreshTimer) {
+                    clearInterval(refreshTimer);
+                }
+            });
         });
     </script>
 @endpush
