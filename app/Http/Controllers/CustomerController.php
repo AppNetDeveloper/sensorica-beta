@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Log;
 use Carbon\Carbon; // Agrega esta línea para usar Carbon
 use Illuminate\Support\Facades\DB;
 use App\Models\Sensor;
+use App\Models\ProductionLineHourlyTotal;
 use Yajra\DataTables\Facades\DataTables;
 use App\Models\BarcodeScanAfter;
 
@@ -144,6 +145,10 @@ if (!empty($logisticsActions)) {
 
 // 📊 ESTADÍSTICAS: Monitorización
 $statsActions = [];
+if (auth()->user()->can('hourly-totals-view')) {
+    $hourlyTotalsUrl = route('customers.hourly-totals', $customer->id);
+    $statsActions[] = "<a href='{$hourlyTotalsUrl}' class='btn btn-sm btn-outline-primary me-1 mb-1'><i class='fas fa-chart-area'></i> " . __('Carga por hora') . "</a>";
+}
 if (auth()->user()->can('productionline-weight-stats')) {
     $statsActions[] = "<a href='{$liveViewUrl}' target='_blank' class='btn btn-sm btn-success me-1 mb-1'><i class='fas fa-weight-hanging'></i> " . __('Weight Stats') . "</a>";
 }
@@ -288,6 +293,54 @@ return "<div class='action-buttons-row d-flex flex-wrap' style='display: none; g
             'customer' => $customer,
             'groupedProcesses' => $sortedProcesses,
             'totalLines' => $productionLines->count()
+        ]);
+    }
+
+    public function hourlyTotals(Customer $customer)
+    {
+        $productionLines = $customer->productionLines()
+            ->with(['processes' => function ($query) {
+                $query->orderBy('production_line_process.order');
+            }])
+            ->get()
+            ->filter(function ($line) {
+                return $line->processes->isNotEmpty();
+            });
+
+        if ($productionLines->isEmpty()) {
+            return redirect()->route('customers.index')->with('error', __('El cliente no tiene líneas de producción configuradas.'));
+        }
+
+        $lineIds = $productionLines->pluck('id');
+
+        $totals = ProductionLineHourlyTotal::query()
+            ->whereIn('production_line_id', $lineIds)
+            ->orderBy('captured_at')
+            ->get()
+            ->groupBy('production_line_id');
+
+        $series = [];
+        $lastCapture = null;
+
+        foreach ($productionLines as $line) {
+            $lineTotals = $totals->get($line->id, collect());
+            $process = $line->processes->first();
+            $series[] = [
+                'name' => sprintf('%s - %s', $line->name, $process?->description ?? __('Sin proceso')),
+                'data' => $lineTotals->map(function (ProductionLineHourlyTotal $total) use (&$lastCapture) {
+                    $lastCapture = $total->captured_at;
+                    return [
+                        'x' => $total->captured_at->format('Y-m-d H:i:s'),
+                        'y' => round($total->total_time / 60, 2),
+                    ];
+                })->values(),
+            ];
+        }
+
+        return view('customers.hourly-totals', [
+            'customer' => $customer,
+            'series' => $series,
+            'lastCapture' => $lastCapture?->format('Y-m-d H:i:s'),
         ]);
     }
     

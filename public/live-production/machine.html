@@ -487,7 +487,27 @@
         
         /* Estilo para órdenes prioritarias */
         .kanban-card.priority-order {
-            border: 1px solid #ffc107;
+            border: 2px solid #22c55e;
+        }
+
+        .priority-icon {
+            color: #22c55e !important;
+            animation: priorityPulse 1.2s ease-in-out infinite;
+        }
+
+        @keyframes priorityPulse {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.2);
+                opacity: 0.6;
+            }
+        }
+
+        .kanban-card.priority-order.priority-locked {
+            cursor: not-allowed;
         }
         
         .card-menu {
@@ -740,6 +760,9 @@
         
         <!-- Botón flotante de refresco en la parte inferior -->
         <div class="fixed bottom-4 right-4 z-50 flex flex-col space-y-2">
+            <button id="legend-button" class="bg-slate-600 hover:bg-slate-700 text-white p-2 rounded-full shadow-sm transition-all duration-150" title="Ver leyenda de iconos">
+                <i class="fas fa-question-circle"></i>
+            </button>
             <button id="maintenance-button" class="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-full shadow-sm transition-all duration-150" title="Solicitar mantenimiento">
                 <i class="fas fa-tools"></i>
             </button>
@@ -1331,6 +1354,7 @@
                 });
             }
             let currentWorker = null;
+            let isFullScreen = false;
             let currentShiftState = { type: null, action: null };
             let selectedShiftId = null;
             let activeShiftId = null; // Nuevo: ID de turno activo persistente para eventos posteriores
@@ -1532,6 +1556,33 @@
             function showShiftRequiredAlert() {
                  if (typeof Swal === 'function') { Swal.fire({ icon: 'warning', title: 'Acción no permitida', text: 'Por favor, selecciona un turno primero.', confirmButtonColor: '#3085d6' }); }
                  else { alert('Por favor, selecciona un turno primero.'); }
+            }
+
+            function showPriorityLockedAlert() {
+                if (typeof Swal === 'function') {
+                    const swalOptions = {
+                        icon: 'info',
+                        title: 'Tarjeta prioritaria',
+                        text: 'No se puede cambiar de posición ni usar el menú en pendientes.',
+                        toast: true,
+                        position: 'top-end',
+                        timer: 3000,
+                        showConfirmButton: false,
+                        timerProgressBar: true
+                    };
+
+                    if (isFullScreen && document.getElementById('kanban-board')) {
+                        swalOptions.target = document.getElementById('kanban-board');
+                        swalOptions.customClass = {
+                            container: 'swal2-in-fullscreen',
+                            popup: 'swal2-in-fullscreen-popup'
+                        };
+                    }
+
+                    Swal.fire(swalOptions);
+                } else {
+                    alert('Tarjeta prioritaria: no se puede cambiar de posición.');
+                }
             }
 
              // --- Función para mostrar confirmación genérica ---
@@ -2827,6 +2878,10 @@
                 // Añadir clase para tarjetas prioritarias
                 if (order.is_priority === true || order.is_priority === 1) {
                     card.classList.add('priority-order');
+                    if (parseInt(order.status, 10) === 0) {
+                        card.classList.add('priority-locked', 'cursor-not-allowed');
+                        card.classList.remove('cursor-pointer');
+                    }
                 }
                 
                 card.dataset.cardId = order.id;
@@ -2836,12 +2891,13 @@
                 const hasUnits = order.units && order.units > 0;
                 const isUrgent = order.json && order.json.urgent;
                 const isPriority = order.is_priority === true || order.is_priority === 1;
+                const priorityMenuLock = isPriority && parseInt(order.status, 10) === 0;
                 
                 card.innerHTML = `
                     <div class="flex justify-between items-center mb-1">
                         <div class="flex items-center">
                             ${statusIcon}
-                            ${isPriority ? '<i class="fas fa-exclamation-triangle text-yellow-500 mr-1" title="Prioritaria"></i>' : ''}
+                            ${isPriority ? '<i class="fas fa-exclamation-triangle priority-icon mr-1" title="Orden prioritaria"></i>' : ''}
                             <span class="font-bold text-xs text-gray-800" style="letter-spacing: -0.3px;">${order.order_id || 'N/A'}</span>
                             ${isUrgent ? '<i class="fas fa-bolt text-orange-500 ml-1" title="Urgente"></i>' : ''}
                         </div>
@@ -2924,13 +2980,18 @@
                     // Mostrar/ocultar el menú al hacer clic en los 3 puntos
                     menuBtn.addEventListener('click', (e) => {
                         e.stopPropagation();
-                        
+
+                        if (priorityMenuLock) {
+                            showPriorityLockedAlert();
+                            return;
+                        }
+
                         // Verificar si hay un operario seleccionado
                         if (!currentWorker) {
                             showWorkerRequiredAlert();
                             return;
                         }
-                        
+
                         // Cerrar todos los demás menús primero
                         const allMenus = document.querySelectorAll('.card-menu');
                         allMenus.forEach(m => {
@@ -2948,7 +3009,15 @@
                     
                     // Opción 1: Incidencias - Abrir el modal de incidencias
                     // Nueva opción: Problemas de calidad (calidad / quality control)
-                    if (qualityBtn) {
+                    if (priorityMenuLock) {
+                        [qualityBtn, incidentBtn, topBtn, machineBtn, detailsBtn]
+                            .filter(btn => btn)
+                            .forEach(btn => {
+                                btn.classList.add('pointer-events-none', 'opacity-50');
+                            });
+                    }
+
+                    if (qualityBtn && !priorityMenuLock) {
                         qualityBtn.addEventListener('click', (e) => {
                             e.stopPropagation();
                             menu.classList.add('hidden'); // Ocultar el menú
@@ -3100,7 +3169,7 @@
                     }
 
                     // Opción 1: Incidencias - Abrir el modal de incidencias
-                    if (incidentBtn) {
+                    if (incidentBtn && !priorityMenuLock) {
                         incidentBtn.addEventListener('click', (e) => {
                             e.stopPropagation();
                             menu.classList.add('hidden'); // Ocultar el menú
@@ -3109,7 +3178,7 @@
                         });
                     }
                     
-                    if (machineBtn) {
+                    if (machineBtn && !priorityMenuLock) {
                         if (order.status === 0) {
                             machineBtn.classList.remove('hidden');
                             machineBtn.addEventListener('click', async (e) => {
@@ -3195,7 +3264,7 @@
                     }
 
                     // Opción 2: Primera - Mover la tarjeta al principio de su columna
-                    if (topBtn) {
+                    if (topBtn && !priorityMenuLock) {
                         topBtn.addEventListener('click', (e) => {
                             e.stopPropagation();
                             menu.classList.add('hidden'); // Ocultar el menú
@@ -3213,7 +3282,7 @@
                     }
                     
                     // Opción 3: Orden detalles - Mostrar detalles de la orden en un modal
-                    if (detailsBtn) {
+                    if (detailsBtn && !priorityMenuLock) {
                         detailsBtn.addEventListener('click', (e) => {
                             e.stopPropagation();
                             menu.classList.add('hidden'); // Ocultar el menú
@@ -4461,11 +4530,19 @@ async function updateOrderStatus(orderId, newStatus) {
 
             const drake = dragula(columns, {
                 moves: function (el, source, handle, sibling) {
+                    if (el && source && source.id === 'col-pendiente' && el.classList.contains('priority-locked')) {
+                        showPriorityLockedAlert();
+                        return false;
+                    }
                     // Permitir arrastrar desde cualquier columna, incluyendo incidencias
                     if (!isTouchInteraction) { return true; }
                     return longPressTriggered;
                 },
                 accepts: function (el, target, source, sibling) {
+                    if (el && source && source.id === 'col-pendiente' && el.classList.contains('priority-locked')) {
+                        showPriorityLockedAlert();
+                        return false;
+                    }
                     // Restricción: Si viene de la columna Finalizadas, solo puede ir a Incidencias
                     if (source.id === 'col-finalizadas') {
                         if (target.id !== 'col-incidencias') {
@@ -4893,6 +4970,17 @@ async function updateOrderStatus(orderId, newStatus) {
                     // Mostrar el modal con la información de la tarjeta
                     showIncidentModal(el, source, target);
                     return;
+                }
+
+                if (targetColumnId === 'col-pendiente' && !el.classList.contains('priority-locked')) {
+                    const priorityCards = Array.from(target.querySelectorAll('.priority-locked'));
+                    if (priorityCards.length > 0) {
+                        const lastPriorityCard = priorityCards[priorityCards.length - 1];
+                        const insertAfterPriority = lastPriorityCard.nextElementSibling;
+                        if (insertAfterPriority !== el) {
+                            target.insertBefore(el, insertAfterPriority);
+                        }
+                    }
                 }
 
                 const columnIdToStatus = {
@@ -6027,8 +6115,38 @@ async function updateOrderStatus(orderId, newStatus) {
             
             // ===== Teclado Virtual Flotante Universal =====
             let activeInputElement = null; // Referencia al campo de entrada activo
-            
-            function initializeVirtualKeyboard() {
+            $(document).ready(function() {
+                const legendButton = document.getElementById('legend-button');
+                const legendModal = document.getElementById('legend-modal');
+                const legendModalClose = document.getElementById('legend-modal-close');
+
+                if (legendButton && legendModal && legendModalClose) {
+                    legendButton.addEventListener('click', () => {
+                        legendModal.classList.remove('hidden');
+                        legendModal.classList.add('flex');
+                    });
+
+                    const closeLegend = () => {
+                        legendModal.classList.add('hidden');
+                        legendModal.classList.remove('flex');
+                    };
+
+                    legendModalClose.addEventListener('click', closeLegend);
+
+                    legendModal.addEventListener('click', (event) => {
+                        if (event.target === legendModal) {
+                            closeLegend();
+                        }
+                    });
+
+                    document.addEventListener('keydown', (event) => {
+                        if (event.key === 'Escape' && legendModal.classList.contains('flex')) {
+                            closeLegend();
+                        }
+                    });
+                }
+            });
+            function initializeMaintenanceButton() {
                 const virtualKeyboard = document.getElementById('virtual-keyboard');
                 const keyboardLayout = document.getElementById('keyboard-layout');
                 const closeKeyboardBtn = document.getElementById('keyboard-close');
@@ -6418,7 +6536,6 @@ async function updateOrderStatus(orderId, newStatus) {
             // ===== Funcionalidad de pantalla completa para el tablero Kanban =====
             const fullscreenButton = document.getElementById('fullscreen-button');
             const kanbanBoard = document.getElementById('kanban-board');
-            let isFullScreen = false;
             let inactivityTimer = null;
             const INACTIVITY_TIMEOUT = 30000; // 30 segundos en milisegundos
             
@@ -6717,6 +6834,127 @@ async function updateOrderStatus(orderId, newStatus) {
         </div>
     </div>
     
+    <!-- Modal de leyenda de iconos -->
+    <div id="legend-modal" class="fixed inset-0 bg-black bg-opacity-60 hidden items-center justify-center z-[70] p-4">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-5xl max-h-[85vh] overflow-y-auto relative">
+            <div class="flex items-center justify-between px-6 py-4 border-b">
+                <h3 class="text-lg font-semibold text-slate-700">Leyenda completa de iconos</h3>
+                <button id="legend-modal-close" class="text-slate-500 hover:text-slate-700" title="Cerrar">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-6 text-sm text-slate-600">
+                <section>
+                    <h4 class="text-sm font-semibold text-slate-600 uppercase tracking-wide mb-3">Estados y prioridades de órdenes</h4>
+                    <div class="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-clock text-red-500"></i>
+                            <span><strong>Pendiente</strong> – Orden aún no iniciada.</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-play text-blue-500"></i>
+                            <span><strong>En curso</strong> – Orden en producción.</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-check text-green-500"></i>
+                            <span><strong>Finalizada</strong> – Orden completada.</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-exclamation-triangle text-yellow-500"></i>
+                            <span><strong>Incidencia</strong> – Orden con incidencia abierta.</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-exclamation-triangle priority-icon"></i>
+                            <span><strong>Prioritaria</strong> – Orden bloqueada en pendientes.</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-bolt text-orange-500"></i>
+                            <span><strong>Urgente</strong> – Orden marcada como urgente.</span>
+                        </div>
+                    </div>
+                </section>
+
+                <section>
+                    <h4 class="text-sm font-semibold text-slate-600 uppercase tracking-wide mb-3">Iconos de acciones y utilidades</h4>
+                    <div class="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-ellipsis-v text-slate-500"></i>
+                            <span><strong>Menú tarjeta</strong> – Acciones disponibles (3 puntos).</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-clipboard-check text-emerald-500"></i>
+                            <span><strong>Control calidad</strong> – Abrir formulario QC.</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-exclamation-triangle text-yellow-500"></i>
+                            <span><strong>Incidencias</strong> – Gestionar incidencias asociadas.</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-industry text-slate-500"></i>
+                            <span><strong>Cambio de máquina</strong> – Seleccionar otra línea.</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-arrow-up text-blue-500"></i>
+                            <span><strong>Primera</strong> – Subir tarjeta al inicio.</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-info-circle text-indigo-500"></i>
+                            <span><strong>Detalles</strong> – Ver información ampliada.</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-user-tie text-blue-500"></i>
+                            <span><strong>Cliente</strong> – Identificador del cliente.</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-clock text-indigo-500"></i>
+                            <span><strong>Tiempo teórico</strong> – Duración estimada de proceso.</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-box text-blue-500"></i>
+                            <span><strong>Cajas</strong> – Cantidad de cajas.</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-cubes text-green-500"></i>
+                            <span><strong>Unidades</strong> – Unidades en total.</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-boxes text-purple-500"></i>
+                            <span><strong>Uds/caja</strong> – Unidades por caja.</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-pallet text-orange-500"></i>
+                            <span><strong>Palets</strong> – Número de palets.</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-truck-loading text-green-600"></i>
+                            <span><strong>Entrega</strong> – Fecha de entrega prevista.</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-tools text-red-600"></i>
+                            <span><strong>Solicitar mantenimiento</strong> – Botón flotante rojo.</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-bell text-green-500"></i>
+                            <span><strong>Notificaciones</strong> – Suscripción WhatsApp.</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-sync-alt text-gray-700"></i>
+                            <span><strong>Refrescar datos</strong> – Botón de recarga API.</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-bolt text-red-500"></i>
+                            <span><strong>Forzar recarga</strong> – Reload completo de la página.</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-expand text-gray-700"></i>
+                            <span><strong>Pantalla completa</strong> – Alternar modo fullscreen.</span>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
     <!-- La funcionalidad del modal de detalles de orden está integrada en este archivo -->
 </body>
 </html>

@@ -162,6 +162,10 @@ Route::prefix('customers')->name('customers.')->group(function () {
         Route::get('order-kanban/{process}', [CustomerController::class, 'showOrderKanban'])
             ->name('order-kanban')
             ->where('process', '[0-9]+');
+
+        Route::get('hourly-totals', [CustomerController::class, 'hourlyTotals'])
+            ->name('hourly-totals')
+            ->middleware('permission:hourly-totals-view');
             
         // Rutas para mantenimientos
         Route::resource('maintenances', MaintenanceController::class)
