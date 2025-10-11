@@ -71,6 +71,27 @@
     <div class="kanban-board" role="list" aria-label="{{ __('Kanban Board') }}"></div>
 </div>
 
+@can('hourly-totals-view')
+<div class="mt-4">
+    <div class="card">
+        <div class="card-header d-flex flex-wrap justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-chart-line me-2 text-primary"></i>{{ __('Carga horaria de líneas activas') }}</h5>
+            <div class="btn-group btn-group-sm" id="kanbanHourlyRange">
+                <button class="btn btn-outline-primary active" data-range="1d">{{ __('1 día') }}</button>
+                <button class="btn btn-outline-primary" data-range="1w">{{ __('1 semana') }}</button>
+                <button class="btn btn-outline-primary" data-range="1m">{{ __('1 mes') }}</button>
+                <button class="btn btn-outline-primary" data-range="6m">{{ __('6 meses') }}</button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="small text-muted mb-2" id="kanbanHourlySubtitle"></div>
+            <div id="kanbanHourlyChart" style="min-height: 360px;"></div>
+            <div class="text-end mt-2 text-muted small" id="kanbanHourlyUpdated"></div>
+        </div>
+    </div>
+</div>
+@endcan
+
 <!-- Leyenda visual para los iconos utilizados en las tarjetas -->
 <div class="container-fluid mt-4 mb-4">
     <div class="card">
@@ -503,9 +524,136 @@
 @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    @can('hourly-totals-view')
+    <script src="https://cdn.jsdelivr.net/npm/svg.js@2.6.6/dist/svg.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.45.2/dist/apexcharts.min.js"></script>
+    @endcan
 
     <script>
     document.addEventListener('DOMContentLoaded', function() {
+        @can('hourly-totals-view')
+        const kanbanHourlyChartEl = document.querySelector('#kanbanHourlyChart');
+        const kanbanHourlyRange = document.querySelector('#kanbanHourlyRange');
+        const kanbanHourlySubtitle = document.querySelector('#kanbanHourlySubtitle');
+        const kanbanHourlyUpdated = document.querySelector('#kanbanHourlyUpdated');
+        const activeLineIds = new Set();
+        let hourlyChart = null;
+        let hourlyRefreshTimer = null;
+        const hourlyRanges = {
+            '1d': { label: '{{ __('Últimas 24 horas') }}', durationMs: 24 * 60 * 60 * 1000 },
+            '1w': { label: '{{ __('Últimos 7 días') }}', durationMs: 7 * 24 * 60 * 60 * 1000 },
+            '1m': { label: '{{ __('Últimos 30 días') }}', durationMs: 30 * 24 * 60 * 60 * 1000 },
+            '6m': { label: '{{ __('Últimos 6 meses') }}', durationMs: 182 * 24 * 60 * 60 * 1000 },
+        };
+
+        function computeLineIdsFromColumns() {
+            activeLineIds.clear();
+            document.querySelectorAll('.kanban-column[data-production-line-id]').forEach(column => {
+                const id = column.getAttribute('data-production-line-id');
+                if (id) {
+                    activeLineIds.add(parseInt(id, 10));
+                }
+            });
+        }
+
+        function fetchHourlyData(rangeKey = '1d') {
+            if (!kanbanHourlyChartEl) {
+                return;
+            }
+
+            computeLineIdsFromColumns();
+
+            const range = hourlyRanges[rangeKey] || hourlyRanges['1d'];
+            const now = new Date();
+            const rangeStart = new Date(now.getTime() - range.durationMs);
+            kanbanHourlySubtitle.textContent = range.label;
+
+            const params = new URLSearchParams();
+            params.append('range_start', rangeStart.toISOString());
+            Array.from(activeLineIds).forEach(id => params.append('line_ids[]', id));
+
+            fetch(`{{ route('customers.hourly-totals.data', [$customer->id]) }}?${params.toString()}`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+                .then(response => response.json())
+                .then(payload => {
+                    const { series = [], lastCapture } = payload;
+
+                    if (!hourlyChart) {
+                        hourlyChart = new ApexCharts(kanbanHourlyChartEl, {
+                            chart: {
+                                type: 'area',
+                                height: 360,
+                                animations: { enabled: true, easing: 'easeinout', speed: 600 },
+                                toolbar: { show: true },
+                                zoom: { enabled: true },
+                            },
+                            stroke: { curve: 'smooth', width: 2 },
+                            dataLabels: { enabled: false },
+                            markers: { size: 0, hover: { size: 6 } },
+                            xaxis: { type: 'datetime', labels: { datetimeUTC: false } },
+                            yaxis: { labels: { formatter: (val) => val.toFixed(0) }, title: { text: '{{ __('Minutos acumulados') }}' } },
+                            tooltip: {
+                                shared: true,
+                                x: { format: 'dd MMM yyyy HH:mm' },
+                                y: { formatter: (val) => `${val.toLocaleString(undefined, { maximumFractionDigits: 2 })} {{ __('min') }}` }
+                            },
+                            legend: { position: 'top', horizontalAlign: 'left' },
+                            series: series,
+                            noData: { text: '{{ __('Sin datos para mostrar') }}' }
+                        });
+                        hourlyChart.render();
+                    } else {
+                        hourlyChart.updateSeries(series);
+                    }
+
+                    const totalLines = series.length;
+                    kanbanHourlyUpdated.textContent = lastCapture
+                        ? `{{ __('Última captura') }}: ${lastCapture} · {{ __('Líneas activas') }}: ${totalLines}`
+                        : `{{ __('Sin capturas disponibles') }} · {{ __('Líneas activas') }}: ${totalLines}`;
+                })
+                .catch(() => {
+                    kanbanHourlyUpdated.textContent = '{{ __('Error al actualizar la gráfica') }}';
+                });
+        }
+
+        function scheduleHourlyRefresh(rangeKey) {
+            if (hourlyRefreshTimer) {
+                clearInterval(hourlyRefreshTimer);
+            }
+            fetchHourlyData(rangeKey);
+            hourlyRefreshTimer = setInterval(() => fetchHourlyData(rangeKey), 60 * 60 * 1000); // cada hora
+        }
+
+        if (kanbanHourlyRange) {
+            kanbanHourlyRange.addEventListener('click', (event) => {
+                const button = event.target.closest('button[data-range]');
+                if (!button) return;
+
+                kanbanHourlyRange.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                scheduleHourlyRefresh(button.dataset.range);
+            });
+
+            const defaultButton = kanbanHourlyRange.querySelector('button.active');
+            const defaultRange = defaultButton ? defaultButton.dataset.range : '1d';
+            scheduleHourlyRefresh(defaultRange);
+        }
+
+        document.addEventListener('kanban:refresh-lines', () => {
+            const currentButton = kanbanHourlyRange.querySelector('button.active');
+            const rangeKey = currentButton ? currentButton.dataset.range : '1d';
+            fetchHourlyData(rangeKey);
+        });
+
+        window.addEventListener('beforeunload', () => {
+            if (hourlyRefreshTimer) {
+                clearInterval(hourlyRefreshTimer);
+            }
+        });
+        @endcan
         // --- 1. CONFIGURACIÓN INICIAL Y VARIABLES GLOBALES ---
         
         // Estado de las líneas de producción
@@ -1382,7 +1530,11 @@
                 updateColumnStats(pendingColumn);
             }
             
-            if (callback) callback();
+            if (typeof callback === 'function') {
+                callback();
+            }
+
+            document.dispatchEvent(new CustomEvent('kanban:refresh-lines'));
         }
 
         function renderBoard() {
@@ -1416,6 +1568,7 @@
                     if (isAutoSortEnabled()) {
                         try {
                             list.sort(compareOrders);
+
                             if (col.type === 'production') {
                                 const idx = list.findIndex(o => o.status === 'in_progress');
                                 if (idx > 0) {
@@ -1423,11 +1576,19 @@
                                     list.unshift(inProg);
                                 }
                             }
-                        } catch(e) { console.debug('Autosort falló, usando orden original', e); }
+                        } catch (e) {
+                            console.debug('Autosort falló, usando orden original', e);
+                        }
                     }
+
                     if (isGroupByCarEnabled()) {
-                        try { list = compactByCar(list, col.type); } catch(e) { console.debug('Agrupación por carro falló', e); }
+                        try {
+                            list = compactByCar(list, col.type);
+                        } catch (e) {
+                            console.debug('Agrupación por carro falló', e);
+                        }
                     }
+
                     return list;
                 };
 
@@ -1952,6 +2113,9 @@
             const columnElement = document.createElement('div');
             columnElement.className = 'kanban-column';
             columnElement.id = column.id;
+            if (column.productionLineId) {
+                columnElement.dataset.productionLineId = column.productionLineId;
+            }
             
             // Obtener el estado de la línea si existe
             let lineStatusHtml = '';

@@ -343,6 +343,73 @@ return "<div class='action-buttons-row d-flex flex-wrap' style='display: none; g
             'lastCapture' => $lastCapture?->format('Y-m-d H:i:s'),
         ]);
     }
+
+    public function hourlyTotalsData(Request $request, Customer $customer)
+    {
+        $lineIds = collect($request->input('line_ids', []))
+            ->map(fn ($id) => (int) $id)
+            ->filter()
+            ->values();
+
+        $query = ProductionLine::query()
+            ->where('customer_id', $customer->id)
+            ->with(['processes' => function ($query) {
+                $query->orderBy('production_line_process.order');
+            }]);
+
+        if ($lineIds->isNotEmpty()) {
+            $query->whereIn('id', $lineIds);
+        }
+
+        $productionLines = $query->get()->filter(function ($line) {
+            return $line->processes->isNotEmpty();
+        });
+
+        if ($productionLines->isEmpty()) {
+            return response()->json([
+                'series' => [],
+                'lastCapture' => null,
+            ]);
+        }
+
+        $totalsQuery = ProductionLineHourlyTotal::query()
+            ->whereIn('production_line_id', $productionLines->pluck('id'))
+            ->orderBy('captured_at');
+
+        if ($request->filled('range_start')) {
+            $rangeStart = Carbon::parse($request->input('range_start')); // from string
+            $totalsQuery->where('captured_at', ">=", $rangeStart);
+        }
+
+        $totals = $totalsQuery->get()->groupBy('production_line_id');
+
+        $series = [];
+        $lastCapture = null;
+
+        foreach ($productionLines as $line) {
+            $lineTotals = $totals->get($line->id, collect());
+            if ($lineTotals->isEmpty()) {
+                continue;
+            }
+
+            $process = $line->processes->first();
+            $series[] = [
+                'name' => sprintf('%s - %s', $line->name, $process?->description ?? __('Sin proceso')),
+                'data' => $lineTotals->map(function (ProductionLineHourlyTotal $total) use (&$lastCapture) {
+                    $lastCapture = $total->captured_at;
+                    return [
+                        'x' => $total->captured_at->format('Y-m-d H:i:s'),
+                        'y' => round($total->total_time / 60, 2),
+                    ];
+                })->values(),
+            ];
+        }
+
+        return response()->json([
+            'series' => $series,
+            'lastCapture' => $lastCapture?->format('Y-m-d H:i:s'),
+        ]);
+    }
     
     /**
      * Muestra el tablero Kanban para un proceso específico

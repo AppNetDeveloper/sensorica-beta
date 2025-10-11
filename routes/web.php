@@ -166,6 +166,10 @@ Route::prefix('customers')->name('customers.')->group(function () {
         Route::get('hourly-totals', [CustomerController::class, 'hourlyTotals'])
             ->name('hourly-totals')
             ->middleware('permission:hourly-totals-view');
+
+        Route::get('hourly-totals/data', [CustomerController::class, 'hourlyTotalsData'])
+            ->name('hourly-totals.data')
+            ->middleware('permission:hourly-totals-view');
             
         // Rutas para mantenimientos
         Route::resource('maintenances', MaintenanceController::class)
