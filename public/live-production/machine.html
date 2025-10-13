@@ -1302,6 +1302,133 @@
 
             // Botón de refresco
             const refreshButton = document.getElementById('refresh-button');
+
+            // Inicialización temprana de Pantalla Completa (evita depender de bloques posteriores)
+            (function() {
+                const fsBtn = document.getElementById('fullscreen-button');
+                const board = document.getElementById('kanban-board');
+                if (fsBtn && board) {
+                    fsBtn.addEventListener('click', function(e) {
+                        // Evitar que otros listeners (registrados más abajo) dupliquen el manejo
+                        if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+                        if (typeof e.stopPropagation === 'function') e.stopPropagation();
+                        console.log('[fullscreen] click');
+
+                        const isFs = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement;
+                        if (!isFs) {
+                            if (board.requestFullscreen) board.requestFullscreen();
+                            else if (board.webkitRequestFullscreen) board.webkitRequestFullscreen();
+                            else if (board.mozRequestFullScreen) board.mozRequestFullScreen();
+                            else if (board.msRequestFullscreen) board.msRequestFullscreen();
+                            fsBtn.innerHTML = '<i class="fas fa-compress"></i>';
+                        } else {
+                            if (document.exitFullscreen) document.exitFullscreen();
+                            else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+                            else if (document.mozCancelFullScreen) document.mozCancelFullScreen();
+                            else if (document.msExitFullscreen) document.msExitFullscreen();
+                            fsBtn.innerHTML = '<i class="fas fa-expand"></i>';
+                        }
+                    }, { capture: true });
+                }
+            })();
+            // Botones críticos reubicados para garantizar su disponibilidad
+            const forceRefreshButton = document.getElementById('force-refresh-button');
+            if (forceRefreshButton) {
+                forceRefreshButton.addEventListener('click', function() {
+                    if (typeof Swal === 'function' && Swal.fire) {
+                        Swal.fire({ title: '¿Forzar recarga completa?', text: "Esto recargará la página. Se perderá cualquier cambio no guardado.", icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', cancelButtonColor: '#3085d6', confirmButtonText: 'Sí, recargar', cancelButtonText: 'Cancelar' }).then((result) => { if (result.isConfirmed) { location.reload(); } });
+                    } else {
+                        if (confirm('¿Forzar recarga completa? Esto recargará la página. Se perderá cualquier cambio no guardado.')) { location.reload(); }
+                    }
+                });
+            }
+
+            // Botón de notificaciones (WhatsApp / info)
+            const whatsappButton = document.getElementById('whatsapp-button');
+            if (whatsappButton) {
+                whatsappButton.addEventListener('click', function() {
+                    if (typeof Swal === 'function' && Swal.fire) {
+                        Swal.fire({ title: 'Notificaciones WhatsApp', text: 'Notificaciones en tiempo real de la máquina', icon: 'info', confirmButtonText: 'Entendido' });
+                    } else {
+                        alert('Notificaciones en tiempo real de la máquina');
+                    }
+                });
+            }
+
+            const maintenanceButton = document.getElementById('maintenance-button');
+            if (maintenanceButton) {
+                maintenanceButton.addEventListener('click', async function() {
+                    try {
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const token = (typeof productionLineToken !== 'undefined' && productionLineToken) ? productionLineToken : urlParams.get('token');
+                        if (!token) { if (typeof Swal === 'function' && Swal.fire) { Swal.fire('Error', 'No se encontró el token de la línea.', 'error'); } else { alert('No se encontró el token de la línea.'); } return; }
+                        if (!currentWorker || !currentWorker.id) { if (typeof Swal === 'function' && Swal.fire) { Swal.fire('Operario requerido', 'Debes seleccionar/iniciar sesión un operario antes de solicitar mantenimiento.', 'warning'); } else { alert('Debes seleccionar/iniciar sesión un operario antes de solicitar mantenimiento.'); } return; }
+
+                        let reason = null;
+                        let production_line_stop = 1;
+                        if (typeof Swal === 'function' && Swal.fire) {
+                            const result = await Swal.fire({
+                                width: '70%',
+                                title: 'Solicitud de mantenimiento',
+                                html: `
+                                    <div class="text-left">
+                                        <label for="maintReason" class="block font-bold text-gray-800 text-center mb-3" style="font-size: 1.15rem;">Motivo</label>
+                                        <textarea id="maintReason" class="swal2-textarea" placeholder="Describe el motivo..." rows="5" style="width:93%;resize:vertical;max-height:180px;min-height:100px;box-sizing:border-box;font-size:1rem;"></textarea>
+                                        <label class="flex items-center justify-center space-x-2 mt-3 p-2 rounded" style="background:#f3f4f6;">
+                                            <input id="maintCanWork" type="checkbox" class="swal2-checkbox" />
+                                            <span class="text-gray-800">La máquina puede seguir trabajando (no parar línea)</span>
+                                        </label>
+                                    </div>
+                                `,
+                                focusConfirm: false,
+                                showCancelButton: true,
+                                confirmButtonText: 'Enviar',
+                                cancelButtonText: 'Cancelar',
+                                didOpen: () => { const ta = Swal.getPopup().querySelector('#maintReason'); if (ta) setTimeout(() => ta.focus(), 50); },
+                                preConfirm: () => {
+                                    const ta = document.getElementById('maintReason');
+                                    const cb = document.getElementById('maintCanWork');
+                                    if (!ta || !ta.value || ta.value.trim().length === 0) { Swal.showValidationMessage('El motivo es obligatorio'); return false; }
+                                    return { reason: ta.value.trim(), canWork: !!cb?.checked };
+                                }
+                            });
+                            if (!result || !result.value) return;
+                            reason = result.value.reason;
+                            production_line_stop = result.value.canWork ? 0 : 1;
+                        } else {
+                            const input = prompt('Motivo de la solicitud de mantenimiento:');
+                            if (!input || !input.trim()) { alert('El motivo es obligatorio'); return; }
+                            reason = input.trim();
+                            const canWork = confirm('¿La máquina puede seguir trabajando (no parar línea)?');
+                            production_line_stop = canWork ? 0 : 1;
+                        }
+
+                        maintenanceButton.disabled = true;
+                        maintenanceButton.classList.add('opacity-70', 'cursor-not-allowed');
+                        const url = `${API_BASE_URL}/api/maintenances/${encodeURIComponent(token)}`;
+                        const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify({ operator_id: currentWorker.id, annotation: reason, production_line_stop }) });
+                        if (res.status === 201 || res.status === 409) {
+                            try { await res.json(); } catch (e) {}
+                            checkMaintenanceAndBlock(token);
+                            if (typeof Swal === 'function' && Swal.fire) { Swal.fire('Enviado', 'La solicitud de mantenimiento ha sido registrada.', 'success'); } else { alert('La solicitud de mantenimiento ha sido registrada.'); }
+                        } else if (res.status === 404) {
+                            if (typeof Swal === 'function' && Swal.fire) { Swal.fire('Error', 'Token de línea inválido.', 'error'); } else { alert('Token de línea inválido.'); }
+                        } else if (res.status === 422) {
+                            if (typeof Swal === 'function' && Swal.fire) { Swal.fire('Error de validación', 'Revisa los datos enviados.', 'error'); } else { alert('Error de validación.'); }
+                        } else {
+                            const text = await res.text();
+                            console.error('Maintenance create error:', res.status, text);
+                            if (typeof Swal === 'function' && Swal.fire) { Swal.fire('Error', 'No se pudo registrar la solicitud de mantenimiento.', 'error'); } else { alert('No se pudo registrar la solicitud de mantenimiento.'); }
+                        }
+                    } catch (e) {
+                        console.error('Maintenance request error:', e);
+                        if (typeof Swal === 'function' && Swal.fire) { Swal.fire('Error', 'Ha ocurrido un error al enviar la solicitud.', 'error'); } else { alert('Ha ocurrido un error al enviar la solicitud.'); }
+                    } finally {
+                        maintenanceButton.disabled = false;
+                        maintenanceButton.classList.remove('opacity-70', 'cursor-not-allowed');
+                    }
+                });
+            }
             // Paneles Flotantes
             const floatingOperatorPanel = document.getElementById('floating-operator-panel');
             const operatorPanelHeader = document.getElementById('floating-panel-header');
@@ -3026,7 +3153,6 @@
                             Swal.fire({
                                 title: 'Control de calidad',
                                 width: '70%',
-                                height: 'auto',
                                 html: `
                                     <div class="text-left">
                                         <label for="qualityInput" class="block font-bold text-red-600 text-center mb-3" style="font-size: 1.25rem;">
@@ -6115,37 +6241,35 @@ async function updateOrderStatus(orderId, newStatus) {
             
             // ===== Teclado Virtual Flotante Universal =====
             let activeInputElement = null; // Referencia al campo de entrada activo
-            $(document).ready(function() {
-                const legendButton = document.getElementById('legend-button');
-                const legendModal = document.getElementById('legend-modal');
-                const legendModalClose = document.getElementById('legend-modal-close');
+            const legendButton = document.getElementById('legend-button');
+            const legendModal = document.getElementById('legend-modal');
+            const legendModalClose = document.getElementById('legend-modal-close');
 
-                if (legendButton && legendModal && legendModalClose) {
-                    legendButton.addEventListener('click', () => {
-                        legendModal.classList.remove('hidden');
-                        legendModal.classList.add('flex');
-                    });
+            if (legendButton && legendModal && legendModalClose) {
+                legendButton.addEventListener('click', () => {
+                    legendModal.classList.remove('hidden');
+                    legendModal.classList.add('flex');
+                });
 
-                    const closeLegend = () => {
-                        legendModal.classList.add('hidden');
-                        legendModal.classList.remove('flex');
-                    };
+                const closeLegend = () => {
+                    legendModal.classList.add('hidden');
+                    legendModal.classList.remove('flex');
+                };
 
-                    legendModalClose.addEventListener('click', closeLegend);
+                legendModalClose.addEventListener('click', closeLegend);
 
-                    legendModal.addEventListener('click', (event) => {
-                        if (event.target === legendModal) {
-                            closeLegend();
-                        }
-                    });
+                legendModal.addEventListener('click', (event) => {
+                    if (event.target === legendModal) {
+                        closeLegend();
+                    }
+                });
 
-                    document.addEventListener('keydown', (event) => {
-                        if (event.key === 'Escape' && legendModal.classList.contains('flex')) {
-                            closeLegend();
-                        }
-                    });
-                }
-            });
+                document.addEventListener('keydown', (event) => {
+                    if (event.key === 'Escape' && legendModal.classList.contains('flex')) {
+                        closeLegend();
+                    }
+                });
+            }
             function initializeMaintenanceButton() {
                 const virtualKeyboard = document.getElementById('virtual-keyboard');
                 const keyboardLayout = document.getElementById('keyboard-layout');
@@ -6673,107 +6797,7 @@ async function updateOrderStatus(orderId, newStatus) {
                 }
             });
 
-            // Evento para el botón de Mantenimiento
-            const maintenanceButton = document.getElementById('maintenance-button');
-            if (maintenanceButton) {
-                maintenanceButton.addEventListener('click', async function() {
-                    try {
-                        if (!productionLineToken) {
-                            Swal.fire('Error', 'No se encontró el token de la línea.', 'error');
-                            return;
-                        }
-                        if (!currentWorker || !currentWorker.id) {
-                            Swal.fire('Operario requerido', 'Debes seleccionar/iniciar sesión un operario antes de solicitar mantenimiento.', 'warning');
-                            return;
-                        }
 
-                                const result = await Swal.fire({
-                                    width: '70%',
-                                    height: 'auto',
-                            title: 'Solicitud de mantenimiento',
-                            html: `
-                                <div class="text-left">
-                                    <label for="maintReason" class="block font-bold text-gray-800 text-center mb-3" style="font-size: 1.15rem;">Motivo</label>
-                                    <textarea id="maintReason" class="swal2-textarea" placeholder="Describe el motivo..." rows="5" style="width:93%;resize:vertical;max-height:180px;min-height:100px;box-sizing:border-box;font-size:1rem;"></textarea>
-                                    <label class="flex items-center justify-center space-x-2 mt-3 p-2 rounded" style="background:#f3f4f6;">
-                                        <input id="maintCanWork" type="checkbox" class="swal2-checkbox" />
-                                        <span class="text-gray-800">La máquina puede seguir trabajando (no parar línea)</span>
-                                    </label>
-                                </div>
-                            `,
-                            focusConfirm: false,
-                            showCancelButton: true,
-                            confirmButtonText: 'Enviar',
-                            cancelButtonText: 'Cancelar',
-                            didOpen: () => {
-                                const ta = Swal.getPopup().querySelector('#maintReason');
-                                if (ta) setTimeout(() => ta.focus(), 50);
-                            },
-                            preConfirm: () => {
-                                const ta = document.getElementById('maintReason');
-                                const cb = document.getElementById('maintCanWork');
-                                if (!ta || !ta.value || ta.value.trim().length === 0) {
-                                    Swal.showValidationMessage('El motivo es obligatorio');
-                                    return false;
-                                }
-                                return { reason: ta.value.trim(), canWork: !!cb?.checked };
-                            }
-                        });
-
-                        if (!result || !result.value) return;
-                        const reason = result.value.reason;
-                        const canWork = !!result.value.canWork;
-                        const production_line_stop = canWork ? 0 : 1;
-
-                        maintenanceButton.disabled = true;
-                        maintenanceButton.classList.add('opacity-70', 'cursor-not-allowed');
-
-                        const url = `${API_BASE_URL}/api/maintenances/${encodeURIComponent(productionLineToken)}`;
-                        const res = await fetch(url, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                            body: JSON.stringify({ operator_id: currentWorker.id, annotation: reason, production_line_stop })
-                        });
-
-                        if (res.status === 201 || res.status === 409) {
-                            const data = await res.json();
-                            // Forzar actualización inmediata
-                            checkMaintenanceAndBlock(productionLineToken);
-                            Swal.fire('Enviado', 'La solicitud de mantenimiento ha sido registrada.', 'success');
-                        } else if (res.status === 404) {
-                            Swal.fire('Error', 'Token de línea inválido.', 'error');
-                        } else if (res.status === 422) {
-                            Swal.fire('Error de validación', 'Revisa los datos enviados.', 'error');
-                        } else {
-                            const text = await res.text();
-                            console.error('Maintenance create error:', res.status, text);
-                            Swal.fire('Error', 'No se pudo registrar la solicitud de mantenimiento.', 'error');
-                        }
-                    } catch (e) {
-                        console.error('Maintenance request error:', e);
-                        Swal.fire('Error', 'Ha ocurrido un error al enviar la solicitud.', 'error');
-                    } finally {
-                        maintenanceButton.disabled = false;
-                        maintenanceButton.classList.remove('opacity-70', 'cursor-not-allowed');
-                    }
-                });
-            }
-
-            // Evento para el botón de WhatsApp
-            const whatsappButton = document.getElementById('whatsapp-button');
-            if (whatsappButton) {
-                whatsappButton.addEventListener('click', function() {
-                    Swal.fire({
-                        title: 'Notificaciones WhatsApp',
-                        text: 'Notificaciones en tiempo real de la máquina',
-                        icon: 'info',
-                        confirmButtonText: 'Entendido'
-                    });
-                });
-            }
-
-            // Evento para el botón de forzar recarga
-            const forceRefreshButton = document.getElementById('force-refresh-button');
             // Evento para mostrar el teclado virtual en el campo de búsqueda de Select2 (Operarios)
             $('#worker-select').on('select2:open', () => {
                 // Usamos un pequeño timeout para asegurar que el campo de búsqueda se haya renderizado
@@ -6787,25 +6811,6 @@ async function updateOrderStatus(orderId, newStatus) {
                     }
                 }, 50); // 50ms es usualmente suficiente
             });
-
-            if (forceRefreshButton) {
-                forceRefreshButton.addEventListener('click', function() {
-                    Swal.fire({
-                        title: '¿Forzar recarga completa?',
-                        text: "Esto recargará la página. Se perderá cualquier cambio no guardado.",
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonColor: '#d33',
-                        cancelButtonColor: '#3085d6',
-                        confirmButtonText: 'Sí, recargar',
-                        cancelButtonText: 'Cancelar'
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            location.reload();
-                        }
-                    });
-                });
-            }
 
         // *** Fin de DOMContentLoaded ***
         });

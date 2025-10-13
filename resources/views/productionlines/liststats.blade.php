@@ -723,19 +723,19 @@
             btn.innerText = show ? '{{ __('Enviando...') }}' : '{{ __('Enviar a IA') }}';
         }
 
-        async function startAiTask(prompt) {
+        async function startAiTask(fullPrompt, userPromptForDisplay) {
             try {
                 showAiLoading(true);
                 const payload = collectAiContext();
                 console.log('[AI][Prod Lines] Context:', payload.tableInfo, 'Filters:', payload.filters);
                 let combinedPrompt;
                 try {
-                    combinedPrompt = `${prompt}\n\n=== Datos para analizar (JSON) ===\n${JSON.stringify(payload, null, 2)}`;
+                    combinedPrompt = `${fullPrompt}\n\n=== Datos para analizar (JSON) ===\n${JSON.stringify(payload, null, 2)}`;
                 } catch (e) {
-                    combinedPrompt = `${prompt}\n\n=== Datos para analizar (JSON) ===\n[Error serializando datos]`;
+                    combinedPrompt = `${fullPrompt}\n\n=== Datos para analizar (JSON) ===\n[Error serializando datos]`;
                 }
                 console.log('[AI] Combined prompt length:', combinedPrompt.length);
-                console.log('[AI] Combined prompt preview:', combinedPrompt.substring(0, 500));
+                console.log('[AI] Combined prompt preview:', combinedPrompt.substring(0, 800));
                 const fd = new FormData();
                 fd.append('prompt', combinedPrompt);
 
@@ -812,7 +812,7 @@
                     }
                 }
 
-                $('#aiResultPrompt').text(prompt);
+                $('#aiResultPrompt').text(userPromptForDisplay);
                 const content = (last && last.task && last.task.response != null) ? last.task.response : last;
                 try { $('#aiResultData').text(typeof content === 'string' ? content : JSON.stringify(content, null, 2)); } catch { $('#aiResultData').text(String(content)); }
                 const resultModal = new bootstrap.Modal(document.getElementById('aiResultModal'));
@@ -826,16 +826,51 @@
         }
 
         $(function(){
-            const defaultPromptPL = {!! json_encode(__('Analiza las líneas de producción mostradas (OEE, tiempos, paradas y operadores) para detectar patrones en los últimos días.')) !!};
+            // Prompt del sistema (oculto para el usuario) que define el rol y la estructura de la respuesta de la IA.
+            const systemPrompt = `Actúa como un analista de datos y eficiencia operativa experto.
+
+**Tarea:** Realiza un **análisis exhaustivo y estructurado** de los datos de rendimiento de las líneas de producción proporcionados. La información incluye, como mínimo: **OEE (Overall Equipment Effectiveness)**, **Tiempos de Ciclo**, **Tiempos de Parada (desglosados por causa si es posible)**, y **Asignación/Actividad de Operadores**.
+
+**Estructura del Informe de Análisis:**
+
+1.  **Resumen Ejecutivo:**
+    *   Indica la **tendencia general** del OEE y los **factores más influyentes** (disponibilidad, rendimiento, calidad) en el periodo analizado.
+    *   Menciona los **principales hallazgos** (ej. "La disponibilidad es el factor limitante principal").
+
+2.  **Análisis Detallado de Patrones:**
+    *   **Patrones de OEE y Rendimiento:** Identifica la **variabilidad diaria/por turno**. ¿Hay picos o caídas recurrentes? ¿Coinciden con alguna línea o producto específico?
+    *   **Análisis de Paradas (Disponibilidad):**
+        *   Determina las **tres causas principales** de parada (Ej. averías, micro-paradas, cambios de utillaje, falta de material).
+        *   Analiza si las paradas están **concentradas** en horas, días, o turnos específicos.
+        *   Evalúa la **duración promedio** de las paradas por causa.
+    *   **Análisis de Tiempos de Ciclo y Operadores (Rendimiento/Productividad):**
+        *   Compara los **tiempos de ciclo reales** con los **tiempos estándar**. Identifica las líneas con mayor desviación.
+        *   Analiza la **correlación** entre la asignación o la actividad de los operadores y las variaciones de rendimiento o paradas. ¿Las líneas con menos operadores o con operadores nuevos/diferentes tienen peor OEE?
+
+3.  **Propuestas de Soluciones Estratégicas y Tácticas:**
+    *   **Enfoque en Disponibilidad (Paradas):** Propón 2-3 acciones para reducir las causas de parada identificadas (Ej. Mantenimiento Preventivo, 5S, formación).
+    *   **Enfoque en Rendimiento (Tiempos/Operadores):** Propón 2-3 acciones para cerrar la brecha entre el tiempo de ciclo real y el estándar (Ej. balanceo de línea, estandarización de procedimientos, entrenamiento específico).
+    *   **Enfoque en Calidad (si hay datos):** Propón acciones para reducir defectos/reprocesos.
+
+4.  **Sugerencias de Próximas Preguntas para el Usuario:**
+    *   Formula **tres preguntas clave** de seguimiento basadas en los hallazgos para profundizar el análisis. Estas preguntas deben guiar al usuario a obtener más datos o a tomar una decisión.`;
+
+            // Prompt por defecto que ve el usuario en el textarea.
+            const defaultUserPrompt = 'Analiza el rendimiento de los últimos 7 días y dame un informe con propuestas de mejora.';
+
             $('#aiPromptModal').on('shown.bs.modal', function(){
                 const $ta = $('#aiPrompt');
-                if (!$ta.val()) $ta.val(defaultPromptPL);
+                if (!$ta.val()) $ta.val(defaultUserPrompt);
                 $ta.trigger('focus');
             });
-            $('#btn-ai-reset').on('click', function(){ $('#aiPrompt').val(defaultPromptPL); });
+
+            $('#btn-ai-reset').on('click', function(){ $('#aiPrompt').val(defaultUserPrompt); });
+
             $('#btn-ai-send').on('click', function(){
-                const prompt = ($('#aiPrompt').val() || '').trim() || defaultPromptPL;
-                startAiTask(prompt);
+                const userPrompt = ($('#aiPrompt').val() || '').trim() || defaultUserPrompt;
+                // Se combina el prompt del sistema (oculto) con el prompt del usuario.
+                const finalPrompt = `${systemPrompt}\n\n**Consulta del Usuario:** ${userPrompt}`;
+                startAiTask(finalPrompt, userPrompt); // Pasamos ambos para mostrarlos correctamente
             });
         });
     </script>
