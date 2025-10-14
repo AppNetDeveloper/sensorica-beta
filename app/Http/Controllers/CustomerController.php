@@ -145,6 +145,10 @@ if (!empty($logisticsActions)) {
 
 // 📊 ESTADÍSTICAS: Monitorización
 $statsActions = [];
+if (auth()->user()->can('original-order-list')) {
+    $productionTimesUrl = route('customers.production-times.view', $customer->id);
+    $statsActions[] = "<a href='{$productionTimesUrl}' class='btn btn-sm btn-outline-dark me-1 mb-1'><i class='fas fa-stopwatch'></i> " . __('Tiempos fabricación') . "</a>";
+}
 if (auth()->user()->can('hourly-totals-view')) {
     $hourlyTotalsUrl = route('customers.hourly-totals', $customer->id);
     $statsActions[] = "<a href='{$hourlyTotalsUrl}' class='btn btn-sm btn-outline-primary me-1 mb-1'><i class='fas fa-chart-area'></i> " . __('Carga por hora') . "</a>";

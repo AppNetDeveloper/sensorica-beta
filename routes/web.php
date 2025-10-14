@@ -139,6 +139,14 @@ Route::get('customers/{customer}/original-orders/finished-processes', [CustomerO
     ->name('customers.original-orders.finished-processes.view');
 Route::get('customers/{customer}/original-orders/finished-processes/data', [CustomerOriginalOrderController::class, 'finishedProcessesData'])
     ->name('customers.original-orders.finished-processes.data');
+Route::get('customers/{customer}/production-times', [CustomerOriginalOrderController::class, 'productionTimesView'])
+    ->name('customers.production-times.view');
+Route::get('customers/{customer}/production-times/data', [CustomerOriginalOrderController::class, 'productionTimesData'])
+    ->name('customers.production-times.data');
+Route::get('customers/{customer}/production-times/summary', [CustomerOriginalOrderController::class, 'productionTimesSummary'])
+    ->name('customers.production-times.summary');
+Route::get('customers/{customer}/production-times/{originalOrder}', [CustomerOriginalOrderController::class, 'productionTimesOrderDetail'])
+    ->name('customers.production-times.order');
 
 Route::post('customers/{customer}/original-orders/import', [CustomerOriginalOrderController::class, 'import'])->name('customers.original-orders.import');
 Route::post('customers/{customer}/original-orders/create-cards', [CustomerOriginalOrderController::class, 'createCards'])->name('customers.original-orders.create-cards');

@@ -53,6 +53,13 @@ class UpdateAccumulatedTimes extends Command
             // Verificar si se especificó una línea de producción específica
             $lineId = $this->argument('line_id');
             
+            // Momento actual y buffer para reusar órdenes finalizadas recientes
+            $now = Carbon::now('Europe/Madrid');
+            $finishedBufferHours = (int) Config::get('production.finished_buffer_hours', 24);
+            $finishedThreshold = $now->copy()->subHours($finishedBufferHours);
+
+            $this->info("Incluyendo órdenes finalizadas de las últimas {$finishedBufferHours} horas para recalcular disponibilidad.");
+
             // Construir la consulta base
             $query = ProductionOrder::where(function($query) {
                 $query->where('status', 1)
@@ -60,6 +67,11 @@ class UpdateAccumulatedTimes extends Command
                           $q->where('status', 0)
                             ->whereNotNull('production_line_id');
                       });
+            })->orWhere(function($query) use ($finishedThreshold) {
+                $query->where('status', 2)
+                      ->whereNotNull('production_line_id')
+                      ->whereNotNull('finished_at')
+                      ->where('finished_at', '>=', $finishedThreshold);
             });
             
             // Si se especificó una línea, filtrar por ella
@@ -134,6 +146,12 @@ class UpdateAccumulatedTimes extends Command
                     }
                 }
                 
+                // Si la orden está finalizada (status=2), la usamos solo para disponibilidad
+                if ($order->status === 2) {
+                    $this->info("  - Orden finalizada ID: {$order->id}, se mantiene para disponibilidad del grupo.");
+                    continue;
+                }
+
                 // Si la orden está en fabricación (status=1), reseteamos su tiempo acumulado
                 if ($order->status === 1) {
                     $this->info("  - Reseteando tiempo acumulado para orden en fabricación ID: {$order->id}");

@@ -13,6 +13,8 @@ use App\Models\ProductionOrder;
 use App\Models\RouteName;
 use Symfony\Component\Process\Process as SymfonyProcess;
 use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
+use Illuminate\Support\Collection;
 
 class CustomerOriginalOrderController extends Controller
 {
@@ -744,6 +746,588 @@ class CustomerOriginalOrderController extends Controller
         ]);
     }
 
+    public function productionTimesView(Customer $customer)
+    {
+        $tz = config('app.timezone');
+        $defaultEnd = Carbon::now($tz);
+        $defaultStart = (clone $defaultEnd)->subDays(30);
+
+        $processOptions = Process::orderBy('sequence')->get(['id', 'code', 'description']);
+        $grupoOptions = OriginalOrderProcess::query()
+            ->whereHas('originalOrder', fn($q) => $q->where('customer_id', $customer->id))
+            ->select('grupo_numero')
+            ->whereNotNull('grupo_numero')
+            ->groupBy('grupo_numero')
+            ->orderBy('grupo_numero')
+            ->pluck('grupo_numero');
+
+        return view('customers.original-orders.production-times', [
+            'customer' => $customer,
+            'processOptions' => $processOptions,
+            'grupoOptions' => $grupoOptions,
+            'defaultStart' => $defaultStart->format('Y-m-d'),
+            'defaultEnd' => $defaultEnd->format('Y-m-d'),
+        ]);
+    }
+
+    public function productionTimesData(Request $request, Customer $customer)
+    {
+        $filters = $this->validateProductionTimeFilters($request);
+
+        $ordersQuery = $this->buildProductionTimesBaseQuery($customer, $filters);
+
+        $recordsTotal = (clone $ordersQuery)->count();
+
+        $orders = $ordersQuery
+            ->with(['customerClient:id,name', 'originalOrderProcesses' => function ($query) use ($filters) {
+                $query->with(['process:id,code,description,sequence', 'productionOrders:id,original_order_process_id,status,finished_at'])
+                    ->orderBy('grupo_numero')
+                    ->orderBy('id');
+
+                if ($filters['only_finished_processes']) {
+                    $query->whereNotNull('finished_at');
+                }
+
+                if (!empty($filters['process_ids'])) {
+                    $query->whereIn('process_id', $filters['process_ids']);
+                }
+
+                if (!empty($filters['grupo_numeros'])) {
+                    $query->whereIn('grupo_numero', $filters['grupo_numeros']);
+                }
+            }])
+            ->orderByDesc('finished_at')
+            ->orderByDesc('created_at')
+            ->get();
+
+        $transformed = $this->transformProductionTimeOrders($orders, $filters);
+
+        return response()->json([
+            'data' => $transformed['rows'],
+            'recordsTotal' => $recordsTotal,
+            'summary' => $transformed['summary'],
+        ]);
+    }
+
+    public function productionTimesSummary(Request $request, Customer $customer)
+    {
+        $filters = $this->validateProductionTimeFilters($request);
+
+        $ordersQuery = $this->buildProductionTimesBaseQuery($customer, $filters);
+
+        $orders = $ordersQuery
+            ->with(['originalOrderProcesses' => function ($query) use ($filters) {
+                $query->select('id', 'original_order_id', 'process_id', 'grupo_numero', 'finished_at', 'created', 'created_at', 'time')
+                    ->orderBy('grupo_numero')
+                    ->orderBy('id');
+
+                if ($filters['only_finished_processes']) {
+                    $query->whereNotNull('finished_at');
+                }
+
+                if (!empty($filters['process_ids'])) {
+                    $query->whereIn('process_id', $filters['process_ids']);
+                }
+
+                if (!empty($filters['grupo_numeros'])) {
+                    $query->whereIn('grupo_numero', $filters['grupo_numeros']);
+                }
+            }, 'originalOrderProcesses.process:id,code,description'])
+            ->orderByDesc('finished_at')
+            ->orderByDesc('created_at')
+            ->get();
+
+        $summary = $this->buildProductionTimesSummary($orders, $filters);
+
+        return response()->json($summary);
+    }
+
+    public function productionTimesOrderDetail(Customer $customer, OriginalOrder $originalOrder, Request $request)
+    {
+        $filters = $this->validateProductionTimeFilters($request, false);
+
+        abort_unless($originalOrder->customer_id === $customer->id, 404);
+
+        $originalOrder->load(['originalOrderProcesses' => function ($query) use ($filters) {
+            $query->with(['process:id,code,description,sequence'])
+                ->with(['productionOrders:id,original_order_process_id,status,finished_at'])
+                ->orderBy('grupo_numero')
+                ->orderBy('id');
+
+            if ($filters['only_finished_processes']) {
+                $query->whereNotNull('finished_at');
+            }
+
+            if (!empty($filters['process_ids'])) {
+                $query->whereIn('process_id', $filters['process_ids']);
+            }
+
+            if (!empty($filters['grupo_numeros'])) {
+                $query->whereIn('grupo_numero', $filters['grupo_numeros']);
+            }
+        }, 'customerClient:id,name']);
+
+        $detail = $this->transformSingleOrderProductionTimes($originalOrder, $filters);
+        $detail['average_timeline'] = $this->computeAverageTimeline($customer, $filters);
+        $detail['use_actual_delivery'] = (bool)($filters['use_actual_delivery'] ?? false);
+
+        \Log::info('PT order_detail payload', [
+            'order_id' => $originalOrder->id,
+            'has_order_timeline' => !empty($detail['order_timeline']),
+            'has_average_timeline' => !empty($detail['average_timeline']),
+            'use_actual_delivery' => $detail['use_actual_delivery'],
+        ]);
+
+        return response()->json($detail);
+    }
+
+    protected function validateProductionTimeFilters(Request $request, bool $requireDates = true): array
+    {
+        $rules = [
+            'date_start' => $requireDates ? ['required', 'date'] : ['nullable', 'date'],
+            'date_end' => $requireDates ? ['required', 'date'] : ['nullable', 'date'],
+            'only_finished_orders' => ['nullable', 'boolean'],
+            'only_finished_processes' => ['nullable', 'boolean'],
+            'process_ids' => ['nullable', 'array'],
+            'process_ids.*' => ['integer', 'exists:processes,id'],
+            'grupo_numeros' => ['nullable', 'array'],
+            'grupo_numeros.*' => ['integer'],
+            'use_actual_delivery' => ['nullable', 'boolean'],
+            'filter_delivery_dates' => ['nullable', 'boolean'],
+        ];
+
+        $validated = $request->validate($rules);
+        $tz = config('app.timezone');
+
+        $dateStart = isset($validated['date_start'])
+            ? Carbon::parse($validated['date_start'], $tz)->startOfDay()
+            : Carbon::now($tz)->subDays(30)->startOfDay();
+        $dateEnd = isset($validated['date_end'])
+            ? Carbon::parse($validated['date_end'], $tz)->endOfDay()
+            : Carbon::now($tz)->endOfDay();
+
+        if ($dateEnd->diffInDays($dateStart) > 30) {
+            $dateStart = (clone $dateEnd)->subDays(30);
+        }
+
+        return [
+            'date_start' => $dateStart,
+            'date_end' => $dateEnd,
+            'only_finished_orders' => (bool)($validated['only_finished_orders'] ?? true),
+            'only_finished_processes' => (bool)($validated['only_finished_processes'] ?? false),
+            'process_ids' => $validated['process_ids'] ?? [],
+            'grupo_numeros' => $validated['grupo_numeros'] ?? [],
+            'use_actual_delivery' => (bool)($validated['use_actual_delivery'] ?? false),
+            'filter_delivery_dates' => (bool)($validated['filter_delivery_dates'] ?? false),
+        ];
+    }
+
+    protected function buildProductionTimesBaseQuery(Customer $customer, array $filters)
+    {
+        $query = OriginalOrder::query()
+            ->where('customer_id', $customer->id)
+            ->where(function ($orderQuery) use ($filters) {
+                $orderQuery->whereBetween(DB::raw('COALESCE(fecha_pedido_erp, created_at)'), [
+                    $filters['date_start'],
+                    $filters['date_end'],
+                ]);
+            });
+
+        if (!empty($filters['filter_delivery_dates'])) {
+            if (!empty($filters['use_actual_delivery'])) {
+                $query->where(function ($q) use ($filters) {
+                    $q->whereNull('actual_delivery_date')
+                      ->orWhereBetween('actual_delivery_date', [$filters['date_start'], $filters['date_end']]);
+                });
+            } else {
+                $query->where(function ($q) use ($filters) {
+                    $q->whereNull('delivery_date')
+                      ->orWhereBetween('delivery_date', [$filters['date_start'], $filters['date_end']]);
+                });
+            }
+        }
+
+        if ($filters['only_finished_orders']) {
+            $query->whereNotNull('finished_at');
+        }
+
+        return $query;
+    }
+
+    protected function transformProductionTimeOrders(Collection $orders, array $filters): array
+    {
+        $rows = [];
+        $orderSummary = new ProductionTimeSummary();
+
+        foreach ($orders as $order) {
+            $row = $this->transformSingleOrderProductionTimes($order, $filters);
+
+            $rows[] = $row;
+
+            $orderSummary->pushOrder($row);
+
+            if (!empty($row['processes'])) {
+                foreach ($row['processes'] as $processRow) {
+                    $orderSummary->pushProcess($processRow);
+                }
+            }
+        }
+
+        return [
+            'rows' => $rows,
+            'summary' => $orderSummary->toArray(),
+        ];
+    }
+
+    protected function transformSingleOrderProductionTimes(OriginalOrder $order, array $filters): array
+    {
+        $tz = config('app.timezone');
+        $erpDate = $order->fecha_pedido_erp ? Carbon::parse($order->fecha_pedido_erp, $tz) : null;
+        $createdAt = $order->created_at ? $order->created_at->copy()->timezone($tz) : null;
+        $finishedAt = $order->finished_at ? $order->finished_at->copy()->timezone($tz) : null;
+        $selectedDelivery = ($filters['use_actual_delivery'] ?? false) ? $order->actual_delivery_date : $order->delivery_date;
+        $deliveryDate = $selectedDelivery ? $selectedDelivery->copy()->timezone($tz)->endOfDay() : null;
+
+        $timeline = new ProductionTimeTimeline($erpDate ?? $createdAt ?? Carbon::now($tz));
+
+        if ($erpDate) {
+            $timeline->addMilestone('ERP', $erpDate);
+        }
+
+        if ($createdAt) {
+            $timeline->addMilestone('CREATED', $createdAt);
+        }
+
+        if ($finishedAt) {
+            $timeline->addMilestone('FINISHED', $finishedAt);
+        }
+
+        $processRows = [];
+        $groupMetrics = [];
+        $processesByGroup = $order->originalOrderProcesses
+            ->filter(function ($process) use ($filters) {
+                if ($filters['only_finished_processes'] && !$process->finished_at) {
+                    return false;
+                }
+                return true;
+            })
+            ->groupBy(fn($process) => $process->grupo_numero ?? 'SIN_GRUPO');
+
+        foreach ($processesByGroup as $grupoNumero => $groupProcesses) {
+            $previousFinished = $createdAt;
+            $groupDurationSum = 0;
+            $groupGapSum = 0;
+            $groupProcCount = 0;
+            $groupFirstFinish = null;
+            $groupLastFinish = null;
+
+            foreach ($groupProcesses->sortBy('process.sequence') as $pivot) {
+                $process = $pivot->process;
+                $pivotFinished = $pivot->finished_at ? Carbon::parse($pivot->finished_at, $tz) : null;
+
+                $durationSeconds = $pivot->time ? (int)$pivot->time : null;
+
+                if (!$durationSeconds && $previousFinished && $pivotFinished) {
+                    $durationSeconds = $previousFinished->diffInSeconds($pivotFinished, false);
+                }
+
+                $gapSeconds = null;
+                if ($previousFinished && $pivotFinished) {
+                    $gapSeconds = $previousFinished->diffInSeconds($pivotFinished, false) - ($durationSeconds ?? 0);
+                    if ($gapSeconds < 0) {
+                        $gapSeconds = 0;
+                    }
+                }
+
+                if ($durationSeconds !== null) { $groupDurationSum += $durationSeconds; }
+                if ($gapSeconds !== null) { $groupGapSum += $gapSeconds; }
+                $groupProcCount++;
+                if ($pivotFinished) {
+                    if (!$groupFirstFinish || $pivotFinished->lt($groupFirstFinish)) { $groupFirstFinish = $pivotFinished; }
+                    if (!$groupLastFinish || $pivotFinished->gt($groupLastFinish)) { $groupLastFinish = $pivotFinished; }
+                }
+
+                $erpToProcess = ($erpDate && $pivotFinished)
+                    ? $erpDate->diffInSeconds($pivotFinished, false)
+                    : null;
+                $createdToProcess = ($createdAt && $pivotFinished)
+                    ? $createdAt->diffInSeconds($pivotFinished, false)
+                    : null;
+
+                $processRows[] = [
+                    'id' => $pivot->id,
+                    'process_code' => $process?->code,
+                    'process_name' => $process?->description,
+                    'grupo_numero' => $pivot->grupo_numero,
+                    'finished_at' => optional($pivotFinished)->format('Y-m-d H:i:s'),
+                    'finished_at_ts' => optional($pivotFinished)?->timestamp,
+                    'duration_seconds' => $durationSeconds,
+                    'gap_seconds' => $gapSeconds,
+                    'duration_formatted' => $this->formatSeconds($durationSeconds),
+                    'gap_formatted' => $this->formatSeconds($gapSeconds),
+                    'erp_to_process_seconds' => $erpToProcess,
+                    'erp_to_process_formatted' => $this->formatSeconds($erpToProcess),
+                    'created_to_process_seconds' => $createdToProcess,
+                    'created_to_process_formatted' => $this->formatSeconds($createdToProcess),
+                ];
+
+                if ($pivotFinished) {
+                    $timeline->addMilestone('PROC_'.$pivot->id, $pivotFinished);
+                }
+
+                if ($pivotFinished) {
+                    $previousFinished = $pivotFinished;
+                }
+            }
+
+            $groupSpanSeconds = ($groupFirstFinish && $groupLastFinish)
+                ? max(0, $groupFirstFinish->diffInSeconds($groupLastFinish, false))
+                : null;
+            $groupMetrics[(string)$grupoNumero] = [
+                'process_count' => $groupProcCount,
+                'duration_sum_seconds' => $groupDurationSum,
+                'gap_sum_seconds' => $groupGapSum,
+                'span_seconds' => $groupSpanSeconds,
+                'first_finished_at' => optional($groupFirstFinish)->format('Y-m-d H:i:s'),
+                'last_finished_at' => optional($groupLastFinish)->format('Y-m-d H:i:s'),
+            ];
+        }
+
+        $diff = function ($start, $end) {
+            if (!$start || !$end) {
+                return null;
+            }
+
+            $seconds = $start->diffInSeconds($end, false);
+            return $seconds < 0 ? 0 : $seconds;
+        };
+
+        $erpToCreated = $diff($erpDate, $createdAt);
+        $erpToFinished = $diff($erpDate, $finishedAt);
+        $createdToFinished = $diff($createdAt, $finishedAt);
+        $erpToDelivery = $diff($erpDate, $deliveryDate);
+        $createdToDelivery = $diff($createdAt, $deliveryDate);
+        $finishedToDelivery = $diff($finishedAt, $deliveryDate);
+
+        if ($erpDate && !$finishedAt) {
+            $timeline->addMilestone('NOW', Carbon::now($tz));
+        }
+
+        // Order-level timeline payload
+        $boundsStartTs = $erpDate?->timestamp ?? $createdAt?->timestamp ?? null;
+        $boundsEndTs = $deliveryDate?->timestamp ?? $finishedAt?->timestamp ?? null;
+        $bounds = null;
+        if ($boundsStartTs && $boundsEndTs && $boundsEndTs > $boundsStartTs) {
+            $bounds = [
+                'start' => $boundsStartTs,
+                'end' => $boundsEndTs,
+                'range' => $boundsEndTs - $boundsStartTs,
+                'start_label' => $erpDate?->format('Y-m-d H:i:s') ?? $createdAt?->format('Y-m-d H:i:s'),
+                'end_label' => $deliveryDate?->format('Y-m-d H:i:s') ?? $finishedAt?->format('Y-m-d H:i:s'),
+            ];
+        }
+
+        $orderTimeline = [
+            'bounds' => $bounds,
+            'erp_start_ts' => $erpDate?->timestamp,
+            'created_end_ts' => $createdAt?->timestamp,
+            'created_start_ts' => $createdAt?->timestamp,
+            'finished_end_ts' => $finishedAt?->timestamp,
+            'finished_start_ts' => $finishedAt?->timestamp,
+            'delivery_end_ts' => $deliveryDate?->timestamp,
+            'erp_to_created_seconds' => $erpToCreated,
+            'erp_to_created_formatted' => $this->formatSeconds($erpToCreated),
+            'created_to_finished_seconds' => $createdToFinished,
+            'created_to_finished_formatted' => $this->formatSeconds($createdToFinished),
+            'finished_to_delivery_seconds' => $finishedToDelivery,
+            'finished_to_delivery_formatted' => $this->formatSeconds($finishedToDelivery),
+        ];
+
+        \Log::info('PT order_timeline', [
+            'order_id' => $order->id,
+            'use_actual_delivery' => (bool)($filters['use_actual_delivery'] ?? false),
+            'bounds_present' => (bool)$bounds,
+            'erp_ts' => $orderTimeline['erp_start_ts'],
+            'created_ts' => $orderTimeline['created_end_ts'],
+            'finished_ts' => $orderTimeline['finished_end_ts'],
+            'delivery_ts' => $orderTimeline['delivery_end_ts'],
+        ]);
+
+        $processAggregates = collect($processRows)
+            ->groupBy(fn($row) => $row['process_code'] ?? 'SIN_CODIGO')
+            ->map(function ($rows) {
+                $durations = collect($rows)->pluck('duration_seconds')->filter();
+                $gaps = collect($rows)->pluck('gap_seconds')->filter();
+                return [
+                    'count' => $rows->count(),
+                    'total_duration' => (int)$durations->sum(),
+                    'total_gap' => (int)$gaps->sum(),
+                    'avg_duration' => $durations->avg(),
+                    'avg_gap' => $gaps->avg(),
+                ];
+            })
+            ->toArray();
+
+        $plannedDelivery = $order->delivery_date ? $order->delivery_date->copy()->timezone($tz)->endOfDay() : null;
+        $actualDelivery = $order->actual_delivery_date ? $order->actual_delivery_date->copy()->timezone($tz)->endOfDay() : null;
+        $deliveryDelaySeconds = ($plannedDelivery && $actualDelivery)
+            ? max(0, $plannedDelivery->diffInSeconds($actualDelivery, false))
+            : null;
+        $deliveryDelaySigned = ($plannedDelivery && $actualDelivery)
+            ? $plannedDelivery->diffInSeconds($actualDelivery, false)
+            : null;
+
+        return [
+            'id' => $order->id,
+            'order_id' => $order->order_id,
+            'client_number' => $order->client_number,
+            'customer_client_name' => optional($order->customerClient)->name,
+            'fecha_pedido_erp' => optional($erpDate)->format('Y-m-d H:i:s'),
+            'fecha_pedido_erp_ts' => optional($erpDate)?->timestamp,
+            'created_at' => optional($createdAt)->format('Y-m-d H:i:s'),
+            'created_at_ts' => optional($createdAt)?->timestamp,
+            'finished_at' => optional($finishedAt)->format('Y-m-d H:i:s'),
+            'finished_at_ts' => optional($finishedAt)?->timestamp,
+            'delivery_date' => optional($deliveryDate)->format('Y-m-d H:i:s'),
+            'delivery_date_ts' => optional($deliveryDate)?->timestamp,
+            'erp_to_created_seconds' => $erpToCreated,
+            'erp_to_created_formatted' => $this->formatSeconds($erpToCreated),
+            'erp_to_finished_seconds' => $erpToFinished,
+            'erp_to_finished_formatted' => $this->formatSeconds($erpToFinished),
+            'created_to_finished_seconds' => $createdToFinished,
+            'created_to_finished_formatted' => $this->formatSeconds($createdToFinished),
+            'erp_to_delivery_seconds' => $erpToDelivery,
+            'erp_to_delivery_formatted' => $this->formatSeconds($erpToDelivery),
+            'created_to_delivery_seconds' => $createdToDelivery,
+            'created_to_delivery_formatted' => $this->formatSeconds($createdToDelivery),
+            'finished_to_delivery_seconds' => $finishedToDelivery,
+            'finished_to_delivery_formatted' => $this->formatSeconds($finishedToDelivery),
+            'processes' => $processRows,
+            'timeline' => $timeline->toArray(),
+            'order_timeline' => $orderTimeline,
+            'group_metrics' => $groupMetrics,
+            'process_aggregates' => $processAggregates,
+            'order_delivery_delay_seconds' => $deliveryDelaySigned,
+        ];
+    }
+
+    protected function computeAverageTimeline(Customer $customer, array $filters): array
+    {
+        $tz = config('app.timezone');
+        $useActual = (bool)($filters['use_actual_delivery'] ?? false);
+        $orders = $this->buildProductionTimesBaseQuery($customer, $filters)
+            ->select('id', 'fecha_pedido_erp', 'created_at', 'finished_at', 'delivery_date', 'actual_delivery_date')
+            ->get();
+
+        $sumErpCreated = 0; $cntErpCreated = 0;
+        $sumCreatedFinished = 0; $cntCreatedFinished = 0;
+        $sumFinishedDelivery = 0; $cntFinishedDelivery = 0;
+
+        foreach ($orders as $o) {
+            $erp = $o->fecha_pedido_erp ? Carbon::parse($o->fecha_pedido_erp, $tz) : null;
+            $cr = $o->created_at ? $o->created_at->copy()->timezone($tz) : null;
+            $fi = $o->finished_at ? $o->finished_at->copy()->timezone($tz) : null;
+            $delBase = $useActual ? $o->actual_delivery_date : $o->delivery_date;
+            $de = $delBase ? $delBase->copy()->timezone($tz)->endOfDay() : null;
+
+            $diff = function ($start, $end) {
+                if (!$start || !$end) return null;
+                $s = $start->diffInSeconds($end, false);
+                return $s < 0 ? 0 : $s;
+            };
+
+            $d1 = $diff($erp, $cr);
+            if ($d1 !== null) { $sumErpCreated += $d1; $cntErpCreated++; }
+
+            $d2 = $diff($cr, $fi);
+            if ($d2 !== null) { $sumCreatedFinished += $d2; $cntCreatedFinished++; }
+
+            $d3 = $diff($fi, $de);
+            if ($d3 !== null) { $sumFinishedDelivery += $d3; $cntFinishedDelivery++; }
+        }
+
+        $avg1 = $cntErpCreated ? intdiv($sumErpCreated, $cntErpCreated) : 0;
+        $avg2 = $cntCreatedFinished ? intdiv($sumCreatedFinished, $cntCreatedFinished) : 0;
+        $avg3 = $cntFinishedDelivery ? intdiv($sumFinishedDelivery, $cntFinishedDelivery) : 0;
+
+        $total = max($avg1 + $avg2 + $avg3, 1);
+
+        $erpStart = 0;
+        $createdEnd = $avg1;
+        $createdStart = $createdEnd;
+        $finishedEnd = $createdEnd + $avg2;
+        $finishedStart = $finishedEnd;
+        $deliveryEnd = $finishedEnd + $avg3;
+
+        $avg = [
+            'bounds' => [
+                'start' => 0,
+                'end' => $total,
+                'range' => $total,
+                'start_label' => '0s',
+                'end_label' => $this->formatSeconds($total),
+            ],
+            'erp_start_ts' => $erpStart,
+            'created_end_ts' => $createdEnd,
+            'created_start_ts' => $createdStart,
+            'finished_end_ts' => $finishedEnd,
+            'finished_start_ts' => $finishedStart,
+            'delivery_end_ts' => $deliveryEnd,
+            'erp_to_created_seconds' => $avg1,
+            'erp_to_created_formatted' => $this->formatSeconds($avg1),
+            'created_to_finished_seconds' => $avg2,
+            'created_to_finished_formatted' => $this->formatSeconds($avg2),
+            'finished_to_delivery_seconds' => $avg3,
+            'finished_to_delivery_formatted' => $this->formatSeconds($avg3),
+        ];
+
+        \Log::info('PT average_timeline', [
+            'orders_count' => count($orders),
+            'use_actual_delivery' => $useActual,
+            'avg1' => $avg1,
+            'avg2' => $avg2,
+            'avg3' => $avg3,
+            'total' => $total,
+        ]);
+
+        return $avg;
+    }
+
+    protected function buildProductionTimesSummary(Collection $orders, array $filters): array
+    {
+        $summary = new ProductionTimeSummary();
+
+        foreach ($orders as $order) {
+            $row = $this->transformSingleOrderProductionTimes($order, $filters);
+            $summary->pushOrder($row);
+
+            foreach ($row['processes'] as $processRow) {
+                $summary->pushProcess($processRow);
+            }
+        }
+
+        return $summary->toArray();
+    }
+
+    protected function formatSeconds(?int $seconds): ?string
+    {
+        if ($seconds === null) {
+            return null;
+        }
+
+        $prefix = '';
+        if ($seconds < 0) {
+            $prefix = '-';
+            $seconds = abs($seconds);
+        }
+
+        $hours = intdiv($seconds, 3600);
+        $minutes = intdiv($seconds % 3600, 60);
+        $secs = $seconds % 60;
+
+        return sprintf('%s%02d:%02d:%02d', $prefix, $hours, $minutes, $secs);
+    }
+
     public function update(Request $request, Customer $customer, OriginalOrder $originalOrder)
     {
         // 1. Validar la petición.
@@ -1003,5 +1587,153 @@ class CustomerOriginalOrderController extends Controller
         }
 
         return $route->id;
+    }
+}
+
+class ProductionTimeSummary
+{
+    protected array $orders = [];
+    protected array $processes = [];
+
+    public function pushOrder(array $orderRow): void
+    {
+        $this->orders[] = $orderRow;
+    }
+
+    public function pushProcess(array $processRow): void
+    {
+        $this->processes[] = $processRow;
+    }
+
+    public function toArray(): array
+    {
+        $ordersCol = collect($this->orders);
+        $processCol = collect($this->processes);
+
+        $orderDurations = $ordersCol->pluck('created_to_finished_seconds')->filter()->values();
+        $orderErpDurations = $ordersCol->pluck('erp_to_finished_seconds')->filter()->values();
+        $orderErpCreated = $ordersCol->pluck('erp_to_created_seconds')->filter()->values();
+
+        $processDurations = $processCol->pluck('duration_seconds')->filter()->values();
+        $processGaps = $processCol->pluck('gap_seconds')->filter()->values();
+
+        $delaysOverDay = $processCol->filter(fn($row) => ($row['gap_seconds'] ?? 0) > 86400)->count();
+
+        $processByCode = $processCol
+            ->groupBy(fn($row) => $row['process_code'] ?? 'SIN_CODIGO')
+            ->map(function ($group) {
+                $dur = $group->pluck('duration_seconds')->filter()->values();
+                $gap = $group->pluck('gap_seconds')->filter()->values();
+                return [
+                    'count' => $group->count(),
+                    'avg_duration' => $dur->avg(),
+                    'p50_duration' => self::percentile($dur, 0.5),
+                    'p90_duration' => self::percentile($dur, 0.9),
+                    'avg_gap' => $gap->avg(),
+                    'p50_gap' => self::percentile($gap, 0.5),
+                    'p90_gap' => self::percentile($gap, 0.9),
+                ];
+            })
+            ->toArray();
+
+        $deliveryDelays = $ordersCol->pluck('order_delivery_delay_seconds')->filter(function ($v) { return $v !== null; })->values();
+        $slaTotal = $deliveryDelays->count();
+        $slaOnTime = $deliveryDelays->filter(fn($d) => $d <= 0)->count();
+        $slaRatio = $slaTotal > 0 ? $slaOnTime / $slaTotal : null;
+
+        $groupLeadTimes = $ordersCol
+            ->pluck('group_metrics')
+            ->filter()
+            ->reduce(function ($carry, $gm) {
+                foreach ($gm as $groupKey => $vals) {
+                    if (!isset($carry[$groupKey])) {
+                        $carry[$groupKey] = [
+                            'process_count' => 0,
+                            'duration_sum_seconds' => 0,
+                            'gap_sum_seconds' => 0,
+                            'span_seconds_sum' => 0,
+                            'orders' => 0,
+                        ];
+                    }
+                    $carry[$groupKey]['process_count'] += (int)($vals['process_count'] ?? 0);
+                    $carry[$groupKey]['duration_sum_seconds'] += (int)($vals['duration_sum_seconds'] ?? 0);
+                    $carry[$groupKey]['gap_sum_seconds'] += (int)($vals['gap_sum_seconds'] ?? 0);
+                    $carry[$groupKey]['span_seconds_sum'] += (int)($vals['span_seconds'] ?? 0);
+                    $carry[$groupKey]['orders'] += 1;
+                }
+                return $carry;
+            }, []);
+
+        foreach ($groupLeadTimes as $k => $agg) {
+            $ordersCnt = max(1, $agg['orders']);
+            $groupLeadTimes[$k]['avg_duration_sum_seconds'] = (int)($agg['duration_sum_seconds'] / $ordersCnt);
+            $groupLeadTimes[$k]['avg_gap_sum_seconds'] = (int)($agg['gap_sum_seconds'] / $ordersCnt);
+            $groupLeadTimes[$k]['avg_span_seconds'] = (int)($agg['span_seconds_sum'] / $ordersCnt);
+        }
+
+        return [
+            'orders_total' => $ordersCol->count(),
+            'processes_total' => $processCol->count(),
+            'orders_avg_created_to_finished' => $orderDurations->avg(),
+            'orders_p50_created_to_finished' => self::percentile($orderDurations, 0.5),
+            'orders_p90_created_to_finished' => self::percentile($orderDurations, 0.9),
+            'orders_avg_erp_to_finished' => $orderErpDurations->avg(),
+            'orders_avg_erp_to_created' => $orderErpCreated->avg(),
+            'process_avg_duration' => $processDurations->avg(),
+            'process_p50_duration' => self::percentile($processDurations, 0.5),
+            'process_p90_duration' => self::percentile($processDurations, 0.9),
+            'process_avg_gap' => $processGaps->avg(),
+            'process_p50_gap' => self::percentile($processGaps, 0.5),
+            'process_p90_gap' => self::percentile($processGaps, 0.9),
+            'process_delays_over_day' => $delaysOverDay,
+            'process_by_code' => $processByCode,
+            'sla_on_time_ratio' => $slaRatio,
+            'sla_on_time_count' => $slaOnTime,
+            'sla_total' => $slaTotal,
+            'group_lead_times' => $groupLeadTimes,
+        ];
+    }
+
+    protected static function percentile($values, float $p)
+    {
+        $arr = collect($values)->filter()->sort()->values()->all();
+        $n = count($arr);
+        if ($n === 0) return null;
+        if ($p <= 0) return $arr[0];
+        if ($p >= 1) return $arr[$n - 1];
+        $rank = $p * ($n - 1);
+        $low = (int) floor($rank);
+        $high = (int) ceil($rank);
+        if ($low === $high) return $arr[$low];
+        $weight = $rank - $low;
+        return $arr[$low] * (1 - $weight) + $arr[$high] * $weight;
+    }
+}
+
+class ProductionTimeTimeline
+{
+    protected Carbon $origin;
+    protected array $milestones = [];
+
+    public function __construct(Carbon $origin)
+    {
+        $this->origin = $origin;
+    }
+
+    public function addMilestone(string $key, Carbon $timestamp): void
+    {
+        $this->milestones[] = [
+            'key' => $key,
+            'timestamp' => $timestamp->toIso8601String(),
+            'seconds_from_origin' => $this->origin->diffInSeconds($timestamp, false),
+        ];
+    }
+
+    public function toArray(): array
+    {
+        return [
+            'origin' => $this->origin->toIso8601String(),
+            'milestones' => $this->milestones,
+        ];
     }
 }
