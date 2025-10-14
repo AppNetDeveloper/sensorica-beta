@@ -5670,11 +5670,14 @@ async function updateOrderStatus(orderId, newStatus) {
             
             // Comprobar cada 120 segundos si la orden de producción ha cambiado (aumentado de 30 a 120 segundos)
             // y hacer un escaneo silencioso con la nueva orden si es necesario
-            setInterval(function() {
-                if (productionLineToken) {
+            let barcodeCheckInterval = null;
+            let isWaitingForBarcodeDecision = false;
+            
+            barcodeCheckInterval = setInterval(function() {
+                if (productionLineToken && !isWaitingForBarcodeDecision) {
                     checkAndUpdateProductionOrder();
                 }
-            }, 30000); // 120 segundos
+            }, 30000); // 30 segundos
             
             // Refrescar las anotaciones de la orden activa cada 10 segundos
             setInterval(function() {
@@ -5684,7 +5687,7 @@ async function updateOrderStatus(orderId, newStatus) {
             }, 10000); // 10 segundos
             
             /**
-             * Comprueba si la orden de producción ha cambiado y hace un escaneo silencioso si es necesario
+             * Comprueba si la orden de producción ha cambiado y muestra popup de confirmación
              */
             function checkAndUpdateProductionOrder() {
                 if (!productionLineToken) {
@@ -5720,15 +5723,64 @@ async function updateOrderStatus(orderId, newStatus) {
                             if (apiOrderId && currentOrderId !== apiOrderId && lastBarcode) {
                                 console.log(`Orden de producción cambiada: ${currentOrderId} -> ${apiOrderId}`);
                                 
+                                // Pausar el polling mientras el usuario decide
+                                isWaitingForBarcodeDecision = true;
+                                
                                 // Obtener el operador actual
                                 const operatorId = getCurrentOperatorId();
                                 if (!operatorId) {
-                                    console.error('No se pudo obtener un operador para el escaneo silencioso');
+                                    console.error('No se pudo obtener un operador');
+                                    isWaitingForBarcodeDecision = false;
                                     return;
                                 }
                                 
-                                // Hacer un escaneo silencioso con el mismo código pero nueva orden
-                                silentBarcodeScan(lastBarcode, currentOrderId, operatorId);
+                                // Mostrar popup de confirmación
+                                if (window.Swal && typeof window.Swal.fire === 'function') {
+                                    window.Swal.fire({
+                                        title: 'Orden de producción cambiada',
+                                        html: `<div class="text-left">
+                                            <p class="mb-3">Se ha detectado un cambio en la orden de producción.</p>
+                                            <p class="mb-2"><strong>Código actual:</strong> ${lastBarcode}</p>
+                                            <p class="mb-3 text-gray-600">¿Desea mantener el mismo código de barras para la nueva orden?</p>
+                                        </div>`,
+                                        icon: 'question',
+                                        showCancelButton: true,
+                                        showDenyButton: true,
+                                        confirmButtonText: '<i class="fa fa-check mr-1"></i>Sí, mismo código',
+                                        denyButtonText: '<i class="fa fa-qrcode mr-1"></i>Escanear nuevo',
+                                        cancelButtonText: 'Cancelar',
+                                        confirmButtonColor: '#3085d6',
+                                        denyButtonColor: '#f59e0b',
+                                        cancelButtonColor: '#6b7280',
+                                        allowOutsideClick: false,
+                                        allowEscapeKey: false
+                                    }).then((result) => {
+                                        if (result.isConfirmed) {
+                                            // Usuario eligió mantener el mismo código
+                                            console.log('Usuario eligió mantener el mismo código');
+                                            silentBarcodeScan(lastBarcode, currentOrderId, operatorId);
+                                            isWaitingForBarcodeDecision = false;
+                                        } else if (result.isDenied) {
+                                            // Usuario eligió escanear nuevo código
+                                            console.log('Usuario eligió escanear nuevo código');
+                                            openBarcodeModal();
+                                            isWaitingForBarcodeDecision = false;
+                                        } else {
+                                            // Usuario canceló
+                                            console.log('Usuario canceló la decisión');
+                                            isWaitingForBarcodeDecision = false;
+                                        }
+                                    });
+                                } else {
+                                    // Fallback si no está SweetAlert2
+                                    const decision = confirm(`Orden cambiada. Código actual: ${lastBarcode}\n¿Mantener el mismo código? (Cancelar para escanear nuevo)`);
+                                    if (decision) {
+                                        silentBarcodeScan(lastBarcode, currentOrderId, operatorId);
+                                    } else {
+                                        openBarcodeModal();
+                                    }
+                                    isWaitingForBarcodeDecision = false;
+                                }
                             } else {
                                 console.log('La orden de producción sigue siendo la misma');
                             }
@@ -5738,6 +5790,18 @@ async function updateOrderStatus(orderId, newStatus) {
                         // Ignorar errores en modo silencioso
                     }
                 });
+            }
+            
+            /**
+             * Abre el modal de escaneo de código de barras
+             */
+            function openBarcodeModal() {
+                const barcodeModal = document.getElementById('barcodeModal');
+                const barcodeInput = document.getElementById('barcodeInput');
+                if (barcodeModal && barcodeInput) {
+                    barcodeModal.classList.remove('hidden');
+                    setTimeout(() => barcodeInput.focus(), 100);
+                }
             }
             
             /**
@@ -6270,7 +6334,7 @@ async function updateOrderStatus(orderId, newStatus) {
                     }
                 });
             }
-            function initializeMaintenanceButton() {
+            function initializeVirtualKeyboard() {
                 const virtualKeyboard = document.getElementById('virtual-keyboard');
                 const keyboardLayout = document.getElementById('keyboard-layout');
                 const closeKeyboardBtn = document.getElementById('keyboard-close');

@@ -266,7 +266,15 @@
                          <option value="day_minus_7">Hace 7 días</option>
                          <option value="last7days">Últimos 7 días (rango)</option>
                          <option value="last30days">Últimos 30 días (rango)</option>
+                         <option value="custom">📅 Personalizado</option>
                      </select>
+                 </div>
+                 <div id="customDateRangeContainer" class="flex items-center space-x-2 hidden">
+                     <label for="customDateFrom" class="text-sm font-medium text-gray-700">Desde:</label>
+                     <input type="date" id="customDateFrom" class="block w-auto px-3 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 rounded-md shadow-sm">
+                     <label for="customDateTo" class="text-sm font-medium text-gray-700">Hasta:</label>
+                     <input type="date" id="customDateTo" class="block w-auto px-3 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 rounded-md shadow-sm">
+                     <button id="applyCustomDateBtn" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-150 ease-in-out">Aplicar</button>
                  </div>
                   <div class="flex items-center">
                      <input id="filterPostsCheckbox" type="checkbox" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" checked>
@@ -500,6 +508,7 @@
     let currentLocalAITaskId = null;
     let localAIPollingIntervalId = null;
     let currentChartType = null;
+    let customDateRangeContainer, customDateFrom, customDateTo, applyCustomDateBtn;
     
     // Variables de sesión
     let sessionTimeout = null;
@@ -1801,7 +1810,21 @@
     function formatDateForAPI(date) { const y = date.getFullYear(), m = String(date.getMonth() + 1).padStart(2, '0'), d = String(date.getDate()).padStart(2, '0'); return `${y}-${m}-${d}`; }
     function getDateRange(selectedValue) {
         const today = new Date(); today.setHours(0,0,0,0); let from = new Date(today), to = new Date(today);
-        switch(selectedValue){ case 'yesterday':from.setDate(today.getDate()-1);to.setDate(today.getDate()-1);break; case 'day_minus_2':from.setDate(today.getDate()-2);to.setDate(today.getDate()-2);break; case 'day_minus_3':from.setDate(today.getDate()-3);to.setDate(today.getDate()-3);break; case 'day_minus_4':from.setDate(today.getDate()-4);to.setDate(today.getDate()-4);break; case 'day_minus_5':from.setDate(today.getDate()-5);to.setDate(today.getDate()-5);break; case 'day_minus_6':from.setDate(today.getDate()-6);to.setDate(today.getDate()-6);break; case 'day_minus_7':from.setDate(today.getDate()-7);to.setDate(today.getDate()-7);break; case 'last7days':from.setDate(today.getDate()-6);break; case 'last30days':from.setDate(today.getDate()-29);break; }
+        
+        // Si es personalizado, usar las fechas del input
+        if (selectedValue === 'custom') {
+            if (customDateFrom && customDateFrom.value) {
+                from = new Date(customDateFrom.value);
+            }
+            if (customDateTo && customDateTo.value) {
+                to = new Date(customDateTo.value);
+            } else {
+                to = new Date(from); // Si no hay fecha 'hasta', usar la misma que 'desde'
+            }
+        } else {
+            switch(selectedValue){ case 'yesterday':from.setDate(today.getDate()-1);to.setDate(today.getDate()-1);break; case 'day_minus_2':from.setDate(today.getDate()-2);to.setDate(today.getDate()-2);break; case 'day_minus_3':from.setDate(today.getDate()-3);to.setDate(today.getDate()-3);break; case 'day_minus_4':from.setDate(today.getDate()-4);to.setDate(today.getDate()-4);break; case 'day_minus_5':from.setDate(today.getDate()-5);to.setDate(today.getDate()-5);break; case 'day_minus_6':from.setDate(today.getDate()-6);to.setDate(today.getDate()-6);break; case 'day_minus_7':from.setDate(today.getDate()-7);to.setDate(today.getDate()-7);break; case 'last7days':from.setDate(today.getDate()-6);break; case 'last30days':from.setDate(today.getDate()-29);break; }
+        }
+        
         let apiTo = new Date(to); apiTo.setDate(to.getDate()+1); return {from:formatDateForAPI(from), to:formatDateForAPI(apiTo)};
     }
     function calculateCajasHora(count, startTimeStr, endTimeStr) {
@@ -2040,6 +2063,10 @@
         exportExcelBtn = document.getElementById('exportExcelBtn');
         printBtn = document.getElementById('printBtn');
         dateRangeSelect = document.getElementById('dateRangeSelect');
+        customDateRangeContainer = document.getElementById('customDateRangeContainer');
+        customDateFrom = document.getElementById('customDateFrom');
+        customDateTo = document.getElementById('customDateTo');
+        applyCustomDateBtn = document.getElementById('applyCustomDateBtn');
         filterPostsCheckbox = document.getElementById('filterPostsCheckbox');
         analizarTodosLocalAIBtn = document.getElementById('analizarTodosLocalAIBtn');
         viewWorkerChartBtn = document.getElementById('viewWorkerChartBtn');
@@ -2108,7 +2135,23 @@
         if (viewDistributionBtn) viewDistributionBtn.addEventListener('click', () => showChartModal('distribution'));
         if (viewRankingBtn) viewRankingBtn.addEventListener('click', () => showChartModal('ranking'));
         
-        if (dateRangeSelect) dateRangeSelect.addEventListener('change', (e) => { const {from, to} = getDateRange(e.target.value); fetchData(from, to); });
+        if (dateRangeSelect) dateRangeSelect.addEventListener('change', (e) => { 
+            const selectedValue = e.target.value;
+            if (selectedValue === 'custom') {
+                // Mostrar los inputs de fecha personalizada
+                if (customDateRangeContainer) customDateRangeContainer.classList.remove('hidden');
+                // Establecer fecha por defecto (hoy)
+                const today = new Date();
+                if (customDateFrom) customDateFrom.valueAsDate = today;
+                if (customDateTo) customDateTo.valueAsDate = today;
+            } else {
+                // Ocultar los inputs de fecha personalizada
+                if (customDateRangeContainer) customDateRangeContainer.classList.add('hidden');
+                // Cargar datos con la opción predeterminada seleccionada
+                const {from, to} = getDateRange(selectedValue);
+                fetchData(from, to);
+            }
+        });
         if (filterPostsCheckbox) filterPostsCheckbox.addEventListener('change', () => { populateTable(originalWorkersData); updateKPICards(); updateHeaderButtonsState(); });
         if (searchInput) searchInput.addEventListener('input', () => { populateTable(originalWorkersData); updateKPICards(); updateHeaderButtonsState(); });
         if (cancelPasswordBtn) cancelPasswordBtn.addEventListener('click', hidePasswordModal);
@@ -2139,6 +2182,20 @@
         if(toggleFullscreenChartBtn) toggleFullscreenChartBtn.addEventListener('click', toggleChartFullscreen);
 
         if (lockButton) lockButton.addEventListener('click', () => { if (isLocked) showPasswordModal(); else toggleLockState(true); });
+        
+        // Event listener para aplicar fechas personalizadas
+        if (applyCustomDateBtn) applyCustomDateBtn.addEventListener('click', () => {
+            if (!customDateFrom || !customDateFrom.value) {
+                alert('Por favor, selecciona una fecha de inicio');
+                return;
+            }
+            const {from, to} = getDateRange('custom');
+            fetchData(from, to);
+        });
+        
+        // Event listener para cambios en los inputs de fecha (Enter para aplicar)
+        if (customDateFrom) customDateFrom.addEventListener('keypress', (e) => { if (e.key === 'Enter' && applyCustomDateBtn) applyCustomDateBtn.click(); });
+        if (customDateTo) customDateTo.addEventListener('keypress', (e) => { if (e.key === 'Enter' && applyCustomDateBtn) applyCustomDateBtn.click(); });
         
         // Event listeners para el sistema de sesión
         if (extendSessionBtn) extendSessionBtn.addEventListener('click', extendSession);
