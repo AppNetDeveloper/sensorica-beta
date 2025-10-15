@@ -442,7 +442,8 @@ return "<div class='action-buttons-row d-flex flex-wrap' style='display: none; g
         // Obtener todas las órdenes para este proceso específico
     // Para status 0 y 1 (pendientes y en progreso) mostramos todas
     // Para status 2, 3, 4 y 5 (completadas, pausadas, canceladas e incidencias) solo mostramos las de los últimos 3 días
-    $query = \App\Models\ProductionOrder::where('process_category', $process->description); // Filtrar por la categoría del proceso actual
+    $query = \App\Models\ProductionOrder::where('process_category', $process->description)
+        ->with(['originalOrder']); // Filtrar por la categoría del proceso actual
     
     // Aplicamos filtros por status
     $query->where(function($q) {
@@ -463,6 +464,7 @@ return "<div class='action-buttons-row d-flex flex-wrap' style='display: none; g
 
     // Consulta separada para status 2 (finalizadas) - últimos 5 días con límite de 100 tarjetas
     $status2Query = \App\Models\ProductionOrder::where('process_category', $process->description)
+        ->with(['originalOrder'])
         ->where('status', 2)
         ->where('finished_at', '>=', now()->subDays(5)->startOfDay())
         ->orderBy('orden', 'desc')
@@ -557,6 +559,7 @@ return "<div class='action-buttons-row d-flex flex-wrap' style='display: none; g
                     'theoretical_time' => $tiempoTeoricoFormateado,
                     'customerId' => $order->customerId ?? 'Sin Cliente',
                     'original_order_id' => $order->original_order_id ?? 'Sin Orden Original',
+                    'ref_order' => optional($order->originalOrder)->ref_order,
                     'articles_descriptions' => $articlesDescriptions,
                 //en lugar de 0 por defecto aqui 'orden' => (int)($order->orden ?? '0') ponemos que sea por production_line_id el orden mas grande que existe y le damos +1
                 'orden' => $order->production_line_id ? ProductionOrder::where('production_line_id', $order->production_line_id)->max('orden') + 1 : 0,

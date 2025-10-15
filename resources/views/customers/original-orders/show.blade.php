@@ -58,6 +58,46 @@
                                     <td>{{ $originalOrder->client_number }}</td>
                                 </tr>
                                 <tr>
+                                    <th class="bg-light">@lang('Address')</th>
+                                    <td>
+                                        @if($originalOrder->address)
+                                            {{ $originalOrder->address }}
+                                        @else
+                                            <span class="text-muted">@lang('Not specified')</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th class="bg-light">@lang('Phone')</th>
+                                    <td>
+                                        @if($originalOrder->phone)
+                                            {{ $originalOrder->phone }}
+                                        @else
+                                            <span class="text-muted">@lang('Not specified')</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th class="bg-light">@lang('CIF / NIF')</th>
+                                    <td>
+                                        @if($originalOrder->cif_nif)
+                                            {{ $originalOrder->cif_nif }}
+                                        @else
+                                            <span class="text-muted">@lang('Not specified')</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th class="bg-light">@lang('Order Reference')</th>
+                                    <td>
+                                        @if($originalOrder->ref_order)
+                                            {{ $originalOrder->ref_order }}
+                                        @else
+                                            <span class="text-muted">@lang('Not specified')</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                                <tr>
                                     <th class="bg-light">@lang('QC Confirmation')</th>
                                     <td>
                                         @if(method_exists($originalOrder, 'hasQcConfirmations') ? $originalOrder->hasQcConfirmations() : \App\Models\QcConfirmation::where('original_order_id', $originalOrder->id)->exists())

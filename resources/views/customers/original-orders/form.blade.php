@@ -361,6 +361,28 @@ $(document).ready(function() {
         $('#no_processes').toggleClass('d-none', hasProcesses);
     }
 
+    function hasSelectedProcesses() {
+        return $('#processes_list tr[data-process-id]').length > 0;
+    }
+
+    function showProcessRequiredAlert() {
+        const alertId = 'process-required-alert';
+        if (!document.getElementById(alertId)) {
+            const alert = document.createElement('div');
+            alert.id = alertId;
+            alert.className = 'alert alert-danger mt-3';
+            alert.innerHTML = `<i class="fas fa-exclamation-triangle me-1"></i>{{ __('Please add at least one process before saving the order.') }}`;
+            document.getElementById('processes_table').closest('.card').prepend(alert);
+        }
+    }
+
+    function removeProcessRequiredAlert() {
+        const alert = document.getElementById('process-required-alert');
+        if (alert) {
+            alert.remove();
+        }
+    }
+
     $('#add_process_btn').on('click', function() {
         const processId = $('#process_selector').val();
         if (!processId) return;
@@ -404,14 +426,17 @@ $(document).ready(function() {
                     </div>
                 </td>
             </tr>`;
-        $('#processes_list').append(newRowHtml);
+        };
+        const newRow = $(newRowHtml);
+        $('#processes_list').append(newRow);
         $('#process_selector').val('');
         updateNoProcessesMessage();
+        removeProcessRequiredAlert();
     });
 
-    $('#processes_list').on('click', '.remove-process', function(e) {
-        e.stopPropagation();
+    $('#processes_list').on('click', '.remove-process', function() {
         const row = $(this).closest('tr');
+        const uniqueId = row.data('unique-id');
         const processRow = row.next('.process-articles');
         row.remove();
         processRow.remove();
@@ -463,6 +488,15 @@ $(document).ready(function() {
         return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
     }
     updateNoProcessesMessage();
+    removeProcessRequiredAlert();
+
+    $('form').on('submit', function(event) {
+        if (!hasSelectedProcesses()) {
+            event.preventDefault();
+            showProcessRequiredAlert();
+            $('html, body').animate({ scrollTop: $('#processes_table').offset().top - 100 }, 400);
+        }
+    });
 });
 </script>
 @endpush

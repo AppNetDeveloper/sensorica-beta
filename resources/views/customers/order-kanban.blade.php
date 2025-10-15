@@ -2429,11 +2429,14 @@
             const carIconHtml = latestAfter && latestAfter.barcode ? `<span class="ms-2" title="${latestAfter.barcode}"><i class="fas fa-dolly"></i></span>` : '';
             const barcodeBadgeHtml = (latestAfter && latestAfter.barcode) ? `<span class="badge bg-light text-dark border ms-2"><i class="fas fa-barcode me-1"></i>${latestAfter.barcode}</span>` : '';
 
+            const refOrderHtml = order.ref_order ? `<div class="text-xs text-muted mt-1"><i class="fas fa-tag me-1" title="{{ __('Order Reference') }}"></i>${order.ref_order}</div>` : '';
+
             card.innerHTML = `
                 <div class="kanban-card-header" onclick="this.parentElement.classList.toggle('collapsed')">
                     <div class="me-2" style="flex-grow: 1;">
                         <div class="fw-bold text-sm d-flex align-items-center">#${order.order_id}${urgencyIconHtml}${stockIconHtml}${priorityIconHtml}${carIconHtml}${barcodeBadgeHtml}</div>
                         <div class="text-xs fw-bold text-muted mt-1">${order.customerId || translations.noCustomer}</div>
+                        ${refOrderHtml}
                         ${processDescription ? `<div class="text-xs text-muted mt-1">${processDescription}</div>` : ''}
                         <div class="d-flex justify-content-between align-items-center mt-1">
                             <div class="text-xs text-muted"><i class="far fa-calendar-alt me-1" title="Fecha de creación tarjeta"></i>${createdAtFormatted}</div>
