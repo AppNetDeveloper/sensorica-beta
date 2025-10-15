@@ -840,6 +840,10 @@ return "<div class='action-buttons-row d-flex flex-wrap' style='display: none; g
             $standardFields = [
                 'order_id' => 'ID del Pedido',
                 'client_number' => 'Número de Cliente',
+                'address' => 'Dirección',
+                'phone' => 'Teléfono',
+                'cif_nif' => 'CIF / NIF',
+                'ref_order' => 'Referencia de Pedido',
                 'route_name' => 'Nombre de Ruta',
                 'created_at' => 'Fecha de Creación',
                 'delivery_date' => 'Fecha de Entrega',
@@ -1343,6 +1347,10 @@ return "<div class='action-buttons-row d-flex flex-wrap' style='display: none; g
                 $standardFields = [
                     'order_id' => 'ID del Pedido',
                     'client_number' => 'Número de Cliente',
+                    'address' => 'Dirección',
+                    'phone' => 'Teléfono',
+                    'cif_nif' => 'CIF / NIF',
+                    'ref_order' => 'Referencia de Pedido',
                     'route_name' => 'Nombre de Ruta',
                     'created_at' => 'Fecha de Creación',
                     'delivery_date' => 'Fecha de Entrega',
@@ -1389,6 +1397,10 @@ return "<div class='action-buttons-row d-flex flex-wrap' style='display: none; g
         $standardFields = [
             'order_id' => 'ID del Pedido',
             'client_number' => 'Número de Cliente',
+            'address' => 'Dirección',
+            'phone' => 'Teléfono',
+            'cif_nif' => 'CIF / NIF',
+            'ref_order' => 'Referencia de Pedido',
             'route_name' => 'Nombre de Ruta',
             'created_at' => 'Fecha de Creación',
             'delivery_date' => 'Fecha de Entrega',

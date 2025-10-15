@@ -5720,9 +5720,15 @@ async function updateOrderStatus(orderId, newStatus) {
                             console.log(`Comparando órdenes: Actual=${currentOrderId}, API=${apiOrderId}`);
                             
                             // Si la orden ha cambiado y tenemos un código de barras
-                            if (apiOrderId && currentOrderId !== apiOrderId && lastBarcode) {
+                            if (apiOrderId && currentOrderId !== apiOrderId) {
                                 console.log(`Orden de producción cambiada: ${currentOrderId} -> ${apiOrderId}`);
-                                
+
+                                // Si no hay código previo, evitar preguntar y permitir flujo normal
+                                if (!lastBarcode) {
+                                    console.warn('Orden cambiada pero no hay código previo, saltando confirmación.');
+                                    return;
+                                }
+
                                 // Pausar el polling mientras el usuario decide
                                 isWaitingForBarcodeDecision = true;
                                 

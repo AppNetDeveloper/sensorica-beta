@@ -209,8 +209,46 @@ class CheckOrdersFromApi extends Command
                                     } else {
                                         $this->logLine("ℹ️ No se encontró información de fecha_pedido_erp en la API para el pedido {$orderId}", 'info');
                                     }
+
+                                    // Sincronizar campos adicionales (Dirección, Teléfono, CIF/NIF, Referencia de Pedido)
+                                    $additionalFields = [
+                                        'address' => 'Dirección',
+                                        'phone' => 'Teléfono',
+                                        'cif_nif' => 'CIF/NIF',
+                                        'ref_order' => 'Referencia de Pedido',
+                                    ];
+
+                                    $pendingUpdates = [];
+                                    foreach ($additionalFields as $field => $label) {
+                                        if (array_key_exists($field, $mappedData)) {
+                                            $incomingValue = $mappedData[$field];
+
+                                            if (is_string($incomingValue)) {
+                                                $incomingValue = trim($incomingValue);
+                                            }
+
+                                            if ($incomingValue === '') {
+                                                $incomingValue = null;
+                                            }
+
+                                            $currentValue = $existingOrder->{$field};
+
+                                            if ($currentValue !== $incomingValue) {
+                                                $currentLabel = $currentValue === null ? 'null' : $currentValue;
+                                                $incomingLabel = $incomingValue === null ? 'null' : $incomingValue;
+                                                $this->logLine("🔄 Actualizando {$label} de '{$currentLabel}' a '{$incomingLabel}' para el pedido {$orderId}", 'info');
+                                                $pendingUpdates[$field] = $incomingValue;
+                                            }
+                                        }
+                                    }
+
+                                    if (!empty($pendingUpdates)) {
+                                        $existingOrder->fill($pendingUpdates);
+                                        $existingOrder->save();
+                                        $this->logLine('✅ Campos adicionales actualizados correctamente', 'info');
+                                    }
                                 }
-                                
+
                                 // Verificar y actualizar el stock de los artículos existentes
                                 $this->logLine("🔍 Verificando stock de artículos para la orden {$orderId}...");
                                 

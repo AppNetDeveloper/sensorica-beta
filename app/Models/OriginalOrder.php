@@ -18,6 +18,10 @@ class OriginalOrder extends Model
         'customer_client_id',
         'route_name_id',
         'client_number',
+        'address',
+        'phone',
+        'cif_nif',
+        'ref_order',
         'order_details',
         'processed',
         'finished_at', //fecha de pedido finalizado cuando el pedido se completa

@@ -36,10 +36,16 @@ class OriginalOrderObserver
         // Candidatos de nombre y datos del cliente
         $candidateName = $order->client_number ?: null;
         $candidateName = $candidateName ?: Arr::get($details, 'cliente.nombre');
-        $candidateAddress = Arr::get($details, 'cliente.direccion') ?: Arr::get($details, 'cliente.address');
-        $candidatePhone = Arr::get($details, 'cliente.telefono') ?: Arr::get($details, 'cliente.phone');
+        $candidateAddress = Arr::get($details, 'cliente.direccion')
+            ?: Arr::get($details, 'cliente.address')
+            ?: $order->address;
+        $candidatePhone = Arr::get($details, 'cliente.telefono')
+            ?: Arr::get($details, 'cliente.phone')
+            ?: $order->phone;
         $candidateEmail = Arr::get($details, 'cliente.email');
-        $candidateTaxId = Arr::get($details, 'cliente.nif') ?: Arr::get($details, 'cliente.tax_id');
+        $candidateTaxId = Arr::get($details, 'cliente.nif')
+            ?: Arr::get($details, 'cliente.tax_id')
+            ?: $order->cif_nif;
 
         // Si no tenemos al menos un nombre identificador, no crear automáticamente
         if (!$candidateName && !$candidateTaxId) {
