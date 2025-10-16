@@ -1,10 +1,40 @@
 #!/usr/bin/env node
 'use strict';
 
-// Carga de variables de entorno desde .env
-require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
+
+// Verificar si existe el archivo .env
+const envPath = path.join(__dirname, '.env');
+if (!fs.existsSync(envPath)) {
+  console.log('');
+  console.log('═══════════════════════════════════════════════════════════════');
+  console.log('  ℹ️  SERVICIO 232-BASCULAS - SIN CONFIGURACIÓN');
+  console.log('═══════════════════════════════════════════════════════════════');
+  console.log('');
+  console.log('📋 No se encontró el archivo .env');
+  console.log('');
+  console.log('Este cliente no requiere el servicio de básculas RS232.');
+  console.log('El proceso permanecerá activo sin realizar ninguna acción.');
+  console.log('');
+  console.log('Si deseas activar el servicio de básculas:');
+  console.log('  1. Copia el archivo: cp env.template .env');
+  console.log('  2. Edita la configuración: nano .env');
+  console.log('  3. Reinicia el servicio: sudo supervisorctl restart 232-basculas-rs232');
+  console.log('');
+  console.log('═══════════════════════════════════════════════════════════════');
+  console.log('');
+  
+  // Mantener el proceso vivo sin hacer nada
+  setInterval(() => {
+    // Nada, solo mantener el proceso activo
+  }, 60000); // Cada 60 segundos
+  
+  return; // No continuar con la ejecución
+}
+
+// Carga de variables de entorno desde .env
+require('dotenv').config();
 const mqtt = require('mqtt');
 const { SerialPort, ReadlineParser } = require('serialport');
 
