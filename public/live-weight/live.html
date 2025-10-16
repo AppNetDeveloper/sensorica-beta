@@ -289,7 +289,7 @@
       box-shadow: 0 12px 30px rgba(0,0,0,0.1);
       border-color: var(--info-color);
     }
-    .info-box i.display-icon { 
+    .info-box .display-icon { 
       font-size: 2.8rem; 
       margin-bottom: 12px; 
       line-height: 1;
@@ -302,6 +302,7 @@
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
+      filter: drop-shadow(var(--led-glow));
     }
     .live-data-box .info-box i.bi-rulers,
     .live-data-box .info-box i.bi-box {
@@ -738,6 +739,23 @@
     .technical-info-value {
         color: var(--text-dark);
         font-family: 'Roboto Mono', monospace;
+    }
+    /* Technical info en cajas LED - texto blanco visible */
+    .live-data-box .technical-info {
+        background: linear-gradient(135deg, rgba(45, 55, 72, 0.4) 0%, rgba(26, 29, 41, 0.4) 100%);
+        border-color: #2d3748;
+    }
+    .live-data-box .technical-info-item {
+        color: rgba(255, 255, 255, 0.9);
+    }
+    .live-data-box .technical-info-item i {
+        color: #22c55e;
+        filter: drop-shadow(0 0 4px rgba(34, 197, 94, 0.6));
+    }
+    .live-data-box .technical-info-value {
+        color: #ffffff;
+        font-weight: 700;
+        text-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
     }
     /* Technical info en cajas históricas */
     .box:not(.live-data-box) .technical-info {
