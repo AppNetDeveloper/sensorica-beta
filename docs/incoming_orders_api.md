@@ -31,9 +31,13 @@ Crea una nueva orden o actualiza una existente (upsert por `order_id`).
   "order_id": "A-12345",
   "client_number": "C-777",
   "route_name": "Ruta Centro",
+  "ref_order": "PED-98765",
   "delivery_date": "2025-09-30",
   "fecha_pedido_erp": "2025-09-20",
   "in_stock": 1,
+  "address": "Av. Industria 42, Nave 3",
+  "phone": "+34 600 111 222",
+  "cif_nif": "B12345678",
   "grupos": [
     {
       "grupoNum": "1",
@@ -44,12 +48,46 @@ Crea una nueva orden o actualiza una existente (upsert por `order_id`).
           "box": 0,
           "units_box": 0,
           "number_of_pallets": 0
+        },
+        {
+          "process_code": "S.305",
+          "time_seconds": 900,
+          "box": 2,
+          "units_box": 12,
+          "number_of_pallets": 1
         }
       ],
       "articulos": [
         {
           "codigo_articulo": "2.H3710ST12.19",
           "descripcion_articulo": "Tablero H3710",
+          "grupo_articulo": "LAMINADO",
+          "in_stock": 1
+        },
+        {
+          "codigo_articulo": "ACC123",
+          "descripcion_articulo": "Kit herrajes",
+          "grupo_articulo": "ACCESORIOS",
+          "in_stock": 0
+        }
+      ]
+    },
+    {
+      "grupoNum": "2",
+      "servicios": [
+        {
+          "process_code": "S.450",
+          "time_seconds": 2400,
+          "box": 1,
+          "units_box": 6,
+          "number_of_pallets": 0
+        }
+      ],
+      "articulos": [
+        {
+          "codigo_articulo": "PINT001",
+          "descripcion_articulo": "Barniz mate 5L",
+          "grupo_articulo": "ACABADOS",
           "in_stock": 1
         }
       ]
