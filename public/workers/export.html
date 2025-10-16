@@ -284,12 +284,112 @@
         <!-- Botones de Análisis y Gráficos -->
         <div class="no-print mb-4">
             <div class="flex flex-wrap justify-between items-center gap-3">
-                <!-- Botón IA PRO destacado a la izquierda -->
-                <button id="analizarTodosLocalAIBtn" class="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold py-2.5 px-4 rounded-lg text-sm shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-150 ease-in-out hidden flex items-center gap-2">
-                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M9.5 2A7.5 7.5 0 002 9.5c0 1.76.61 3.37 1.63 4.66l-1.36 4.08a1 1 0 001.28 1.28l4.08-1.36A7.47 7.47 0 009.5 17a7.5 7.5 0 000-15zM9 12H8v-1h1v1zm2 0h-1v-1h1v1zm2 0h-1v-1h1v1zm0-3H8V8h5v1z"/><circle cx="17" cy="17" r="5" fill="currentColor" opacity="0.5"/><path d="M17 14v6m-3-3h6" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
-                    <span class="font-extrabold">🤖 ANÁLISIS IA</span>
-                    <span class="text-xs bg-yellow-400 text-purple-900 px-1.5 py-0.5 rounded-full font-bold">PRO</span>
-                </button>
+                <!-- Menú desplegable IA PRO destacado a la izquierda -->
+                <div id="aiMenuContainer" class="relative inline-block hidden">
+                    <button id="aiMenuBtn" class="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold py-2.5 px-4 rounded-lg text-sm shadow-lg hover:shadow-xl transition-all duration-150 ease-in-out flex items-center gap-2 border-2 border-yellow-400">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M9.5 2A7.5 7.5 0 002 9.5c0 1.76.61 3.37 1.63 4.66l-1.36 4.08a1 1 0 001.28 1.28l4.08-1.36A7.47 7.47 0 009.5 17a7.5 7.5 0 000-15zM9 12H8v-1h1v1zm2 0h-1v-1h1v1zm2 0h-1v-1h1v1zm0-3H8V8h5v1z"/><circle cx="17" cy="17" r="5" fill="currentColor" opacity="0.5"/><path d="M17 14v6m-3-3h6" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
+                        <span class="font-extrabold">🤖 ANÁLISIS IA</span>
+                        <span class="text-xs bg-yellow-400 text-purple-900 px-1.5 py-0.5 rounded-full font-extrabold">PRO</span>
+                        <svg class="w-3 h-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                    </button>
+                    <div id="aiMenuDropdown" class="hidden absolute left-0 mt-2 w-96 bg-white rounded-lg shadow-2xl border-2 border-purple-200 z-50 py-2 max-h-96 overflow-y-auto">
+                        <!-- ENCABEZADO -->
+                        <div class="px-4 py-3 bg-gradient-to-r from-purple-50 to-indigo-50 border-b-2 border-purple-200">
+                            <p class="text-sm font-extrabold text-purple-900 flex items-center gap-2">
+                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M9.5 2A7.5 7.5 0 002 9.5c0 1.76.61 3.37 1.63 4.66l-1.36 4.08a1 1 0 001.28 1.28l4.08-1.36A7.47 7.47 0 009.5 17a7.5 7.5 0 000-15z"/></svg>
+                                ANÁLISIS INTELIGENTE DEL EQUIPO
+                                <span class="text-xs bg-yellow-400 text-purple-900 px-2 py-0.5 rounded-full">PRO</span>
+                            </p>
+                            <p class="text-xs text-purple-600 mt-1">Selecciona el tipo de análisis que deseas realizar</p>
+                        </div>
+                        
+                        <!-- ANÁLISIS BÁSICO -->
+                        <div class="px-3 py-2 text-xs font-bold text-purple-700 bg-purple-50 border-b border-purple-100">📊 ANÁLISIS BÁSICO</div>
+                        <div class="py-1">
+                            <button id="aiGlobalCajasBtn" class="w-full text-left px-4 py-2.5 text-sm hover:bg-purple-50 flex items-center gap-3 transition-all group">
+                                <span class="text-xl group-hover:scale-110 transition-transform">📦</span>
+                                <div class="flex-1">
+                                    <p class="font-semibold text-gray-900">Análisis Global por Cajas</p>
+                                    <p class="text-xs text-gray-500">Enfoque en producción total</p>
+                                </div>
+                            </button>
+                            <button id="aiGlobalEfficiencyBtn" class="w-full text-left px-4 py-2.5 text-sm hover:bg-purple-50 flex items-center gap-3 transition-all group">
+                                <span class="text-xl group-hover:scale-110 transition-transform">⚡</span>
+                                <div class="flex-1">
+                                    <p class="font-semibold text-gray-900">Análisis por Eficiencia c/h</p>
+                                    <p class="text-xs text-gray-500">Enfoque en productividad horaria</p>
+                                </div>
+                            </button>
+                            <button id="aiGlobalTrendsBtn" class="w-full text-left px-4 py-2.5 text-sm hover:bg-purple-50 flex items-center gap-3 transition-all group">
+                                <span class="text-xl group-hover:scale-110 transition-transform">📈</span>
+                                <div class="flex-1">
+                                    <p class="font-semibold text-gray-900">Tendencias del Equipo</p>
+                                    <p class="text-xs text-gray-500">Patrones y evolución temporal</p>
+                                </div>
+                            </button>
+                        </div>
+                        
+                        <!-- OPTIMIZACIÓN -->
+                        <div class="px-3 py-2 text-xs font-bold text-indigo-700 bg-indigo-50 border-t border-b border-indigo-100">🎯 OPTIMIZACIÓN</div>
+                        <div class="py-1">
+                            <button id="aiGlobalDistributionBtn" class="w-full text-left px-4 py-2.5 text-sm hover:bg-indigo-50 flex items-center gap-3 transition-all group">
+                                <span class="text-xl group-hover:scale-110 transition-transform">🎯</span>
+                                <div class="flex-1">
+                                    <p class="font-semibold text-gray-900">Optimizar Distribución</p>
+                                    <p class="text-xs text-gray-500">Mejor asignación de recursos</p>
+                                </div>
+                            </button>
+                            <button id="aiGlobalComparativeBtn" class="w-full text-left px-4 py-2.5 text-sm hover:bg-indigo-50 flex items-center gap-3 transition-all group">
+                                <span class="text-xl group-hover:scale-110 transition-transform">🔄</span>
+                                <div class="flex-1">
+                                    <p class="font-semibold text-gray-900">Análisis Comparativo</p>
+                                    <p class="text-xs text-gray-500">Comparar grupos y turnos</p>
+                                </div>
+                            </button>
+                            <button id="aiGlobalHourlyBtn" class="w-full text-left px-4 py-2.5 text-sm hover:bg-indigo-50 flex items-center gap-3 transition-all group">
+                                <span class="text-xl group-hover:scale-110 transition-transform">🕐</span>
+                                <div class="flex-1">
+                                    <p class="font-semibold text-gray-900">Análisis Horario</p>
+                                    <p class="text-xs text-gray-500">Productividad por franjas horarias</p>
+                                </div>
+                            </button>
+                        </div>
+                        
+                        <!-- AVANZADO -->
+                        <div class="px-3 py-2 text-xs font-bold text-purple-700 bg-purple-50 border-t border-b border-purple-100">🚀 AVANZADO</div>
+                        <div class="py-1">
+                            <button id="aiGlobalObjectivesBtn" class="w-full text-left px-4 py-2.5 text-sm hover:bg-purple-50 flex items-center gap-3 transition-all group">
+                                <span class="text-xl group-hover:scale-110 transition-transform">🏆</span>
+                                <div class="flex-1">
+                                    <p class="font-semibold text-gray-900">Objetivos & KPIs</p>
+                                    <p class="text-xs text-gray-500">Metas y métricas del equipo</p>
+                                </div>
+                            </button>
+                            <button id="aiGlobalTeamBtn" class="w-full text-left px-4 py-2.5 text-sm hover:bg-purple-50 flex items-center gap-3 transition-all group">
+                                <span class="text-xl group-hover:scale-110 transition-transform">🤝</span>
+                                <div class="flex-1">
+                                    <p class="font-semibold text-gray-900">Dinámicas de Equipo</p>
+                                    <p class="text-xs text-gray-500">Sinergia y colaboración</p>
+                                </div>
+                            </button>
+                            <button id="aiGlobalPredictiveBtn" class="w-full text-left px-4 py-2.5 text-sm hover:bg-purple-50 flex items-center gap-3 transition-all group">
+                                <span class="text-xl group-hover:scale-110 transition-transform">🔮</span>
+                                <div class="flex-1">
+                                    <p class="font-semibold text-gray-900">Análisis Predictivo</p>
+                                    <p class="text-xs text-gray-500">Proyecciones y forecasting</p>
+                                </div>
+                            </button>
+                        </div>
+                        
+                        <!-- NOTA AL PIE -->
+                        <div class="px-4 py-2 bg-yellow-50 border-t-2 border-yellow-200 mt-2">
+                            <p class="text-xs text-yellow-800 flex items-center gap-1">
+                                <svg class="w-3 h-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg>
+                                Podrás editar el prompt antes de enviarlo
+                            </p>
+                        </div>
+                    </div>
+                </div>
                 
                 <!-- Botones principales a la derecha -->
                 <div class="flex flex-wrap gap-2 items-center">
@@ -563,7 +663,11 @@
 
     // Variables globales (declaraciones)
     let tableBody, loadingRow, errorRow, errorCell, noDataRow, exportExcelBtn, printBtn,
-        dateRangeSelect, filterPostsCheckbox, analizarTodosLocalAIBtn,
+        dateRangeSelect, filterPostsCheckbox,
+        aiMenuContainer, aiMenuBtn, aiMenuDropdown,
+        aiGlobalCajasBtn, aiGlobalEfficiencyBtn, aiGlobalTrendsBtn,
+        aiGlobalDistributionBtn, aiGlobalComparativeBtn, aiGlobalHourlyBtn,
+        aiGlobalObjectivesBtn, aiGlobalTeamBtn, aiGlobalPredictiveBtn,
         chartsMenuContainer, chartsMenuBtn, chartsMenuDropdown,
         viewWorkerChartBtn, viewWorkerCHChartBtn, viewPostChartBtn, viewPostCHChartBtn, viewWorkerPieChartBtn, viewWorkerCHPieChartBtn, viewConfeccionPorTrabajadorChartBtn,
         viewWorkerEvolutionBtn, viewWorkerEvolutionCHBtn, viewDistributionBtn, viewRankingBtn, viewRankingCHBtn, viewFullRankingBtn, viewFullRankingCHBtn,
@@ -833,13 +937,18 @@
 
     function updateHeaderButtonsState() {
         const hasData = displayedPostRowsCount > 0;
-        const actionButtons = [analizarTodosLocalAIBtn, viewWorkerChartBtn, viewWorkerCHChartBtn, viewPostChartBtn, viewPostCHChartBtn, viewWorkerPieChartBtn, viewWorkerCHPieChartBtn, viewConfeccionPorTrabajadorChartBtn, viewWorkerEvolutionBtn, viewWorkerEvolutionCHBtn, viewDistributionBtn, viewRankingBtn, viewRankingCHBtn, viewFullRankingBtn, viewFullRankingCHBtn, viewInsightsBtn, viewTemporalComparisonBtn, viewHeatmapBtn];
+        const actionButtons = [viewWorkerChartBtn, viewWorkerCHChartBtn, viewPostChartBtn, viewPostCHChartBtn, viewWorkerPieChartBtn, viewWorkerCHPieChartBtn, viewConfeccionPorTrabajadorChartBtn, viewWorkerEvolutionBtn, viewWorkerEvolutionCHBtn, viewDistributionBtn, viewRankingBtn, viewRankingCHBtn, viewFullRankingBtn, viewFullRankingCHBtn, viewInsightsBtn, viewTemporalComparisonBtn, viewHeatmapBtn];
         actionButtons.forEach(btn => {
             if (btn) {
                 if (isLocked || !hasData) { btn.classList.add('hidden'); btn.disabled = true; }
                 else { btn.classList.remove('hidden'); btn.disabled = false; }
             }
         });
+        // Mostrar/ocultar menú de IA PRO
+        if (aiMenuContainer) {
+            if (isLocked || !hasData) { aiMenuContainer.classList.add('hidden'); }
+            else { aiMenuContainer.classList.remove('hidden'); }
+        }
         // Mostrar/ocultar menú de gráficos
         if (chartsMenuContainer) {
             if (isLocked || !hasData) { chartsMenuContainer.classList.add('hidden'); }
@@ -1177,7 +1286,31 @@
         showPromptEditModal(hybridGlobalPrompt, analysisTitle, modelToUse, overallSummaryText);
     }
     
-    function generateHybridGlobalPrompt() {
+    async function executeGlobalAIAnalysis(analysisType) {
+        const analysisConfig = {
+            cajas: { title: '📦 Análisis Global por Cajas', focus: 'producción total' },
+            efficiency: { title: '⚡ Análisis por Eficiencia c/h', focus: 'productividad horaria' },
+            trends: { title: '📈 Tendencias del Equipo', focus: 'patrones temporales' },
+            distribution: { title: '🎯 Optimizar Distribución', focus: 'asignación de recursos' },
+            comparative: { title: '🔄 Análisis Comparativo', focus: 'comparaciones entre grupos' },
+            hourly: { title: '🕐 Análisis Horario', focus: 'franjas horarias' },
+            objectives: { title: '🏆 Objetivos & KPIs', focus: 'metas y métricas' },
+            team: { title: '🤝 Dinámicas de Equipo', focus: 'colaboración y sinergia' },
+            predictive: { title: '🔮 Análisis Predictivo', focus: 'proyecciones futuras' }
+        };
+        
+        const config = analysisConfig[analysisType] || analysisConfig.cajas;
+        const analysisTitle = config.title;
+        
+        // Generar prompt en formato híbrido CSV/tabla
+        const hybridPrompt = generateHybridGlobalPrompt(analysisType, config);
+        
+        // Mostrar modal de edición de prompt antes de enviar
+        const modelToUse = defaultLocalAIModelName;
+        showPromptEditModal(hybridPrompt, analysisTitle, modelToUse, '');
+    }
+    
+    function generateHybridGlobalPrompt(analysisType, config) {
         const teamData = filterDataByCheckbox(JSON.parse(JSON.stringify(originalWorkersData)));
         
         if (teamData.length === 0) {
@@ -1290,15 +1423,67 @@
             prompt += `${topPuesto[0]}: ${topPuesto[1].cajas} cajas en ${topPuesto[1].turnos} turnos\n`;
         }
         
-        // INSTRUCCIONES DE ANÁLISIS
-        prompt += `\n## INSTRUCCIONES\n`;
-        prompt += `Analiza el rendimiento global del equipo. Proporciona:\n`;
-        prompt += `1. Análisis de fortalezas y debilidades del equipo\n`;
-        prompt += `2. Identificación de patrones y tendencias\n`;
-        prompt += `3. Recomendaciones de optimización\n`;
-        prompt += `4. Sugerencias de formación o redistribución\n`;
-        prompt += `5. Oportunidades de mejora\n`;
-        prompt += `\nProporciona un análisis claro, estructurado y accionable.`;
+        // INSTRUCCIONES DE ANÁLISIS (específicas según tipo)
+        prompt += `\n## INSTRUCCIONES DE ANÁLISIS\n`;
+        prompt += `Enfoque: ${config ? config.focus : 'análisis general'}\n\n`;
+        
+        if (!analysisType || analysisType === 'cajas') {
+            prompt += `Analiza el rendimiento del equipo con enfoque en PRODUCCIÓN TOTAL (cajas):\n`;
+            prompt += `1. Identificar trabajadores más productivos en cantidad\n`;
+            prompt += `2. Detectar cuellos de botella en la producción\n`;
+            prompt += `3. Sugerir cómo aumentar la producción total\n`;
+            prompt += `4. Analizar distribución de carga de trabajo\n`;
+        } else if (analysisType === 'efficiency') {
+            prompt += `Analiza el rendimiento del equipo con enfoque en EFICIENCIA (c/h):\n`;
+            prompt += `1. Identificar trabajadores más eficientes\n`;
+            prompt += `2. Factores que afectan la eficiencia\n`;
+            prompt += `3. Cómo mejorar la productividad horaria\n`;
+            prompt += `4. Comparar eficiencia entre puestos\n`;
+        } else if (analysisType === 'trends') {
+            prompt += `Analiza TENDENCIAS Y PATRONES del equipo:\n`;
+            prompt += `1. Patrones de mejora o deterioro\n`;
+            prompt += `2. Evolución temporal del equipo\n`;
+            prompt += `3. Predecir tendencias futuras\n`;
+            prompt += `4. Alertas tempranas de problemas\n`;
+        } else if (analysisType === 'distribution') {
+            prompt += `Analiza y optimiza la DISTRIBUCIÓN de trabajadores:\n`;
+            prompt += `1. Asignación óptima de trabajadores a puestos\n`;
+            prompt += `2. Sugerencias de rotación\n`;
+            prompt += `3. Balance de carga de trabajo\n`;
+            prompt += `4. Especialización vs polivalencia\n`;
+        } else if (analysisType === 'comparative') {
+            prompt += `Realiza ANÁLISIS COMPARATIVO del equipo:\n`;
+            prompt += `1. Comparar diferentes grupos de trabajadores\n`;
+            prompt += `2. Identificar mejores prácticas\n`;
+            prompt += `3. Qué hacen diferente los top performers\n`;
+            prompt += `4. Plan de desarrollo para otros\n`;
+        } else if (analysisType === 'hourly') {
+            prompt += `Analiza el rendimiento por FRANJAS HORARIAS:\n`;
+            prompt += `1. Mejores/peores horas del equipo\n`;
+            prompt += `2. Fatiga vs productividad\n`;
+            prompt += `3. Sugerencias de pausas óptimas\n`;
+            prompt += `4. Turnos ideales\n`;
+        } else if (analysisType === 'objectives') {
+            prompt += `Define OBJETIVOS Y KPIs para el equipo:\n`;
+            prompt += `1. Establecer metas realistas\n`;
+            prompt += `2. Métricas de seguimiento\n`;
+            prompt += `3. Gap analysis (brecha actual vs objetivo)\n`;
+            prompt += `4. Roadmap de mejora\n`;
+        } else if (analysisType === 'team') {
+            prompt += `Analiza las DINÁMICAS DE EQUIPO:\n`;
+            prompt += `1. Sinergia entre trabajadores\n`;
+            prompt += `2. Mejores combinaciones de equipos\n`;
+            prompt += `3. Identificar líderes naturales\n`;
+            prompt += `4. Dinámicas de grupo\n`;
+        } else if (analysisType === 'predictive') {
+            prompt += `Realiza ANÁLISIS PREDICTIVO del equipo:\n`;
+            prompt += `1. Predecir producción del próximo período\n`;
+            prompt += `2. Identificar riesgos\n`;
+            prompt += `3. Detectar necesidades de contratación\n`;
+            prompt += `4. Forecasting inteligente\n`;
+        }
+        
+        prompt += `\nProporciona un análisis claro, estructurado y accionable con recomendaciones específicas.`;
         
         return prompt;
     }
@@ -3653,7 +3838,18 @@
         customDateTo = document.getElementById('customDateTo');
         applyCustomDateBtn = document.getElementById('applyCustomDateBtn');
         filterPostsCheckbox = document.getElementById('filterPostsCheckbox');
-        analizarTodosLocalAIBtn = document.getElementById('analizarTodosLocalAIBtn');
+        aiMenuContainer = document.getElementById('aiMenuContainer');
+        aiMenuBtn = document.getElementById('aiMenuBtn');
+        aiMenuDropdown = document.getElementById('aiMenuDropdown');
+        aiGlobalCajasBtn = document.getElementById('aiGlobalCajasBtn');
+        aiGlobalEfficiencyBtn = document.getElementById('aiGlobalEfficiencyBtn');
+        aiGlobalTrendsBtn = document.getElementById('aiGlobalTrendsBtn');
+        aiGlobalDistributionBtn = document.getElementById('aiGlobalDistributionBtn');
+        aiGlobalComparativeBtn = document.getElementById('aiGlobalComparativeBtn');
+        aiGlobalHourlyBtn = document.getElementById('aiGlobalHourlyBtn');
+        aiGlobalObjectivesBtn = document.getElementById('aiGlobalObjectivesBtn');
+        aiGlobalTeamBtn = document.getElementById('aiGlobalTeamBtn');
+        aiGlobalPredictiveBtn = document.getElementById('aiGlobalPredictiveBtn');
         chartsMenuContainer = document.getElementById('chartsMenuContainer');
         chartsMenuBtn = document.getElementById('chartsMenuBtn');
         chartsMenuDropdown = document.getElementById('chartsMenuDropdown');
@@ -3730,7 +3926,32 @@
             if (typeof printTable === 'function') { printBtn.addEventListener('click', printTable); }
             else { console.error('ERROR: printTable no es una función al adjuntar listener.'); }
         }
-        if (analizarTodosLocalAIBtn) analizarTodosLocalAIBtn.addEventListener('click', fetchLocalAIOverallAnalysis);
+        
+        // Event listeners para menú desplegable de IA PRO
+        if (aiMenuBtn && aiMenuDropdown) {
+            aiMenuBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                aiMenuDropdown.classList.toggle('hidden');
+            });
+            
+            // Cerrar menú al hacer clic fuera
+            document.addEventListener('click', (e) => {
+                if (aiMenuContainer && !aiMenuContainer.contains(e.target)) {
+                    if (aiMenuDropdown) aiMenuDropdown.classList.add('hidden');
+                }
+            });
+            
+            // Event listeners para cada opción de análisis global
+            if (aiGlobalCajasBtn) aiGlobalCajasBtn.addEventListener('click', () => { aiMenuDropdown.classList.add('hidden'); executeGlobalAIAnalysis('cajas'); });
+            if (aiGlobalEfficiencyBtn) aiGlobalEfficiencyBtn.addEventListener('click', () => { aiMenuDropdown.classList.add('hidden'); executeGlobalAIAnalysis('efficiency'); });
+            if (aiGlobalTrendsBtn) aiGlobalTrendsBtn.addEventListener('click', () => { aiMenuDropdown.classList.add('hidden'); executeGlobalAIAnalysis('trends'); });
+            if (aiGlobalDistributionBtn) aiGlobalDistributionBtn.addEventListener('click', () => { aiMenuDropdown.classList.add('hidden'); executeGlobalAIAnalysis('distribution'); });
+            if (aiGlobalComparativeBtn) aiGlobalComparativeBtn.addEventListener('click', () => { aiMenuDropdown.classList.add('hidden'); executeGlobalAIAnalysis('comparative'); });
+            if (aiGlobalHourlyBtn) aiGlobalHourlyBtn.addEventListener('click', () => { aiMenuDropdown.classList.add('hidden'); executeGlobalAIAnalysis('hourly'); });
+            if (aiGlobalObjectivesBtn) aiGlobalObjectivesBtn.addEventListener('click', () => { aiMenuDropdown.classList.add('hidden'); executeGlobalAIAnalysis('objectives'); });
+            if (aiGlobalTeamBtn) aiGlobalTeamBtn.addEventListener('click', () => { aiMenuDropdown.classList.add('hidden'); executeGlobalAIAnalysis('team'); });
+            if (aiGlobalPredictiveBtn) aiGlobalPredictiveBtn.addEventListener('click', () => { aiMenuDropdown.classList.add('hidden'); executeGlobalAIAnalysis('predictive'); });
+        }
         
         // Event listeners para menú desplegable de gráficos
         if (chartsMenuBtn && chartsMenuDropdown) {
@@ -3851,6 +4072,9 @@
             console.log('Sesión restaurada desde caché');
         }
 
+        // Configurar IA al inicio
+        configureAIFromServer();
+        
         const {from, to} = getDateRange(dateRangeSelect.value);
         fetchData(from, to);
         toggleLockState(isLocked); 
