@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Xmart Developer Autoconto - Barra e Indicador Más Gruesos</title>
+  <title>Control de Peso en Vivo - Xmart Autoconto</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,159 +18,510 @@
   <style>
     /* --- Variables CSS --- */
     :root {
-      --primary-dark: #2c3e50;
-      --primary-light-bg: #ecf0f1;
-      --accent-color: #e67e22;
+      --primary-dark: #1a1d29;
+      --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      --success-gradient: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+      --primary-light-bg: #f0f2f8;
+      --accent-color: #ff6b6b;
+      --accent-secondary: #4ecdc4;
       --text-light: #ffffff;
-      --text-dark: #34495e;
-      --text-muted: #7f8c8d;
+      --text-dark: #2d3748;
+      --text-muted: #718096;
       --card-bg: #ffffff;
-      --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-      --border-radius: 8px;
+      --card-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+      --card-shadow-hover: 0 20px 60px rgba(0, 0, 0, 0.12);
+      --border-radius: 16px;
       --font-family: 'Poppins', sans-serif;
-      --success-color: #2ecc71;
-      --warning-color: #f1c40f;
-      --danger-color: #e74c3c;
-      --info-color: #3498db;
-      --info-box-bg: #f8f9fa;
-      --info-box-border: #e9ecef;
+      --success-color: #38ef7d;
+      --warning-color: #ffd93d;
+      --danger-color: #ff6b6b;
+      --info-color: #667eea;
+      --info-box-bg: linear-gradient(145deg, #ffffff 0%, #f7fafc 100%);
+      --info-box-border: #e2e8f0;
       --black-color: #000000;
     }
 
     html, body {
       width: 100%; height: 100%; margin: 0; padding: 0; display: flex; flex-direction: column;
-      background-color: var(--primary-light-bg); color: var(--text-dark); font-family: var(--font-family);
+      background: linear-gradient(135deg, #f0f2f8 0%, #e8ebf5 100%);
+      color: var(--text-dark); font-family: var(--font-family);
       box-sizing: border-box; overflow: hidden;
     }
 
-    /* --- Header --- */
-    .header-container { width: 100%; background-color: var(--primary-dark); color: var(--text-light); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); flex-shrink: 0; }
-    .header-left img { max-height: 50px; width: auto; }
-    .header-center { text-align: center; font-size: 1.1rem; font-weight: 500; }
-    .header-center #created-at { font-size: 0.9rem; color: #bdc3c7; }
-    .header-right { text-align: right; }
-    .header-right #timeDisplay { font-size: 1.4rem; font-weight: 600; margin: 0; padding: 0; }
-    .header-right #scaleName { display: block; font-size: 1.1rem; color: var(--accent-color); font-weight: 600; margin: 0; padding: 0; }
+    /* --- Scrollbar personalizado --- */
+    main::-webkit-scrollbar {
+      width: 10px;
+    }
+    main::-webkit-scrollbar-track {
+      background: rgba(226, 232, 240, 0.3);
+      border-radius: 10px;
+    }
+    main::-webkit-scrollbar-thumb {
+      background: var(--primary-gradient);
+      border-radius: 10px;
+      transition: all 0.3s ease;
+    }
+    main::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(135deg, #5568d3 0%, #6a3f91 100%);
+    }
+
+    /* --- Header Info Inline --- */
+    .header-info-inline {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 0;
+      padding: 10px 16px;
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
+      border-radius: 10px;
+      border: 1px solid var(--info-box-border);
+    }
+    .header-info-inline .info-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .header-info-inline .info-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+    }
+    .header-info-inline .info-value {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #000000;
+    }
+    .header-info-inline .info-value.large {
+      font-size: 1.3rem;
+    }
 
     /* --- Contenido Principal --- */
-    main { display: flex; flex-direction: column; align-items: center; width: 100%; flex-grow: 1; padding: 20px; overflow-y: auto; }
+    main { display: flex; flex-direction: column; align-items: center; width: 100%; flex-grow: 1; padding: 15px 20px; overflow-y: auto; height: 100vh; }
 
     /* --- Cajas Principales --- */
-    .box { background-color: var(--card-bg); padding: 25px; margin-bottom: 25px; border-radius: var(--border-radius); width: 98%; max-width: 2400px; box-shadow: var(--card-shadow); border: none; display: flex; flex-direction: column; align-items: center; }
-    .box h5 { color: var(--primary-dark); font-weight: 600; margin-bottom: 20px; align-self: flex-start; display: flex; align-items: center; }
+    .box { 
+      background: var(--card-bg); 
+      padding: 25px 30px; 
+      margin-bottom: 20px; 
+      border-radius: var(--border-radius); 
+      width: 98%; 
+      max-width: 2400px; 
+      box-shadow: var(--card-shadow); 
+      border: 1px solid rgba(255,255,255,0.6);
+      display: flex; 
+      flex-direction: column; 
+      align-items: center;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .box::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: var(--primary-gradient);
+    }
+    .box:hover {
+      box-shadow: var(--card-shadow-hover);
+      transform: translateY(-2px);
+    }
+    .box h5 { 
+      color: var(--text-dark); 
+      font-weight: 700; 
+      margin-bottom: 15px; 
+      align-self: flex-start; 
+      display: flex; 
+      align-items: center;
+      font-size: 1.3rem;
+      letter-spacing: -0.5px;
+    }
+    .box-header {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .box-header h5 {
+      margin-bottom: 0;
+    }
 
-    .box-content { display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px; width: 100%; }
+    .box-content { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; width: 100%; }
 
     /* --- Cajas de Información Internas --- */
-    .info-box { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 20px; border-radius: var(--border-radius); background-color: var(--info-box-bg); border: 1px solid var(--info-box-border); }
-    .info-box i.display-icon { font-size: 2.8rem; color: var(--accent-color); margin-bottom: 15px; line-height: 1; }
-    .live-data-box .info-box { background-color: #ffffff; }
+    .info-box { 
+      display: flex; 
+      flex-direction: column; 
+      align-items: center; 
+      text-align: center; 
+      padding: 20px 15px; 
+      border-radius: var(--border-radius); 
+      background: var(--info-box-bg); 
+      border: 1px solid var(--info-box-border);
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .info-box::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(145deg, rgba(102, 126, 234, 0.03) 0%, rgba(118, 75, 162, 0.03) 100%);
+      pointer-events: none;
+    }
+    .info-box:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 30px rgba(0,0,0,0.1);
+      border-color: var(--info-color);
+    }
+    .info-box i.display-icon { 
+      font-size: 2.8rem; 
+      margin-bottom: 12px; 
+      line-height: 1;
+      position: relative;
+      z-index: 1;
+    }
+    /* Iconos con colores industriales para cada KPI */
+    .info-box i.bi-speedometer2 {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .info-box i.bi-rulers,
+    .info-box i.bi-box {
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .info-box i.bi-box-seam {
+      background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .live-data-box .info-box { 
+      background: linear-gradient(145deg, #ffffff 0%, #fafbff 100%);
+      border: 2px solid var(--info-box-border);
+    }
 
     /* --- Tipografía Principal (Números grandes) --- */
     .weight-display, .dimension-display, #boxNumberDisplay, #lastBoxNumberDisplay,
     #weightDisplay, #dimensionDisplay, #lastWeightDisplay, #lastDimensionDisplay {
-      font-size: 5rem; font-weight: 600; color: var(--text-dark); line-height: 1.1; word-wrap: break-word; margin-bottom: 5px;
-      transition: transform 0.3s ease-in-out, color 0.3s ease-in-out;
+      font-size: 3.8rem; 
+      font-weight: 700; 
+      background: linear-gradient(135deg, var(--text-dark) 0%, var(--info-color) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1; 
+      word-wrap: break-word; 
+      margin-bottom: 5px;
+      transition: all 0.4s ease;
+      position: relative;
+      z-index: 1;
+      letter-spacing: -1.5px;
     }
-    .unit { font-size: 1.8rem; font-weight: 500; vertical-align: baseline; color: var(--text-muted); margin-left: 8px; }
-     @media (max-width: 1200px) { .weight-display, .dimension-display, #boxNumberDisplay, #lastBoxNumberDisplay, #weightDisplay, #dimensionDisplay, #lastWeightDisplay, #lastDimensionDisplay { font-size: 4rem; } .unit { font-size: 1.5rem; } .info-box i.display-icon { font-size: 2.5rem; } }
-     @media (max-width: 768px) { .weight-display, .dimension-display, #boxNumberDisplay, #lastBoxNumberDisplay, #weightDisplay, #dimensionDisplay, #lastWeightDisplay, #lastDimensionDisplay { font-size: 3.5rem; } .unit { font-size: 1.2rem; } .info-box i.display-icon { font-size: 2.2rem; } }
+    .unit { 
+      font-size: 1.3rem; 
+      font-weight: 600; 
+      vertical-align: baseline; 
+      color: #64748b;
+      margin-left: 6px; 
+    }
+     @media (max-width: 1200px) { 
+       .weight-display, .dimension-display, #boxNumberDisplay, #lastBoxNumberDisplay, 
+       #weightDisplay, #dimensionDisplay, #lastWeightDisplay, #lastDimensionDisplay { 
+         font-size: 3.2rem; 
+         letter-spacing: -1.2px;
+       } 
+       .unit { font-size: 1.1rem; } 
+       .info-box i.display-icon { font-size: 2.8rem; } 
+     }
+     @media (max-width: 768px) { 
+       .weight-display, .dimension-display, #boxNumberDisplay, #lastBoxNumberDisplay, 
+       #weightDisplay, #dimensionDisplay, #lastWeightDisplay, #lastDimensionDisplay { 
+         font-size: 2.8rem; 
+         letter-spacing: -1px;
+       } 
+       .unit { font-size: 1rem; } 
+       .info-box i.display-icon { font-size: 2.4rem; } 
+     }
 
-    .info-box p:not(.weight-display):not(.dimension-display) { font-size: 1.1rem; color: var(--text-dark); margin-top: 10px; }
+    .info-box p:not(.weight-display):not(.dimension-display) { 
+      font-size: 1.1rem; 
+      color: var(--text-dark); 
+      margin-top: 10px;
+      font-weight: 500;
+    }
 
     /* --- Sección Inferior (Barcode, QR, RFID) --- */
-    .bottom-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; width: 100%; padding-top: 25px; margin-top: 20px; border-top: 1px solid var(--info-box-border); }
-    .barcode-container { display: flex; align-items: center; justify-content: center; flex-grow: 1; min-width: 250px; }
-    .barcode-section { display: flex; flex-direction: column; align-items: center; text-align: center; }
-    .barcode-container p { font-size: 1rem; color: var(--text-dark); margin-bottom: 8px; font-weight: 500; }
-    #lastBarcode { width: 100%; max-width: 400px; height: auto; margin-top: 5px; }
-    .qr-rfid-container { display: flex; flex-direction: row; align-items: center; gap: 40px; flex-grow: 1; justify-content: center; min-width: 250px; margin-top: 15px; }
-    .qr-rfid-container div { display: flex; flex-direction: column; align-items: center; }
-    .qr-rfid-container p { font-size: 1rem; color: var(--text-dark); margin-bottom: 8px; font-weight: 500; }
-    .rfid-logo, #qrCode { width: 100px; height: 100px; object-fit: contain; background-color: transparent; padding: 0; border: none; border-radius: 0; display: flex; justify-content: center; align-items: center; }
-    #qrCode { background-color: white; border: 1px solid var(--info-box-border); }
+    .bottom-row { 
+      display: flex; 
+      flex-wrap: wrap; 
+      align-items: center; 
+      justify-content: space-between; 
+      width: 100%; 
+      padding-top: 30px; 
+      margin-top: 25px; 
+      border-top: 2px solid var(--info-box-border);
+      position: relative;
+    }
+    .bottom-row::before {
+      content: '';
+      position: absolute;
+      top: -2px;
+      left: 0;
+      width: 100px;
+      height: 2px;
+      background: var(--primary-gradient);
+    }
+    .barcode-container { 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      flex-grow: 1; 
+      min-width: 250px;
+    }
+    .barcode-section { 
+      display: flex; 
+      flex-direction: column; 
+      align-items: center; 
+      text-align: center;
+      padding: 20px;
+      background: linear-gradient(145deg, #fafbff 0%, #ffffff 100%);
+      border-radius: 12px;
+      border: 1px solid var(--info-box-border);
+    }
+    .barcode-container p { 
+      font-size: 1.05rem; 
+      color: var(--text-dark); 
+      margin-bottom: 12px; 
+      font-weight: 600;
+      letter-spacing: -0.3px;
+    }
+    #lastBarcode { 
+      width: 100%; 
+      max-width: 400px; 
+      height: auto; 
+      margin-top: 5px;
+      filter: drop-shadow(0 2px 8px rgba(0,0,0,0.08));
+    }
+    .qr-rfid-container { 
+      display: flex; 
+      flex-direction: row; 
+      align-items: center; 
+      gap: 50px; 
+      flex-grow: 1; 
+      justify-content: center; 
+      min-width: 250px; 
+      margin-top: 15px; 
+    }
+    .qr-rfid-container div { 
+      display: flex; 
+      flex-direction: column; 
+      align-items: center;
+      padding: 15px;
+      background: linear-gradient(145deg, #fafbff 0%, #ffffff 100%);
+      border-radius: 12px;
+      border: 1px solid var(--info-box-border);
+      transition: all 0.3s ease;
+    }
+    .qr-rfid-container div:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+    }
+    .qr-rfid-container p { 
+      font-size: 1.05rem; 
+      color: var(--text-dark); 
+      margin-bottom: 12px; 
+      font-weight: 600;
+      letter-spacing: -0.3px;
+    }
+    .rfid-logo, #qrCode { 
+      width: 110px; 
+      height: 110px; 
+      object-fit: contain; 
+      background-color: transparent; 
+      padding: 8px; 
+      border: none; 
+      border-radius: 8px; 
+      display: flex; 
+      justify-content: center; 
+      align-items: center;
+    }
+    #qrCode { 
+      background-color: white; 
+      border: 2px solid var(--info-box-border);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    }
 
     /* --- Media Queries --- */
     @media (max-width: 992px) { .box-content { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); } .bottom-row { justify-content: center; gap: 30px; } }
     @media (max-width: 768px) { .box-content { grid-template-columns: 1fr; } .bottom-row { flex-direction: column; align-items: center; gap: 25px; } .qr-rfid-container { margin-top: 20px; gap: 25px; } }
 
     /* --- Animaciones --- */
-    @keyframes zoomEffect { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
-    .zoom { animation: zoomEffect 1s ease-in-out; }
-    @keyframes zoomEffectRed { 0% { transform: scale(1); color: var(--text-dark); } 50% { transform: scale(1.1); color: var(--danger-color); } 100% { transform: scale(1); color: var(--text-dark); } }
-    .zoom-red { animation: zoomEffectRed 1s ease-in-out; }
-    .live-indicator { display: inline-block; width: 10px; height: 10px; background-color: var(--success-color); border-radius: 50%; margin-left: 10px; animation: pulse 1.5s infinite ease-in-out; }
-    @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.3; transform: scale(0.8); } 100% { opacity: 1; transform: scale(1); } }
+    @keyframes zoomEffect { 
+      0% { transform: scale(1); filter: brightness(1); } 
+      50% { transform: scale(1.08); filter: brightness(1.1); } 
+      100% { transform: scale(1); filter: brightness(1); } 
+    }
+    .zoom { animation: zoomEffect 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    
+    @keyframes zoomEffectRed { 
+      0% { transform: scale(1); filter: brightness(1) hue-rotate(0deg); } 
+      50% { transform: scale(1.08); filter: brightness(1.2) hue-rotate(10deg); } 
+      100% { transform: scale(1); filter: brightness(1) hue-rotate(0deg); } 
+    }
+    .zoom-red { animation: zoomEffectRed 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    
+    .live-indicator { 
+      display: inline-block; 
+      width: 12px; 
+      height: 12px; 
+      background: var(--success-gradient);
+      border-radius: 50%; 
+      margin-left: 12px; 
+      animation: pulse 2s infinite ease-in-out;
+      box-shadow: 0 0 0 0 rgba(56, 239, 125, 0.7);
+      position: relative;
+    }
+    .live-indicator::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 100%;
+      height: 100%;
+      background: var(--success-gradient);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      animation: pulse-ring 2s infinite ease-in-out;
+    }
+    @keyframes pulse { 
+      0%, 100% { 
+        opacity: 1; 
+        transform: scale(1); 
+      } 
+      50% { 
+        opacity: 0.7; 
+        transform: scale(0.9); 
+      } 
+    }
+    @keyframes pulse-ring {
+      0% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 0.8;
+      }
+      50%, 100% {
+        transform: translate(-50%, -50%) scale(2.5);
+        opacity: 0;
+      }
+    }
 
     /* <<< ESTILOS BARRA TOLERANCIA >>> */
     .tolerance-bar-container {
-        width: 80%;
-        max-width: 400px;
-        margin-top: 15px;
-        margin-bottom: 5px;
+        width: 85%;
+        max-width: 450px;
+        margin-top: 10px;
+        margin-bottom: 0;
+        padding: 6px;
+        background: linear-gradient(145deg, #f8f9fa 0%, #ffffff 100%);
+        border-radius: 12px;
+        box-shadow: inset 0 2px 8px rgba(0,0,0,0.04);
     }
     .tolerance-bar-track {
         position: relative;
-        /* <<< CAMBIO: Aumentar altura de la barra de colores >>> */
-        height: 15px;
-        background-color: var(--info-box-border);
-        border-radius: 7px; /* Ajustar redondeo */
+        height: 18px;
+        background: linear-gradient(to right, rgba(0,0,0,0.03), rgba(0,0,0,0.01));
+        border-radius: 10px;
         display: flex;
         overflow: hidden;
+        box-shadow: inset 0 2px 6px rgba(0,0,0,0.08);
     }
     .tolerance-zone {
         height: 100%;
+        transition: all 0.3s ease;
     }
     .zone-low {
-        background-color: var(--danger-color);
+        background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
         flex-basis: 48%;
     }
     .zone-target {
-        background-color: var(--success-color);
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
         flex-basis: 4%;
+        box-shadow: 0 0 15px rgba(16, 185, 129, 0.6);
     }
     .zone-high {
-        background-color: var(--danger-color);
+        background: linear-gradient(135deg, #b91c1c 0%, #dc2626 100%);
         flex-basis: 48%;
     }
     .tolerance-indicator {
         position: absolute;
-        /* Mantener el solapamiento vertical (ajustar si se ve mal con la nueva altura) */
-        top: -6px;
-        bottom: -6px;
-        /* <<< CAMBIO: Hacer la línea indicadora más ancha (gruesa) >>> */
-        width: 12px;
-        background-color: var(--black-color);
-        border-radius: 3px; /* Ajustar redondeo */
+        top: -8px;
+        bottom: -8px;
+        width: 14px;
+        background: linear-gradient(135deg, #2d3748 0%, #1a1d29 100%);
+        border-radius: 4px;
         left: 50%;
         transform: translateX(-50%);
-        transition: left 0.4s ease-in-out;
-        box-shadow: 0 0 5px rgba(0,0,0,0.6);
+        transition: left 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.4), 0 0 0 3px rgba(255,255,255,0.9);
         z-index: 1;
-        border: 1px solid white;
+        border: 2px solid white;
         box-sizing: border-box;
+    }
+    .tolerance-indicator::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 6px;
+        height: 6px;
+        background: white;
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
     }
 
   </style>
 </head>
 <body>
-  <header class="header-container">
-    <div class="header-left">
-      <img src="logo.png" alt="Logo de Autoconto" onerror="this.style.display='none'">
-    </div>
-    <div class="header-center">
-      <div id="orderId">Cargando...</div>
-      <div id="created-at" style="font-size: 1rem;">Iniciada ...</div>
-    </div>
-    <div class="header-right">
-      <div id="timeDisplay">--:--:--</div>
-      <small id="scaleName">Cargando...</small>
-    </div>
-  </header>
-
   <main>
     <div class="box live-data-box">
-      <h5 class="mb-3 fw-semibold">Datos en Directo<span class="live-indicator"></span></h5>
+      <div class="box-header">
+        <h5 class="mb-3 fw-semibold">Datos en Directo<span class="live-indicator"></span></h5>
+        <div class="header-info-inline">
+          <div class="info-item">
+            <span class="info-label">Orden</span>
+            <span class="info-value" id="orderId">Cargando...</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Iniciada</span>
+            <span class="info-value" id="created-at">...</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Hora</span>
+            <span class="info-value large" id="timeDisplay">--:--:--</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Báscula</span>
+            <span class="info-value" id="scaleName">Cargando...</span>
+          </div>
+        </div>
+      </div>
       <div class="box-content">
         <div class="info-box">
           <i class="bi bi-speedometer2 display-icon" aria-hidden="true"></i>
