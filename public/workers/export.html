@@ -16,7 +16,6 @@
             .modal { display: none !important; }
             .kpi-card-container, #searchInputContainer { display: none !important; }
         }
-        .live-cajas-hora {}
         .modal {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-color: rgba(0,0,0,0.5); display: flex;
@@ -287,26 +286,44 @@
             <!-- Primera fila: Gráficos y Análisis -->
             <div class="flex flex-wrap justify-end items-center gap-2">
                 <button id="viewWorkerChartBtn" class="bg-teal-500 hover:bg-teal-600 text-white font-bold py-2 px-3 rounded-lg text-xs transition-colors duration-150 ease-in-out hidden">📊 Cajas/Trabajador</button>
+                <button id="viewWorkerCHChartBtn" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-3 rounded-lg text-xs transition-colors duration-150 ease-in-out hidden">⚡ c/h/Trabajador</button>
                 <button id="viewPostChartBtn" class="bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-2 px-3 rounded-lg text-xs transition-colors duration-150 ease-in-out hidden">📊 Cajas/Puesto (Barras)</button>
+                <button id="viewPostCHChartBtn" class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-3 rounded-lg text-xs transition-colors duration-150 ease-in-out hidden">⚡ c/h/Puesto (Barras)</button>
                 <button id="viewWorkerPieChartBtn" class="bg-sky-500 hover:bg-sky-600 text-white font-bold py-2 px-3 rounded-lg text-xs transition-colors duration-150 ease-in-out hidden">📊 Cajas/Empleado (Circular)</button>
+                <button id="viewWorkerCHPieChartBtn" class="bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-3 rounded-lg text-xs transition-colors duration-150 ease-in-out hidden">⚡ c/h/Empleado (Circular)</button>
                 <button id="viewConfeccionPorTrabajadorChartBtn" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-3 rounded-lg text-xs transition-colors duration-150 ease-in-out hidden">📊 Confección/Trabajador</button>
                 <button id="viewWorkerEvolutionBtn" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-3 rounded-lg text-xs transition-colors duration-150 ease-in-out hidden">📈 Evolución Operarios</button>
+                <button id="viewWorkerEvolutionCHBtn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-3 rounded-lg text-xs transition-colors duration-150 ease-in-out hidden">⚡ Evolución Operarios c/h</button>
                 <button id="viewInsightsBtn" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-3 rounded-lg text-xs transition-colors duration-150 ease-in-out hidden">💡 Insights</button>
                 <button id="viewTemporalComparisonBtn" class="bg-violet-500 hover:bg-violet-600 text-white font-bold py-2 px-3 rounded-lg text-xs transition-colors duration-150 ease-in-out hidden">📈 Comparar Períodos</button>
                 <button id="viewHeatmapBtn" class="bg-rose-500 hover:bg-rose-600 text-white font-bold py-2 px-3 rounded-lg text-xs transition-colors duration-150 ease-in-out hidden">🕐 Heatmap Horas</button>
             </div>
             
             <!-- Segunda fila: Análisis avanzados y Acciones -->
-            <div class="flex flex-wrap justify-end items-center gap-2">
-                <button id="viewDistributionBtn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-3 rounded-lg text-xs transition-colors duration-150 ease-in-out hidden">🎯 Distribución Puestos</button>
-                <button id="viewRankingBtn" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-3 rounded-lg text-xs transition-colors duration-150 ease-in-out hidden">🏆 Top 10</button>
-                <button id="viewFullRankingBtn" class="bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 px-3 rounded-lg text-xs transition-colors duration-150 ease-in-out hidden">📋 Ranking Completo</button>
-                <button id="analizarTodosLocalAIBtn" class="btn-ia-local text-white font-bold py-2 px-3 rounded-lg text-xs transition-colors duration-150 ease-in-out hidden">
-                    <svg class="icon mr-1 inline-block" style="width:16px; height:16px;" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 15c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm0-10c-2.06 0-3.82 1.22-4.58 3h9.16c-.76-1.78-2.52-3-4.58-3z"/></svg>
-                    Analizar Todos (IA)
+            <div class="flex flex-wrap justify-between items-center gap-2">
+                <!-- Botón IA destacado a la izquierda -->
+                <button id="analizarTodosLocalAIBtn" class="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold py-2.5 px-4 rounded-lg text-sm shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-150 ease-in-out hidden flex items-center gap-2">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M9.5 2A7.5 7.5 0 002 9.5c0 1.76.61 3.37 1.63 4.66l-1.36 4.08a1 1 0 001.28 1.28l4.08-1.36A7.47 7.47 0 009.5 17a7.5 7.5 0 000-15zM9 12H8v-1h1v1zm2 0h-1v-1h1v1zm2 0h-1v-1h1v1zm0-3H8V8h5v1z"/><circle cx="17" cy="17" r="5" fill="currentColor" opacity="0.5"/><path d="M17 14v6m-3-3h6" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
+                    <span class="font-extrabold">🤖 ANÁLISIS IA</span>
+                    <span class="text-xs bg-yellow-400 text-purple-900 px-1.5 py-0.5 rounded-full font-bold">PRO</span>
                 </button>
-                <button id="exportExcelBtn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-3 rounded-lg text-xs transition-colors duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed">Exportar a Excel</button>
-                <button id="printBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-3 rounded-lg text-xs transition-colors duration-150 ease-in-out">Imprimir</button>
+                
+                <!-- Botones de la derecha -->
+                <div class="flex flex-wrap gap-2">
+                    <button id="viewDistributionBtn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-3 rounded-lg text-xs transition-colors duration-150 ease-in-out hidden">🎯 Distribución Puestos</button>
+                    <button id="viewRankingBtn" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-3 rounded-lg text-xs transition-colors duration-150 ease-in-out hidden">🏆 Top 10 Cajas</button>
+                    <button id="viewRankingCHBtn" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2 px-3 rounded-lg text-xs transition-colors duration-150 ease-in-out hidden">⚡ Top 10 c/h</button>
+                    <button id="viewFullRankingBtn" class="bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 px-3 rounded-lg text-xs transition-colors duration-150 ease-in-out hidden">📋 Ranking Completo Cajas</button>
+                    <button id="viewFullRankingCHBtn" class="bg-lime-500 hover:bg-lime-600 text-white font-bold py-2 px-3 rounded-lg text-xs transition-colors duration-150 ease-in-out hidden">⚡ Ranking Completo c/h</button>
+                    <button id="exportExcelBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-lg text-xs transition-colors duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 2l5 5h-5V4zM8 12h8v2H8v-2zm0 4h8v2H8v-2z"/></svg>
+                        Excel
+                    </button>
+                    <button id="printBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-lg text-xs transition-colors duration-150 ease-in-out flex items-center gap-1">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/></svg>
+                        Imprimir
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -424,6 +441,37 @@
     </div>
 </div>
 
+<div id="promptEditModal" class="modal hidden no-print">
+    <div class="modal-content" style="max-width: 800px;">
+        <div class="modal-header">
+            <h3 id="promptEditModalTitle" class="text-lg font-medium leading-6 text-gray-900">🤖 Editar Prompt de IA</h3>
+            <button type="button" id="closePromptEditModalBtn" class="text-gray-400 hover:text-gray-600">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+        </div>
+        <div class="p-4">
+            <div class="mb-4">
+                <p class="text-sm text-gray-600 mb-2">ℹ️ Edita el prompt que se enviará a la IA. Usa las variables disponibles como referencia.</p>
+            </div>
+            <div class="mb-4">
+                <label for="promptTextArea" class="block text-sm font-medium text-gray-700 mb-2">Prompt:</label>
+                <textarea id="promptTextArea" rows="12" class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm font-mono" placeholder="Escribe tu prompt aquí..."></textarea>
+            </div>
+            <div class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                <p class="text-xs font-semibold text-blue-800 mb-1">📊 Datos disponibles:</p>
+                <p id="promptDataSummary" class="text-xs text-blue-700"></p>
+            </div>
+        </div>
+        <div class="modal-footer flex justify-between">
+            <button type="button" id="cancelPromptEditBtn" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 border border-gray-300 rounded-md shadow-sm">Cancelar</button>
+            <button type="button" id="sendPromptBtn" class="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 rounded-md shadow-sm flex items-center gap-2">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                Enviar a IA
+            </button>
+        </div>
+    </div>
+</div>
+
 <div id="chartModal" class="modal hidden no-print">
     <div class="modal-content">
         <div class="modal-header">
@@ -489,8 +537,8 @@
     // Variables globales (declaraciones)
     let tableBody, loadingRow, errorRow, errorCell, noDataRow, exportExcelBtn, printBtn,
         dateRangeSelect, filterPostsCheckbox, analizarTodosLocalAIBtn,
-        viewWorkerChartBtn, viewPostChartBtn, viewWorkerPieChartBtn, viewConfeccionPorTrabajadorChartBtn,
-        viewWorkerEvolutionBtn, viewDistributionBtn, viewRankingBtn, viewFullRankingBtn,
+        viewWorkerChartBtn, viewWorkerCHChartBtn, viewPostChartBtn, viewPostCHChartBtn, viewWorkerPieChartBtn, viewWorkerCHPieChartBtn, viewConfeccionPorTrabajadorChartBtn,
+        viewWorkerEvolutionBtn, viewWorkerEvolutionCHBtn, viewDistributionBtn, viewRankingBtn, viewRankingCHBtn, viewFullRankingBtn, viewFullRankingCHBtn,
         viewInsightsBtn, viewTemporalComparisonBtn, viewHeatmapBtn,
         totalUnidadesTurnoHeader,
         lockButton, lockIcon, unlockIcon, passwordModal, passwordInput, passwordError,
@@ -498,6 +546,7 @@
         editQuantityError, editApiStatus, cancelEditBtn, saveEditBtn,
         analysisModal, analysisModalTitle, analysisModalContent, analysisModalStatus,
         closeAnalysisModalBtn, okAnalysisModalBtn,
+        promptEditModal, promptTextArea, promptDataSummary, closePromptEditModalBtn, cancelPromptEditBtn, sendPromptBtn,
         chartModal, chartModalTitleEl, chartContainerEl, toggleFullscreenChartBtn, expandIcon, contractIcon,
         tooltip,
         kpiCardContainer, kpiTotalCajas, kpiTrabajadoresActivos, kpiAvgCajasHora, kpiPuestoMasProductivo,
@@ -513,6 +562,7 @@
     let currentLocalAITaskId = null;
     let localAIPollingIntervalId = null;
     let currentChartType = null;
+    let pendingPromptData = null; // Para guardar modelo y título mientras se edita
     let customDateRangeContainer, customDateFrom, customDateTo, applyCustomDateBtn;
     
     // Variables de sesión
@@ -725,7 +775,7 @@
 
     function updateHeaderButtonsState() {
         const hasData = displayedPostRowsCount > 0;
-        const actionButtons = [analizarTodosLocalAIBtn, viewWorkerChartBtn, viewPostChartBtn, viewWorkerPieChartBtn, viewConfeccionPorTrabajadorChartBtn, viewWorkerEvolutionBtn, viewDistributionBtn, viewRankingBtn, viewFullRankingBtn, viewInsightsBtn, viewTemporalComparisonBtn, viewHeatmapBtn];
+        const actionButtons = [analizarTodosLocalAIBtn, viewWorkerChartBtn, viewWorkerCHChartBtn, viewPostChartBtn, viewPostCHChartBtn, viewWorkerPieChartBtn, viewWorkerCHPieChartBtn, viewConfeccionPorTrabajadorChartBtn, viewWorkerEvolutionBtn, viewWorkerEvolutionCHBtn, viewDistributionBtn, viewRankingBtn, viewRankingCHBtn, viewFullRankingBtn, viewFullRankingCHBtn, viewInsightsBtn, viewTemporalComparisonBtn, viewHeatmapBtn];
         actionButtons.forEach(btn => {
             if (btn) {
                 if (isLocked || !hasData) { btn.classList.add('hidden'); btn.disabled = true; }
@@ -870,20 +920,74 @@
 
     async function fetchLocalAIOverallAnalysis() {
         const analysisTitle = "Análisis Global de Trabajadores (IA Local)";
-        showAnalysisModal(analysisTitle);
+        
+        // Cargar prompt desde servidor
         const promptInfo = await getPromptFromServer(promptApiKeys.global);
         if (promptInfo.error) {
-            if(analysisModalContent) analysisModalContent.textContent = promptInfo.errorMessage || "Error al cargar prompt global.";
-            if(analysisModalStatus) analysisModalStatus.textContent = "Fallo al cargar prompt."; return;
+            alert(promptInfo.errorMessage || "Error al cargar prompt global.");
+            return;
         }
-        let promptTemplate = promptInfo.content; const modelToUse = promptInfo.modelName;
+        
+        let promptTemplate = promptInfo.content;
+        const modelToUse = promptInfo.modelName;
         const overallSummaryText = generateOverallSummaryTextForContext();
+        
         if (overallSummaryText.startsWith("No hay datos globales")) {
-            if(analysisModalContent) analysisModalContent.textContent = 'No hay datos para análisis global.';
-            if(analysisModalStatus) analysisModalStatus.textContent = 'No disponible.'; return;
+            alert('No hay datos para análisis global.');
+            return;
         }
+        
+        // Reemplazar variables en el prompt
         promptTemplate = promptTemplate.replace(/{{overallSummary}}/g, overallSummaryText);
-        await submitLocalAITask(promptTemplate, analysisTitle, modelToUse);
+        
+        // Mostrar modal de edición de prompt
+        showPromptEditModal(promptTemplate, analysisTitle, modelToUse, overallSummaryText);
+    }
+    
+    function showPromptEditModal(prompt, title, model, dataSummary) {
+        if (!promptEditModal || !promptTextArea) return;
+        
+        // Guardar datos temporales
+        pendingPromptData = { title, model };
+        
+        // Llenar el textarea con el prompt
+        promptTextArea.value = prompt;
+        
+        // Mostrar resumen de datos
+        if (promptDataSummary) {
+            const dataToProcess = filterDataByCheckbox(JSON.parse(JSON.stringify(originalWorkersData)));
+            const totalWorkers = dataToProcess.length;
+            const totalCajas = dataToProcess.reduce((sum, w) => sum + (w.operator_posts || []).reduce((s, p) => s + (Number(p.count) || 0), 0), 0);
+            promptDataSummary.textContent = `${totalWorkers} trabajadores, ${totalCajas} cajas totales. El prompt incluye todos los datos del período.`;
+        }
+        
+        // Mostrar modal
+        promptEditModal.classList.remove('hidden');
+        promptTextArea.focus();
+    }
+    
+    function hidePromptEditModal() {
+        if (promptEditModal) {
+            promptEditModal.classList.add('hidden');
+            pendingPromptData = null;
+        }
+    }
+    
+    function sendEditedPrompt() {
+        if (!promptTextArea || !pendingPromptData) return;
+        
+        const editedPrompt = promptTextArea.value.trim();
+        if (!editedPrompt) {
+            alert('El prompt no puede estar vacío');
+            return;
+        }
+        
+        // Cerrar modal de edición
+        hidePromptEditModal();
+        
+        // Mostrar modal de análisis y enviar
+        showAnalysisModal(pendingPromptData.title);
+        submitLocalAITask(editedPrompt, pendingPromptData.title, pendingPromptData.model);
     }
 
     async function submitLocalAITask(prompt, modalTitleText, modelName) {
@@ -981,13 +1085,19 @@
     function renderCurrentChart() { 
         if (!currentChartType || !chartModalTitleEl) return;
         if (currentChartType === 'workers') { chartModalTitleEl.textContent = '📊 Producción Total por Trabajador'; renderProductionByWorkerChart(); }
+        else if (currentChartType === 'workersCH') { chartModalTitleEl.textContent = '⚡ Cajas/Hora por Trabajador'; renderProductionCHByWorkerChart(); }
         else if (currentChartType === 'postsBar') { chartModalTitleEl.textContent = '📊 Producción Total por Puesto (Barras)'; renderProductionByPostBarChart(); }
-        else if (currentChartType === 'workerPie') { chartModalTitleEl.textContent = '📊 Distribución de Cajas por Empleado (Circular)'; renderWorkerDistributionPieChart(); } 
+        else if (currentChartType === 'postsCHBar') { chartModalTitleEl.textContent = '⚡ Cajas/Hora por Puesto (Barras)'; renderProductionCHByPostBarChart(); }
+        else if (currentChartType === 'workerPie') { chartModalTitleEl.textContent = '📊 Distribución de Cajas por Empleado (Circular)'; renderWorkerDistributionPieChart(); }
+        else if (currentChartType === 'workerCHPie') { chartModalTitleEl.textContent = '⚡ Distribución c/h por Empleado (Circular)'; renderWorkerCHDistributionPieChart(); } 
         else if (currentChartType === 'confeccionPorTrabajador') { chartModalTitleEl.textContent = '📊 Confección por Trabajador (Apilado)'; renderConfeccionPorTrabajadorChart(); }
         else if (currentChartType === 'workerEvolution') { chartModalTitleEl.textContent = '📈 Evolución de Productividad por Operario'; renderWorkerEvolutionChart(); }
+        else if (currentChartType === 'workerEvolutionCH') { chartModalTitleEl.textContent = '⚡ Evolución de Cajas/Hora por Operario'; renderWorkerEvolutionCHChart(); }
         else if (currentChartType === 'distribution') { chartModalTitleEl.textContent = '🎯 Distribución de Trabajadores por Puesto'; renderWorkerDistributionChart(); }
-        else if (currentChartType === 'ranking') { chartModalTitleEl.textContent = '🏆 Top 10 Trabajadores'; renderRankingChart(); }
-        else if (currentChartType === 'fullRanking') { chartModalTitleEl.textContent = '📋 Ranking Completo de Todos los Trabajadores'; renderFullRankingChart(); }
+        else if (currentChartType === 'ranking') { chartModalTitleEl.textContent = '🏆 Top 10 - Total Cajas'; renderRankingChart(); }
+        else if (currentChartType === 'rankingCH') { chartModalTitleEl.textContent = '⚡ Top 10 - Cajas por Hora'; renderRankingCHChart(); }
+        else if (currentChartType === 'fullRanking') { chartModalTitleEl.textContent = '📋 Ranking Completo - Total Cajas'; renderFullRankingChart(); }
+        else if (currentChartType === 'fullRankingCH') { chartModalTitleEl.textContent = '⚡ Ranking Completo - Cajas por Hora'; renderFullRankingCHChart(); }
         else if (currentChartType === 'insights') { chartModalTitleEl.textContent = '💡 Insights Inteligentes'; renderInsightsChart(); }
         else if (currentChartType === 'temporalComparison') { chartModalTitleEl.textContent = '📈 Comparativa Temporal'; renderTemporalComparisonChart(); }
         else if (currentChartType === 'heatmap') { chartModalTitleEl.textContent = '🕐 Heatmap de Productividad por Hora'; renderHeatmapChart(); }
@@ -1020,6 +1130,24 @@
             .filter(d => d.value > 0).sort((a, b) => b.value - a.value);
         drawBarChart(dataForChart, "Total de Cajas Producidas por Trabajador", "Trabajadores", "Total de Cajas");
     }
+    function renderProductionCHByWorkerChart() {
+        d3.select("#chartContainer svg").remove();
+        const dataForChart = filterDataByCheckbox(JSON.parse(JSON.stringify(originalWorkersData)))
+            .map(worker => {
+                const totalCajas = (worker.operator_posts || []).reduce((sum, post) => sum + (Number(post.count) || 0), 0);
+                let totalHours = 0;
+                (worker.operator_posts || []).forEach(post => {
+                    if (post.created_at) {
+                        const start = new Date(post.created_at);
+                        const end = post.finish_at ? new Date(post.finish_at) : new Date();
+                        if (end > start) totalHours += (end - start) / 3600000;
+                    }
+                });
+                return { name: worker.name || `ID: ${worker.client_id || 'N/A'}`, value: totalHours > 0 ? (totalCajas / totalHours) : 0 };
+            })
+            .filter(d => d.value > 0).sort((a, b) => b.value - a.value);
+        drawBarChart(dataForChart, "Cajas por Hora por Trabajador", "Trabajadores", "Cajas/Hora");
+    }
     function renderProductionByPostBarChart() {
         d3.select("#chartContainer svg").remove();
         const postCounts = {};
@@ -1028,6 +1156,24 @@
         });
         const dataForChart = Object.entries(postCounts).map(([name, value]) => ({ name, value })).filter(d => d.value > 0).sort((a,b) => b.value - a.value);
         drawBarChart(dataForChart, "Total de Cajas Producidas por Puesto", "Puestos de Trabajo", "Total de Cajas");
+    }
+    function renderProductionCHByPostBarChart() {
+        d3.select("#chartContainer svg").remove();
+        const postData = {};
+        filterDataByCheckbox(JSON.parse(JSON.stringify(originalWorkersData))).forEach(worker => {
+            (worker.operator_posts || []).forEach(post => {
+                if (post.rfid_reading?.name && post.created_at) {
+                    const postName = post.rfid_reading.name;
+                    if (!postData[postName]) postData[postName] = { cajas: 0, hours: 0 };
+                    postData[postName].cajas += Number(post.count) || 0;
+                    const start = new Date(post.created_at);
+                    const end = post.finish_at ? new Date(post.finish_at) : new Date();
+                    if (end > start) postData[postName].hours += (end - start) / 3600000;
+                }
+            });
+        });
+        const dataForChart = Object.entries(postData).map(([name, data]) => ({ name, value: data.hours > 0 ? (data.cajas / data.hours) : 0 })).filter(d => d.value > 0).sort((a,b) => b.value - a.value);
+        drawBarChart(dataForChart, "Cajas por Hora por Puesto", "Puestos de Trabajo", "Cajas/Hora");
     }
     function drawBarChart(chartData, titleText, xAxisLabelText, yAxisLabelText) {
         if (!chartContainerEl) return;
@@ -1186,6 +1332,106 @@
         function midAngle(d){ return d.startAngle + (d.endAngle - d.startAngle)/2; }
     }
     
+    function renderWorkerCHDistributionPieChart() {
+        if (!chartContainerEl) return;
+        d3.select("#chartContainer svg").remove();
+        const workerData = {};
+        const dataToProcess = filterDataByCheckbox(JSON.parse(JSON.stringify(originalWorkersData)));
+
+        dataToProcess.forEach(worker => {
+            const workerName = worker.name || `ID: ${worker.client_id || 'N/A'}`;
+            let totalCajas = 0, totalHours = 0;
+            (worker.operator_posts || []).forEach(post => {
+                totalCajas += (Number(post.count) || 0);
+                if (post.created_at) {
+                    const start = new Date(post.created_at);
+                    const end = post.finish_at ? new Date(post.finish_at) : new Date();
+                    if (end > start) totalHours += (end - start) / 3600000;
+                }
+            });
+            if (totalHours > 0) {
+                workerData[workerName] = totalCajas / totalHours;
+            }
+        });
+
+        const dataForChart = Object.entries(workerData)
+            .map(([name, value]) => ({ name, value }))
+            .filter(d => d.value > 0)
+            .sort((a,b) => b.value - a.value);
+
+        if (dataForChart.length === 0) {
+            chartContainerEl.innerHTML = '<p class="text-center text-gray-500 p-4">No hay datos de c/h por empleado para mostrar.</p>';
+            return;
+        }
+        chartContainerEl.innerHTML = '';
+        
+        const rect = chartContainerEl.getBoundingClientRect();
+        const availableWidth = rect.width;
+        const availableHeight = rect.height > 50 ? rect.height : 450;
+
+        const marginPie = 40; 
+        const radius = Math.min(availableWidth - (2*marginPie), availableHeight - (2*marginPie)) / 2;
+        if (radius <=0) { console.error("Pie chart radius is invalid."); chartContainerEl.innerHTML = '<p class="text-center text-red-500 p-4">Error al calcular dimensiones del gráfico.</p>'; return; }
+
+        const svg = d3.select("#chartContainer").append("svg").attr("width",availableWidth).attr("height",availableHeight).append("g").attr("transform",`translate(${availableWidth/2},${availableHeight/2})`);
+        const color = d3.scaleOrdinal(d3.schemeCategory10); 
+        const pie = d3.pie().value(d=>d.value).sort(null); 
+        const data_ready = pie(dataForChart);
+        
+        const arcGenerator = d3.arc().innerRadius(0).outerRadius(radius);
+        const outerArcForLabels = d3.arc().innerRadius(radius * 1.05).outerRadius(radius * 1.05);
+
+        const slices = svg.selectAll('allSlices').data(data_ready).join('path')
+            .attr('d', d3.arc().innerRadius(0).outerRadius(0))
+            .attr('fill', d => color(d.data.name))
+            .attr("stroke", "white").style("stroke-width", "2px").style("opacity", 0.8)
+            .on("mouseover",function(e,d){
+                d3.select(this).style("opacity", 1).style("stroke", "#ffffff").style("stroke-width", "3px"); 
+                tooltip.transition().duration(200).style("opacity",.9);
+                tooltip.html(`<strong>${d.data.name}</strong><br/>c/h: ${d.data.value.toFixed(2)}<br/>${((d.endAngle-d.startAngle)*100/(2*Math.PI)).toFixed(1)}%`)
+                    .style("left", (e.pageX+10)+"px").style("top", (e.pageY-15)+"px");
+            })
+            .on("mouseout",function(){
+                d3.select(this).style("opacity", 0.8).style("stroke", "white").style("stroke-width", "2px");
+                tooltip.transition().duration(500).style("opacity", 0);
+            });
+
+        slices.transition().duration(1000).attrTween('d', function(d){
+            const i = d3.interpolate({startAngle:0, endAngle:0}, d);
+            return function(t){ return arcGenerator(i(t)); };
+        });
+
+        const polylines = svg.selectAll('allPolylines').data(data_ready).join('polyline')
+            .attr("stroke", "black").style("fill", "none").attr("stroke-width", 1).attr('points', function(){return [outerArcForLabels.centroid({startAngle:0,endAngle:0})];})
+            .transition().duration(1000)
+            .attrTween('points', function(d){
+                const posA = arcGenerator.centroid(d);
+                const posB = outerArcForLabels.centroid(d);
+                const posC = outerArcForLabels.centroid(d);
+                const midAngleVal = d.startAngle + (d.endAngle-d.startAngle)/2;
+                posC[0] = radius * 1.15 * (midAngleVal < Math.PI ? 1 : -1);
+                return function(t){return [d3.interpolate([0,0],posA)(t), d3.interpolate([0,0],posB)(t), d3.interpolate([0,0],posC)(t)];};
+            });
+
+        const labels = svg.selectAll('allLabels').data(data_ready).join('text')
+            .text(d => `${d.data.name.substring(0,15)} (${d.data.value.toFixed(1)})`)
+            .attr('transform', d=>{const pos = [0,0]; return `translate(${pos})`;})
+            .style('text-anchor', 'middle').attr('class','pie-slice-label')
+            .transition().duration(1000)
+            .attrTween('transform', function(d){
+                const pos = outerArcForLabels.centroid(d);
+                const midAngleVal = d.startAngle+(d.endAngle-d.startAngle)/2;
+                pos[0] = radius * 1.18 * (midAngleVal < Math.PI ? 1 : -1);
+                return function(t){const interpolatedPos = d3.interpolate([0,0],pos)(t); return `translate(${interpolatedPos})`;};
+            })
+            .styleTween('text-anchor', function(d){
+                const midAngleVal = d.startAngle+(d.endAngle-d.startAngle)/2;
+                return function(t){return midAngleVal < Math.PI ? 'start' : 'end';};
+            });
+
+        function midAngle(d){ return d.startAngle + (d.endAngle - d.startAngle)/2; }
+    }
+    
     function renderConfeccionPorTrabajadorChart() {
         if (!chartContainerEl) { console.error("chartContainerEl no encontrado en renderConfeccionPorTrabajadorChart"); return; }
         d3.select("#chartContainer svg").remove();
@@ -1323,8 +1569,8 @@
             return;
         }
         
-        // Tomar solo los top 10 para mejor visualización
-        const topWorkers = workerData.slice(0, 10);
+        // Mostrar todos los operarios ordenados
+        const topWorkers = workerData; // Mostrar todos
         
         chartContainerEl.innerHTML = '';
         const rect = chartContainerEl.getBoundingClientRect();
@@ -1502,6 +1748,225 @@
             .style("fill", "#ff6b6b")
             .style("font-weight", "bold")
             .text(`Promedio: ${avgCajas.toFixed(1)}`)
+            .style("opacity", 0)
+            .transition().delay(3000).duration(500)
+            .style("opacity", 1);
+    }
+    
+    function renderWorkerEvolutionCHChart() {
+        if (!chartContainerEl) return;
+        d3.select("#chartContainer svg").remove();
+        
+        const dataToProcess = filterDataByCheckbox(JSON.parse(JSON.stringify(originalWorkersData)));
+        
+        // Preparar datos por trabajador con c/h
+        const workerData = [];
+        dataToProcess.forEach(worker => {
+            const workerName = worker.name || `ID: ${worker.client_id}`;
+            let totalCajas = 0;
+            let totalHours = 0;
+            
+            (worker.operator_posts || []).forEach(post => {
+                totalCajas += Number(post.count) || 0;
+                if (post.created_at) {
+                    const start = new Date(post.created_at);
+                    const end = post.finish_at ? new Date(post.finish_at) : new Date();
+                    if (end > start) totalHours += (end - start) / 3600000;
+                }
+            });
+            
+            if (totalHours > 0) {
+                workerData.push({
+                    name: workerName,
+                    cajasHora: totalCajas / totalHours,
+                    totalCajas: totalCajas,
+                    totalHours: totalHours
+                });
+            }
+        });
+        
+        // Ordenar por cajas/hora
+        workerData.sort((a, b) => b.cajasHora - a.cajasHora);
+        
+        if (workerData.length === 0) {
+            chartContainerEl.innerHTML = '<p class="text-center text-gray-500 p-4">No hay datos de operarios para mostrar.</p>';
+            return;
+        }
+        
+        // Mostrar todos los operarios ordenados
+        const allWorkers = workerData;
+        
+        chartContainerEl.innerHTML = '';
+        const rect = chartContainerEl.getBoundingClientRect();
+        const margin = {top: 60, right: 30, bottom: 120, left: 80};
+        const width = Math.max(rect.width - margin.left - margin.right, 600);
+        const height = (rect.height > 50 ? rect.height : 450) - margin.top - margin.bottom;
+        
+        const svg = d3.select("#chartContainer").append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+        
+        // Escalas
+        const x = d3.scalePoint()
+            .domain(allWorkers.map((d, i) => i))
+            .range([0, width])
+            .padding(0.1);
+        
+        const y = d3.scaleLinear()
+            .domain([0, d3.max(allWorkers, d => d.cajasHora)])
+            .nice()
+            .range([height, 0]);
+        
+        // Crear línea de evolución
+        const line = d3.line()
+            .x((d, i) => x(i))
+            .y(d => y(d.cajasHora))
+            .curve(d3.curveCardinal);
+        
+        // Área bajo la línea
+        const area = d3.area()
+            .x((d, i) => x(i))
+            .y0(height)
+            .y1(d => y(d.cajasHora))
+            .curve(d3.curveCardinal);
+        
+        // Gradiente para el área
+        const gradient = svg.append("defs")
+            .append("linearGradient")
+            .attr("id", "area-gradient-ch")
+            .attr("x1", "0%")
+            .attr("y1", "0%")
+            .attr("x2", "0%")
+            .attr("y2", "100%");
+        
+        gradient.append("stop")
+            .attr("offset", "0%")
+            .attr("stop-color", "#a855f7")
+            .attr("stop-opacity", 0.6);
+        
+        gradient.append("stop")
+            .attr("offset", "100%")
+            .attr("stop-color", "#a855f7")
+            .attr("stop-opacity", 0.1);
+        
+        // Dibujar área con animación
+        svg.append("path")
+            .datum(allWorkers)
+            .attr("class", "area")
+            .attr("d", area)
+            .style("fill", "url(#area-gradient-ch)")
+            .style("opacity", 0)
+            .transition().duration(1500)
+            .style("opacity", 1);
+        
+        // Dibujar línea con animación
+        const path = svg.append("path")
+            .datum(allWorkers)
+            .attr("class", "trend-line")
+            .attr("d", line)
+            .attr("stroke", "#9333ea")
+            .attr("stroke-width", 3)
+            .attr("fill", "none");
+        
+        const totalLength = path.node().getTotalLength();
+        path.attr("stroke-dasharray", totalLength + " " + totalLength)
+            .attr("stroke-dashoffset", totalLength)
+            .transition().duration(2000).ease(d3.easeLinear)
+            .attr("stroke-dashoffset", 0);
+        
+        // Puntos en la línea
+        svg.selectAll(".trend-point")
+            .data(allWorkers)
+            .join("circle")
+            .attr("class", "trend-point")
+            .attr("cx", (d, i) => x(i))
+            .attr("cy", d => y(d.cajasHora))
+            .attr("r", 0)
+            .attr("stroke", "#9333ea")
+            .attr("fill", "#fff")
+            .on("mouseover", function(e, d) {
+                d3.select(this).attr("r", 6).attr("stroke-width", 3);
+                tooltip.transition().duration(200).style("opacity", .9);
+                tooltip.html(`<strong>${d.name}</strong><br/>c/h: ${d.cajasHora.toFixed(2)}<br/>Total: ${d.totalCajas} cajas<br/>Horas: ${d.totalHours.toFixed(1)}h`)
+                    .style("left", (e.pageX + 10) + "px").style("top", (e.pageY - 15) + "px");
+            })
+            .on("mouseout", function() {
+                d3.select(this).attr("r", 4).attr("stroke-width", 2);
+                tooltip.transition().duration(500).style("opacity", 0);
+            })
+            .transition().delay((d, i) => 2000 + i * 30).duration(300)
+            .attr("r", 4)
+            .attr("stroke-width", 2);
+        
+        // Etiquetas de trabajadores
+        svg.selectAll(".worker-label")
+            .data(allWorkers)
+            .join("text")
+            .attr("class", "worker-label")
+            .attr("x", (d, i) => x(i))
+            .attr("y", height + 20)
+            .attr("text-anchor", "middle")
+            .style("font-size", "10px")
+            .style("fill", "#666")
+            .text(d => d.name.length > 12 ? d.name.substring(0, 10) + "..." : d.name)
+            .attr("transform", (d, i) => `rotate(-45, ${x(i)}, ${height + 20})`)
+            .style("opacity", 0)
+            .transition().delay(2500).duration(500)
+            .style("opacity", 1);
+        
+        // Ejes
+        svg.append("g")
+            .attr("transform", `translate(0,${height})`)
+            .call(d3.axisBottom(x).tickFormat(() => ""));
+        
+        svg.append("g").call(d3.axisLeft(y));
+        
+        // Etiquetas de ejes y título
+        svg.append("text")
+            .attr("x", width / 2)
+            .attr("y", 0 - (margin.top / 2))
+            .attr("text-anchor", "middle")
+            .style("font-size", "16px")
+            .style("font-weight", "bold")
+            .text("Evolución de Cajas/Hora - Todos los Operarios");
+        
+        svg.append("text")
+            .attr("transform", "rotate(-90)")
+            .attr("y", 0 - margin.left + 15)
+            .attr("x", 0 - (height / 2))
+            .attr("dy", "1em")
+            .style("text-anchor", "middle")
+            .text("Cajas por Hora");
+        
+        svg.append("text")
+            .attr("transform", `translate(${width/2}, ${height + margin.bottom - 10})`)
+            .style("text-anchor", "middle")
+            .text("Operarios (ordenados por eficiencia)");
+        
+        // Línea de promedio
+        const avgCH = d3.mean(allWorkers, d => d.cajasHora);
+        svg.append("line")
+            .attr("x1", 0)
+            .attr("x2", width)
+            .attr("y1", y(avgCH))
+            .attr("y2", y(avgCH))
+            .style("stroke", "#10b981")
+            .style("stroke-width", "2px")
+            .style("stroke-dasharray", "5,5")
+            .style("opacity", 0)
+            .transition().delay(3000).duration(500)
+            .style("opacity", 0.7);
+        
+        // Etiqueta de promedio
+        svg.append("text")
+            .attr("x", width - 10)
+            .attr("y", y(avgCH) - 5)
+            .attr("text-anchor", "end")
+            .style("font-size", "12px")
+            .style("fill", "#10b981")
+            .style("font-weight", "bold")
+            .text(`Promedio: ${avgCH.toFixed(2)} c/h`)
             .style("opacity", 0)
             .transition().delay(3000).duration(500)
             .style("opacity", 1);
@@ -1816,6 +2281,99 @@
             .text("🏆 Top 10 Trabajadores Más Productivos");
     }
     
+    function renderRankingCHChart() {
+        if (!chartContainerEl) return;
+        d3.select("#chartContainer svg").remove();
+        
+        const dataToProcess = filterDataByCheckbox(JSON.parse(JSON.stringify(originalWorkersData)));
+        const rankings = dataToProcess.map(worker => {
+            const totalCajas = (worker.operator_posts || []).reduce((sum, post) => sum + (Number(post.count) || 0), 0);
+            let totalHours = 0;
+            (worker.operator_posts || []).forEach(post => {
+                if (post.created_at) {
+                    const start = new Date(post.created_at);
+                    const end = post.finish_at ? new Date(post.finish_at) : new Date();
+                    if (end > start) totalHours += (end - start) / 3600000;
+                }
+            });
+            
+            return {
+                name: worker.name || `ID: ${worker.client_id}`,
+                totalCajas,
+                cajasHora: totalHours > 0 ? (totalCajas / totalHours) : 0,
+                totalHours: totalHours,
+                efficiency: totalHours > 0 ? ((totalCajas / totalHours) * 100 / 50).toFixed(1) : 0
+            };
+        }).filter(w => w.totalHours > 0).sort((a, b) => b.cajasHora - a.cajasHora); // Ordenar por cajas/hora
+        
+        if (rankings.length === 0) {
+            chartContainerEl.innerHTML = '<p class="text-center text-gray-500 p-4">No hay datos para rankings.</p>';
+            return;
+        }
+        
+        chartContainerEl.innerHTML = '';
+        const container = d3.select("#chartContainer");
+        
+        // Crear cards de ranking
+        const rankingCards = container.selectAll(".ranking-card")
+            .data(rankings.slice(0, 10)) // Top 10
+            .join("div")
+            .attr("class", "ranking-card")
+            .style("background", "linear-gradient(135deg, #10b981 0%, #059669 100%)") // Verde esmeralda
+            .style("opacity", 0)
+            .style("transform", "translateY(20px)")
+            .transition().delay((d, i) => i * 100).duration(500)
+            .style("opacity", 1)
+            .style("transform", "translateY(0px)")
+            .selection();
+        
+        rankingCards.each(function(d, i) {
+            const card = d3.select(this);
+            
+            card.append("div")
+                .style("display", "flex")
+                .style("align-items", "center")
+                .each(function() {
+                    const content = d3.select(this);
+                    
+                    // Posición
+                    content.append("div")
+                        .attr("class", "ranking-position")
+                        .text(i + 1);
+                    
+                    // Información del trabajador
+                    const info = content.append("div").style("flex", "1");
+                    
+                    info.append("div")
+                        .style("font-size", "1.2rem")
+                        .style("font-weight", "bold")
+                        .text(d.name);
+                    
+                    info.append("div")
+                        .style("font-size", "0.9rem")
+                        .style("opacity", "0.9")
+                        .html(`<strong style="font-size:1.1rem;">⚡ ${d.cajasHora.toFixed(2)} c/h</strong> • ${d.totalCajas} cajas • ${d.totalHours.toFixed(1)}h • ${d.efficiency}% eficiencia`);
+                    
+                    // Medalla para top 3
+                    if (i < 3) {
+                        const medals = ["🥇", "🥈", "🥉"];
+                        content.append("div")
+                            .style("font-size", "2rem")
+                            .text(medals[i]);
+                    }
+                });
+        });
+        
+        // Título
+        container.insert("h3", ":first-child")
+            .style("text-align", "center")
+            .style("margin", "1rem 0")
+            .style("font-size", "1.5rem")
+            .style("font-weight", "bold")
+            .style("color", "#1f2937")
+            .text("⚡ Top 10 por Cajas/Hora - Máxima Eficiencia");
+    }
+    
     function renderFullRankingChart() {
         if (!chartContainerEl) return;
         d3.select("#chartContainer svg").remove();
@@ -1991,6 +2549,182 @@
         });
     }
     
+    function renderFullRankingCHChart() {
+        if (!chartContainerEl) return;
+        d3.select("#chartContainer svg").remove();
+        
+        const dataToProcess = filterDataByCheckbox(JSON.parse(JSON.stringify(originalWorkersData)));
+        const rankings = dataToProcess.map(worker => {
+            const totalCajas = (worker.operator_posts || []).reduce((sum, post) => sum + (Number(post.count) || 0), 0);
+            let totalHours = 0;
+            (worker.operator_posts || []).forEach(post => {
+                if (post.created_at) {
+                    const start = new Date(post.created_at);
+                    const end = post.finish_at ? new Date(post.finish_at) : new Date();
+                    if (end > start) totalHours += (end - start) / 3600000;
+                }
+            });
+            
+            return {
+                name: worker.name || `ID: ${worker.client_id}`,
+                totalCajas,
+                cajasHora: totalHours > 0 ? (totalCajas / totalHours) : 0,
+                totalHours: totalHours,
+                efficiency: totalHours > 0 ? ((totalCajas / totalHours) * 100 / 50).toFixed(1) : 0
+            };
+        }).filter(w => w.totalHours > 0).sort((a, b) => b.cajasHora - a.cajasHora); // Ordenar por cajas/hora
+        
+        if (rankings.length === 0) {
+            chartContainerEl.innerHTML = '<p class="text-center text-gray-500 p-4">No hay datos para rankings.</p>';
+            return;
+        }
+        
+        chartContainerEl.innerHTML = '';
+        const container = d3.select("#chartContainer");
+        
+        // Título
+        container.append("h3")
+            .style("text-align", "center")
+            .style("margin", "1rem 0")
+            .style("font-size", "1.5rem")
+            .style("font-weight", "bold")
+            .style("color", "#1f2937")
+            .text(`⚡ Ranking Completo por Cajas/Hora - ${rankings.length} Trabajadores`);
+        
+        // Estadísticas generales
+        const statsDiv = container.append("div")
+            .style("display", "grid")
+            .style("grid-template-columns", "repeat(auto-fit, minmax(200px, 1fr))")
+            .style("gap", "1rem")
+            .style("margin", "1rem 0")
+            .style("padding", "1rem")
+            .style("background", "#f9fafb")
+            .style("border-radius", "0.5rem");
+        
+        const totalCajasGlobal = rankings.reduce((sum, w) => sum + w.totalCajas, 0);
+        const avgCajasHora = rankings.reduce((sum, w) => sum + w.cajasHora, 0) / rankings.length;
+        const topCajasHora = rankings[0].cajasHora;
+        
+        statsDiv.append("div")
+            .style("text-align", "center")
+            .html(`<div style="font-size: 0.875rem; color: #6b7280;">Total Cajas</div><div style="font-size: 1.5rem; font-weight: bold; color: #1f2937;">${totalCajasGlobal}</div>`);
+        
+        statsDiv.append("div")
+            .style("text-align", "center")
+            .html(`<div style="font-size: 0.875rem; color: #6b7280;">Promedio c/h</div><div style="font-size: 1.5rem; font-weight: bold; color: #1f2937;">${avgCajasHora.toFixed(1)}</div>`);
+        
+        statsDiv.append("div")
+            .style("text-align", "center")
+            .html(`<div style="font-size: 0.875rem; color: #6b7280;">Mejor c/h</div><div style="font-size: 1.5rem; font-weight: bold; color: #10b981;">${topCajasHora.toFixed(1)}</div>`);
+        
+        // Crear tabla scrolleable con todos los rankings
+        const tableContainer = container.append("div")
+            .style("max-height", "500px")
+            .style("overflow-y", "auto")
+            .style("margin", "1rem 0")
+            .style("border", "1px solid #e5e7eb")
+            .style("border-radius", "0.5rem");
+        
+        const table = tableContainer.append("table")
+            .style("width", "100%")
+            .style("border-collapse", "collapse")
+            .style("background", "white");
+        
+        // Header de la tabla
+        const thead = table.append("thead")
+            .style("background", "linear-gradient(135deg, #84cc16 0%, #65a30d 100%)")
+            .style("color", "white")
+            .style("position", "sticky")
+            .style("top", "0")
+            .style("z-index", "10");
+        
+        const headerRow = thead.append("tr");
+        ['#', 'Trabajador', 'Cajas/Hora', 'Total Cajas', 'Horas', 'Eficiencia'].forEach(header => {
+            headerRow.append("th")
+                .style("padding", "0.75rem")
+                .style("text-align", "left")
+                .style("font-size", "0.875rem")
+                .style("font-weight", "600")
+                .text(header);
+        });
+        
+        // Body de la tabla
+        const tbody = table.append("tbody");
+        
+        rankings.forEach((worker, i) => {
+            const row = tbody.append("tr")
+                .style("border-bottom", "1px solid #e5e7eb")
+                .style("transition", "all 0.2s ease")
+                .on("mouseover", function() {
+                    d3.select(this)
+                        .style("background", "#f3f4f6")
+                        .style("transform", "scale(1.01)");
+                })
+                .on("mouseout", function() {
+                    d3.select(this)
+                        .style("background", i % 2 === 0 ? "white" : "#f9fafb")
+                        .style("transform", "scale(1)");
+                })
+                .style("background", i % 2 === 0 ? "white" : "#f9fafb");
+            
+            // Posición con medallas para top 3
+            const positionCell = row.append("td")
+                .style("padding", "0.75rem")
+                .style("font-weight", "bold")
+                .style("font-size", "1rem");
+            
+            if (i < 3) {
+                const medals = ["🥇", "🥈", "🥉"];
+                positionCell.html(`${medals[i]} ${i + 1}`);
+            } else {
+                positionCell.text(i + 1);
+            }
+            
+            // Nombre
+            row.append("td")
+                .style("padding", "0.75rem")
+                .style("font-weight", i < 3 ? "600" : "normal")
+                .text(worker.name);
+            
+            // Cajas por hora (columna destacada)
+            row.append("td")
+                .style("padding", "0.75rem")
+                .style("font-weight", "700")
+                .style("font-size", "1.1rem")
+                .style("color", i < 3 ? "#84cc16" : "#65a30d")
+                .text(worker.cajasHora.toFixed(2));
+            
+            // Total Cajas
+            row.append("td")
+                .style("padding", "0.75rem")
+                .text(worker.totalCajas);
+            
+            // Horas trabajadas
+            row.append("td")
+                .style("padding", "0.75rem")
+                .text(worker.totalHours.toFixed(1) + "h");
+            
+            // Eficiencia
+            const efficiencyCell = row.append("td")
+                .style("padding", "0.75rem");
+            
+            const efficiency = parseFloat(worker.efficiency);
+            let efficiencyColor = "#6b7280";
+            if (efficiency >= 100) efficiencyColor = "#10b981";
+            else if (efficiency >= 80) efficiencyColor = "#f59e0b";
+            else efficiencyColor = "#ef4444";
+            
+            efficiencyCell.append("span")
+                .style("padding", "0.25rem 0.5rem")
+                .style("background", efficiencyColor)
+                .style("color", "white")
+                .style("border-radius", "0.25rem")
+                .style("font-size", "0.875rem")
+                .style("font-weight", "600")
+                .text(worker.efficiency + "%");
+        });
+    }
+    
     // Nueva función: Panel de Insights
     function renderInsightsChart() {
         if (!chartContainerEl) return;
@@ -2016,24 +2750,145 @@
     }
     
     // Nueva función: Comparativa Temporal
-    function renderTemporalComparisonChart() {
+    async function renderTemporalComparisonChart() {
         if (!chartContainerEl) return;
         d3.select("#chartContainer svg").remove();
-        chartContainerEl.innerHTML = '';
+        chartContainerEl.innerHTML = '<div class="text-center p-4"><div class="spinner"></div><p class="mt-2">Cargando datos de comparación...</p></div>';
         const container = d3.select("#chartContainer");
-        container.append("h3").style("text-align", "center").style("margin", "1rem 0").style("font-size", "1.5rem").style("font-weight", "bold").style("color", "#1f2937").text("📈 Comparativa Temporal");
-        container.append("div").style("background", "linear-gradient(135deg, #667eea 0%, #764ba2 100%)").style("color", "white").style("padding", "1.5rem").style("border-radius", "0.5rem").style("margin", "1rem 0").style("text-align", "center").html(`<div style="font-size: 1.2rem; font-weight: bold; margin-bottom: 0.5rem;">⚠️ Función en Desarrollo</div><p style="font-size: 0.9rem; opacity: 0.9; margin: 0;">Esta funcionalidad requiere datos históricos de múltiples días.<br>Actualmente estás viendo datos de: <strong>${dateRangeSelect ? dateRangeSelect.options[dateRangeSelect.selectedIndex].text : 'período seleccionado'}</strong></p>`);
-        const dataToProcess = filterDataByCheckbox(JSON.parse(JSON.stringify(originalWorkersData)));
-        if (dataToProcess.length === 0) { container.append("p").style("text-align", "center").style("color", "#6b7280").style("padding", "2rem").text("No hay datos disponibles."); return; }
-        const workers = dataToProcess.map(w => { const tc = (w.operator_posts || []).reduce((s, p) => s + (Number(p.count) || 0), 0); return { name: w.name || `ID: ${w.client_id}`, currentValue: tc, previousValue: Math.floor(tc * (0.85 + Math.random() * 0.3)), change: 0 }; }).filter(w => w.currentValue > 0);
-        workers.forEach(w => w.change = w.previousValue > 0 ? ((w.currentValue - w.previousValue) / w.previousValue * 100) : 0);
-        workers.sort((a, b) => b.change - a.change);
-        const avgChange = workers.reduce((s, w) => s + w.change, 0) / workers.length;
-        const improving = workers.filter(w => w.change > 0).length, declining = workers.filter(w => w.change < 0).length;
-        const statsDiv = container.append("div").style("display", "grid").style("grid-template-columns", "repeat(auto-fit, minmax(200px, 1fr))").style("gap", "1rem").style("margin", "1rem 0").style("padding", "1rem").style("background", "#f9fafb").style("border-radius", "0.5rem");
-        statsDiv.append("div").style("text-align", "center").html(`<div style="font-size: 0.875rem; color: #6b7280;">Mejorando</div><div style="font-size: 1.5rem; font-weight: bold; color: #10b981;">${improving} ↑</div>`);
-        statsDiv.append("div").style("text-align", "center").html(`<div style="font-size: 0.875rem; color: #6b7280;">Estables/Bajando</div><div style="font-size: 1.5rem; font-weight: bold; color: #ef4444;">${declining} ↓</div>`);
-        statsDiv.append("div").style("text-align", "center").html(`<div style="font-size: 0.875rem; color: #6b7280;">Cambio Promedio</div><div style="font-size: 1.5rem; font-weight: bold; color: ${avgChange > 0 ? '#10b981' : '#ef4444'};">${avgChange > 0 ? '+' : ''}${avgChange.toFixed(1)}%</div>`);
+        
+        try {
+            // Obtener período actual
+            const currentPeriod = getDateRange(dateRangeSelect ? dateRangeSelect.value : 'today');
+            
+            // Calcular período anterior equivalente
+            const currentStart = new Date(currentPeriod.from);
+            const currentEnd = new Date(currentPeriod.to);
+            const daysDiff = Math.ceil((currentEnd - currentStart) / (1000 * 60 * 60 * 24));
+            
+            const previousEnd = new Date(currentStart);
+            previousEnd.setDate(previousEnd.getDate() - 1);
+            const previousStart = new Date(previousEnd);
+            previousStart.setDate(previousStart.getDate() - daysDiff + 1);
+            
+            const previousPeriod = {
+                from: formatDateForAPI(previousStart),
+                to: formatDateForAPI(previousEnd)
+            };
+            
+            // Cargar datos del período anterior
+            const previousResponse = await fetch(`${apiBaseUrl}?from=${previousPeriod.from}&to=${previousPeriod.to}`);
+            if (!previousResponse.ok) throw new Error('Error al cargar datos anteriores');
+            const previousApiResponse = await previousResponse.json();
+            
+            // Verificar que la respuesta tenga el formato correcto
+            if (!previousApiResponse.success || !Array.isArray(previousApiResponse.data)) {
+                throw new Error('No hay datos disponibles para el período anterior');
+            }
+            const previousData = previousApiResponse.data;
+            
+            // Procesar datos actuales
+            const currentDataProcessed = filterDataByCheckbox(JSON.parse(JSON.stringify(originalWorkersData)));
+            
+            // Comparar trabajadores
+            const comparisons = currentDataProcessed.map(currWorker => {
+                const currTotalCajas = (currWorker.operator_posts || []).reduce((s, p) => s + (Number(p.count) || 0), 0);
+                let currTotalHours = 0;
+                (currWorker.operator_posts || []).forEach(p => {
+                    if (p.created_at) {
+                        const st = new Date(p.created_at);
+                        const et = p.finish_at ? new Date(p.finish_at) : new Date();
+                        if (et > st) currTotalHours += (et - st) / 3600000;
+                    }
+                });
+                const currCajasHora = currTotalHours > 0 ? (currTotalCajas / currTotalHours) : 0;
+                
+                // Buscar mismo trabajador en período anterior
+                const prevWorker = previousData.find(w => w.client_id === currWorker.client_id);
+                let prevTotalCajas = 0, prevTotalHours = 0, prevCajasHora = 0;
+                
+                if (prevWorker) {
+                    prevTotalCajas = (prevWorker.operator_posts || []).reduce((s, p) => s + (Number(p.count) || 0), 0);
+                    (prevWorker.operator_posts || []).forEach(p => {
+                        if (p.created_at) {
+                            const st = new Date(p.created_at);
+                            const et = p.finish_at ? new Date(p.finish_at) : new Date();
+                            if (et > st) prevTotalHours += (et - st) / 3600000;
+                        }
+                    });
+                    prevCajasHora = prevTotalHours > 0 ? (prevTotalCajas / prevTotalHours) : 0;
+                }
+                
+                const changeInCajas = prevTotalCajas > 0 ? ((currTotalCajas - prevTotalCajas) / prevTotalCajas * 100) : (currTotalCajas > 0 ? 100 : 0);
+                const changeInCH = prevCajasHora > 0 ? ((currCajasHora - prevCajasHora) / prevCajasHora * 100) : (currCajasHora > 0 ? 100 : 0);
+                
+                return {
+                    name: currWorker.name || `ID: ${currWorker.client_id}`,
+                    currCajas: currTotalCajas,
+                    prevCajas: prevTotalCajas,
+                    currHours: currTotalHours,
+                    prevHours: prevTotalHours,
+                    currCH: currCajasHora,
+                    prevCH: prevCajasHora,
+                    changeCajas: changeInCajas,
+                    changeCH: changeInCH,
+                    hasPrevData: !!prevWorker
+                };
+            }).filter(w => w.currCajas > 0 || w.prevCajas > 0);
+            
+            comparisons.sort((a, b) => b.changeCH - a.changeCH); // Ordenar por cambio en c/h
+            
+            chartContainerEl.innerHTML = '';
+            container.append("h3").style("text-align", "center").style("margin", "1rem 0").style("font-size", "1.5rem").style("font-weight", "bold").style("color", "#1f2937").text("📈 Comparativa Temporal de Períodos");
+            
+            // Info de períodos
+            container.append("div").style("background", "linear-gradient(135deg, #667eea 0%, #764ba2 100%)").style("color", "white").style("padding", "1rem").style("border-radius", "0.5rem").style("margin", "1rem 0").style("text-align", "center").html(`<p style="margin: 0; font-size: 0.9rem;"><strong>Período Actual:</strong> ${currentPeriod.from} → ${currentPeriod.to} | <strong>Período Anterior:</strong> ${previousPeriod.from} → ${previousPeriod.to}</p>`);
+            
+            if (comparisons.length === 0) {
+                container.append("p").style("text-align", "center").style("color", "#6b7280").style("padding", "2rem").text("No hay datos disponibles para comparación.");
+                return;
+            }
+            
+            // Estadísticas generales - Usar cambio en c/h como métrica principal (más justo)
+            const avgChangeCajas = comparisons.reduce((s, w) => s + w.changeCajas, 0) / comparisons.length;
+            const avgChangeCH = comparisons.reduce((s, w) => s + w.changeCH, 0) / comparisons.length;
+            const improving = comparisons.filter(w => w.changeCH > 0).length; // Basado en c/h
+            const declining = comparisons.filter(w => w.changeCH < 0).length; // Basado en c/h
+            const newWorkers = comparisons.filter(w => !w.hasPrevData).length;
+            
+            // Aviso sobre comparación
+            container.append("div").style("background", "linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)").style("border-left", "4px solid #f59e0b").style("padding", "1rem").style("border-radius", "0.5rem").style("margin", "1rem 0").html('<div style="display: flex; align-items: center;"><span style="font-size: 1.5rem; margin-right: 0.5rem;">⚠️</span><p style="margin: 0; font-size: 0.85rem; color: #92400e;"><strong>Nota:</strong> El "Cambio Cajas" puede ser negativo si los períodos tienen diferente duración (ej: día parcial vs día completo). <strong>Usa "Cambio c/h"</strong> para comparar eficiencia real.</p></div>');
+            
+            const statsDiv = container.append("div").style("display", "grid").style("grid-template-columns", "repeat(auto-fit, minmax(180px, 1fr))").style("gap", "1rem").style("margin", "1rem 0").style("padding", "1rem").style("background", "#f9fafb").style("border-radius", "0.5rem");
+            statsDiv.append("div").style("text-align", "center").html(`<div style="font-size: 0.875rem; color: #6b7280;">Mejorando</div><div style="font-size: 1.5rem; font-weight: bold; color: #10b981;">${improving} ↑</div>`);
+            statsDiv.append("div").style("text-align", "center").html(`<div style="font-size: 0.875rem; color: #6b7280;">Bajando</div><div style="font-size: 1.5rem; font-weight: bold; color: #ef4444;">${declining} ↓</div>`);
+            statsDiv.append("div").style("text-align", "center").html(`<div style="font-size: 0.875rem; color: #6b7280;">Nuevos</div><div style="font-size: 1.5rem; font-weight: bold; color: #3b82f6;">${newWorkers}</div>`);
+            statsDiv.append("div").style("text-align", "center").html(`<div style="font-size: 0.875rem; color: #6b7280;">Cambio Cajas</div><div style="font-size: 1.5rem; font-weight: bold; color: ${avgChangeCajas > 0 ? '#10b981' : '#ef4444'};">${avgChangeCajas > 0 ? '+' : ''}${avgChangeCajas.toFixed(1)}%</div>`);
+            statsDiv.append("div").style("text-align", "center").html(`<div style="font-size: 0.875rem; color: #6b7280;">Cambio c/h</div><div style="font-size: 1.5rem; font-weight: bold; color: ${avgChangeCH > 0 ? '#10b981' : '#ef4444'};">${avgChangeCH > 0 ? '+' : ''}${avgChangeCH.toFixed(1)}%</div>`);
+            
+            // Tabla de comparación
+            const tableContainer = container.append("div").style("max-height", "500px").style("overflow-y", "auto").style("margin", "1rem 0").style("border", "1px solid #e5e7eb").style("border-radius", "0.5rem");
+            const table = tableContainer.append("table").style("width", "100%").style("border-collapse", "collapse").style("background", "white");
+            const thead = table.append("thead").style("background", "linear-gradient(135deg, #667eea 0%, #764ba2 100%)").style("color", "white").style("position", "sticky").style("top", "0").style("z-index", "10");
+            const headerRow = thead.append("tr");
+            ['Trabajador', 'Horas Act.', 'Horas Ant.', 'Cajas Act.', 'Cajas Ant.', 'c/h Actual', 'c/h Anterior', 'Cambio c/h %'].forEach(h => headerRow.append("th").style("padding", "0.75rem").style("text-align", "left").style("font-size", "0.875rem").style("font-weight", "600").text(h));
+            
+            const tbody = table.append("tbody");
+            comparisons.slice(0, 20).forEach((w, i) => {
+                const row = tbody.append("tr").style("border-bottom", "1px solid #e5e7eb").style("background", i % 2 === 0 ? "white" : "#f9fafb");
+                row.append("td").style("padding", "0.75rem").style("font-weight", "500").text(w.name);
+                row.append("td").style("padding", "0.75rem").style("font-size", "0.85rem").style("color", "#6b7280").text(w.currHours.toFixed(1) + 'h');
+                row.append("td").style("padding", "0.75rem").style("font-size", "0.85rem").style("color", "#6b7280").text(w.hasPrevData ? w.prevHours.toFixed(1) + 'h' : 'N/A');
+                row.append("td").style("padding", "0.75rem").text(w.currCajas);
+                row.append("td").style("padding", "0.75rem").text(w.hasPrevData ? w.prevCajas : 'N/A');
+                row.append("td").style("padding", "0.75rem").style("font-weight", "600").text(w.currCH.toFixed(2));
+                row.append("td").style("padding", "0.75rem").style("font-weight", "600").text(w.hasPrevData ? w.prevCH.toFixed(2) : 'N/A');
+                const changeCHCell = row.append("td").style("padding", "0.75rem");
+                changeCHCell.append("span").style("padding", "0.25rem 0.5rem").style("background", w.changeCH > 0 ? '#10b981' : w.changeCH < 0 ? '#ef4444' : '#6b7280').style("color", "white").style("border-radius", "0.25rem").style("font-size", "0.875rem").style("font-weight", "600").text(`${w.changeCH > 0 ? '+' : ''}${w.changeCH.toFixed(1)}%`);
+            });
+        } catch (error) {
+            chartContainerEl.innerHTML = `<div class="text-center p-4 text-red-500"><p>Error al cargar la comparación: ${error.message}</p><p class="text-sm mt-2">Verifica que hay datos disponibles para el período anterior.</p></div>`;
+            console.error('Error en comparación temporal:', error);
+        }
     }
     
     // Nueva función: Heatmap por hora
@@ -2046,7 +2901,55 @@
         const container = d3.select("#chartContainer");
         container.append("h3").style("text-align", "center").style("margin", "1rem 0").style("font-size", "1.5rem").style("font-weight", "bold").style("color", "#1f2937").text("🕐 Heatmap de Productividad por Hora");
         const hourlyData = {};
-        dataToProcess.forEach(w => { const wn = w.name || `ID: ${w.client_id}`; hourlyData[wn] = Array(24).fill(0); (w.operator_posts || []).forEach(p => { if (p.created_at) { const h = new Date(p.created_at).getHours(); hourlyData[wn][h] += Number(p.count) || 0; } }); });
+        dataToProcess.forEach(w => { 
+            const wn = w.name || `ID: ${w.client_id}`; 
+            hourlyData[wn] = Array(24).fill(0); 
+            (w.operator_posts || []).forEach(p => { 
+                if (p.created_at) { 
+                    const startDate = new Date(p.created_at);
+                    const endDate = p.finish_at ? new Date(p.finish_at) : new Date();
+                    const count = Number(p.count) || 0;
+                    
+                    // Calcular horas trabajadas
+                    const startHour = startDate.getHours();
+                    const endHour = endDate.getHours();
+                    const totalMinutes = (endDate - startDate) / 60000; // Duración en minutos
+                    
+                    if (totalMinutes > 0 && count > 0) {
+                        // Si el trabajo es en la misma hora
+                        if (startHour === endHour) {
+                            hourlyData[wn][startHour] += count;
+                        } else {
+                            // Distribuir proporcionalmente entre las horas trabajadas
+                            const startMinutes = 60 - startDate.getMinutes(); // Minutos restantes en hora de inicio
+                            const endMinutes = endDate.getMinutes(); // Minutos en hora de fin
+                            
+                            // Minutos en horas completas intermedias
+                            const hoursInBetween = endHour - startHour - 1;
+                            const totalWorkMinutes = startMinutes + (hoursInBetween * 60) + endMinutes;
+                            
+                            if (totalWorkMinutes > 0) {
+                                // Asignar a hora de inicio
+                                hourlyData[wn][startHour] += Math.round(count * (startMinutes / totalWorkMinutes));
+                                
+                                // Asignar a horas intermedias
+                                for (let h = startHour + 1; h < endHour; h++) {
+                                    hourlyData[wn][h] += Math.round(count * (60 / totalWorkMinutes));
+                                }
+                                
+                                // Asignar a hora de fin
+                                if (endMinutes > 0) {
+                                    hourlyData[wn][endHour] += Math.round(count * (endMinutes / totalWorkMinutes));
+                                }
+                            }
+                        }
+                    } else if (count > 0) {
+                        // Fallback: asignar a hora de inicio si no hay finish_at válido
+                        hourlyData[wn][startHour] += count;
+                    }
+                } 
+            }); 
+        });
         const workers = Object.keys(hourlyData).filter(n => hourlyData[n].some(v => v > 0)).slice(0, 15);
         if (workers.length === 0) { container.append("p").style("text-align", "center").style("color", "#6b7280").style("padding", "2rem").text("No hay suficientes datos temporales."); return; }
         let minH = 23, maxH = 0; workers.forEach(w => { hourlyData[w].forEach((v, h) => { if (v > 0) { minH = Math.min(minH, h); maxH = Math.max(maxH, h); } }); });
@@ -2067,6 +2970,38 @@
         statsDiv.append("div").style("text-align", "center").html(`<div style="font-size: 0.875rem; color: #6b7280;">Hora Pico</div><div style="font-size: 1.5rem; font-weight: bold; color: #0369a1;">${peakHour}:00</div>`);
         statsDiv.append("div").style("text-align", "center").html(`<div style="font-size: 0.875rem; color: #6b7280;">Producción en Hora Pico</div><div style="font-size: 1.5rem; font-weight: bold; color: #0369a1;">${hourTotals[peakHour]} cajas</div>`);
         statsDiv.append("div").style("text-align", "center").html(`<div style="font-size: 0.875rem; color: #6b7280;">Rango Horario</div><div style="font-size: 1.5rem; font-weight: bold; color: #0369a1;">${minH}:00 - ${maxH}:00</div>`);
+        
+        // Leyenda explicativa
+        const legendDiv = container.append("div")
+            .style("margin-top", "2rem")
+            .style("padding", "1.5rem")
+            .style("background", "linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)")
+            .style("border-left", "4px solid #0369a1")
+            .style("border-radius", "0.5rem")
+            .style("box-shadow", "0 2px 4px rgba(0,0,0,0.1)");
+        
+        legendDiv.append("div")
+            .style("display", "flex")
+            .style("align-items", "center")
+            .style("margin-bottom", "1rem")
+            .html('<span style="font-size: 1.5rem; margin-right: 0.75rem;">ℹ️</span><h4 style="font-size: 1.1rem; font-weight: 600; color: #0369a1; margin: 0;">¿Cómo se calcula este Heatmap?</h4>');
+        
+        legendDiv.append("div")
+            .style("font-size", "0.9rem")
+            .style("color", "#334155")
+            .style("line-height", "1.6")
+            .html(`
+                <p style="margin: 0.5rem 0;"><strong>📊 Distribución proporcional de la producción:</strong> Las cajas no se asignan únicamente a la hora de inicio, sino que se distribuyen proporcionalmente entre todas las horas trabajadas.</p>
+                <p style="margin: 0.5rem 0;"><strong>🕐 Ejemplo:</strong> Si un trabajador produce 120 cajas de 8:30 a 11:15:</p>
+                <ul style="margin: 0.5rem 0; padding-left: 2rem;">
+                    <li><strong>8:00-9:00</strong>: 30 minutos trabajados → recibe ~22 cajas</li>
+                    <li><strong>9:00-10:00</strong>: 60 minutos trabajados → recibe ~43 cajas</li>
+                    <li><strong>10:00-11:00</strong>: 60 minutos trabajados → recibe ~43 cajas</li>
+                    <li><strong>11:00-12:00</strong>: 15 minutos trabajados → recibe ~12 cajas</li>
+                </ul>
+                <p style="margin: 0.5rem 0;"><strong>🎨 Escala de colores:</strong> Del azul claro (baja producción) al azul oscuro (alta producción). Los números en cada celda muestran la cantidad exacta de cajas.</p>
+                <p style="margin: 0.5rem 0;"><strong>💡 Interpretación:</strong> Este heatmap te permite identificar las franjas horarias más productivas y las horas de menor rendimiento para optimizar la planificación.</p>
+            `);
     }
 
     function formatDateForAPI(date) { const y = date.getFullYear(), m = String(date.getMonth() + 1).padStart(2, '0'), d = String(date.getDate()).padStart(2, '0'); return `${y}-${m}-${d}`; }
@@ -2265,7 +3200,7 @@
         let hLC=false;wVPC=0;
         dTD.forEach(w=>{const tQS=(w.operator_posts||[]).reduce((s,p)=>s+((p.count??0)>0?(p.count??0):0),0);let wSBR=false;const lST=sT.toLowerCase();if(!sT){wSBR=!(filterPostsCheckbox && filterPostsCheckbox.checked&&!((w.operator_posts||[]).some(p=>(p.count??0)>0)));}else{if((w.name||'').toLowerCase().includes(lST)||(w.client_id||'').toString().toLowerCase().includes(lST))wSBR=true;else if(w.operator_posts)wSBR=w.operator_posts.some(p=>((p.rfid_reading?.name||'').toLowerCase().includes(lST))||((p.product_list?.name||'').toLowerCase().includes(lST)));}if(!wSBR)return;wVPC++;
         const wR=tableBody.insertRow();wR.classList.add('bg-blue-50','hover:bg-blue-100','transition-colors');wR.insertCell().textContent=w.client_id??'-';const nC=wR.insertCell();nC.textContent=w.name??'Sin Nombre';
-        if(!isLocked){const aLIA=document.createElement('button');aLIA.classList.add('analyze-icon','ml-1','text-indigo-600','hover:text-indigo-800');aLIA.title="Analizar (IA)";aLIA.innerHTML=`<svg class="icon" style="width:18px;height:18px;" viewBox="0 0 24 24" fill="currentColor"><path d="M7 14c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3zm13.71-9.37c-.39-.39-1.02-.39-1.41 0L18 5.92 14.08 2 12 2c-1.1 0-2 .9-2 2v2H8c-1.1 0-2 .9-2 2v2H4c-1.1 0-2 .9-2 2v10h20V4c0-1.1-.9-2-2-2h-2.29L19.3 2.63c-.39-.39-1.02-.39-1.41 0zM16 14c0-2.21-1.79-4-4-4s-4 1.79-4 4 1.79 4 4 4 4-1.79 4-4zm-4-2c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2z"/></svg>`;aLIA.addEventListener('click',(e)=>{e.stopPropagation();fetchLocalAIWorkerAnalysis(w);});nC.appendChild(aLIA);}
+        if(!isLocked){const aLIA=document.createElement('button');aLIA.classList.add('ml-2','px-2','py-1','text-xs','font-semibold','text-white','bg-gradient-to-r','from-purple-500','to-indigo-500','hover:from-purple-600','hover:to-indigo-600','rounded-md','shadow-sm','hover:shadow-md','transition-all','duration-150','inline-flex','items-center','gap-1');aLIA.title="Análisis Individual con IA";aLIA.innerHTML=`<svg style="width:14px;height:14px;" viewBox="0 0 24 24" fill="currentColor"><path d="M9.5 2A7.5 7.5 0 002 9.5c0 1.76.61 3.37 1.63 4.66l-1.36 4.08a1 1 0 001.28 1.28l4.08-1.36A7.47 7.47 0 009.5 17a7.5 7.5 0 000-15zM9 12H8v-1h1v1zm2 0h-1v-1h1v1zm2 0h-1v-1h1v1zm0-3H8V8h5v1z"/><circle cx="17" cy="17" r="5" fill="currentColor" opacity="0.5"/><path d="M17 14v6m-3-3h6" stroke="white" stroke-width="2" stroke-linecap="round"/></svg><span>🤖 IA</span>`;aLIA.addEventListener('click',(e)=>{e.stopPropagation();fetchLocalAIWorkerAnalysis(w);});nC.appendChild(aLIA);}
         const wUC=wR.insertCell();wUC.textContent=tQS;wR.insertCell();wR.insertCell();wR.insertCell();wR.insertCell();wR.insertCell();wR.insertCell();Array.from(wR.cells).forEach(c=>c.classList.add('px-4','py-3','text-sm','font-medium','text-gray-900','whitespace-nowrap'));
         if(w.operator_posts&&w.operator_posts.length>0){const sP=[...w.operator_posts].sort((a,b)=>(new Date(a.created_at)||0)-(new Date(b.created_at)||0));sP.forEach((p,pI)=>{const pC=p.count??0;let dTPR=false;if(!sT){if(pC>0||(filterPostsCheckbox && !filterPostsCheckbox.checked))dTPR=true;}else{const lS=sT.toLowerCase();if((w.name||'').toLowerCase().includes(lS)||(w.client_id||'').toString().toLowerCase().includes(lS)||(p.rfid_reading?.name||'').toLowerCase().includes(lS)||(p.product_list?.name||'').toLowerCase().includes(lS)){if(pC>0||(filterPostsCheckbox && !filterPostsCheckbox.checked))dTPR=true;}}if(!dTPR && !(filterPostsCheckbox && !filterPostsCheckbox.checked && pC === 0 && !sT)) return; if(filterPostsCheckbox && filterPostsCheckbox.checked && pC === 0 && dTPR && !sT) return;
         const pR=tableBody.insertRow();pR.classList.add((tableBody.rows.length-3)%2===0?'bg-white':'bg-gray-50','hover:bg-gray-100');pR.insertCell();pR.insertCell();pR.insertCell();pR.insertCell().textContent=p.rfid_reading?.name??'N/A';pR.insertCell().textContent=p.created_at?dateFormatter.format(new Date(p.created_at)):'-';pR.insertCell().textContent=p.finish_at?dateFormatter.format(new Date(p.finish_at)):'-';
@@ -2332,13 +3267,19 @@
         filterPostsCheckbox = document.getElementById('filterPostsCheckbox');
         analizarTodosLocalAIBtn = document.getElementById('analizarTodosLocalAIBtn');
         viewWorkerChartBtn = document.getElementById('viewWorkerChartBtn');
+        viewWorkerCHChartBtn = document.getElementById('viewWorkerCHChartBtn');
         viewPostChartBtn = document.getElementById('viewPostChartBtn');
+        viewPostCHChartBtn = document.getElementById('viewPostCHChartBtn');
         viewWorkerPieChartBtn = document.getElementById('viewWorkerPieChartBtn');
+        viewWorkerCHPieChartBtn = document.getElementById('viewWorkerCHPieChartBtn');
         viewConfeccionPorTrabajadorChartBtn = document.getElementById('viewConfeccionPorTrabajadorChartBtn');
         viewWorkerEvolutionBtn = document.getElementById('viewWorkerEvolutionBtn');
+        viewWorkerEvolutionCHBtn = document.getElementById('viewWorkerEvolutionCHBtn');
         viewDistributionBtn = document.getElementById('viewDistributionBtn');
         viewRankingBtn = document.getElementById('viewRankingBtn');
+        viewRankingCHBtn = document.getElementById('viewRankingCHBtn');
         viewFullRankingBtn = document.getElementById('viewFullRankingBtn');
+        viewFullRankingCHBtn = document.getElementById('viewFullRankingCHBtn');
         viewInsightsBtn = document.getElementById('viewInsightsBtn');
         viewTemporalComparisonBtn = document.getElementById('viewTemporalComparisonBtn');
         viewHeatmapBtn = document.getElementById('viewHeatmapBtn');
@@ -2364,6 +3305,12 @@
         analysisModalStatus = document.getElementById('analysisModalStatus');
         closeAnalysisModalBtn = document.getElementById('closeAnalysisModalBtn');
         okAnalysisModalBtn = document.getElementById('okAnalysisModalBtn');
+        promptEditModal = document.getElementById('promptEditModal');
+        promptTextArea = document.getElementById('promptTextArea');
+        promptDataSummary = document.getElementById('promptDataSummary');
+        closePromptEditModalBtn = document.getElementById('closePromptEditModalBtn');
+        cancelPromptEditBtn = document.getElementById('cancelPromptEditBtn');
+        sendPromptBtn = document.getElementById('sendPromptBtn');
         chartModal = document.getElementById('chartModal');
         chartModalTitleEl = document.getElementById('chartModalTitle');
         chartContainerEl = document.getElementById('chartContainer');
@@ -2394,13 +3341,19 @@
         }
         if (analizarTodosLocalAIBtn) analizarTodosLocalAIBtn.addEventListener('click', fetchLocalAIOverallAnalysis);
         if (viewWorkerChartBtn) viewWorkerChartBtn.addEventListener('click', () => showChartModal('workers'));
+        if (viewWorkerCHChartBtn) viewWorkerCHChartBtn.addEventListener('click', () => showChartModal('workersCH'));
         if (viewPostChartBtn) viewPostChartBtn.addEventListener('click', () => showChartModal('postsBar'));
+        if (viewPostCHChartBtn) viewPostCHChartBtn.addEventListener('click', () => showChartModal('postsCHBar'));
         if (viewWorkerPieChartBtn) viewWorkerPieChartBtn.addEventListener('click', () => showChartModal('workerPie'));
+        if (viewWorkerCHPieChartBtn) viewWorkerCHPieChartBtn.addEventListener('click', () => showChartModal('workerCHPie'));
         if (viewConfeccionPorTrabajadorChartBtn) viewConfeccionPorTrabajadorChartBtn.addEventListener('click', () => showChartModal('confeccionPorTrabajador'));
         if (viewWorkerEvolutionBtn) viewWorkerEvolutionBtn.addEventListener('click', () => showChartModal('workerEvolution'));
+        if (viewWorkerEvolutionCHBtn) viewWorkerEvolutionCHBtn.addEventListener('click', () => showChartModal('workerEvolutionCH'));
         if (viewDistributionBtn) viewDistributionBtn.addEventListener('click', () => showChartModal('distribution'));
         if (viewRankingBtn) viewRankingBtn.addEventListener('click', () => showChartModal('ranking'));
+        if (viewRankingCHBtn) viewRankingCHBtn.addEventListener('click', () => showChartModal('rankingCH'));
         if (viewFullRankingBtn) viewFullRankingBtn.addEventListener('click', () => showChartModal('fullRanking'));
+        if (viewFullRankingCHBtn) viewFullRankingCHBtn.addEventListener('click', () => showChartModal('fullRankingCH'));
         if (viewInsightsBtn) viewInsightsBtn.addEventListener('click', () => showChartModal('insights'));
         if (viewTemporalComparisonBtn) viewTemporalComparisonBtn.addEventListener('click', () => showChartModal('temporalComparison'));
         if (viewHeatmapBtn) viewHeatmapBtn.addEventListener('click', () => showChartModal('heatmap'));
@@ -2444,6 +3397,9 @@
         if (editQuantityInput) editQuantityInput.addEventListener('keypress', (e) => { if (e.key === 'Enter' && saveEditBtn) saveEditBtn.click(); });
         if (closeAnalysisModalBtn) closeAnalysisModalBtn.addEventListener('click', hideAnalysisModal);
         if (okAnalysisModalBtn) okAnalysisModalBtn.addEventListener('click', hideAnalysisModal);
+        if (closePromptEditModalBtn) closePromptEditModalBtn.addEventListener('click', hidePromptEditModal);
+        if (cancelPromptEditBtn) cancelPromptEditBtn.addEventListener('click', hidePromptEditModal);
+        if (sendPromptBtn) sendPromptBtn.addEventListener('click', sendEditedPrompt);
         
         const localCloseChartModalBtn = document.getElementById('closeChartModalBtn');
         const localOkChartModalBtn = document.getElementById('okChartModalBtn');
