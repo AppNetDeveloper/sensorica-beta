@@ -731,6 +731,36 @@
 
     // --- Definiciones de Funciones ---
 
+    async function configureAIFromServer() {
+        try {
+            // Llamar a la API para obtener configuración de IA
+            const response = await fetch(`${apiPromptBaseUrl}${promptApiKeys.global}`);
+            if (!response.ok) {
+                console.warn('No se pudo cargar configuración de IA desde servidor');
+                return;
+            }
+            const promptData = await response.json();
+            
+            // Configurar IA si vienen las credenciales
+            if (promptData.ai_url && promptData.ai_token) {
+                localAISubmitTaskUrl = `${promptData.ai_url}/api/ollama-tasks`;
+                localAITaskStatusUrlBase = `${promptData.ai_url}/api/ollama-tasks/`;
+                localAIApiToken = promptData.ai_token;
+                iaEnabled = true;
+                console.log('✅ IA configurada correctamente:', { 
+                    url: localAISubmitTaskUrl, 
+                    tokenLength: localAIApiToken.length 
+                });
+            } else {
+                iaEnabled = false;
+                console.warn('⚠️ IA no disponible: faltan ai_url o ai_token en la respuesta del servidor');
+            }
+        } catch (error) {
+            console.error('❌ Error al configurar IA:', error);
+            iaEnabled = false;
+        }
+    }
+    
     async function getPromptFromServer(promptApiKey) {
         try {
             const response = await fetch(`${apiPromptBaseUrl}${promptApiKey}`);
@@ -889,6 +919,176 @@
         return `- Trabajadores activos (con producción): ${workersToAnalyze.length}\n- Total Cajas Equipo: ${totalCajasGlobal}\n- Promedio Cajas/Hora Global: ${avgCajasHoraGlobal} c/h\n- Puestos con actividad: ${Object.keys(puestosConteo).length}\n- Distribución Cajas/Puesto:\n${puestosSummary}\n- Top Productores:\n${topSummary}\n- Menor Producción:\n${lowSummary}`.trim();
     }
 
+    async function executeAIAnalysis(worker, analysisType) {
+        const analysisConfig = {
+            individual: { title: '📊 Análisis Individual', key: 'individual_worker_analysis_v3' },
+            efficiency: { title: '⚡ Análisis de Eficiencia c/h', key: 'efficiency_analysis' },
+            trends: { title: '📈 Análisis de Tendencias', key: 'trends_analysis' },
+            distribution: { title: '🎯 Optimizar Distribución', key: 'distribution_analysis' },
+            comparative: { title: '🔄 Análisis Comparativo', key: 'comparative_analysis' },
+            objectives: { title: '🏆 Objetivos & KPIs', key: 'objectives_analysis' },
+            hourly: { title: '🕐 Análisis Horario', key: 'hourly_analysis' },
+            team: { title: '🤝 Análisis de Equipo', key: 'team_analysis' },
+            predictive: { title: '🔮 Análisis Predictivo', key: 'predictive_analysis' }
+        };
+        
+        const config = analysisConfig[analysisType] || analysisConfig.individual;
+        const analysisTitle = `${config.title} - ${worker.name || 'ID: '+worker.client_id}`;
+        
+        // Generar prompt en formato híbrido CSV/tabla
+        const hybridPrompt = generateHybridPrompt(worker, analysisType, config);
+        
+        // Mostrar modal de edición de prompt antes de enviar
+        const modelToUse = defaultLocalAIModelName;
+        showPromptEditModal(hybridPrompt, analysisTitle, modelToUse, '');
+    }
+    
+    function generateHybridPrompt(worker, analysisType, config) {
+        const workerName = worker.name || `ID: ${worker.client_id || 'N/A'}`;
+        const posts = worker.operator_posts || [];
+        
+        // Calcular métricas principales
+        let totalCajas = 0, totalHours = 0;
+        const postsByPuesto = {};
+        
+        posts.forEach(post => {
+            const cajas = Number(post.count) || 0;
+            totalCajas += cajas;
+            
+            if (post.created_at) {
+                const start = new Date(post.created_at);
+                const end = post.finish_at ? new Date(post.finish_at) : new Date();
+                if (end > start) totalHours += (end - start) / 3600000;
+            }
+            
+            const puestoName = post.rfid_reading?.name || 'N/A';
+            if (!postsByPuesto[puestoName]) postsByPuesto[puestoName] = { cajas: 0, turnos: 0 };
+            postsByPuesto[puestoName].cajas += cajas;
+            postsByPuesto[puestoName].turnos++;
+        });
+        
+        const cajasHora = totalHours > 0 ? (totalCajas / totalHours) : 0;
+        const avgCajasEquipo = calculateGlobalAverage();
+        const eficiencia = avgCajasEquipo > 0 ? ((cajasHora / avgCajasEquipo) * 100) : 0;
+        
+        // FORMATO HÍBRIDO: Contexto + Tabla CSV
+        let prompt = `# ANÁLISIS REQUERIDO: ${config.title}\n\n`;
+        
+        // RESUMEN EJECUTIVO
+        prompt += `## RESUMEN DEL TRABAJADOR\n`;
+        prompt += `Nombre: ${workerName} | ID: ${worker.client_id || 'N/A'}\n`;
+        prompt += `Total Cajas: ${totalCajas} | Horas: ${totalHours.toFixed(1)}h | c/h: ${cajasHora.toFixed(2)}\n`;
+        prompt += `Eficiencia: ${eficiencia.toFixed(1)}% vs promedio equipo (${avgCajasEquipo.toFixed(2)} c/h)\n`;
+        prompt += `Puestos trabajados: ${Object.keys(postsByPuesto).length} | Turnos totales: ${posts.length}\n\n`;
+        
+        // TABLA DE DATOS DETALLADOS (CSV)
+        prompt += `## DATOS DETALLADOS POR TURNO\n`;
+        prompt += `| # | Puesto | Inicio | Fin | Cajas | Horas | c/h | Producto |\n`;
+        prompt += `|---|--------|--------|-----|-------|-------|-----|----------|\n`;
+        
+        posts.forEach((post, idx) => {
+            const cajas = Number(post.count) || 0;
+            const inicio = post.created_at ? new Date(post.created_at).toLocaleTimeString('es-ES', {hour: '2-digit', minute: '2-digit'}) : 'N/A';
+            const fin = post.finish_at ? new Date(post.finish_at).toLocaleTimeString('es-ES', {hour: '2-digit', minute: '2-digit'}) : 'En curso';
+            const hours = post.created_at && post.finish_at ? ((new Date(post.finish_at) - new Date(post.created_at)) / 3600000) : 0;
+            const ch = hours > 0 ? (cajas / hours) : 0;
+            const puesto = (post.rfid_reading?.name || 'N/A').substring(0, 15);
+            const producto = (post.product_list?.name || 'N/A').substring(0, 15);
+            
+            prompt += `| ${idx+1} | ${puesto} | ${inicio} | ${fin} | ${cajas} | ${hours.toFixed(1)} | ${ch.toFixed(1)} | ${producto} |\n`;
+        });
+        
+        // TABLA DE RENDIMIENTO POR PUESTO
+        prompt += `\n## RENDIMIENTO POR PUESTO\n`;
+        prompt += `| Puesto | Cajas | Turnos | Promedio c/turno |\n`;
+        prompt += `|--------|-------|--------|------------------|\n`;
+        
+        Object.entries(postsByPuesto).forEach(([puesto, data]) => {
+            const avgPerTurno = data.turnos > 0 ? (data.cajas / data.turnos) : 0;
+            prompt += `| ${puesto} | ${data.cajas} | ${data.turnos} | ${avgPerTurno.toFixed(1)} |\n`;
+        });
+        
+        // CONTEXTO DEL EQUIPO
+        const teamData = filterDataByCheckbox(JSON.parse(JSON.stringify(originalWorkersData)));
+        prompt += `\n## CONTEXTO DEL EQUIPO\n`;
+        prompt += `Total trabajadores activos: ${teamData.length}\n`;
+        prompt += `Promedio equipo: ${avgCajasEquipo.toFixed(2)} c/h\n`;
+        prompt += `Posición del trabajador: ${getRankingPosition(worker, teamData)}\n\n`;
+        
+        // INSTRUCCIONES ESPECÍFICAS POR TIPO DE ANÁLISIS
+        prompt += `## INSTRUCCIONES DE ANÁLISIS\n`;
+        
+        switch(analysisType) {
+            case 'individual':
+                prompt += `Analiza el rendimiento individual de ${workerName}. Identifica fortalezas, áreas de mejora, patrones de productividad y recomendaciones específicas.`;
+                break;
+            case 'efficiency':
+                prompt += `Analiza la eficiencia (c/h) de ${workerName}. Compara con el promedio del equipo, identifica factores que afectan su eficiencia y proporciona recomendaciones para mejorar.`;
+                break;
+            case 'trends':
+                prompt += `Analiza las tendencias y evolución de ${workerName}. Detecta patrones de mejora o deterioro, predice rendimiento futuro y sugiere acciones preventivas.`;
+                break;
+            case 'distribution':
+                prompt += `Optimiza la distribución de ${workerName} en los puestos. Identifica en qué puestos rinde mejor, sugiere asignaciones óptimas y mejora el balance de carga.`;
+                break;
+            case 'comparative':
+                prompt += `Compara ${workerName} con otros trabajadores del equipo. Identifica mejores prácticas de top performers y qué hace diferente este trabajador.`;
+                break;
+            case 'objectives':
+                prompt += `Define objetivos y KPIs para ${workerName}. Establece metas realistas, métricas de seguimiento y un plan de desarrollo.`;
+                break;
+            case 'hourly':
+                prompt += `Analiza el rendimiento horario de ${workerName}. Identifica mejores/peores horas, fatiga vs productividad y sugiere turnos ideales.`;
+                break;
+            case 'team':
+                prompt += `Analiza cómo ${workerName} interactúa con el equipo. Identifica sinergia, mejores compañeros de equipo y dinámicas de grupo.`;
+                break;
+            case 'predictive':
+                prompt += `Predice el rendimiento futuro de ${workerName}. Estima producción del próximo período, identifica riesgos y oportunidades.`;
+                break;
+        }
+        
+        prompt += `\n\nProporciona un análisis claro, accionable y estructurado.`;
+        
+        return prompt;
+    }
+    
+    function calculateGlobalAverage() {
+        const data = filterDataByCheckbox(JSON.parse(JSON.stringify(originalWorkersData)));
+        let totalCajas = 0, totalHours = 0;
+        
+        data.forEach(w => {
+            (w.operator_posts || []).forEach(p => {
+                totalCajas += Number(p.count) || 0;
+                if (p.created_at) {
+                    const start = new Date(p.created_at);
+                    const end = p.finish_at ? new Date(p.finish_at) : new Date();
+                    if (end > start) totalHours += (end - start) / 3600000;
+                }
+            });
+        });
+        
+        return totalHours > 0 ? (totalCajas / totalHours) : 0;
+    }
+    
+    function getRankingPosition(worker, teamData) {
+        const rankings = teamData.map(w => {
+            let totalCajas = 0, totalHours = 0;
+            (w.operator_posts || []).forEach(p => {
+                totalCajas += Number(p.count) || 0;
+                if (p.created_at) {
+                    const start = new Date(p.created_at);
+                    const end = p.finish_at ? new Date(p.finish_at) : new Date();
+                    if (end > start) totalHours += (end - start) / 3600000;
+                }
+            });
+            return { id: w.client_id, ch: totalHours > 0 ? (totalCajas / totalHours) : 0 };
+        }).sort((a, b) => b.ch - a.ch);
+        
+        const position = rankings.findIndex(r => r.id === worker.client_id) + 1;
+        return `${position} de ${rankings.length} (Top ${((position / rankings.length) * 100).toFixed(0)}%)`;
+    }
+    
     async function fetchLocalAIWorkerAnalysis(worker) {
         const analysisTitle = `Análisis de ${worker.name || 'Desconocido'} (IA Local)`;
         showAnalysisModal(analysisTitle);
@@ -937,11 +1137,152 @@
             return;
         }
         
-        // Reemplazar variables en el prompt
-        promptTemplate = promptTemplate.replace(/{{overallSummary}}/g, overallSummaryText);
+        // Generar prompt en formato híbrido CSV/tabla
+        const hybridGlobalPrompt = generateHybridGlobalPrompt();
         
         // Mostrar modal de edición de prompt
-        showPromptEditModal(promptTemplate, analysisTitle, modelToUse, overallSummaryText);
+        showPromptEditModal(hybridGlobalPrompt, analysisTitle, modelToUse, overallSummaryText);
+    }
+    
+    function generateHybridGlobalPrompt() {
+        const teamData = filterDataByCheckbox(JSON.parse(JSON.stringify(originalWorkersData)));
+        
+        if (teamData.length === 0) {
+            return "# ANÁLISIS GLOBAL\n\nNo hay datos disponibles para el período seleccionado.";
+        }
+        
+        // Calcular métricas globales y por trabajador
+        let totalCajasGlobal = 0, totalHorasGlobal = 0;
+        const workerMetrics = [];
+        const puestoStats = {};
+        
+        teamData.forEach(w => {
+            let workerCajas = 0, workerHours = 0;
+            const workerPuestos = new Set();
+            
+            (w.operator_posts || []).forEach(p => {
+                const cajas = Number(p.count) || 0;
+                workerCajas += cajas;
+                totalCajasGlobal += cajas;
+                
+                if (p.created_at) {
+                    const start = new Date(p.created_at);
+                    const end = p.finish_at ? new Date(p.finish_at) : new Date();
+                    if (end > start) {
+                        const hours = (end - start) / 3600000;
+                        workerHours += hours;
+                        totalHorasGlobal += hours;
+                    }
+                }
+                
+                const puestoName = p.rfid_reading?.name || 'N/A';
+                workerPuestos.add(puestoName);
+                
+                if (!puestoStats[puestoName]) puestoStats[puestoName] = { cajas: 0, turnos: 0 };
+                puestoStats[puestoName].cajas += cajas;
+                puestoStats[puestoName].turnos++;
+            });
+            
+            if (workerCajas > 0) {
+                workerMetrics.push({
+                    nombre: w.name || `ID: ${w.client_id}`,
+                    id: w.client_id,
+                    cajas: workerCajas,
+                    horas: workerHours,
+                    ch: workerHours > 0 ? (workerCajas / workerHours) : 0,
+                    turnos: (w.operator_posts || []).length,
+                    puestos: workerPuestos.size
+                });
+            }
+        });
+        
+        // Ordenar trabajadores por c/h
+        workerMetrics.sort((a, b) => b.ch - a.ch);
+        
+        const avgCH = totalHorasGlobal > 0 ? (totalCajasGlobal / totalHorasGlobal) : 0;
+        
+        // CONSTRUIR PROMPT HÍBRIDO
+        let prompt = `# ANÁLISIS GLOBAL DEL EQUIPO\n\n`;
+        
+        // RESUMEN EJECUTIVO
+        prompt += `## RESUMEN EJECUTIVO\n`;
+        prompt += `Período: ${getCurrentPeriodLabel()}\n`;
+        prompt += `Total Trabajadores: ${workerMetrics.length}\n`;
+        prompt += `Total Cajas Producidas: ${totalCajasGlobal}\n`;
+        prompt += `Total Horas Trabajadas: ${totalHorasGlobal.toFixed(1)}h\n`;
+        prompt += `Promedio Equipo: ${avgCH.toFixed(2)} c/h\n`;
+        prompt += `Puestos Activos: ${Object.keys(puestoStats).length}\n\n`;
+        
+        // TABLA PRINCIPAL DE TRABAJADORES (CSV OPTIMIZADO)
+        prompt += `## DATOS POR TRABAJADOR\n`;
+        prompt += `| Rank | Nombre | Cajas | Horas | c/h | Efic% | Turnos | Puestos |\n`;
+        prompt += `|------|--------|-------|-------|-----|-------|--------|---------|\n`;
+        
+        workerMetrics.forEach((w, idx) => {
+            const eficiencia = avgCH > 0 ? ((w.ch / avgCH) * 100) : 100;
+            const nombreCorto = w.nombre.length > 20 ? w.nombre.substring(0, 18) + '...' : w.nombre;
+            prompt += `| ${idx + 1} | ${nombreCorto} | ${w.cajas} | ${w.horas.toFixed(1)} | ${w.ch.toFixed(1)} | ${eficiencia.toFixed(0)}% | ${w.turnos} | ${w.puestos} |\n`;
+        });
+        
+        // TABLA DE RENDIMIENTO POR PUESTO
+        prompt += `\n## RENDIMIENTO POR PUESTO\n`;
+        prompt += `| Puesto | Cajas | Turnos | Promedio c/turno |\n`;
+        prompt += `|--------|-------|--------|------------------|\n`;
+        
+        Object.entries(puestoStats).sort((a, b) => b[1].cajas - a[1].cajas).forEach(([puesto, data]) => {
+            const avgPerTurno = data.turnos > 0 ? (data.cajas / data.turnos) : 0;
+            prompt += `| ${puesto} | ${data.cajas} | ${data.turnos} | ${avgPerTurno.toFixed(1)} |\n`;
+        });
+        
+        // INSIGHTS CLAVE
+        prompt += `\n## INSIGHTS CLAVE\n`;
+        
+        const top3 = workerMetrics.slice(0, 3);
+        const bottom3 = workerMetrics.slice(-3).reverse();
+        
+        prompt += `\n### Top 3 Performers (c/h):\n`;
+        top3.forEach((w, i) => {
+            prompt += `${i + 1}. ${w.nombre}: ${w.ch.toFixed(2)} c/h (${w.cajas} cajas, ${w.horas.toFixed(1)}h)\n`;
+        });
+        
+        prompt += `\n### Necesitan Atención:\n`;
+        bottom3.forEach((w, i) => {
+            prompt += `${i + 1}. ${w.nombre}: ${w.ch.toFixed(2)} c/h (${w.cajas} cajas, ${w.horas.toFixed(1)}h)\n`;
+        });
+        
+        // Puesto más productivo
+        const topPuesto = Object.entries(puestoStats).sort((a, b) => b[1].cajas - a[1].cajas)[0];
+        if (topPuesto) {
+            prompt += `\n### Puesto Más Productivo:\n`;
+            prompt += `${topPuesto[0]}: ${topPuesto[1].cajas} cajas en ${topPuesto[1].turnos} turnos\n`;
+        }
+        
+        // INSTRUCCIONES DE ANÁLISIS
+        prompt += `\n## INSTRUCCIONES\n`;
+        prompt += `Analiza el rendimiento global del equipo. Proporciona:\n`;
+        prompt += `1. Análisis de fortalezas y debilidades del equipo\n`;
+        prompt += `2. Identificación de patrones y tendencias\n`;
+        prompt += `3. Recomendaciones de optimización\n`;
+        prompt += `4. Sugerencias de formación o redistribución\n`;
+        prompt += `5. Oportunidades de mejora\n`;
+        prompt += `\nProporciona un análisis claro, estructurado y accionable.`;
+        
+        return prompt;
+    }
+    
+    function getCurrentPeriodLabel() {
+        if (!dateRangeSelect) return 'N/A';
+        const value = dateRangeSelect.value;
+        const labels = {
+            'today': 'Hoy',
+            'yesterday': 'Ayer',
+            'last7days': 'Últimos 7 días',
+            'last30days': 'Últimos 30 días',
+            'thisMonth': 'Este mes',
+            'lastMonth': 'Mes pasado',
+            'custom': 'Período personalizado'
+        };
+        return labels[value] || value;
     }
     
     function showPromptEditModal(prompt, title, model, dataSummary) {
@@ -974,7 +1315,17 @@
     }
     
     function sendEditedPrompt() {
-        if (!promptTextArea || !pendingPromptData) return;
+        if (!promptTextArea) {
+            console.error('promptTextArea no encontrado');
+            return;
+        }
+        
+        if (!pendingPromptData || !pendingPromptData.title || !pendingPromptData.model) {
+            console.error('pendingPromptData no válido:', pendingPromptData);
+            alert('Error: No hay datos de análisis pendientes. Por favor, intenta de nuevo.');
+            hidePromptEditModal();
+            return;
+        }
         
         const editedPrompt = promptTextArea.value.trim();
         if (!editedPrompt) {
@@ -982,12 +1333,16 @@
             return;
         }
         
+        // Guardar referencia antes de cerrar
+        const title = pendingPromptData.title;
+        const model = pendingPromptData.model;
+        
         // Cerrar modal de edición
         hidePromptEditModal();
         
         // Mostrar modal de análisis y enviar
-        showAnalysisModal(pendingPromptData.title);
-        submitLocalAITask(editedPrompt, pendingPromptData.title, pendingPromptData.model);
+        showAnalysisModal(title);
+        submitLocalAITask(editedPrompt, title, model);
     }
 
     async function submitLocalAITask(prompt, modalTitleText, modelName) {
@@ -3200,7 +3555,7 @@
         let hLC=false;wVPC=0;
         dTD.forEach(w=>{const tQS=(w.operator_posts||[]).reduce((s,p)=>s+((p.count??0)>0?(p.count??0):0),0);let wSBR=false;const lST=sT.toLowerCase();if(!sT){wSBR=!(filterPostsCheckbox && filterPostsCheckbox.checked&&!((w.operator_posts||[]).some(p=>(p.count??0)>0)));}else{if((w.name||'').toLowerCase().includes(lST)||(w.client_id||'').toString().toLowerCase().includes(lST))wSBR=true;else if(w.operator_posts)wSBR=w.operator_posts.some(p=>((p.rfid_reading?.name||'').toLowerCase().includes(lST))||((p.product_list?.name||'').toLowerCase().includes(lST)));}if(!wSBR)return;wVPC++;
         const wR=tableBody.insertRow();wR.classList.add('bg-blue-50','hover:bg-blue-100','transition-colors');wR.insertCell().textContent=w.client_id??'-';const nC=wR.insertCell();nC.textContent=w.name??'Sin Nombre';
-        if(!isLocked){const aLIA=document.createElement('button');aLIA.classList.add('ml-2','px-2','py-1','text-xs','font-semibold','text-white','bg-gradient-to-r','from-purple-500','to-indigo-500','hover:from-purple-600','hover:to-indigo-600','rounded-md','shadow-sm','hover:shadow-md','transition-all','duration-150','inline-flex','items-center','gap-1');aLIA.title="Análisis Individual con IA";aLIA.innerHTML=`<svg style="width:14px;height:14px;" viewBox="0 0 24 24" fill="currentColor"><path d="M9.5 2A7.5 7.5 0 002 9.5c0 1.76.61 3.37 1.63 4.66l-1.36 4.08a1 1 0 001.28 1.28l4.08-1.36A7.47 7.47 0 009.5 17a7.5 7.5 0 000-15zM9 12H8v-1h1v1zm2 0h-1v-1h1v1zm2 0h-1v-1h1v1zm0-3H8V8h5v1z"/><circle cx="17" cy="17" r="5" fill="currentColor" opacity="0.5"/><path d="M17 14v6m-3-3h6" stroke="white" stroke-width="2" stroke-linecap="round"/></svg><span>🤖 IA</span>`;aLIA.addEventListener('click',(e)=>{e.stopPropagation();fetchLocalAIWorkerAnalysis(w);});nC.appendChild(aLIA);}
+        if(!isLocked){const aiContainer=document.createElement('div');aiContainer.classList.add('relative','inline-block','ml-2');const aLIA=document.createElement('button');aLIA.classList.add('px-2','py-1','text-xs','font-bold','text-white','bg-gradient-to-r','from-purple-600','to-indigo-600','hover:from-purple-700','hover:to-indigo-700','rounded-md','shadow-md','hover:shadow-lg','transition-all','duration-150','inline-flex','items-center','gap-1','border','border-yellow-400');aLIA.title="Análisis IA PRO";aLIA.innerHTML=`<svg style="width:14px;height:14px;" viewBox="0 0 24 24" fill="currentColor"><path d="M9.5 2A7.5 7.5 0 002 9.5c0 1.76.61 3.37 1.63 4.66l-1.36 4.08a1 1 0 001.28 1.28l4.08-1.36A7.47 7.47 0 009.5 17a7.5 7.5 0 000-15zM9 12H8v-1h1v1zm2 0h-1v-1h1v1zm2 0h-1v-1h1v1zm0-3H8V8h5v1z"/><circle cx="17" cy="17" r="5" fill="currentColor" opacity="0.5"/><path d="M17 14v6m-3-3h6" stroke="white" stroke-width="2" stroke-linecap="round"/></svg><span>🤖 IA PRO</span><span class="text-xs bg-yellow-400 text-purple-900 px-1 py-0.5 rounded-full ml-1 font-extrabold">+</span><svg style="width:10px;height:10px;" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>`;const menu=document.createElement('div');menu.classList.add('hidden','absolute','left-0','mt-1','w-64','bg-white','rounded-lg','shadow-xl','border','border-gray-200','z-50','py-1');menu.style.top='100%';menu.innerHTML=`<div class="px-3 py-2 text-xs font-bold text-gray-500 border-b border-gray-100">📊 ANÁLISIS DISPONIBLES</div><div class="py-1"><button class="w-full text-left px-4 py-2 text-xs hover:bg-purple-50 flex items-center gap-2 transition-colors" data-analysis="individual"><span>📊</span><span class="font-semibold">Análisis Individual</span></button><button class="w-full text-left px-4 py-2 text-xs hover:bg-purple-50 flex items-center gap-2 transition-colors" data-analysis="efficiency"><span>⚡</span><span class="font-semibold">Análisis de Eficiencia c/h</span></button><button class="w-full text-left px-4 py-2 text-xs hover:bg-purple-50 flex items-center gap-2 transition-colors" data-analysis="trends"><span>📈</span><span class="font-semibold">Análisis de Tendencias</span></button></div><div class="border-t border-gray-100 py-1"><button class="w-full text-left px-4 py-2 text-xs hover:bg-indigo-50 flex items-center gap-2 transition-colors" data-analysis="distribution"><span>🎯</span><span class="font-semibold">Optimizar Distribución</span></button><button class="w-full text-left px-4 py-2 text-xs hover:bg-indigo-50 flex items-center gap-2 transition-colors" data-analysis="comparative"><span>🔄</span><span class="font-semibold">Análisis Comparativo</span></button></div><div class="border-t border-gray-100 py-1"><button class="w-full text-left px-4 py-2 text-xs hover:bg-blue-50 flex items-center gap-2 transition-colors" data-analysis="objectives"><span>🏆</span><span class="font-semibold">Objetivos & KPIs</span></button><button class="w-full text-left px-4 py-2 text-xs hover:bg-blue-50 flex items-center gap-2 transition-colors" data-analysis="hourly"><span>🕐</span><span class="font-semibold">Análisis Horario</span></button><button class="w-full text-left px-4 py-2 text-xs hover:bg-blue-50 flex items-center gap-2 transition-colors" data-analysis="team"><span>🤝</span><span class="font-semibold">Análisis de Equipo</span></button><button class="w-full text-left px-4 py-2 text-xs hover:bg-blue-50 flex items-center gap-2 transition-colors" data-analysis="predictive"><span>🔮</span><span class="font-semibold">Análisis Predictivo</span></button></div>`;aLIA.addEventListener('click',(e)=>{e.stopPropagation();menu.classList.toggle('hidden');});menu.querySelectorAll('button').forEach(btn=>{btn.addEventListener('click',(e)=>{e.stopPropagation();const analysisType=btn.dataset.analysis;menu.classList.add('hidden');executeAIAnalysis(w,analysisType);});});document.addEventListener('click',(e)=>{if(!aiContainer.contains(e.target))menu.classList.add('hidden');});aiContainer.appendChild(aLIA);aiContainer.appendChild(menu);nC.appendChild(aiContainer);}
         const wUC=wR.insertCell();wUC.textContent=tQS;wR.insertCell();wR.insertCell();wR.insertCell();wR.insertCell();wR.insertCell();wR.insertCell();Array.from(wR.cells).forEach(c=>c.classList.add('px-4','py-3','text-sm','font-medium','text-gray-900','whitespace-nowrap'));
         if(w.operator_posts&&w.operator_posts.length>0){const sP=[...w.operator_posts].sort((a,b)=>(new Date(a.created_at)||0)-(new Date(b.created_at)||0));sP.forEach((p,pI)=>{const pC=p.count??0;let dTPR=false;if(!sT){if(pC>0||(filterPostsCheckbox && !filterPostsCheckbox.checked))dTPR=true;}else{const lS=sT.toLowerCase();if((w.name||'').toLowerCase().includes(lS)||(w.client_id||'').toString().toLowerCase().includes(lS)||(p.rfid_reading?.name||'').toLowerCase().includes(lS)||(p.product_list?.name||'').toLowerCase().includes(lS)){if(pC>0||(filterPostsCheckbox && !filterPostsCheckbox.checked))dTPR=true;}}if(!dTPR && !(filterPostsCheckbox && !filterPostsCheckbox.checked && pC === 0 && !sT)) return; if(filterPostsCheckbox && filterPostsCheckbox.checked && pC === 0 && dTPR && !sT) return;
         const pR=tableBody.insertRow();pR.classList.add((tableBody.rows.length-3)%2===0?'bg-white':'bg-gray-50','hover:bg-gray-100');pR.insertCell();pR.insertCell();pR.insertCell();pR.insertCell().textContent=p.rfid_reading?.name??'N/A';pR.insertCell().textContent=p.created_at?dateFormatter.format(new Date(p.created_at)):'-';pR.insertCell().textContent=p.finish_at?dateFormatter.format(new Date(p.finish_at)):'-';
@@ -3370,6 +3725,8 @@
             } else {
                 // Ocultar los inputs de fecha personalizada
                 if (customDateRangeContainer) customDateRangeContainer.classList.add('hidden');
+                // Configurar IA antes de cargar datos
+                configureAIFromServer();
                 // Cargar datos con la opción predeterminada seleccionada
                 const {from, to} = getDateRange(selectedValue);
                 fetchData(from, to);
