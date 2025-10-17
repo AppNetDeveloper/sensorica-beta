@@ -426,7 +426,6 @@ $(document).ready(function() {
                     </div>
                 </td>
             </tr>`;
-        };
         const newRow = $(newRowHtml);
         $('#processes_list').append(newRow);
         $('#process_selector').val('');
