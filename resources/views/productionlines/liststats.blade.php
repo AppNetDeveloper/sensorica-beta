@@ -294,10 +294,29 @@
                         @php($aiUrl = config('services.ai.url'))
                         @php($aiToken = config('services.ai.token'))
                         @if(!empty($aiUrl) && !empty($aiToken))
-                        <div class="btn-group btn-group-sm me-2" role="group" aria-label="IA">
-                            <button type="button" class="btn btn-dark" id="btn-ai-open" data-bs-toggle="modal" data-bs-target="#aiPromptModal" title="@lang('Análisis con IA')">
+                        <div class="btn-group btn-group-sm me-2" role="group">
+                            <button type="button" class="btn btn-dark dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="@lang('Análisis con IA')">
                                 <i class="bi bi-stars me-1 text-white"></i><span class="d-none d-sm-inline">@lang('Análisis IA')</span>
                             </button>
+                            <ul class="dropdown-menu">
+                                <li><h6 class="dropdown-header"><i class="fas fa-brain me-1"></i> Tipo de Análisis</h6></li>
+                                <li><a class="dropdown-item" href="#" data-analysis="oee-general">
+                                    <i class="fas fa-chart-line text-success me-2"></i>Análisis General de OEE
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" data-analysis="stops">
+                                    <i class="fas fa-pause-circle text-danger me-2"></i>Análisis de Paradas
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" data-analysis="performance">
+                                    <i class="fas fa-tachometer-alt text-primary me-2"></i>Rendimiento por Línea
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" data-analysis="operators">
+                                    <i class="fas fa-users text-info me-2"></i>Eficiencia de Operadores
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="#" data-analysis="comparison">
+                                    <i class="fas fa-balance-scale text-warning me-2"></i>Comparativa Top/Bottom
+                                </a></li>
+                            </ul>
                         </div>
                         @endif
                         <div class="btn-group" role="group">
@@ -565,125 +584,196 @@
         const AI_URL = "{{ config('services.ai.url') }}";
         const AI_TOKEN = "{{ config('services.ai.token') }}";
 
-        function collectAiContext() {
-            const table = $('#controlWeightTable').DataTable();
+        // Función auxiliar para limpiar y escapar valores CSV
+        function cleanValue(value) {
+            if (value === null || value === undefined) return '';
+            let str = String(value).trim();
+            // Escapar para CSV
+            str = str.replace(/"/g, '""');
+            if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                str = `"${str}"`;
+            }
+            return str;
+        }
+
+        // Análisis General de OEE
+        function collectOEEGeneralData() {
+            if (!$.fn.DataTable.isDataTable('#controlWeightTable')) {
+                console.error('[AI] DataTable no inicializada');
+                return { metrics: {}, csv: '', type: 'OEE General' };
+            }
             
-            // Obtener métricas resumen
+            const table = $('#controlWeightTable').DataTable();
             const metrics = {
                 avgOEE: $('#avgOEE').text() || '0%',
                 totalDuration: $('#totalDuration').text() || '00:00:00',
-                totalDifference: $('#totalTheoretical').text() || '00:00:00',
-                totalPrepTime: $('#totalPrepairTime').text() || '00:00:00',
-                totalSlowTime: $('#totalSlowTime').text() || '00:00:00',
-                totalStopsTime: $('#totalProductionStopsTime').text() || '00:00:00',
-                totalDownTime: $('#totalDownTime').text() || '00:00:00'
-            };
-            
-            const filters = {
                 dateRange: `${$('#startDate').val()} a ${$('#endDate').val()}`
             };
             
-            // Extraer datos de la tabla y convertir a CSV
-            let csvData = '';
-            let columnNames = [];
-            let rowCount = 0;
-            const maxRows = 50;
+            // CSV reducido: solo Línea, OEE, Duración
+            let csv = 'Linea,OEE,Duracion\n';
+            let count = 0;
             
-            if (table) {
-                // Obtener nombres de columnas (excluyendo Acciones)
-                table.columns().header().each(function(header) {
-                    const colName = $(header).text().trim();
-                    if (colName && !colName.toLowerCase().includes('acciones') && !colName.toLowerCase().includes('actions')) {
-                        columnNames.push(colName);
-                    }
-                });
-                
-                // Header CSV
-                csvData = columnNames.join(',') + '\n';
-                
-                // Extraer datos de las filas (limitado a 50)
-                table.rows({search: 'applied'}).nodes().each(function(rowNode) {
-                    if (rowCount >= maxRows) return false;
-                    
-                    const $row = $(rowNode);
-                    const rowData = [];
-                    let colIndexForData = 0;
-                    
-                    $row.find('td').each(function(colIndex) {
-                        const headerText = $(table.columns().header()[colIndex]).text().trim();
-                        
-                        if (headerText && !headerText.toLowerCase().includes('acciones') && !headerText.toLowerCase().includes('actions')) {
-                            if (colIndexForData < columnNames.length) {
-                                let cellValue = $(this).text().trim();
-                                if (!cellValue) {
-                                    cellValue = $(this).attr('data-sort') || '';
-                                }
-                                // Escapar comas y comillas en CSV
-                                cellValue = cellValue.replace(/"/g, '""');
-                                if (cellValue.includes(',') || cellValue.includes('"') || cellValue.includes('\n')) {
-                                    cellValue = `"${cellValue}"`;
-                                }
-                                rowData.push(cellValue);
-                                colIndexForData++;
-                            }
-                        }
-                    });
-                    
-                    if (rowData.length > 0) {
-                        csvData += rowData.join(',') + '\n';
-                        rowCount++;
-                    }
-                });
-            }
+            table.rows({search: 'applied'}).data().each(function(row) {
+                if (count >= 50) return false;
+                // row es un array con los datos de la fila
+                const linea = cleanValue(row[1] || row.production_line_name);
+                const oee = cleanValue(row[7] || row.oee);
+                const duracion = cleanValue(row[10]);
+                csv += `${linea},${oee},${duracion}\n`;
+                count++;
+            });
             
-            const totalRecords = table ? table.page.info().recordsDisplay : 0;
-            const note = rowCount >= maxRows ? `Mostrando primeras ${maxRows} de ${totalRecords} líneas` : `Total: ${rowCount} líneas`;
-            
-            console.log(`[AI] CSV generado: ${rowCount} filas, ${csvData.length} caracteres`);
-            
-            return { 
-                metrics, 
-                filters,
-                csvData,
-                note
-            };
+            return { metrics, csv, type: 'OEE General' };
         }
 
-        function showAiLoading(show) {
-            const btn = document.getElementById('btn-ai-send');
-            if (!btn) return;
-            btn.disabled = !!show;
-            btn.innerText = show ? '{{ __('Enviando...') }}' : '{{ __('Enviar a IA') }}';
+        // Análisis de Paradas
+        function collectStopsData() {
+            if (!$.fn.DataTable.isDataTable('#controlWeightTable')) {
+                console.error('[AI] DataTable no inicializada');
+                return { metrics: {}, csv: '', type: 'Paradas' };
+            }
+            
+            const table = $('#controlWeightTable').DataTable();
+            const metrics = {
+                totalStops: $('#totalProductionStopsTime').text() || '00:00:00',
+                totalDownTime: $('#totalDownTime').text() || '00:00:00',
+                dateRange: `${$('#startDate').val()} a ${$('#endDate').val()}`
+            };
+            
+            // CSV reducido: Línea, Paradas, Falta Material, Preparación
+            let csv = 'Linea,Paradas,Falta_Material,Preparacion\n';
+            let count = 0;
+            
+            table.rows({search: 'applied'}).data().each(function(row) {
+                if (count >= 50) return false;
+                const linea = cleanValue(row[1] || row.production_line_name);
+                const paradas = cleanValue(row[14]);
+                const material = cleanValue(row[13]);
+                const prep = cleanValue(row[11]);
+                csv += `${linea},${paradas},${material},${prep}\n`;
+                count++;
+            });
+            
+            return { metrics, csv, type: 'Paradas' };
+        }
+
+        // Análisis de Rendimiento
+        function collectPerformanceData() {
+            if (!$.fn.DataTable.isDataTable('#controlWeightTable')) {
+                console.error('[AI] DataTable no inicializada');
+                return { metrics: {}, csv: '', type: 'Rendimiento' };
+            }
+            
+            const table = $('#controlWeightTable').DataTable();
+            const metrics = {
+                avgOEE: $('#avgOEE').text() || '0%',
+                slowTime: $('#totalSlowTime').text() || '00:00:00',
+                dateRange: `${$('#startDate').val()} a ${$('#endDate').val()}`
+            };
+            
+            // CSV reducido: Línea, OEE, Tiempo Lento, UPM Real, UPM Teórico
+            let csv = 'Linea,OEE,Tiempo_Lento,UPM_Real,UPM_Teorico\n';
+            let count = 0;
+            
+            table.rows({search: 'applied'}).data().each(function(row) {
+                if (count >= 50) return false;
+                const linea = cleanValue(row[1] || row.production_line_name);
+                const oee = cleanValue(row[7] || row.oee);
+                const lento = cleanValue(row[12]);
+                const upmReal = cleanValue(row[5] || row.units_per_minute_real);
+                const upmTeo = cleanValue(row[6] || row.units_per_minute_theoretical);
+                csv += `${linea},${oee},${lento},${upmReal},${upmTeo}\n`;
+                count++;
+            });
+            
+            return { metrics, csv, type: 'Rendimiento' };
+        }
+
+        // Análisis de Operadores
+        function collectOperatorsData() {
+            if (!$.fn.DataTable.isDataTable('#controlWeightTable')) {
+                console.error('[AI] DataTable no inicializada');
+                return { metrics: {}, csv: '', type: 'Operadores' };
+            }
+            
+            const table = $('#controlWeightTable').DataTable();
+            const selectedOps = $('#operatorSelect').select2('data').map(o => o.text).join(', ') || 'Todos';
+            const metrics = {
+                operators: selectedOps,
+                avgOEE: $('#avgOEE').text() || '0%',
+                dateRange: `${$('#startDate').val()} a ${$('#endDate').val()}`
+            };
+            
+            // CSV reducido: Línea, OEE, Duración, Tiempo Ganado, Tiempo Mas
+            let csv = 'Linea,OEE,Duracion,Tiempo_Ganado,Tiempo_Mas\n';
+            let count = 0;
+            
+            table.rows({search: 'applied'}).data().each(function(row) {
+                if (count >= 50) return false;
+                const linea = cleanValue(row[1] || row.production_line_name);
+                const oee = cleanValue(row[7] || row.oee);
+                const duracion = cleanValue(row[10]);
+                const ganado = cleanValue(row[16]);
+                const mas = cleanValue(row[17]);
+                csv += `${linea},${oee},${duracion},${ganado},${mas}\n`;
+                count++;
+            });
+            
+            return { metrics, csv, type: 'Operadores' };
+        }
+
+        // Comparativa Top/Bottom
+        function collectComparisonData() {
+            if (!$.fn.DataTable.isDataTable('#controlWeightTable')) {
+                console.error('[AI] DataTable no inicializada');
+                return { metrics: {}, csv: '', type: 'Comparativa' };
+            }
+            
+            const table = $('#controlWeightTable').DataTable();
+            const metrics = {
+                avgOEE: $('#avgOEE').text() || '0%',
+                dateRange: `${$('#startDate').val()} a ${$('#endDate').val()}`
+            };
+            
+            // CSV reducido: solo top 10 y bottom 10
+            let csv = 'Linea,OEE,Duracion,Paradas\n';
+            const allRows = [];
+            
+            table.rows({search: 'applied'}).data().each(function(row) {
+                allRows.push({
+                    linea: cleanValue(row[1] || row.production_line_name),
+                    oee: cleanValue(row[7] || row.oee),
+                    duracion: cleanValue(row[10]),
+                    paradas: cleanValue(row[14])
+                });
+            });
+            
+            // Top 10 y Bottom 10
+            const top10 = allRows.slice(0, 10);
+            const bottom10 = allRows.slice(-10);
+            
+            csv += '# TOP 10\n';
+            top10.forEach(r => csv += `${r.linea},${r.oee},${r.duracion},${r.paradas}\n`);
+            csv += '# BOTTOM 10\n';
+            bottom10.forEach(r => csv += `${r.linea},${r.oee},${r.duracion},${r.paradas}\n`);
+            
+            return { metrics, csv, type: 'Comparativa' };
         }
 
         async function startAiTask(fullPrompt, userPromptForDisplay) {
             try {
-                showAiLoading(true);
-                const payload = collectAiContext();
-                console.log('[AI][Prod Lines] Metrics:', payload.metrics, 'Filters:', payload.filters);
+                console.log('[AI] Iniciando análisis:', userPromptForDisplay);
+                console.log('[AI] Prompt length:', fullPrompt.length, 'caracteres');
                 
-                // Construir prompt optimizado con CSV
-                const combinedPrompt = `${fullPrompt}
-
-=== RESUMEN ===
-Periodo: ${payload.filters.dateRange}
-OEE Promedio: ${payload.metrics.avgOEE}
-Duración Total: ${payload.metrics.totalDuration}
-Diferencia Total: ${payload.metrics.totalDifference}
-Tiempo Preparación: ${payload.metrics.totalPrepTime}
-Tiempo Lento: ${payload.metrics.totalSlowTime}
-Paradas: ${payload.metrics.totalStopsTime}
-Falta Material: ${payload.metrics.totalDownTime}
-
-=== DATOS (CSV) ===
-${payload.csvData}
-
-Nota: ${payload.note}`;
+                // Mostrar modal de procesamiento
+                $('#aiProcessingTitle').text(userPromptForDisplay);
+                $('#aiProcessingStatus').html('<i class="fas fa-spinner fa-spin me-2"></i>Enviando solicitud a IA...');
+                const processingModal = new bootstrap.Modal(document.getElementById('aiProcessingModal'));
+                processingModal.show();
                 
-                console.log('[AI] Prompt length:', combinedPrompt.length, 'caracteres');
-                console.log('[AI] Preview:', combinedPrompt.substring(0, 500));
                 const fd = new FormData();
-                fd.append('prompt', combinedPrompt);
+                fd.append('prompt', fullPrompt);
 
                 const resp = await fetch(`${AI_URL.replace(/\/$/, '')}/api/ollama-tasks`, {
                     method: 'POST',
@@ -700,11 +790,15 @@ Nota: ${payload.note}`;
 
                 console.log('[AI] Tarea creada con ID:', taskId);
                 console.log('[AI] Iniciando polling cada 5 segundos...');
+                
+                // Actualizar estado
+                $('#aiProcessingStatus').html('<i class="fas fa-spinner fa-spin me-2"></i>IA procesando... Esperando respuesta...');
 
                 let done = false; let last; let pollCount = 0;
                 while (!done) {
                     pollCount++;
                     console.log(`[AI] Polling #${pollCount} - Esperando 5 segundos...`);
+                    $('#aiProcessingStatus').html(`<i class="fas fa-spinner fa-spin me-2"></i>IA procesando... (${pollCount * 5}s)`);
                     await new Promise(r => setTimeout(r, 5000));
                     
                     console.log(`[AI] Polling #${pollCount} - Verificando estado de la tarea...`);
@@ -758,6 +852,10 @@ Nota: ${payload.note}`;
                     }
                 }
 
+                // Cerrar modal de procesamiento
+                bootstrap.Modal.getInstance(document.getElementById('aiProcessingModal')).hide();
+                
+                // Mostrar resultado
                 $('#aiResultPrompt').text(userPromptForDisplay);
                 const content = (last && last.task && last.task.response != null) ? last.task.response : last;
                 try { $('#aiResultData').text(typeof content === 'string' ? content : JSON.stringify(content, null, 2)); } catch { $('#aiResultData').text(String(content)); }
@@ -765,63 +863,186 @@ Nota: ${payload.note}`;
                 resultModal.show();
             } catch (err) {
                 console.error('[AI] Unexpected error:', err);
-                alert('{{ __('An error occurred') }}');
-            } finally {
-                showAiLoading(false);
+                // Cerrar modal de procesamiento si está abierto
+                const procModal = bootstrap.Modal.getInstance(document.getElementById('aiProcessingModal'));
+                if (procModal) procModal.hide();
+                alert('{{ __('Error al procesar solicitud de IA') }}');
             }
         }
 
         $(function(){
-            // Prompt del sistema simplificado
-            const systemPrompt = `Eres un analista de producción experto. Analiza los datos de OEE y tiempos de las líneas de producción.
+            // Prompts ultra-simplificados para agentes especialistas
+            const analysisPrompts = {
+                'oee-general': {
+                    title: 'Análisis General de OEE',
+                    prompt: `Identifica mejores/peores líneas, tendencia general y 3 recomendaciones prioritarias.`
+                },
+                'stops': {
+                    title: 'Análisis de Paradas',
+                    prompt: `Identifica líneas con más paradas, impacto de falta material y 3 acciones correctivas.`
+                },
+                'performance': {
+                    title: 'Análisis de Rendimiento',
+                    prompt: `Identifica desviaciones UPM real/teórico, tiempo lento y 3 mejoras de velocidad.`
+                },
+                'operators': {
+                    title: 'Análisis de Operadores',
+                    prompt: `Identifica patrones tiempo ganado/perdido y 3 recomendaciones de gestión.`
+                },
+                'comparison': {
+                    title: 'Comparativa Top/Bottom',
+                    prompt: `Compara top 10 vs bottom 10, diferencias clave y plan de acción.`
+                }
+            };
 
-Proporciona:
-1. **Resumen**: Principales hallazgos sobre OEE, tiempos y eficiencia
-2. **Problemas detectados**: Identifica las líneas o patrones con peor rendimiento
-3. **Recomendaciones**: 3-4 acciones concretas para mejorar la eficiencia
-
-Sé claro, conciso y enfócate en insights accionables.`;
-
-            // Prompt por defecto que ve el usuario en el textarea.
-            const defaultUserPrompt = 'Analiza estos datos de producción y dame recomendaciones para mejorar el OEE.';
-
-            $('#aiPromptModal').on('shown.bs.modal', function(){
-                const $ta = $('#aiPrompt');
-                if (!$ta.val()) $ta.val(defaultUserPrompt);
-                $ta.trigger('focus');
+            // Variable global para guardar el prompt y título actual
+            let currentPromptData = null;
+            
+            // Click en opciones del dropdown
+            $('.dropdown-item[data-analysis]').on('click', function(e) {
+                e.preventDefault();
+                const analysisType = $(this).data('analysis');
+                const config = analysisPrompts[analysisType];
+                
+                if (!config) return;
+                
+                // Recolectar datos según el tipo de análisis
+                let data;
+                switch(analysisType) {
+                    case 'oee-general':
+                        data = collectOEEGeneralData();
+                        break;
+                    case 'stops':
+                        data = collectStopsData();
+                        break;
+                    case 'performance':
+                        data = collectPerformanceData();
+                        break;
+                    case 'operators':
+                        data = collectOperatorsData();
+                        break;
+                    case 'comparison':
+                        data = collectComparisonData();
+                        break;
+                    default:
+                        return;
+                }
+                
+                // Verificar si hay datos
+                if (!data.csv || data.csv.trim() === '' || data.csv.split('\n').length <= 1) {
+                    alert('No hay datos disponibles para analizar. Por favor, ejecuta primero una búsqueda.');
+                    return;
+                }
+                
+                // Construir prompt final
+                let finalPrompt = `${config.prompt}\n\n=== PERIODO ===\n${data.metrics.dateRange}\n\n`;
+                
+                // Añadir métricas específicas
+                finalPrompt += '=== MÉTRICAS ===\n';
+                Object.keys(data.metrics).forEach(key => {
+                    if (key !== 'dateRange') {
+                        finalPrompt += `${key}: ${data.metrics[key]}\n`;
+                    }
+                });
+                
+                finalPrompt += `\n=== DATOS (CSV) ===\n${data.csv}`;
+                
+                console.log(`[AI] Análisis: ${config.title}`);
+                console.log(`[AI] Tamaño prompt: ${finalPrompt.length} caracteres`);
+                
+                // Guardar prompt y título para enviarlo después
+                currentPromptData = {
+                    prompt: finalPrompt,
+                    title: config.title
+                };
+                
+                // Mostrar modal de edición
+                $('#aiEditModalTitle').text(config.title);
+                $('#aiPromptEdit').val(finalPrompt);
+                const editModal = new bootstrap.Modal(document.getElementById('aiPromptEditModal'));
+                editModal.show();
             });
-
-            $('#btn-ai-reset').on('click', function(){ $('#aiPrompt').val(defaultUserPrompt); });
-
-            $('#btn-ai-send').on('click', function(){
-                const userPrompt = ($('#aiPrompt').val() || '').trim() || defaultUserPrompt;
-                // Se combina el prompt del sistema (oculto) con el prompt del usuario.
-                const finalPrompt = `${systemPrompt}\n\n**Consulta del Usuario:** ${userPrompt}`;
-                startAiTask(finalPrompt, userPrompt); // Pasamos ambos para mostrarlos correctamente
+            
+            // Click en botón de enviar después de editar
+            $('#btn-ai-send-edited').on('click', function() {
+                if (!currentPromptData) return;
+                
+                // Obtener el prompt editado
+                const editedPrompt = $('#aiPromptEdit').val().trim();
+                
+                if (!editedPrompt) {
+                    alert('El prompt no puede estar vacío');
+                    return;
+                }
+                
+                // Deshabilitar botón y mostrar spinner
+                const $btn = $(this);
+                $btn.prop('disabled', true);
+                $btn.html('<i class="fas fa-spinner fa-spin me-1"></i>Enviando...');
+                
+                // Cerrar modal de edición
+                bootstrap.Modal.getInstance(document.getElementById('aiPromptEditModal')).hide();
+                
+                // Enviar a IA
+                startAiTask(editedPrompt, currentPromptData.title).finally(() => {
+                    // Restaurar botón
+                    $btn.prop('disabled', false);
+                    $btn.html('<i class="fas fa-paper-plane me-1"></i>Enviar a IA');
+                });
             });
         });
     </script>
 
-    <!-- AI Prompt Modal -->
-    <div class="modal fade" id="aiPromptModal" tabindex="-1" aria-hidden="true">
+    <!-- AI Prompt Edit Modal -->
+    <div class="modal fade" id="aiPromptEditModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title"><i class="fas fa-robot me-2"></i>@lang('Análisis IA')</h5>
+                    <h5 class="modal-title"><i class="fas fa-edit me-2"></i><span id="aiEditModalTitle">Editar Prompt</span></h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <label class="form-label">@lang('¿Qué necesitas analizar?')</label>
-                    <textarea class="form-control" id="aiPrompt" rows="4" placeholder="@lang('Describe qué análisis quieres sobre las líneas mostradas')"></textarea>
+                    <label class="form-label fw-bold">Prompt a enviar (puedes editarlo):</label>
+                    <textarea class="form-control font-monospace" id="aiPromptEdit" rows="15" style="font-size: 0.9rem;"></textarea>
+                    <small class="text-muted mt-2 d-block">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Este prompt incluye las instrucciones, métricas y datos CSV. Puedes modificarlo antes de enviar.
+                    </small>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" id="btn-ai-reset">@lang('Limpiar prompt por defecto')</button>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@lang('Close')</button>
-                    <button type="button" class="btn btn-primary" id="btn-ai-send">@lang('Enviar a IA')</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@lang('Cancelar')</button>
+                    <button type="button" class="btn btn-primary" id="btn-ai-send-edited">
+                        <i class="fas fa-paper-plane me-1"></i>@lang('Enviar a IA')
+                    </button>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- AI Processing Modal -->
+    <div class="modal fade" id="aiProcessingModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title"><i class="fas fa-robot me-2"></i><span id="aiProcessingTitle">Procesando...</span></h5>
+                </div>
+                <div class="modal-body text-center py-4">
+                    <div class="mb-3">
+                        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                            <span class="visually-hidden">Cargando...</span>
+                        </div>
+                    </div>
+                    <p class="text-muted mb-0" id="aiProcessingStatus">
+                        <i class="fas fa-spinner fa-spin me-2"></i>Procesando solicitud...
+                    </p>
+                    <small class="text-muted d-block mt-2">
+                        Esto puede tardar varios segundos. Por favor, espere...
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- AI Result Modal -->
     <div class="modal fade" id="aiResultModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-scrollable">
@@ -831,7 +1052,7 @@ Sé claro, conciso y enfócate en insights accionables.`;
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="text-muted"><strong>@lang('Prompt'):</strong> <span id="aiResultPrompt"></span></p>
+                    <p class="text-muted"><strong>@lang('Tipo de Análisis'):</strong> <span id="aiResultPrompt"></span></p>
                     <pre id="aiResultData" class="bg-light p-3 rounded" style="white-space: pre-wrap;"></pre>
                 </div>
                 <div class="modal-footer">
