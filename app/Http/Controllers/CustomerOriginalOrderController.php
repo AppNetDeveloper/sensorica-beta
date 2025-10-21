@@ -869,12 +869,14 @@ class CustomerOriginalOrderController extends Controller
 
         $detail = $this->transformSingleOrderProductionTimes($originalOrder, $filters);
         $detail['average_timeline'] = $this->computeAverageTimeline($customer, $filters);
+        $detail['median_timeline'] = $this->computeMedianTimeline($customer, $filters);
         $detail['use_actual_delivery'] = (bool)($filters['use_actual_delivery'] ?? false);
 
         \Log::info('PT order_detail payload', [
             'order_id' => $originalOrder->id,
             'has_order_timeline' => !empty($detail['order_timeline']),
             'has_average_timeline' => !empty($detail['average_timeline']),
+            'has_median_timeline' => !empty($detail['median_timeline']),
             'use_actual_delivery' => $detail['use_actual_delivery'],
         ]);
 
@@ -1291,6 +1293,101 @@ class CustomerOriginalOrderController extends Controller
         ]);
 
         return $avg;
+    }
+
+    protected function computeMedianTimeline(Customer $customer, array $filters): array
+    {
+        $tz = config('app.timezone');
+        $useActual = (bool)($filters['use_actual_delivery'] ?? false);
+        $orders = $this->buildProductionTimesBaseQuery($customer, $filters)
+            ->select('id', 'fecha_pedido_erp', 'created_at', 'finished_at', 'delivery_date', 'actual_delivery_date')
+            ->get();
+
+        $erpCreatedValues = [];
+        $createdFinishedValues = [];
+        $finishedDeliveryValues = [];
+
+        foreach ($orders as $o) {
+            $erp = $o->fecha_pedido_erp ? Carbon::parse($o->fecha_pedido_erp, $tz) : null;
+            $cr = $o->created_at ? $o->created_at->copy()->timezone($tz) : null;
+            $fi = $o->finished_at ? $o->finished_at->copy()->timezone($tz) : null;
+            $delBase = $useActual ? $o->actual_delivery_date : $o->delivery_date;
+            $de = $delBase ? $delBase->copy()->timezone($tz)->endOfDay() : null;
+
+            $diff = function ($start, $end) {
+                if (!$start || !$end) return null;
+                $s = $start->diffInSeconds($end, false);
+                return $s < 0 ? 0 : $s;
+            };
+
+            $d1 = $diff($erp, $cr);
+            if ($d1 !== null) $erpCreatedValues[] = $d1;
+
+            $d2 = $diff($cr, $fi);
+            if ($d2 !== null) $createdFinishedValues[] = $d2;
+
+            $d3 = $diff($fi, $de);
+            if ($d3 !== null) $finishedDeliveryValues[] = $d3;
+        }
+
+        // Función auxiliar para calcular la mediana
+        $calculateMedian = function ($values) {
+            if (empty($values)) return 0;
+            sort($values);
+            $count = count($values);
+            $middle = floor($count / 2);
+            if ($count % 2 == 0) {
+                return intval(($values[$middle - 1] + $values[$middle]) / 2);
+            } else {
+                return intval($values[$middle]);
+            }
+        };
+
+        $med1 = $calculateMedian($erpCreatedValues);
+        $med2 = $calculateMedian($createdFinishedValues);
+        $med3 = $calculateMedian($finishedDeliveryValues);
+
+        $total = max($med1 + $med2 + $med3, 1);
+
+        $erpStart = 0;
+        $createdEnd = $med1;
+        $createdStart = $createdEnd;
+        $finishedEnd = $createdEnd + $med2;
+        $finishedStart = $finishedEnd;
+        $deliveryEnd = $finishedEnd + $med3;
+
+        $median = [
+            'bounds' => [
+                'start' => 0,
+                'end' => $total,
+                'range' => $total,
+                'start_label' => '0s',
+                'end_label' => $this->formatSeconds($total),
+            ],
+            'erp_start_ts' => $erpStart,
+            'created_end_ts' => $createdEnd,
+            'created_start_ts' => $createdStart,
+            'finished_end_ts' => $finishedEnd,
+            'finished_start_ts' => $finishedStart,
+            'delivery_end_ts' => $deliveryEnd,
+            'erp_to_created_seconds' => $med1,
+            'erp_to_created_formatted' => $this->formatSeconds($med1),
+            'created_to_finished_seconds' => $med2,
+            'created_to_finished_formatted' => $this->formatSeconds($med2),
+            'finished_to_delivery_seconds' => $med3,
+            'finished_to_delivery_formatted' => $this->formatSeconds($med3),
+        ];
+
+        \Log::info('PT median_timeline', [
+            'orders_count' => count($orders),
+            'use_actual_delivery' => $useActual,
+            'med1' => $med1,
+            'med2' => $med2,
+            'med3' => $med3,
+            'total' => $total,
+        ]);
+
+        return $median;
     }
 
     protected function buildProductionTimesSummary(Collection $orders, array $filters): array

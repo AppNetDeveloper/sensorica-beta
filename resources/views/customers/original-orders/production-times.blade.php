@@ -570,7 +570,8 @@
                 toggleActualDeliveryLabel: @json(__('Usar fecha real de entrega (actual_delivery_date) en lugar de fecha ERP programada')),
                 timelineLegendFinishedActualDelivery: @json(__('Fin → Entrega real')),
                 timelineLegendProcessActualDelivery: @json(__('Proceso → Entrega real')),
-                timelineOrdersAverageTitle: @json(__('Promedio del rango'))
+                timelineOrdersAverageTitle: @json(__('Promedio del rango')),
+                timelineOrdersMedianTitle: @json(__('Mediana del rango'))
             };
 
             function renderOrderRangeBar(detail) {
@@ -655,6 +656,102 @@
                         el.innerHTML = '<div class="text-danger small">{{ __('No se pudo renderizar el timeline') }}</div>';
                     }
                 };
+                ensureRendered();
+            }
+
+            function renderMedianRangeBar(detail) {
+                const key = detail.id ?? detail.order_id;
+                const el = document.querySelector(`#median-rangebar-${key}`);
+                if (!el || typeof ApexCharts === 'undefined') return;
+
+                const median = detail.median_timeline ?? {};
+                const useActual = !!(detail.use_actual_delivery);
+
+                const c1s = 0;
+                const c1e = median.created_end_ts ?? 0;
+                const c2s = median.created_start_ts ?? 0;
+                const c2e = median.finished_end_ts ?? 0;
+                const c3s = median.finished_start_ts ?? 0;
+                const c3e = median.delivery_end_ts ?? 0;
+
+                const points = [];
+                if (c1e > c1s) points.push({ x: 'ERP → Creado', y: [c1s, c1e], fillColor: '#118DFF' });
+                if (c2e > c2s) points.push({ x: 'Creado → Fin', y: [c2s, c2e], fillColor: '#21A366' });
+                if (c3e > c3s) points.push({ x: (useActual ? 'Fin → Entrega real' : 'Fin → Entrega'), y: [c3s, c3e], fillColor: '#F2C811' });
+
+                try { console.log('[MRB] median points', { key, pointsCount: points.length, points }); } catch(e) {}
+
+                if (!points.length) {
+                    el.innerHTML = '<div class="text-muted small">' + i18n.timelineNoData + '</div>';
+                    return;
+                }
+
+                const options = {
+                    chart: {
+                        type: 'rangeBar',
+                        height: 240,
+                        width: '100%',
+                        id: `median-rangebar-${key}`,
+                        toolbar: {
+                            show: true,
+                            tools: { download: true, selection: true, zoom: true, zoomin: true, zoomout: true, pan: true, reset: true },
+                            export: { csv: { filename: 'timeline_mediana' }, svg: { filename: 'timeline_mediana' }, png: { filename: 'timeline_mediana' } }
+                        },
+                        animations: { enabled: true }
+                    },
+                    plotOptions: { bar: { horizontal: true, barHeight: '70%', borderRadius: 4 } },
+                    series: [{ name: 'Mediana', data: points }],
+                    xaxis: {
+                        type: 'numeric',
+                        labels: {
+                            formatter: function(val) {
+                                if (!val || val === 0) return '0s';
+                                const h = Math.floor(val / 3600);
+                                const m = Math.floor((val % 3600) / 60);
+                                const s = Math.floor(val % 60);
+                                return h.toString().padStart(2,'0') + ':' + m.toString().padStart(2,'0') + ':' + s.toString().padStart(2,'0');
+                            }
+                        },
+                        title: { text: 'Tiempo (segundos acumulados)' }
+                    },
+                    dataLabels: { enabled: false },
+                    grid: { strokeDashArray: 3 },
+                    tooltip: {
+                        custom: function({ seriesIndex, dataPointIndex, w }) {
+                            const point = w.config.series[seriesIndex].data[dataPointIndex];
+                            if (!point) return '';
+                            const label = point.x || '';
+                            const y0 = point.y[0] || 0;
+                            const y1 = point.y[1] || 0;
+                            const diff = Math.max(0, y1 - y0);
+                            const h = Math.floor(diff / 3600);
+                            const m = Math.floor((diff % 3600) / 60);
+                            const s = Math.floor(diff % 60);
+                            const formatted = h.toString().padStart(2,'0') + ':' + m.toString().padStart(2,'0') + ':' + s.toString().padStart(2,'0');
+                            return '<div class="p-2"><strong>' + label + '</strong><br/>Duración: ' + formatted + '</div>';
+                        }
+                    }
+                };
+
+                const ensureRendered = () => {
+                    const w = el.offsetWidth || 0;
+                    if (w < 10) {
+                        const n = parseInt(el.dataset.retry || '0', 10) + 1;
+                        el.dataset.retry = String(n);
+                        if (n <= 5) {
+                            setTimeout(ensureRendered, 200);
+                            return;
+                        }
+                    }
+                    try {
+                        const chart = new ApexCharts(el, options);
+                        chart.render();
+                    } catch (error) {
+                        console.error('ApexCharts median render error', error);
+                        el.innerHTML = '<div class="text-danger small">Error al renderizar gráfico de mediana</div>';
+                    }
+                };
+
                 ensureRendered();
             }
 
@@ -881,6 +978,7 @@
                             setTimeout(() => {
                                 renderOrderRangeBar(detail);
                                 renderAvgRangeBar(detail);
+                                renderMedianRangeBar(detail);
                             }, 0);
                         } catch (err) {
                             try { console.error('renderDetail error', err); } catch(e2) {}
@@ -937,6 +1035,7 @@
             }
 
             function updateSummary(summary) {
+                latestSummary = summary;
                 $('#kpi-orders-total').text(summary?.orders_total ?? 0);
                 $('#kpi-processes-total').text(summary?.processes_total ?? 0);
                 $('#kpi-erp-finish').text(formatSeconds(summary?.orders_avg_erp_to_finished));
@@ -1217,6 +1316,34 @@
                                     })()}
                                 </div>
                             </div>
+                            <div class="col-12">
+                                <div class="timeline-card">
+                                    <div class="timeline-header d-flex justify-content-between align-items-center mb-3">
+                                        <h6 class="mb-0">${i18n.timelineOrdersMedianTitle}</h6>
+                                        <div class="timeline-legend">
+                                            <span><span class="legend-dot segment-primary"></span>${i18n.timelineLegendErpCreated}</span>
+                                            <span><span class="legend-dot segment-success"></span>${i18n.timelineLegendCreatedFinished}</span>
+                                            <span><span class="legend-dot segment-warning"></span>${useActualDelivery ? i18n.timelineLegendFinishedActualDelivery : i18n.timelineLegendFinishedDelivery}</span>
+                                        </div>
+                                    </div>
+                                    <div id="median-rangebar-${detail.id ?? detail.order_id}" style="height: 240px;"></div>
+                                    ${(() => {
+                                        const medianTimeline = detail.median_timeline ?? {};
+                                        const mb = medianTimeline.bounds ?? null;
+                                        const ce = typeof medianTimeline.created_end_ts === 'number' ? medianTimeline.created_end_ts : null;
+                                        const fe = typeof medianTimeline.finished_end_ts === 'number' ? medianTimeline.finished_end_ts : null;
+                                        const de = typeof medianTimeline.delivery_end_ts === 'number' ? medianTimeline.delivery_end_ts : null;
+                                        if (!mb || ce == null || fe == null || de == null) return '';
+                                        const rows = [
+                                            buildTimelineRow('ERP → Fin', fe, formatSeconds(fe), 0, fe, 'segment-success', mb),
+                                            buildTimelineRow(useActualDelivery ? 'ERP → Entrega real' : 'ERP → Entrega', de, formatSeconds(de), 0, de, 'segment-warning', mb),
+                                            buildTimelineRow('Creado → Fin', Math.max(0, fe - ce), formatSeconds(Math.max(0, fe - ce)), ce, fe, 'segment-success', mb),
+                                            buildTimelineRow(useActualDelivery ? 'Creado → Entrega real' : 'Creado → Entrega', Math.max(0, de - ce), formatSeconds(Math.max(0, de - ce)), ce, de, 'segment-warning', mb),
+                                        ].join('');
+                                        return `<div class="mt-2">${rows}</div>`;
+                                    })()}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -1294,6 +1421,7 @@
                     setTimeout(() => {
                         renderOrderRangeBar(detail);
                         renderAvgRangeBar(detail);
+                        renderMedianRangeBar(detail);
                         renderProcessTimelineChart(processes, `process-timeline-${detail.id ?? detail.order_id}`);
                     }, 0);
                     return;
@@ -1457,6 +1585,8 @@
             const AI_URL = "{{ config('services.ai.url') }}";
             const AI_TOKEN = "{{ config('services.ai.token') }}";
 
+            let latestSummary = null;
+
             function collectAiContext() {
                 const table = $('#production-times-table').DataTable();
                 
@@ -1503,9 +1633,9 @@
                         }
                     });
                     
-                    if (tableData.length > 50) {
-                        tableData = tableData.slice(0, 50);
-                        tableInfo.note = `Mostrando solo las primeras 50 filas de ${tableInfo.filteredRecords} registros filtrados`;
+                    if (tableData.length > 100) {
+                        tableData = tableData.slice(0, 100);
+                        tableInfo.note = `Mostrando solo las primeras 100 filas de ${tableInfo.filteredRecords} registros filtrados`;
                     }
                 }
                 
@@ -1513,7 +1643,20 @@
                     ordersTotal: $('#kpi-orders-total').text() || '0',
                     processesTotal: $('#kpi-processes-total').text() || '0',
                     avgErpToFinish: $('#kpi-erp-finish').text() || '-',
-                    avgGap: $('#kpi-gap').text() || '-'
+                    avgGap: $('#kpi-gap').text() || '-',
+                    // Métricas adicionales del summary
+                    medianErpToFinish: latestSummary?.orders_p50_created_to_finished ? formatSeconds(latestSummary.orders_p50_created_to_finished) : '-',
+                    medianProcessDuration: latestSummary?.process_p50_duration ? formatSeconds(latestSummary.process_p50_duration) : '-',
+                    medianGap: latestSummary?.process_p50_gap ? formatSeconds(latestSummary.process_p50_gap) : '-',
+                    // Percentil 90 (detecta outliers)
+                    p90ErpToFinish: latestSummary?.orders_p90_created_to_finished ? formatSeconds(latestSummary.orders_p90_created_to_finished) : '-',
+                    p90ProcessDuration: latestSummary?.process_p90_duration ? formatSeconds(latestSummary.process_p90_duration) : '-',
+                    p90Gap: latestSummary?.process_p90_gap ? formatSeconds(latestSummary.process_p90_gap) : '-',
+                    // Otras métricas
+                    avgErpToCreated: latestSummary?.orders_avg_erp_to_created ? formatSeconds(latestSummary.orders_avg_erp_to_created) : '-',
+                    slaOnTimeRatio: latestSummary?.sla_on_time_ratio ? (latestSummary.sla_on_time_ratio * 100).toFixed(1) + '%' : '-',
+                    processDelaysOverDay: latestSummary?.process_delays_over_day || 0,
+                    processByCode: latestSummary?.process_by_code || {}
                 };
                 
                 const filters = {
@@ -1523,12 +1666,38 @@
                     onlyFinishedProcesses: $('#only_finished_processes').is(':checked')
                 };
                 
+                // Convertir datos a formato CSV
+                function convertToCSV(data, columns) {
+                    if (!data || data.length === 0) return '';
+                    
+                    // Escapar valores CSV
+                    const escapeCSV = (value) => {
+                        if (value == null) return '';
+                        const str = String(value);
+                        if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                            return `"${str.replace(/"/g, '""')}"`;
+                        }
+                        return str;
+                    };
+                    
+                    // Crear header
+                    const header = columns.map(col => escapeCSV(col)).join(',');
+                    
+                    // Crear filas
+                    const rows = data.map(row => {
+                        return columns.map(col => escapeCSV(row[col])).join(',');
+                    });
+                    
+                    return [header, ...rows].join('\n');
+                }
+                
                 return { 
                     tableInfo, 
                     tableData,
                     columnNames,
                     metrics, 
                     filters, 
+                    csvData: convertToCSV(tableData, columnNames),
                     page: 'customers/production-times',
                     description: 'Vista de análisis de tiempos de fabricación con métricas de duración de órdenes y procesos, gaps entre procesos y filtros por fecha y tipo de proceso'
                 };
@@ -1546,11 +1715,88 @@
                     showAiLoading(true);
                     const payload = collectAiContext();
                     console.log('[AI][Production Times] Context:', payload.tableInfo, 'Filters:', payload.filters);
+                    
+                    // Construir datos estructurados en formato CSV
+                    let dataSection = 'Datos:\n\n';
+                    
+                    // Sección 1: Resumen de filtros aplicados
+                    dataSection += 'FILTROS APLICADOS:\n';
+                    dataSection += `Fecha inicio: ${payload.filters.dateStart || 'No especificada'}\n`;
+                    dataSection += `Fecha fin: ${payload.filters.dateEnd || 'No especificada'}\n`;
+                    dataSection += `Solo órdenes finalizadas: ${payload.filters.onlyFinishedOrders ? 'Sí' : 'No'}\n`;
+                    dataSection += `Solo procesos finalizados: ${payload.filters.onlyFinishedProcesses ? 'Sí' : 'No'}\n`;
+                    dataSection += '\n';
+                    
+                    // Sección 2: KPIs principales (Promedio y Mediana)
+                    dataSection += 'INDICADORES CLAVE (KPIs):\n';
+                    dataSection += `Total de órdenes analizadas: ${payload.metrics.ordersTotal}\n`;
+                    dataSection += `Total de procesos analizados: ${payload.metrics.processesTotal}\n`;
+                    dataSection += `SLA - Órdenes a tiempo: ${payload.metrics.slaOnTimeRatio}\n`;
+                    dataSection += `Procesos con retraso > 1 día: ${payload.metrics.processDelaysOverDay}\n`;
+                    dataSection += '\n';
+                    dataSection += 'ANÁLISIS ESTADÍSTICO DE TIEMPOS:\n';
+                    dataSection += '\n';
+                    dataSection += 'Tiempo ERP → Creación:\n';
+                    dataSection += `  - Promedio: ${payload.metrics.avgErpToCreated}\n`;
+                    dataSection += '\n';
+                    dataSection += 'Tiempo ERP → Finalización:\n';
+                    dataSection += `  - Promedio (Media): ${payload.metrics.avgErpToFinish}\n`;
+                    dataSection += `  - Mediana (P50): ${payload.metrics.medianErpToFinish}\n`;
+                    dataSection += `  - Percentil 90 (P90): ${payload.metrics.p90ErpToFinish}\n`;
+                    dataSection += '\n';
+                    dataSection += 'Duración de Procesos:\n';
+                    dataSection += `  - Mediana (P50): ${payload.metrics.medianProcessDuration}\n`;
+                    dataSection += `  - Percentil 90 (P90): ${payload.metrics.p90ProcessDuration}\n`;
+                    dataSection += '\n';
+                    dataSection += 'Gaps entre Procesos:\n';
+                    dataSection += `  - Promedio: ${payload.metrics.avgGap}\n`;
+                    dataSection += `  - Mediana (P50): ${payload.metrics.medianGap}\n`;
+                    dataSection += `  - Percentil 90 (P90): ${payload.metrics.p90Gap}\n`;
+                    dataSection += '\n';
+                    dataSection += 'NOTA: P90 indica que el 90% de los casos están por debajo de ese valor. Útil para detectar outliers.\n';
+                    dataSection += '\n';
+                    // Agregar análisis por código de proceso en formato CSV
+                    if (payload.metrics.processByCode && Object.keys(payload.metrics.processByCode).length > 0) {
+                        const processCount = Object.keys(payload.metrics.processByCode).length;
+                        if (processCount <= 20) {
+                            dataSection += 'ANÁLISIS POR CÓDIGO DE PROCESO (CSV):\n';
+                            dataSection += 'Codigo,Cantidad,Duracion_Promedio,Duracion_P50,Duracion_P90,Gap_Promedio,Gap_P90\n';
+                            for (const [code, data] of Object.entries(payload.metrics.processByCode)) {
+                                const dur_avg = data.avg_duration ? formatSeconds(data.avg_duration) : '-';
+                                const dur_p50 = data.p50_duration ? formatSeconds(data.p50_duration) : '-';
+                                const dur_p90 = data.p90_duration ? formatSeconds(data.p90_duration) : '-';
+                                const gap_avg = data.avg_gap ? formatSeconds(data.avg_gap) : '-';
+                                const gap_p90 = data.p90_gap ? formatSeconds(data.p90_gap) : '-';
+                                dataSection += `${code},${data.count || 0},${dur_avg},${dur_p50},${dur_p90},${gap_avg},${gap_p90}\n`;
+                            }
+                            dataSection += '\n';
+                        } else {
+                            dataSection += `NOTA: ${processCount} tipos de procesos diferentes detectados. Ver detalles en CSV de órdenes.\n\n`;
+                        }
+                    };
+                    
+                    // Sección 3: Información de la tabla
+                    dataSection += 'INFORMACIÓN DE REGISTROS:\n';
+                    dataSection += `Total de registros: ${payload.tableInfo.totalRecords}\n`;
+                    dataSection += `Registros filtrados: ${payload.tableInfo.filteredRecords}\n`;
+                    if (payload.tableInfo.note) {
+                        dataSection += `Nota: ${payload.tableInfo.note}\n`;
+                    }
+                    dataSection += '\n';
+                    
+                    // Sección 4: Datos de la tabla en formato CSV
+                    dataSection += 'DETALLE DE ÓRDENES:\n';
+                    if (payload.csvData && payload.csvData.trim()) {
+                        dataSection += payload.csvData;
+                    } else {
+                        dataSection += 'No hay datos disponibles en la tabla.\n';
+                    }
+                    
                     let combinedPrompt;
                     try {
-                        combinedPrompt = `${fullPrompt}\n\n=== Datos para analizar (JSON) ===\n${JSON.stringify(payload, null, 2)}`;
+                        combinedPrompt = `${fullPrompt}\n\n${dataSection}`;
                     } catch (e) {
-                        combinedPrompt = `${fullPrompt}\n\n=== Datos para analizar (JSON) ===\n[Error serializando datos]`;
+                        combinedPrompt = `${fullPrompt}\n\nDatos:\n[Error procesando datos]`;
                     }
                     console.log('[AI] Combined prompt length:', combinedPrompt.length);
                     
@@ -1622,47 +1868,140 @@
                 }
             }
 
-            // Prompt del sistema para análisis de tiempos de producción
-            const systemPrompt = `Actúa como un analista de operaciones y eficiencia en manufactura experto.
+            const defaultUserPrompt = `Analiza los datos de tiempos de fabricación proporcionados.
 
-**Tarea:** Realiza un **análisis exhaustivo y estructurado** de los datos de tiempos de fabricación proporcionados. La información incluye: **Tiempos ERP → Creado**, **Tiempos ERP → Finalizado**, **Tiempos Creado → Finalizado**, **Duraciones de Procesos**, **Gaps entre Procesos**, y **Grupos de Procesos**.
+Realiza:
+1. Resumen ejecutivo con hallazgos principales
+2. Identificación de cuellos de botella y procesos lentos
+3. Análisis de gaps entre procesos
+4. Propuestas concretas para reducir tiempos de producción
+5. Acciones prioritarias para optimizar el flujo
 
-**Estructura del Informe de Análisis:**
+Enfoque: Resultados accionables y específicos basados en los datos.`;
 
-1.  **Resumen Ejecutivo:**
-    *   Indica la **tendencia general** de los tiempos de fabricación en el periodo analizado.
-    *   Menciona los **principales hallazgos** (ej. "Los gaps entre procesos representan el 30% del tiempo total").
+            // Función para estimar tokens (aproximación: ~4 caracteres por token)
+            function estimateTokens(text) {
+                if (!text) return 0;
+                // Estimación aproximada: 4 caracteres = 1 token en promedio
+                // Para ser más preciso, contamos palabras y caracteres
+                const charCount = text.length;
+                const wordCount = text.split(/\s+/).filter(w => w.length > 0).length;
+                // Promedio entre método de caracteres y palabras
+                const tokensByChars = Math.ceil(charCount / 4);
+                const tokensByWords = Math.ceil(wordCount * 1.3); // Palabras + overhead
+                return Math.ceil((tokensByChars + tokensByWords) / 2);
+            }
 
-2.  **Análisis Detallado de Patrones:**
-    *   **Tiempos de Orden:** Identifica patrones en los tiempos desde ERP hasta finalización. ¿Hay órdenes con tiempos excesivos?
-    *   **Análisis de Procesos:**
-        *   Determina los **procesos más lentos** y los que tienen mayor variabilidad.
-        *   Identifica los **gaps más significativos** entre procesos.
-        *   Analiza si hay **cuellos de botella** específicos.
-    *   **Análisis por Grupo:** Compara el rendimiento entre diferentes grupos de procesos.
-
-3.  **Propuestas de Soluciones Estratégicas:**
-    *   **Reducción de Gaps:** Propón 2-3 acciones para reducir tiempos muertos entre procesos.
-    *   **Optimización de Procesos:** Propón 2-3 acciones para mejorar procesos lentos.
-    *   **Mejora de Flujo:** Propón acciones para mejorar el flujo general de producción.
-
-4.  **Sugerencias de Próximas Preguntas:**
-    *   Formula **tres preguntas clave** de seguimiento para profundizar el análisis.`;
-
-            const defaultUserPrompt = 'Analiza los tiempos de fabricación y dame un informe con propuestas de mejora para reducir los tiempos de producción.';
+            // Función para actualizar el contador de tokens
+            function updateTokenCounter() {
+                const userPrompt = $('#aiPrompt').val() || '';
+                const payload = collectAiContext();
+                
+                // Construir el prompt completo como se enviará a la IA
+                let dataSection = 'Datos:\n\n';
+                dataSection += 'FILTROS APLICADOS:\n';
+                dataSection += `Fecha inicio: ${payload.filters.dateStart || 'No especificada'}\n`;
+                dataSection += `Fecha fin: ${payload.filters.dateEnd || 'No especificada'}\n`;
+                dataSection += `Solo órdenes finalizadas: ${payload.filters.onlyFinishedOrders ? 'Sí' : 'No'}\n`;
+                dataSection += `Solo procesos finalizados: ${payload.filters.onlyFinishedProcesses ? 'Sí' : 'No'}\n`;
+                dataSection += '\n';
+                dataSection += 'INDICADORES CLAVE (KPIs):\n';
+                dataSection += `Total de órdenes analizadas: ${payload.metrics.ordersTotal}\n`;
+                dataSection += `Total de procesos analizados: ${payload.metrics.processesTotal}\n`;
+                dataSection += `SLA - Órdenes a tiempo: ${payload.metrics.slaOnTimeRatio}\n`;
+                dataSection += `Procesos con retraso > 1 día: ${payload.metrics.processDelaysOverDay}\n`;
+                dataSection += '\n';
+                dataSection += 'ANÁLISIS ESTADÍSTICO DE TIEMPOS:\n';
+                dataSection += '\n';
+                dataSection += 'Tiempo ERP → Creación:\n';
+                dataSection += `  - Promedio: ${payload.metrics.avgErpToCreated}\n`;
+                dataSection += '\n';
+                dataSection += 'Tiempo ERP → Finalización:\n';
+                dataSection += `  - Promedio (Media): ${payload.metrics.avgErpToFinish}\n`;
+                dataSection += `  - Mediana (P50): ${payload.metrics.medianErpToFinish}\n`;
+                dataSection += `  - Percentil 90 (P90): ${payload.metrics.p90ErpToFinish}\n`;
+                dataSection += '\n';
+                dataSection += 'Duración de Procesos:\n';
+                dataSection += `  - Mediana (P50): ${payload.metrics.medianProcessDuration}\n`;
+                dataSection += `  - Percentil 90 (P90): ${payload.metrics.p90ProcessDuration}\n`;
+                dataSection += '\n';
+                dataSection += 'Gaps entre Procesos:\n';
+                dataSection += `  - Promedio: ${payload.metrics.avgGap}\n`;
+                dataSection += `  - Mediana (P50): ${payload.metrics.medianGap}\n`;
+                dataSection += `  - Percentil 90 (P90): ${payload.metrics.p90Gap}\n`;
+                dataSection += '\n';
+                dataSection += 'NOTA: P90 indica que el 90% de los casos están por debajo de ese valor. Útil para detectar outliers.\n';
+                dataSection += '\n';
+                // Agregar análisis por código de proceso en formato CSV
+                if (payload.metrics.processByCode && Object.keys(payload.metrics.processByCode).length > 0) {
+                    const processCount = Object.keys(payload.metrics.processByCode).length;
+                    if (processCount <= 20) {
+                        dataSection += 'ANÁLISIS POR CÓDIGO DE PROCESO (CSV):\n';
+                        dataSection += 'Codigo,Cantidad,Duracion_Promedio,Duracion_P50,Duracion_P90,Gap_Promedio,Gap_P90\n';
+                        for (const [code, data] of Object.entries(payload.metrics.processByCode)) {
+                            const dur_avg = data.avg_duration ? formatSeconds(data.avg_duration) : '-';
+                            const dur_p50 = data.p50_duration ? formatSeconds(data.p50_duration) : '-';
+                            const dur_p90 = data.p90_duration ? formatSeconds(data.p90_duration) : '-';
+                            const gap_avg = data.avg_gap ? formatSeconds(data.avg_gap) : '-';
+                            const gap_p90 = data.p90_gap ? formatSeconds(data.p90_gap) : '-';
+                            dataSection += `${code},${data.count || 0},${dur_avg},${dur_p50},${dur_p90},${gap_avg},${gap_p90}\n`;
+                        }
+                        dataSection += '\n';
+                    } else {
+                        dataSection += `NOTA: ${processCount} tipos de procesos diferentes detectados. Ver detalles en CSV de órdenes.\n\n`;
+                    }
+                }
+                dataSection += 'INFORMACIÓN DE REGISTROS:\n';
+                dataSection += `Total de registros: ${payload.tableInfo.totalRecords}\n`;
+                dataSection += `Registros filtrados: ${payload.tableInfo.filteredRecords}\n`;
+                if (payload.tableInfo.note) {
+                    dataSection += `Nota: ${payload.tableInfo.note}\n`;
+                }
+                dataSection += '\n';
+                dataSection += 'DETALLE DE ÓRDENES:\n';
+                if (payload.csvData && payload.csvData.trim()) {
+                    dataSection += payload.csvData;
+                } else {
+                    dataSection += 'No hay datos disponibles en la tabla.\n';
+                }
+                
+                const fullPrompt = `${userPrompt}\n\n${dataSection}`;
+                const tokens = estimateTokens(fullPrompt);
+                
+                $('#token-counter').text(tokens.toLocaleString());
+                
+                // Cambiar color según cantidad de tokens
+                const $badge = $('#token-counter');
+                $badge.removeClass('bg-primary bg-warning bg-danger');
+                if (tokens > 100000) {
+                    $badge.addClass('bg-danger');
+                } else if (tokens > 50000) {
+                    $badge.addClass('bg-warning');
+                } else {
+                    $badge.addClass('bg-primary');
+                }
+            }
 
             $('#aiPromptModal').on('shown.bs.modal', function(){
                 const $ta = $('#aiPrompt');
                 if (!$ta.val()) $ta.val(defaultUserPrompt);
                 $ta.trigger('focus');
+                updateTokenCounter();
             });
 
-            $('#btn-ai-reset').on('click', function(){ $('#aiPrompt').val(defaultUserPrompt); });
+            // Actualizar contador cuando el usuario escribe
+            $('#aiPrompt').on('input', function() {
+                updateTokenCounter();
+            });
+
+            $('#btn-ai-reset').on('click', function(){ 
+                $('#aiPrompt').val(defaultUserPrompt);
+                updateTokenCounter();
+            });
 
             $('#btn-ai-send').on('click', function(){
                 const userPrompt = ($('#aiPrompt').val() || '').trim() || defaultUserPrompt;
-                const finalPrompt = `${systemPrompt}\n\n**Consulta del Usuario:** ${userPrompt}`;
-                startAiTask(finalPrompt, userPrompt);
+                startAiTask(userPrompt, userPrompt);
             });
         });
     </script>
@@ -1677,16 +2016,30 @@
                 </div>
                 <div class="modal-body">
                     <div class="alert alert-info">
-                        <h6 class="mb-2 text-primary"><i class="fas fa-database me-1"></i>{{ __('Datos que enviamos a la IA con tu consulta') }}</h6>
+                        <h6 class="mb-2 text-primary"><i class="fas fa-database me-1"></i>{{ __('Datos que enviamos a la IA') }}</h6>
                         <ul class="mb-0 ps-3">
-                            <li><strong>{{ __('Filtros aplicados') }}:</strong> {{ __('rango de fechas, uso de fecha real de entrega y si solo se incluyen órdenes/procesos finalizados.') }}</li>
-                            <li><strong>{{ __('KPIs principales') }}:</strong> {{ __('total de órdenes y procesos analizados, promedio ERP → Fin y promedio de gap entre procesos.') }}</li>
-                            <li><strong>{{ __('Tabla resumen') }}:</strong> {{ __('primeras 50 filas visibles en la tabla (ORDER ID, cliente, fechas y duraciones clave).') }}</li>
-                            <li><strong>{{ __('Detalles calculados') }}:</strong> {{ __('resultados del análisis por proceso (duraciones y gaps por código).') }}</li>
+                            <li><strong>{{ __('Filtros') }}:</strong> {{ __('rango de fechas y filtros de órdenes/procesos finalizados') }}</li>
+                            <li><strong>{{ __('KPIs') }}:</strong> {{ __('promedios y medianas de tiempos ERP → Fin, duraciones de procesos y gaps') }}</li>
+                            <li><strong>{{ __('Datos detallados') }}:</strong> {{ __('hasta 100 órdenes en formato CSV con toda la información') }}</li>
                         </ul>
                     </div>
-                    <label class="form-label">{{ __('¿Qué necesitas analizar?') }}</label>
-                    <textarea class="form-control" id="aiPrompt" rows="4" placeholder="{{ __('Describe qué insight quieres obtener (p. ej. comparativa de gaps, pedidos con mayor retraso, recomendaciones, etc.)') }}"></textarea>
+                    <label class="form-label fw-bold">{{ __('Instrucciones para la IA') }}</label>
+                    <textarea class="form-control" id="aiPrompt" rows="8" placeholder="{{ __('Escribe tus instrucciones completas para el análisis...') }}"></textarea>
+                    <div class="mt-3 p-3 bg-light rounded border">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="fas fa-calculator text-primary me-2"></i>
+                                <strong>{{ __('Tokens estimados del prompt completo:') }}</strong>
+                            </div>
+                            <div>
+                                <span class="badge bg-primary fs-6" id="token-counter">0</span>
+                            </div>
+                        </div>
+                        <small class="text-muted d-block mt-2">
+                            <i class="fas fa-info-circle me-1"></i>
+                            {{ __('Incluye instrucciones + datos CSV. Aproximación: ~4 caracteres = 1 token') }}
+                        </small>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" id="btn-ai-reset">{{ __('Limpiar prompt por defecto') }}</button>

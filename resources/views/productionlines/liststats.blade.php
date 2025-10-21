@@ -568,151 +568,84 @@
         function collectAiContext() {
             const table = $('#controlWeightTable').DataTable();
             
-            // Obtener información de la estructura de la tabla
-            const tableInfo = {
-                totalRecords: table ? table.page.info().recordsTotal : 0,
-                filteredRecords: table ? table.page.info().recordsDisplay : 0,
-                currentPage: table ? table.page.info().page + 1 : 1,
-                totalPages: table ? table.page.info().pages : 0
+            // Obtener métricas resumen
+            const metrics = {
+                avgOEE: $('#avgOEE').text() || '0%',
+                totalDuration: $('#totalDuration').text() || '00:00:00',
+                totalDifference: $('#totalTheoretical').text() || '00:00:00',
+                totalPrepTime: $('#totalPrepairTime').text() || '00:00:00',
+                totalSlowTime: $('#totalSlowTime').text() || '00:00:00',
+                totalStopsTime: $('#totalProductionStopsTime').text() || '00:00:00',
+                totalDownTime: $('#totalDownTime').text() || '00:00:00'
             };
             
-            // Obtener los datos reales de la tabla
-            let tableData = [];
+            const filters = {
+                dateRange: `${$('#startDate').val()} a ${$('#endDate').val()}`
+            };
+            
+            // Extraer datos de la tabla y convertir a CSV
+            let csvData = '';
             let columnNames = [];
+            let rowCount = 0;
+            const maxRows = 50;
             
             if (table) {
-                // Obtener nombres de columnas excluyendo "Acciones"
+                // Obtener nombres de columnas (excluyendo Acciones)
                 table.columns().header().each(function(header) {
                     const colName = $(header).text().trim();
-                    // Excluir columnas que no son útiles para el análisis
                     if (colName && !colName.toLowerCase().includes('acciones') && !colName.toLowerCase().includes('actions')) {
                         columnNames.push(colName);
                     }
                 });
                 
-                // Obtener datos de todas las filas visibles (filtradas) usando nodes() para acceder al DOM
-                table.rows({search: 'applied'}).nodes().each(function(rowNode, index) {
-                    const row = {};
+                // Header CSV
+                csvData = columnNames.join(',') + '\n';
+                
+                // Extraer datos de las filas (limitado a 50)
+                table.rows({search: 'applied'}).nodes().each(function(rowNode) {
+                    if (rowCount >= maxRows) return false;
+                    
                     const $row = $(rowNode);
+                    const rowData = [];
                     let colIndexForData = 0;
                     
-                    // Iterar por cada celda de la fila
                     $row.find('td').each(function(colIndex) {
-                        // Obtener el nombre de la columna correspondiente del header
                         const headerText = $(table.columns().header()[colIndex]).text().trim();
                         
-                        // Solo procesar si no es columna de acciones
                         if (headerText && !headerText.toLowerCase().includes('acciones') && !headerText.toLowerCase().includes('actions')) {
                             if (colIndexForData < columnNames.length) {
                                 let cellValue = $(this).text().trim();
-                                // Si la celda está vacía, intentar obtener el valor del atributo data-sort
                                 if (!cellValue) {
                                     cellValue = $(this).attr('data-sort') || '';
                                 }
-                                row[columnNames[colIndexForData]] = cellValue;
+                                // Escapar comas y comillas en CSV
+                                cellValue = cellValue.replace(/"/g, '""');
+                                if (cellValue.includes(',') || cellValue.includes('"') || cellValue.includes('\n')) {
+                                    cellValue = `"${cellValue}"`;
+                                }
+                                rowData.push(cellValue);
                                 colIndexForData++;
                             }
                         }
                     });
                     
-                    // Solo agregar si la fila tiene datos
-                    if (Object.keys(row).length > 0) {
-                        tableData.push(row);
+                    if (rowData.length > 0) {
+                        csvData += rowData.join(',') + '\n';
+                        rowCount++;
                     }
                 });
-                
-                // Si no hay datos con el método anterior, intentar método alternativo
-                if (tableData.length === 0) {
-                    console.log('[AI] Intentando método alternativo para extraer datos...');
-                    
-                    // Reconstruir columnNames excluyendo acciones para el método alternativo
-                    const allColumnNames = [];
-                    table.columns().header().each(function(header) {
-                        allColumnNames.push($(header).text().trim());
-                    });
-                    
-                    table.rows({search: 'applied'}).data().each(function(rowData, index) {
-                        const row = {};
-                        if (Array.isArray(rowData)) {
-                            let dataColIndex = 0;
-                            rowData.forEach((cellValue, colIndex) => {
-                                const headerText = allColumnNames[colIndex] || '';
-                                // Solo procesar si no es columna de acciones
-                                if (headerText && !headerText.toLowerCase().includes('acciones') && !headerText.toLowerCase().includes('actions')) {
-                                    if (dataColIndex < columnNames.length) {
-                                        // Limpiar datos HTML y obtener texto plano
-                                        if (typeof cellValue === 'string') {
-                                            cellValue = cellValue.replace(/<[^>]*>/g, '').trim();
-                                        }
-                                        row[columnNames[dataColIndex]] = cellValue || '';
-                                        dataColIndex++;
-                                    }
-                                }
-                            });
-                        } else if (typeof rowData === 'object') {
-                            // Si rowData es un objeto, usar las claves
-                            let dataColIndex = 0;
-                            Object.keys(rowData).forEach((key, colIndex) => {
-                                const headerText = allColumnNames[colIndex] || key;
-                                // Solo procesar si no es columna de acciones
-                                if (headerText && !headerText.toLowerCase().includes('acciones') && !headerText.toLowerCase().includes('actions')) {
-                                    if (dataColIndex < columnNames.length) {
-                                        let cellValue = rowData[key];
-                                        if (typeof cellValue === 'string') {
-                                            cellValue = cellValue.replace(/<[^>]*>/g, '').trim();
-                                        }
-                                        row[columnNames[dataColIndex]] = cellValue || '';
-                                        dataColIndex++;
-                                    }
-                                }
-                            });
-                        }
-                        
-                        if (Object.keys(row).length > 0) {
-                            tableData.push(row);
-                        }
-                    });
-                }
-                
-                // Limitar a máximo 50 filas para evitar payload muy grande
-                if (tableData.length > 50) {
-                    tableData = tableData.slice(0, 50);
-                    tableInfo.note = `Mostrando solo las primeras 50 filas de ${tableInfo.filteredRecords} registros filtrados`;
-                }
-                
-                console.log('[AI] Datos extraídos:', tableData.length, 'filas');
-                console.log('[AI] Columnas:', columnNames);
-                if (tableData.length > 0) {
-                    console.log('[AI] Primera fila de ejemplo:', tableData[0]);
-                }
             }
             
-            // Obtener resúmenes de las métricas mostradas en las tarjetas
-            const metrics = {
-                avgOEE: $('#avgOEE').text() || '0%',
-                totalDuration: $('#totalDuration').text() || '00:00:00',
-                totalTheoretical: $('#totalTheoretical').text() || '00:00:00',
-                totalPrepairTime: $('#totalPrepairTime').text() || '00:00:00',
-                totalSlowTime: $('#totalSlowTime').text() || '00:00:00',
-                totalProductionStopsTime: $('#totalProductionStopsTime').text() || '00:00:00',
-                totalDownTime: $('#totalDownTime').text() || '00:00:00'
-            };
+            const totalRecords = table ? table.page.info().recordsDisplay : 0;
+            const note = rowCount >= maxRows ? `Mostrando primeras ${maxRows} de ${totalRecords} líneas` : `Total: ${rowCount} líneas`;
             
-            const filters = {
-                lines: $('#modbusSelect').val() || [],
-                operators: $('#operatorSelect').val() || [],
-                startDate: $('#startDate').val(),
-                endDate: $('#endDate').val()
-            };
+            console.log(`[AI] CSV generado: ${rowCount} filas, ${csvData.length} caracteres`);
             
             return { 
-                tableInfo, 
-                tableData,
-                columnNames,
                 metrics, 
-                filters, 
-                page: 'productionlines/liststats',
-                description: 'Vista de estadísticas de líneas de producción con métricas OEE, tiempos de producción, paradas y filtros por línea, operador y fechas'
+                filters,
+                csvData,
+                note
             };
         }
 
@@ -727,15 +660,28 @@
             try {
                 showAiLoading(true);
                 const payload = collectAiContext();
-                console.log('[AI][Prod Lines] Context:', payload.tableInfo, 'Filters:', payload.filters);
-                let combinedPrompt;
-                try {
-                    combinedPrompt = `${fullPrompt}\n\n=== Datos para analizar (JSON) ===\n${JSON.stringify(payload, null, 2)}`;
-                } catch (e) {
-                    combinedPrompt = `${fullPrompt}\n\n=== Datos para analizar (JSON) ===\n[Error serializando datos]`;
-                }
-                console.log('[AI] Combined prompt length:', combinedPrompt.length);
-                console.log('[AI] Combined prompt preview:', combinedPrompt.substring(0, 800));
+                console.log('[AI][Prod Lines] Metrics:', payload.metrics, 'Filters:', payload.filters);
+                
+                // Construir prompt optimizado con CSV
+                const combinedPrompt = `${fullPrompt}
+
+=== RESUMEN ===
+Periodo: ${payload.filters.dateRange}
+OEE Promedio: ${payload.metrics.avgOEE}
+Duración Total: ${payload.metrics.totalDuration}
+Diferencia Total: ${payload.metrics.totalDifference}
+Tiempo Preparación: ${payload.metrics.totalPrepTime}
+Tiempo Lento: ${payload.metrics.totalSlowTime}
+Paradas: ${payload.metrics.totalStopsTime}
+Falta Material: ${payload.metrics.totalDownTime}
+
+=== DATOS (CSV) ===
+${payload.csvData}
+
+Nota: ${payload.note}`;
+                
+                console.log('[AI] Prompt length:', combinedPrompt.length, 'caracteres');
+                console.log('[AI] Preview:', combinedPrompt.substring(0, 500));
                 const fd = new FormData();
                 fd.append('prompt', combinedPrompt);
 
@@ -826,37 +772,18 @@
         }
 
         $(function(){
-            // Prompt del sistema (oculto para el usuario) que define el rol y la estructura de la respuesta de la IA.
-            const systemPrompt = `Actúa como un analista de datos y eficiencia operativa experto.
+            // Prompt del sistema simplificado
+            const systemPrompt = `Eres un analista de producción experto. Analiza los datos de OEE y tiempos de las líneas de producción.
 
-**Tarea:** Realiza un **análisis exhaustivo y estructurado** de los datos de rendimiento de las líneas de producción proporcionados. La información incluye, como mínimo: **OEE (Overall Equipment Effectiveness)**, **Tiempos de Ciclo**, **Tiempos de Parada (desglosados por causa si es posible)**, y **Asignación/Actividad de Operadores**.
+Proporciona:
+1. **Resumen**: Principales hallazgos sobre OEE, tiempos y eficiencia
+2. **Problemas detectados**: Identifica las líneas o patrones con peor rendimiento
+3. **Recomendaciones**: 3-4 acciones concretas para mejorar la eficiencia
 
-**Estructura del Informe de Análisis:**
-
-1.  **Resumen Ejecutivo:**
-    *   Indica la **tendencia general** del OEE y los **factores más influyentes** (disponibilidad, rendimiento, calidad) en el periodo analizado.
-    *   Menciona los **principales hallazgos** (ej. "La disponibilidad es el factor limitante principal").
-
-2.  **Análisis Detallado de Patrones:**
-    *   **Patrones de OEE y Rendimiento:** Identifica la **variabilidad diaria/por turno**. ¿Hay picos o caídas recurrentes? ¿Coinciden con alguna línea o producto específico?
-    *   **Análisis de Paradas (Disponibilidad):**
-        *   Determina las **tres causas principales** de parada (Ej. averías, micro-paradas, cambios de utillaje, falta de material).
-        *   Analiza si las paradas están **concentradas** en horas, días, o turnos específicos.
-        *   Evalúa la **duración promedio** de las paradas por causa.
-    *   **Análisis de Tiempos de Ciclo y Operadores (Rendimiento/Productividad):**
-        *   Compara los **tiempos de ciclo reales** con los **tiempos estándar**. Identifica las líneas con mayor desviación.
-        *   Analiza la **correlación** entre la asignación o la actividad de los operadores y las variaciones de rendimiento o paradas. ¿Las líneas con menos operadores o con operadores nuevos/diferentes tienen peor OEE?
-
-3.  **Propuestas de Soluciones Estratégicas y Tácticas:**
-    *   **Enfoque en Disponibilidad (Paradas):** Propón 2-3 acciones para reducir las causas de parada identificadas (Ej. Mantenimiento Preventivo, 5S, formación).
-    *   **Enfoque en Rendimiento (Tiempos/Operadores):** Propón 2-3 acciones para cerrar la brecha entre el tiempo de ciclo real y el estándar (Ej. balanceo de línea, estandarización de procedimientos, entrenamiento específico).
-    *   **Enfoque en Calidad (si hay datos):** Propón acciones para reducir defectos/reprocesos.
-
-4.  **Sugerencias de Próximas Preguntas para el Usuario:**
-    *   Formula **tres preguntas clave** de seguimiento basadas en los hallazgos para profundizar el análisis. Estas preguntas deben guiar al usuario a obtener más datos o a tomar una decisión.`;
+Sé claro, conciso y enfócate en insights accionables.`;
 
             // Prompt por defecto que ve el usuario en el textarea.
-            const defaultUserPrompt = 'Analiza el rendimiento de los últimos 7 días y dame un informe con propuestas de mejora.';
+            const defaultUserPrompt = 'Analiza estos datos de producción y dame recomendaciones para mejorar el OEE.';
 
             $('#aiPromptModal').on('shown.bs.modal', function(){
                 const $ta = $('#aiPrompt');
