@@ -58,7 +58,7 @@
             </div>
 
             <div class="row g-4 mb-4" id="kpi-cards">
-                <div class="col-md-3">
+                <div class="col-12 col-sm-6 col-lg-3">
                     <div class="card shadow-sm border-0 h-100 hover-lift">
                         <div class="card-body text-center">
                             <div class="mb-2">
@@ -69,7 +69,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-12 col-sm-6 col-lg-3">
                     <div class="card shadow-sm border-0 h-100 hover-lift">
                         <div class="card-body text-center">
                             <div class="mb-2">
@@ -80,18 +80,18 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-12 col-sm-6 col-lg-3">
                     <div class="card shadow-sm border-0 h-100 hover-lift">
                         <div class="card-body text-center">
                             <div class="mb-2">
                                 <i class="fas fa-stopwatch fa-2x text-info"></i>
                             </div>
-                            <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Promedio ERP → Fin orden') }}</h6>
+                            <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Promedio recepción oficina → fin orden') }}</h6>
                             <h2 class="mb-0 text-dark fw-bold" id="kpi-erp-finish">-</h2>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-12 col-sm-6 col-lg-3">
                     <div class="card shadow-sm border-0 h-100 hover-lift">
                         <div class="card-body text-center">
                             <div class="mb-2">
@@ -99,6 +99,50 @@
                             </div>
                             <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Promedio gap procesos') }}</h6>
                             <h2 class="mb-0 text-dark fw-bold" id="kpi-gap">-</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="card shadow-sm border-0 h-100 hover-lift">
+                        <div class="card-body text-center">
+                            <div class="mb-2">
+                                <i class="fas fa-clock fa-2x text-secondary"></i>
+                            </div>
+                            <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Mediana recepción oficina → fin orden') }}</h6>
+                            <h2 class="mb-0 text-dark fw-bold" id="kpi-erp-finish-median">-</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="card shadow-sm border-0 h-100 hover-lift">
+                        <div class="card-body text-center">
+                            <div class="mb-2">
+                                <i class="fas fa-equals fa-2x text-muted"></i>
+                            </div>
+                            <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Mediana gap procesos') }}</h6>
+                            <h2 class="mb-0 text-dark fw-bold" id="kpi-gap-median">-</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="card shadow-sm border-0 h-100 hover-lift">
+                        <div class="card-body text-center">
+                            <div class="mb-2">
+                                <i class="fas fa-industry fa-2x text-success"></i>
+                            </div>
+                            <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Promedio lanzamiento producción → fin orden') }}</h6>
+                            <h2 class="mb-0 text-dark fw-bold" id="kpi-created-finish">-</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="card shadow-sm border-0 h-100 hover-lift">
+                        <div class="card-body text-center">
+                            <div class="mb-2">
+                                <i class="fas fa-balance-scale fa-2x text-info"></i>
+                            </div>
+                            <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Mediana lanzamiento producción → fin orden') }}</h6>
+                            <h2 class="mb-0 text-dark fw-bold" id="kpi-created-finish-median">-</h2>
                         </div>
                     </div>
                 </div>
@@ -1066,7 +1110,11 @@
                 $('#kpi-orders-total').text(summary?.orders_total ?? 0);
                 $('#kpi-processes-total').text(summary?.processes_total ?? 0);
                 $('#kpi-erp-finish').text(formatSeconds(summary?.orders_avg_erp_to_finished));
+                $('#kpi-erp-finish-median').text(formatSeconds(summary?.orders_p50_erp_to_finished));
+                $('#kpi-created-finish').text(formatSeconds(summary?.orders_avg_created_to_finished));
+                $('#kpi-created-finish-median').text(formatSeconds(summary?.orders_p50_created_to_finished));
                 $('#kpi-gap').text(formatSeconds(summary?.process_avg_gap));
+                $('#kpi-gap-median').text(formatSeconds(summary?.process_p50_gap));
             }
 
             let processChart = null;
