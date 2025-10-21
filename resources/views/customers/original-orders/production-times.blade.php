@@ -398,6 +398,47 @@
             font-size: 0.85rem;
             color: #6c757d;
         }
+        .detail-kpi-inline {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            background: #f8fafc;
+            border-radius: 0.75rem;
+            border: 1px solid #e2e8f0;
+            min-width: 220px;
+        }
+        .detail-kpi-inline .detail-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(13, 110, 253, 0.08);
+            color: #0d6efd;
+            font-size: 1rem;
+        }
+        .detail-kpi-inline .detail-text {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.2;
+        }
+        .detail-kpi-inline .detail-title {
+            font-size: 0.75rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #64748b;
+        }
+        .detail-kpi-inline .detail-value {
+            font-weight: 700;
+            color: #0f172a;
+            font-size: 1.1rem;
+        }
+        .detail-kpi-inline .detail-subtext {
+            font-size: 0.75rem;
+            color: #64748b;
+        }
         .timeline-card {
             background-color: #fff;
             border-radius: 0.75rem;
@@ -507,6 +548,22 @@
             width: 12px;
             height: 12px;
             border-radius: 50%;
+        }
+        .timeline-summary .timeline-row {
+            flex-wrap: nowrap;
+            gap: 0.5rem;
+        }
+        .timeline-summary .timeline-label {
+            min-width: 160px;
+            font-weight: 600;
+            color: #0f172a;
+        }
+        .timeline-summary .timeline-bar {
+            display: none;
+        }
+        .timeline-summary .timeline-value {
+            font-weight: 700;
+            color: #0f172a;
         }
         .legend-dot.segment-primary { background: linear-gradient(90deg, rgba(13,110,253,0.9), rgba(13,110,253,0.6)); }
         .legend-dot.segment-success { background: linear-gradient(90deg, rgba(25,135,84,0.9), rgba(25,135,84,0.6)); }
@@ -645,6 +702,25 @@
                 timelineOrdersMedianTitle: @json(__('Mediana del rango'))
             };
 
+            const normalizeTimelineLabel = (raw) => {
+                if (!raw || typeof raw !== 'string') return '-';
+                return raw
+                    .replace('ERP → Creado', '{{ __('Recepcion Pedido Oficina → Creado orden de fabricacion') }}')
+                    .replace('Creado → Fin', '{{ __('Lanzamiento a Producción → Finalizado Producción') }}')
+                    .replace('Fin → Entrega real', '{{ __('Fin → Entrega real') }}')
+                    .replace('Fin → Entrega', '{{ __('Fin → Entrega') }}');
+            };
+
+            const computeDurationLabel = (start, end, isDatetime) => {
+                const s = Number(start);
+                const e = Number(end);
+                if (!Number.isFinite(s) || !Number.isFinite(e) || e <= s) {
+                    return '{{ __('Sin datos disponibles') }}';
+                }
+                const diff = isDatetime ? (e - s) / 1000 : (e - s);
+                return '{{ __('Duración') }}: ' + formatDurationHms(diff);
+            };
+
             function renderOrderRangeBar(detail) {
                 const key = detail.id ?? detail.order_id;
                 const el = document.querySelector(`#order-rangebar-${key}`);
@@ -697,12 +773,14 @@
                     dataLabels: { enabled: false },
                     grid: { strokeDashArray: 3 },
                     tooltip: {
-                        x: { format: 'yyyy-MM-dd HH:mm' },
-                        y: {
-                            formatter: function(val, opts) {
-                                const formatted = formatRangeTooltip(val, opts, true);
-                                return formatted ?? '--:--:--';
+                        custom: function({ seriesIndex, dataPointIndex, w }) {
+                            const point = w?.config?.series?.[seriesIndex]?.data?.[dataPointIndex];
+                            if (!point || !Array.isArray(point.y) || point.y.length < 2) {
+                                return null;
                             }
+                            const label = normalizeTimelineLabel(point.x);
+                            const duration = computeDurationLabel(point.y?.[0], point.y?.[1], true);
+                            return `<div class="p-2"><strong>${label}</strong><br/>${duration}</div>`;
                         }
                     }
                 };
@@ -789,17 +867,13 @@
                     grid: { strokeDashArray: 3 },
                     tooltip: {
                         custom: function({ seriesIndex, dataPointIndex, w }) {
-                            const point = w.config.series[seriesIndex].data[dataPointIndex];
-                            if (!point) return '';
-                            const label = point.x || '';
-                            const y0 = point.y[0] || 0;
-                            const y1 = point.y[1] || 0;
-                            const diff = Math.max(0, y1 - y0);
-                            const h = Math.floor(diff / 3600);
-                            const m = Math.floor((diff % 3600) / 60);
-                            const s = Math.floor(diff % 60);
-                            const formatted = h.toString().padStart(2,'0') + ':' + m.toString().padStart(2,'0') + ':' + s.toString().padStart(2,'0');
-                            return '<div class="p-2"><strong>' + label + '</strong><br/>Duración: ' + formatted + '</div>';
+                            const point = w?.config?.series?.[seriesIndex]?.data?.[dataPointIndex];
+                            if (!point || !Array.isArray(point.y) || point.y.length < 2) {
+                                return null;
+                            }
+                            const label = normalizeTimelineLabel(point.x);
+                            const duration = computeDurationLabel(point.y?.[0], point.y?.[1], false);
+                            return `<div class="p-2"><strong>${label}</strong><br/>${duration}</div>`;
                         }
                     }
                 };
@@ -881,11 +955,12 @@
                     dataLabels: { enabled: false },
                     grid: { strokeDashArray: 3 },
                     tooltip: {
-                        y: {
-                            formatter: function(val, opts){
-                                const formatted = formatRangeTooltip(val, opts, false);
-                                return formatted ?? '--:--:--';
-                            }
+                        custom: function({ seriesIndex, dataPointIndex, w }) {
+                            const point = w?.config?.series?.[seriesIndex]?.data?.[dataPointIndex];
+                            if (!point) return '';
+                            const label = normalizeTimelineLabel(point.x);
+                            const duration = computeDurationLabel(point.y?.[0], point.y?.[1], false);
+                            return `<div class="p-2"><strong>${label}</strong><br/>${duration}</div>`;
                         }
                     }
                 };
@@ -1279,16 +1354,16 @@
                 ];
 
                 let html = '<div class="details-row p-3 p-lg-4">';
-                html += '<div class="row g-3 g-lg-4">';
+                html += '<div class="d-flex flex-wrap gap-3">';
 
                 kpiCards.forEach(card => {
                     html += `
-                        <div class="col-12 col-sm-6 col-lg-3">
-                            <div class="detail-kpi-card">
-                                <div class="detail-icon"><i class="fas ${card.icon}"></i></div>
-                                <h6>${card.title}</h6>
-                                <div class="detail-value">${card.value}</div>
-                                <div class="detail-subtext">${card.subtext ?? ''}</div>
+                        <div class="detail-kpi-inline">
+                            <span class="detail-icon"><i class="fas ${card.icon}"></i></span>
+                            <div class="detail-text">
+                                <span class="detail-title">${card.title}</span>
+                                <span class="detail-value">${card.value}</span>
+                                <span class="detail-subtext">${card.subtext ?? ''}</span>
                             </div>
                         </div>`;
                 });
@@ -1381,13 +1456,19 @@
                                         const fe = typeof avgTimeline.finished_end_ts === 'number' ? avgTimeline.finished_end_ts : null;
                                         const de = typeof avgTimeline.delivery_end_ts === 'number' ? avgTimeline.delivery_end_ts : null;
                                         if (!ab || ce == null || fe == null || de == null) return '';
-                                        const rows = [
-                                            buildTimelineRow('ERP → Fin', fe, formatSeconds(fe), 0, fe, 'segment-success', ab),
-                                            buildTimelineRow(useActualDelivery ? 'ERP → Entrega real' : 'ERP → Entrega', de, formatSeconds(de), 0, de, 'segment-warning', ab),
-                                            buildTimelineRow('Creado → Fin', Math.max(0, fe - ce), formatSeconds(Math.max(0, fe - ce)), ce, fe, 'segment-success', ab),
-                                            buildTimelineRow(useActualDelivery ? 'Creado → Entrega real' : 'Creado → Entrega', Math.max(0, de - ce), formatSeconds(Math.max(0, de - ce)), ce, de, 'segment-warning', ab),
-                                        ].join('');
-                                        return `<div class="mt-2">${rows}</div>`;
+                                        const items = [
+                                            { label: 'Recepcion Pedido Oficina → Finalizado Producción', value: formatSeconds(fe), color: 'segment-success' },
+                                            { label: useActualDelivery ? 'Recepcion Pedido Oficina → Entrega Pedido' : 'Recepcion Pedido Oficina → Entrega Pedido', value: formatSeconds(de), color: 'segment-warning' },
+                                            { label: 'Lanzamiento a Producción → Finalizado Producción', value: formatSeconds(Math.max(0, fe - ce)), color: 'segment-success' },
+                                            { label: useActualDelivery ? 'Lanzamiento a Producción → Entrega Pedido' : 'Lanzamiento a Producción → Entrega Pedido', value: formatSeconds(Math.max(0, de - ce)), color: 'segment-warning' }
+                                        ];
+                                        return `<div class="timeline-summary-inline mt-3">${items.map(item => `
+                                            <div class="timeline-chip">
+                                                <span class="legend-dot ${item.color}"></span>
+                                                <span class="chip-label">${item.label}</span>
+                                                <span class="chip-value">${item.value}</span>
+                                            </div>
+                                        `).join('')}</div>`;
                                     })()}
                                 </div>
                             </div>
@@ -1409,13 +1490,19 @@
                                         const fe = typeof medianTimeline.finished_end_ts === 'number' ? medianTimeline.finished_end_ts : null;
                                         const de = typeof medianTimeline.delivery_end_ts === 'number' ? medianTimeline.delivery_end_ts : null;
                                         if (!mb || ce == null || fe == null || de == null) return '';
-                                        const rows = [
-                                            buildTimelineRow('ERP → Fin', fe, formatSeconds(fe), 0, fe, 'segment-success', mb),
-                                            buildTimelineRow(useActualDelivery ? 'ERP → Entrega real' : 'ERP → Entrega', de, formatSeconds(de), 0, de, 'segment-warning', mb),
-                                            buildTimelineRow('Creado → Fin', Math.max(0, fe - ce), formatSeconds(Math.max(0, fe - ce)), ce, fe, 'segment-success', mb),
-                                            buildTimelineRow(useActualDelivery ? 'Creado → Entrega real' : 'Creado → Entrega', Math.max(0, de - ce), formatSeconds(Math.max(0, de - ce)), ce, de, 'segment-warning', mb),
-                                        ].join('');
-                                        return `<div class="mt-2">${rows}</div>`;
+                                        const items = [
+                                            { label: 'Recepcion Pedido Oficina → Finalizado Producción:', value: formatSeconds(fe), color: 'segment-success' },
+                                            { label: useActualDelivery ? 'Recepcion Pedido Oficina → Entrega Pedido' : 'Recepcion Pedido Oficina → Entrega Pedido', value: formatSeconds(de), color: 'segment-warning' },
+                                            { label: 'Lanzamiento a Producción → Finalizado Producción: ', value: formatSeconds(Math.max(0, fe - ce)), color: 'segment-success' },
+                                            { label: useActualDelivery ? 'Lanzamiento a Producción → Entrega Pedido' : 'Lanzamiento a Producción → Entrega Pedido:', value: formatSeconds(Math.max(0, de - ce)), color: 'segment-warning' }
+                                        ];
+                                        return `<div class="timeline-summary-inline mt-3">${items.map(item => `
+                                            <div class="timeline-chip">
+                                                <span class="legend-dot ${item.color}"></span>
+                                                <span class="chip-label">${item.label}</span>
+                                                <span class="chip-value">${item.value}</span>
+                                            </div>
+                                        `).join('')}</div>`;
                                     })()}
                                 </div>
                             </div>
@@ -1459,7 +1546,7 @@
                             <div class="process-card">
                                 <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
                                     <div>
-                                        <div class="process-title">${process.process_code ?? '-'} • ${process.process_name ?? '-'}</div>
+                                        <div class="process-title">${process.process_code ?? '{{ __('Sin código') }}'} • ${process.process_name ?? '{{ __('Sin nombre de proceso') }}'}</div>
                                         <div class="process-metadata mt-1">
                                             <i class="fas fa-layer-group me-1 text-primary"></i>${i18n.position}: ${index + 1}
                                             <span class="mx-2">•</span>
