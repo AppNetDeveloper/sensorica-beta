@@ -12,6 +12,7 @@ use Carbon\Carbon; // Agrega esta línea para usar Carbon
 use Illuminate\Support\Facades\DB;
 use App\Models\Sensor;
 use App\Models\ProductionLineHourlyTotal;
+use App\Models\ProductionLineWaitTimeHistory;
 use Yajra\DataTables\Facades\DataTables;
 use App\Models\BarcodeScanAfter;
 
@@ -411,6 +412,87 @@ return "<div class='action-buttons-row d-flex flex-wrap' style='display: none; g
 
         return response()->json([
             'series' => $series,
+            'lastCapture' => $lastCapture?->format('Y-m-d H:i:s'),
+        ]);
+    }
+
+    /**
+     * Obtiene datos de WT/WTM (historial de tiempos de espera) para gráfica del Kanban
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \App\Models\Customer  $customer
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function waitTimeHistoryData(Request $request, Customer $customer)
+    {
+        $productionLines = $customer->productionLines()
+            ->with('processes')
+            ->when($request->filled('line_ids'), function ($query) use ($request) {
+                $lineIds = $request->input('line_ids', []);
+                $query->whereIn('id', $lineIds);
+            })
+            ->get();
+
+        if ($productionLines->isEmpty()) {
+            return response()->json([
+                'series' => [],
+                'lastCapture' => null,
+            ]);
+        }
+
+        $historyQuery = ProductionLineWaitTimeHistory::query()
+            ->whereIn('production_line_id', $productionLines->pluck('id'))
+            ->orderBy('captured_at');
+
+        if ($request->filled('range_start')) {
+            $rangeStart = Carbon::parse($request->input('range_start'));
+            $historyQuery->where('captured_at', '>=', $rangeStart);
+        }
+
+        $history = $historyQuery->get()->groupBy('production_line_id');
+
+        $seriesWT = [];
+        $seriesWTM = [];
+        $lastCapture = null;
+
+        foreach ($productionLines as $line) {
+            $lineHistory = $history->get($line->id, collect());
+            if ($lineHistory->isEmpty()) {
+                continue;
+            }
+
+            $dataWT = $lineHistory->map(function ($record) use (&$lastCapture) {
+                $lastCapture = $record->captured_at;
+                return [
+                    'x' => $record->captured_at->format('Y-m-d H:i:s'),
+                    'y' => $record->wait_time_mean ? round($record->wait_time_mean, 2) : null,
+                ];
+            })->filter(fn($item) => $item['y'] !== null)->values();
+
+            $dataWTM = $lineHistory->map(function ($record) {
+                return [
+                    'x' => $record->captured_at->format('Y-m-d H:i:s'),
+                    'y' => $record->wait_time_median ? round($record->wait_time_median, 2) : null,
+                ];
+            })->filter(fn($item) => $item['y'] !== null)->values();
+
+            if ($dataWT->isNotEmpty()) {
+                $seriesWT[] = [
+                    'name' => $line->name . ' (WT)',
+                    'data' => $dataWT,
+                ];
+            }
+
+            if ($dataWTM->isNotEmpty()) {
+                $seriesWTM[] = [
+                    'name' => $line->name . ' (WTM)',
+                    'data' => $dataWTM,
+                ];
+            }
+        }
+
+        return response()->json([
+            'series' => array_merge($seriesWT, $seriesWTM),
             'lastCapture' => $lastCapture?->format('Y-m-d H:i:s'),
         ]);
     }

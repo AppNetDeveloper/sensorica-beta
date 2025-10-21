@@ -37,6 +37,30 @@
         </div>
     </div>
 </div>
+
+<div class="mb-3" id="kanbanWaitTimePanel">
+    <div class="card">
+        <div class="card-header d-flex flex-wrap justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+                <h5 class="mb-0"><i class="fas fa-clock me-2 text-info"></i>{{ __('Historial WT/WTM de líneas activas') }}</h5>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="kanbanWaitTimeToggle">
+                    <i class="fas fa-chevron-up"></i>
+                </button>
+            </div>
+            <div class="btn-group btn-group-sm" id="kanbanWaitTimeRange">
+                <button class="btn btn-outline-info active" data-range="1d">{{ __('1 día') }}</button>
+                <button class="btn btn-outline-info" data-range="1w">{{ __('1 semana') }}</button>
+                <button class="btn btn-outline-info" data-range="1m">{{ __('1 mes') }}</button>
+                <button class="btn btn-outline-info" data-range="6m">{{ __('6 meses') }}</button>
+            </div>
+        </div>
+        <div class="card-body" id="kanbanWaitTimeBody">
+            <div class="small text-muted mb-2" id="kanbanWaitTimeSubtitle"></div>
+            <div id="kanbanWaitTimeChart" style="min-height: 360px;"></div>
+            <div class="text-end mt-2 text-muted small" id="kanbanWaitTimeUpdated"></div>
+        </div>
+    </div>
+</div>
 @endcan
 
 <!-- Barra de Filtros y Controles -->
@@ -124,6 +148,14 @@
                 <div class="d-flex align-items-center">
                     <span class="me-2"><i class="far fa-clock text-muted"></i></span>
                     <span>@lang('Tiempo teórico')</span>
+                </div>
+                <div class="d-flex align-items-center">
+                    <span class="badge bg-info me-2">WT</span>
+                    <span>@lang('Tiempo medio de espera desde inicio programado')</span>
+                </div>
+                <div class="d-flex align-items-center">
+                    <span class="badge bg-info me-2">WTM</span>
+                    <span>@lang('Tiempo mediano de espera desde inicio programado')</span>
                 </div>
             </div>
             
@@ -278,7 +310,7 @@
         .column-header-stopped { border-top: 3px solid #6c757d !important; }
         /* Estructura del header en dos líneas */
         .header-line-1 { display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; }
-        .header-line-2 { display: flex; align-items: center; margin-top: 0.25rem; }
+        .header-line-2 { display: flex; align-items: center; margin-top: 0.25rem; gap: 0.5rem; }
         
         /* Estilos para el indicador de estado */
         .line-status-indicator { display: inline-flex; align-items: center; font-size: 0.8rem; }
@@ -321,7 +353,7 @@
             pointer-events: none;
         }
         .column-header-stats { display: flex; align-items: center; gap: 0.5rem; }
-        .card-count-badge, .time-sum-badge { background-color: rgba(0,0,0,0.08); color: var(--header-text); padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.75rem; font-weight: 500; white-space: nowrap; }
+        .card-count-badge, .time-sum-badge, .wait-time-badge { background-color: rgba(0,0,0,0.08); color: var(--header-text); padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.75rem; font-weight: 500; white-space: nowrap; }
         .time-sum-badge .fa-clock { margin-right: 0.25rem; }
 
         .final-states-container { display: flex; flex-direction: column; flex-grow: 1; overflow-y: auto; padding: 0.5rem; gap: 1rem; }
@@ -694,6 +726,130 @@
         window.addEventListener('beforeunload', () => {
             if (hourlyRefreshTimer) {
                 clearInterval(hourlyRefreshTimer);
+            }
+        });
+
+        // --- Gráfica de WT/WTM (Historial de tiempos de espera) ---
+        const kanbanWaitTimePanel = document.querySelector('#kanbanWaitTimePanel');
+        const kanbanWaitTimeChartEl = document.querySelector('#kanbanWaitTimeChart');
+        const kanbanWaitTimeRange = document.querySelector('#kanbanWaitTimeRange');
+        const kanbanWaitTimeSubtitle = document.querySelector('#kanbanWaitTimeSubtitle');
+        const kanbanWaitTimeUpdated = document.querySelector('#kanbanWaitTimeUpdated');
+        const kanbanWaitTimeToggle = document.querySelector('#kanbanWaitTimeToggle');
+        const kanbanWaitTimeBody = document.querySelector('#kanbanWaitTimeBody');
+
+        let waitTimeChart = null;
+        let waitTimeRefreshTimer = null;
+
+        if (kanbanWaitTimeToggle && kanbanWaitTimeBody) {
+            kanbanWaitTimeToggle.addEventListener('click', () => {
+                const isCollapsed = kanbanWaitTimeBody.style.display === 'none';
+                kanbanWaitTimeBody.style.display = isCollapsed ? 'block' : 'none';
+                const icon = kanbanWaitTimeToggle.querySelector('i');
+                icon.className = isCollapsed ? 'fas fa-chevron-up' : 'fas fa-chevron-down';
+            });
+        }
+
+        function fetchWaitTimeData(rangeKey = '1d') {
+            if (!kanbanWaitTimeChartEl) {
+                return;
+            }
+
+            computeLineIdsFromColumns();
+
+            const range = hourlyRanges[rangeKey] || hourlyRanges['1d'];
+            const now = new Date();
+            const rangeStart = new Date(now.getTime() - range.durationMs);
+            kanbanWaitTimeSubtitle.textContent = range.label;
+
+            const params = new URLSearchParams();
+            params.append('range_start', rangeStart.toISOString());
+            Array.from(activeLineIds).forEach(id => params.append('line_ids[]', id));
+
+            fetch(`{{ route('customers.wait-time-history.data', [$customer->id]) }}?${params.toString()}`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+                .then(response => response.json())
+                .then(payload => {
+                    const { series = [], lastCapture } = payload;
+
+                    if (!waitTimeChart) {
+                        waitTimeChart = new ApexCharts(kanbanWaitTimeChartEl, {
+                            chart: {
+                                type: 'line',
+                                height: 360,
+                                animations: { enabled: true, easing: 'easeinout', speed: 600 },
+                                toolbar: { show: true },
+                                zoom: { enabled: true },
+                            },
+                            stroke: { curve: 'smooth', width: 2 },
+                            dataLabels: { enabled: false },
+                            markers: { size: 0, hover: { size: 6 } },
+                            xaxis: { type: 'datetime', labels: { datetimeUTC: false } },
+                            yaxis: { 
+                                labels: { formatter: (val) => val.toFixed(0) }, 
+                                title: { text: '{{ __('Minutos de espera') }}' } 
+                            },
+                            tooltip: {
+                                shared: true,
+                                x: { format: 'dd MMM yyyy HH:mm' },
+                                y: { formatter: (val) => `${val.toLocaleString(undefined, { maximumFractionDigits: 2 })} {{ __('min') }}` }
+                            },
+                            legend: { position: 'top', horizontalAlign: 'left' },
+                            series: series,
+                            noData: { text: '{{ __('Sin datos para mostrar') }}' }
+                        });
+                        waitTimeChart.render();
+                    } else {
+                        waitTimeChart.updateSeries(series);
+                    }
+
+                    const totalLines = new Set(series.map(s => s.name.replace(/ \(WT.*\)$/, ''))).size;
+                    kanbanWaitTimeUpdated.textContent = lastCapture
+                        ? `{{ __('Última captura') }}: ${lastCapture} · {{ __('Líneas activas') }}: ${totalLines}`
+                        : `{{ __('Sin capturas disponibles') }} · {{ __('Líneas activas') }}: ${totalLines}`;
+                })
+                .catch(() => {
+                    kanbanWaitTimeUpdated.textContent = '{{ __('Error al actualizar la gráfica') }}';
+                });
+        }
+
+        function scheduleWaitTimeRefresh(rangeKey) {
+            if (waitTimeRefreshTimer) {
+                clearInterval(waitTimeRefreshTimer);
+            }
+            fetchWaitTimeData(rangeKey);
+            waitTimeRefreshTimer = setInterval(() => fetchWaitTimeData(rangeKey), 60 * 60 * 1000); // cada hora
+        }
+
+        if (kanbanWaitTimeRange) {
+            kanbanWaitTimeRange.addEventListener('click', (event) => {
+                const button = event.target.closest('button[data-range]');
+                if (!button) return;
+
+                kanbanWaitTimeRange.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                scheduleWaitTimeRefresh(button.dataset.range);
+            });
+
+            const defaultButton = kanbanWaitTimeRange.querySelector('button.active');
+            const defaultRange = defaultButton ? defaultButton.dataset.range : '1d';
+            scheduleWaitTimeRefresh(defaultRange);
+        }
+
+        document.addEventListener('kanban:refresh-lines', () => {
+            const currentButton = kanbanWaitTimeRange?.querySelector('button.active');
+            const rangeKey = currentButton ? currentButton.dataset.range : '1d';
+            if (kanbanWaitTimeChartEl) {
+                fetchWaitTimeData(rangeKey);
+            }
+        });
+
+        window.addEventListener('beforeunload', () => {
+            if (waitTimeRefreshTimer) {
+                clearInterval(waitTimeRefreshTimer);
             }
         });
         @endcan
@@ -1413,7 +1569,9 @@
             cancelButton: "{{ __('Cancelar') }}",
             fullscreenError: "{{ __('No se pudo activar la pantalla completa.') }}",
             cardCountTitle: "{{ __('Número de tarjetas') }}",
-            totalTimeTitle: "{{ __('Tiempo total teórico') }}"
+            totalTimeTitle: "{{ __('Tiempo total teórico') }}",
+            waitTimeTitle: "{{ __('Tiempo medio de espera (WT)') }}",
+            waitTimeMedianTitle: "{{ __('Tiempo mediano de espera (WTM)') }}"
         };
         
         const columns = {
@@ -1598,6 +1756,13 @@
                 const timeSumBadge = columnElement.querySelector('.time-sum-badge');
                 if (cardCountBadge) cardCountBadge.textContent = totalCards;
                 if (timeSumBadge) timeSumBadge.innerHTML = `<i class="far fa-clock"></i> ${formatSecondsToTime(totalSeconds)}`;
+                
+                // Calcular y mostrar WT y WTM
+                const waitTimes = calculateWaitTimes(allItems);
+                const wtBadge = columnElement.querySelector('.wait-time-badge[data-type="mean"]');
+                const wtmBadge = columnElement.querySelector('.wait-time-badge[data-type="median"]');
+                if (wtBadge) wtBadge.textContent = `WT: ${formatWaitTime(waitTimes.mean)}`;
+                if (wtmBadge) wtmBadge.textContent = `WTM: ${formatWaitTime(waitTimes.median)}`;
                 
                 const appendCards = (items, container) => {
                     if (items && container) {
@@ -2282,12 +2447,14 @@
                                         <span></span>
                                     </div>
                                 </div>
-                                <!-- Segunda línea: estado de planificación (siempre presente) -->
+                                <!-- Segunda línea: estado de planificación + WT/WTM (siempre presente) -->
                                 <div class="header-line-2">
                                     <div class="line-schedule">
                                         <i class="fas fa-calendar"></i>
                                         <span></span>
                                     </div>
+                                    <span class="wait-time-badge" data-type="mean" title="${translations.waitTimeTitle}">WT: —</span>
+                                    <span class="wait-time-badge" data-type="median" title="${translations.waitTimeMedianTitle}">WTM: —</span>
                                 </div>
                              </div>
                              ${searchFieldHtml}
@@ -2527,6 +2694,51 @@
             const minutes = Math.floor((totalSeconds % 3600) / 60);
             const seconds = Math.floor(totalSeconds % 60);
             return [hours, minutes, seconds].map(v => v.toString().padStart(2, '0')).join(':');
+        }
+        
+        // Calcular WT (tiempo medio) y WTM (tiempo mediano) de espera
+        function calculateWaitTimes(orders) {
+            const now = Date.now();
+            const waitMinutes = [];
+            
+            orders.forEach(order => {
+                if (!order || !order.estimated_start_datetime) return;
+                try {
+                    const startDate = new Date(order.estimated_start_datetime.replace(' ', 'T'));
+                    if (!isNaN(startDate.getTime())) {
+                        const diffMs = now - startDate.getTime();
+                        const diffMinutes = diffMs / 60000;
+                        waitMinutes.push(diffMinutes);
+                    }
+                } catch (e) {
+                    console.debug('Error calculando WT:', e);
+                }
+            });
+            
+            if (waitMinutes.length === 0) {
+                return { mean: null, median: null };
+            }
+            
+            // Calcular media
+            const mean = waitMinutes.reduce((a, b) => a + b, 0) / waitMinutes.length;
+            
+            // Calcular mediana
+            const sorted = [...waitMinutes].sort((a, b) => a - b);
+            const mid = Math.floor(sorted.length / 2);
+            const median = sorted.length % 2 === 0 
+                ? (sorted[mid - 1] + sorted[mid]) / 2 
+                : sorted[mid];
+            
+            return { mean, median };
+        }
+        
+        function formatWaitTime(minutes) {
+            if (minutes === null || isNaN(minutes)) return '—';
+            const sign = minutes < 0 ? '-' : '';
+            const abs = Math.abs(minutes);
+            const h = Math.floor(abs / 60);
+            const m = Math.round(abs % 60);
+            return `${sign}${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
         }
         // isOrderUrgent se define más arriba basándose en la fecha de entrega (<= 5 días)
         // Formatea fecha/hora con tolerancia a cadenas tipo 'YYYY-MM-DD HH:MM:SS'
@@ -3338,6 +3550,25 @@
             
             // Formatear el tiempo total
             const formattedTime = formatSecondsToTime(totalSeconds);
+            
+            // Calcular WT y WTM
+            const orders = visibleCards.map(card => {
+                const orderId = card.dataset.id;
+                return masterOrderList.find(o => o.id == orderId);
+            }).filter(Boolean);
+            const waitTimes = calculateWaitTimes(orders);
+            
+            // Actualizar badges WT y WTM
+            const wtBadge = columnElement.querySelector('.wait-time-badge[data-type="mean"]');
+            const wtmBadge = columnElement.querySelector('.wait-time-badge[data-type="median"]');
+            if (wtBadge) {
+                const newWT = `WT: ${formatWaitTime(waitTimes.mean)}`;
+                if (wtBadge.textContent !== newWT) wtBadge.textContent = newWT;
+            }
+            if (wtmBadge) {
+                const newWTM = `WTM: ${formatWaitTime(waitTimes.median)}`;
+                if (wtmBadge.textContent !== newWTM) wtmBadge.textContent = newWTM;
+            }
             
             // Actualizar el badge de tiempo total solo si ha cambiado
             const timeSumBadge = columnElement.querySelector('.time-sum-badge');

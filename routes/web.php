@@ -178,6 +178,10 @@ Route::prefix('customers')->name('customers.')->group(function () {
         Route::get('hourly-totals/data', [CustomerController::class, 'hourlyTotalsData'])
             ->name('hourly-totals.data')
             ->middleware('permission:hourly-totals-view');
+
+        Route::get('wait-time-history/data', [CustomerController::class, 'waitTimeHistoryData'])
+            ->name('wait-time-history.data')
+            ->middleware('permission:hourly-totals-view');
             
         // Rutas para mantenimientos
         Route::resource('maintenances', MaintenanceController::class)
