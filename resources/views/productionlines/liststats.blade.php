@@ -316,6 +316,10 @@
                                 <li><a class="dropdown-item" href="#" data-analysis="comparison">
                                     <i class="fas fa-balance-scale text-warning me-2"></i>Comparativa Top/Bottom
                                 </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="#" data-analysis="full">
+                                    <i class="fas fa-layer-group text-dark me-2"></i>Análisis Total (CSV extendido)
+                                </a></li>
                             </ul>
                         </div>
                         @endif
@@ -647,14 +651,21 @@
             
             table.rows({search: 'applied'}).data().each(function(row) {
                 if (count >= 50) return false;
-                const linea = cleanValue(row[1] || row.production_line_name);
-                const paradas = cleanValue(row[14]);
-                const material = cleanValue(row[13]);
-                const prep = cleanValue(row[11]);
+
+                const linea = cleanValue(row.production_line_name ?? row[1]);
+
+                const paradasSeconds = row.production_stops_time ?? row[13] ?? 0;
+                const faltaMaterialSeconds = row.down_time ?? row[14] ?? 0;
+                const prepSeconds = row.prepair_time ?? row[11] ?? 0;
+
+                const paradas = cleanValue(formatTime(paradasSeconds));
+                const material = cleanValue(formatTime(faltaMaterialSeconds));
+                const prep = cleanValue(formatTime(prepSeconds));
+
                 csv += `${linea},${paradas},${material},${prep}\n`;
                 count++;
             });
-            
+
             return { metrics, csv, type: 'Paradas' };
         }
 
@@ -705,18 +716,52 @@
                 dateRange: `${$('#startDate').val()} a ${$('#endDate').val()}`
             };
             
-            // CSV reducido: Línea, OEE, Duración, Tiempo Ganado, Tiempo Mas
-            let csv = 'Linea,OEE,Duracion,Tiempo_Ganado,Tiempo_Mas\n';
+            // CSV reducido: Empleados, OEE, Duración, Tiempo Ganado, Tiempo Mas
+            let csv = 'Empleados,OEE,Duracion,Tiempo_Ganado,Tiempo_Mas\n';
             let count = 0;
-            
+
+            const toTimeString = (raw) => {
+                if (raw === null || raw === undefined) return '00:00:00';
+                if (typeof raw === 'number') return formatTime(raw);
+                if (typeof raw === 'string') {
+                    const trimmed = raw.trim();
+                     if (!trimmed) return '00:00:00';
+                    if (/^\d{1,2}:\d{2}:\d{2}$/.test(trimmed)) return trimmed;
+                    const parsed = parseInt(trimmed, 10);
+                    if (!isNaN(parsed)) return formatTime(parsed);
+                }
+                return '00:00:00';
+            };
+
+            const formatOEE = (raw) => {
+                if (raw === null || raw === undefined) return '0%';
+                if (typeof raw === 'number') return `${raw.toFixed(2)}%`;
+                if (typeof raw === 'string') {
+                    const trimmed = raw.trim();
+                    if (!trimmed) return '0%';
+                    if (trimmed.endsWith('%')) return trimmed;
+                    const parsed = parseFloat(trimmed);
+                    if (!isNaN(parsed)) return `${parsed.toFixed(2)}%`;
+                }
+                return '0%';
+            };
+
             table.rows({search: 'applied'}).data().each(function(row) {
                 if (count >= 50) return false;
-                const linea = cleanValue(row[1] || row.production_line_name);
-                const oee = cleanValue(row[7] || row.oee);
-                const duracion = cleanValue(row[10]);
-                const ganado = cleanValue(row[16]);
-                const mas = cleanValue(row[17]);
-                csv += `${linea},${oee},${duracion},${ganado},${mas}\n`;
+                let empleadosRaw = '';
+                if (Array.isArray(row.operator_names)) {
+                    empleadosRaw = row.operator_names.join(' | ');
+                } else if (row.operator_names) {
+                    empleadosRaw = row.operator_names;
+                } else {
+                    empleadosRaw = 'Sin asignar';
+                }
+                const empleados = cleanValue(empleadosRaw);
+                const oee = cleanValue(formatOEE(row.oee ?? row[7]));
+                const duracion = cleanValue(toTimeString(row.on_time ?? row[10]));
+                const ganado = cleanValue(toTimeString(row.fast_time ?? row[16]));
+                const mas = cleanValue(toTimeString(row.out_time ?? row[17]));
+                csv += `${empleados},${oee},${duracion},${ganado},${mas}\n`;
                 count++;
             });
             
@@ -736,16 +781,19 @@
                 dateRange: `${$('#startDate').val()} a ${$('#endDate').val()}`
             };
             
-            // CSV reducido: solo top 10 y bottom 10
-            let csv = 'Linea,OEE,Duracion,Paradas\n';
+            // CSV reducido: top/bottom con métricas extendidas
+            let csv = 'Linea,OEE,Duracion,Preparacion,Lento,Paradas,Falta_Material\n';
             const allRows = [];
             
             table.rows({search: 'applied'}).data().each(function(row) {
                 allRows.push({
                     linea: cleanValue(row[1] || row.production_line_name),
                     oee: cleanValue(row[7] || row.oee),
-                    duracion: cleanValue(row[10]),
-                    paradas: cleanValue(row[14])
+                    duracion: cleanValue(formatTime(row[10] || row.on_time)),
+                    preparacion: cleanValue(formatTime(row[11] || row.prepair_time)),
+                    lento: cleanValue(formatTime(row[12] || row.slow_time)),
+                    paradas: cleanValue(formatTime(row[13] || row.production_stops_time)),
+                    faltaMaterial: cleanValue(formatTime(row[14] || row.down_time))
                 });
             });
             
@@ -754,11 +802,75 @@
             const bottom10 = allRows.slice(-10);
             
             csv += '# TOP 10\n';
-            top10.forEach(r => csv += `${r.linea},${r.oee},${r.duracion},${r.paradas}\n`);
+            top10.forEach(r => csv += `${r.linea},${r.oee},${r.duracion},${r.preparacion},${r.lento},${r.paradas},${r.faltaMaterial}\n`);
             csv += '# BOTTOM 10\n';
-            bottom10.forEach(r => csv += `${r.linea},${r.oee},${r.duracion},${r.paradas}\n`);
+            bottom10.forEach(r => csv += `${r.linea},${r.oee},${r.duracion},${r.preparacion},${r.lento},${r.paradas},${r.faltaMaterial}\n`);
             
             return { metrics, csv, type: 'Comparativa' };
+        }
+
+        // Análisis Total extendido
+        function collectFullAnalysisData() {
+            if (!$.fn.DataTable.isDataTable('#controlWeightTable')) {
+                console.error('[AI] DataTable no inicializada');
+                return { metrics: {}, csv: '', type: 'Análisis Total', note: 'Sin datos' };
+            }
+
+            const table = $('#controlWeightTable').DataTable();
+            const metrics = {
+                avgOEE: $('#avgOEE').text() || '0%',
+                totalDuration: $('#totalDuration').text() || '00:00:00',
+                totalDifference: $('#totalTheoretical').text() || '00:00:00',
+                totalPrepTime: $('#totalPrepairTime').text() || '00:00:00',
+                totalSlowTime: $('#totalSlowTime').text() || '00:00:00',
+                totalStopsTime: $('#totalProductionStopsTime').text() || '00:00:00',
+                totalDownTime: $('#totalDownTime').text() || '00:00:00'
+            };
+
+            let csv = 'Linea,Orden,Empleados,OEE,Duracion,Diferencia_Teorica,Preparacion,Lento,Paradas,Falta_Material\n';
+            let count = 0;
+            const maxRows = 50;
+
+            table.rows({search: 'applied'}).data().each(function(row) {
+                if (count >= maxRows) return false;
+
+                const linea = cleanValue(row[1] || row.production_line_name);
+                const orden = cleanValue(row[2] || row.order_id);
+                let empleadosRaw = '';
+                if (Array.isArray(row.operator_names)) {
+                    empleadosRaw = row.operator_names.join(' | ');
+                } else if (row.operator_names) {
+                    empleadosRaw = row.operator_names;
+                }
+                const empleados = cleanValue(empleadosRaw);
+                const oee = cleanValue(row[7] || row.oee);
+                const duracion = cleanValue(formatTime(row[10]));
+
+                const fastSeconds = row.fast_time ? parseInt(row.fast_time, 10) || 0 : 0;
+                const outSeconds = row.out_time ? parseInt(row.out_time, 10) || 0 : 0;
+                const diffSeconds = outSeconds - fastSeconds;
+                let diffFormatted = '00:00:00';
+                if (diffSeconds !== 0) {
+                    const sign = diffSeconds > 0 ? '+' : '-';
+                    diffFormatted = `${sign}${formatTime(Math.abs(diffSeconds))}`;
+                }
+                const diferencia = cleanValue(diffFormatted);
+
+                const preparacion = cleanValue(formatTime(row[11] || row.prepair_time));
+                const lento = cleanValue(formatTime(row[12] || row.slow_time));
+                const paradas = cleanValue(formatTime(row[13] || row.production_stops_time));
+                const faltaMaterial = cleanValue(formatTime(row[14] || row.down_time));
+
+                csv += `${linea},${orden},${empleados},${oee},${duracion},${diferencia},${preparacion},${lento},${paradas},${faltaMaterial}\n`;
+                count++;
+            });
+
+            const pageInfo = (typeof table.page?.info === 'function') ? table.page.info() : null;
+            const note = count >= maxRows
+                ? `Mostrando primeras ${maxRows} de ${pageInfo ? pageInfo.recordsDisplay : count} órdenes`
+                : `Total analizado: ${count} órdenes`;
+
+            return { metrics, csv, type: 'Análisis Total', note };
         }
 
         async function startAiTask(fullPrompt, userPromptForDisplay) {
@@ -858,7 +970,27 @@
                 // Mostrar resultado
                 $('#aiResultPrompt').text(userPromptForDisplay);
                 const content = (last && last.task && last.task.response != null) ? last.task.response : last;
-                try { $('#aiResultData').text(typeof content === 'string' ? content : JSON.stringify(content, null, 2)); } catch { $('#aiResultData').text(String(content)); }
+
+                let rawText;
+                try {
+                    rawText = typeof content === 'string' ? content : JSON.stringify(content, null, 2);
+                } catch {
+                    rawText = String(content);
+                }
+
+                $('#aiResultText').text(rawText || '');
+
+                const htmlTarget = $('#aiResultHtml');
+                if (window.DOMPurify && typeof DOMPurify.sanitize === 'function') {
+                    const sanitized = DOMPurify.sanitize(rawText || '', {
+                        ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'style', 'src', 'alt', 'title'],
+                        ALLOWED_TAGS: false
+                    });
+                    htmlTarget.html(sanitized && sanitized.trim() ? sanitized : '<p class="text-muted mb-0">Sin contenido HTML para mostrar.</p>');
+                } else {
+                    htmlTarget.text(rawText || '');
+                }
+
                 const resultModal = new bootstrap.Modal(document.getElementById('aiResultModal'));
                 resultModal.show();
             } catch (err) {
@@ -892,6 +1024,10 @@
                 'comparison': {
                     title: 'Comparativa Top/Bottom',
                     prompt: `Compara top 10 vs bottom 10, diferencias clave y plan de acción.`
+                },
+                'full': {
+                    title: 'Análisis Total (CSV extendido)',
+                    prompt: `Genera conclusiones globales. Resume insights clave, riesgos y oportunidades usando todos los datos disponibles.`
                 }
             };
 
@@ -923,6 +1059,9 @@
                         break;
                     case 'comparison':
                         data = collectComparisonData();
+                        break;
+                    case 'full':
+                        data = collectFullAnalysisData();
                         break;
                     default:
                         return;
@@ -1053,7 +1192,26 @@
                 </div>
                 <div class="modal-body">
                     <p class="text-muted"><strong>@lang('Tipo de Análisis'):</strong> <span id="aiResultPrompt"></span></p>
-                    <pre id="aiResultData" class="bg-light p-3 rounded" style="white-space: pre-wrap;"></pre>
+                    <ul class="nav nav-tabs mb-3" id="aiResultTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="ai-tab-rendered" data-bs-toggle="tab" data-bs-target="#aiResultRendered" type="button" role="tab" aria-controls="aiResultRendered" aria-selected="true">
+                                <i class="fas fa-code me-1"></i>HTML Interpretado
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="ai-tab-raw" data-bs-toggle="tab" data-bs-target="#aiResultRaw" type="button" role="tab" aria-controls="aiResultRaw" aria-selected="false">
+                                <i class="fas fa-file-alt me-1"></i>Texto Plano
+                            </button>
+                        </li>
+                    </ul>
+                    <div class="tab-content" id="aiResultTabContent">
+                        <div class="tab-pane fade show active" id="aiResultRendered" role="tabpanel" aria-labelledby="ai-tab-rendered">
+                            <div id="aiResultHtml" class="border rounded p-3 bg-light" style="min-height: 200px; overflow:auto;"></div>
+                        </div>
+                        <div class="tab-pane fade" id="aiResultRaw" role="tabpanel" aria-labelledby="ai-tab-raw">
+                            <pre id="aiResultText" class="bg-light p-3 rounded" style="white-space: pre-wrap; min-height: 200px; overflow:auto;"></pre>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@lang('Close')</button>
