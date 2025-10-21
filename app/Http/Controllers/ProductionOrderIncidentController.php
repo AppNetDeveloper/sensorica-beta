@@ -35,15 +35,19 @@ class ProductionOrderIncidentController extends Controller
         $lines = $allIncidents->pluck('productionOrder.productionLine')->filter()->unique('id')->values();
         $operators = $allIncidents->pluck('createdBy')->filter()->unique('id')->values();
 
+        // Establecer fechas por defecto (última semana) si no se especifican
+        $dateFrom = $request->input('date_from', now()->subDays(7)->format('Y-m-d'));
+        $dateTo = $request->input('date_to', now()->format('Y-m-d'));
+
         // Aplicar filtros en base a la petición
         $incidentsQuery = (clone $baseQuery);
 
-        if ($request->filled('date_from')) {
-            $incidentsQuery->whereDate('created_at', '>=', $request->input('date_from'));
+        if ($dateFrom) {
+            $incidentsQuery->whereDate('created_at', '>=', $dateFrom);
         }
 
-        if ($request->filled('date_to')) {
-            $incidentsQuery->whereDate('created_at', '<=', $request->input('date_to'));
+        if ($dateTo) {
+            $incidentsQuery->whereDate('created_at', '<=', $dateTo);
         }
 
         if ($request->filled('line_id')) {
@@ -59,8 +63,8 @@ class ProductionOrderIncidentController extends Controller
         $incidents = $incidentsQuery->latest()->get();
 
         $filters = [
-            'date_from' => $request->input('date_from'),
-            'date_to' => $request->input('date_to'),
+            'date_from' => $dateFrom,
+            'date_to' => $dateTo,
             'line_id' => $request->input('line_id'),
             'operator_id' => $request->input('operator_id'),
         ];

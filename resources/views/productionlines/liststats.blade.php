@@ -991,6 +991,11 @@
                     htmlTarget.text(rawText || '');
                 }
 
+                const rawTabTrigger = document.getElementById('ai-tab-raw');
+                if (rawTabTrigger && bootstrap && bootstrap.Tab) {
+                    bootstrap.Tab.getOrCreateInstance(rawTabTrigger).show();
+                }
+
                 const resultModal = new bootstrap.Modal(document.getElementById('aiResultModal'));
                 resultModal.show();
             } catch (err) {
@@ -1022,7 +1027,7 @@
                     prompt: `Identifica patrones tiempo ganado/perdido y 3 recomendaciones de gestión.`
                 },
                 'comparison': {
-                    title: 'Comparativa Top/Bottom',
+                    title: 'Comparativa Alto/Bajo',
                     prompt: `Compara top 10 vs bottom 10, diferencias clave y plan de acción.`
                 },
                 'full': {
@@ -1194,21 +1199,21 @@
                     <p class="text-muted"><strong>@lang('Tipo de Análisis'):</strong> <span id="aiResultPrompt"></span></p>
                     <ul class="nav nav-tabs mb-3" id="aiResultTabs" role="tablist">
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="ai-tab-rendered" data-bs-toggle="tab" data-bs-target="#aiResultRendered" type="button" role="tab" aria-controls="aiResultRendered" aria-selected="true">
+                            <button class="nav-link" id="ai-tab-rendered" data-bs-toggle="tab" data-bs-target="#aiResultRendered" type="button" role="tab" aria-controls="aiResultRendered" aria-selected="false">
                                 <i class="fas fa-code me-1"></i>HTML Interpretado
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="ai-tab-raw" data-bs-toggle="tab" data-bs-target="#aiResultRaw" type="button" role="tab" aria-controls="aiResultRaw" aria-selected="false">
+                            <button class="nav-link active" id="ai-tab-raw" data-bs-toggle="tab" data-bs-target="#aiResultRaw" type="button" role="tab" aria-controls="aiResultRaw" aria-selected="true">
                                 <i class="fas fa-file-alt me-1"></i>Texto Plano
                             </button>
                         </li>
                     </ul>
                     <div class="tab-content" id="aiResultTabContent">
-                        <div class="tab-pane fade show active" id="aiResultRendered" role="tabpanel" aria-labelledby="ai-tab-rendered">
+                        <div class="tab-pane fade" id="aiResultRendered" role="tabpanel" aria-labelledby="ai-tab-rendered">
                             <div id="aiResultHtml" class="border rounded p-3 bg-light" style="min-height: 200px; overflow:auto;"></div>
                         </div>
-                        <div class="tab-pane fade" id="aiResultRaw" role="tabpanel" aria-labelledby="ai-tab-raw">
+                        <div class="tab-pane fade show active" id="aiResultRaw" role="tabpanel" aria-labelledby="ai-tab-raw">
                             <pre id="aiResultText" class="bg-light p-3 rounded" style="white-space: pre-wrap; min-height: 200px; overflow:auto;"></pre>
                         </div>
                     </div>

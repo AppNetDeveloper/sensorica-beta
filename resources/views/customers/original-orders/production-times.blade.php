@@ -113,9 +113,35 @@
                             @php($aiToken = config('services.ai.token'))
                             @if(!empty($aiUrl) && !empty($aiToken))
                             <div class="btn-group btn-group-sm me-2" role="group">
-                                <button type="button" class="btn btn-dark" id="btn-ai-open" data-bs-toggle="modal" data-bs-target="#aiPromptModal" title="{{ __('Análisis con IA') }}">
+                                <button type="button" class="btn btn-dark dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="{{ __('Análisis con IA') }}">
                                     <i class="bi bi-stars me-1 text-white"></i><span class="d-none d-sm-inline">{{ __('Análisis IA') }}</span>
                                 </button>
+                                <ul class="dropdown-menu">
+                                    <li><h6 class="dropdown-header"><i class="fas fa-brain me-1"></i> {{ __("Tipo de Análisis") }}</h6></li>
+                                    <li><a class="dropdown-item" href="#" data-analysis="erp-to-created">
+                                        <i class="fas fa-hourglass-start text-info me-2"></i>{{ __("Tiempos ERP → Creación") }}
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="#" data-analysis="created-to-finished">
+                                        <i class="fas fa-industry text-success me-2"></i>{{ __("Tiempos Creación → Fin") }}
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="#" data-analysis="process-gaps">
+                                        <i class="fas fa-project-diagram text-warning me-2"></i>{{ __("Gaps entre Procesos") }}
+                                    </a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="#" data-analysis="by-client">
+                                        <i class="fas fa-users text-primary me-2"></i>{{ __("Análisis por Cliente") }}
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="#" data-analysis="slow-processes">
+                                        <i class="fas fa-turtle text-danger me-2"></i>{{ __("Procesos Lentos") }}
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="#" data-analysis="top-bottom">
+                                        <i class="fas fa-balance-scale text-secondary me-2"></i>{{ __("Comparativa Top/Bottom") }}
+                                    </a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="#" data-analysis="full">
+                                        <i class="fas fa-layer-group text-dark me-2"></i>{{ __("Análisis Total") }}
+                                    </a></li>
+                                </ul>
                             </div>
                             @endif
                         </div>
@@ -520,6 +546,7 @@
     <script src="https://cdn.jsdelivr.net/npm/svg.js@2.6.6/dist/svg.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.45.2/dist/apexcharts.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.4/dist/purify.min.js"></script>
     <script>
         $(function () {
             const routes = {
@@ -1586,222 +1613,422 @@
             const AI_TOKEN = "{{ config('services.ai.token') }}";
 
             let latestSummary = null;
-
-            function collectAiContext() {
-                const table = $('#production-times-table').DataTable();
+            
+            // Rate limiting simple: max 10 solicitudes por minuto
+            let aiRequestHistory = [];
+            const MAX_AI_REQUESTS_PER_MINUTE = 10;
+            
+            function checkAiRateLimit() {
+                const now = Date.now();
+                const oneMinuteAgo = now - 60000;
                 
-                const tableInfo = {
-                    totalRecords: table ? table.page.info().recordsTotal : 0,
-                    filteredRecords: table ? table.page.info().recordsDisplay : 0,
-                    currentPage: table ? table.page.info().page + 1 : 1,
-                    totalPages: table ? table.page.info().pages : 0
-                };
+                // Limpiar solicitudes antiguas
+                aiRequestHistory = aiRequestHistory.filter(time => time > oneMinuteAgo);
                 
-                let tableData = [];
-                let columnNames = [];
-                
-                if (table) {
-                    table.columns().header().each(function(header) {
-                        const colName = $(header).text().trim();
-                        if (colName && !colName.toLowerCase().includes('acciones') && !colName.toLowerCase().includes('actions')) {
-                            columnNames.push(colName);
-                        }
-                    });
-                    
-                    table.rows({search: 'applied'}).nodes().each(function(rowNode, index) {
-                        const row = {};
-                        const $row = $(rowNode);
-                        let colIndexForData = 0;
-                        
-                        $row.find('td').each(function(colIndex) {
-                            const headerText = $(table.columns().header()[colIndex]).text().trim();
-                            
-                            if (headerText && !headerText.toLowerCase().includes('acciones') && !headerText.toLowerCase().includes('actions')) {
-                                if (colIndexForData < columnNames.length) {
-                                    let cellValue = $(this).text().trim();
-                                    if (!cellValue) {
-                                        cellValue = $(this).attr('data-sort') || '';
-                                    }
-                                    row[columnNames[colIndexForData]] = cellValue;
-                                    colIndexForData++;
-                                }
-                            }
-                        });
-                        
-                        if (Object.keys(row).length > 0) {
-                            tableData.push(row);
-                        }
-                    });
-                    
-                    if (tableData.length > 100) {
-                        tableData = tableData.slice(0, 100);
-                        tableInfo.note = `Mostrando solo las primeras 100 filas de ${tableInfo.filteredRecords} registros filtrados`;
-                    }
+                if (aiRequestHistory.length >= MAX_AI_REQUESTS_PER_MINUTE) {
+                    return false;
                 }
                 
+                aiRequestHistory.push(now);
+                return true;
+            }
+
+            // Función auxiliar para limpiar y escapar valores CSV
+            function cleanValue(value) {
+                if (value === null || value === undefined) return '';
+                let str = String(value).trim();
+                // Escapar para CSV
+                str = str.replace(/"/g, '""');
+                if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                    str = `"${str}"`;
+                }
+                return str;
+            }
+
+            function safeValue(value, fallback = '') {
+                if (value === null || value === undefined) return fallback;
+                const str = String(value).trim();
+                if (!str || str === '-' || str === '--' || str.toLowerCase() === 'null' || str.toLowerCase() === 'undefined') {
+                    return fallback;
+                }
+                return str;
+            }
+
+            function safeDate(value) {
+                const dateStr = safeValue(value, '0000-00-00 00:00:00');
+                return dateStr || '0000-00-00 00:00:00';
+            }
+
+            // Función para formatear segundos a HH:MM:SS
+            function formatTime(seconds) {
+                if (seconds === null || seconds === undefined || isNaN(seconds) || seconds === 0) return '00:00:00';
+                seconds = parseInt(seconds);
+                const hours = Math.floor(seconds / 3600);
+                const minutes = Math.floor((seconds % 3600) / 60);
+                const secs = seconds % 60;
+                return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            }
+
+            // Análisis 1: Tiempos ERP → Creación
+            function collectErpToCreatedData() {
+                const table = $('#production-times-table').DataTable();
+                if (!table) {
+                    console.error('[AI] DataTable no inicializada');
+                    return { metrics: {}, csv: '', type: 'Tiempos ERP → Creación' };
+                }
+
+                const metrics = {
+                    ordersTotal: $('#kpi-orders-total').text() || '0',
+                    avgErpToCreated: latestSummary?.orders_avg_erp_to_created ? formatSeconds(latestSummary.orders_avg_erp_to_created) : '-',
+                    medianErpToCreated: latestSummary?.orders_p50_erp_to_created ? formatSeconds(latestSummary.orders_p50_erp_to_created) : '-',
+                    dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
+                };
+
+                // CSV: Order_ID, Cliente, Fecha_ERP, Fecha_Creado, Tiempo_ERP_a_Creado
+                let csv = 'Order_ID,Cliente,Fecha_ERP,Fecha_Creado,Tiempo_ERP_a_Creado\n';
+                let count = 0;
+                const maxRows = 150;
+
+                console.log('[AI] Recolectando datos ERP→Creación...');
+                const rowsData = table.rows({search: 'applied'}).data();
+                console.log('[AI] Total rows disponibles:', rowsData.length);
+                
+                if (rowsData.length === 0) {
+                    console.warn('[AI] No hay datos en la tabla. Asegúrate de haber aplicado los filtros primero.');
+                    return { 
+                        metrics, 
+                        csv: 'Order_ID,Cliente,Fecha_ERP,Fecha_Creado,Tiempo_ERP_a_Creado\n', 
+                        type: 'Tiempos ERP → Creación', 
+                        note: 'Sin datos - Aplica filtros primero' 
+                    };
+                }
+
+                rowsData.each(function(row, index) {
+                    if (count >= maxRows) return false;
+                    
+                    // Debug primera fila
+                    if (index === 0) {
+                        console.log('[AI] Primera fila (muestra):', row);
+                    }
+                    
+                    const orderId = cleanValue(safeValue(row.order_id, '0'));
+                    const cliente = cleanValue(safeValue(row.customer_client_name, 'Sin cliente'));
+                    const fechaErp = cleanValue(safeDate(row.fecha_pedido_erp));
+                    const fechaCreado = cleanValue(safeDate(row.created_at));
+                    const tiempoErpCreado = cleanValue(safeValue(row.erp_to_created_formatted, '0'));
+                    csv += `${orderId},${cliente},${fechaErp},${fechaCreado},${tiempoErpCreado}\n`;
+                    count++;
+                });
+
+                console.log(`[AI] CSV generado con ${count} filas`);
+                console.log('[AI] Primeras 200 caracteres del CSV:', csv.substring(0, 200));
+                
+                const note = count >= maxRows ? `Mostrando primeras ${maxRows} órdenes` : `Total: ${count} órdenes`;
+                return { metrics, csv, type: 'Tiempos ERP → Creación', note };
+            }
+
+            // Análisis 2: Tiempos Creación → Finalización
+            function collectCreatedToFinishedData() {
+                const table = $('#production-times-table').DataTable();
+                if (!table) {
+                    console.error('[AI] DataTable no inicializada');
+                    return { metrics: {}, csv: '', type: 'Tiempos Creación → Fin' };
+                }
+
+                const metrics = {
+                    ordersTotal: $('#kpi-orders-total').text() || '0',
+                    avgCreatedToFinish: $('#kpi-erp-finish').text() || '-',
+                    medianCreatedToFinish: latestSummary?.orders_p50_created_to_finished ? formatSeconds(latestSummary.orders_p50_created_to_finished) : '-',
+                    dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
+                };
+
+                // CSV: Order_ID, Cliente, Fecha_Creado, Fecha_Fin, Tiempo_Creado_a_Fin
+                let csv = 'Order_ID,Cliente,Fecha_Creado,Fecha_Fin,Tiempo_Creado_a_Fin\n';
+                let count = 0;
+                const maxRows = 150;
+
+                table.rows({search: 'applied'}).data().each(function(row) {
+                    if (count >= maxRows) return false;
+                    const orderId = cleanValue(safeValue(row.order_id, '0'));
+                    const cliente = cleanValue(safeValue(row.customer_client_name, 'Sin cliente'));
+                    const fechaCreado = cleanValue(safeDate(row.created_at));
+                    const fechaFin = cleanValue(safeDate(row.finished_at));
+                    const tiempoCreadoFin = cleanValue(safeValue(row.created_to_finished_formatted, '0'));
+                    csv += `${orderId},${cliente},${fechaCreado},${fechaFin},${tiempoCreadoFin}\n`;
+                    count++;
+                });
+
+                const note = count >= maxRows ? `Mostrando primeras ${maxRows} órdenes` : `Total: ${count} órdenes`;
+                return { metrics, csv, type: 'Tiempos Creación → Fin', note };
+            }
+
+            // Análisis 3: Rendimiento de Órdenes (mantener como referencia)
+            function collectOrdersOverviewData() {
+                const table = $('#production-times-table').DataTable();
+                if (!table) {
+                    console.error('[AI] DataTable no inicializada');
+                    return { metrics: {}, csv: '', type: 'Rendimiento de Órdenes' };
+                }
+
                 const metrics = {
                     ordersTotal: $('#kpi-orders-total').text() || '0',
                     processesTotal: $('#kpi-processes-total').text() || '0',
                     avgErpToFinish: $('#kpi-erp-finish').text() || '-',
                     avgGap: $('#kpi-gap').text() || '-',
-                    // Métricas adicionales del summary
-                    medianErpToFinish: latestSummary?.orders_p50_created_to_finished ? formatSeconds(latestSummary.orders_p50_created_to_finished) : '-',
-                    medianProcessDuration: latestSummary?.process_p50_duration ? formatSeconds(latestSummary.process_p50_duration) : '-',
-                    medianGap: latestSummary?.process_p50_gap ? formatSeconds(latestSummary.process_p50_gap) : '-',
-                    // Percentil 90 (detecta outliers)
-                    p90ErpToFinish: latestSummary?.orders_p90_created_to_finished ? formatSeconds(latestSummary.orders_p90_created_to_finished) : '-',
-                    p90ProcessDuration: latestSummary?.process_p90_duration ? formatSeconds(latestSummary.process_p90_duration) : '-',
-                    p90Gap: latestSummary?.process_p90_gap ? formatSeconds(latestSummary.process_p90_gap) : '-',
-                    // Otras métricas
-                    avgErpToCreated: latestSummary?.orders_avg_erp_to_created ? formatSeconds(latestSummary.orders_avg_erp_to_created) : '-',
-                    slaOnTimeRatio: latestSummary?.sla_on_time_ratio ? (latestSummary.sla_on_time_ratio * 100).toFixed(1) + '%' : '-',
-                    processDelaysOverDay: latestSummary?.process_delays_over_day || 0,
-                    processByCode: latestSummary?.process_by_code || {}
+                    dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
                 };
-                
-                const filters = {
-                    dateStart: $('#date_start').val(),
-                    dateEnd: $('#date_end').val(),
-                    onlyFinishedOrders: $('#only_finished_orders').is(':checked'),
-                    onlyFinishedProcesses: $('#only_finished_processes').is(':checked')
-                };
-                
-                // Convertir datos a formato CSV
-                function convertToCSV(data, columns) {
-                    if (!data || data.length === 0) return '';
-                    
-                    // Escapar valores CSV
-                    const escapeCSV = (value) => {
-                        if (value == null) return '';
-                        const str = String(value);
-                        if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-                            return `"${str.replace(/"/g, '""')}"`;
-                        }
-                        return str;
-                    };
-                    
-                    // Crear header
-                    const header = columns.map(col => escapeCSV(col)).join(',');
-                    
-                    // Crear filas
-                    const rows = data.map(row => {
-                        return columns.map(col => escapeCSV(row[col])).join(',');
-                    });
-                    
-                    return [header, ...rows].join('\n');
-                }
-                
-                return { 
-                    tableInfo, 
-                    tableData,
-                    columnNames,
-                    metrics, 
-                    filters, 
-                    csvData: convertToCSV(tableData, columnNames),
-                    page: 'customers/production-times',
-                    description: 'Vista de análisis de tiempos de fabricación con métricas de duración de órdenes y procesos, gaps entre procesos y filtros por fecha y tipo de proceso'
-                };
+
+                // CSV reducido: Order_ID, Cliente, Fecha_ERP, Tiempo_ERP_a_Fin, Gap_Promedio
+                let csv = 'Order_ID,Cliente,Fecha_ERP,Tiempo_ERP_a_Fin,Tiempo_Creado_a_Fin\n';
+                let count = 0;
+                const maxRows = 150;
+
+                table.rows({search: 'applied'}).data().each(function(row) {
+                    if (count >= maxRows) return false;
+                    const orderId = cleanValue(safeValue(row.order_id, '0'));
+                    const cliente = cleanValue(safeValue(row.customer_client_name, 'Sin cliente'));
+                    const fechaErp = cleanValue(safeValue(row.fecha_pedido_erp));
+                    const tiempoErpFin = cleanValue(safeValue(row.erp_to_finished_formatted, '0'));
+                    const tiempoCreadoFin = cleanValue(safeValue(row.created_to_finished_formatted, '0'));
+                    csv += `${orderId},${cliente},${fechaErp},${tiempoErpFin},${tiempoCreadoFin}\n`;
+                    count++;
+                });
+
+                const note = count >= maxRows ? `Mostrando primeras ${maxRows} órdenes` : `Total: ${count} órdenes`;
+                return { metrics, csv, type: 'Rendimiento de Órdenes', note };
             }
 
-            function showAiLoading(show) {
-                const btn = document.getElementById('btn-ai-send');
-                if (!btn) return;
-                btn.disabled = !!show;
-                btn.innerText = show ? '{{ __('Enviando...') }}' : '{{ __('Enviar a IA') }}';
+            // Análisis 4: Gaps por Proceso
+            function collectProcessGapsData() {
+                const table = $('#production-times-table').DataTable();
+                if (!table) {
+                    console.error('[AI] DataTable no inicializada');
+                    return { metrics: {}, csv: '', type: 'Gaps por Proceso' };
+                }
+
+                const metrics = {
+                    avgGap: $('#kpi-gap').text() || '-',
+                    processesTotal: $('#kpi-processes-total').text() || '0',
+                    dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
+                };
+
+                // CSV: Order_ID, Codigo_Proceso, Gap, Duracion
+                let csv = 'Order_ID,Codigo_Proceso,Nombre_Proceso,Gap,Duracion\n';
+                let count = 0;
+                const maxRows = 100;
+
+                table.rows({search: 'applied'}).data().each(function(row) {
+                    if (count >= maxRows) return false;
+                    const orderId = row.order_id || '-';
+                    
+                    // Acceder a los procesos si están disponibles en los datos
+                    const processes = row.processes || [];
+                    if (Array.isArray(processes) && processes.length > 0) {
+                        processes.forEach(proc => {
+                            const codigo = cleanValue(proc.process_code || '-');
+                            const nombre = cleanValue(proc.process_name || '-');
+                            const gap = cleanValue(proc.gap_formatted || '-');
+                            const duracion = cleanValue(proc.duration_formatted || '-');
+                            csv += `${cleanValue(safeValue(orderId, '0'))},${cleanValue(safeValue(codigo, 'N/A'))},${cleanValue(safeValue(nombre, 'N/A'))},${cleanValue(safeValue(gap, '0'))},${cleanValue(safeValue(duracion, '0'))}\n`;
+                            count++;
+                        });
+                    }
+                });
+
+                const note = count >= maxRows ? `Mostrando primeros ${maxRows} procesos` : `Total: ${count} procesos`;
+                return { metrics, csv, type: 'Gaps por Proceso', note };
+            }
+
+            // Análisis 5: Por Cliente
+            function collectByClientData() {
+                const table = $('#production-times-table').DataTable();
+                if (!table) {
+                    console.error('[AI] DataTable no inicializada');
+                    return { metrics: {}, csv: '', type: 'Análisis por Cliente' };
+                }
+
+                const metrics = {
+                    ordersTotal: $('#kpi-orders-total').text() || '0',
+                    avgErpToFinish: $('#kpi-erp-finish').text() || '-',
+                    dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
+                };
+
+                // Agrupar por cliente
+                const clientData = {};
+                let totalOrders = 0;
+
+                table.rows({search: 'applied'}).data().each(function(row) {
+                    const cliente = row.customer_client_name || 'Sin cliente';
+                    if (!clientData[cliente]) {
+                        clientData[cliente] = {
+                            count: 0,
+                            orders: []
+                        };
+                    }
+                    clientData[cliente].count++;
+                    clientData[cliente].orders.push({
+                        orderId: row.order_id,
+                        tiempoTotal: row.erp_to_finished_formatted || '-',
+                        tiempoCreado: row.created_to_finished_formatted || '-'
+                    });
+                    totalOrders++;
+                });
+
+                // CSV: Cliente, Cantidad_Ordenes, Order_IDs, Tiempos_Promedio
+                let csv = 'Cliente,Cantidad_Ordenes,Ordenes_IDs,Tiempo_Promedio_Total\n';
+                for (const [cliente, data] of Object.entries(clientData)) {
+                    const orderIds = data.orders.slice(0, 5).map(o => o.orderId).join(' | ');
+                    const suffix = data.count > 5 ? ` (+${data.count - 5} más)` : '';
+                    csv += `${cleanValue(cliente)},${data.count},${cleanValue(orderIds + suffix)},${cleanValue('-')}\n`;
+                }
+
+                const note = `${totalOrders} órdenes de ${Object.keys(clientData).length} clientes`;
+                return { metrics, csv, type: 'Análisis por Cliente', note };
+            }
+
+            // Análisis 6: Procesos Lentos
+            function collectSlowProcessesData() {
+                const table = $('#production-times-table').DataTable();
+                if (!table) {
+                    console.error('[AI] DataTable no inicializada');
+                    return { metrics: {}, csv: '', type: 'Procesos Lentos' };
+                }
+
+                const metrics = {
+                    processesTotal: $('#kpi-processes-total').text() || '0',
+                    avgGap: $('#kpi-gap').text() || '-',
+                    dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
+                };
+
+                // Recolectar todos los procesos y ordenar por duración
+                const allProcesses = [];
+
+                table.rows({search: 'applied'}).data().each(function(row) {
+                    const orderId = row.order_id || '-';
+                    const processes = row.processes || [];
+                    
+                    if (Array.isArray(processes) && processes.length > 0) {
+                        processes.forEach(proc => {
+                            // Extraer duración en segundos si está disponible
+                            const durationSec = proc.duration_seconds || 0;
+                            allProcesses.push({
+                                orderId: orderId,
+                                codigo: proc.process_code || '-',
+                                nombre: proc.process_name || '-',
+                                duracion: proc.duration_formatted || '-',
+                                durationSec: durationSec,
+                                gap: proc.gap_formatted || '-'
+                            });
+                        });
+                    }
+                });
+
+                // Ordenar por duración (descendente) y tomar top 30
+                allProcesses.sort((a, b) => b.durationSec - a.durationSec);
+                const slowest = allProcesses.slice(0, 30);
+
+                // CSV: Order_ID, Codigo_Proceso, Nombre, Duracion, Gap
+                let csv = 'Order_ID,Codigo_Proceso,Nombre_Proceso,Duracion,Gap\n';
+                slowest.forEach(proc => {
+                    csv += `${cleanValue(proc.orderId)},${cleanValue(proc.codigo)},${cleanValue(proc.nombre)},${cleanValue(proc.duracion)},${cleanValue(proc.gap)}\n`;
+                });
+
+                const note = `Top 30 procesos más lentos de ${allProcesses.length} totales`;
+                return { metrics, csv, type: 'Procesos Lentos', note };
+            }
+
+            // Análisis 7: Comparativa Top/Bottom
+            function collectTopBottomData() {
+                const table = $('#production-times-table').DataTable();
+                if (!table) {
+                    console.error('[AI] DataTable no inicializada');
+                    return { metrics: {}, csv: '', type: 'Comparativa Top/Bottom' };
+                }
+
+                const metrics = {
+                    ordersTotal: $('#kpi-orders-total').text() || '0',
+                    avgErpToFinish: $('#kpi-erp-finish').text() || '-',
+                    dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
+                };
+
+                const allOrders = [];
+                table.rows({search: 'applied'}).data().each(function(row) {
+                    allOrders.push({
+                        orderId: cleanValue(row.order_id || '-'),
+                        cliente: cleanValue(row.customer_client_name || '-'),
+                        tiempoTotal: cleanValue(row.erp_to_finished_formatted || '-'),
+                        tiempoCreado: cleanValue(row.created_to_finished_formatted || '-')
+                    });
+                });
+
+                // Top 10 y Bottom 10
+                const top10 = allOrders.slice(0, 10);
+                const bottom10 = allOrders.slice(-10);
+
+                let csv = 'Tipo,Order_ID,Cliente,Tiempo_ERP_a_Fin,Tiempo_Creado_a_Fin\n';
+                csv += '# TOP 10 (Más rápidas)\n';
+                top10.forEach(o => csv += `TOP,${o.orderId},${o.cliente},${o.tiempoTotal},${o.tiempoCreado}\n`);
+                csv += '# BOTTOM 10 (Más lentas)\n';
+                bottom10.forEach(o => csv += `BOTTOM,${o.orderId},${o.cliente},${o.tiempoTotal},${o.tiempoCreado}\n`);
+
+                const note = `Comparando ${allOrders.length} órdenes`;
+                return { metrics, csv, type: 'Comparativa Top/Bottom', note };
+            }
+
+            // Análisis 8: Análisis Total (CSV extendido)
+            function collectFullAnalysisData() {
+                const table = $('#production-times-table').DataTable();
+                if (!table) {
+                    console.error('[AI] DataTable no inicializada');
+                    return { metrics: {}, csv: '', type: 'Análisis Total' };
+                }
+
+                const metrics = {
+                    ordersTotal: $('#kpi-orders-total').text() || '0',
+                    processesTotal: $('#kpi-processes-total').text() || '0',
+                    avgErpToFinish: $('#kpi-erp-finish').text() || '-',
+                    avgGap: $('#kpi-gap').text() || '-',
+                    medianErpToFinish: latestSummary?.orders_p50_created_to_finished ? formatSeconds(latestSummary.orders_p50_created_to_finished) : '-',
+                    medianGap: latestSummary?.process_p50_gap ? formatSeconds(latestSummary.process_p50_gap) : '-',
+                    dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
+                };
+
+                // CSV completo con todas las columnas visibles
+                let csv = 'Order_ID,Cliente,Fecha_Pedido_ERP,Fecha_Creado,Fecha_Finalizado,Tiempo_ERP_a_Creado,Tiempo_ERP_a_Fin,Tiempo_Creado_a_Fin\n';
+                let count = 0;
+                const maxRows = 150;
+
+                table.rows({search: 'applied'}).data().each(function(row) {
+                    if (count >= maxRows) return false;
+                    const orderId = cleanValue(row.order_id || '-');
+                    const cliente = cleanValue(row.customer_client_name || '-');
+                    const fechaErp = cleanValue(row.fecha_pedido_erp || '-');
+                    const fechaCreado = cleanValue(row.created_at || '-');
+                    const fechaFin = cleanValue(row.finished_at || '-');
+                    const erpCreado = cleanValue(row.erp_to_created_formatted || '-');
+                    const erpFin = cleanValue(row.erp_to_finished_formatted || '-');
+                    const creadoFin = cleanValue(row.created_to_finished_formatted || '-');
+                    csv += `${orderId},${cliente},${fechaErp},${fechaCreado},${fechaFin},${erpCreado},${erpFin},${creadoFin}\n`;
+                    count++;
+                });
+
+                const note = count >= maxRows ? `Mostrando primeras ${maxRows} órdenes de ${table.page.info().recordsDisplay}` : `Total: ${count} órdenes`;
+                return { metrics, csv, type: 'Análisis Total', note };
             }
 
             async function startAiTask(fullPrompt, userPromptForDisplay) {
                 try {
-                    showAiLoading(true);
-                    const payload = collectAiContext();
-                    console.log('[AI][Production Times] Context:', payload.tableInfo, 'Filters:', payload.filters);
+                    console.log('[AI][Production Times] Iniciando análisis:', userPromptForDisplay);
+                    console.log('[AI] Prompt length:', fullPrompt.length, 'caracteres');
                     
-                    // Construir datos estructurados en formato CSV
-                    let dataSection = 'Datos:\n\n';
-                    
-                    // Sección 1: Resumen de filtros aplicados
-                    dataSection += 'FILTROS APLICADOS:\n';
-                    dataSection += `Fecha inicio: ${payload.filters.dateStart || 'No especificada'}\n`;
-                    dataSection += `Fecha fin: ${payload.filters.dateEnd || 'No especificada'}\n`;
-                    dataSection += `Solo órdenes finalizadas: ${payload.filters.onlyFinishedOrders ? 'Sí' : 'No'}\n`;
-                    dataSection += `Solo procesos finalizados: ${payload.filters.onlyFinishedProcesses ? 'Sí' : 'No'}\n`;
-                    dataSection += '\n';
-                    
-                    // Sección 2: KPIs principales (Promedio y Mediana)
-                    dataSection += 'INDICADORES CLAVE (KPIs):\n';
-                    dataSection += `Total de órdenes analizadas: ${payload.metrics.ordersTotal}\n`;
-                    dataSection += `Total de procesos analizados: ${payload.metrics.processesTotal}\n`;
-                    dataSection += `SLA - Órdenes a tiempo: ${payload.metrics.slaOnTimeRatio}\n`;
-                    dataSection += `Procesos con retraso > 1 día: ${payload.metrics.processDelaysOverDay}\n`;
-                    dataSection += '\n';
-                    dataSection += 'ANÁLISIS ESTADÍSTICO DE TIEMPOS:\n';
-                    dataSection += '\n';
-                    dataSection += 'Tiempo ERP → Creación:\n';
-                    dataSection += `  - Promedio: ${payload.metrics.avgErpToCreated}\n`;
-                    dataSection += '\n';
-                    dataSection += 'Tiempo ERP → Finalización:\n';
-                    dataSection += `  - Promedio (Media): ${payload.metrics.avgErpToFinish}\n`;
-                    dataSection += `  - Mediana (P50): ${payload.metrics.medianErpToFinish}\n`;
-                    dataSection += `  - Percentil 90 (P90): ${payload.metrics.p90ErpToFinish}\n`;
-                    dataSection += '\n';
-                    dataSection += 'Duración de Procesos:\n';
-                    dataSection += `  - Mediana (P50): ${payload.metrics.medianProcessDuration}\n`;
-                    dataSection += `  - Percentil 90 (P90): ${payload.metrics.p90ProcessDuration}\n`;
-                    dataSection += '\n';
-                    dataSection += 'Gaps entre Procesos:\n';
-                    dataSection += `  - Promedio: ${payload.metrics.avgGap}\n`;
-                    dataSection += `  - Mediana (P50): ${payload.metrics.medianGap}\n`;
-                    dataSection += `  - Percentil 90 (P90): ${payload.metrics.p90Gap}\n`;
-                    dataSection += '\n';
-                    dataSection += 'NOTA: P90 indica que el 90% de los casos están por debajo de ese valor. Útil para detectar outliers.\n';
-                    dataSection += '\n';
-                    // Agregar análisis por código de proceso en formato CSV
-                    if (payload.metrics.processByCode && Object.keys(payload.metrics.processByCode).length > 0) {
-                        const processCount = Object.keys(payload.metrics.processByCode).length;
-                        if (processCount <= 20) {
-                            dataSection += 'ANÁLISIS POR CÓDIGO DE PROCESO (CSV):\n';
-                            dataSection += 'Codigo,Cantidad,Duracion_Promedio,Duracion_P50,Duracion_P90,Gap_Promedio,Gap_P90\n';
-                            for (const [code, data] of Object.entries(payload.metrics.processByCode)) {
-                                const dur_avg = data.avg_duration ? formatSeconds(data.avg_duration) : '-';
-                                const dur_p50 = data.p50_duration ? formatSeconds(data.p50_duration) : '-';
-                                const dur_p90 = data.p90_duration ? formatSeconds(data.p90_duration) : '-';
-                                const gap_avg = data.avg_gap ? formatSeconds(data.avg_gap) : '-';
-                                const gap_p90 = data.p90_gap ? formatSeconds(data.p90_gap) : '-';
-                                dataSection += `${code},${data.count || 0},${dur_avg},${dur_p50},${dur_p90},${gap_avg},${gap_p90}\n`;
-                            }
-                            dataSection += '\n';
-                        } else {
-                            dataSection += `NOTA: ${processCount} tipos de procesos diferentes detectados. Ver detalles en CSV de órdenes.\n\n`;
-                        }
-                    };
-                    
-                    // Sección 3: Información de la tabla
-                    dataSection += 'INFORMACIÓN DE REGISTROS:\n';
-                    dataSection += `Total de registros: ${payload.tableInfo.totalRecords}\n`;
-                    dataSection += `Registros filtrados: ${payload.tableInfo.filteredRecords}\n`;
-                    if (payload.tableInfo.note) {
-                        dataSection += `Nota: ${payload.tableInfo.note}\n`;
-                    }
-                    dataSection += '\n';
-                    
-                    // Sección 4: Datos de la tabla en formato CSV
-                    dataSection += 'DETALLE DE ÓRDENES:\n';
-                    if (payload.csvData && payload.csvData.trim()) {
-                        dataSection += payload.csvData;
-                    } else {
-                        dataSection += 'No hay datos disponibles en la tabla.\n';
-                    }
-                    
-                    let combinedPrompt;
-                    try {
-                        combinedPrompt = `${fullPrompt}\n\n${dataSection}`;
-                    } catch (e) {
-                        combinedPrompt = `${fullPrompt}\n\nDatos:\n[Error procesando datos]`;
-                    }
-                    console.log('[AI] Combined prompt length:', combinedPrompt.length);
+                    // Mostrar modal de procesamiento
+                    $('#aiProcessingTitle').text(userPromptForDisplay);
+                    $('#aiProcessingStatus').html('<i class="fas fa-spinner fa-spin me-2"></i>Enviando solicitud a IA...');
+                    const processingModal = new bootstrap.Modal(document.getElementById('aiProcessingModal'));
+                    processingModal.show();
                     
                     const fd = new FormData();
-                    fd.append('prompt', combinedPrompt);
+                    fd.append('prompt', fullPrompt);
 
                     const resp = await fetch(`${AI_URL.replace(/\/$/, '')}/api/ollama-tasks`, {
                         method: 'POST',
@@ -1817,11 +2044,16 @@
                     if (!taskId) throw new Error('No task id');
 
                     console.log('[AI] Tarea creada con ID:', taskId);
+                    console.log('[AI] Iniciando polling cada 5 segundos...');
+                    
+                    // Actualizar estado
+                    $('#aiProcessingStatus').html('<i class="fas fa-spinner fa-spin me-2"></i>IA procesando... Esperando respuesta...');
 
                     let done = false; let last; let pollCount = 0;
                     while (!done) {
                         pollCount++;
                         console.log(`[AI] Polling #${pollCount} - Esperando 5 segundos...`);
+                        $('#aiProcessingStatus').html(`<i class="fas fa-spinner fa-spin me-2"></i>IA procesando... (${pollCount * 5}s)`);
                         await new Promise(r => setTimeout(r, 5000));
                         
                         const pollResp = await fetch(`${AI_URL.replace(/\/$/, '')}/api/ollama-tasks/${encodeURIComponent(taskId)}`, {
@@ -1850,158 +2082,340 @@
                             alert(task.error); 
                             return; 
                         }
-                        if (task.response != null) { 
+                        if (task.response != null) {
+                            console.log('[AI] ¡Respuesta recibida! Finalizando polling...');
                             done = true; 
                         }
                     }
 
+                    // Cerrar modal de procesamiento
+                    bootstrap.Modal.getInstance(document.getElementById('aiProcessingModal')).hide();
+                    
+                    // Mostrar resultado
                     $('#aiResultPrompt').text(userPromptForDisplay);
                     const content = (last && last.task && last.task.response != null) ? last.task.response : last;
-                    try { $('#aiResultData').text(typeof content === 'string' ? content : JSON.stringify(content, null, 2)); } catch { $('#aiResultData').text(String(content)); }
+
+                    let rawText;
+                    try {
+                        rawText = typeof content === 'string' ? content : JSON.stringify(content, null, 2);
+                    } catch {
+                        rawText = String(content);
+                    }
+
+                    $('#aiResultText').text(rawText || '');
+
+                    const htmlTarget = $('#aiResultHtml');
+                    if (window.DOMPurify && typeof DOMPurify.sanitize === 'function') {
+                        const sanitized = DOMPurify.sanitize(rawText || '', {
+                            ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'style', 'src', 'alt', 'title'],
+                            ALLOWED_TAGS: false
+                        });
+                        htmlTarget.html(sanitized && sanitized.trim() ? sanitized : '<p class="text-muted mb-0">Sin contenido HTML para mostrar.</p>');
+                    } else {
+                        htmlTarget.text(rawText || '');
+                    }
+
+                    const rawTabTrigger = document.getElementById('ai-tab-raw');
+                    if (rawTabTrigger && bootstrap && bootstrap.Tab) {
+                        bootstrap.Tab.getOrCreateInstance(rawTabTrigger).show();
+                    }
+
                     const resultModal = new bootstrap.Modal(document.getElementById('aiResultModal'));
                     resultModal.show();
                 } catch (err) {
                     console.error('[AI] Unexpected error:', err);
-                    alert('{{ __('An error occurred') }}');
-                } finally {
-                    showAiLoading(false);
+                    // Cerrar modal de procesamiento si está abierto
+                    const procModal = bootstrap.Modal.getInstance(document.getElementById('aiProcessingModal'));
+                    if (procModal) procModal.hide();
+                    alert('{{ __("Error al procesar solicitud de IA") }}');
                 }
             }
 
-            const defaultUserPrompt = `Analiza los datos de tiempos de fabricación proporcionados.
+            // Configuración de prompts por tipo de análisis
+            const analysisPrompts = {
+                'erp-to-created': {
+                    title: 'Tiempos ERP → Creación',
+                    prompt: `Analiza los tiempos entre el registro del pedido en ERP y su creacion en produccion.
 
-Realiza:
+IMPORTANTE: A continuacion recibiras un archivo CSV completo. Lee TODAS las filas del CSV para realizar el analisis.
+
+El CSV contiene las columnas:
+- Order_ID: Identificador de la orden
+- Cliente: Nombre del cliente
+- Fecha_ERP: Fecha de registro en ERP
+- Fecha_Creado: Fecha de creacion en produccion
+- Tiempo_ERP_a_Creado: Tiempo transcurrido (formato HH:MM:SS o 0 si no aplica)
+
+Objetivos del analisis:
+1. Identificar ordenes con mayores retrasos en inicio de produccion (top 5)
+2. Detectar patrones de retraso por cliente
+3. Calcular tiempo promedio vs casos problematicos
+4. Proponer 3 acciones especificas para acelerar el paso de ERP a produccion
+
+Se breve, concreto y cuantifica los hallazgos usando TODOS los datos del CSV.`
+                },
+                'created-to-finished': {
+                    title: 'Tiempos Creación → Finalización',
+                    prompt: `Analiza los tiempos de ciclo de produccion (desde creacion hasta finalizacion).
+
+IMPORTANTE: Lee TODAS las filas del CSV completo que recibiras a continuacion.
+
+Columnas del CSV:
+- Order_ID, Cliente, Fecha_Creado, Fecha_Fin, Tiempo_Creado_a_Fin
+
+Foco del analisis:
+1. Identificar ordenes con ciclos mas largos (top 5)
+2. Comparar con promedio y mediana del periodo
+3. Detectar tendencias o patrones temporales
+4. Proponer 3 medidas especificas para reducir tiempo de ciclo
+
+Prioriza hallazgos accionables usando TODOS los datos.`
+                },
+                'process-gaps': {
+                    title: 'Gaps entre Procesos',
+                    prompt: `Analiza los gaps (tiempos muertos) entre procesos consecutivos.
+
+IMPORTANTE: Lee TODAS las filas del CSV.
+
+Columnas: Order_ID, Codigo_Proceso, Nombre_Proceso, Gap, Duracion
+
+Focus del analisis:
+1. Identificar procesos con mayores tiempos de espera (top 10)
+2. Detectar patrones de gaps entre procesos especificos
+3. Comparar duracion de proceso vs tiempo de espera
+4. Proponer 3 soluciones para reducir tiempos muertos
+
+Se conciso y cuantifica impacto usando TODOS los datos.`
+                },
+                'by-client': {
+                    title: 'Análisis por Cliente',
+                    prompt: `Analiza el rendimiento agrupado por cliente.
+
+IMPORTANTE: Procesa TODAS las filas del CSV.
+
+Columnas: Cliente, Cantidad_Ordenes, Ordenes_IDs, Tiempo_Promedio_Total
+
+Objetivos:
+1. Identificar top 5 clientes con mas ordenes
+2. Comparar tiempos promedio por cliente
+3. Detectar clientes con patrones de retraso
+4. Proponer 3 estrategias diferenciadas
+
+Manten el analisis breve usando TODOS los datos.`
+                },
+                'slow-processes': {
+                    title: 'Procesos Lentos',
+                    prompt: `Analiza los procesos mas lentos del periodo.
+
+IMPORTANTE: Analiza TODAS las filas del CSV (top 30 procesos mas lentos).
+
+Columnas: Order_ID, Codigo_Proceso, Nombre_Proceso, Duracion, Gap
+
+Centra el analisis en:
+1. Identificar top 10 procesos con mayor duracion
+2. Detectar procesos que aparecen frecuentemente
+3. Comparar duracion vs gaps asociados
+4. Proponer 3 acciones especificas para optimizar
+
+Se especifico y prioriza por impacto usando TODOS los datos.`
+                },
+                'top-bottom': {
+                    title: 'Comparativa Top/Bottom',
+                    prompt: `Compara las 10 ordenes mas rapidas vs las 10 mas lentas.
+
+IMPORTANTE: El CSV contiene 20 filas (10 TOP + 10 BOTTOM). Lee TODAS.
+
+Columnas: Tipo, Order_ID, Cliente, Tiempo_ERP_a_Fin, Tiempo_Creado_a_Fin
+
+Analisis requerido:
+1. Identificar factores comunes en ordenes rapidas (TOP)
+2. Identificar factores comunes en ordenes lentas (BOTTOM)
+3. Detectar 3 diferencias clave entre grupos
+4. Proponer como replicar practicas del TOP
+
+Manten el analisis conciso usando TODOS los datos.`
+                },
+                'full': {
+                    title: 'Análisis Total',
+                    prompt: `Realiza un analisis integral de todos los datos de tiempos de produccion.
+
+IMPORTANTE: El CSV contiene hasta 150 ordenes. Procesa TODAS las filas.
+
+Columnas: Order_ID, Cliente, Fecha_Pedido_ERP, Fecha_Creado, Fecha_Finalizado, 
+Tiempo_ERP_a_Creado, Tiempo_ERP_a_Fin, Tiempo_Creado_a_Fin
+
+Incluye:
 1. Resumen ejecutivo con hallazgos principales
-2. Identificación de cuellos de botella y procesos lentos
-3. Análisis de gaps entre procesos
-4. Propuestas concretas para reducir tiempos de producción
-5. Acciones prioritarias para optimizar el flujo
+2. Analisis de tendencias generales
+3. Identificacion de 5 cuellos de botella criticos
+4. 5 recomendaciones priorizadas (corto vs medio plazo)
+5. 3 acciones inmediatas sugeridas
 
-Enfoque: Resultados accionables y específicos basados en los datos.`;
+Genera un informe estructurado pero conciso usando TODOS los datos.`
+                }
+            };
 
-            // Función para estimar tokens (aproximación: ~4 caracteres por token)
-            function estimateTokens(text) {
-                if (!text) return 0;
-                // Estimación aproximada: 4 caracteres = 1 token en promedio
-                // Para ser más preciso, contamos palabras y caracteres
-                const charCount = text.length;
-                const wordCount = text.split(/\s+/).filter(w => w.length > 0).length;
-                // Promedio entre método de caracteres y palabras
-                const tokensByChars = Math.ceil(charCount / 4);
-                const tokensByWords = Math.ceil(wordCount * 1.3); // Palabras + overhead
-                return Math.ceil((tokensByChars + tokensByWords) / 2);
-            }
+            // Variable global para el prompt actual
+            let currentPromptData = null;
 
-            // Función para actualizar el contador de tokens
-            function updateTokenCounter() {
-                const userPrompt = $('#aiPrompt').val() || '';
-                const payload = collectAiContext();
+
+            // Click en opciones del dropdown de análisis
+            $('.dropdown-item[data-analysis]').on('click', function(e) {
+                e.preventDefault();
+                const analysisType = $(this).data('analysis');
+                const config = analysisPrompts[analysisType];
                 
-                // Construir el prompt completo como se enviará a la IA
-                let dataSection = 'Datos:\n\n';
-                dataSection += 'FILTROS APLICADOS:\n';
-                dataSection += `Fecha inicio: ${payload.filters.dateStart || 'No especificada'}\n`;
-                dataSection += `Fecha fin: ${payload.filters.dateEnd || 'No especificada'}\n`;
-                dataSection += `Solo órdenes finalizadas: ${payload.filters.onlyFinishedOrders ? 'Sí' : 'No'}\n`;
-                dataSection += `Solo procesos finalizados: ${payload.filters.onlyFinishedProcesses ? 'Sí' : 'No'}\n`;
-                dataSection += '\n';
-                dataSection += 'INDICADORES CLAVE (KPIs):\n';
-                dataSection += `Total de órdenes analizadas: ${payload.metrics.ordersTotal}\n`;
-                dataSection += `Total de procesos analizados: ${payload.metrics.processesTotal}\n`;
-                dataSection += `SLA - Órdenes a tiempo: ${payload.metrics.slaOnTimeRatio}\n`;
-                dataSection += `Procesos con retraso > 1 día: ${payload.metrics.processDelaysOverDay}\n`;
-                dataSection += '\n';
-                dataSection += 'ANÁLISIS ESTADÍSTICO DE TIEMPOS:\n';
-                dataSection += '\n';
-                dataSection += 'Tiempo ERP → Creación:\n';
-                dataSection += `  - Promedio: ${payload.metrics.avgErpToCreated}\n`;
-                dataSection += '\n';
-                dataSection += 'Tiempo ERP → Finalización:\n';
-                dataSection += `  - Promedio (Media): ${payload.metrics.avgErpToFinish}\n`;
-                dataSection += `  - Mediana (P50): ${payload.metrics.medianErpToFinish}\n`;
-                dataSection += `  - Percentil 90 (P90): ${payload.metrics.p90ErpToFinish}\n`;
-                dataSection += '\n';
-                dataSection += 'Duración de Procesos:\n';
-                dataSection += `  - Mediana (P50): ${payload.metrics.medianProcessDuration}\n`;
-                dataSection += `  - Percentil 90 (P90): ${payload.metrics.p90ProcessDuration}\n`;
-                dataSection += '\n';
-                dataSection += 'Gaps entre Procesos:\n';
-                dataSection += `  - Promedio: ${payload.metrics.avgGap}\n`;
-                dataSection += `  - Mediana (P50): ${payload.metrics.medianGap}\n`;
-                dataSection += `  - Percentil 90 (P90): ${payload.metrics.p90Gap}\n`;
-                dataSection += '\n';
-                dataSection += 'NOTA: P90 indica que el 90% de los casos están por debajo de ese valor. Útil para detectar outliers.\n';
-                dataSection += '\n';
-                // Agregar análisis por código de proceso en formato CSV
-                if (payload.metrics.processByCode && Object.keys(payload.metrics.processByCode).length > 0) {
-                    const processCount = Object.keys(payload.metrics.processByCode).length;
-                    if (processCount <= 20) {
-                        dataSection += 'ANÁLISIS POR CÓDIGO DE PROCESO (CSV):\n';
-                        dataSection += 'Codigo,Cantidad,Duracion_Promedio,Duracion_P50,Duracion_P90,Gap_Promedio,Gap_P90\n';
-                        for (const [code, data] of Object.entries(payload.metrics.processByCode)) {
-                            const dur_avg = data.avg_duration ? formatSeconds(data.avg_duration) : '-';
-                            const dur_p50 = data.p50_duration ? formatSeconds(data.p50_duration) : '-';
-                            const dur_p90 = data.p90_duration ? formatSeconds(data.p90_duration) : '-';
-                            const gap_avg = data.avg_gap ? formatSeconds(data.avg_gap) : '-';
-                            const gap_p90 = data.p90_gap ? formatSeconds(data.p90_gap) : '-';
-                            dataSection += `${code},${data.count || 0},${dur_avg},${dur_p50},${dur_p90},${gap_avg},${gap_p90}\n`;
-                        }
-                        dataSection += '\n';
-                    } else {
-                        dataSection += `NOTA: ${processCount} tipos de procesos diferentes detectados. Ver detalles en CSV de órdenes.\n\n`;
+                if (!config) {
+                    console.error('[AI] Tipo de análisis no configurado:', analysisType);
+                    return;
+                }
+                
+                console.log('[AI] Tipo seleccionado:', analysisType, config.title);
+                
+                // Recolectar datos según el tipo de análisis
+                let data;
+                switch(analysisType) {
+                    case 'erp-to-created':
+                        data = collectErpToCreatedData();
+                        break;
+                    case 'created-to-finished':
+                        data = collectCreatedToFinishedData();
+                        break;
+                    case 'process-gaps':
+                        data = collectProcessGapsData();
+                        break;
+                    case 'by-client':
+                        data = collectByClientData();
+                        break;
+                    case 'slow-processes':
+                        data = collectSlowProcessesData();
+                        break;
+                    case 'top-bottom':
+                        data = collectTopBottomData();
+                        break;
+                    case 'full':
+                        data = collectFullAnalysisData();
+                        break;
+                    default:
+                        console.error('[AI] Tipo desconocido:', analysisType);
+                        return;
+                }
+                
+                // Verificar si hay datos
+                if (!data.csv || data.csv.trim() === '' || data.csv.split('\n').length <= 1) {
+                    alert('No hay datos disponibles para analizar. Por favor, ejecuta primero una búsqueda con el botón "Aplicar Filtros".');
+                    return;
+                }
+                
+                console.log('[AI] Datos recolectados:', {
+                    type: data.type,
+                    csvLength: data.csv.length,
+                    note: data.note
+                });
+                
+                // Contar filas del CSV
+                const csvLines = data.csv.split('\n').filter(line => line.trim() !== '');
+                const csvRows = csvLines.length - 1; // -1 porque el primer elemento es el header
+                
+                // Construir prompt final con formato optimizado para agentes
+                let finalPrompt = `${config.prompt}\n\n`;
+                finalPrompt += `PERIODO: ${data.metrics.dateRange}\n\n`;
+                
+                // Añadir métricas específicas
+                finalPrompt += 'METRICAS CLAVE:\n';
+                Object.keys(data.metrics).forEach(key => {
+                    if (key !== 'dateRange') {
+                        finalPrompt += `- ${key}: ${data.metrics[key]}\n`;
                     }
-                }
-                dataSection += 'INFORMACIÓN DE REGISTROS:\n';
-                dataSection += `Total de registros: ${payload.tableInfo.totalRecords}\n`;
-                dataSection += `Registros filtrados: ${payload.tableInfo.filteredRecords}\n`;
-                if (payload.tableInfo.note) {
-                    dataSection += `Nota: ${payload.tableInfo.note}\n`;
-                }
-                dataSection += '\n';
-                dataSection += 'DETALLE DE ÓRDENES:\n';
-                if (payload.csvData && payload.csvData.trim()) {
-                    dataSection += payload.csvData;
-                } else {
-                    dataSection += 'No hay datos disponibles en la tabla.\n';
+                });
+                
+                if (data.note) {
+                    finalPrompt += `\n${data.note}\n`;
                 }
                 
-                const fullPrompt = `${userPrompt}\n\n${dataSection}`;
-                const tokens = estimateTokens(fullPrompt);
+                // Información clara sobre el CSV
+                finalPrompt += `\n--- INICIO DEL CSV (${csvRows} filas de datos) ---\n`;
+                finalPrompt += data.csv;
+                finalPrompt += `--- FIN DEL CSV ---\n`;
+                finalPrompt += `\nATENCION: El CSV anterior contiene ${csvRows} filas de datos reales. Asegurate de procesar TODAS las filas para tu analisis.`;
                 
-                $('#token-counter').text(tokens.toLocaleString());
+                console.log(`[AI] Análisis: ${config.title}`);
+                console.log(`[AI] Filas CSV: ${csvRows}`);
+                console.log(`[AI] Tamaño prompt: ${finalPrompt.length} caracteres`);
+                console.log(`[AI] Tamaño CSV: ${data.csv.length} caracteres`);
                 
-                // Cambiar color según cantidad de tokens
-                const $badge = $('#token-counter');
-                $badge.removeClass('bg-primary bg-warning bg-danger');
-                if (tokens > 100000) {
-                    $badge.addClass('bg-danger');
-                } else if (tokens > 50000) {
-                    $badge.addClass('bg-warning');
-                } else {
-                    $badge.addClass('bg-primary');
-                }
-            }
-
-            $('#aiPromptModal').on('shown.bs.modal', function(){
-                const $ta = $('#aiPrompt');
-                if (!$ta.val()) $ta.val(defaultUserPrompt);
-                $ta.trigger('focus');
-                updateTokenCounter();
+                // Guardar prompt y título para editarlo/enviarlo
+                currentPromptData = {
+                    prompt: finalPrompt,
+                    title: config.title
+                };
+                
+                // Mostrar modal de edición
+                $('#aiPromptModalTitle').text(config.title);
+                $('#aiPrompt').val(finalPrompt);
+                const editModal = new bootstrap.Modal(document.getElementById('aiPromptModal'));
+                editModal.show();
             });
-
-            // Actualizar contador cuando el usuario escribe
-            $('#aiPrompt').on('input', function() {
-                updateTokenCounter();
+            
+            // Enviar prompt editado a la IA
+            $('#btn-ai-send').on('click', function() {
+                // Verificar rate limiting
+                if (!checkAiRateLimit()) {
+                    alert(`Has alcanzado el límite de ${MAX_AI_REQUESTS_PER_MINUTE} solicitudes por minuto. Por favor, espera un momento antes de intentarlo de nuevo.`);
+                    return;
+                }
+                
+                if (!currentPromptData) {
+                    console.error('[AI] No hay datos de prompt');
+                    return;
+                }
+                
+                const editedPrompt = $('#aiPrompt').val().trim();
+                
+                if (!editedPrompt) {
+                    alert('El prompt no puede estar vacío');
+                    return;
+                }
+                
+                // Validación de tamaño máximo (100KB aprox 100,000 caracteres)
+                const maxPromptSize = 100000;
+                if (editedPrompt.length > maxPromptSize) {
+                    alert(`El prompt es demasiado grande (${editedPrompt.length} caracteres). Máximo permitido: ${maxPromptSize} caracteres. Reduce el número de filas o el contenido.`);
+                    return;
+                }
+                
+                // Deshabilitar botón durante el envío
+                const $btn = $(this);
+                $btn.prop('disabled', true);
+                $btn.html('<i class="fas fa-spinner fa-spin me-1"></i>{{ __('Enviando...') }}');
+                
+                // Cerrar modal de edición
+                bootstrap.Modal.getInstance(document.getElementById('aiPromptModal')).hide();
+                
+                // Log del prompt que se enviará
+                console.log('[AI] Enviando prompt de longitud:', editedPrompt.length, 'caracteres');
+                console.log('[AI] Primeros 500 caracteres:', editedPrompt.substring(0, 500));
+                console.log('[AI] Últimos 1000 caracteres:', editedPrompt.substring(editedPrompt.length - 1000));
+                
+                // Contar líneas CSV en el prompt editado
+                const csvMatch = editedPrompt.match(/--- INICIO DEL CSV.*?---[\s\S]*?--- FIN DEL CSV ---/s);
+                if (csvMatch) {
+                    const csvSection = csvMatch[0];
+                    const csvLinesInPrompt = csvSection.split('\n').filter(l => l.trim() && !l.includes('---')).length;
+                    console.log(`[AI] Líneas detectadas en sección CSV del prompt: ${csvLinesInPrompt}`);
+                }
+                
+                // Enviar a IA
+                startAiTask(editedPrompt, currentPromptData.title).finally(() => {
+                    $btn.prop('disabled', false);
+                    $btn.html('{{ __('Enviar a IA') }}');
+                });
             });
 
             $('#btn-ai-reset').on('click', function(){ 
-                $('#aiPrompt').val(defaultUserPrompt);
-                updateTokenCounter();
-            });
-
-            $('#btn-ai-send').on('click', function(){
-                const userPrompt = ($('#aiPrompt').val() || '').trim() || defaultUserPrompt;
-                startAiTask(userPrompt, userPrompt);
+                if (currentPromptData && currentPromptData.prompt) {
+                    $('#aiPrompt').val(currentPromptData.prompt);
+                }
             });
         });
     </script>
@@ -2011,7 +2425,7 @@ Enfoque: Resultados accionables y específicos basados en los datos.`;
         <div class="modal-dialog modal-lg modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title"><i class="fas fa-robot me-2"></i>{{ __('Análisis IA') }}</h5>
+                    <h5 class="modal-title" id="aiPromptModalTitle"><i class="fas fa-robot me-2"></i>{{ __('Análisis IA') }}</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -2020,31 +2434,46 @@ Enfoque: Resultados accionables y específicos basados en los datos.`;
                         <ul class="mb-0 ps-3">
                             <li><strong>{{ __('Filtros') }}:</strong> {{ __('rango de fechas y filtros de órdenes/procesos finalizados') }}</li>
                             <li><strong>{{ __('KPIs') }}:</strong> {{ __('promedios y medianas de tiempos ERP → Fin, duraciones de procesos y gaps') }}</li>
-                            <li><strong>{{ __('Datos detallados') }}:</strong> {{ __('hasta 100 órdenes en formato CSV con toda la información') }}</li>
+                            <li><strong>{{ __('Datos detallados') }}:</strong> {{ __('hasta 150 órdenes en formato CSV con toda la información') }}</li>
                         </ul>
                     </div>
-                    <label class="form-label fw-bold">{{ __('Instrucciones para la IA') }}</label>
-                    <textarea class="form-control" id="aiPrompt" rows="8" placeholder="{{ __('Escribe tus instrucciones completas para el análisis...') }}"></textarea>
-                    <div class="mt-3 p-3 bg-light rounded border">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <i class="fas fa-calculator text-primary me-2"></i>
-                                <strong>{{ __('Tokens estimados del prompt completo:') }}</strong>
-                            </div>
-                            <div>
-                                <span class="badge bg-primary fs-6" id="token-counter">0</span>
-                            </div>
-                        </div>
-                        <small class="text-muted d-block mt-2">
-                            <i class="fas fa-info-circle me-1"></i>
-                            {{ __('Incluye instrucciones + datos CSV. Aproximación: ~4 caracteres = 1 token') }}
+                    <label class="form-label fw-bold">{{ __('Prompt a enviar (puedes editarlo):') }}</label>
+                    <textarea class="form-control font-monospace" id="aiPrompt" rows="12" style="font-size: 0.9rem;" placeholder="{{ __('Selecciona un tipo de análisis del dropdown...') }}"></textarea>
+                    <div class="alert alert-warning mt-2 mb-0">
+                        <small>
+                            <i class="fas fa-exclamation-triangle me-1"></i>
+                            <strong>{{ __('Importante:') }}</strong> {{ __('El prompt incluye los datos en formato CSV entre "--- INICIO DEL CSV ---" y "--- FIN DEL CSV ---". NO elimines esta sección o la IA no podrá analizar los datos.') }}
                         </small>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" id="btn-ai-reset">{{ __('Limpiar prompt por defecto') }}</button>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('Close') }}</button>
+                    <button type="button" class="btn btn-outline-secondary" id="btn-ai-reset">{{ __('Restaurar prompt original') }}</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('Cancelar') }}</button>
                     <button type="button" class="btn btn-primary" id="btn-ai-send">{{ __('Enviar a IA') }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Processing Modal -->
+    <div class="modal fade" id="aiProcessingModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title"><i class="fas fa-robot me-2"></i><span id="aiProcessingTitle">{{ __('Procesando...') }}</span></h5>
+                </div>
+                <div class="modal-body text-center py-4">
+                    <div class="mb-3">
+                        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                            <span class="visually-hidden">{{ __('Cargando...') }}</span>
+                        </div>
+                    </div>
+                    <p class="text-muted mb-0" id="aiProcessingStatus">
+                        <i class="fas fa-spinner fa-spin me-2"></i>{{ __('Procesando solicitud...') }}
+                    </p>
+                    <small class="text-muted d-block mt-2">
+                        {{ __('Esto puede tardar varios segundos. Por favor, espere...') }}
+                    </small>
                 </div>
             </div>
         </div>
@@ -2059,8 +2488,27 @@ Enfoque: Resultados accionables y específicos basados en los datos.`;
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="text-muted"><strong>{{ __('Prompt') }}:</strong> <span id="aiResultPrompt"></span></p>
-                    <pre id="aiResultData" class="bg-light p-3 rounded" style="white-space: pre-wrap;"></pre>
+                    <p class="text-muted"><strong>{{ __('Tipo de Análisis') }}:</strong> <span id="aiResultPrompt"></span></p>
+                    <ul class="nav nav-tabs mb-3" id="aiResultTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="ai-tab-rendered" data-bs-toggle="tab" data-bs-target="#aiResultRendered" type="button" role="tab" aria-controls="aiResultRendered" aria-selected="false">
+                                <i class="fas fa-code me-1"></i>{{ __('HTML Interpretado') }}
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="ai-tab-raw" data-bs-toggle="tab" data-bs-target="#aiResultRaw" type="button" role="tab" aria-controls="aiResultRaw" aria-selected="true">
+                                <i class="fas fa-file-alt me-1"></i>{{ __('Texto Plano') }}
+                            </button>
+                        </li>
+                    </ul>
+                    <div class="tab-content" id="aiResultTabContent">
+                        <div class="tab-pane fade" id="aiResultRendered" role="tabpanel" aria-labelledby="ai-tab-rendered">
+                            <div id="aiResultHtml" class="border rounded p-3 bg-light" style="min-height: 200px; overflow:auto;"></div>
+                        </div>
+                        <div class="tab-pane fade show active" id="aiResultRaw" role="tabpanel" aria-labelledby="ai-tab-raw">
+                            <pre id="aiResultText" class="bg-light p-3 rounded" style="white-space: pre-wrap; min-height: 200px; overflow:auto;"></pre>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('Close') }}</button>

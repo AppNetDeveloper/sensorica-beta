@@ -26,6 +26,8 @@ class CustomerOriginalOrderController extends Controller
         $this->middleware('permission:original-order-delete', ['only' => ['destroy', 'bulkDelete']]);
         // Permisos para la nueva vista y su API
         $this->middleware('permission:original-order-list', ['only' => ['finishedProcessesView', 'finishedProcessesData']]);
+        // Permisos para production-times y sus endpoints
+        $this->middleware('permission:original-order-list', ['only' => ['productionTimesView', 'productionTimesData', 'productionTimesSummary', 'productionTimesOrderDetail']]);
     }
 
     /**
@@ -750,7 +752,7 @@ class CustomerOriginalOrderController extends Controller
     {
         $tz = config('app.timezone');
         $defaultEnd = Carbon::now($tz);
-        $defaultStart = (clone $defaultEnd)->subDays(30);
+        $defaultStart = (clone $defaultEnd)->subDays(7);
 
         $processOptions = Process::orderBy('sequence')->get(['id', 'code', 'description']);
         $grupoOptions = OriginalOrderProcess::query()
