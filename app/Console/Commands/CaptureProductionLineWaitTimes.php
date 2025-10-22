@@ -92,7 +92,11 @@ class CaptureProductionLineWaitTimes extends Command
                     ->where('production_line_id', $line->id)
                     ->whereIn('status', [0, 1]) // 0: Pendiente, 1: En progreso
                     ->whereNotNull('estimated_start_datetime')
-                    ->get(['id', 'estimated_start_datetime']);
+                    ->where(function ($query) {
+                        $query->whereNull('ready_after_datetime')
+                            ->orWhere('ready_after_datetime', '<=', now('Europe/Madrid'));
+                    })
+                    ->get(['id', 'estimated_start_datetime', 'ready_after_datetime']);
 
                 if ($orders->isEmpty()) {
                     $this->line("ℹ️ Línea {$line->id} ({$line->name}) - Sin órdenes con estimated_start_datetime");

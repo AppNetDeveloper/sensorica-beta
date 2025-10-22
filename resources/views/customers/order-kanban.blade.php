@@ -2802,8 +2802,18 @@
         function calculateWaitTimes(orders) {
             const now = Date.now();
             const waitMinutes = [];
+
+            if (!Array.isArray(orders) || orders.length === 0) {
+                return { mean: null, median: null };
+            }
+
+            const readyOrders = orders.filter(order => isOrderReadyForFilter(order));
+
+            if (readyOrders.length === 0) {
+                return { mean: null, median: null };
+            }
             
-            orders.forEach(order => {
+            readyOrders.forEach(order => {
                 if (!order || !order.estimated_start_datetime) return;
                 try {
                     const startDate = new Date(order.estimated_start_datetime.replace(' ', 'T'));
