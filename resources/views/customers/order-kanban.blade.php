@@ -589,6 +589,86 @@
             '6m': { label: '{{ __('Últimos 6 meses') }}', durationMs: 182 * 24 * 60 * 60 * 1000 },
         };
 
+        const chartStateTTL = 5 * 60 * 1000; // 5 minutos
+        const chartStateKeys = {
+            hourly: `kanbanHourlyHiddenSeries_{{ $customer->id }}`,
+            wait: `kanbanWaitHiddenSeries_{{ $customer->id }}`,
+        };
+
+        let hourlyHiddenSeries = new Set();
+        let waitHiddenSeries = new Set();
+
+        function loadHiddenSeries(storageKey) {
+            try {
+                const raw = localStorage.getItem(storageKey);
+                if (!raw) {
+                    return new Set();
+                }
+                const parsed = JSON.parse(raw);
+                if (!parsed || !Array.isArray(parsed.hidden) || typeof parsed.savedAt !== 'number') {
+                    return new Set();
+                }
+                if (Date.now() - parsed.savedAt > chartStateTTL) {
+                    localStorage.removeItem(storageKey);
+                    return new Set();
+                }
+                return new Set(parsed.hidden);
+            } catch (_) {
+                return new Set();
+            }
+        }
+
+        function saveHiddenSeries(storageKey, hiddenSet) {
+            try {
+                const payload = {
+                    hidden: Array.from(hiddenSet),
+                    savedAt: Date.now(),
+                };
+                localStorage.setItem(storageKey, JSON.stringify(payload));
+            } catch (_) {}
+        }
+
+        function applyHiddenSeries(chartInstance, hiddenSet) {
+            if (!chartInstance || !hiddenSet || hiddenSet.size === 0) {
+                return;
+            }
+            const seriesNames = chartInstance.w?.globals?.seriesNames || [];
+            hiddenSet.forEach((name) => {
+                if (seriesNames.includes(name)) {
+                    chartInstance.hideSeries(name);
+                }
+            });
+        }
+
+        function refreshHiddenSeriesFromChart(chartInstance, storageKey) {
+            if (!chartInstance || !chartInstance.w) {
+                return new Set();
+            }
+            const { globals } = chartInstance.w;
+            const names = globals.seriesNames || [];
+            const collapsedIndices = globals.collapsedSeriesIndices || [];
+            const hidden = new Set(collapsedIndices.map(index => names[index]).filter(Boolean));
+            saveHiddenSeries(storageKey, hidden);
+            return hidden;
+        }
+
+        function pruneHiddenSet(hiddenSet, availableSeries) {
+            if (!hiddenSet || hiddenSet.size === 0) {
+                return new Set();
+            }
+            const available = new Set(availableSeries);
+            const pruned = new Set();
+            hiddenSet.forEach(name => {
+                if (available.has(name)) {
+                    pruned.add(name);
+                }
+            });
+            return pruned;
+        }
+
+        hourlyHiddenSeries = loadHiddenSeries(chartStateKeys.hourly);
+        waitHiddenSeries = loadHiddenSeries(chartStateKeys.wait);
+
         const setChartsPanelCollapsed = (collapsed) => {
             if (!kanbanChartsBody || !kanbanChartsToggle) {
                 return;
@@ -664,7 +744,12 @@
             })
                 .then(response => response.json())
                 .then(payload => {
-                    const { series = [], lastCapture } = payload;
+                    const rawSeries = Array.isArray(payload.series) ? payload.series : [];
+                    const sanitizedSeries = rawSeries.filter(serie => Array.isArray(serie.data) && serie.data.length > 0);
+                    const { lastCapture } = payload;
+                    const availableNames = sanitizedSeries.map(s => s.name);
+                    hourlyHiddenSeries = pruneHiddenSet(hourlyHiddenSeries, availableNames);
+                    saveHiddenSeries(chartStateKeys.hourly, hourlyHiddenSeries);
 
                     if (!hourlyChart) {
                         hourlyChart = new ApexCharts(kanbanHourlyChartEl, {
@@ -674,6 +759,13 @@
                                 animations: { enabled: true, easing: 'easeinout', speed: 600 },
                                 toolbar: { show: true },
                                 zoom: { enabled: true },
+                                events: {
+                                    legendClick: (chartContext) => {
+                                        setTimeout(() => {
+                                            hourlyHiddenSeries = refreshHiddenSeriesFromChart(chartContext, chartStateKeys.hourly);
+                                        }, 0);
+                                    },
+                                },
                             },
                             stroke: { curve: 'smooth', width: 2 },
                             dataLabels: { enabled: false },
@@ -686,15 +778,17 @@
                                 y: { formatter: (val) => `${val.toLocaleString(undefined, { maximumFractionDigits: 2 })} {{ __('min') }}` }
                             },
                             legend: { position: 'top', horizontalAlign: 'left' },
-                            series: series,
+                            series: sanitizedSeries,
                             noData: { text: '{{ __('Sin datos para mostrar') }}' }
                         });
                         hourlyChart.render();
+                        applyHiddenSeries(hourlyChart, hourlyHiddenSeries);
                     } else {
-                        hourlyChart.updateSeries(series);
+                        hourlyChart.updateSeries(sanitizedSeries);
+                        applyHiddenSeries(hourlyChart, hourlyHiddenSeries);
                     }
 
-                    const totalLines = series.length;
+                    const totalLines = sanitizedSeries.length;
                     kanbanHourlyUpdated.textContent = lastCapture
                         ? `{{ __('Última captura') }}: ${lastCapture} · {{ __('Líneas activas') }}: ${totalLines}`
                         : `{{ __('Sin capturas disponibles') }} · {{ __('Líneas activas') }}: ${totalLines}`;
@@ -770,16 +864,24 @@
             })
                 .then(response => response.json())
                 .then(payload => {
-                    const { series = [], lastCapture } = payload;
+                    const rawSeries = Array.isArray(payload.series) ? payload.series : [];
 
                     // Convertir cualquier valor negativo a positivo por si la DB lo devuelve así
-                    const normalizedSeries = series.map(serie => ({
+                    const normalizedSeries = rawSeries.map(serie => ({
                         ...serie,
                         data: (serie.data || []).map(point => ({
                             x: point.x,
                             y: point.y !== null && point.y !== undefined ? Math.abs(point.y) : point.y,
                         })),
                     }));
+
+                    const sanitizedSeries = normalizedSeries.filter(serie => Array.isArray(serie.data) && serie.data.length > 0);
+
+                    const { lastCapture } = payload;
+
+                    const availableNames = sanitizedSeries.map(s => s.name);
+                    waitHiddenSeries = pruneHiddenSet(waitHiddenSeries, availableNames);
+                    saveHiddenSeries(chartStateKeys.wait, waitHiddenSeries);
 
                     if (!waitTimeChart) {
                         waitTimeChart = new ApexCharts(kanbanWaitTimeChartEl, {
@@ -789,30 +891,52 @@
                                 animations: { enabled: true, easing: 'easeinout', speed: 600 },
                                 toolbar: { show: true },
                                 zoom: { enabled: true },
+                                events: {
+                                    legendClick: (chartContext) => {
+                                        setTimeout(() => {
+                                            waitHiddenSeries = refreshHiddenSeriesFromChart(chartContext, chartStateKeys.wait);
+                                        }, 0);
+                                    },
+                                },
                             },
                             stroke: { curve: 'smooth', width: 2 },
                             dataLabels: { enabled: false },
                             markers: { size: 0, hover: { size: 6 } },
                             xaxis: { type: 'datetime', labels: { datetimeUTC: false } },
                             yaxis: { 
-                                labels: { formatter: (val) => val.toFixed(0) }, 
+                                labels: { 
+                                    formatter: (val) => {
+                                        const num = typeof val === 'number' ? val : Number(val);
+                                        return Number.isFinite(num) ? num.toFixed(0) : '—';
+                                    }
+                                }, 
                                 title: { text: '{{ __('Minutos de espera') }}' } 
                             },
                             tooltip: {
                                 shared: true,
                                 x: { format: 'dd MMM yyyy HH:mm' },
-                                y: { formatter: (val) => `${val.toLocaleString(undefined, { maximumFractionDigits: 2 })} {{ __('min') }}` }
+                                y: { 
+                                    formatter: (val) => {
+                                        const num = typeof val === 'number' ? val : Number(val);
+                                        if (!Number.isFinite(num)) {
+                                            return '—';
+                                        }
+                                        return `${num.toLocaleString(undefined, { maximumFractionDigits: 2 })} {{ __('min') }}`;
+                                    }
+                                }
                             },
                             legend: { position: 'top', horizontalAlign: 'left' },
-                            series: normalizedSeries,
+                            series: sanitizedSeries,
                             noData: { text: '{{ __('Sin datos para mostrar') }}' }
                         });
                         waitTimeChart.render();
+                        applyHiddenSeries(waitTimeChart, waitHiddenSeries);
                     } else {
-                        waitTimeChart.updateSeries(normalizedSeries);
+                        waitTimeChart.updateSeries(sanitizedSeries);
+                        applyHiddenSeries(waitTimeChart, waitHiddenSeries);
                     }
 
-                    const totalLines = new Set(normalizedSeries.map(s => s.name.replace(/ \(WT.*\)$/, ''))).size;
+                    const totalLines = new Set(sanitizedSeries.map(s => s.name.replace(/ \(WT.*\)$/, ''))).size;
                     kanbanWaitTimeUpdated.textContent = lastCapture
                         ? `{{ __('Última captura') }}: ${lastCapture} · {{ __('Líneas activas') }}: ${totalLines}`
                         : `{{ __('Sin capturas disponibles') }} · {{ __('Líneas activas') }}: ${totalLines}`;
@@ -2609,7 +2733,7 @@
                                 return `
                                 <div class="d-flex justify-content-between align-items-center mt-1">
                                     <div class="text-xs text-success" title="Disponible desde">
-                                        <i class="fas fa-unlock me-1"></i>Ready desde ${abs}
+                                        <i class="fas fa-unlock me-1"></i>Disponible desde ${abs}
                                     </div>
                                 </div>`;
                             }

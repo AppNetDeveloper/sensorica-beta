@@ -13,6 +13,12 @@ use Illuminate\Support\Facades\Log;
 class CaptureProductionLineWaitTimes extends Command
 {
     /**
+     * Tiempo máximo permitido (en minutos) para considerar un wait time válido.
+     * Actualmente 365 días para descartar valores anómalos provenientes de datos corruptos.
+     */
+    protected const MAX_WAIT_MINUTES = 365 * 24 * 60;
+
+    /**
      * The name and signature of the console command.
      *
      * @var string
@@ -116,8 +122,24 @@ class CaptureProductionLineWaitTimes extends Command
                     try {
                         $estimatedStart = Carbon::parse($order->estimated_start_datetime);
                         $diffMinutes = $now->diffInMinutes($estimatedStart, false);
-                        // Guardamos el valor absoluto en minutos
-                        $waitMinutes[] = abs($diffMinutes);
+                        if (!is_numeric($diffMinutes)) {
+                            Log::warning("Wait time no numérico para orden {$order->id} en línea {$line->id}");
+                            continue;
+                        }
+
+                        $absDiff = abs((float) $diffMinutes);
+
+                        if (!is_finite($absDiff)) {
+                            Log::warning("Wait time infinito/NaN para orden {$order->id} en línea {$line->id}");
+                            continue;
+                        }
+
+                        if ($absDiff > self::MAX_WAIT_MINUTES) {
+                            Log::warning("Wait time fuera de rango (>{$absDiff} min) para orden {$order->id} en línea {$line->id}");
+                            continue;
+                        }
+
+                        $waitMinutes[] = $absDiff;
                     } catch (\Exception $e) {
                         Log::warning("Error parseando estimated_start_datetime para orden {$order->id}: {$e->getMessage()}");
                         continue;
