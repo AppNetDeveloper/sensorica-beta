@@ -2,6 +2,7 @@ require('dotenv').config({ path: '../.env' });
 const mqtt = require('mqtt');
 const mysql = require('mysql2/promise');
 const axios = require('axios'); // Usamos axios para las solicitudes HTTP
+const https = require('https');
 const { promisify } = require('util');
 const setIntervalAsync = promisify(setInterval); // Usar una versión async-friendly de setInterval
 
@@ -23,6 +24,12 @@ let dbConnection;
 let subscribedTopics = new Set();
 // Usar un Map para valueCounters. Guardará: { count, lastValue, repNumber, config }
 let valueCounters = new Map();
+
+const axiosClient = axios.create({
+    httpsAgent: new https.Agent({
+        rejectUnauthorized: false,
+    }),
+});
 
 // Función para obtener la fecha y hora actual en formato<y_bin_46>-MM-DD HH:mm:ss
 function getCurrentTimestamp() {
@@ -433,7 +440,7 @@ async function processCallApi(topic, data) {
             console.log(`[${getCurrentTimestamp()}] 🚀 Llamando a API: ${apiUrl} con datos para Modbus ID ${modbusConfig.id} (Tópico: ${topic})`);
 
             try {
-                const response = await axios.post(apiUrl, dataToSend, { timeout: 10000 });
+                const response = await axiosClient.post(apiUrl, dataToSend, { timeout: 10000 });
                 console.log(`[${getCurrentTimestamp()}] ✅ API OK para ${topic}. Status: ${response.status}. Respuesta: ${JSON.stringify(response.data)}`);
             } catch (apiError) {
                 if (apiError.response) {

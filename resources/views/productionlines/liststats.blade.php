@@ -316,6 +316,15 @@
                                 <li><a class="dropdown-item" href="#" data-analysis="comparison">
                                     <i class="fas fa-balance-scale text-warning me-2"></i>Comparativa Top/Bottom
                                 </a></li>
+                                <li><a class="dropdown-item" href="#" data-analysis="availability-performance">
+                                    <i class="fas fa-exchange-alt text-primary me-2"></i>Disponibilidad vs Rendimiento
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" data-analysis="shift-variations">
+                                    <i class="fas fa-user-clock text-info me-2"></i>Variaciones por Turno/Operador
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" data-analysis="idle-time">
+                                    <i class="fas fa-hourglass-half text-danger me-2"></i>Consumo de Tiempo Improductivo
+                                </a></li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item" href="#" data-analysis="full">
                                     <i class="fas fa-layer-group text-dark me-2"></i>Análisis Total (CSV extendido)
@@ -588,16 +597,62 @@
         const AI_URL = "{{ config('services.ai.url') }}";
         const AI_TOKEN = "{{ config('services.ai.token') }}";
 
-        // Función auxiliar para limpiar y escapar valores CSV
+        // Funciones auxiliares para normalización y CSV
         function cleanValue(value) {
             if (value === null || value === undefined) return '';
             let str = String(value).trim();
-            // Escapar para CSV
-            str = str.replace(/"/g, '""');
-            if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-                str = `"${str}"`;
+            if (str === '') return '';
+            const needsQuoting = /[",\n\r]/.test(str);
+            if (str.includes('"')) {
+                str = str.replace(/"/g, '""');
+            }
+            return needsQuoting ? `"${str}"` : str;
+        }
+
+        function safeValue(value, fallback = '') {
+            if (value === null || value === undefined) return fallback;
+            const str = String(value).trim();
+            if (!str || str === '-' || str === '--' || str.toLowerCase() === 'null' || str.toLowerCase() === 'undefined') {
+                return fallback;
             }
             return str;
+        }
+
+        function normalizeDateTime(value) {
+            const raw = safeValue(value, '');
+            if (!raw || raw === '0000-00-00 00:00:00' || raw === '0000-00-00') return '';
+            const trimmed = raw.trim();
+            const isIso = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(trimmed);
+            const isSql = /\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}/.test(trimmed);
+            if (isIso) {
+                return trimmed.length === 16 ? `${trimmed}:00` : trimmed;
+            }
+            if (isSql) {
+                const dt = new Date(trimmed.replace(' ', 'T'));
+                if (!Number.isNaN(dt.getTime())) {
+                    return dt.toISOString();
+                }
+            }
+            const parsed = new Date(trimmed);
+            if (!Number.isNaN(parsed.getTime())) {
+                return parsed.toISOString();
+            }
+            return '';
+        }
+
+        function durationToSeconds(value) {
+            const raw = safeValue(value, '');
+            if (!raw) return '';
+            if (/^-?\d+$/.test(raw)) {
+                return parseInt(raw, 10);
+            }
+            const match = raw.match(/(-?)(\d{1,2}):(\d{2}):(\d{2})/);
+            if (!match) return '';
+            const sign = match[1] === '-' ? -1 : 1;
+            const hours = parseInt(match[2], 10) || 0;
+            const minutes = parseInt(match[3], 10) || 0;
+            const seconds = parseInt(match[4], 10) || 0;
+            return sign * (hours * 3600 + minutes * 60 + seconds);
         }
 
         // Análisis General de OEE
@@ -614,20 +669,29 @@
                 dateRange: `${$('#startDate').val()} a ${$('#endDate').val()}`
             };
             
-            // CSV reducido: solo Línea, OEE, Duración
-            let csv = 'Linea,OEE,Duracion\n';
+            // CSV normalizado: Línea, Fecha_Inicio_ISO, Fecha_Fin_ISO, OEE_Porcentaje, Duracion_Segundos, Duracion_Formato
+            let csv = 'Linea,Fecha_Inicio_ISO,Fecha_Fin_ISO,OEE_Porcentaje,Duracion_Segundos,Duracion_Formato\n';
             let count = 0;
-            
+
             table.rows({search: 'applied'}).data().each(function(row) {
                 if (count >= 50) return false;
-                // row es un array con los datos de la fila
-                const linea = cleanValue(row[1] || row.production_line_name);
-                const oee = cleanValue(row[7] || row.oee);
-                const duracion = cleanValue(row[10]);
-                csv += `${linea},${oee},${duracion}\n`;
+                const linea = cleanValue(row.production_line_name ?? row[1]);
+                const startIso = cleanValue(normalizeDateTime(row.created_at ?? row[8]));
+                const endIso = cleanValue(normalizeDateTime(row.updated_at ?? row[9]));
+
+                const oeeRaw = row.oee ?? row[7];
+                const oeeValue = oeeRaw !== null && oeeRaw !== undefined
+                    ? (typeof oeeRaw === 'number' ? oeeRaw.toFixed(2) : safeValue(oeeRaw, '0'))
+                    : '0';
+                const oeePct = cleanValue(oeeValue);
+
+                const durationSeconds = durationToSeconds(row.on_time ?? row[10]) || 0;
+                const durationFormatted = cleanValue(formatTime(durationSeconds));
+
+                csv += `${linea},${startIso},${endIso},${oeePct},${cleanValue(String(durationSeconds))},${durationFormatted}\n`;
                 count++;
             });
-            
+
             return { metrics, csv, type: 'OEE General' };
         }
 
@@ -645,8 +709,8 @@
                 dateRange: `${$('#startDate').val()} a ${$('#endDate').val()}`
             };
             
-            // CSV reducido: Línea, Paradas, Falta Material, Preparación
-            let csv = 'Linea,Paradas,Falta_Material,Preparacion\n';
+            // CSV normalizado: Línea, Paradas_Segundos, Paradas_Formato, Falta_Material_Segundos, Falta_Material_Formato, Preparacion_Segundos, Preparacion_Formato
+            let csv = 'Linea,Paradas_Segundos,Paradas_Formato,Falta_Material_Segundos,Falta_Material_Formato,Preparacion_Segundos,Preparacion_Formato\n';
             let count = 0;
             
             table.rows({search: 'applied'}).data().each(function(row) {
@@ -654,15 +718,11 @@
 
                 const linea = cleanValue(row.production_line_name ?? row[1]);
 
-                const paradasSeconds = row.production_stops_time ?? row[13] ?? 0;
-                const faltaMaterialSeconds = row.down_time ?? row[14] ?? 0;
-                const prepSeconds = row.prepair_time ?? row[11] ?? 0;
+                const paradasSeconds = durationToSeconds(row.production_stops_time ?? row[13]) || 0;
+                const faltaMaterialSeconds = durationToSeconds(row.down_time ?? row[14]) || 0;
+                const prepSeconds = durationToSeconds(row.prepair_time ?? row[11]) || 0;
 
-                const paradas = cleanValue(formatTime(paradasSeconds));
-                const material = cleanValue(formatTime(faltaMaterialSeconds));
-                const prep = cleanValue(formatTime(prepSeconds));
-
-                csv += `${linea},${paradas},${material},${prep}\n`;
+                csv += `${linea},${cleanValue(String(paradasSeconds))},${cleanValue(formatTime(paradasSeconds))},${cleanValue(String(faltaMaterialSeconds))},${cleanValue(formatTime(faltaMaterialSeconds))},${cleanValue(String(prepSeconds))},${cleanValue(formatTime(prepSeconds))}\n`;
                 count++;
             });
 
@@ -683,18 +743,21 @@
                 dateRange: `${$('#startDate').val()} a ${$('#endDate').val()}`
             };
             
-            // CSV reducido: Línea, OEE, Tiempo Lento, UPM Real, UPM Teórico
-            let csv = 'Linea,OEE,Tiempo_Lento,UPM_Real,UPM_Teorico\n';
+            // CSV normalizado: Línea, OEE_Porcentaje, Tiempo_Lento_Segundos, Tiempo_Lento_Formato, UPM_Real, UPM_Teorico
+            let csv = 'Linea,OEE_Porcentaje,Tiempo_Lento_Segundos,Tiempo_Lento_Formato,UPM_Real,UPM_Teorico\n';
             let count = 0;
             
             table.rows({search: 'applied'}).data().each(function(row) {
                 if (count >= 50) return false;
-                const linea = cleanValue(row[1] || row.production_line_name);
-                const oee = cleanValue(row[7] || row.oee);
-                const lento = cleanValue(row[12]);
-                const upmReal = cleanValue(row[5] || row.units_per_minute_real);
-                const upmTeo = cleanValue(row[6] || row.units_per_minute_theoretical);
-                csv += `${linea},${oee},${lento},${upmReal},${upmTeo}\n`;
+                const linea = cleanValue(row.production_line_name ?? row[1]);
+                const oeeRaw = row.oee ?? row[7];
+                const oee = oeeRaw !== null && oeeRaw !== undefined
+                    ? cleanValue(typeof oeeRaw === 'number' ? oeeRaw.toFixed(2) : safeValue(oeeRaw, '0'))
+                    : '0';
+                const lentoSeconds = durationToSeconds(row.slow_time ?? row[12]) || 0;
+                const upmReal = cleanValue(row.units_per_minute_real ?? row[5] ?? '0');
+                const upmTeo = cleanValue(row.units_per_minute_theoretical ?? row[6] ?? '0');
+                csv += `${linea},${oee},${cleanValue(String(lentoSeconds))},${cleanValue(formatTime(lentoSeconds))},${upmReal},${upmTeo}\n`;
                 count++;
             });
             
@@ -716,8 +779,8 @@
                 dateRange: `${$('#startDate').val()} a ${$('#endDate').val()}`
             };
             
-            // CSV reducido: Empleados, OEE, Duración, Tiempo Ganado, Tiempo Mas
-            let csv = 'Empleados,OEE,Duracion,Tiempo_Ganado,Tiempo_Mas\n';
+            // CSV normalizado: Empleados,OEE_Porcentaje,Duracion_Segundos,Duracion_Formato,Tiempo_Ganado_Segundos,Tiempo_Ganado_Formato,Tiempo_Mas_Segundos,Tiempo_Mas_Formato
+            let csv = 'Empleados,OEE_Porcentaje,Duracion_Segundos,Duracion_Formato,Tiempo_Ganado_Segundos,Tiempo_Ganado_Formato,Tiempo_Mas_Segundos,Tiempo_Mas_Formato\n';
             let count = 0;
 
             const toTimeString = (raw) => {
@@ -758,10 +821,10 @@
                 }
                 const empleados = cleanValue(empleadosRaw);
                 const oee = cleanValue(formatOEE(row.oee ?? row[7]));
-                const duracion = cleanValue(toTimeString(row.on_time ?? row[10]));
-                const ganado = cleanValue(toTimeString(row.fast_time ?? row[16]));
-                const mas = cleanValue(toTimeString(row.out_time ?? row[17]));
-                csv += `${empleados},${oee},${duracion},${ganado},${mas}\n`;
+                const durSeconds = durationToSeconds(row.on_time ?? row[10]) || 0;
+                const ganadoSeconds = durationToSeconds(row.fast_time ?? row[16]) || 0;
+                const masSeconds = durationToSeconds(row.out_time ?? row[17]) || 0;
+                csv += `${empleados},${oee},${cleanValue(String(durSeconds))},${cleanValue(toTimeString(durSeconds))},${cleanValue(String(ganadoSeconds))},${cleanValue(toTimeString(ganadoSeconds))},${cleanValue(String(masSeconds))},${cleanValue(toTimeString(masSeconds))}\n`;
                 count++;
             });
             
@@ -782,18 +845,18 @@
             };
             
             // CSV reducido: top/bottom con métricas extendidas
-            let csv = 'Linea,OEE,Duracion,Preparacion,Lento,Paradas,Falta_Material\n';
+            let csv = 'Tipo,Linea,OEE_Porcentaje,Duracion_Segundos,Duracion_Formato,Preparacion_Segundos,Preparacion_Formato,Lento_Segundos,Lento_Formato,Paradas_Segundos,Paradas_Formato,Falta_Material_Segundos,Falta_Material_Formato\n';
             const allRows = [];
             
             table.rows({search: 'applied'}).data().each(function(row) {
                 allRows.push({
-                    linea: cleanValue(row[1] || row.production_line_name),
-                    oee: cleanValue(row[7] || row.oee),
-                    duracion: cleanValue(formatTime(row[10] || row.on_time)),
-                    preparacion: cleanValue(formatTime(row[11] || row.prepair_time)),
-                    lento: cleanValue(formatTime(row[12] || row.slow_time)),
-                    paradas: cleanValue(formatTime(row[13] || row.production_stops_time)),
-                    faltaMaterial: cleanValue(formatTime(row[14] || row.down_time))
+                    linea: cleanValue(row.production_line_name ?? row[1]),
+                    oee: cleanValue((row.oee ?? row[7]) ? (typeof (row.oee ?? row[7]) === 'number' ? (row.oee ?? row[7]).toFixed(2) : safeValue(row.oee ?? row[7], '0')) : '0'),
+                    duracionSeconds: durationToSeconds(row.on_time ?? row[10]) || 0,
+                    preparacionSeconds: durationToSeconds(row.prepair_time ?? row[11]) || 0,
+                    lentoSeconds: durationToSeconds(row.slow_time ?? row[12]) || 0,
+                    paradasSeconds: durationToSeconds(row.production_stops_time ?? row[13]) || 0,
+                    faltaMaterialSeconds: durationToSeconds(row.down_time ?? row[14]) || 0
                 });
             });
             
@@ -801,12 +864,138 @@
             const top10 = allRows.slice(0, 10);
             const bottom10 = allRows.slice(-10);
             
-            csv += '# TOP 10\n';
-            top10.forEach(r => csv += `${r.linea},${r.oee},${r.duracion},${r.preparacion},${r.lento},${r.paradas},${r.faltaMaterial}\n`);
-            csv += '# BOTTOM 10\n';
-            bottom10.forEach(r => csv += `${r.linea},${r.oee},${r.duracion},${r.preparacion},${r.lento},${r.paradas},${r.faltaMaterial}\n`);
+            top10.forEach(r => {
+                csv += `TOP,${r.linea},${r.oee},${cleanValue(String(r.duracionSeconds))},${cleanValue(formatTime(r.duracionSeconds))},${cleanValue(String(r.preparacionSeconds))},${cleanValue(formatTime(r.preparacionSeconds))},${cleanValue(String(r.lentoSeconds))},${cleanValue(formatTime(r.lentoSeconds))},${cleanValue(String(r.paradasSeconds))},${cleanValue(formatTime(r.paradasSeconds))},${cleanValue(String(r.faltaMaterialSeconds))},${cleanValue(formatTime(r.faltaMaterialSeconds))}\n`;
+            });
+            bottom10.forEach(r => {
+                csv += `BOTTOM,${r.linea},${r.oee},${cleanValue(String(r.duracionSeconds))},${cleanValue(formatTime(r.duracionSeconds))},${cleanValue(String(r.preparacionSeconds))},${cleanValue(formatTime(r.preparacionSeconds))},${cleanValue(String(r.lentoSeconds))},${cleanValue(formatTime(r.lentoSeconds))},${cleanValue(String(r.paradasSeconds))},${cleanValue(formatTime(r.paradasSeconds))},${cleanValue(String(r.faltaMaterialSeconds))},${cleanValue(formatTime(r.faltaMaterialSeconds))}\n`;
+            });
             
             return { metrics, csv, type: 'Comparativa' };
+        }
+
+        // Disponibilidad vs Rendimiento
+        function collectAvailabilityPerformanceData() {
+            if (!$.fn.DataTable.isDataTable('#controlWeightTable')) {
+                console.error('[AI] DataTable no inicializada');
+                return { metrics: {}, csv: '', type: 'Disponibilidad vs Rendimiento' };
+            }
+
+            const table = $('#controlWeightTable').DataTable();
+            const metrics = {
+                avgOEE: $('#avgOEE').text() || '0%',
+                dateRange: `${$('#startDate').val()} a ${$('#endDate').val()}`
+            };
+
+            let csv = 'Linea,OEE_Porcentaje,Duracion_Segundos,Duracion_Formato,Tiempo_Disponible_Segundos,Tiempo_Disponible_Formato,Tiempo_Incidencias_Segundos,Tiempo_Incidencias_Formato\n';
+            let count = 0;
+            const maxRows = 100;
+
+            table.rows({search: 'applied'}).data().each(function(row) {
+                if (count >= maxRows) return false;
+
+                const linea = cleanValue(row.production_line_name ?? row[1]);
+                const oeeRaw = row.oee ?? row[7];
+                const oee = cleanValue(oeeRaw !== null && oeeRaw !== undefined ? (typeof oeeRaw === 'number' ? oeeRaw.toFixed(2) : safeValue(oeeRaw, '0')) : '0');
+                const duracionSeconds = durationToSeconds(row.on_time ?? row[10]) || 0;
+                const paradasSeconds = durationToSeconds(row.production_stops_time ?? row[13]) || 0;
+                const faltaSeconds = durationToSeconds(row.down_time ?? row[14]) || 0;
+                const prepSeconds = durationToSeconds(row.prepair_time ?? row[11]) || 0;
+
+                const disponibleSeconds = Math.max(duracionSeconds - paradasSeconds - faltaSeconds, 0);
+                const incidenciasSeconds = paradasSeconds + faltaSeconds + prepSeconds;
+
+                csv += `${linea},${oee},${cleanValue(String(duracionSeconds))},${cleanValue(formatTime(duracionSeconds))},${cleanValue(String(disponibleSeconds))},${cleanValue(formatTime(disponibleSeconds))},${cleanValue(String(incidenciasSeconds))},${cleanValue(formatTime(incidenciasSeconds))}\n`;
+                count++;
+            });
+
+            const note = count >= maxRows ? `Mostrando primeras ${maxRows} líneas` : `Total analizado: ${count} líneas`;
+            return { metrics, csv, type: 'Disponibilidad vs Rendimiento', note };
+        }
+
+        // Variaciones por Turno/Operador
+        function collectShiftVariationsData() {
+            if (!$.fn.DataTable.isDataTable('#controlWeightTable')) {
+                console.error('[AI] DataTable no inicializada');
+                return { metrics: {}, csv: '', type: 'Variaciones por Turno/Operador' };
+            }
+
+            const table = $('#controlWeightTable').DataTable();
+            const selectedOps = $('#operatorSelect').select2('data').map(o => o.text).join(', ') || 'Todos';
+            const metrics = {
+                operators: selectedOps,
+                dateRange: `${$('#startDate').val()} a ${$('#endDate').val()}`
+            };
+
+            let csv = 'Linea,Turno,Operadores,OEE_Porcentaje,Duracion_Segundos,Duracion_Formato,Tiempo_Lento_Segundos,Tiempo_Lento_Formato,Tiempo_Ganado_Segundos,Tiempo_Ganado_Formato\n';
+            let count = 0;
+            const maxRows = 120;
+
+            table.rows({search: 'applied'}).data().each(function(row) {
+                if (count >= maxRows) return false;
+
+                const linea = cleanValue(row.production_line_name ?? row[1]);
+                const turno = cleanValue(row.shift_name ?? row.shift ?? row.turno ?? 'Sin turno');
+                let operadores = '';
+                if (Array.isArray(row.operator_names)) {
+                    operadores = row.operator_names.join(' | ');
+                } else if (row.operator_names) {
+                    operadores = row.operator_names;
+                } else {
+                    operadores = 'Sin asignar';
+                }
+                const operadoresClean = cleanValue(operadores);
+                const oeeRaw = row.oee ?? row[7];
+                const oee = cleanValue(oeeRaw !== null && oeeRaw !== undefined ? (typeof oeeRaw === 'number' ? oeeRaw.toFixed(2) : safeValue(oeeRaw, '0')) : '0');
+                const durSeconds = durationToSeconds(row.on_time ?? row[10]) || 0;
+                const lentoSeconds = durationToSeconds(row.slow_time ?? row[12]) || 0;
+                const ganadoSeconds = durationToSeconds(row.fast_time ?? row[16]) || 0;
+
+                csv += `${linea},${turno},${operadoresClean},${oee},${cleanValue(String(durSeconds))},${cleanValue(formatTime(durSeconds))},${cleanValue(String(lentoSeconds))},${cleanValue(formatTime(lentoSeconds))},${cleanValue(String(ganadoSeconds))},${cleanValue(formatTime(ganadoSeconds))}\n`;
+                count++;
+            });
+
+            const note = count >= maxRows ? `Mostrando primeras ${maxRows} registros por turno` : `Total analizado: ${count} registros`;
+            return { metrics, csv, type: 'Variaciones por Turno/Operador', note };
+        }
+
+        // Consumo de Tiempo Improductivo
+        function collectIdleTimeData() {
+            if (!$.fn.DataTable.isDataTable('#controlWeightTable')) {
+                console.error('[AI] DataTable no inicializada');
+                return { metrics: {}, csv: '', type: 'Tiempo improductivo' };
+            }
+
+            const table = $('#controlWeightTable').DataTable();
+            const metrics = {
+                totalSlowTime: $('#totalSlowTime').text() || '00:00:00',
+                totalStopsTime: $('#totalProductionStopsTime').text() || '00:00:00',
+                totalDownTime: $('#totalDownTime').text() || '00:00:00',
+                dateRange: `${$('#startDate').val()} a ${$('#endDate').val()}`
+            };
+
+            let csv = 'Linea,OEE_Porcentaje,Tiempo_Lento_Segundos,Tiempo_Lento_Formato,Paradas_Segundos,Paradas_Formato,Falta_Material_Segundos,Falta_Material_Formato,Tiempo_Neto_Produccion_Segundos,Tiempo_Neto_Produccion_Formato\n';
+            let count = 0;
+            const maxRows = 120;
+
+            table.rows({search: 'applied'}).data().each(function(row) {
+                if (count >= maxRows) return false;
+
+                const linea = cleanValue(row.production_line_name ?? row[1]);
+                const oeeRaw = row.oee ?? row[7];
+                const oee = cleanValue(oeeRaw !== null && oeeRaw !== undefined ? (typeof oeeRaw === 'number' ? oeeRaw.toFixed(2) : safeValue(oeeRaw, '0')) : '0');
+                const lentoSeconds = durationToSeconds(row.slow_time ?? row[12]) || 0;
+                const paradasSeconds = durationToSeconds(row.production_stops_time ?? row[13]) || 0;
+                const faltaSeconds = durationToSeconds(row.down_time ?? row[14]) || 0;
+                const durSeconds = durationToSeconds(row.on_time ?? row[10]) || 0;
+                const netoSeconds = Math.max(durSeconds - paradasSeconds - faltaSeconds - lentoSeconds, 0);
+
+                csv += `${linea},${oee},${cleanValue(String(lentoSeconds))},${cleanValue(formatTime(lentoSeconds))},${cleanValue(String(paradasSeconds))},${cleanValue(formatTime(paradasSeconds))},${cleanValue(String(faltaSeconds))},${cleanValue(formatTime(faltaSeconds))},${cleanValue(String(netoSeconds))},${cleanValue(formatTime(netoSeconds))}\n`;
+                count++;
+            });
+
+            const note = count >= maxRows ? `Mostrando primeras ${maxRows} líneas` : `Total analizado: ${count} líneas`;
+            return { metrics, csv, type: 'Tiempo improductivo', note };
         }
 
         // Análisis Total extendido
@@ -827,15 +1016,15 @@
                 totalDownTime: $('#totalDownTime').text() || '00:00:00'
             };
 
-            let csv = 'Linea,Orden,Empleados,OEE,Duracion,Diferencia_Teorica,Preparacion,Lento,Paradas,Falta_Material\n';
+            let csv = 'Linea,Orden,Empleados,Fecha_Inicio_ISO,Fecha_Fin_ISO,OEE_Porcentaje,Duracion_Segundos,Duracion_Formato,Diferencia_Teorica_Segundos,Diferencia_Teorica_Formato,Preparacion_Segundos,Preparacion_Formato,Lento_Segundos,Lento_Formato,Paradas_Segundos,Paradas_Formato,Falta_Material_Segundos,Falta_Material_Formato\n';
             let count = 0;
-            const maxRows = 50;
+            const maxRows = 150;
 
             table.rows({search: 'applied'}).data().each(function(row) {
                 if (count >= maxRows) return false;
 
-                const linea = cleanValue(row[1] || row.production_line_name);
-                const orden = cleanValue(row[2] || row.order_id);
+                const linea = cleanValue(row.production_line_name ?? row[1]);
+                const orden = cleanValue(row.order_id ?? row[2]);
                 let empleadosRaw = '';
                 if (Array.isArray(row.operator_names)) {
                     empleadosRaw = row.operator_names.join(' | ');
@@ -843,25 +1032,24 @@
                     empleadosRaw = row.operator_names;
                 }
                 const empleados = cleanValue(empleadosRaw);
-                const oee = cleanValue(row[7] || row.oee);
-                const duracion = cleanValue(formatTime(row[10]));
+                const startIso = cleanValue(normalizeDateTime(row.created_at ?? row[8]));
+                const endIso = cleanValue(normalizeDateTime(row.updated_at ?? row[9]));
 
-                const fastSeconds = row.fast_time ? parseInt(row.fast_time, 10) || 0 : 0;
-                const outSeconds = row.out_time ? parseInt(row.out_time, 10) || 0 : 0;
+                const oeeRaw = row.oee ?? row[7];
+                const oee = cleanValue(oeeRaw !== null && oeeRaw !== undefined ? (typeof oeeRaw === 'number' ? oeeRaw.toFixed(2) : safeValue(oeeRaw, '0')) : '0');
+
+                const durSeconds = durationToSeconds(row.on_time ?? row[10]) || 0;
+                const fastSeconds = durationToSeconds(row.fast_time ?? row[16]) || 0;
+                const outSeconds = durationToSeconds(row.out_time ?? row[17]) || 0;
                 const diffSeconds = outSeconds - fastSeconds;
-                let diffFormatted = '00:00:00';
-                if (diffSeconds !== 0) {
-                    const sign = diffSeconds > 0 ? '+' : '-';
-                    diffFormatted = `${sign}${formatTime(Math.abs(diffSeconds))}`;
-                }
-                const diferencia = cleanValue(diffFormatted);
+                const diffFormatted = diffSeconds === 0 ? '00:00:00' : `${diffSeconds > 0 ? '+' : '-'}${formatTime(Math.abs(diffSeconds))}`;
 
-                const preparacion = cleanValue(formatTime(row[11] || row.prepair_time));
-                const lento = cleanValue(formatTime(row[12] || row.slow_time));
-                const paradas = cleanValue(formatTime(row[13] || row.production_stops_time));
-                const faltaMaterial = cleanValue(formatTime(row[14] || row.down_time));
+                const prepSeconds = durationToSeconds(row.prepair_time ?? row[11]) || 0;
+                const lentoSeconds = durationToSeconds(row.slow_time ?? row[12]) || 0;
+                const paradasSeconds = durationToSeconds(row.production_stops_time ?? row[13]) || 0;
+                const faltaSeconds = durationToSeconds(row.down_time ?? row[14]) || 0;
 
-                csv += `${linea},${orden},${empleados},${oee},${duracion},${diferencia},${preparacion},${lento},${paradas},${faltaMaterial}\n`;
+                csv += `${linea},${orden},${empleados},${startIso},${endIso},${oee},${cleanValue(String(durSeconds))},${cleanValue(formatTime(durSeconds))},${cleanValue(String(diffSeconds))},${cleanValue(diffFormatted)},${cleanValue(String(prepSeconds))},${cleanValue(formatTime(prepSeconds))},${cleanValue(String(lentoSeconds))},${cleanValue(formatTime(lentoSeconds))},${cleanValue(String(paradasSeconds))},${cleanValue(formatTime(paradasSeconds))},${cleanValue(String(faltaSeconds))},${cleanValue(formatTime(faltaSeconds))}\n`;
                 count++;
             });
 
@@ -1031,6 +1219,67 @@
                     title: 'Comparativa Alto/Bajo',
                     prompt: `Compara top 10 vs bottom 10, diferencias clave y plan de acción.`
                 },
+                'availability-performance': {
+                    title: 'Disponibilidad vs Rendimiento',
+                    prompt: `Analiza la relación entre disponibilidad operativa y rendimiento real de las líneas.
+
+IMPORTANTE: Procesa TODAS las filas del CSV.
+
+Columnas normalizadas:
+- Linea
+- OEE_Porcentaje
+- Duracion_Segundos, Duracion_Formato
+- Tiempo_Disponible_Segundos, Tiempo_Disponible_Formato
+- Tiempo_Incidencias_Segundos, Tiempo_Incidencias_Formato
+
+Objetivos:
+1. Identificar líneas donde las incidencias reducen significativamente el tiempo disponible
+2. Comparar disponibilidad vs OEE y detectar desviaciones
+3. Priorizar 3 acciones para equilibrar disponibilidad y rendimiento
+
+Entrega conclusiones concretas y cuantificadas.`
+                },
+                'shift-variations': {
+                    title: 'Variaciones por Turno/Operador',
+                    prompt: `Analiza diferencias de rendimiento entre turnos y operadores.
+
+IMPORTANTE: Procesa TODAS las filas del CSV.
+
+Columnas normalizadas:
+- Linea, Turno, Operadores
+- OEE_Porcentaje
+- Duracion_Segundos, Duracion_Formato
+- Tiempo_Lento_Segundos, Tiempo_Lento_Formato
+- Tiempo_Ganado_Segundos, Tiempo_Ganado_Formato
+
+Objetivos:
+1. Detectar turnos y equipos con mejor/peor desempeño
+2. Identificar factores comunes en tiempos lentos o ganados
+3. Recomendar 3 acciones para homogeneizar resultados entre turnos
+
+Sintetiza hallazgos y apoya con cifras.`
+                },
+                'idle-time': {
+                    title: 'Consumo de Tiempo Improductivo',
+                    prompt: `Evalúa cómo se distribuye el tiempo improductivo (lento, paradas, falta de material).
+
+IMPORTANTE: Procesa TODAS las filas del CSV.
+
+Columnas normalizadas:
+- Linea
+- OEE_Porcentaje
+- Tiempo_Lento_Segundos, Tiempo_Lento_Formato
+- Paradas_Segundos, Paradas_Formato
+- Falta_Material_Segundos, Falta_Material_Formato
+- Tiempo_Neto_Produccion_Segundos, Tiempo_Neto_Produccion_Formato
+
+Objetivos:
+1. Identificar las líneas con mayor peso de tiempo improductivo
+2. Diferenciar qué causa (lento, paradas, falta material) domina en cada caso
+3. Priorizar 3 iniciativas para recuperar tiempo productivo
+
+Resume de forma accionable.`
+                },
                 'full': {
                     title: 'Análisis Total (CSV extendido)',
                     prompt: `Genera conclusiones globales. Resume insights clave, riesgos y oportunidades usando todos los datos disponibles.`
@@ -1065,6 +1314,15 @@
                         break;
                     case 'comparison':
                         data = collectComparisonData();
+                        break;
+                    case 'availability-performance':
+                        data = collectAvailabilityPerformanceData();
+                        break;
+                    case 'shift-variations':
+                        data = collectShiftVariationsData();
+                        break;
+                    case 'idle-time':
+                        data = collectIdleTimeData();
                         break;
                     case 'full':
                         data = collectFullAnalysisData();

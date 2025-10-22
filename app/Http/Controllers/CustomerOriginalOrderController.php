@@ -781,7 +781,7 @@ class CustomerOriginalOrderController extends Controller
         $recordsTotal = (clone $ordersQuery)->count();
 
         $orders = $ordersQuery
-            ->with(['customerClient:id,name', 'originalOrderProcesses' => function ($query) use ($filters) {
+            ->with(['customerClient:id,name', 'routeName:id,name', 'originalOrderProcesses' => function ($query) use ($filters) {
                 $query->with(['process:id,code,description,sequence', 'productionOrders:id,original_order_process_id,status,finished_at'])
                     ->orderBy('grupo_numero')
                     ->orderBy('id');
@@ -818,7 +818,7 @@ class CustomerOriginalOrderController extends Controller
         $ordersQuery = $this->buildProductionTimesBaseQuery($customer, $filters);
 
         $orders = $ordersQuery
-            ->with(['originalOrderProcesses' => function ($query) use ($filters) {
+            ->with(['routeName:id,name', 'originalOrderProcesses' => function ($query) use ($filters) {
                 $query->select('id', 'original_order_id', 'process_id', 'grupo_numero', 'finished_at', 'created', 'created_at', 'time')
                     ->orderBy('grupo_numero')
                     ->orderBy('id');
@@ -1186,6 +1186,7 @@ class CustomerOriginalOrderController extends Controller
             'order_id' => $order->order_id,
             'client_number' => $order->client_number,
             'customer_client_name' => optional($order->customerClient)->name,
+            'route_name' => optional($order->routeName)->name,
             'fecha_pedido_erp' => optional($erpDate)->format('Y-m-d H:i:s'),
             'fecha_pedido_erp_ts' => optional($erpDate)?->timestamp,
             'created_at' => optional($createdAt)->format('Y-m-d H:i:s'),
@@ -1194,6 +1195,10 @@ class CustomerOriginalOrderController extends Controller
             'finished_at_ts' => optional($finishedAt)?->timestamp,
             'delivery_date' => optional($deliveryDate)->format('Y-m-d H:i:s'),
             'delivery_date_ts' => optional($deliveryDate)?->timestamp,
+            'delivery_date_planned' => optional($plannedDelivery)->format('Y-m-d H:i:s'),
+            'delivery_date_planned_ts' => optional($plannedDelivery)?->timestamp,
+            'actual_delivery_date' => optional($actualDelivery)->format('Y-m-d H:i:s'),
+            'actual_delivery_date_ts' => optional($actualDelivery)?->timestamp,
             'erp_to_created_seconds' => $erpToCreated,
             'erp_to_created_formatted' => $this->formatSeconds($erpToCreated),
             'erp_to_finished_seconds' => $erpToFinished,
@@ -1212,6 +1217,8 @@ class CustomerOriginalOrderController extends Controller
             'group_metrics' => $groupMetrics,
             'process_aggregates' => $processAggregates,
             'order_delivery_delay_seconds' => $deliveryDelaySigned,
+            'order_delivery_delay_formatted' => $this->formatSeconds($deliveryDelaySigned),
+            'use_actual_delivery' => (bool)($filters['use_actual_delivery'] ?? false),
         ];
     }
 

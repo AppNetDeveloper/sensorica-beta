@@ -168,12 +168,21 @@
                                     <li><a class="dropdown-item" href="#" data-analysis="created-to-finished">
                                         <i class="fas fa-industry text-success me-2"></i>{{ __("Tiempos Creación → Fin") }}
                                     </a></li>
+                                    <li><a class="dropdown-item" href="#" data-analysis="finish-to-delivery">
+                                        <i class="fas fa-truck-loading text-warning me-2"></i>{{ __("Retraso Fin → Entrega") }}
+                                    </a></li>
                                     <li><a class="dropdown-item" href="#" data-analysis="process-gaps">
                                         <i class="fas fa-project-diagram text-warning me-2"></i>{{ __("Gaps entre Procesos") }}
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="#" data-analysis="gap-alerts">
+                                        <i class="fas fa-exclamation-triangle text-danger me-2"></i>{{ __("Alertas de Brechas") }}
                                     </a></li>
                                     <li><hr class="dropdown-divider"></li>
                                     <li><a class="dropdown-item" href="#" data-analysis="by-client">
                                         <i class="fas fa-users text-primary me-2"></i>{{ __("Análisis por Cliente") }}
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="#" data-analysis="order-type-critical">
+                                        <i class="fas fa-cubes text-secondary me-2"></i>{{ __("Órdenes por Tipo") }}
                                     </a></li>
                                     <li><a class="dropdown-item" href="#" data-analysis="slow-processes">
                                         <i class="fas fa-turtle text-danger me-2"></i>{{ __("Procesos Lentos") }}
@@ -1772,12 +1781,12 @@
             function cleanValue(value) {
                 if (value === null || value === undefined) return '';
                 let str = String(value).trim();
-                // Escapar para CSV
-                str = str.replace(/"/g, '""');
-                if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-                    str = `"${str}"`;
+                if (str === '') return '';
+                const needsQuoting = /[",\n\r]/.test(str);
+                if (str.includes('"')) {
+                    str = str.replace(/"/g, '""');
                 }
-                return str;
+                return needsQuoting ? `"${str}"` : str;
             }
 
             function safeValue(value, fallback = '') {
@@ -1828,6 +1837,19 @@
                 if (Number.isNaN(hours) || Number.isNaN(minutes) || Number.isNaN(seconds)) return '';
                 const total = sign * (hours * 3600 + minutes * 60 + seconds);
                 return String(total);
+            }
+
+            function formatSignedSeconds(value) {
+                const parsed = parseInt(value, 10);
+                if (Number.isNaN(parsed) || parsed === 0) return '0';
+                return parsed > 0 ? `+${parsed}` : `${parsed}`;
+            }
+
+            function formatSignedDuration(value) {
+                const parsed = parseInt(value, 10);
+                if (Number.isNaN(parsed) || parsed === 0) return '00:00:00';
+                const prefix = parsed > 0 ? '+' : '-';
+                return `${prefix}${formatTime(Math.abs(parsed))}`;
             }
 
             // Análisis 1: Tiempos ERP → Creación
@@ -1929,6 +1951,101 @@
                 return { metrics, csv, type: 'Tiempos Creación → Fin', note };
             }
 
+            // Análisis adicional: Retraso Fin → Entrega
+            function collectFinishToDeliveryData() {
+                const table = $('#production-times-table').DataTable();
+                if (!table) {
+                    console.error('[AI] DataTable no inicializada');
+                    return { metrics: {}, csv: '', type: 'Retraso Fin → Entrega' };
+                }
+
+                const header = 'Order_ID,Cliente,Fecha_Fin_ISO,Fecha_Entrega_Usada_ISO,Fecha_Entrega_Planificada_ISO,Fecha_Entrega_Real_ISO,Tiempo_Fin_a_Entrega_Segundos,Tiempo_Fin_a_Entrega_Formato,Retraso_vs_Plan_Segundos,Retraso_vs_Plan_Formato\n';
+                let csv = header;
+
+                const rows = table.rows({search: 'applied'}).data();
+                const deliveryReference = $('#use_actual_delivery').is(':checked')
+                    ? 'Fecha real de entrega (actual_delivery_date)'
+                    : 'Fecha ERP programada (delivery_date)';
+
+                const onTimeTotalRaw = latestSummary?.sla_total;
+                const onTimeCountRaw = latestSummary?.sla_on_time_count;
+                let onTimeRatio = latestSummary?.sla_on_time_ratio;
+                if (typeof onTimeRatio === 'number' && !Number.isNaN(onTimeRatio)) {
+                    onTimeRatio = `${(onTimeRatio * 100).toFixed(1)}%`;
+                } else {
+                    onTimeRatio = '-';
+                }
+
+                if (!rows || rows.length === 0) {
+                    const metrics = {
+                        ordersTotal: $('#kpi-orders-total').text() || '0',
+                        avgFinishToDelivery: '-',
+                        deliveriesDelayed: 0,
+                        slaOnTime: `${onTimeCountRaw ?? '-'} / ${onTimeTotalRaw ?? '-'}`,
+                        slaRate: onTimeRatio,
+                        deliveryReference,
+                        dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
+                    };
+                    return { metrics, csv: header, type: 'Retraso Fin → Entrega', note: 'Sin datos disponibles' };
+                }
+
+                let count = 0;
+                const maxRows = 150;
+                let totalSeconds = 0;
+                let validSeconds = 0;
+                let delayedCount = 0;
+
+                rows.each(function(row) {
+                    if (count >= maxRows) return false;
+
+                    const orderId = cleanValue(safeValue(row.order_id, '0'));
+                    const cliente = cleanValue(safeValue(row.customer_client_name, 'Sin cliente'));
+                    const fechaFinIso = cleanValue(normalizeDateTime(row.finished_at));
+                    const fechaEntregaUsadaIso = cleanValue(normalizeDateTime(row.delivery_date));
+                    const fechaEntregaPlanIso = cleanValue(normalizeDateTime(row.delivery_date_planned));
+                    const fechaEntregaRealIso = cleanValue(normalizeDateTime(row.actual_delivery_date));
+
+                    const tiempoFinEntregaFormato = safeValue(row.finished_to_delivery_formatted, '00:00:00');
+                    const tiempoFinEntregaSegundosRaw = durationToSeconds(tiempoFinEntregaFormato);
+                    const tiempoFinEntregaSegundos = tiempoFinEntregaSegundosRaw !== '' ? tiempoFinEntregaSegundosRaw : '0';
+
+                    let delaySegundos = '0';
+                    let delayFormato = '00:00:00';
+                    const delayRaw = typeof row.order_delivery_delay_seconds === 'number' ? row.order_delivery_delay_seconds : null;
+                    if (delayRaw !== null && !Number.isNaN(delayRaw)) {
+                        delaySegundos = String(delayRaw);
+                        delayFormato = formatSignedDuration(delayRaw);
+                        if (delayRaw > 0) {
+                            delayedCount++;
+                        }
+                    }
+
+                    const parsedSeconds = parseInt(tiempoFinEntregaSegundosRaw, 10);
+                    if (!Number.isNaN(parsedSeconds)) {
+                        totalSeconds += parsedSeconds;
+                        validSeconds++;
+                    }
+
+                    csv += `${orderId},${cliente},${fechaFinIso},${fechaEntregaUsadaIso},${fechaEntregaPlanIso},${fechaEntregaRealIso},${cleanValue(tiempoFinEntregaSegundos)},${cleanValue(tiempoFinEntregaFormato)},${delaySegundos},${cleanValue(delayFormato)}\n`;
+                    count++;
+                });
+
+                const avgSeconds = validSeconds > 0 ? Math.round(totalSeconds / validSeconds) : 0;
+
+                const metrics = {
+                    ordersTotal: $('#kpi-orders-total').text() || '0',
+                    avgFinishToDelivery: formatTime(avgSeconds),
+                    deliveriesDelayed: delayedCount,
+                    slaOnTime: `${onTimeCountRaw ?? '-'} / ${onTimeTotalRaw ?? '-'}`,
+                    slaRate: onTimeRatio,
+                    deliveryReference,
+                    dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
+                };
+
+                const note = count >= maxRows ? `Mostrando primeras ${maxRows} órdenes` : `Total: ${count} órdenes`;
+                return { metrics, csv, type: 'Retraso Fin → Entrega', note };
+            }
+
             // Análisis 3: Rendimiento de Órdenes (mantener como referencia)
             function collectOrdersOverviewData() {
                 const table = $('#production-times-table').DataTable();
@@ -1967,6 +2084,193 @@
 
                 const note = count >= maxRows ? `Mostrando primeras ${maxRows} órdenes` : `Total: ${count} órdenes`;
                 return { metrics, csv, type: 'Rendimiento de Órdenes', note };
+            }
+
+            // Análisis adicional: Órdenes críticas por tipo de producto
+            function collectOrderTypeCriticalData() {
+                const table = $('#production-times-table').DataTable();
+                if (!table) {
+                    console.error('[AI] DataTable no inicializada');
+                    return { metrics: {}, csv: '', type: 'Órdenes críticas por tipo' };
+                }
+
+                const header = 'Order_ID,Cliente,Tipo_Producto,Estado_Entrega,Fecha_Fin_ISO,Fecha_Entrega_Usada_ISO,Fecha_Entrega_Planificada_ISO,Fecha_Entrega_Real_ISO,Tiempo_Fin_a_Entrega_Segundos,Tiempo_Fin_a_Entrega_Formato,Retraso_vs_Plan_Segundos,Retraso_vs_Plan_Formato\n';
+                let csv = header;
+                const rows = table.rows({search: 'applied'}).data();
+
+                if (!rows || rows.length === 0) {
+                    const metrics = {
+                        ordersTotal: $('#kpi-orders-total').text() || '0',
+                        delayedTotal: 0,
+                        worstType: '-',
+                        worstAvgDelay: '-',
+                        dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
+                    };
+                    return { metrics, csv: header, type: 'Órdenes críticas por tipo', note: 'Sin datos disponibles' };
+                }
+
+                const typeStats = {};
+                const maxRows = 150;
+                let count = 0;
+                let delayedTotal = 0;
+
+                rows.each(function(row) {
+                    if (count >= maxRows) return false;
+
+                    const orderId = cleanValue(safeValue(row.order_id, '0'));
+                    const cliente = cleanValue(safeValue(row.customer_client_name, 'Sin cliente'));
+                    const tipoProductoRaw = safeValue(row.route_name, 'Sin tipo');
+                    const tipoProducto = cleanValue(tipoProductoRaw);
+                    const fechaFinIso = cleanValue(normalizeDateTime(row.finished_at));
+                    const fechaEntregaUsadaIso = cleanValue(normalizeDateTime(row.delivery_date));
+                    const fechaEntregaPlanIso = cleanValue(normalizeDateTime(row.delivery_date_planned));
+                    const fechaEntregaRealIso = cleanValue(normalizeDateTime(row.actual_delivery_date));
+
+                    const tiempoFinEntregaFormato = safeValue(row.finished_to_delivery_formatted, '00:00:00');
+                    const tiempoFinEntregaSegundosStr = durationToSeconds(tiempoFinEntregaFormato);
+                    const tiempoFinEntregaSegundos = tiempoFinEntregaSegundosStr !== '' ? parseInt(tiempoFinEntregaSegundosStr, 10) : 0;
+
+                    let delaySegundos = 0;
+                    let delayFormato = '00:00:00';
+                    const delayRaw = typeof row.order_delivery_delay_seconds === 'number' ? row.order_delivery_delay_seconds : null;
+                    if (delayRaw !== null && !Number.isNaN(delayRaw)) {
+                        delaySegundos = delayRaw;
+                        delayFormato = formatSignedDuration(delayRaw);
+                    }
+
+                    const estadoEntrega = delaySegundos > 0 ? 'Retraso' : (delaySegundos < 0 ? 'Adelantado' : 'A tiempo');
+                    if (delaySegundos > 0) {
+                        delayedTotal++;
+                    }
+
+                    if (!typeStats[tipoProductoRaw]) {
+                        typeStats[tipoProductoRaw] = {
+                            count: 0,
+                            delayed: 0,
+                            delaySum: 0,
+                        };
+                    }
+
+                    typeStats[tipoProductoRaw].count++;
+                    if (delaySegundos > 0) {
+                        typeStats[tipoProductoRaw].delayed++;
+                        typeStats[tipoProductoRaw].delaySum += delaySegundos;
+                    }
+
+                    csv += `${orderId},${cliente},${tipoProducto},${estadoEntrega},${fechaFinIso},${fechaEntregaUsadaIso},${fechaEntregaPlanIso},${fechaEntregaRealIso},${cleanValue(String(tiempoFinEntregaSegundos))},${cleanValue(tiempoFinEntregaFormato)},${cleanValue(String(delaySegundos))},${cleanValue(delayFormato)}\n`;
+                    count++;
+                });
+
+                let worstType = '-';
+                let worstAvgDelaySeconds = null;
+                Object.entries(typeStats).forEach(([type, stats]) => {
+                    if (stats.delayed > 0) {
+                        const avgDelay = stats.delaySum / stats.delayed;
+                        if (worstAvgDelaySeconds === null || avgDelay > worstAvgDelaySeconds) {
+                            worstAvgDelaySeconds = avgDelay;
+                            worstType = type;
+                        }
+                    }
+                });
+
+                const worstAvgDelay = worstAvgDelaySeconds !== null ? formatTime(Math.round(worstAvgDelaySeconds)) : '-';
+
+                const metrics = {
+                    ordersTotal: $('#kpi-orders-total').text() || '0',
+                    delayedTotal,
+                    worstType: cleanValue(worstType)?.replace(/^"|"$/g, '') || '-',
+                    worstAvgDelay,
+                    dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
+                };
+
+                const note = count >= maxRows ? `Mostrando primeras ${maxRows} órdenes` : `Total: ${count} órdenes`;
+                return { metrics, csv, type: 'Órdenes críticas por tipo', note };
+            }
+
+            // Análisis adicional: Alertas de brechas acumuladas
+            function collectGapAlertsData() {
+                const table = $('#production-times-table').DataTable();
+                if (!table) {
+                    console.error('[AI] DataTable no inicializada');
+                    return { metrics: {}, csv: '', type: 'Alertas de brechas' };
+                }
+
+                const header = 'Order_ID,Cliente,Procesos_Afectados,Gap_Total_Segundos,Gap_Total_Formato,Gap_Maximo_Segundos,Gap_Maximo_Formato,Gap_Promedio_Segundos,Gap_Promedio_Formato\n';
+                let csv = header;
+                const rows = table.rows({search: 'applied'}).data();
+
+                if (!rows || rows.length === 0) {
+                    const metrics = {
+                        ordersTotal: $('#kpi-orders-total').text() || '0',
+                        ordersOverThreshold: 0,
+                        threshold: '02:00:00',
+                        dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
+                    };
+                    return { metrics, csv: header, type: 'Alertas de brechas', note: 'Sin datos disponibles' };
+                }
+
+                const thresholdSeconds = 2 * 3600; // 2 horas
+                const maxRows = 150;
+                let count = 0;
+                let ordersOverThreshold = 0;
+                let processedOrders = 0;
+
+                rows.each(function(row) {
+                    if (count >= maxRows) return false;
+
+                    const processes = Array.isArray(row.processes) ? row.processes : [];
+                    if (!processes.length) {
+                        return;
+                    }
+
+                    let totalGap = 0;
+                    let maxGap = 0;
+                    let gapsCount = 0;
+
+                    processes.forEach(proc => {
+                        let gapSeconds = null;
+                        if (typeof proc.gap_seconds === 'number') {
+                            gapSeconds = proc.gap_seconds;
+                        } else if (proc.gap_formatted) {
+                            const parsed = durationToSeconds(proc.gap_formatted);
+                            gapSeconds = parsed !== '' ? parseInt(parsed, 10) : null;
+                        }
+
+                        if (gapSeconds !== null && !Number.isNaN(gapSeconds) && gapSeconds > 0) {
+                            totalGap += gapSeconds;
+                            gapsCount++;
+                            if (gapSeconds > maxGap) {
+                                maxGap = gapSeconds;
+                            }
+                        }
+                    });
+
+                    if (gapsCount === 0) {
+                        return;
+                    }
+
+                    processedOrders++;
+
+                    const avgGap = Math.round(totalGap / gapsCount);
+                    if (totalGap >= thresholdSeconds) {
+                        ordersOverThreshold++;
+                    }
+
+                    const orderId = cleanValue(safeValue(row.order_id, '0'));
+                    const cliente = cleanValue(safeValue(row.customer_client_name, 'Sin cliente'));
+                    csv += `${orderId},${cliente},${cleanValue(String(gapsCount))},${cleanValue(String(totalGap))},${cleanValue(formatTime(totalGap))},${cleanValue(String(maxGap))},${cleanValue(formatTime(maxGap))},${cleanValue(String(avgGap))},${cleanValue(formatTime(avgGap))}\n`;
+                    count++;
+                });
+
+                const metrics = {
+                    ordersTotal: processedOrders,
+                    ordersOverThreshold,
+                    threshold: formatTime(thresholdSeconds),
+                    dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
+                };
+
+                const note = count >= maxRows ? `Incluye primeras ${maxRows} órdenes evaluadas` : `Total: ${count} órdenes evaluadas`;
+                return { metrics, csv, type: 'Alertas de brechas', note };
             }
 
             // Análisis 4: Gaps por Proceso
@@ -2395,11 +2699,32 @@ Foco del analisis:
 
 Prioriza hallazgos accionables usando TODOS los datos.`
                 },
+                'finish-to-delivery': {
+                    title: 'Retraso Fin → Entrega',
+                    prompt: `Analiza el tramo final desde la finalizacion de produccion hasta la entrega.
+
+IMPORTANTE: Procesa TODAS las filas del CSV.
+
+Columnas normalizadas:
+- Order_ID, Cliente
+- Fecha_Fin_ISO, Fecha_Entrega_Usada_ISO
+- Fecha_Entrega_Planificada_ISO, Fecha_Entrega_Real_ISO
+- Tiempo_Fin_a_Entrega_Segundos, Tiempo_Fin_a_Entrega_Formato
+- Retraso_vs_Plan_Segundos, Retraso_vs_Plan_Formato
+
+Objetivos:
+1. Identificar pedidos con mayor retraso entre fin y entrega (top 5)
+2. Comparar cumplimiento versus SLA (entregas a tiempo vs tarde)
+3. Detectar clientes o tipos con mayor retraso recurrente
+4. Sugerir 3 acciones para reducir retrasos post-produccion
+
+Incluye una breve nota sobre si se esta usando fecha real o programada de entrega.`
+                },
                 'process-gaps': {
                     title: 'Gaps entre Procesos',
                     prompt: `Analiza los gaps (tiempos muertos) entre procesos consecutivos.
 
-IMPORTANTE: Lee TODAS las filas del CSV.
+IMPORTANTE: Procesa TODAS las filas del CSV.
 
 Columnas normalizadas:
 - Order_ID, Codigo_Proceso, Nombre_Proceso
@@ -2410,7 +2735,7 @@ Focus del analisis:
 1. Identificar procesos con mayores tiempos de espera (top 10)
 2. Detectar patrones de gaps entre procesos especificos
 3. Comparar duracion de proceso vs tiempo de espera
-4. Proponer 3 soluciones para reducir tiempos muertos
+4. Proponer 3 acciones especificas para optimizar
 
 Se conciso y cuantifica impacto usando TODOS los datos.`
                 },
@@ -2433,10 +2758,53 @@ Objetivos:
 
 Manten el analisis breve usando TODOS los datos.`
                 },
+                'order-type-critical': {
+                    title: 'Órdenes críticas por tipo',
+                    prompt: `Agrupa las ordenes por tipo de producto o ruta y detecta donde hay retrasos criticos.
+
+IMPORTANTE: Analiza TODAS las filas del CSV.
+
+Columnas normalizadas:
+- Order_ID, Cliente, Tipo_Producto
+- Estado_Entrega (Retraso/A tiempo/Adelantado)
+- Fecha_Fin_ISO, Fecha_Entrega_Usada_ISO
+- Tiempo_Fin_a_Entrega_Segundos, Tiempo_Fin_a_Entrega_Formato
+- Retraso_vs_Plan_Segundos, Retraso_vs_Plan_Formato
+
+Objetivos:
+1. Identificar los 3 tipos de producto con mayor incidencia de retrasos
+2. Cuantificar el retraso promedio por tipo (en segundos y formato HH:MM:SS)
+3. Señalar casos criticos concretos (orden y cliente)
+4. Sugerir acciones orientadas por tipo para mejorar el cumplimiento
+
+Se breve y cuantifica siempre que sea posible.`
+                },
+                'gap-alerts': {
+                    title: 'Alertas de brechas acumuladas',
+                    prompt: `Detecta ordenes con brechas acumuladas elevadas entre procesos.
+
+IMPORTANTE: Procesa TODAS las filas del CSV.
+
+Columnas normalizadas:
+- Order_ID, Cliente
+- Procesos_Afectados
+- Gap_Total_Segundos, Gap_Total_Formato
+- Gap_Maximo_Segundos, Gap_Maximo_Formato
+- Gap_Promedio_Segundos, Gap_Promedio_Formato
+
+Analisis solicitado:
+1. Identificar ordenes que superan el umbral definido (2 horas)
+2. Destacar top 5 ordenes con mayor gap total
+3. Analizar si hay clientes/procesos repetidos entre las alertas
+4. Proponer 3 medidas para reducir estas brechas acumuladas
+
+Entrega el analisis de forma concisa y priorizada.`
+                },
                 'slow-processes': {
                     title: 'Procesos Lentos',
                     prompt: `Analiza los procesos mas lentos del periodo.
 
+IMPORTANTE: Procesa TODAS las filas del CSV (top 30 procesos mas lentos).
 IMPORTANTE: Analiza TODAS las filas del CSV (top 30 procesos mas lentos).
 
 Columnas normalizadas:
@@ -2521,11 +2889,20 @@ Genera un informe estructurado pero conciso usando TODOS los datos.`
                     case 'created-to-finished':
                         data = collectCreatedToFinishedData();
                         break;
+                    case 'finish-to-delivery':
+                        data = collectFinishToDeliveryData();
+                        break;
                     case 'process-gaps':
                         data = collectProcessGapsData();
                         break;
                     case 'by-client':
                         data = collectByClientData();
+                        break;
+                    case 'order-type-critical':
+                        data = collectOrderTypeCriticalData();
+                        break;
+                    case 'gap-alerts':
+                        data = collectGapAlertsData();
                         break;
                     case 'slow-processes':
                         data = collectSlowProcessesData();
