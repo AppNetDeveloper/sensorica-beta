@@ -322,6 +322,9 @@
                                 <li><a class="dropdown-item" href="#" data-analysis="shift-variations">
                                     <i class="fas fa-user-clock text-info me-2"></i>Variaciones por Turno/Operador
                                 </a></li>
+                                <li><a class="dropdown-item" href="#" data-analysis="shift-profitability">
+                                    <i class="fas fa-money-bill-trend-up text-success me-2"></i>Rentabilidad por Turno
+                                </a></li>
                                 <li><a class="dropdown-item" href="#" data-analysis="idle-time">
                                     <i class="fas fa-hourglass-half text-danger me-2"></i>Consumo de Tiempo Improductivo
                                 </a></li>
@@ -655,6 +658,82 @@
             return sign * (hours * 3600 + minutes * 60 + seconds);
         }
 
+        // === Turnos: helpers y caché ===
+        const shiftCacheByToken = {};
+        const shiftCacheByLineId = {};
+
+        function parseTimeToMinutes(timeStr) {
+            if (!timeStr || typeof timeStr !== 'string') return null;
+            const parts = timeStr.split(':').map(p => parseInt(p, 10));
+            if (parts.length < 2 || parts.some(Number.isNaN)) return null;
+            return parts[0] * 60 + parts[1];
+        }
+
+        function findShiftForDate(dateStr, shifts) {
+            if (!dateStr || !Array.isArray(shifts) || shifts.length === 0) return null;
+            const d = new Date(dateStr);
+            if (Number.isNaN(d.getTime())) return null;
+            const minutes = d.getHours() * 60 + d.getMinutes();
+            for (const shift of shifts) {
+                const startMin = parseTimeToMinutes(shift.start);
+                const endMin = parseTimeToMinutes(shift.end);
+                if (startMin === null || endMin === null) continue;
+                if (startMin <= endMin) {
+                    if (minutes >= startMin && minutes < endMin) return shift;
+                } else {
+                    if (minutes >= startMin || minutes < endMin) return shift; // cruza medianoche
+                }
+            }
+            return null;
+        }
+
+        async function ensureShiftsLoadedForTokens(tokens) {
+            try {
+                const toLoad = (tokens || []).filter(t => t && !shiftCacheByToken[t]);
+                if (toLoad.length === 0) return;
+                await Promise.all(toLoad.map(async (t) => {
+                    const resp = await fetch(`/api/shift-lists?token=${encodeURIComponent(t)}`);
+                    if (!resp.ok) { shiftCacheByToken[t] = []; return; }
+                    const arr = await resp.json();
+                    const list = Array.isArray(arr) ? arr : [];
+                    shiftCacheByToken[t] = list;
+                    list.forEach(s => {
+                        const lid = s && s.production_line_id;
+                        if (!lid) return;
+                        if (!Array.isArray(shiftCacheByLineId[lid])) shiftCacheByLineId[lid] = [];
+                        shiftCacheByLineId[lid].push(s);
+                    });
+                }));
+                // deduplicate por id
+                Object.keys(shiftCacheByLineId).forEach(lid => {
+                    const seen = {};
+                    shiftCacheByLineId[lid] = shiftCacheByLineId[lid].filter(s => {
+                        if (!s || seen[s.id]) return false;
+                        seen[s.id] = true;
+                        return true;
+                    });
+                });
+            } catch (e) {
+                console.warn('[Shifts] Error precargando turnos', e);
+            }
+        }
+
+        function resolveShiftForRow(item) {
+            if (!item) return null;
+            const lid = item.production_line_id || (item.production_line && item.production_line.id);
+            const shifts = lid ? (shiftCacheByLineId[lid] || []) : [];
+            const when = item.created_at || item.start || item.updated_at || null;
+            const found = findShiftForDate(when, shifts);
+            if (!found) return null;
+            return {
+                id: found.id,
+                name: found.name || `Turno ${found.start}-${found.end}`,
+                start: found.start,
+                end: found.end,
+                active: found.active
+            };
+        }
+
         // Análisis General de OEE
         function collectOEEGeneralData() {
             if (!$.fn.DataTable.isDataTable('#controlWeightTable')) {
@@ -935,7 +1014,8 @@
                 if (count >= maxRows) return false;
 
                 const linea = cleanValue(row.production_line_name ?? row[1]);
-                const turno = cleanValue(row.shift_name ?? row.shift ?? row.turno ?? 'Sin turno');
+                const resolvedShift = resolveShiftForRow(row);
+                const turno = cleanValue(row.shift_name ?? row.shift ?? row.turno ?? (resolvedShift ? resolvedShift.name : 'Sin turno'));
                 let operadores = '';
                 if (Array.isArray(row.operator_names)) {
                     operadores = row.operator_names.join(' | ');
@@ -957,6 +1037,98 @@
 
             const note = count >= maxRows ? `Mostrando primeras ${maxRows} registros por turno` : `Total analizado: ${count} registros`;
             return { metrics, csv, type: 'Variaciones por Turno/Operador', note };
+        }
+
+        // Rentabilidad por Turno
+        function collectShiftProfitabilityData() {
+            if (!$.fn.DataTable.isDataTable('#controlWeightTable')) {
+                console.error('[AI] DataTable no inicializada');
+                return { metrics: {}, csv: '', type: 'Rentabilidad por Turno' };
+            }
+
+            const table = $('#controlWeightTable').DataTable();
+            const metrics = {
+                dateRange: `${$('#startDate').val()} a ${$('#endDate').val()}`
+            };
+
+            const groups = {};
+            table.rows({search: 'applied'}).data().each(function(row) {
+                const resolvedShift = resolveShiftForRow(row);
+                const shiftId = (row.shift_id ?? (resolvedShift && resolvedShift.id)) || 'N/A';
+                const shiftName = cleanValue(row.shift_name ?? row.shift ?? row.turno ?? (resolvedShift ? resolvedShift.name : 'Sin turno'));
+                const shiftStart = cleanValue((resolvedShift && resolvedShift.start) || '');
+                const shiftEnd = cleanValue((resolvedShift && resolvedShift.end) || '');
+                const linea = cleanValue(row.production_line_name ?? row[1]);
+                const lineId = row.production_line_id || 'N/A';
+                const key = `${lineId}|${shiftId}|${shiftName}`;
+
+                if (!groups[key]) {
+                    groups[key] = {
+                        linea, shiftId, shiftName, shiftStart, shiftEnd,
+                        orders: 0,
+                        oeeSum: 0, oeeCount: 0,
+                        durSum: 0,
+                        slowSum: 0, stopsSum: 0, downSum: 0, prepairSum: 0,
+                        kgSum: 0, numSum: 0
+                    };
+                }
+                const g = groups[key];
+                g.orders++;
+
+                const oeeRaw = row.oee ?? row[7];
+                const oeeNum = (oeeRaw !== null && oeeRaw !== undefined)
+                    ? (typeof oeeRaw === 'number' ? oeeRaw : parseFloat(String(oeeRaw).replace(',', '.')) || 0)
+                    : 0;
+                g.oeeSum += oeeNum > 1 ? oeeNum : (oeeNum * 100);
+                g.oeeCount++;
+
+                const dur = durationToSeconds(row.on_time ?? row[10]) || 0;
+                const lento = durationToSeconds(row.slow_time ?? row[12]) || 0;
+                const stops = durationToSeconds(row.production_stops_time ?? row[13]) || 0;
+                const falta = durationToSeconds(row.down_time ?? row[14]) || 0;
+                const prepair = durationToSeconds(row.prepair_time ?? row[11]) || 0;
+                g.durSum += dur;
+                g.slowSum += lento;
+                g.stopsSum += stops;
+                g.downSum += falta;
+                g.prepairSum += prepair;
+
+                const kg = parseFloat(row.weights_0_shiftKg) || 0;
+                const num = parseInt(row.weights_0_shiftNumber) || 0;
+                g.kgSum += kg;
+                g.numSum += num;
+            });
+
+            let csv = 'Linea,Turno_Id,Turno,Inicio_Turno,Fin_Turno,Ordenes,OEE_Promedio,Duracion_Total_Segundos,Duracion_Total_Formato,Improductivo_Segundos,Improductivo_Formato,Neto_Segundos,Neto_Formato,Lento_Segundos,Paradas_Segundos,Falta_Material_Segundos,Preparacion_Segundos,Kg_Turno_Main,Cajas_Turno_Main\n';
+            Object.values(groups).forEach(g => {
+                const improd = g.slowSum + g.stopsSum + g.downSum + g.prepairSum;
+                const neto = Math.max(g.durSum - improd, 0);
+                const oeeAvg = g.oeeCount > 0 ? g.oeeSum / g.oeeCount : 0;
+                csv += [
+                    cleanValue(g.linea),
+                    cleanValue(String(g.shiftId)),
+                    cleanValue(g.shiftName),
+                    cleanValue(g.shiftStart),
+                    cleanValue(g.shiftEnd),
+                    cleanValue(String(g.orders)),
+                    cleanValue(oeeAvg.toFixed(2)),
+                    cleanValue(String(g.durSum)),
+                    cleanValue(formatTime(g.durSum)),
+                    cleanValue(String(improd)),
+                    cleanValue(formatTime(improd)),
+                    cleanValue(String(neto)),
+                    cleanValue(formatTime(neto)),
+                    cleanValue(String(g.slowSum)),
+                    cleanValue(String(g.stopsSum)),
+                    cleanValue(String(g.downSum)),
+                    cleanValue(String(g.prepairSum)),
+                    cleanValue(String(g.kgSum)),
+                    cleanValue(String(g.numSum))
+                ].join(',') + '\n';
+            });
+
+            const note = `Total grupos turno: ${Object.keys(groups).length}`;
+            return { metrics, csv, type: 'Rentabilidad por Turno', note };
         }
 
         // Consumo de Tiempo Improductivo
@@ -1280,6 +1452,29 @@ Objetivos:
 
 Resume de forma accionable.`
                 },
+                'shift-profitability': {
+                    title: 'Rentabilidad por Turno',
+                    prompt: `Evalúa el desempeño y rentabilidad operativa por turno, por línea.
+
+IMPORTANTE: Procesa TODAS las filas del CSV.
+
+Columnas normalizadas:
+- Linea
+- Turno_Id, Turno, Inicio_Turno, Fin_Turno
+- Ordenes, OEE_Promedio
+- Duracion_Total_Segundos, Duracion_Total_Formato
+- Improductivo_Segundos, Improductivo_Formato (suma de lento+paradas+falta material+preparación)
+- Neto_Segundos, Neto_Formato (Duracion_Total - Improductivo)
+- Lento_Segundos, Paradas_Segundos, Falta_Material_Segundos, Preparacion_Segundos
+- Kg_Turno_Main, Cajas_Turno_Main
+
+Objetivos:
+1. Identificar turnos más y menos productivos (OEE, Neto_Segundos) por línea
+2. Detectar drivers de improductivo dominantes por turno (lento/paradas/falta material/preparación)
+3. Proponer 3 acciones priorizadas por línea y turno para mejorar rentabilidad
+
+Entrega conclusiones concretas, cuantificadas y priorizadas.`
+                },
                 'full': {
                     title: 'Análisis Total (CSV extendido)',
                     prompt: `Genera conclusiones globales. Resume insights clave, riesgos y oportunidades usando todos los datos disponibles.`
@@ -1320,6 +1515,9 @@ Resume de forma accionable.`
                         break;
                     case 'shift-variations':
                         data = collectShiftVariationsData();
+                        break;
+                    case 'shift-profitability':
+                        data = collectShiftProfitabilityData();
                         break;
                     case 'idle-time':
                         data = collectIdleTimeData();
@@ -1606,6 +1804,7 @@ Resume de forma accionable.`
                     url += `&hide_100_oee=1`;
                 }
                 
+                await ensureShiftsLoadedForTokens(filteredTokens);
                 const fullUrl = window.location.origin + url;
                 console.log("URL COMPLETA de la API:", fullUrl);
                 console.log("==================================================");
@@ -1623,6 +1822,7 @@ Resume de forma accionable.`
                     return {
                         id: item.id || '-',
                         production_line_name: item.production_line_name || '-',
+                        production_line_id: item.production_line_id || null,
                         order_id: item.order_id || '-',
                         box: item.box || '-',
                         units: parseInt(item.units) || 0,
@@ -1639,7 +1839,25 @@ Resume de forma accionable.`
                         fast_time: item.fast_time || null,
                         slow_time: item.slow_time || null,
                         out_time: item.out_time || null,
-                        prepair_time: item.prepair_time || null
+                        prepair_time: item.prepair_time || null,
+                        // Báscula final de línea (main)
+                        weights_0_shiftNumber: item.weights_0_shiftNumber ?? null,
+                        weights_0_shiftKg: item.weights_0_shiftKg ?? null,
+                        weights_0_orderNumber: item.weights_0_orderNumber ?? null,
+                        weights_0_orderKg: item.weights_0_orderKg ?? null,
+                        // Básculas de rechazo (1-3)
+                        weights_1_shiftNumber: item.weights_1_shiftNumber ?? null,
+                        weights_1_shiftKg: item.weights_1_shiftKg ?? null,
+                        weights_1_orderNumber: item.weights_1_orderNumber ?? null,
+                        weights_1_orderKg: item.weights_1_orderKg ?? null,
+                        weights_2_shiftNumber: item.weights_2_shiftNumber ?? null,
+                        weights_2_shiftKg: item.weights_2_shiftKg ?? null,
+                        weights_2_orderNumber: item.weights_2_orderNumber ?? null,
+                        weights_2_orderKg: item.weights_2_orderKg ?? null,
+                        weights_3_shiftNumber: item.weights_3_shiftNumber ?? null,
+                        weights_3_shiftKg: item.weights_3_shiftKg ?? null,
+                        weights_3_orderNumber: item.weights_3_orderNumber ?? null,
+                        weights_3_orderKg: item.weights_3_orderKg ?? null
                     }});
                 
                 // Actualizar los KPIs con los datos ya filtrados del backend
