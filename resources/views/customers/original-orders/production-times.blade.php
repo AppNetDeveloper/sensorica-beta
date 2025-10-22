@@ -1804,6 +1804,32 @@
                 return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
             }
 
+            function normalizeDateTime(value) {
+                const raw = safeValue(value, '');
+                if (!raw || raw === '0000-00-00 00:00:00' || raw === '0000-00-00') return '';
+                const trimmed = raw.trim();
+                if (!trimmed) return '';
+                const normalized = trimmed.replace(' ', 'T');
+                if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(normalized)) return normalized;
+                if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return `${trimmed}T00:00:00`;
+                return normalized;
+            }
+
+            function durationToSeconds(value) {
+                const raw = safeValue(value, '');
+                if (!raw) return '';
+                if (/^-?\d+$/.test(raw)) return raw;
+                const match = raw.match(/^(-)?(\d{1,3}):(\d{2}):(\d{2})$/);
+                if (!match) return '';
+                const sign = match[1] === '-' ? -1 : 1;
+                const hours = parseInt(match[2], 10);
+                const minutes = parseInt(match[3], 10);
+                const seconds = parseInt(match[4], 10);
+                if (Number.isNaN(hours) || Number.isNaN(minutes) || Number.isNaN(seconds)) return '';
+                const total = sign * (hours * 3600 + minutes * 60 + seconds);
+                return String(total);
+            }
+
             // Análisis 1: Tiempos ERP → Creación
             function collectErpToCreatedData() {
                 const table = $('#production-times-table').DataTable();
@@ -1819,8 +1845,8 @@
                     dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
                 };
 
-                // CSV: Order_ID, Cliente, Fecha_ERP, Fecha_Creado, Tiempo_ERP_a_Creado
-                let csv = 'Order_ID,Cliente,Fecha_ERP,Fecha_Creado,Tiempo_ERP_a_Creado\n';
+                // CSV: Order_ID, Cliente, Fecha_ERP_ISO, Fecha_Creado_ISO, Tiempo_ERP_a_Creado_Segundos, Tiempo_ERP_a_Creado_Formato
+                let csv = 'Order_ID,Cliente,Fecha_ERP_ISO,Fecha_Creado_ISO,Tiempo_ERP_a_Creado_Segundos,Tiempo_ERP_a_Creado_Formato\n';
                 let count = 0;
                 const maxRows = 150;
 
@@ -1832,9 +1858,9 @@
                     console.warn('[AI] No hay datos en la tabla. Asegúrate de haber aplicado los filtros primero.');
                     return { 
                         metrics, 
-                        csv: 'Order_ID,Cliente,Fecha_ERP,Fecha_Creado,Tiempo_ERP_a_Creado\n', 
+                        csv: 'Order_ID,Cliente,Fecha_ERP_ISO,Fecha_Creado_ISO,Tiempo_ERP_a_Creado_Segundos,Tiempo_ERP_a_Creado_Formato\n', 
                         type: 'Tiempos ERP → Creación', 
-                        note: 'Sin datos - Aplica filtros primero' 
+                        note: 'Sin datos disponibles'
                     };
                 }
 
@@ -1848,10 +1874,13 @@
                     
                     const orderId = cleanValue(safeValue(row.order_id, '0'));
                     const cliente = cleanValue(safeValue(row.customer_client_name, 'Sin cliente'));
-                    const fechaErp = cleanValue(safeDate(row.fecha_pedido_erp));
-                    const fechaCreado = cleanValue(safeDate(row.created_at));
-                    const tiempoErpCreado = cleanValue(safeValue(row.erp_to_created_formatted, '0'));
-                    csv += `${orderId},${cliente},${fechaErp},${fechaCreado},${tiempoErpCreado}\n`;
+                    const fechaErpIso = cleanValue(normalizeDateTime(row.fecha_pedido_erp));
+                    const fechaCreadoIso = cleanValue(normalizeDateTime(row.created_at));
+                    const tiempoErpCreadoFormato = safeValue(row.erp_to_created_formatted, '00:00:00');
+                    const tiempoErpCreadoSegundosRaw = durationToSeconds(tiempoErpCreadoFormato);
+                    const tiempoErpCreadoSegundos = cleanValue(tiempoErpCreadoSegundosRaw !== '' ? tiempoErpCreadoSegundosRaw : '0');
+                    const tiempoErpCreado = cleanValue(tiempoErpCreadoFormato);
+                    csv += `${orderId},${cliente},${fechaErpIso},${fechaCreadoIso},${tiempoErpCreadoSegundos},${tiempoErpCreado}\n`;
                     count++;
                 });
 
@@ -1877,8 +1906,8 @@
                     dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
                 };
 
-                // CSV: Order_ID, Cliente, Fecha_Creado, Fecha_Fin, Tiempo_Creado_a_Fin
-                let csv = 'Order_ID,Cliente,Fecha_Creado,Fecha_Fin,Tiempo_Creado_a_Fin\n';
+                // CSV: Order_ID, Cliente, Fecha_Creado_ISO, Fecha_Fin_ISO, Tiempo_Creado_a_Fin_Segundos, Tiempo_Creado_a_Fin_Formato
+                let csv = 'Order_ID,Cliente,Fecha_Creado_ISO,Fecha_Fin_ISO,Tiempo_Creado_a_Fin_Segundos,Tiempo_Creado_a_Fin_Formato\n';
                 let count = 0;
                 const maxRows = 150;
 
@@ -1886,10 +1915,13 @@
                     if (count >= maxRows) return false;
                     const orderId = cleanValue(safeValue(row.order_id, '0'));
                     const cliente = cleanValue(safeValue(row.customer_client_name, 'Sin cliente'));
-                    const fechaCreado = cleanValue(safeDate(row.created_at));
-                    const fechaFin = cleanValue(safeDate(row.finished_at));
-                    const tiempoCreadoFin = cleanValue(safeValue(row.created_to_finished_formatted, '0'));
-                    csv += `${orderId},${cliente},${fechaCreado},${fechaFin},${tiempoCreadoFin}\n`;
+                    const fechaCreadoIso = cleanValue(normalizeDateTime(row.created_at));
+                    const fechaFinIso = cleanValue(normalizeDateTime(row.finished_at));
+                    const tiempoCreadoFinFormato = safeValue(row.created_to_finished_formatted, '00:00:00');
+                    const tiempoCreadoFinSegundosRaw = durationToSeconds(tiempoCreadoFinFormato);
+                    const tiempoCreadoFinSegundos = cleanValue(tiempoCreadoFinSegundosRaw !== '' ? tiempoCreadoFinSegundosRaw : '0');
+                    const tiempoCreadoFin = cleanValue(tiempoCreadoFinFormato);
+                    csv += `${orderId},${cliente},${fechaCreadoIso},${fechaFinIso},${tiempoCreadoFinSegundos},${tiempoCreadoFin}\n`;
                     count++;
                 });
 
@@ -1913,8 +1945,8 @@
                     dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
                 };
 
-                // CSV reducido: Order_ID, Cliente, Fecha_ERP, Tiempo_ERP_a_Fin, Gap_Promedio
-                let csv = 'Order_ID,Cliente,Fecha_ERP,Tiempo_ERP_a_Fin,Tiempo_Creado_a_Fin\n';
+                // CSV reducido: Order_ID, Cliente, Fecha_ERP_ISO, Tiempo_ERP_a_Fin_Segundos, Tiempo_ERP_a_Fin_Formato, Tiempo_Creado_a_Fin_Segundos, Tiempo_Creado_a_Fin_Formato
+                let csv = 'Order_ID,Cliente,Fecha_ERP_ISO,Tiempo_ERP_a_Fin_Segundos,Tiempo_ERP_a_Fin_Formato,Tiempo_Creado_a_Fin_Segundos,Tiempo_Creado_a_Fin_Formato\n';
                 let count = 0;
                 const maxRows = 150;
 
@@ -1922,10 +1954,14 @@
                     if (count >= maxRows) return false;
                     const orderId = cleanValue(safeValue(row.order_id, '0'));
                     const cliente = cleanValue(safeValue(row.customer_client_name, 'Sin cliente'));
-                    const fechaErp = cleanValue(safeValue(row.fecha_pedido_erp));
-                    const tiempoErpFin = cleanValue(safeValue(row.erp_to_finished_formatted, '0'));
-                    const tiempoCreadoFin = cleanValue(safeValue(row.created_to_finished_formatted, '0'));
-                    csv += `${orderId},${cliente},${fechaErp},${tiempoErpFin},${tiempoCreadoFin}\n`;
+                    const fechaErpIso = cleanValue(normalizeDateTime(row.fecha_pedido_erp));
+                    const tiempoErpFinFormato = safeValue(row.erp_to_finished_formatted, '00:00:00');
+                    const tiempoErpFinSegundosRaw = durationToSeconds(tiempoErpFinFormato);
+                    const tiempoErpFinSegundos = cleanValue(tiempoErpFinSegundosRaw !== '' ? tiempoErpFinSegundosRaw : '0');
+                    const tiempoCreadoFinFormato = safeValue(row.created_to_finished_formatted, '00:00:00');
+                    const tiempoCreadoFinSegundosRaw = durationToSeconds(tiempoCreadoFinFormato);
+                    const tiempoCreadoFinSegundos = cleanValue(tiempoCreadoFinSegundosRaw !== '' ? tiempoCreadoFinSegundosRaw : '0');
+                    csv += `${orderId},${cliente},${fechaErpIso},${tiempoErpFinSegundos},${cleanValue(tiempoErpFinFormato)},${tiempoCreadoFinSegundos},${cleanValue(tiempoCreadoFinFormato)}\n`;
                     count++;
                 });
 
@@ -1947,8 +1983,8 @@
                     dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
                 };
 
-                // CSV: Order_ID, Codigo_Proceso, Gap, Duracion
-                let csv = 'Order_ID,Codigo_Proceso,Nombre_Proceso,Gap,Duracion\n';
+                // CSV: Order_ID, Codigo_Proceso, Nombre_Proceso, Gap_Segundos, Gap_Formato, Duracion_Segundos, Duracion_Formato
+                let csv = 'Order_ID,Codigo_Proceso,Nombre_Proceso,Gap_Segundos,Gap_Formato,Duracion_Segundos,Duracion_Formato\n';
                 let count = 0;
                 const maxRows = 100;
 
@@ -1962,9 +1998,13 @@
                         processes.forEach(proc => {
                             const codigo = cleanValue(proc.process_code || '-');
                             const nombre = cleanValue(proc.process_name || '-');
-                            const gap = cleanValue(proc.gap_formatted || '-');
-                            const duracion = cleanValue(proc.duration_formatted || '-');
-                            csv += `${cleanValue(safeValue(orderId, '0'))},${cleanValue(safeValue(codigo, 'N/A'))},${cleanValue(safeValue(nombre, 'N/A'))},${cleanValue(safeValue(gap, '0'))},${cleanValue(safeValue(duracion, '0'))}\n`;
+                            const gapFormato = safeValue(proc.gap_formatted, '00:00:00');
+                            const gapSegundosRaw = durationToSeconds(gapFormato);
+                            const gapSegundos = cleanValue(gapSegundosRaw !== '' ? gapSegundosRaw : '0');
+                            const duracionFormato = safeValue(proc.duration_formatted, '00:00:00');
+                            const duracionSegundosRaw = durationToSeconds(duracionFormato);
+                            const duracionSegundos = cleanValue(duracionSegundosRaw !== '' ? duracionSegundosRaw : '0');
+                            csv += `${cleanValue(safeValue(orderId, '0'))},${cleanValue(safeValue(codigo, 'N/A'))},${cleanValue(safeValue(nombre, 'N/A'))},${gapSegundos},${cleanValue(gapFormato)},${duracionSegundos},${cleanValue(duracionFormato)}\n`;
                             count++;
                         });
                     }
@@ -2001,20 +2041,44 @@
                         };
                     }
                     clientData[cliente].count++;
+                    const tiempoTotalFormato = safeValue(row.erp_to_finished_formatted, '00:00:00');
+                    const tiempoTotalSegundosRaw = durationToSeconds(tiempoTotalFormato);
+                    const tiempoTotalSegundos = tiempoTotalSegundosRaw !== '' ? parseInt(tiempoTotalSegundosRaw, 10) : null;
+                    const tiempoCreadoFormato = safeValue(row.created_to_finished_formatted, '00:00:00');
+                    const tiempoCreadoSegundosRaw = durationToSeconds(tiempoCreadoFormato);
+                    const tiempoCreadoSegundos = tiempoCreadoSegundosRaw !== '' ? parseInt(tiempoCreadoSegundosRaw, 10) : null;
                     clientData[cliente].orders.push({
                         orderId: row.order_id,
-                        tiempoTotal: row.erp_to_finished_formatted || '-',
-                        tiempoCreado: row.created_to_finished_formatted || '-'
+                        tiempoTotalSegundos,
+                        tiempoTotalFormato,
+                        tiempoCreadoSegundos,
+                        tiempoCreadoFormato
                     });
                     totalOrders++;
                 });
 
-                // CSV: Cliente, Cantidad_Ordenes, Order_IDs, Tiempos_Promedio
-                let csv = 'Cliente,Cantidad_Ordenes,Ordenes_IDs,Tiempo_Promedio_Total\n';
+                // CSV: Cliente, Cantidad_Ordenes, Ordenes_IDs, Tiempo_ERP_a_Fin_Promedio_Segundos, Tiempo_ERP_a_Fin_Promedio_Formato, Tiempo_Creado_a_Fin_Promedio_Segundos, Tiempo_Creado_a_Fin_Promedio_Formato
+                let csv = 'Cliente,Cantidad_Ordenes,Ordenes_IDs,Tiempo_ERP_a_Fin_Promedio_Segundos,Tiempo_ERP_a_Fin_Promedio_Formato,Tiempo_Creado_a_Fin_Promedio_Segundos,Tiempo_Creado_a_Fin_Promedio_Formato\n';
                 for (const [cliente, data] of Object.entries(clientData)) {
                     const orderIds = data.orders.slice(0, 5).map(o => o.orderId).join(' | ');
                     const suffix = data.count > 5 ? ` (+${data.count - 5} más)` : '';
-                    csv += `${cleanValue(cliente)},${data.count},${cleanValue(orderIds + suffix)},${cleanValue('-')}\n`;
+                    let sumaErp = 0; let cuentaErp = 0;
+                    let sumaCreado = 0; let cuentaCreado = 0;
+                    data.orders.forEach(o => {
+                        if (typeof o.tiempoTotalSegundos === 'number') {
+                            sumaErp += o.tiempoTotalSegundos;
+                            cuentaErp++;
+                        }
+                        if (typeof o.tiempoCreadoSegundos === 'number') {
+                            sumaCreado += o.tiempoCreadoSegundos;
+                            cuentaCreado++;
+                        }
+                    });
+                    const promedioErpSegundos = cuentaErp > 0 ? Math.round(sumaErp / cuentaErp) : 0;
+                    const promedioCreadoSegundos = cuentaCreado > 0 ? Math.round(sumaCreado / cuentaCreado) : 0;
+                    const promedioErpFormato = formatTime(promedioErpSegundos);
+                    const promedioCreadoFormato = formatTime(promedioCreadoSegundos);
+                    csv += `${cleanValue(cliente)},${data.count},${cleanValue(orderIds + suffix)},${promedioErpSegundos},${cleanValue(promedioErpFormato)},${promedioCreadoSegundos},${cleanValue(promedioCreadoFormato)}\n`;
                 }
 
                 const note = `${totalOrders} órdenes de ${Object.keys(clientData).length} clientes`;
@@ -2062,10 +2126,13 @@
                 allProcesses.sort((a, b) => b.durationSec - a.durationSec);
                 const slowest = allProcesses.slice(0, 30);
 
-                // CSV: Order_ID, Codigo_Proceso, Nombre, Duracion, Gap
-                let csv = 'Order_ID,Codigo_Proceso,Nombre_Proceso,Duracion,Gap\n';
+                // CSV: Order_ID, Codigo_Proceso, Nombre_Proceso, Duracion_Segundos, Duracion_Formato, Gap_Segundos, Gap_Formato
+                let csv = 'Order_ID,Codigo_Proceso,Nombre_Proceso,Duracion_Segundos,Duracion_Formato,Gap_Segundos,Gap_Formato\n';
                 slowest.forEach(proc => {
-                    csv += `${cleanValue(proc.orderId)},${cleanValue(proc.codigo)},${cleanValue(proc.nombre)},${cleanValue(proc.duracion)},${cleanValue(proc.gap)}\n`;
+                    const duracionSec = typeof proc.durationSec === 'number' ? String(proc.durationSec) : '0';
+                    const gapSec = durationToSeconds(proc.gap || '00:00:00');
+                    const gapSegundos = cleanValue(gapSec !== '' ? gapSec : '0');
+                    csv += `${cleanValue(proc.orderId)},${cleanValue(proc.codigo)},${cleanValue(proc.nombre)},${cleanValue(duracionSec)},${cleanValue(proc.duracion)},${gapSegundos},${cleanValue(proc.gap || '00:00:00')}\n`;
                 });
 
                 const note = `Top 30 procesos más lentos de ${allProcesses.length} totales`;
@@ -2100,11 +2167,23 @@
                 const top10 = allOrders.slice(0, 10);
                 const bottom10 = allOrders.slice(-10);
 
-                let csv = 'Tipo,Order_ID,Cliente,Tiempo_ERP_a_Fin,Tiempo_Creado_a_Fin\n';
+                let csv = 'Tipo,Order_ID,Cliente,Tiempo_ERP_a_Fin_Segundos,Tiempo_ERP_a_Fin_Formato,Tiempo_Creado_a_Fin_Segundos,Tiempo_Creado_a_Fin_Formato\n';
                 csv += '# TOP 10 (Más rápidas)\n';
-                top10.forEach(o => csv += `TOP,${o.orderId},${o.cliente},${o.tiempoTotal},${o.tiempoCreado}\n`);
+                top10.forEach(o => {
+                    const erpSegRaw = durationToSeconds(o.tiempoTotal || '00:00:00');
+                    const erpSeg = erpSegRaw !== '' ? erpSegRaw : '0';
+                    const creSegRaw = durationToSeconds(o.tiempoCreado || '00:00:00');
+                    const creSeg = creSegRaw !== '' ? creSegRaw : '0';
+                    csv += `TOP,${o.orderId},${o.cliente},${erpSeg},${o.tiempoTotal},${creSeg},${o.tiempoCreado}\n`;
+                });
                 csv += '# BOTTOM 10 (Más lentas)\n';
-                bottom10.forEach(o => csv += `BOTTOM,${o.orderId},${o.cliente},${o.tiempoTotal},${o.tiempoCreado}\n`);
+                bottom10.forEach(o => {
+                    const erpSegRaw = durationToSeconds(o.tiempoTotal || '00:00:00');
+                    const erpSeg = erpSegRaw !== '' ? erpSegRaw : '0';
+                    const creSegRaw = durationToSeconds(o.tiempoCreado || '00:00:00');
+                    const creSeg = creSegRaw !== '' ? creSegRaw : '0';
+                    csv += `BOTTOM,${o.orderId},${o.cliente},${erpSeg},${o.tiempoTotal},${creSeg},${o.tiempoCreado}\n`;
+                });
 
                 const note = `Comparando ${allOrders.length} órdenes`;
                 return { metrics, csv, type: 'Comparativa Top/Bottom', note };
@@ -2128,8 +2207,8 @@
                     dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
                 };
 
-                // CSV completo con todas las columnas visibles
-                let csv = 'Order_ID,Cliente,Fecha_Pedido_ERP,Fecha_Creado,Fecha_Finalizado,Tiempo_ERP_a_Creado,Tiempo_ERP_a_Fin,Tiempo_Creado_a_Fin\n';
+                // CSV completo con todas las columnas visibles (normalizadas)
+                let csv = 'Order_ID,Cliente,Fecha_Pedido_ERP_ISO,Fecha_Creado_ISO,Fecha_Finalizado_ISO,Tiempo_ERP_a_Creado_Segundos,Tiempo_ERP_a_Creado_Formato,Tiempo_ERP_a_Fin_Segundos,Tiempo_ERP_a_Fin_Formato,Tiempo_Creado_a_Fin_Segundos,Tiempo_Creado_a_Fin_Formato\n';
                 let count = 0;
                 const maxRows = 150;
 
@@ -2137,13 +2216,19 @@
                     if (count >= maxRows) return false;
                     const orderId = cleanValue(row.order_id || '-');
                     const cliente = cleanValue(row.customer_client_name || '-');
-                    const fechaErp = cleanValue(row.fecha_pedido_erp || '-');
-                    const fechaCreado = cleanValue(row.created_at || '-');
-                    const fechaFin = cleanValue(row.finished_at || '-');
-                    const erpCreado = cleanValue(row.erp_to_created_formatted || '-');
-                    const erpFin = cleanValue(row.erp_to_finished_formatted || '-');
-                    const creadoFin = cleanValue(row.created_to_finished_formatted || '-');
-                    csv += `${orderId},${cliente},${fechaErp},${fechaCreado},${fechaFin},${erpCreado},${erpFin},${creadoFin}\n`;
+                    const fechaErpIso = cleanValue(normalizeDateTime(row.fecha_pedido_erp));
+                    const fechaCreadoIso = cleanValue(normalizeDateTime(row.created_at));
+                    const fechaFinIso = cleanValue(normalizeDateTime(row.finished_at));
+                    const erpCreadoFormato = safeValue(row.erp_to_created_formatted, '00:00:00');
+                    const erpCreadoSegundosRaw = durationToSeconds(erpCreadoFormato);
+                    const erpCreadoSegundos = cleanValue(erpCreadoSegundosRaw !== '' ? erpCreadoSegundosRaw : '0');
+                    const erpFinFormato = safeValue(row.erp_to_finished_formatted, '00:00:00');
+                    const erpFinSegundosRaw = durationToSeconds(erpFinFormato);
+                    const erpFinSegundos = cleanValue(erpFinSegundosRaw !== '' ? erpFinSegundosRaw : '0');
+                    const creadoFinFormato = safeValue(row.created_to_finished_formatted, '00:00:00');
+                    const creadoFinSegundosRaw = durationToSeconds(creadoFinFormato);
+                    const creadoFinSegundos = cleanValue(creadoFinSegundosRaw !== '' ? creadoFinSegundosRaw : '0');
+                    csv += `${orderId},${cliente},${fechaErpIso},${fechaCreadoIso},${fechaFinIso},${erpCreadoSegundos},${cleanValue(erpCreadoFormato)},${erpFinSegundos},${cleanValue(erpFinFormato)},${creadoFinSegundos},${cleanValue(creadoFinFormato)}\n`;
                     count++;
                 });
 
@@ -2164,6 +2249,7 @@
                     
                     const fd = new FormData();
                     fd.append('prompt', fullPrompt);
+                    fd.append('agent', 'data_analysis');
 
                     const resp = await fetch(`${AI_URL.replace(/\/$/, '')}/api/ollama-tasks`, {
                         method: 'POST',
@@ -2274,12 +2360,13 @@
 
 IMPORTANTE: A continuacion recibiras un archivo CSV completo. Lee TODAS las filas del CSV para realizar el analisis.
 
-El CSV contiene las columnas:
+El CSV contiene las columnas normalizadas:
 - Order_ID: Identificador de la orden
 - Cliente: Nombre del cliente
-- Fecha_ERP: Fecha de registro en ERP
-- Fecha_Creado: Fecha de creacion en produccion
-- Tiempo_ERP_a_Creado: Tiempo transcurrido (formato HH:MM:SS o 0 si no aplica)
+- Fecha_ERP_ISO: Marca temporal ISO del registro en ERP
+- Fecha_Creado_ISO: Marca temporal ISO de la creacion en produccion
+- Tiempo_ERP_a_Creado_Segundos: Diferencia en segundos entre ERP y creacion
+- Tiempo_ERP_a_Creado_Formato: Mismo tiempo en formato HH:MM:SS
 
 Objetivos del analisis:
 1. Identificar ordenes con mayores retrasos en inicio de produccion (top 5)
@@ -2295,8 +2382,10 @@ Se breve, concreto y cuantifica los hallazgos usando TODOS los datos del CSV.`
 
 IMPORTANTE: Lee TODAS las filas del CSV completo que recibiras a continuacion.
 
-Columnas del CSV:
-- Order_ID, Cliente, Fecha_Creado, Fecha_Fin, Tiempo_Creado_a_Fin
+Columnas normalizadas del CSV:
+- Order_ID, Cliente
+- Fecha_Creado_ISO, Fecha_Fin_ISO
+- Tiempo_Creado_a_Fin_Segundos, Tiempo_Creado_a_Fin_Formato
 
 Foco del analisis:
 1. Identificar ordenes con ciclos mas largos (top 5)
@@ -2312,7 +2401,10 @@ Prioriza hallazgos accionables usando TODOS los datos.`
 
 IMPORTANTE: Lee TODAS las filas del CSV.
 
-Columnas: Order_ID, Codigo_Proceso, Nombre_Proceso, Gap, Duracion
+Columnas normalizadas:
+- Order_ID, Codigo_Proceso, Nombre_Proceso
+- Gap_Segundos, Gap_Formato
+- Duracion_Segundos, Duracion_Formato
 
 Focus del analisis:
 1. Identificar procesos con mayores tiempos de espera (top 10)
@@ -2328,7 +2420,10 @@ Se conciso y cuantifica impacto usando TODOS los datos.`
 
 IMPORTANTE: Procesa TODAS las filas del CSV.
 
-Columnas: Cliente, Cantidad_Ordenes, Ordenes_IDs, Tiempo_Promedio_Total
+Columnas normalizadas:
+- Cliente, Cantidad_Ordenes, Ordenes_IDs
+- Tiempo_ERP_a_Fin_Promedio_Segundos, Tiempo_ERP_a_Fin_Promedio_Formato
+- Tiempo_Creado_a_Fin_Promedio_Segundos, Tiempo_Creado_a_Fin_Promedio_Formato
 
 Objetivos:
 1. Identificar top 5 clientes con mas ordenes
@@ -2344,7 +2439,10 @@ Manten el analisis breve usando TODOS los datos.`
 
 IMPORTANTE: Analiza TODAS las filas del CSV (top 30 procesos mas lentos).
 
-Columnas: Order_ID, Codigo_Proceso, Nombre_Proceso, Duracion, Gap
+Columnas normalizadas:
+- Order_ID, Codigo_Proceso, Nombre_Proceso
+- Duracion_Segundos, Duracion_Formato
+- Gap_Segundos, Gap_Formato
 
 Centra el analisis en:
 1. Identificar top 10 procesos con mayor duracion
@@ -2360,7 +2458,10 @@ Se especifico y prioriza por impacto usando TODOS los datos.`
 
 IMPORTANTE: El CSV contiene 20 filas (10 TOP + 10 BOTTOM). Lee TODAS.
 
-Columnas: Tipo, Order_ID, Cliente, Tiempo_ERP_a_Fin, Tiempo_Creado_a_Fin
+Columnas normalizadas:
+- Tipo, Order_ID, Cliente
+- Tiempo_ERP_a_Fin_Segundos, Tiempo_ERP_a_Fin_Formato
+- Tiempo_Creado_a_Fin_Segundos, Tiempo_Creado_a_Fin_Formato
 
 Analisis requerido:
 1. Identificar factores comunes en ordenes rapidas (TOP)
@@ -2376,8 +2477,12 @@ Manten el analisis conciso usando TODOS los datos.`
 
 IMPORTANTE: El CSV contiene hasta 150 ordenes. Procesa TODAS las filas.
 
-Columnas: Order_ID, Cliente, Fecha_Pedido_ERP, Fecha_Creado, Fecha_Finalizado, 
-Tiempo_ERP_a_Creado, Tiempo_ERP_a_Fin, Tiempo_Creado_a_Fin
+Columnas normalizadas:
+- Order_ID, Cliente
+- Fecha_Pedido_ERP_ISO, Fecha_Creado_ISO, Fecha_Finalizado_ISO
+- Tiempo_ERP_a_Creado_Segundos, Tiempo_ERP_a_Creado_Formato
+- Tiempo_ERP_a_Fin_Segundos, Tiempo_ERP_a_Fin_Formato
+- Tiempo_Creado_a_Fin_Segundos, Tiempo_Creado_a_Fin_Formato
 
 Incluye:
 1. Resumen ejecutivo con hallazgos principales

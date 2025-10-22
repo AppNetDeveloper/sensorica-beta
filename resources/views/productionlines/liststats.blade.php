@@ -886,6 +886,7 @@
                 
                 const fd = new FormData();
                 fd.append('prompt', fullPrompt);
+                fd.append('agent', 'data_analysis');
 
                 const resp = await fetch(`${AI_URL.replace(/\/$/, '')}/api/ollama-tasks`, {
                     method: 'POST',
