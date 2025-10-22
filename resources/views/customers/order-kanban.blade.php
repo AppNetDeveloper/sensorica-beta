@@ -14,50 +14,52 @@
 
 @section('content')
 @can('hourly-totals-view')
-<div class="mb-3" id="kanbanHourlyPanel">
+<div class="mb-3" id="kanbanChartsPanel">
     <div class="card">
-        <div class="card-header d-flex flex-wrap justify-content-between align-items-center">
-            <div class="d-flex align-items-center gap-2">
-                <h5 class="mb-0"><i class="fas fa-chart-line me-2 text-primary"></i>{{ __('Carga horaria de líneas activas') }}</h5>
-                <button type="button" class="btn btn-sm btn-outline-secondary" id="kanbanHourlyToggle">
-                    <i class="fas fa-chevron-up"></i>
-                </button>
+        <div class="card-header">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <div class="d-flex align-items-center gap-2">
+                    <h5 class="mb-0"><i class="fas fa-chart-line me-2 text-primary"></i>{{ __('Análisis de líneas activas') }}</h5>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="kanbanChartsToggle">
+                        <i class="fas fa-chevron-up"></i>
+                    </button>
+                </div>
+                <div class="btn-group btn-group-sm" id="kanbanChartsRange">
+                    <button class="btn btn-outline-primary active" data-range="1d">{{ __('1 día') }}</button>
+                    <button class="btn btn-outline-primary" data-range="1w">{{ __('1 semana') }}</button>
+                    <button class="btn btn-outline-primary" data-range="1m">{{ __('1 mes') }}</button>
+                    <button class="btn btn-outline-primary" data-range="6m">{{ __('6 meses') }}</button>
+                </div>
             </div>
-            <div class="btn-group btn-group-sm" id="kanbanHourlyRange">
-                <button class="btn btn-outline-primary active" data-range="1d">{{ __('1 día') }}</button>
-                <button class="btn btn-outline-primary" data-range="1w">{{ __('1 semana') }}</button>
-                <button class="btn btn-outline-primary" data-range="1m">{{ __('1 mes') }}</button>
-                <button class="btn btn-outline-primary" data-range="6m">{{ __('6 meses') }}</button>
-            </div>
+            <!-- Pestañas para cambiar entre gráficas -->
+            <ul class="nav nav-tabs mt-3" id="chartsTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="hourly-tab" data-bs-toggle="tab" data-bs-target="#hourly-chart-tab" type="button" role="tab">
+                        <i class="fas fa-chart-area me-1"></i> {{ __('Carga horaria') }}
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="waittime-tab" data-bs-toggle="tab" data-bs-target="#waittime-chart-tab" type="button" role="tab">
+                        <i class="fas fa-clock me-1"></i> {{ __('WT/WTM') }}
+                    </button>
+                </li>
+            </ul>
         </div>
-        <div class="card-body" id="kanbanHourlyBody">
-            <div class="small text-muted mb-2" id="kanbanHourlySubtitle"></div>
-            <div id="kanbanHourlyChart" style="min-height: 360px;"></div>
-            <div class="text-end mt-2 text-muted small" id="kanbanHourlyUpdated"></div>
-        </div>
-    </div>
-</div>
-
-<div class="mb-3" id="kanbanWaitTimePanel">
-    <div class="card">
-        <div class="card-header d-flex flex-wrap justify-content-between align-items-center">
-            <div class="d-flex align-items-center gap-2">
-                <h5 class="mb-0"><i class="fas fa-clock me-2 text-info"></i>{{ __('Historial WT/WTM de líneas activas') }}</h5>
-                <button type="button" class="btn btn-sm btn-outline-secondary" id="kanbanWaitTimeToggle">
-                    <i class="fas fa-chevron-up"></i>
-                </button>
+        <div class="card-body" id="kanbanChartsBody">
+            <div class="tab-content" id="chartsTabContent">
+                <!-- Pestaña Carga Horaria -->
+                <div class="tab-pane fade show active" id="hourly-chart-tab" role="tabpanel">
+                    <div class="small text-muted mb-2" id="kanbanHourlySubtitle"></div>
+                    <div id="kanbanHourlyChart" style="min-height: 360px;"></div>
+                    <div class="text-end mt-2 text-muted small" id="kanbanHourlyUpdated"></div>
+                </div>
+                <!-- Pestaña WT/WTM -->
+                <div class="tab-pane fade" id="waittime-chart-tab" role="tabpanel">
+                    <div class="small text-muted mb-2" id="kanbanWaitTimeSubtitle"></div>
+                    <div id="kanbanWaitTimeChart" style="min-height: 360px;"></div>
+                    <div class="text-end mt-2 text-muted small" id="kanbanWaitTimeUpdated"></div>
+                </div>
             </div>
-            <div class="btn-group btn-group-sm" id="kanbanWaitTimeRange">
-                <button class="btn btn-outline-info active" data-range="1d">{{ __('1 día') }}</button>
-                <button class="btn btn-outline-info" data-range="1w">{{ __('1 semana') }}</button>
-                <button class="btn btn-outline-info" data-range="1m">{{ __('1 mes') }}</button>
-                <button class="btn btn-outline-info" data-range="6m">{{ __('6 meses') }}</button>
-            </div>
-        </div>
-        <div class="card-body" id="kanbanWaitTimeBody">
-            <div class="small text-muted mb-2" id="kanbanWaitTimeSubtitle"></div>
-            <div id="kanbanWaitTimeChart" style="min-height: 360px;"></div>
-            <div class="text-end mt-2 text-muted small" id="kanbanWaitTimeUpdated"></div>
         </div>
     </div>
 </div>
@@ -564,17 +566,22 @@
     <script>
     document.addEventListener('DOMContentLoaded', function() {
         @can('hourly-totals-view')
-        const kanbanHourlyPanel = document.querySelector('#kanbanHourlyPanel');
+        const kanbanChartsPanel = document.querySelector('#kanbanChartsPanel');
         const kanbanHourlyChartEl = document.querySelector('#kanbanHourlyChart');
-        const kanbanHourlyRange = document.querySelector('#kanbanHourlyRange');
+        const kanbanWaitTimeChartEl = document.querySelector('#kanbanWaitTimeChart');
+        const kanbanChartsRange = document.querySelector('#kanbanChartsRange');
         const kanbanHourlySubtitle = document.querySelector('#kanbanHourlySubtitle');
+        const kanbanWaitTimeSubtitle = document.querySelector('#kanbanWaitTimeSubtitle');
         const kanbanHourlyUpdated = document.querySelector('#kanbanHourlyUpdated');
-        const kanbanHourlyToggle = document.querySelector('#kanbanHourlyToggle');
-        const kanbanHourlyBody = document.querySelector('#kanbanHourlyBody');
-        const hourlyPanelStorageKey = `kanbanHourlyPanelCollapsed_{{ $customer->id }}`;
+        const kanbanWaitTimeUpdated = document.querySelector('#kanbanWaitTimeUpdated');
+        const kanbanChartsToggle = document.querySelector('#kanbanChartsToggle');
+        const kanbanChartsBody = document.querySelector('#kanbanChartsBody');
+        const chartsPanelStorageKey = `kanbanChartsPanelCollapsed_{{ $customer->id }}`;
         const activeLineIds = new Set();
         let hourlyChart = null;
+        let waitTimeChart = null;
         let hourlyRefreshTimer = null;
+        let waitTimeRefreshTimer = null;
         const hourlyRanges = {
             '1d': { label: '{{ __('Últimas 24 horas') }}', durationMs: 24 * 60 * 60 * 1000 },
             '1w': { label: '{{ __('Últimos 7 días') }}', durationMs: 7 * 24 * 60 * 60 * 1000 },
@@ -582,41 +589,44 @@
             '6m': { label: '{{ __('Últimos 6 meses') }}', durationMs: 182 * 24 * 60 * 60 * 1000 },
         };
 
-        const setHourlyPanelCollapsed = (collapsed) => {
-            if (!kanbanHourlyBody || !kanbanHourlyToggle) {
+        const setChartsPanelCollapsed = (collapsed) => {
+            if (!kanbanChartsBody || !kanbanChartsToggle) {
                 return;
             }
             if (collapsed) {
-                kanbanHourlyBody.classList.add('d-none');
-                kanbanHourlyToggle.querySelector('i').classList.remove('fa-chevron-up');
-                kanbanHourlyToggle.querySelector('i').classList.add('fa-chevron-down');
+                kanbanChartsBody.classList.add('d-none');
+                kanbanChartsToggle.querySelector('i').classList.remove('fa-chevron-up');
+                kanbanChartsToggle.querySelector('i').classList.add('fa-chevron-down');
             } else {
-                kanbanHourlyBody.classList.remove('d-none');
-                kanbanHourlyToggle.querySelector('i').classList.remove('fa-chevron-down');
-                kanbanHourlyToggle.querySelector('i').classList.add('fa-chevron-up');
+                kanbanChartsBody.classList.remove('d-none');
+                kanbanChartsToggle.querySelector('i').classList.remove('fa-chevron-down');
+                kanbanChartsToggle.querySelector('i').classList.add('fa-chevron-up');
             }
             try {
-                localStorage.setItem(hourlyPanelStorageKey, collapsed ? '1' : '0');
+                localStorage.setItem(chartsPanelStorageKey, collapsed ? '1' : '0');
             } catch (_) {}
         };
 
-        if (kanbanHourlyToggle) {
+        if (kanbanChartsToggle) {
             const storedValue = (() => {
                 try {
-                    return localStorage.getItem(hourlyPanelStorageKey);
+                    return localStorage.getItem(chartsPanelStorageKey);
                 } catch (_) {
                     return null;
                 }
             })();
 
             const initialCollapsed = storedValue === '1';
-            setHourlyPanelCollapsed(initialCollapsed);
+            setChartsPanelCollapsed(initialCollapsed);
 
-            kanbanHourlyToggle.addEventListener('click', () => {
-                const isCollapsed = kanbanHourlyBody?.classList.contains('d-none');
-                setHourlyPanelCollapsed(!isCollapsed);
-                if (!isCollapsed && hourlyChart) {
-                    setTimeout(() => hourlyChart?.updateOptions({}), 150);
+            kanbanChartsToggle.addEventListener('click', () => {
+                const isCollapsed = kanbanChartsBody?.classList.contains('d-none');
+                setChartsPanelCollapsed(!isCollapsed);
+                if (!isCollapsed) {
+                    setTimeout(() => {
+                        hourlyChart?.updateOptions({});
+                        waitTimeChart?.updateOptions({});
+                    }, 150);
                 }
             });
         }
@@ -702,54 +712,41 @@
             hourlyRefreshTimer = setInterval(() => fetchHourlyData(rangeKey), 60 * 60 * 1000); // cada hora
         }
 
-        if (kanbanHourlyRange) {
-            kanbanHourlyRange.addEventListener('click', (event) => {
+        if (kanbanChartsRange) {
+            kanbanChartsRange.addEventListener('click', (event) => {
                 const button = event.target.closest('button[data-range]');
                 if (!button) return;
 
-                kanbanHourlyRange.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
+                kanbanChartsRange.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
                 button.classList.add('active');
-                scheduleHourlyRefresh(button.dataset.range);
+                const rangeKey = button.dataset.range;
+                scheduleHourlyRefresh(rangeKey);
+                scheduleWaitTimeRefresh(rangeKey);
             });
 
-            const defaultButton = kanbanHourlyRange.querySelector('button.active');
+            const defaultButton = kanbanChartsRange.querySelector('button.active');
             const defaultRange = defaultButton ? defaultButton.dataset.range : '1d';
             scheduleHourlyRefresh(defaultRange);
+            scheduleWaitTimeRefresh(defaultRange);
         }
 
         document.addEventListener('kanban:refresh-lines', () => {
-            const currentButton = kanbanHourlyRange.querySelector('button.active');
+            const currentButton = kanbanChartsRange?.querySelector('button.active');
             const rangeKey = currentButton ? currentButton.dataset.range : '1d';
             fetchHourlyData(rangeKey);
+            fetchWaitTimeData(rangeKey);
         });
 
         window.addEventListener('beforeunload', () => {
             if (hourlyRefreshTimer) {
                 clearInterval(hourlyRefreshTimer);
             }
+            if (waitTimeRefreshTimer) {
+                clearInterval(waitTimeRefreshTimer);
+            }
         });
 
-        // --- Gráfica de WT/WTM (Historial de tiempos de espera) ---
-        const kanbanWaitTimePanel = document.querySelector('#kanbanWaitTimePanel');
-        const kanbanWaitTimeChartEl = document.querySelector('#kanbanWaitTimeChart');
-        const kanbanWaitTimeRange = document.querySelector('#kanbanWaitTimeRange');
-        const kanbanWaitTimeSubtitle = document.querySelector('#kanbanWaitTimeSubtitle');
-        const kanbanWaitTimeUpdated = document.querySelector('#kanbanWaitTimeUpdated');
-        const kanbanWaitTimeToggle = document.querySelector('#kanbanWaitTimeToggle');
-        const kanbanWaitTimeBody = document.querySelector('#kanbanWaitTimeBody');
-
-        let waitTimeChart = null;
-        let waitTimeRefreshTimer = null;
-
-        if (kanbanWaitTimeToggle && kanbanWaitTimeBody) {
-            kanbanWaitTimeToggle.addEventListener('click', () => {
-                const isCollapsed = kanbanWaitTimeBody.style.display === 'none';
-                kanbanWaitTimeBody.style.display = isCollapsed ? 'block' : 'none';
-                const icon = kanbanWaitTimeToggle.querySelector('i');
-                icon.className = isCollapsed ? 'fas fa-chevron-up' : 'fas fa-chevron-down';
-            });
-        }
-
+        // --- Función para cargar datos de WT/WTM ---
         function fetchWaitTimeData(rangeKey = '1d') {
             if (!kanbanWaitTimeChartEl) {
                 return;
@@ -824,34 +821,6 @@
             waitTimeRefreshTimer = setInterval(() => fetchWaitTimeData(rangeKey), 60 * 60 * 1000); // cada hora
         }
 
-        if (kanbanWaitTimeRange) {
-            kanbanWaitTimeRange.addEventListener('click', (event) => {
-                const button = event.target.closest('button[data-range]');
-                if (!button) return;
-
-                kanbanWaitTimeRange.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
-                button.classList.add('active');
-                scheduleWaitTimeRefresh(button.dataset.range);
-            });
-
-            const defaultButton = kanbanWaitTimeRange.querySelector('button.active');
-            const defaultRange = defaultButton ? defaultButton.dataset.range : '1d';
-            scheduleWaitTimeRefresh(defaultRange);
-        }
-
-        document.addEventListener('kanban:refresh-lines', () => {
-            const currentButton = kanbanWaitTimeRange?.querySelector('button.active');
-            const rangeKey = currentButton ? currentButton.dataset.range : '1d';
-            if (kanbanWaitTimeChartEl) {
-                fetchWaitTimeData(rangeKey);
-            }
-        });
-
-        window.addEventListener('beforeunload', () => {
-            if (waitTimeRefreshTimer) {
-                clearInterval(waitTimeRefreshTimer);
-            }
-        });
         @endcan
         // --- 1. CONFIGURACIÓN INICIAL Y VARIABLES GLOBALES ---
         
