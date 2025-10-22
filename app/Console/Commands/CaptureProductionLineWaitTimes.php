@@ -116,9 +116,8 @@ class CaptureProductionLineWaitTimes extends Command
                     try {
                         $estimatedStart = Carbon::parse($order->estimated_start_datetime);
                         $diffMinutes = $now->diffInMinutes($estimatedStart, false);
-                        // Valor positivo = esperando (ya pasó la hora de inicio)
-                        // Valor negativo = aún no llegó la hora
-                        $waitMinutes[] = -$diffMinutes; // Invertimos para que positivo = espera
+                        // Guardamos el valor absoluto en minutos
+                        $waitMinutes[] = abs($diffMinutes);
                     } catch (\Exception $e) {
                         Log::warning("Error parseando estimated_start_datetime para orden {$order->id}: {$e->getMessage()}");
                         continue;

@@ -772,6 +772,15 @@
                 .then(payload => {
                     const { series = [], lastCapture } = payload;
 
+                    // Convertir cualquier valor negativo a positivo por si la DB lo devuelve así
+                    const normalizedSeries = series.map(serie => ({
+                        ...serie,
+                        data: (serie.data || []).map(point => ({
+                            x: point.x,
+                            y: point.y !== null && point.y !== undefined ? Math.abs(point.y) : point.y,
+                        })),
+                    }));
+
                     if (!waitTimeChart) {
                         waitTimeChart = new ApexCharts(kanbanWaitTimeChartEl, {
                             chart: {
@@ -795,15 +804,15 @@
                                 y: { formatter: (val) => `${val.toLocaleString(undefined, { maximumFractionDigits: 2 })} {{ __('min') }}` }
                             },
                             legend: { position: 'top', horizontalAlign: 'left' },
-                            series: series,
+                            series: normalizedSeries,
                             noData: { text: '{{ __('Sin datos para mostrar') }}' }
                         });
                         waitTimeChart.render();
                     } else {
-                        waitTimeChart.updateSeries(series);
+                        waitTimeChart.updateSeries(normalizedSeries);
                     }
 
-                    const totalLines = new Set(series.map(s => s.name.replace(/ \(WT.*\)$/, ''))).size;
+                    const totalLines = new Set(normalizedSeries.map(s => s.name.replace(/ \(WT.*\)$/, ''))).size;
                     kanbanWaitTimeUpdated.textContent = lastCapture
                         ? `{{ __('Última captura') }}: ${lastCapture} · {{ __('Líneas activas') }}: ${totalLines}`
                         : `{{ __('Sin capturas disponibles') }} · {{ __('Líneas activas') }}: ${totalLines}`;
@@ -2676,7 +2685,7 @@
                     const startDate = new Date(order.estimated_start_datetime.replace(' ', 'T'));
                     if (!isNaN(startDate.getTime())) {
                         const diffMs = now - startDate.getTime();
-                        const diffMinutes = diffMs / 60000;
+                        const diffMinutes = Math.abs(diffMs / 60000);
                         waitMinutes.push(diffMinutes);
                     }
                 } catch (e) {
@@ -2703,11 +2712,10 @@
         
         function formatWaitTime(minutes) {
             if (minutes === null || isNaN(minutes)) return '—';
-            const sign = minutes < 0 ? '-' : '';
             const abs = Math.abs(minutes);
             const h = Math.floor(abs / 60);
             const m = Math.round(abs % 60);
-            return `${sign}${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+            return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
         }
         // isOrderUrgent se define más arriba basándose en la fecha de entrega (<= 5 días)
         // Formatea fecha/hora con tolerancia a cadenas tipo 'YYYY-MM-DD HH:MM:SS'
