@@ -670,19 +670,19 @@
             };
 
             const i18n = {
-                erpToCreated: @json(__('ERP → Creado')),
-                erpToFinished: @json(__('ERP → Fin')),
+                erpToCreated: @json(__('Tiempo Recepción Pedido → Puesto en Fabricación')),
+                erpToFinished: @json(__('Tiempo Recepción Pedido → Pedido Finalizado')),
                 createdToFinished: @json(__('Tiempo Recepción Pedido → Pedido Finalizado')),
                 processes: @json(__('Procesos')),
-                erpRegistered: @json(__('Pedido ERP')),
-                noErpDate: @json(__('Sin fecha ERP registrada')),
-                createdAt: @json(__('Creado en producción')),
-                finishedAt: @json(__('Finalizado')),
+                erpRegistered: @json(__('Recepción Pedido')),
+                noErpDate: @json(__('Sin fecha de recepción registrada')),
+                createdAt: @json(__('Puesto en Fabricación')),
+                finishedAt: @json(__('Pedido Finalizado')),
                 position: @json(__('Posición')),
                 duration: @json(__('Duración')),
                 gap: @json(__('Gap')),
-                erpToProcess: @json(__('ERP → Proceso')),
-                createdToProcess: @json(__('Creado → Proceso')),
+                erpToProcess: @json(__('Recepción Pedido → Proceso')),
+                createdToProcess: @json(__('Puesto en Fabricación → Proceso')),
                 timelineTitle: @json(__('Timeline de procesos')),
                 timelineDetail: @json(__('Detalle de procesos')),
                 noProcesses: @json(__('Sin procesos registrados para esta orden')),
@@ -694,22 +694,22 @@
                 timelineOrdersTitle: @json(__('Cronología de fechas')),
                 timelineFromErp: @json(__('Ruta desde ERP')),
                 timelineFromCreated: @json(__('Ruta desde creación')),
-                timelineLegendErpCreated: @json(__('ERP → Creado')),
+                timelineLegendErpCreated: @json(__('Tiempo Recepción Pedido →  Puesto en Fabricación')),
                 timelineLegendCreatedFinished: @json(__('Tiempo Recepción Pedido → Pedido Finalizado')),
                 timelineLegendFinishedDelivery: @json(__('Fin → Entrega')),
-                timelineLegendCreatedProcess: @json(__('Creado → Proceso')),
-                timelineLegendProcessDelivery: @json(__('Proceso → Entrega')),
+                timelineLegendCreatedProcess: @json(__('Tiempo Puesto en Fabricación → Proceso')),
+                timelineLegendProcessDelivery: @json(__('Tiempo Proceso → Entrega')),
                 timelineProcessPath: @json(__('Ruta al proceso')),
                 timelineNoData: @json(__('Sin datos suficientes para mostrar la cronología')),
                 timelineStart: @json(__('Inicio')),
                 timelineEnd: @json(__('Fin')),
-                erpDateLabel: @json(__('Fecha ERP')),
-                createdDateLabel: @json(__('Creado en producción')),
-                finishedDateLabel: @json(__('Fecha fin producción')),
+                erpDateLabel: @json(__('Fecha Recepción Pedido')),
+                createdDateLabel: @json(__('Puesto en Fabricación')),
+                finishedDateLabel: @json(__('Fecha Pedido Finalizado')),
                 deliveryDateLabel: @json(__('Fecha de entrega prevista')),
                 actualDeliveryLabel: @json(__('Fecha de entrega real')),
                 toggleActualDeliveryLabel: @json(__('Usar fecha real de entrega (actual_delivery_date) en lugar de fecha ERP programada')),
-                timelineLegendFinishedActualDelivery: @json(__('Fin → Entrega real')),
+                timelineLegendFinishedActualDelivery: @json(__('Pedido Finalizado → Entrega real')),
                 timelineLegendProcessActualDelivery: @json(__('Proceso → Entrega real')),
                 timelineOrdersAverageTitle: @json(__('Promedio del rango')),
                 timelineOrdersMedianTitle: @json(__('Mediana del rango'))
@@ -718,10 +718,10 @@
             const normalizeTimelineLabel = (raw) => {
                 if (!raw || typeof raw !== 'string') return '-';
                 return raw
-                    .replace('ERP → Creado', '{{ __('Tiempo entre Recepción Pedido → Puesta en Marcha') }}')
+                    .replace('ERP → Creado', '{{ __('Tiempo Recepción Pedido → Puesto en Fabricación') }}')
                     .replace('Tiempo Recepción Pedido → Pedido Finalizado', '{{ __('Tiempo Recepción Pedido → Pedido Finalizado') }}')
-                    .replace('Fin → Entrega real', '{{ __('Fin → Entrega real') }}')
-                    .replace('Fin → Entrega', '{{ __('Fin → Entrega') }}');
+                    .replace('Fin → Entrega real', '{{ __('Pedido Finalizado → Entrega real') }}')
+                    .replace('Fin → Entrega', '{{ __('Pedido Finalizado → Entrega') }}');
             };
 
             const computeDurationLabel = (start, end, isDatetime) => {
@@ -1472,10 +1472,10 @@
                                         const de = typeof avgTimeline.delivery_end_ts === 'number' ? avgTimeline.delivery_end_ts : null;
                                         if (!ab || ce == null || fe == null || de == null) return '';
                                         const items = [
-                                            { label: 'Recepcion Pedido Oficina → Finalizado Producción', value: formatSeconds(fe), color: 'segment-success' },
-                                            { label: useActualDelivery ? 'Recepcion Pedido Oficina → Entrega Pedido' : 'Recepcion Pedido Oficina → Entrega Pedido', value: formatSeconds(de), color: 'segment-warning' },
-                                            { label: 'Tiempo Lanzamiento a Producción → Pedido Finalizado', value: formatSeconds(Math.max(0, fe - ce)), color: 'segment-success' },
-                                            { label: useActualDelivery ? 'Lanzamiento a Producción → Entrega Pedido' : 'Lanzamiento a Producción → Entrega Pedido', value: formatSeconds(Math.max(0, de - ce)), color: 'segment-warning' }
+                                            { label: 'Recepción Pedido → Pedido Finalizado', value: formatSeconds(fe), color: 'segment-success' },
+                                            { label: useActualDelivery ? 'Recepción Pedido → Entrega Pedido' : 'Recepción Pedido → Entrega Pedido', value: formatSeconds(de), color: 'segment-warning' },
+                                            { label: 'Tiempo Puesto en Producción → Pedido Finalizado', value: formatSeconds(Math.max(0, fe - ce)), color: 'segment-success' },
+                                            { label: useActualDelivery ? 'Puesto en Fabricación → Entrega Pedido' : 'Tiempo Puesto en Producción → Entrega Pedido', value: formatSeconds(Math.max(0, de - ce)), color: 'segment-warning' }
                                         ];
                                         return `<div class="timeline-summary-inline mt-3">${items.map(item => `
                                             <div class="timeline-chip">
@@ -1506,10 +1506,10 @@
                                         const de = typeof medianTimeline.delivery_end_ts === 'number' ? medianTimeline.delivery_end_ts : null;
                                         if (!mb || ce == null || fe == null || de == null) return '';
                                         const items = [
-                                            { label: 'Recepcion Pedido Oficina → Finalizado Producción:', value: formatSeconds(fe), color: 'segment-success' },
-                                            { label: useActualDelivery ? 'Recepcion Pedido Oficina → Entrega Pedido' : 'Recepcion Pedido Oficina → Entrega Pedido', value: formatSeconds(de), color: 'segment-warning' },
-                                            { label: 'Tiempo Lanzamiento a Producción → Pedido Finalizado: ', value: formatSeconds(Math.max(0, fe - ce)), color: 'segment-success' },
-                                            { label: useActualDelivery ? 'Lanzamiento a Producción → Entrega Pedido' : 'Lanzamiento a Producción → Entrega Pedido:', value: formatSeconds(Math.max(0, de - ce)), color: 'segment-warning' }
+                                            { label: 'Tiempo Recepción Pedido → Pedido Finalizado:', value: formatSeconds(fe), color: 'segment-success' },
+                                            { label: useActualDelivery ? 'Recepción Pedido  → Entrega Pedido' : 'Recepción Pedido  → Entrega Pedido', value: formatSeconds(de), color: 'segment-warning' },
+                                            { label: 'Tiempo Puesto en Producción → Pedido Finalizado: ', value: formatSeconds(Math.max(0, fe - ce)), color: 'segment-success' },
+                                            { label: useActualDelivery ? 'Tiempo Puesto en Producción → Entrega Pedido' : 'Tiempo Puesto en Producción → Entrega Pedido:', value: formatSeconds(Math.max(0, de - ce)), color: 'segment-warning' }
                                         ];
                                         return `<div class="timeline-summary-inline mt-3">${items.map(item => `
                                             <div class="timeline-chip">
