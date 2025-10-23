@@ -167,13 +167,13 @@
                                 <ul class="dropdown-menu">
                                     <li><h6 class="dropdown-header"><i class="fas fa-brain me-1"></i> {{ __("Tipo de Análisis") }}</h6></li>
                                     <li><a class="dropdown-item" href="#" data-analysis="erp-to-created">
-                                        <i class="fas fa-hourglass-start text-info me-2"></i>{{ __("Tiempos ERP → Creación") }}
+                                        <i class="fas fa-hourglass-start text-info me-2"></i>{{ __("Tiempo Recepción Pedido → Puesto en Fabricación") }}
                                     </a></li>
                                     <li><a class="dropdown-item" href="#" data-analysis="created-to-finished">
-                                        <i class="fas fa-industry text-success me-2"></i>{{ __("Tiempos Creación → Fin") }}
+                                        <i class="fas fa-industry text-success me-2"></i>{{ __("Tiempo Puesto en Fabricación → Pedido Finalizado") }}
                                     </a></li>
                                     <li><a class="dropdown-item" href="#" data-analysis="finish-to-delivery">
-                                        <i class="fas fa-truck-loading text-warning me-2"></i>{{ __("Retraso Fin → Entrega") }}
+                                        <i class="fas fa-truck-loading text-warning me-2"></i>{{ __("Pedido Finalizado → Entrega") }}
                                     </a></li>
                                     <li><a class="dropdown-item" href="#" data-analysis="process-gaps">
                                         <i class="fas fa-project-diagram text-warning me-2"></i>{{ __("Gaps entre Procesos") }}
@@ -215,8 +215,8 @@
                                     <th>{{ __('Fecha Recepción Pedido') }}</th>
                                     <th>{{ __('Fecha Puesto en Fabricación') }}</th>
                                     <th>{{ __('Fecha Pedido Finalizado') }}</th>
-                                    <th>{{ __('ERP → Creado') }}</th>
-                                    <th>{{ __('ERP → Fin') }}</th>
+                                    <th>{{ __('Tiempo Recepción Pedido → Puesto en Fabricación') }}</th>
+                                    <th>{{ __('Tiempo Puesto en Fabricación → Pedido Finalizado') }}</th>
                                     <th>{{ __('Tiempo Recepción Pedido → Pedido Finalizado') }}</th>
                                 </tr>
                             </thead>
@@ -265,10 +265,10 @@
                         <div class="col-md-6">
                             <h6 class="text-primary mb-3"><i class="fas fa-clipboard-list me-2"></i>{{ __('KPIs de orden') }}</h6>
                             <dl class="row mb-0">
-                                <dt class="col-sm-5 mb-3"><span class="badge bg-primary bg-opacity-10 text-primary me-2"><i class="fas fa-clipboard-list"></i></span>{{ __('ERP → Creado') }}</dt>
+                                <dt class="col-sm-5 mb-3"><span class="badge bg-primary bg-opacity-10 text-primary me-2"><i class="fas fa-clipboard-list"></i></span>{{ __('Tiempo Recepción Pedido → Puesto en Fabricación') }}</dt>
                                 <dd class="col-sm-7 mb-3">{{ __('Tiempo desde que el pedido se registra en el ERP hasta que entra en producción. Se representa en azul en el timeline interactivo y alimenta el cálculo promedio.') }}</dd>
 
-                                <dt class="col-sm-5 mb-3"><span class="badge bg-success bg-opacity-10 text-success me-2"><i class="fas fa-flag-checkered"></i></span>{{ __('ERP → Fin') }}</dt>
+                                <dt class="col-sm-5 mb-3"><span class="badge bg-success bg-opacity-10 text-success me-2"><i class="fas fa-flag-checkered"></i></span>{{ __('Tiempo Recepción Pedido → Pedido Finalizado') }}</dt>
                                 <dd class="col-sm-7 mb-3">{{ __('Duración total del pedido desde el ERP hasta la finalización. Ayuda a identificar cuellos de botella globales y se refleja como suma de los tramos azul y verde.') }}</dd>
 
                                 <dt class="col-sm-5 mb-3"><span class="badge bg-primary bg-opacity-10 text-primary me-2"><i class="fas fa-industry"></i></span>{{ __('Tiempo Recepción Pedido → Pedido Finalizado') }}</dt>
@@ -285,8 +285,8 @@
                                 <dt class="col-sm-5 mb-3"><span class="badge bg-primary bg-opacity-10 text-primary me-2"><i class="fas fa-stopwatch"></i></span>{{ __('Duración del proceso') }}</dt>
                                 <dd class="col-sm-7 mb-3">{{ __('Tiempo neto de actividad del proceso (desde que arranca hasta que finaliza). Se muestra en azul y se expresa en minutos.') }}</dd>
 
-                                <dt class="col-sm-5 mb-3"><span class="badge bg-warning bg-opacity-10 text-warning me-2"><i class="fas fa-hourglass-half"></i></span>{{ __('Gap entre procesos') }}</dt>
-                                <dd class="col-sm-7 mb-3">{{ __('Tiempo que la orden permanece en espera entre un proceso y el siguiente. Cuanto mayor es el gap, más tiempo estuvo detenida la orden fuera de la producción activa.') }}</dd>
+                                <dt class="col-sm-5 mb-3"><span class="badge bg-warning bg-opacity-10 text-warning me-2"><i class="fas fa-hourglass-half"></i></span>{{ __('Tiempo de espera entre procesos') }}</dt>
+                                <dd class="col-sm-7 mb-3">{{ __('Tiempo de espera entre un proceso y el siguiente. Cuanto mayor es el tiempo de espera, más tiempo estuvo detenida la orden fuera de la producción activa.') }}</dd>
 
                                 <dt class="col-sm-5 mb-3"><span class="badge bg-info bg-opacity-10 text-info me-2"><i class="fas fa-project-diagram"></i></span>{{ __('ERP → Proceso / Creado → Proceso') }}</dt>
                                 <dd class="col-sm-7 mb-3">{{ __('Indicadores adicionales que muestran cuánto tardó el proceso en arrancar desde el ERP y desde la creación en planta.') }}</dd>
@@ -692,11 +692,11 @@
                 minutesSuffix: @json(__('min')),
                 orderId: @json(__('Pedido')),
                 timelineOrdersTitle: @json(__('Cronología de fechas')),
-                timelineFromErp: @json(__('Ruta desde ERP')),
-                timelineFromCreated: @json(__('Ruta desde creación')),
+                timelineFromErp: @json(__('Ruta desde Recepción Pedido')),
+                timelineFromCreated: @json(__('Ruta desde Puesto en Fabricación')),
                 timelineLegendErpCreated: @json(__('Tiempo Recepción Pedido →  Puesto en Fabricación')),
                 timelineLegendCreatedFinished: @json(__('Tiempo Recepción Pedido → Pedido Finalizado')),
-                timelineLegendFinishedDelivery: @json(__('Fin → Entrega')),
+                timelineLegendFinishedDelivery: @json(__('Pedido Finalizado → Entrega')),
                 timelineLegendCreatedProcess: @json(__('Tiempo Puesto en Fabricación → Proceso')),
                 timelineLegendProcessDelivery: @json(__('Tiempo Proceso → Entrega')),
                 timelineProcessPath: @json(__('Ruta al proceso')),
@@ -749,13 +749,13 @@
 
                 const points = [];
                 if (typeof erp === 'number' && typeof created === 'number' && created > erp) {
-                    points.push({ x: 'ERP → Creado', y: [erp * 1000, created * 1000], fillColor: '#118DFF' });
+                    points.push({ x: 'Tiempo Recepción Pedido → Puesto en Fabricación', y: [erp * 1000, created * 1000], fillColor: '#118DFF' });
                 }
                 if (typeof created === 'number' && typeof finished === 'number' && finished > created) {
                     points.push({ x: 'Tiempo Recepción Pedido → Pedido Finalizado', y: [created * 1000, finished * 1000], fillColor: '#21A366' });
                 }
                 if (typeof finished === 'number' && typeof delivery === 'number' && delivery > finished) {
-                    points.push({ x: (useActual ? 'Fin → Entrega real' : 'Fin → Entrega'), y: [finished * 1000, delivery * 1000], fillColor: '#F2C811' });
+                    points.push({ x: (useActual ? 'Pedido Finalizado → Entrega real' : 'Pedido Finalizado → Entrega'), y: [finished * 1000, delivery * 1000], fillColor: '#F2C811' });
                 }
 
                 try { console.log('[RB] order points', { key, pointsCount: points.length, points }); } catch(e) {}
@@ -837,9 +837,9 @@
                 const c3e = median.delivery_end_ts ?? 0;
 
                 const points = [];
-                if (c1e > c1s) points.push({ x: 'ERP → Creado', y: [c1s, c1e], fillColor: '#118DFF' });
+                if (c1e > c1s) points.push({ x: 'Tiempo Recepción Pedido → Puesto en Fabricación', y: [c1s, c1e], fillColor: '#118DFF' });
                 if (c2e > c2s) points.push({ x: 'Tiempo Recepción Pedido → Pedido Finalizado', y: [c2s, c2e], fillColor: '#21A366' });
-                if (c3e > c3s) points.push({ x: (useActual ? 'Fin → Entrega real' : 'Fin → Entrega'), y: [c3s, c3e], fillColor: '#F2C811' });
+                if (c3e > c3s) points.push({ x: (useActual ? 'Pedido Finalizado → Entrega real' : 'Pedido Finalizado → Entrega'), y: [c3s, c3e], fillColor: '#F2C811' });
 
                 try { console.log('[MRB] median points', { key, pointsCount: points.length, points }); } catch(e) {}
 
@@ -929,9 +929,9 @@
                 const c3e = typeof avg.delivery_end_ts === 'number' ? avg.delivery_end_ts : null;
 
                 const points = [];
-                if (typeof c1e === 'number' && c1e > c1s) points.push({ x: 'ERP → Creado', y: [c1s, c1e], fillColor: '#118DFF' });
+                if (typeof c1e === 'number' && c1e > c1s) points.push({ x: 'Tiempo Recepción Pedido → Puesto en Fabricación', y: [c1s, c1e], fillColor: '#118DFF' });
                 if (typeof c2e === 'number' && c2e > c2s) points.push({ x: 'Tiempo Recepción Pedido → Pedido Finalizado', y: [c2s, c2e], fillColor: '#21A366' });
-                if (typeof c3e === 'number' && c3e > c3s) points.push({ x: (useActual ? 'Fin → Entrega real' : 'Fin → Entrega'), y: [c3s, c3e], fillColor: '#F2C811' });
+                if (typeof c3e === 'number' && c3e > c3s) points.push({ x: (useActual ? 'Pedido Finalizado → Entrega real' : 'Pedido Finalizado → Entrega'), y: [c3s, c3e], fillColor: '#F2C811' });
 
                 try { console.log('[RB] avg points', { key, pointsCount: points.length, points }); } catch(e) {}
 
@@ -1063,8 +1063,29 @@
                 rows.push(buildTimelineRow(`${i18n.timelineProcessPath}: ${i18n.erpToProcess}`, process.erp_to_process_seconds, process.erp_to_process_formatted, detail.fecha_pedido_erp_ts, process.finished_at_ts, 'segment-primary', bounds));
                 rows.push(buildTimelineRow(`${i18n.timelineProcessPath}: ${i18n.createdToProcess}`, process.created_to_process_seconds, process.created_to_process_formatted, detail.created_at_ts, process.finished_at_ts, 'segment-info', bounds));
 
-                const deliveryTarget = detail.delivery_date_ts ?? bounds.end;
-                rows.push(buildTimelineRow(i18n.timelineLegendProcessDelivery, deliveryTarget && process.finished_at_ts ? Math.max(0, deliveryTarget - process.finished_at_ts) : null, detail.delivery_date ? detail.delivery_date : '-', process.finished_at_ts, deliveryTarget, 'segment-warning', bounds));
+                const useActualDelivery = !!(detail.use_actual_delivery);
+                const chosenDeliveryTs = useActualDelivery
+                    ? (typeof detail.actual_delivery_date_ts === 'number' ? detail.actual_delivery_date_ts : null)
+                    : (typeof detail.delivery_date_ts === 'number' ? detail.delivery_date_ts : null);
+                const deliveryLabel = useActualDelivery ? i18n.timelineLegendProcessActualDelivery : i18n.timelineLegendProcessDelivery;
+
+                const procToDeliverySeconds = (typeof chosenDeliveryTs === 'number' && typeof process.finished_at_ts === 'number')
+                    ? Math.max(0, chosenDeliveryTs - process.finished_at_ts)
+                    : null;
+                const procToDeliveryFormatted = (typeof chosenDeliveryTs === 'number' && typeof process.finished_at_ts === 'number')
+                    ? computeDurationLabel(process.finished_at_ts, chosenDeliveryTs, false)
+                    : '-';
+                rows.push(
+                    buildTimelineRow(
+                        deliveryLabel,
+                        procToDeliverySeconds,
+                        procToDeliveryFormatted,
+                        process.finished_at_ts,
+                        chosenDeliveryTs ?? 0,
+                        'segment-warning',
+                        bounds
+                    )
+                );
 
                 const hasValidRow = rows.some(row => !row.includes('timeline-row disabled'));
 
@@ -1139,6 +1160,9 @@
                                 renderOrderRangeBar(detail);
                                 renderAvgRangeBar(detail);
                                 renderMedianRangeBar(detail);
+                                const $childRow = tr.next('tr');
+                                const tooltipEls = $childRow.find('[data-bs-toggle="tooltip"]').toArray();
+                                tooltipEls.forEach(el => { try { new bootstrap.Tooltip(el); } catch (e) {} });
                             }, 0);
                         } catch (err) {
                             try { console.error('renderDetail error', err); } catch(e2) {}
@@ -1542,7 +1566,6 @@
                             <div class="process-detail-wrapper h-100">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
                                     <h6 class="mb-0">${i18n.detailTitle}</h6>
-                                    <span class="badge bg-primary bg-opacity-10 text-primary"><i class="fas fa-hashtag me-1"></i>${detail.order_id ?? '-'}</span>
                                 </div>`;
 
                 if (!processes.length) {
@@ -1551,10 +1574,10 @@
                     processes.forEach((process, index) => {
                         const badges = [];
                         if (process.duration_formatted) {
-                            badges.push(`<span class="badge bg-primary bg-opacity-10 text-primary"><i class="fas fa-stopwatch me-1"></i>${process.duration_formatted}</span>`);
+                            badges.push(`<span class="badge bg-primary text-white fs-6 py-2 px-3 me-2" data-bs-toggle="tooltip" title="Duración del proceso"><i class="fas fa-stopwatch me-1"></i>${process.duration_formatted}</span>`);
                         }
                         if (process.gap_formatted) {
-                            badges.push(`<span class="badge bg-warning bg-opacity-10 text-warning"><i class="fas fa-hourglass-half me-1"></i>${process.gap_formatted}</span>`);
+                            badges.push(`<span class="badge bg-warning text-white fs-6 py-2 px-3 me-2" data-bs-toggle="tooltip" title="Tiempo de espera entre procesos"><i class="fas fa-hourglass-half me-1"></i>${process.gap_formatted}</span>`);
                         }
 
                         html += `
