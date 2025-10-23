@@ -1881,12 +1881,12 @@
                 return `${prefix}${formatTime(Math.abs(parsed))}`;
             }
 
-            // Análisis 1: Tiempos ERP → Creación
+            // Análisis 1: Tiempo Recepción Pedido → Puesto en Fabricación
             function collectErpToCreatedData() {
                 const table = $('#production-times-table').DataTable();
                 if (!table) {
                     console.error('[AI] DataTable no inicializada');
-                    return { metrics: {}, csv: '', type: 'Tiempos ERP → Creación' };
+                    return { metrics: {}, csv: '', type: 'Tiempo Recepción Pedido → Puesto en Fabricación' };
                 }
 
                 const metrics = {
@@ -1910,7 +1910,7 @@
                     return { 
                         metrics, 
                         csv: 'Order_ID,Cliente,Fecha_ERP_ISO,Fecha_Creado_ISO,Tiempo_ERP_a_Creado_Segundos,Tiempo_ERP_a_Creado_Formato\n', 
-                        type: 'Tiempos ERP → Creación', 
+                        type: 'Tiempo Recepción Pedido → Puesto en Fabricación', 
                         note: 'Sin datos disponibles'
                     };
                 }
@@ -1939,15 +1939,15 @@
                 console.log('[AI] Primeras 200 caracteres del CSV:', csv.substring(0, 200));
                 
                 const note = count >= maxRows ? `Mostrando primeras ${maxRows} órdenes` : `Total: ${count} órdenes`;
-                return { metrics, csv, type: 'Tiempos ERP → Creación', note };
+                return { metrics, csv, type: 'Tiempo Recepción Pedido → Puesto en Fabricación', note };
             }
 
-            // Análisis 2: Tiempos Creación → Finalización
+            // Análisis 2: Tiempo Puesto en Fabricación → Pedido Finalizado
             function collectCreatedToFinishedData() {
                 const table = $('#production-times-table').DataTable();
                 if (!table) {
                     console.error('[AI] DataTable no inicializada');
-                    return { metrics: {}, csv: '', type: 'Tiempos Creación → Fin' };
+                    return { metrics: {}, csv: '', type: 'Tiempo Puesto en Fabricación → Pedido Finalizado' };
                 }
 
                 const metrics = {
@@ -1977,15 +1977,15 @@
                 });
 
                 const note = count >= maxRows ? `Mostrando primeras ${maxRows} órdenes` : `Total: ${count} órdenes`;
-                return { metrics, csv, type: 'Tiempos Creación → Fin', note };
+                return { metrics, csv, type: 'Tiempo Puesto en Fabricación → Pedido Finalizado', note };
             }
 
-            // Análisis adicional: Retraso Fin → Entrega
+            // Análisis adicional: Pedido Finalizado → Entrega
             function collectFinishToDeliveryData() {
                 const table = $('#production-times-table').DataTable();
                 if (!table) {
                     console.error('[AI] DataTable no inicializada');
-                    return { metrics: {}, csv: '', type: 'Retraso Fin → Entrega' };
+                    return { metrics: {}, csv: '', type: 'Pedido Finalizado → Entrega' };
                 }
 
                 const header = 'Order_ID,Cliente,Fecha_Fin_ISO,Fecha_Entrega_Usada_ISO,Fecha_Entrega_Planificada_ISO,Fecha_Entrega_Real_ISO,Tiempo_Fin_a_Entrega_Segundos,Tiempo_Fin_a_Entrega_Formato,Retraso_vs_Plan_Segundos,Retraso_vs_Plan_Formato\n';
@@ -2015,7 +2015,7 @@
                         deliveryReference,
                         dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
                     };
-                    return { metrics, csv: header, type: 'Retraso Fin → Entrega', note: 'Sin datos disponibles' };
+                    return { metrics, csv: header, type: 'Pedido Finalizado → Entrega', note: 'Sin datos disponibles' };
                 }
 
                 let count = 0;
@@ -2072,7 +2072,7 @@
                 };
 
                 const note = count >= maxRows ? `Mostrando primeras ${maxRows} órdenes` : `Total: ${count} órdenes`;
-                return { metrics, csv, type: 'Retraso Fin → Entrega', note };
+                return { metrics, csv, type: 'Pedido Finalizado → Entrega', note };
             }
 
             // Análisis 3: Rendimiento de Órdenes (mantener como referencia)
@@ -2688,8 +2688,8 @@
             // Configuración de prompts por tipo de análisis
             const analysisPrompts = {
                 'erp-to-created': {
-                    title: 'Tiempos ERP → Creación',
-                    prompt: `Analiza los tiempos entre el registro del pedido en ERP y su creacion en produccion.
+                    title: 'Tiempo Recepción Pedido → Puesto en Fabricación',
+                    prompt: `Analiza los tiempos entre la recepcion del pedido y su puesta en fabricacion.
 
 IMPORTANTE: A continuacion recibiras un archivo CSV completo. Lee TODAS las filas del CSV para realizar el analisis.
 
@@ -2710,8 +2710,8 @@ Objetivos del analisis:
 Se breve, concreto y cuantifica los hallazgos usando TODOS los datos del CSV.`
                 },
                 'created-to-finished': {
-                    title: 'Tiempos Creación → Finalización',
-                    prompt: `Analiza los tiempos de ciclo de produccion (desde creacion hasta finalizacion).
+                    title: 'Tiempo Puesto en Fabricación → Pedido Finalizado',
+                    prompt: `Analiza los tiempos de ciclo de produccion (desde puesta en fabricacion hasta finalizacion del pedido).
 
 IMPORTANTE: Lee TODAS las filas del CSV completo que recibiras a continuacion.
 
@@ -2729,8 +2729,8 @@ Foco del analisis:
 Prioriza hallazgos accionables usando TODOS los datos.`
                 },
                 'finish-to-delivery': {
-                    title: 'Retraso Fin → Entrega',
-                    prompt: `Analiza el tramo final desde la finalizacion de produccion hasta la entrega.
+                    title: 'Pedido Finalizado → Entrega',
+                    prompt: `Analiza el tramo final desde la finalizacion del pedido hasta la entrega.
 
 IMPORTANTE: Procesa TODAS las filas del CSV.
 
