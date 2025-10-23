@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\ProductionLineProcessController;
+use App\Http\Controllers\ProductionLineArticleController;
 use App\Http\Controllers\ModualController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\RoleController;
@@ -61,6 +62,8 @@ use App\Http\Controllers\AssetCategoryController;
 use App\Http\Controllers\AssetLocationController;
 use App\Http\Controllers\AssetController;
 use App\Http\Controllers\AssetReceiptController;
+use App\Http\Controllers\ArticleFamilyController;
+use App\Http\Controllers\ArticleController;
 
 // Rutas para transportistas/conductores (fuera del grupo de customers)
 Route::middleware(['auth', 'XSS'])->group(function () {
@@ -406,6 +409,17 @@ Route::prefix('productionlines/{production_line}/processes')->name('productionli
     Route::delete('/{process}', [ProductionLineProcessController::class, 'destroy'])->name('destroy');
 });
 
+// Rutas para ProductionLineArticle
+Route::prefix('productionlines/{production_line}/articles')->name('productionlines.articles.')->group(function () {
+    Route::get('/', [ProductionLineArticleController::class, 'index'])->name('index');
+    Route::get('/create', [ProductionLineArticleController::class, 'create'])->name('create');
+    Route::post('/', [ProductionLineArticleController::class, 'store'])->name('store');
+    Route::get('/{article}/edit', [ProductionLineArticleController::class, 'edit'])->name('edit');
+    Route::put('/{article}', [ProductionLineArticleController::class, 'update'])->name('update');
+    Route::delete('/{article}', [ProductionLineArticleController::class, 'destroy'])->name('destroy');
+    Route::post('/bulk-delete', [ProductionLineArticleController::class, 'bulkDelete'])->name('bulk-delete')->middleware(['auth', 'XSS']);
+});
+
 // Mostrar el listado de sensores para una línea de producción
 Route::get('smartsensors/{production_line_id}', [SensorController::class, 'index'])->name('smartsensors.index');
 
@@ -682,6 +696,10 @@ Route::delete('users/delete/ajax/{id}', [UserController::class, 'deleteAjax'])->
 
 // Rutas para la gestión de procesos
 Route::resource('processes', ProcessController::class);
+
+// Rutas para familias de artículos y artículos
+Route::resource('article-families', ArticleFamilyController::class)->middleware(['auth', 'XSS']);
+Route::resource('article-families.articles', ArticleController::class)->middleware(['auth', 'XSS']);
 
 Route::get('confections', [ConfectionController::class, 'index'])->name('confections.index');
 

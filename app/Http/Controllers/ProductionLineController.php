@@ -86,7 +86,16 @@ class ProductionLineController extends Controller
         </a>";
         $buttons[] = $processesBtn;
     }
-    
+
+    // Botón de familia de artículos - requiere permiso productionline-article-view
+    if (auth()->user()->can('productionline-article-view')) {
+        $articlesUrl = route('productionlines.articles.index', $line->id);
+        $articlesBtn = "<a href='{$articlesUrl}' class='btn btn-sm btn-info' title='Familia de Artículos'>
+            <i class='fa fa-tags'></i> " . __('Familia de Artículos') . "
+        </a>";
+        $buttons[] = $articlesBtn;
+    }
+
     // Botón de órdenes - requiere permiso productionline-orders-kanban
     if (auth()->user()->can('productionline-orders-kanban')) {
         $ordersBtn = "<a href='{$ordersUrl}' class='btn btn-sm btn-secondary' title='Production Orders'>

@@ -185,6 +185,15 @@ $settings = Utility::settings();
                     </li>
                 @endif
 
+                @if (auth()->user()->hasRole('admin') || auth()->user()->can('article-family-show'))
+                    <li class="dash-item dash-hasmenu {{ request()->is('article-families*') ? 'active' : '' }}">
+                        <a class="dash-link" href="{{ route('article-families.index') }}">
+                            <span class="dash-micon"><i class="fas fa-folder-tree"></i></span>
+                            <span class="dash-mtext custom-weight">{{ __('Article Families') }}</span>
+                        </a>
+                    </li>
+                @endif
+
                 @if (auth()->user()->hasRole('admin') || auth()->user()->can('shift-show'))
                     <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
                         <a class="dash-link" href="{{ route('shift.index') }}">

@@ -31,6 +31,16 @@ class ProductionLine extends Model
     }
 
     /**
+     * Los artículos asociados a esta línea de producción.
+     */
+    public function articles()
+    {
+        return $this->belongsToMany(Article::class, 'production_line_article')
+            ->withPivot('order')
+            ->orderBy('production_line_article.order');
+    }
+
+    /**
      * Los atributos que deberían estar ocultos para los arrays.
      *
      * @var array<int, string>
