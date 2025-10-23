@@ -1271,5 +1271,10 @@
   "No hay activos registrados.": "No hay activos registrados.",
   "Vista inventario": "Vista inventario",
   "Sin categoría": "Sin categoría",
-  "Sin ubicación": "Sin ubicación"
+  "Sin ubicación": "Sin ubicación",
+  "Pedidos con datos faltantes": "Pedidos con datos faltantes",
+  "pedido(s) tienen fechas faltantes (Fecha ERP, Creado o Finalizado).": "pedido(s) tienen fechas faltantes (Fecha ERP, Creado o Finalizado).",
+  "¿Deseas mostrar estos pedidos o esconderlos? Los pedidos escondidos no se enviarán al análisis de IA.": "¿Deseas mostrar estos pedidos o esconderlos? Los pedidos escondidos no se enviarán al análisis de IA.",
+  "Mostrar todos": "Mostrar todos",
+  "Esconder incompletos": "Esconder incompletos"
 }

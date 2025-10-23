@@ -898,6 +898,7 @@ class CustomerOriginalOrderController extends Controller
             'grupo_numeros.*' => ['integer'],
             'use_actual_delivery' => ['nullable', 'boolean'],
             'filter_delivery_dates' => ['nullable', 'boolean'],
+            'exclude_incomplete_orders' => ['nullable', 'boolean'],
         ];
 
         $validated = $request->validate($rules);
@@ -923,6 +924,7 @@ class CustomerOriginalOrderController extends Controller
             'grupo_numeros' => $validated['grupo_numeros'] ?? [],
             'use_actual_delivery' => (bool)($validated['use_actual_delivery'] ?? false),
             'filter_delivery_dates' => (bool)($validated['filter_delivery_dates'] ?? false),
+            'exclude_incomplete_orders' => (bool)($validated['exclude_incomplete_orders'] ?? true),
         ];
     }
 
@@ -953,6 +955,13 @@ class CustomerOriginalOrderController extends Controller
 
         if ($filters['only_finished_orders']) {
             $query->whereNotNull('finished_at');
+        }
+
+        // Excluir órdenes con fechas incompletas (ERP, creado o finalizado) si se solicita
+        if (!empty($filters['exclude_incomplete_orders'])) {
+            $query->whereNotNull('fecha_pedido_erp')
+                  ->whereNotNull('created_at')
+                  ->whereNotNull('finished_at');
         }
 
         return $query;

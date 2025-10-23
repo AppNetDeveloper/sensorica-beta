@@ -67,8 +67,9 @@ class DatabaseSeeder extends Seeder
         $encargadoRole = Role::firstOrCreate(['name' => 'encargado']);
         $oficinaRole = Role::firstOrCreate(['name' => 'oficina']);
 
-        // Asignar todos los permisos al rol "admin"
-        $adminRole->syncPermissions($permissions);
+        // Asignar todos los permisos existentes al rol "admin"
+        $allPermissions = Permission::all();
+        $adminRole->syncPermissions($allPermissions);
 
         // Crear o encontrar el usuario admin
         $user = User::firstOrCreate(

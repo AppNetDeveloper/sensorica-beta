@@ -52,6 +52,10 @@
                                 <input class="form-check-input" type="checkbox" value="1" id="only_finished_processes">
                                 <label class="form-check-label" for="only_finished_processes">{{ __('Sólo procesos finalizados') }}</label>
                             </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="1" id="exclude_incomplete_orders" checked>
+                                <label class="form-check-label" for="exclude_incomplete_orders">{{ __('Excluir órdenes sin fechas completas') }}</label>
+                            </div>
                         </div>
                     </form>
                 </div>
@@ -86,7 +90,7 @@
                             <div class="mb-2">
                                 <i class="fas fa-stopwatch fa-2x text-info"></i>
                             </div>
-                            <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Promedio recepción oficina → fin orden') }}</h6>
+                            <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Promedio Recepción Pedido → Pedido Finalizado') }}</h6>
                             <h2 class="mb-0 text-dark fw-bold" id="kpi-erp-finish">-</h2>
                         </div>
                     </div>
@@ -97,7 +101,7 @@
                             <div class="mb-2">
                                 <i class="fas fa-clock fa-2x text-secondary"></i>
                             </div>
-                            <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Mediana recepción oficina → fin orden') }}</h6>
+                            <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Mediana Recepción Pedido → Pedido Finalizado') }}</h6>
                             <h2 class="mb-0 text-dark fw-bold" id="kpi-erp-finish-median">-</h2>
                         </div>
                     </div>
@@ -108,7 +112,7 @@
                             <div class="mb-2">
                                 <i class="fas fa-chart-line fa-2x text-warning"></i>
                             </div>
-                            <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Promedio gap procesos') }}</h6>
+                            <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Promedio Tiempo de Espera Operacion / Máquina') }}</h6>
                             <h2 class="mb-0 text-dark fw-bold" id="kpi-gap">-</h2>
                         </div>
                     </div>
@@ -119,7 +123,7 @@
                             <div class="mb-2">
                                 <i class="fas fa-equals fa-2x text-muted"></i>
                             </div>
-                            <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Mediana gap procesos') }}</h6>
+                            <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Mediana Tiempo de Espera Operacion / Máquina') }}</h6>
                             <h2 class="mb-0 text-dark fw-bold" id="kpi-gap-median">-</h2>
                         </div>
                     </div>
@@ -139,7 +143,7 @@
                     <div class="card shadow-sm border-0 h-100 hover-lift">
                         <div class="card-body text-center">
                             <div class="mb-2">
-                                <i class="fas fa-balance-scale fa-2x text-info"></i>
+                                <i class="fas fa-stopwatch fa-2x text-info"></i>
                             </div>
                             <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Mediana lanzamiento producción → fin orden') }}</h6>
                             <h2 class="mb-0 text-dark fw-bold" id="kpi-created-finish-median">-</h2>
@@ -1121,7 +1125,8 @@
                 const icon = $(this).find('i');
 
                 if (row.child.isShown()) {
-                    row.child.hide();
+                    // Eliminar completamente el child para evitar estados intermedios
+                    try { row.child.remove(); } catch(e) { row.child.hide(); }
                     tr.removeClass('shown');
                     icon.removeClass('fa-chevron-up').addClass('fa-chevron-down');
                 } else {
@@ -1185,7 +1190,8 @@
                     date_end: $('#date_end').val(),
                     only_finished_orders: $('#only_finished_orders').is(':checked') ? 1 : 0,
                     only_finished_processes: $('#only_finished_processes').is(':checked') ? 1 : 0,
-                    use_actual_delivery: $('#use_actual_delivery').is(':checked') ? 1 : 0
+                    use_actual_delivery: $('#use_actual_delivery').is(':checked') ? 1 : 0,
+                    exclude_incomplete_orders: $('#exclude_incomplete_orders').is(':checked') ? 1 : 0
                 };
             }
 
