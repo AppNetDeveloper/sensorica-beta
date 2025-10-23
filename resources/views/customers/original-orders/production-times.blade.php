@@ -38,7 +38,7 @@
                                 <div class="form-check form-switch">
                                     <input class="form-check-input" type="checkbox" id="use_actual_delivery">
                                     <label class="form-check-label" for="use_actual_delivery" id="use_actual_delivery_label">
-                                        {{ __('Usar fecha real de entrega (actual_delivery_date) en lugar de fecha ERP programada') }}
+                                        {{ __('Fecha de entrega teorica (ERP) / Fecha de entrega real(modulo Logistica)') }}
                                     </label>
                                 </div>
                             </div>
@@ -95,10 +95,10 @@
                     <div class="card shadow-sm border-0 h-100 hover-lift">
                         <div class="card-body text-center">
                             <div class="mb-2">
-                                <i class="fas fa-chart-line fa-2x text-warning"></i>
+                                <i class="fas fa-clock fa-2x text-secondary"></i>
                             </div>
-                            <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Promedio gap procesos') }}</h6>
-                            <h2 class="mb-0 text-dark fw-bold" id="kpi-gap">-</h2>
+                            <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Mediana recepción oficina → fin orden') }}</h6>
+                            <h2 class="mb-0 text-dark fw-bold" id="kpi-erp-finish-median">-</h2>
                         </div>
                     </div>
                 </div>
@@ -106,10 +106,10 @@
                     <div class="card shadow-sm border-0 h-100 hover-lift">
                         <div class="card-body text-center">
                             <div class="mb-2">
-                                <i class="fas fa-clock fa-2x text-secondary"></i>
+                                <i class="fas fa-chart-line fa-2x text-warning"></i>
                             </div>
-                            <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Mediana recepción oficina → fin orden') }}</h6>
-                            <h2 class="mb-0 text-dark fw-bold" id="kpi-erp-finish-median">-</h2>
+                            <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Promedio gap procesos') }}</h6>
+                            <h2 class="mb-0 text-dark fw-bold" id="kpi-gap">-</h2>
                         </div>
                     </div>
                 </div>
@@ -870,7 +870,7 @@
                                 return h.toString().padStart(2,'0') + ':' + m.toString().padStart(2,'0') + ':' + s.toString().padStart(2,'0');
                             }
                         },
-                        title: { text: 'Tiempo (segundos acumulados)' }
+                        title: { text: 'Tiempo ' }
                     },
                     dataLabels: { enabled: false },
                     grid: { strokeDashArray: 3 },

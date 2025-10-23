@@ -35,12 +35,12 @@
             <ul class="nav nav-tabs mt-3" id="chartsTabs" role="tablist">
                 <li class="nav-item" role="presentation">
                     <button class="nav-link active" id="hourly-tab" data-bs-toggle="tab" data-bs-target="#hourly-chart-tab" type="button" role="tab">
-                        <i class="fas fa-chart-area me-1"></i> {{ __('Carga horaria') }}
+                        <i class="fas fa-chart-area me-1"></i> {{ __('Ocupación') }}
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="waittime-tab" data-bs-toggle="tab" data-bs-target="#waittime-chart-tab" type="button" role="tab">
-                        <i class="fas fa-clock me-1"></i> {{ __('WT/WTM') }}
+                        <i class="fas fa-clock me-1"></i> {{ __('Tiempos de espera') }}
                     </button>
                 </li>
             </ul>
@@ -83,7 +83,34 @@
             <button id="saveChangesBtn" class="d-none"></button>
             <button id="refreshBtn" class="d-none"></button>
 
-            <div class="w-100 d-flex justify-content-end mt-2">
+            <div class="w-100 d-flex justify-content-between align-items-center mt-2 gap-3">
+                <!-- KPIs separados a la izquierda -->
+                <div class="kanban-kpis d-flex align-items-center gap-3">
+                    <div class="kanban-kpi-card kpi-mean">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <span class="kpi-label text-uppercase">{{ __('Tiempo promedio') }}</span>
+                                <span class="kpi-value d-block" id="globalMeanKpiValue">—</span>
+                            </div>
+                            <div class="kpi-icon">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="kanban-kpi-card kpi-median">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <span class="kpi-label text-uppercase">{{ __('Tiempo mediano') }}</span>
+                                <span class="kpi-value d-block" id="globalMedianKpiValue">—</span>
+                            </div>
+                            <div class="kpi-icon">
+                                <i class="fas fa-stopwatch"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Filtros y botones a la derecha -->
                 <div class="filters-row d-flex align-items-center">
                     <div class="form-check form-switch mb-0 me-3 filters-switch">
                         <input class="form-check-input" type="checkbox" id="readyOnlyToggle">
@@ -158,6 +185,14 @@
                 <div class="d-flex align-items-center">
                     <span class="badge bg-info me-2">WTM</span>
                     <span>@lang('Tiempo mediano de espera desde inicio programado')</span>
+                </div>
+                <div class="d-flex align-items-center">
+                    <span class="me-2"><i class="fas fa-chart-line text-emerald-500"></i></span>
+                    <span>@lang('WT Medio - Tiempo promedio de espera de órdenes listas')</span>
+                </div>
+                <div class="d-flex align-items-center">
+                    <span class="me-2"><i class="fas fa-stopwatch text-indigo-500"></i></span>
+                    <span>@lang('WTM Mediana - Tiempo medio de espera de órdenes listas')</span>
                 </div>
             </div>
             
@@ -548,10 +583,76 @@
     @media (max-width: 1200px) {
         .filters-row { border-radius: 12px; }
     }
+    .kanban-kpis {
+        display: flex;
+        align-items: stretch;
+        gap: 1rem;
+    }
+    .kanban-kpi-card {
+        background: #ffffff;
+        border: 2px solid rgba(59,130,246,0.3);
+        border-radius: 16px;
+        padding: 1rem 1.5rem;
+        min-width: 180px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        box-shadow: 0 8px 20px rgba(15,23,42,0.08);
+        transition: all 0.2s ease;
+    }
+    .kanban-kpi-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 28px rgba(15,23,42,0.12);
+    }
+    .kanban-kpi-card .kpi-label {
+        font-size: 0.7rem;
+        letter-spacing: 0.08em;
+        color: #6b7280;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+    .kanban-kpi-card .kpi-value {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #0f172a;
+        line-height: 1.2;
+    }
+    .kanban-kpi-card .kpi-icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+        flex-shrink: 0;
+    }
+    .kanban-kpi-card.kpi-mean {
+        border-color: rgba(16, 185, 129, 0.4);
+    }
+    .kanban-kpi-card.kpi-mean .kpi-icon {
+        background: rgba(16, 185, 129, 0.12);
+        color: #059669;
+    }
+    .kanban-kpi-card.kpi-median {
+        border-color: rgba(99, 102, 241, 0.4);
+    }
+    .kanban-kpi-card.kpi-median .kpi-icon {
+        background: rgba(99, 102, 241, 0.12);
+        color: #4f46e5;
+    }
     @media (max-width: 768px) {
         .filters-row { justify-content: space-between; gap: 8px; }
         .filters-switch { margin-right: 0 !important; }
+        .kanban-kpis {
+            width: 100%;
+            justify-content: center;
+        }
+        .kanban-kpi-card {
+            min-width: 140px;
+        }
     }
+    .filters-switch { margin-right: 0 !important; }
     </style>
 @endpush
 
@@ -965,6 +1066,8 @@
         let masterOrderList = @json($processOrders);
         const customerId = {{ $customer->id }};
         const productionLinesData = @json($productionLines);
+        const globalMeanKpiValue = document.getElementById('globalMeanKpiValue');
+        const globalMedianKpiValue = document.getElementById('globalMedianKpiValue');
         
         let hasUnsavedChanges = false;
         let draggedCard = null;
@@ -2851,6 +2954,50 @@
             const m = Math.round(abs % 60);
             return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
         }
+
+        function updateGlobalKpis() {
+            if (!globalMeanKpiValue || !globalMedianKpiValue) return;
+            const now = Date.now();
+            const waitMinutes = [];
+
+            (masterOrderList || []).forEach(order => {
+                if (!order) return;
+                if (!isOrderReadyForFilter(order)) return;
+                if (!order.estimated_start_datetime) return;
+
+                try {
+                    const startDate = new Date(order.estimated_start_datetime.replace(' ', 'T'));
+                    if (!isNaN(startDate.getTime())) {
+                        const diffMinutes = Math.abs((now - startDate.getTime()) / 60000);
+                        waitMinutes.push(diffMinutes);
+                    }
+                } catch (_) {
+                    // ignorar orden con fecha inválida
+                }
+            });
+
+            if (waitMinutes.length === 0) {
+                globalMeanKpiValue.textContent = '—';
+                globalMedianKpiValue.textContent = '—';
+                return;
+            }
+
+            const mean = waitMinutes.reduce((a, b) => a + b, 0) / waitMinutes.length;
+            const sorted = [...waitMinutes].sort((a, b) => a - b);
+            const mid = Math.floor(sorted.length / 2);
+            const median = sorted.length % 2 === 0
+                ? (sorted[mid - 1] + sorted[mid]) / 2
+                : sorted[mid];
+
+            const format = (value) => {
+                const hours = Math.floor(value / 60);
+                const minutes = Math.round(value % 60);
+                return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+            };
+
+            globalMeanKpiValue.textContent = format(mean);
+            globalMedianKpiValue.textContent = format(median);
+        }
         // isOrderUrgent se define más arriba basándose en la fecha de entrega (<= 5 días)
         // Formatea fecha/hora con tolerancia a cadenas tipo 'YYYY-MM-DD HH:MM:SS'
         function formatDateTimeEs(dateInput) {
@@ -3903,6 +4050,8 @@
         // Listeners para filtros de readiness
         document.getElementById('readyOnlyToggle')?.addEventListener('change', () => applyReadinessFilters());
         document.getElementById('dimNotReadyToggle')?.addEventListener('change', () => applyReadinessFilters());
+        document.getElementById('readyOnlyToggle')?.addEventListener('change', updateGlobalKpis);
+        document.getElementById('dimNotReadyToggle')?.addEventListener('change', updateGlobalKpis);
         // Listener para autosort (toggle)
         document.getElementById('autoSortToggle')?.addEventListener('change', () => { autoSortDirty = true; distributeAndRender(true); });
         // Listener para botón azul Guardar
@@ -3959,6 +4108,7 @@
             
             savePendingSearchValue();
             refreshKanbanData();
+            updateGlobalKpis(); // Trigger global KPI refresh after data updates and KPI events
             
             // Restaurar el foco si el campo lo tenía antes de la actualización
             setTimeout(() => {
@@ -4106,6 +4256,7 @@
             });
             
             console.log('Kanban final inicializado con tiempos acumulados');
+            updateGlobalKpis();
         });
 
         //ponemos un wait que reciva ms desde otra parte
