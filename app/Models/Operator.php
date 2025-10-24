@@ -19,6 +19,7 @@ class Operator extends Model
         'phone',
         'count_shift',
         'count_order',
+        'active',
     ];
     // Hidden fields for security purposes
     protected $hidden = [

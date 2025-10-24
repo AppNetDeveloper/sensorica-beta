@@ -19,7 +19,7 @@ class OperatorPostController extends Controller
     public function index()
     {
         // Estos datos se envían para poblar los <select> del formulario
-        $operators = Operator::all();
+        $operators = Operator::where('active', 1)->get();
         $rfids = RfidReading::all();
         $sensors = Sensor::all();
         $modbuses = Modbus::all();

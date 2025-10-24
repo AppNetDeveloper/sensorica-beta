@@ -268,8 +268,9 @@ class OperatorController extends Controller
                     'rfidReading.rfidColor' // Cargar el color RFID relacionado
                 ]);
          }])
+         ->where('active', 1) // Filtrar solo operadores activos
          ->orderBy('count_shift', 'desc')  // Ordenar por count_shift en orden descendente
-         ->get(['id', 'name', 'email', 'phone', 'count_shift', 'count_order', 'client_id', 'pin']); // Ahora estamos obteniendo 'id' real del operador
+         ->get(['id', 'name', 'email', 'phone', 'count_shift', 'count_order', 'client_id', 'pin', 'active']); // Ahora estamos obteniendo 'id' real del operador y el campo active
      
          // Modificar los datos para devolver 'client_id' como 'id'
          $operators = $operators->map(function ($operator) {
@@ -281,6 +282,7 @@ class OperatorController extends Controller
                  'count_shift' => $operator->count_shift,
                  'count_order' => $operator->count_order,
                 'pin'         => $operator->pin,
+                'active'      => $operator->active ?? true, // Incluir el campo active, con valor por defecto true si es null
                  'operator_posts' => $operator->operatorPosts->map(function ($post) {
                     return [
                         'rfid_reading_name' => $post->rfidReading->name ?? null, // Nombre de RFID (suponiendo que tiene un campo 'name')
@@ -359,8 +361,9 @@ class OperatorController extends Controller
                        ]);
              }
          ])
+         ->where('active', 1) // Filtrar solo operadores activos
          // Elegir campos que necesitamos (incluyendo id real y client_id)
-         ->get(['id', 'name', 'email', 'phone', 'count_shift', 'count_order', 'client_id', 'pin']);
+         ->get(['id', 'name', 'email', 'phone', 'count_shift', 'count_order', 'client_id', 'pin', 'active']);
      
          // Ajustar los datos para mostrar tanto id como client_id por separado
          $operators = $operators->map(function ($operator) {
@@ -373,6 +376,7 @@ class OperatorController extends Controller
                  'count_shift' => $operator->count_shift,
                  'count_order' => $operator->count_order,
                  'pin'         => $operator->pin,        // PIN en texto plano para validación en frontend
+                 'active'      => $operator->active ?? true, // Incluir el campo active, con valor por defecto true si es null
 
                  // Mapeo de operatorPosts
                  'operator_posts' => $operator->operatorPosts->map(function ($post) {
@@ -429,6 +433,7 @@ class OperatorController extends Controller
         try {
             // Obtener todos los operadores con ID interno y nombre
             $operators = Operator::select('id', 'name')
+                ->where('active', 1) // Filtrar solo operadores activos
                 ->orderBy('name', 'asc')
                 ->get();
             
@@ -585,6 +590,29 @@ class OperatorController extends Controller
         $operator->delete();
 
         return response()->json(['message' => 'Operator deleted successfully'], 200);
+    }
+
+    /**
+     * Toggle the active status of an operator
+     */
+    public function toggleActive($id)
+    {
+        $operator = Operator::where('client_id', $id)->first();
+
+        if (!$operator) {
+            return response()->json(['error' => 'Operator not found'], 404);
+        }
+
+        // Cambiar el estado del campo active
+        $operator->active = !$operator->active;
+        $operator->save();
+
+        $statusText = $operator->active ? 'habilitado' : 'deshabilitado';
+        
+        return response()->json([
+            'message' => "Operator {$statusText} successfully",
+            'active' => $operator->active
+        ], 200);
     }
 
     /**
@@ -909,7 +937,9 @@ public function verifyPassword(Request $request)
             } elseif ($toDate) {
                 $query->whereDate('created_at', '<=', $toDate);
             }
-        }])->get();
+        }])
+        ->where('active', 1) // Filtrar solo operadores activos
+        ->get();
     
         return response()->json([
             'success' => true,

@@ -229,6 +229,8 @@ Route::post('/workers/reset-pin-whatsapp', [OperatorController::class, 'resetPin
 Route::post('/workers/verify-password', [OperatorController::class, 'verifyPassword']);
 // Ruta para eliminar un operador por ID
 Route::delete('/workers/{id}', [OperatorController::class, 'destroy']);
+// Ruta para cambiar el estado activo de un operador
+Route::post('/workers/{id}/toggle-active', [OperatorController::class, 'toggleActive']);
 Route::post('/scada/log-access', [OperatorController::class, 'logScadaAccess']);
 //mostrar los login de scada
 Route::post('/scada/get-logins', [OperatorController::class, 'getLoginsByScadaToken']);

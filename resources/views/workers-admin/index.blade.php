@@ -169,6 +169,11 @@
                                         data-id="${data.id}">
                                     Eliminar
                                 </button>
+                                <button class="toggle-active-btn btn btn-sm ${data.active ? 'btn-warning' : 'btn-success'}"
+                                        data-id="${data.id}"
+                                        data-active="${data.active}">
+                                    ${data.active ? 'Deshabilitar' : 'Habilitar'}
+                                </button>
                                 <button class="reset-email-btn btn btn-sm btn-warning"
                                         data-email="${data.email || ''}">
                                     Reset Pass Email
@@ -423,6 +428,41 @@
                                 Swal.fire({
                                     icon: 'error',
                                     title: 'Error al Eliminar',
+                                    text: `Status: ${xhr.status}. Mensaje: ${xhr.responseJSON?.error || 'Error desconocido'}`
+                                });
+                            }
+                        });
+                    }
+                });
+            });
+
+            // Toggle estado activo del trabajador
+            $('#workersTable tbody').on('click', '.toggle-active-btn', function () {
+                const id = $(this).data('id');
+                const currentActive = $(this).data('active');
+                const actionText = currentActive ? 'deshabilitar' : 'habilitar';
+                
+                Swal.fire({
+                    title: `¿Estás seguro de ${actionText} este trabajador?`,
+                    text: currentActive ? 'El trabajador no podrá acceder al sistema.' : 'El trabajador podrá acceder al sistema.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: `Sí, ${actionText}`,
+                    cancelButtonText: 'Cancelar'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: `${workersApiUrl}/${id}/toggle-active`,
+                            method: 'POST',
+                            success: function () {
+                                const newActiveText = currentActive ? 'habilitado' : 'deshabilitado';
+                                Swal.fire(`Trabajador ${newActiveText}`, '', 'success');
+                                table.ajax.reload();
+                            },
+                            error: function (xhr) {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: `Error al ${actionText}`,
                                     text: `Status: ${xhr.status}. Mensaje: ${xhr.responseJSON?.error || 'Error desconocido'}`
                                 });
                             }
