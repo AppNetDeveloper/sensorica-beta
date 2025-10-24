@@ -292,7 +292,7 @@ let RS232_TARA_BY_ADDRESS = {}; // { address: tara_value }
 
 function initAutodetectConfigs() {
   // Genera todas las combinaciones posibles
-  const commands = ['A', 'P', '$', String.fromCharCode(0x16)];
+  const commands = ['P'];
   const terminators = [
     { name: 'none', cr: false, lf: false },
     { name: 'CR', cr: true, lf: false },
