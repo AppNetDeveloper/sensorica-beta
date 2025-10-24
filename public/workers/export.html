@@ -866,7 +866,11 @@
     async function configureAIFromServer() {
         try {
             // Llamar a la API para obtener configuración de IA
-            const response = await fetch(`${apiPromptBaseUrl}${promptApiKeys.global}`);
+            const response = await fetch(`${apiPromptBaseUrl}${promptApiKeys.global}`, {
+                headers: {
+                    'agent': 'data_analysis'
+                }
+            });
             if (!response.ok) {
                 console.warn('No se pudo cargar configuración de IA desde servidor');
                 return;
@@ -895,7 +899,11 @@
     
     async function getPromptFromServer(promptApiKey) {
         try {
-            const response = await fetch(`${apiPromptBaseUrl}${promptApiKey}`);
+            const response = await fetch(`${apiPromptBaseUrl}${promptApiKey}`, {
+                headers: {
+                    'agent': 'data_analysis'
+                }
+            });
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error(`Error al obtener prompt ${promptApiKey} desde API: ${response.status} - ${errorText}. Usando prompt de fallback.`);
@@ -1011,7 +1019,15 @@
             if(editApiStatus) {editApiStatus.textContent = 'Actualizando...'; editApiStatus.classList.remove('text-red-500', 'text-green-500');}
             const formData = new URLSearchParams(); formData.append('id', postId); formData.append('count', newQuantity);
             try {
-                const response = await fetch(apiEditPostUrl, { method: 'POST', headers: { 'Accept': 'application/json', 'Authorization': 'Bearer 915afe8b7fabc2ca8d759761b0fe159f88bf0f064be7e4cd6a1f99021eff4e3b' }, body: formData });
+                const response = await fetch(apiEditPostUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Authorization': 'Bearer 915afe8b7fabc2ca8d759761b0fe159f88bf0f064be7e4cd6a1f99021eff4e3b',
+                        'agent': 'data_analysis'
+                    },
+                    body: formData
+                });
                 if (!response.ok) { let err = `Error Servidor: ${response.status}`; try { const eD = await response.json(); err = eD.message || err; } catch (e) { const tE = await response.text(); if(tE) err = tE; } throw new Error(err); }
                 const result = await response.json();
                 if (result.status === 'success') {
@@ -1576,6 +1592,7 @@
             const fd = new FormData();
             fd.append('prompt', prompt);
             if (effectiveModelName) fd.append('model', effectiveModelName);
+            fd.append('agent', 'data_analysis');
             // opcional: callback_url si quieres utilizar webhooks
             // fd.append('callback_url', localAICallbackUrl);
 
@@ -1606,7 +1623,13 @@
         const statusUrl = `${localAITaskStatusUrlBase}${taskId}`;
         try {
             if (!localAITaskStatusUrlBase || !localAIApiToken) { throw new Error('IA no configurada: faltan URL o token.'); }
-            const response = await fetch(statusUrl, { headers: { 'Accept': 'application/json', 'Authorization': localAIApiToken } });
+            const response = await fetch(statusUrl, {
+                headers: {
+                    'Accept': 'application/json',
+                    'Authorization': localAIApiToken,
+                    'agent': 'data_analysis'
+                }
+            });
             if (!response.ok) {
                 if (response.status === 404) {
                     if (analysisModalContent) analysisModalContent.textContent = `Tarea ${taskId} no encontrada.`;
@@ -3349,7 +3372,11 @@
             };
             
             // Cargar datos del período anterior
-            const previousResponse = await fetch(`${apiBaseUrl}?from=${previousPeriod.from}&to=${previousPeriod.to}`);
+            const previousResponse = await fetch(`${apiBaseUrl}?from=${previousPeriod.from}&to=${previousPeriod.to}`, {
+                headers: {
+                    'agent': 'data_analysis'
+                }
+            });
             if (!previousResponse.ok) throw new Error('Error al cargar datos anteriores');
             const previousApiResponse = await previousResponse.json();
             
@@ -3814,7 +3841,11 @@
         if(tableBody) tableBody.querySelectorAll('tr:not(#loadingRow):not(#errorRow):not(#noDataRow)').forEach(r=>r.remove());
         if(exportExcelBtn)exportExcelBtn.disabled=true; updateHeaderButtonsState();
         if(liveUpdateIntervalId)clearInterval(liveUpdateIntervalId);liveUpdateIntervalId=null;
-        fetch(apiUrl)
+        fetch(apiUrl, {
+            headers: {
+                'agent': 'data_analysis'
+            }
+        })
             .then(r=>r.ok?r.json():r.text().then(t=>{throw new Error(`Error HTTP ${r.status}: ${t}`);}))
             .then(apiR=>{if(loadingRow)loadingRow.classList.add('hidden');
                 if(apiR.success&&Array.isArray(apiR.data)){originalWorkersData=apiR.data.sort((a,b)=>{const fFP=(w)=>{if(!w.operator_posts||w.operator_posts.length===0)return null;const aP=w.operator_posts.filter(p=>(p.count??0)>0&&p.created_at).map(p=>({...p,cAD:new Date(p.created_at)})).filter(p=>!isNaN(p.cAD.getTime()));if(aP.length===0)return null;aP.sort((p1,p2)=>p1.cAD-p2.cAD);return aP[0];};const fPA=fFP(a),fPB=fFP(b);const pNA=fPA?.rfid_reading?.name??null,pNB=fPB?.rfid_reading?.name??null;if(pNA&&pNB){const nC=pNA.localeCompare(pNB,undefined,{numeric:true,sensitivity:'base'});if(nC!==0)return nC;return(a.name??'').localeCompare(b.name??'');}else if(pNA)return -1;else if(pNB)return 1;else return(a.name??'').localeCompare(b.name??'');});populateTable(originalWorkersData);}
