@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+e @extends('layouts.admin')
 
 @section('title', __('Afegir Article a la Línia de Producció'))
 
@@ -244,6 +244,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const selectAllCheckbox = document.getElementById('select-all-articles');
     const submitBtn = document.getElementById('submit-btn');
     const articleForm = document.getElementById('article-form');
+    const orderInput = document.getElementById('order');
 
     // Función para filtrar artículos por familia
     function filterArticlesByFamily(familyId) {

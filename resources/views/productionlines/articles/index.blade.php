@@ -47,37 +47,79 @@
                         </div>
                     @endif
 
-                    <!-- Filtro por familia de artículos -->
+                    <!-- Panel de filtros y estadísticas mejorado -->
                     <div class="row mb-4">
-                        <div class="col-md-6">
-                            <form method="GET" action="{{ route('productionlines.articles.index', $productionLine->id) }}" class="d-flex align-items-center">
-                                <label for="article_family_id" class="form-label me-2 mb-0">{{ __('Filtrar per Família') }}:</label>
-                                <select name="article_family_id" id="article_family_id" class="form-select form-select-sm me-2" style="width: auto;" onchange="this.form.submit()">
-                                    <option value="">{{ __('Totes les Famílies') }}</option>
-                                    @foreach($articleFamilies as $family)
-                                        <option value="{{ $family->id }}" {{ request('article_family_id') == $family->id ? 'selected' : '' }}>
-                                            {{ $family->name }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                                @if(request('article_family_id'))
-                                    <a href="{{ route('productionlines.articles.index', $productionLine->id) }}" class="btn btn-outline-secondary btn-sm">
-                                        <i class="fas fa-times"></i> {{ __('Netejar Filtre') }}
-                                    </a>
-                                @endif
-                            </form>
-                        </div>
-                        <div class="col-md-6 text-end">
-                            @if($articles->count() > 0)
-                                <div class="d-flex justify-content-end align-items-center">
-                                    <span class="me-2">{{ __('Total articles') }}: {{ $articles->count() }}</span>
-                                    @can('productionline-article-delete')
-                                    <button type="button" class="btn btn-danger btn-sm" onclick="bulkDelete()" {{ $articles->count() == 0 ? 'disabled' : '' }}>
-                                        <i class="fas fa-trash"></i> {{ __('Eliminar Seleccionats') }}
-                                    </button>
-                                    @endcan
+                        <div class="col-12">
+                            <div class="card border">
+                                <div class="card-header bg-light">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0">
+                                            <i class="fas fa-filter me-2"></i>{{ __('Filtres i Estadístiques') }}
+                                        </h6>
+                                        <div class="d-flex align-items-center">
+                                            <span class="badge bg-primary fs-6 me-3">
+                                                <i class="fas fa-box me-1"></i>{{ __('Total articles') }}: {{ $articles->count() }}
+                                            </span>
+                                            @if($articleFamilies->count() > 0)
+                                                <span class="badge bg-info fs-6">
+                                                    <i class="fas fa-folder me-1"></i>{{ __('Famílies') }}: {{ $articleFamilies->count() }}
+                                                </span>
+                                            @endif
+                                        </div>
+                                    </div>
                                 </div>
-                            @endif
+                                <div class="card-body">
+                                    <div class="row align-items-end">
+                                        <div class="col-md-6">
+                                            <label for="article_family_id" class="form-label">
+                                                <i class="fas fa-folder-open me-1"></i>{{ __('Filtrar per Família d\'Articles') }}
+                                            </label>
+                                            <div class="input-group">
+                                                <span class="input-group-text">
+                                                    <i class="fas fa-search"></i>
+                                                </span>
+                                                <select name="article_family_id" id="article_family_id" class="form-select" onchange="this.form.submit()">
+                                                    <option value="">{{ __('Totes les Famílies') }}</option>
+                                                    @foreach($articleFamilies as $family)
+                                                        <option value="{{ $family->id }}" {{ request('article_family_id') == $family->id ? 'selected' : '' }}>
+                                                            {{ $family->name }} ({{ $family->articles->count() }} {{ __('articles') }})
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                                @if(request('article_family_id'))
+                                                    <a href="{{ route('productionlines.articles.index', $productionLine->id) }}" class="btn btn-outline-secondary" title="{{ __('Netejar Filtre') }}">
+                                                        <i class="fas fa-times"></i>
+                                                    </a>
+                                                @endif
+                                            </div>
+                                            @if(request('article_family_id'))
+                                                <?php
+                                                    $selectedFamily = $articleFamilies->find(request('article_family_id'));
+                                                ?>
+                                                @if($selectedFamily)
+                                                    <small class="text-muted mt-1 d-block">
+                                                        <i class="fas fa-info-circle me-1"></i>{{ __('Filtrant per') }}: <strong>{{ $selectedFamily->name }}</strong>
+                                                    </small>
+                                                @endif
+                                            @endif
+                                        </div>
+                                        <div class="col-md-6 text-end">
+                                            <div class="d-flex justify-content-end align-items-center gap-2">
+                                                @can('productionline-article-delete')
+                                                    <button type="button" class="btn btn-danger" onclick="bulkDelete()" id="bulk-delete-btn" {{ $articles->count() == 0 ? 'disabled' : '' }}>
+                                                        <i class="fas fa-trash me-1"></i>{{ __('Eliminar Seleccionats') }}
+                                                    </button>
+                                                @endcan
+                                                @can('productionline-article-create')
+                                                    <a href="{{ route('productionlines.articles.create', $productionLine->id) }}" class="btn btn-success">
+                                                        <i class="fas fa-plus me-1"></i>{{ __('Afegir Article') }}
+                                                    </a>
+                                                @endcan
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -88,7 +130,9 @@
                                 <thead>
                                     <tr>
                                         <th width="5%" class="text-center">
-                                            <input type="checkbox" id="select-all" class="form-check-input">
+                                            <div class="form-check d-flex justify-content-center align-items-center">
+                                                <input type="checkbox" id="select-all" class="form-check-input">
+                                            </div>
                                         </th>
                                         <th width="8%" class="text-center">{{ __('Ordre') }}</th>
                                         <th width="15%">{{ __('Codi Família') }}</th>
@@ -181,19 +225,77 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/select/1.7.0/css/select.bootstrap5.min.css">
 
     <style>
-        .table th, .table td {
-            vertical-align: middle;
-            padding: 0.75rem;
+        /* Panel de filtros mejorado */
+        .card.border {
+            border: 1px solid #e3e6f0 !important;
+            border-radius: 0.75rem;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
         }
 
-        /* Hacer la tabla más ancha y con bordes más visibles */
+        .card-header.bg-light {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%) !important;
+            border-bottom: 1px solid #dee2e6;
+            border-radius: 0.75rem 0.75rem 0 0 !important;
+        }
+
+        .card-body {
+            padding: 1.5rem;
+        }
+
+        /* Badges mejorados */
+        .badge {
+            font-size: 0.75rem;
+            padding: 0.5em 0.75em;
+            border-radius: 0.5rem;
+            font-weight: 500;
+        }
+
+        .badge.bg-primary {
+            background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%) !important;
+        }
+
+        .badge.bg-info {
+            background: linear-gradient(135deg, #0dcaf0 0%, #0aa2c0 100%) !important;
+        }
+
+        /* Input group mejorado */
+        .input-group-text {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border: 1px solid #ced4da;
+            color: #6c757d;
+        }
+
+        .form-select:focus {
+            border-color: #0d6efd;
+            box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+        }
+
+        /* Botones mejorados */
+        .btn-outline-secondary {
+            border: 1px solid #6c757d;
+            color: #6c757d;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        }
+
+        .btn-outline-secondary:hover {
+            background: linear-gradient(135deg, #6c757d 0%, #5c636a 100%);
+            border-color: #5c636a;
+            color: white;
+        }
+
+        /* Tabla mejorada */
+        .table th, .table td {
+            vertical-align: middle;
+            padding: 0.875rem 0.75rem;
+        }
+
         .table-bordered {
-            border: 1px solid #dee2e6;
+            border: 1px solid #e3e6f0;
         }
 
         .table-bordered th,
         .table-bordered td {
-            border: 1px solid #dee2e6;
+            border: 1px solid #e3e6f0;
         }
 
         .container-fluid.px-0 {
@@ -214,13 +316,54 @@
         /* Encabezados de tabla más destacados */
         .table thead th {
             font-weight: 600;
-            background-color: #f8f9fa;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
             border-bottom: 2px solid #dee2e6;
+            color: #495057;
         }
 
-        /* Mejorar el espaciado entre botones */
+        /* Checkbox del header mejorado */
+        .table thead th:first-child {
+            background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+        }
+
+        /* Checkbox styling mejorado */
+        .form-check-input:checked {
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+            box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+        }
+
+        .form-check-input:focus {
+            border-color: #0d6efd;
+            box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+        }
+
+        /* Botones de acción mejorados */
         .btn-group .btn {
-            margin: 0 3px;
+            margin: 0 2px;
+            border-radius: 0.375rem !important;
+            font-size: 0.875rem;
+            padding: 0.375rem 0.5rem;
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+            border: none;
+        }
+
+        .btn-warning:hover {
+            background: linear-gradient(135deg, #fd7e14 0%, #e86804 100%);
+            transform: translateY(-1px);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            border: none;
+        }
+
+        .btn-danger:hover {
+            background: linear-gradient(135deg, #c82333 0%, #a71e2a 100%);
+            transform: translateY(-1px);
         }
 
         /* Espacio entre botones DataTables y la tabla */
@@ -228,18 +371,19 @@
             margin-bottom: 1rem;
         }
 
-        /* Checkbox styling */
-        .form-check-input:checked {
-            background-color: #0d6efd;
-            border-color: #0d6efd;
+        .dt-buttons .btn {
+            border-radius: 0.5rem !important;
+            font-weight: 500;
+            text-transform: none;
+            padding: 0.5rem 1rem;
         }
 
-        /* Filtro styling */
-        .form-select-sm {
-            font-size: 0.875rem;
+        /* Información de filtro activo */
+        .text-muted {
+            color: #6c757d !important;
         }
 
-        /* Responsive adjustments */
+        /* Responsive adjustments mejorados */
         @media (max-width: 768px) {
             .d-flex.justify-content-between {
                 flex-direction: column;
@@ -249,6 +393,31 @@
             .text-end {
                 text-align: start !important;
             }
+
+            .card-body {
+                padding: 1rem;
+            }
+
+            .badge {
+                font-size: 0.7rem;
+                padding: 0.4em 0.6em;
+            }
+        }
+
+        /* Animaciones suaves */
+        .btn, .form-select, .form-check-input {
+            transition: all 0.2s ease-in-out;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        }
+
+        /* Loading state mejorado */
+        .table-responsive {
+            border-radius: 0.5rem;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
         }
     </style>
 @endpush
@@ -283,10 +452,7 @@
 
     <script>
         $(document).ready(function() {
-            // Verificar si hay filas en la tabla
-            const hasRows = $('#articles-table tbody tr').length > 1; // -1 porque hay una fila vacía
-
-            // Configuración base de DataTables
+            // Configuración simplificada de DataTables
             const tableConfig = {
                 responsive: true,
                 scrollX: true,
@@ -386,31 +552,28 @@
                             columns: [1, 2, 3, 4, 5]
                         }
                     }
-                ]
+                ],
+                initComplete: function() {
+                    console.log('DataTables inicializado correctamente');
+
+                    // Recrear el checkbox "Seleccionar todo" en el header después de que DataTables lo reemplace
+                    const headerCheckbox = $('<div class="form-check d-flex justify-content-center align-items-center"><input type="checkbox" id="select-all" class="form-check-input"></div>');
+                    this.api().column(0).header().innerHTML = headerCheckbox.html();
+
+                    // Reasignar el evento del checkbox después de recrearlo
+                    $('#select-all').off('change').on('change', function() {
+                        const isChecked = $(this).is(':checked');
+                        $('.article-checkbox').prop('checked', isChecked);
+                        updateBulkDeleteButton();
+                    });
+
+                    // Actualizar el botón de eliminación masiva después de la inicialización
+                    updateBulkDeleteButton();
+                }
             };
 
-            // Inicializar DataTables
-            let table;
-
-            if (hasRows) {
-                table = $('#articles-table').DataTable(tableConfig);
-                console.log('DataTables inicializado con datos existentes');
-            } else {
-                table = $('#articles-table').DataTable({
-                    ...tableConfig,
-                    data: [],
-                    columns: [
-                        { title: '<input type="checkbox" id="select-all" class="form-check-input">', className: 'text-center', orderable: false },
-                        { title: '{{ __("Ordre") }}', className: 'text-center' },
-                        { title: '{{ __("Codi Família") }}' },
-                        { title: '{{ __("Nom Família") }}' },
-                        { title: '{{ __("Codi Article") }}' },
-                        { title: '{{ __("Nom Article") }}' },
-                        { title: '{{ __("Accions") }}', className: 'text-center' }
-                    ]
-                });
-                console.log('DataTables inicializado con datos vacíos');
-            }
+            // Inicializar DataTables con configuración simplificada
+            const table = $('#articles-table').DataTable(tableConfig);
 
             // Asegurarse de que la tabla es responsiva
             new $.fn.dataTable.Responsive(table);
@@ -424,23 +587,26 @@
 
             // Manejar checkboxes individuales
             $(document).on('change', '.article-checkbox', function() {
-                const allChecked = $('.article-checkbox:checked').length === $('.article-checkbox').length;
-                const anyChecked = $('.article-checkbox:checked').length > 0;
-                $('#select-all').prop('checked', allChecked);
+                const totalCheckboxes = $('.article-checkbox').length;
+                const checkedCheckboxes = $('.article-checkbox:checked').length;
+                $('#select-all').prop('checked', checkedCheckboxes === totalCheckboxes && totalCheckboxes > 0);
                 updateBulkDeleteButton();
             });
 
             // Función para actualizar el estado del botón de eliminación masiva
             function updateBulkDeleteButton() {
                 const selectedCount = $('.article-checkbox:checked').length;
-                const bulkDeleteBtn = $('button[onclick="bulkDelete()"]');
+                const bulkDeleteBtn = $('#bulk-delete-btn');
 
                 if (selectedCount > 0) {
-                    bulkDeleteBtn.prop('disabled', false).html('<i class="fas fa-trash"></i> {{ __("Eliminar Seleccionats") }} (' + selectedCount + ')');
+                    bulkDeleteBtn.prop('disabled', false).html('<i class="fas fa-trash me-1"></i>{{ __("Eliminar Seleccionats") }} (' + selectedCount + ')');
                 } else {
-                    bulkDeleteBtn.prop('disabled', true).html('<i class="fas fa-trash"></i> {{ __("Eliminar Seleccionats") }}');
+                    bulkDeleteBtn.prop('disabled', true).html('<i class="fas fa-trash me-1"></i>{{ __("Eliminar Seleccionats") }}');
                 }
             }
+
+            // Hacer la función global para que se pueda llamar desde el HTML
+            window.updateBulkDeleteButton = updateBulkDeleteButton;
         });
 
         // Función para eliminar un artículo individual

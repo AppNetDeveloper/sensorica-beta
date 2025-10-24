@@ -40,17 +40,33 @@
             </div>
         @endif
 
+        @if ($errors->any())
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <ul class="mb-0">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        @endif
+
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h3 class="card-title mb-0">{{ __('Listado de Prompts de IA') }}</h3>
-                <form action="{{ route('ia_prompts.regenerate') }}" method="POST" onsubmit="return confirm('{{ __('¿Regenerar/actualizar plantillas para todos los grupos de procesos?') }}')">
-                    @csrf
-                    <input type="hidden" name="activate" value="1">
-                    <input type="hidden" name="update" value="1">
-                    <button type="submit" class="btn btn-sm btn-outline-secondary">
-                        <i class="ti ti-reload"></i> {{ __('Regenerar plantillas') }}
-                    </button>
-                </form>
+                <div>
+                    <a href="{{ route('ai_config.index') }}" class="btn btn-sm btn-outline-primary me-2">
+                        <i class="ti ti-settings"></i> {{ __('Configuración de IA') }}
+                    </a>
+                    <form action="{{ route('ia_prompts.regenerate') }}" method="POST" onsubmit="return confirm('{{ __('¿Regenerar/actualizar plantillas para todos los grupos de procesos?') }}')" class="d-inline">
+                        @csrf
+                        <input type="hidden" name="activate" value="1">
+                        <input type="hidden" name="update" value="1">
+                        <button type="submit" class="btn btn-sm btn-outline-secondary">
+                            <i class="ti ti-reload"></i> {{ __('Regenerar plantillas') }}
+                        </button>
+                    </form>
+                </div>
             </div>
             <div class="card-body">
                 {{-- Se usa $prompts (plural) para la colección --}}
@@ -113,10 +129,4 @@
         </div>
     </div>
 </div>
-@endsection
-
-@section('javascript')
-    <script>
-        // ...
-    </script>
 @endsection

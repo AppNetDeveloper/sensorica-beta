@@ -50,6 +50,7 @@ use App\Http\Controllers\ServerMonitorController;
 use App\Http\Controllers\TelegramController;
 use App\Http\Controllers\RfidBlockedController;
 use App\Http\Controllers\IaPromptAdminController;
+use App\Http\Controllers\AiConfigController;
 use App\Http\Controllers\Api\ProductionLineInfoController;
 use App\Http\Controllers\WorkCalendarController;
 use App\Http\Controllers\OriginalOrderProcessFileController;
@@ -154,7 +155,7 @@ Route::get('customers/{customer}/production-times/{originalOrder}', [CustomerOri
 Route::post('customers/{customer}/original-orders/import', [CustomerOriginalOrderController::class, 'import'])->name('customers.original-orders.import');
 Route::post('customers/{customer}/original-orders/create-cards', [CustomerOriginalOrderController::class, 'createCards'])->name('customers.original-orders.create-cards');
 Route::post('customers/{customer}/original-orders/bulk-delete', [CustomerOriginalOrderController::class, 'bulkDelete'])->name('customers.original-orders.bulk-delete')->middleware(['auth', 'XSS']);
-Route::resource('customers.original-orders', CustomerOriginalOrderController::class)->except(['edit', 'update']);
+// Route resource movido al grupo de customers más abajo (líneas 166-168) para evitar duplicación
 
 // Ruta para obtener el HTML de una fila de mapeo de campos
 Route::get('customers/{customer}/field-mapping-row', [CustomerController::class, 'fieldMappingRow'])
@@ -581,7 +582,7 @@ Route::group(['middleware' => ['auth', 'XSS']], function () {
     Route::resource('modules', ModualController::class);
 });
 
-Route::delete('/user/{id}', [UserController::class, 'destroy'])->name('users.destroy')->middleware(['auth', 'XSS']);
+// Route::delete para users.destroy eliminada - ya está incluida en el Route::resource de arriba
 
 Route::post('/role/{id}', [RoleController::class, 'assignPermission'])->name('roles_permit')->middleware(['auth', 'XSS']);
 
@@ -674,12 +675,21 @@ Route::get('workers-admin', [WorkerController::class, 'index'])->name('workers-a
 
 
 // rutas para editar prompts
-Route::prefix('ia-prompts')->name('ia_prompts.')->group(function () {
+Route::middleware(['auth', 'XSS'])->prefix('ia-prompts')->name('ia_prompts.')->group(function () {
     Route::get('/', [IaPromptAdminController::class, 'index'])->name('index');
     Route::get('/{iaPrompt}/edit', [IaPromptAdminController::class, 'edit'])->name('edit');
     Route::put('/{iaPrompt}', [IaPromptAdminController::class, 'update'])->name('update');
     // Ejecutar Artisan para regenerar plantillas desde la UI
     Route::post('/regenerate', [IaPromptAdminController::class, 'regenerate'])->name('regenerate');
+    // Rutas para configuración de AI
+    Route::get('/config', [AiConfigController::class, 'index'])->name('config');
+    Route::put('/config', [AiConfigController::class, 'update'])->name('config.update');
+});
+
+// Rutas alternativas de configuración de IA (sin permisos específicos, solo autenticación)
+Route::middleware(['auth', 'XSS'])->group(function () {
+    Route::get('/ai-config', [AiConfigController::class, 'index'])->name('ai_config.index');
+    Route::put('/ai-config', [AiConfigController::class, 'update'])->name('ai_config.update');
 });
 
 // Vista principal de usuarios (Blade con DataTables manual)

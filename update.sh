@@ -484,5 +484,5 @@ echo 'limpiar cache'
     php artisan db:seed --class=RouteNamePermissionsSeeder --force -n
     php artisan db:seed --class=HourlyTotalsPermissionsSeeder --force -n
     php artisan db:seed --class=ArticlePermissionsSeeder --force -n
-    php artisan db:seed --class=ProductionLineArticlePermissionsSeeder --force -n
+    php artisan db:seed --class=ProductionLineArticlePermissionsSeedermor --force -n
     echo "Proceso completado con éxito..."

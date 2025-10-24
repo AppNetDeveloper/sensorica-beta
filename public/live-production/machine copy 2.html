@@ -3019,17 +3019,13 @@
                 const isUrgent = order.json && order.json.urgent;
                 const isPriority = order.is_priority === true || order.is_priority === 1;
                 const priorityMenuLock = isPriority && parseInt(order.status, 10) === 0;
-
-                // Añadir HTML del icono y número de carrito
-                const cartIconHtml = order.cart_number ?
-                    `<span class="ml-2" title="Carrito: ${order.cart_number}"><i class="fas fa-dolly"></i> ${order.cart_number}</span>` : '';
                 
                 card.innerHTML = `
                     <div class="flex justify-between items-center mb-1">
                         <div class="flex items-center">
                             ${statusIcon}
                             ${isPriority ? '<i class="fas fa-exclamation-triangle priority-icon mr-1" title="Orden prioritaria"></i>' : ''}
-                            <span class="font-bold text-xs text-gray-800" style="letter-spacing: -0.3px;">${order.order_id || 'N/A'}${cartIconHtml}</span>
+                            <span class="font-bold text-xs text-gray-800" style="letter-spacing: -0.3px;">${order.order_id || 'N/A'}</span>
                             ${isUrgent ? '<i class="fas fa-bolt text-orange-500 ml-1" title="Urgente"></i>' : ''}
                         </div>
                         <div class="relative card-menu-container">

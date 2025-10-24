@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB; // Importar Facade DB para la consulta
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
+use App\Models\BarcodeScanAfter;
 
 class ProductionOrderController extends Controller
 {
@@ -354,6 +355,30 @@ class ProductionOrderController extends Controller
         $orders = collect();
         $orders = $orders->concat($activeOrders)->concat($finishedOrders)->concat($incidentOrders);
         $orders = $orders->sortBy('orden')->values();
+
+        // Añadir después de obtener las órdenes
+        $orderIds = $orders->pluck('id');
+
+        // Obtener información de carritos (similar a CustomerController)
+        $afterByOrder = BarcodeScanAfter::leftJoin('barcode_scans', 'barcode_scans.id', '=', 'barcode_scans_after.barcode_scan_id')
+            ->whereIn('barcode_scans_after.production_order_id', $orderIds)
+            ->select(
+                'barcode_scans_after.production_order_id',
+                'barcode_scans.barcode as barcode',
+                'barcode_scans_after.scanned_at'
+            )
+            ->orderBy('barcode_scans_after.id','desc')
+            ->get()
+            ->groupBy('production_order_id');
+
+        // Añadir información de carrito a cada orden
+        $orders->each(function($order) use ($afterByOrder) {
+            $cartItems = $afterByOrder[$order->id] ?? collect();
+            $latestCart = $cartItems->first();
+
+            $order->cart_number = $latestCart->barcode ?? null;
+            $order->cart_scanned_at = $latestCart->scanned_at ?? null;
+        });
 
         // Añadir información de diagnóstico en la respuesta
         return response()->json([
