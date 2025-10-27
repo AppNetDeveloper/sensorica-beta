@@ -407,7 +407,7 @@ echo 'limpiar cache'
 
     # Reiniciar Supervisor con nueva configuración
     echo "Reconfigurando Supervisor..."
-    sudo rm -rf /etc/supervisor/conf.d/*
+    sudo rm -rf /etc/supervisor/conf.d/laravel*
     sudo cp laravel*.conf /etc/supervisor/conf.d/
     sudo supervisorctl reread
     sudo supervisorctl update

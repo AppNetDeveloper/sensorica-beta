@@ -221,11 +221,11 @@
                     <span>@lang('Orden urgente')</span>
                 </div>
                 <div class="d-flex align-items-center">
-                    <span class="me-2"><i class="fas fa-exclamation-triangle text-primary"></i></span>
+                    <span class="me-2"><i class="fas fa-minus-circle text-danger"></i></span>
                     <span>@lang('Sin stock de materiales')</span>
                 </div>
                 <div class="d-flex align-items-center">
-                    <span class="me-2"><i class="fas fa-exclamation-triangle text-warning"></i></span>
+                    <span class="me-2"><i class="fas fa-bolt text-success"></i></span>
                     <span>@lang('Orden prioritaria')</span>
                 </div>
             </div>
@@ -2733,16 +2733,16 @@
                 urgencyIconHtml = `<span class="ms-2" title="${titleText}"><i class="fas fa-exclamation-triangle text-danger"></i></span>`;
             }
             
-            // Triángulo azul para órdenes sin stock
+            // Indicador circular rojo para órdenes sin stock
             if (order.has_stock === 0) {
                 const stockTitleText = 'Sin stock de materiales';
-                stockIconHtml = `<span class="ms-2" title="${stockTitleText}"><i class="fas fa-exclamation-triangle text-primary"></i></span>`;
+                stockIconHtml = `<span class="ms-2" title="${stockTitleText}"><i class="fas fa-minus-circle text-danger"></i></span>`;
             }
             
-            // Triángulo amarillo para órdenes prioritarias
+            // Rayo verde para órdenes prioritarias
             if (order.is_priority === true || order.is_priority === 1) {
                 const priorityTitleText = 'Orden prioritaria';
-                priorityIconHtml = `<span class="ms-2" title="${priorityTitleText}"><i class="fas fa-exclamation-triangle text-warning"></i></span>`;
+                priorityIconHtml = `<span class="ms-2" title="${priorityTitleText}"><i class="fas fa-bolt text-success"></i></span>`;
             }
 
             // Grupo eliminado - ya no es necesario

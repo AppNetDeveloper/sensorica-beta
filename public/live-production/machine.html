@@ -3014,11 +3014,12 @@
                 card.dataset.cardId = order.id;
                 card.dataset.orderSort = order.orden || 0;
                 
-                // Determinar si hay unidades, si es urgente y si es prioritaria
+                // Determinar si hay unidades, si es urgente, si es prioritaria y si falta stock
                 const hasUnits = order.units && order.units > 0;
                 const isUrgent = order.json && order.json.urgent;
                 const isPriority = order.is_priority === true || order.is_priority === 1;
                 const priorityMenuLock = isPriority && parseInt(order.status, 10) === 0;
+                const hasStockIssue = order.has_stock === 0 || order.has_stock === '0' || order.has_stock === false;
 
                 // Añadir HTML del icono y número de carrito
                 const cartIconHtml = order.cart_number ?
@@ -3028,9 +3029,10 @@
                     <div class="flex justify-between items-center mb-1">
                         <div class="flex items-center">
                             ${statusIcon}
-                            ${isPriority ? '<i class="fas fa-exclamation-triangle priority-icon mr-1" title="Orden prioritaria"></i>' : ''}
+                            ${isPriority ? '<i class="fas fa-bolt priority-icon mr-1" title="Orden prioritaria"></i>' : ''}
                             <span class="font-bold text-xs text-gray-800" style="letter-spacing: -0.3px;">${order.order_id || 'N/A'}${cartIconHtml}</span>
-                            ${isUrgent ? '<i class="fas fa-bolt text-orange-500 ml-1" title="Urgente"></i>' : ''}
+                            ${hasStockIssue ? '<i class="fas fa-minus-circle text-red-500 ml-1" title="Sin stock de materiales"></i>' : ''}
+                            ${isUrgent ? '<i class="fas fa-exclamation-triangle text-red-500 ml-1" title="Orden urgente"></i>' : ''}
                         </div>
                         <div class="relative card-menu-container">
                             <button class="card-menu-btn text-gray-500 hover:text-gray-700 p-1" data-order-id="${order.id}">
@@ -3792,8 +3794,8 @@ async function showOrderDetailsModal(order) {
                         </div>
                         ${order.json && order.json.urgent ? 
                             `<div class="mt-2 flex items-center">
-                                <i class="fas fa-bolt text-orange-500 mr-2"></i>
-                                <span class="text-sm font-medium text-orange-500">Orden urgente</span>
+                                <i class="fas fa-exclamation-triangle text-red-500 mr-2"></i>
+                                <span class="text-sm font-medium text-red-500">Orden urgente</span>
                             </div>` : ''}
                     </div>
                 </div>
@@ -6943,12 +6945,16 @@ async function updateOrderStatus(orderId, newStatus) {
                             <span><strong>Incidencia</strong> – Orden con incidencia abierta.</span>
                         </div>
                         <div class="flex items-center gap-2">
-                            <i class="fas fa-exclamation-triangle priority-icon"></i>
+                            <i class="fas fa-bolt priority-icon"></i>
                             <span><strong>Prioritaria</strong> – Orden bloqueada en pendientes.</span>
                         </div>
                         <div class="flex items-center gap-2">
-                            <i class="fas fa-bolt text-orange-500"></i>
+                            <i class="fas fa-exclamation-triangle text-red-500"></i>
                             <span><strong>Urgente</strong> – Orden marcada como urgente.</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-minus-circle text-red-500"></i>
+                            <span><strong>Sin stock</strong> – Falta de materiales disponibles.</span>
                         </div>
                     </div>
                 </section>
