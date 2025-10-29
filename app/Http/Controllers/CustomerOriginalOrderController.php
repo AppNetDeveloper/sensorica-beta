@@ -752,7 +752,7 @@ class CustomerOriginalOrderController extends Controller
     {
         $tz = config('app.timezone');
         $defaultEnd = Carbon::now($tz);
-        $defaultStart = (clone $defaultEnd)->subDays(7);
+        $defaultStart = (clone $defaultEnd)->subDays(30);
 
         $processOptions = Process::orderBy('sequence')->get(['id', 'code', 'description']);
         $grupoOptions = OriginalOrderProcess::query()
@@ -785,10 +785,6 @@ class CustomerOriginalOrderController extends Controller
                 $query->with(['process:id,code,description,sequence', 'productionOrders:id,original_order_process_id,status,finished_at'])
                     ->orderBy('grupo_numero')
                     ->orderBy('id');
-
-                if ($filters['only_finished_processes']) {
-                    $query->whereNotNull('finished_at');
-                }
 
                 if (!empty($filters['process_ids'])) {
                     $query->whereIn('process_id', $filters['process_ids']);
@@ -823,10 +819,6 @@ class CustomerOriginalOrderController extends Controller
                     ->orderBy('grupo_numero')
                     ->orderBy('id');
 
-                if ($filters['only_finished_processes']) {
-                    $query->whereNotNull('finished_at');
-                }
-
                 if (!empty($filters['process_ids'])) {
                     $query->whereIn('process_id', $filters['process_ids']);
                 }
@@ -855,10 +847,6 @@ class CustomerOriginalOrderController extends Controller
                 ->with(['productionOrders:id,original_order_process_id,status,finished_at'])
                 ->orderBy('grupo_numero')
                 ->orderBy('id');
-
-            if ($filters['only_finished_processes']) {
-                $query->whereNotNull('finished_at');
-            }
 
             if (!empty($filters['process_ids'])) {
                 $query->whereIn('process_id', $filters['process_ids']);
@@ -890,8 +878,6 @@ class CustomerOriginalOrderController extends Controller
         $rules = [
             'date_start' => $requireDates ? ['required', 'date'] : ['nullable', 'date'],
             'date_end' => $requireDates ? ['required', 'date'] : ['nullable', 'date'],
-            'only_finished_orders' => ['nullable', 'boolean'],
-            'only_finished_processes' => ['nullable', 'boolean'],
             'process_ids' => ['nullable', 'array'],
             'process_ids.*' => ['integer', 'exists:processes,id'],
             'grupo_numeros' => ['nullable', 'array'],
@@ -911,15 +897,13 @@ class CustomerOriginalOrderController extends Controller
             ? Carbon::parse($validated['date_end'], $tz)->endOfDay()
             : Carbon::now($tz)->endOfDay();
 
-        if ($dateEnd->diffInDays($dateStart) > 30) {
-            $dateStart = (clone $dateEnd)->subDays(30);
+        if ($dateEnd->diffInDays($dateStart) > 180) {
+            $dateStart = (clone $dateEnd)->subDays(180);
         }
 
         return [
             'date_start' => $dateStart,
             'date_end' => $dateEnd,
-            'only_finished_orders' => (bool)($validated['only_finished_orders'] ?? true),
-            'only_finished_processes' => (bool)($validated['only_finished_processes'] ?? false),
             'process_ids' => $validated['process_ids'] ?? [],
             'grupo_numeros' => $validated['grupo_numeros'] ?? [],
             'use_actual_delivery' => (bool)($validated['use_actual_delivery'] ?? false),
@@ -932,12 +916,11 @@ class CustomerOriginalOrderController extends Controller
     {
         $query = OriginalOrder::query()
             ->where('customer_id', $customer->id)
-            ->where(function ($orderQuery) use ($filters) {
-                $orderQuery->whereBetween(DB::raw('COALESCE(fecha_pedido_erp, created_at)'), [
-                    $filters['date_start'],
-                    $filters['date_end'],
-                ]);
-            });
+            ->whereNotNull('finished_at')
+            ->whereBetween('finished_at', [
+                $filters['date_start'],
+                $filters['date_end'],
+            ]);
 
         if (!empty($filters['filter_delivery_dates'])) {
             if (!empty($filters['use_actual_delivery'])) {
@@ -951,10 +934,6 @@ class CustomerOriginalOrderController extends Controller
                       ->orWhereBetween('delivery_date', [$filters['date_start'], $filters['date_end']]);
                 });
             }
-        }
-
-        if ($filters['only_finished_orders']) {
-            $query->whereNotNull('finished_at');
         }
 
         // Excluir órdenes con fechas incompletas (ERP, creado o finalizado) si se solicita
@@ -1018,12 +997,6 @@ class CustomerOriginalOrderController extends Controller
         $processRows = [];
         $groupMetrics = [];
         $processesByGroup = $order->originalOrderProcesses
-            ->filter(function ($process) use ($filters) {
-                if ($filters['only_finished_processes'] && !$process->finished_at) {
-                    return false;
-                }
-                return true;
-            })
             ->groupBy(fn($process) => $process->grupo_numero ?? 'SIN_GRUPO');
 
         foreach ($processesByGroup as $grupoNumero => $groupProcesses) {

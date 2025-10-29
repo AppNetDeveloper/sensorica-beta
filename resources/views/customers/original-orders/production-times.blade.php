@@ -45,14 +45,6 @@
                         </div>
                         <div class="col-12 d-flex flex-wrap gap-3 mt-2">
                             <div class="form-check">
-                                <input class="form-check-input" type="checkbox" value="1" id="only_finished_orders" checked>
-                                <label class="form-check-label" for="only_finished_orders">{{ __('Sólo órdenes finalizadas') }}</label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" value="1" id="only_finished_processes">
-                                <label class="form-check-label" for="only_finished_processes">{{ __('Sólo procesos finalizados') }}</label>
-                            </div>
-                            <div class="form-check">
                                 <input class="form-check-input" type="checkbox" value="1" id="exclude_incomplete_orders" checked>
                                 <label class="form-check-label" for="exclude_incomplete_orders">{{ __('Excluir órdenes sin fechas completas') }}</label>
                             </div>
@@ -1212,8 +1204,6 @@
                 return {
                     date_start: $('#date_start').val(),
                     date_end: $('#date_end').val(),
-                    only_finished_orders: $('#only_finished_orders').is(':checked') ? 1 : 0,
-                    only_finished_processes: $('#only_finished_processes').is(':checked') ? 1 : 0,
                     use_actual_delivery: $('#use_actual_delivery').is(':checked') ? 1 : 0,
                     exclude_incomplete_orders: $('#exclude_incomplete_orders').is(':checked') ? 1 : 0
                 };
