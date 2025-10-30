@@ -405,39 +405,78 @@
                                     <span>{{ __('Análisis IA') }}</span>
                                     <span class="badge bg-warning text-dark ms-2" style="font-size: 0.7em; padding: 3px 8px; animation: pulse 2s infinite;">PRO</span>
                                 </button>
-                                <ul class="dropdown-menu">
-                                    <li><h6 class="dropdown-header"><i class="fas fa-brain me-1"></i> {{ __("Tipo de Análisis") }}</h6></li>
+                                <ul class="dropdown-menu dropdown-menu-end shadow-lg" style="min-width: 380px; max-height: 600px; overflow-y: auto;">
+                                    <li><h6 class="dropdown-header bg-gradient text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin: -0.5rem -0.5rem 0.5rem -0.5rem; padding: 0.75rem 1rem;">
+                                        <i class="fas fa-brain me-2"></i>{{ __("Análisis Inteligente con IA") }}
+                                        <span class="badge bg-warning text-dark ms-2" style="font-size: 0.7em;">PRO</span>
+                                    </h6></li>
+
+                                    <!-- SECCIÓN 1: Análisis de Tiempos y Eficiencia -->
+                                    <li><h6 class="dropdown-header text-primary"><i class="fas fa-clock me-1"></i> {{ __("Tiempos y Eficiencia") }}</h6></li>
                                     <li><a class="dropdown-item" href="#" data-analysis="erp-to-created">
-                                        <i class="fas fa-hourglass-start text-info me-2"></i>{{ __("Tiempo Recepción Pedido → Puesto en Fabricación") }}
+                                        <i class="fas fa-hourglass-start text-info me-2"></i>{{ __("Tiempo Recepción → Fabricación") }}
                                     </a></li>
                                     <li><a class="dropdown-item" href="#" data-analysis="created-to-finished">
-                                        <i class="fas fa-industry text-success me-2"></i>{{ __("Tiempo Puesto en Fabricación → Pedido Finalizado") }}
+                                        <i class="fas fa-industry text-success me-2"></i>{{ __("Tiempo Fabricación → Finalizado") }}
                                     </a></li>
                                     <li><a class="dropdown-item" href="#" data-analysis="finish-to-delivery">
-                                        <i class="fas fa-truck-loading text-warning me-2"></i>{{ __("Pedido Finalizado → Entrega") }}
+                                        <i class="fas fa-truck-loading text-warning me-2"></i>{{ __("Tiempo Finalizado → Entrega") }}
                                     </a></li>
+                                    <li><a class="dropdown-item" href="#" data-analysis="working-days-efficiency">
+                                        <i class="fas fa-briefcase text-success me-2"></i>{{ __("Eficiencia Días Laborables") }}
+                                        <span class="badge bg-success ms-1" style="font-size: 0.65em;">NUEVO</span>
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="#" data-analysis="calendar-impact">
+                                        <i class="fas fa-calendar-times text-danger me-2"></i>{{ __("Impacto Calendario Laboral") }}
+                                        <span class="badge bg-success ms-1" style="font-size: 0.65em;">NUEVO</span>
+                                    </a></li>
+
+                                    <li><hr class="dropdown-divider"></li>
+
+                                    <!-- SECCIÓN 2: Análisis de Procesos -->
+                                    <li><h6 class="dropdown-header text-warning"><i class="fas fa-cogs me-1"></i> {{ __("Procesos y Gaps") }}</h6></li>
                                     <li><a class="dropdown-item" href="#" data-analysis="process-gaps">
                                         <i class="fas fa-project-diagram text-warning me-2"></i>{{ __("Gaps entre Procesos") }}
                                     </a></li>
                                     <li><a class="dropdown-item" href="#" data-analysis="gap-alerts">
                                         <i class="fas fa-exclamation-triangle text-danger me-2"></i>{{ __("Alertas de Brechas") }}
                                     </a></li>
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item" href="#" data-analysis="by-client">
-                                        <i class="fas fa-users text-primary me-2"></i>{{ __("Análisis por Cliente") }}
-                                    </a></li>
-                                    <li><a class="dropdown-item" href="#" data-analysis="order-type-critical">
-                                        <i class="fas fa-cubes text-secondary me-2"></i>{{ __("Órdenes por Tipo") }}
-                                    </a></li>
                                     <li><a class="dropdown-item" href="#" data-analysis="slow-processes">
                                         <i class="fas fa-turtle text-danger me-2"></i>{{ __("Procesos Lentos") }}
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="#" data-analysis="bottleneck-analysis">
+                                        <i class="fas fa-compress-arrows-alt text-danger me-2"></i>{{ __("Detección de Cuellos de Botella") }}
+                                        <span class="badge bg-success ms-1" style="font-size: 0.65em;">NUEVO</span>
+                                    </a></li>
+
+                                    <li><hr class="dropdown-divider"></li>
+
+                                    <!-- SECCIÓN 3: Análisis Comparativos -->
+                                    <li><h6 class="dropdown-header text-secondary"><i class="fas fa-chart-bar me-1"></i> {{ __("Análisis Comparativos") }}</h6></li>
+                                    <li><a class="dropdown-item" href="#" data-analysis="by-client">
+                                        <i class="fas fa-users text-primary me-2"></i>{{ __("Por Cliente") }}
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="#" data-analysis="order-type-critical">
+                                        <i class="fas fa-cubes text-secondary me-2"></i>{{ __("Por Tipo de Orden") }}
                                     </a></li>
                                     <li><a class="dropdown-item" href="#" data-analysis="top-bottom">
                                         <i class="fas fa-balance-scale text-secondary me-2"></i>{{ __("Comparativa Top/Bottom") }}
                                     </a></li>
+
                                     <li><hr class="dropdown-divider"></li>
+
+                                    <!-- SECCIÓN 4: Análisis Avanzado -->
+                                    <li><h6 class="dropdown-header text-dark"><i class="fas fa-rocket me-1"></i> {{ __("Análisis Avanzado") }}</h6></li>
+                                    <li><a class="dropdown-item" href="#" data-analysis="capacity-planning">
+                                        <i class="fas fa-tasks text-info me-2"></i>{{ __("Planificación de Capacidad") }}
+                                        <span class="badge bg-success ms-1" style="font-size: 0.65em;">NUEVO</span>
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="#" data-analysis="predictive-delays">
+                                        <i class="fas fa-chart-line text-warning me-2"></i>{{ __("Predicción de Retrasos") }}
+                                        <span class="badge bg-success ms-1" style="font-size: 0.65em;">NUEVO</span>
+                                    </a></li>
                                     <li><a class="dropdown-item" href="#" data-analysis="full">
-                                        <i class="fas fa-layer-group text-dark me-2"></i>{{ __("Análisis Total") }}
+                                        <i class="fas fa-layer-group text-dark me-2"></i>{{ __("Análisis Completo") }}
                                     </a></li>
                                 </ul>
                             </div>
@@ -2560,11 +2599,16 @@
                     ordersTotal: $('#kpi-orders-total').text() || '0',
                     avgErpToCreated: latestSummary?.orders_avg_erp_to_created ? formatSeconds(latestSummary.orders_avg_erp_to_created) : '-',
                     medianErpToCreated: latestSummary?.orders_p50_erp_to_created ? formatSeconds(latestSummary.orders_p50_erp_to_created) : '-',
+                    // Nuevas métricas de días laborables
+                    avgErpToCreatedWorkingDays: Math.round(latestSummary?.orders_avg_erp_to_created_working_days ?? 0) + 'd',
+                    avgErpToCreatedNonWorkingDays: Math.round(latestSummary?.orders_avg_erp_to_created_non_working_days ?? 0) + 'd',
+                    medianErpToCreatedWorkingDays: Math.round(latestSummary?.orders_p50_erp_to_created_working_days ?? 0) + 'd',
+                    medianErpToCreatedNonWorkingDays: Math.round(latestSummary?.orders_p50_erp_to_created_non_working_days ?? 0) + 'd',
                     dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
                 };
 
-                // CSV: Order_ID, Cliente, Fecha_ERP_ISO, Fecha_Creado_ISO, Tiempo_ERP_a_Creado_Segundos, Tiempo_ERP_a_Creado_Formato
-                let csv = 'Order_ID,Cliente,Fecha_ERP_ISO,Fecha_Creado_ISO,Tiempo_ERP_a_Creado_Segundos,Tiempo_ERP_a_Creado_Formato\n';
+                // CSV mejorado con días laborables y no laborables
+                let csv = 'Order_ID,Cliente,Fecha_ERP_ISO,Fecha_Creado_ISO,Tiempo_Segundos,Tiempo_Formato,Dias_Laborables,Dias_No_Laborables,Dias_Totales\n';
                 let count = 0;
                 const maxRows = 150;
 
@@ -2574,10 +2618,10 @@
                 
                 if (rowsData.length === 0) {
                     console.warn('[AI] No hay datos en la tabla. Asegúrate de haber aplicado los filtros primero.');
-                    return { 
-                        metrics, 
-                        csv: 'Order_ID,Cliente,Fecha_ERP_ISO,Fecha_Creado_ISO,Tiempo_ERP_a_Creado_Segundos,Tiempo_ERP_a_Creado_Formato\n', 
-                        type: 'Tiempo Recepción Pedido → Puesto en Fabricación', 
+                    return {
+                        metrics,
+                        csv: 'Order_ID,Cliente,Fecha_ERP_ISO,Fecha_Creado_ISO,Tiempo_Segundos,Tiempo_Formato,Dias_Laborables,Dias_No_Laborables,Dias_Totales\n',
+                        type: 'Tiempo Recepción Pedido → Puesto en Fabricación',
                         note: 'Sin datos disponibles'
                     };
                 }
@@ -2598,7 +2642,11 @@
                     const tiempoErpCreadoSegundosRaw = durationToSeconds(tiempoErpCreadoFormato);
                     const tiempoErpCreadoSegundos = cleanValue(tiempoErpCreadoSegundosRaw !== '' ? tiempoErpCreadoSegundosRaw : '0');
                     const tiempoErpCreado = cleanValue(tiempoErpCreadoFormato);
-                    csv += `${orderId},${cliente},${fechaErpIso},${fechaCreadoIso},${tiempoErpCreadoSegundos},${tiempoErpCreado}\n`;
+                    // Nuevos campos de días laborables
+                    const diasLaborables = cleanValue(safeValue(row.erp_to_created_working_days, '0'));
+                    const diasNoLaborables = cleanValue(safeValue(row.erp_to_created_non_working_days, '0'));
+                    const diasTotales = cleanValue(safeValue(row.erp_to_created_calendar_days, '0'));
+                    csv += `${orderId},${cliente},${fechaErpIso},${fechaCreadoIso},${tiempoErpCreadoSegundos},${tiempoErpCreado},${diasLaborables},${diasNoLaborables},${diasTotales}\n`;
                     count++;
                 });
 
@@ -3189,6 +3237,124 @@
                 return { metrics, csv, type: 'Comparativa Top/Bottom', note };
             }
 
+            // NUEVO: Análisis de Eficiencia con Días Laborables
+            function collectWorkingDaysEfficiencyData() {
+                const table = $('#production-times-table').DataTable();
+                if (!table) return { metrics: {}, csv: '', type: 'Eficiencia Días Laborables' };
+
+                const metrics = {
+                    ordersTotal: $('#kpi-orders-total').text() || '0',
+                    avgErpFinishWorkingDays: Math.round(latestSummary?.orders_avg_erp_to_finished_working_days ?? 0) + 'd',
+                    avgErpFinishNonWorkingDays: Math.round(latestSummary?.orders_avg_erp_to_finished_non_working_days ?? 0) + 'd',
+                    avgCreatedFinishWorkingDays: Math.round(latestSummary?.orders_avg_created_to_finished_working_days ?? 0) + 'd',
+                    avgCreatedFinishNonWorkingDays: Math.round(latestSummary?.orders_avg_created_to_finished_non_working_days ?? 0) + 'd',
+                    efficiencyRatio: latestSummary?.orders_avg_erp_to_finished_working_days > 0
+                        ? `${((latestSummary.orders_avg_erp_to_finished_working_days / (latestSummary.orders_avg_erp_to_finished_working_days + latestSummary.orders_avg_erp_to_finished_non_working_days)) * 100).toFixed(1)}%`
+                        : '-',
+                    dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
+                };
+
+                let csv = 'Order_ID,Cliente,ERP_Fin_Dias_Lab,ERP_Fin_Dias_NoLab,Creado_Fin_Dias_Lab,Creado_Fin_Dias_NoLab,Eficiencia_Pct\n';
+                let count = 0;
+                table.rows({search: 'applied'}).data().each(function(row) {
+                    if (count >= 150) return false;
+                    const orderId = cleanValue(safeValue(row.order_id, '0'));
+                    const cliente = cleanValue(safeValue(row.customer_client_name, 'Sin cliente'));
+                    const erpFinLab = cleanValue(safeValue(row.erp_to_finished_working_days, '0'));
+                    const erpFinNoLab = cleanValue(safeValue(row.erp_to_finished_non_working_days, '0'));
+                    const creFinLab = cleanValue(safeValue(row.created_to_finished_working_days, '0'));
+                    const creFinNoLab = cleanValue(safeValue(row.created_to_finished_non_working_days, '0'));
+                    const totalDays = parseInt(erpFinLab) + parseInt(erpFinNoLab);
+                    const efficiency = totalDays > 0 ? ((parseInt(erpFinLab) / totalDays) * 100).toFixed(1) : '0';
+                    csv += `${orderId},${cliente},${erpFinLab},${erpFinNoLab},${creFinLab},${creFinNoLab},${efficiency}\n`;
+                    count++;
+                });
+
+                return { metrics, csv, type: 'Eficiencia Días Laborables', note: `Analizando ${count} órdenes` };
+            }
+
+            // NUEVO: Impacto del Calendario Laboral
+            function collectCalendarImpactData() {
+                const table = $('#production-times-table').DataTable();
+                if (!table) return { metrics: {}, csv: '', type: 'Impacto Calendario Laboral' };
+
+                const metrics = {
+                    ordersTotal: $('#kpi-orders-total').text() || '0',
+                    avgNonWorkingDaysTotal: Math.round(
+                        (latestSummary?.orders_avg_erp_to_created_non_working_days ?? 0) +
+                        (latestSummary?.orders_avg_created_to_finished_non_working_days ?? 0)
+                    ) + 'd',
+                    avgWorkingDaysTotal: Math.round(
+                        (latestSummary?.orders_avg_erp_to_created_working_days ?? 0) +
+                        (latestSummary?.orders_avg_created_to_finished_working_days ?? 0)
+                    ) + 'd',
+                    impactRatio: ((latestSummary?.orders_avg_erp_to_created_non_working_days ?? 0) +
+                                  (latestSummary?.orders_avg_created_to_finished_non_working_days ?? 0)) > 0
+                        ? `${(((latestSummary.orders_avg_erp_to_created_non_working_days + latestSummary.orders_avg_created_to_finished_non_working_days) /
+                             ((latestSummary.orders_avg_erp_to_created_working_days + latestSummary.orders_avg_created_to_finished_working_days) +
+                              (latestSummary.orders_avg_erp_to_created_non_working_days + latestSummary.orders_avg_created_to_finished_non_working_days))) * 100).toFixed(1)}%`
+                        : '-',
+                    dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
+                };
+
+                let csv = 'Order_ID,Cliente,Total_Dias_NoLaborables,Total_Dias_Laborables,Pct_Impacto_NoLaborables,Dias_Totales\n';
+                let count = 0;
+                table.rows({search: 'applied'}).data().each(function(row) {
+                    if (count >= 150) return false;
+                    const orderId = cleanValue(safeValue(row.order_id, '0'));
+                    const cliente = cleanValue(safeValue(row.customer_client_name, 'Sin cliente'));
+                    const erpCreNoLab = parseInt(safeValue(row.erp_to_created_non_working_days, '0'));
+                    const creFinNoLab = parseInt(safeValue(row.created_to_finished_non_working_days, '0'));
+                    const erpCreLab = parseInt(safeValue(row.erp_to_created_working_days, '0'));
+                    const creFinLab = parseInt(safeValue(row.created_to_finished_working_days, '0'));
+                    const totalNoLab = erpCreNoLab + creFinNoLab;
+                    const totalLab = erpCreLab + creFinLab;
+                    const totalDias = totalNoLab + totalLab;
+                    const impact = totalDias > 0 ? ((totalNoLab / totalDias) * 100).toFixed(1) : '0';
+                    csv += `${orderId},${cliente},${totalNoLab},${totalLab},${impact},${totalDias}\n`;
+                    count++;
+                });
+
+                return { metrics, csv, type: 'Impacto Calendario Laboral', note: `Analizando ${count} órdenes con calendario laboral` };
+            }
+
+            // NUEVO: Detección de Cuellos de Botella
+            function collectBottleneckAnalysisData() {
+                return collectProcessGapsData(); // Reutiliza análisis de gaps pero con contexto diferente
+            }
+
+            // NUEVO: Planificación de Capacidad
+            function collectCapacityPlanningData() {
+                const table = $('#production-times-table').DataTable();
+                if (!table) return { metrics: {}, csv: '', type: 'Planificación de Capacidad' };
+
+                const metrics = {
+                    ordersTotal: $('#kpi-orders-total').text() || '0',
+                    processesTotal: $('#kpi-processes-total').text() || '0',
+                    avgWorkingDaysPerOrder: Math.round(latestSummary?.orders_avg_created_to_finished_working_days ?? 0) + 'd',
+                    dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`,
+                    recommendedCapacity: 'Ver análisis IA para recomendaciones'
+                };
+
+                let csv = 'Order_ID,Cliente,Dias_Laborables_Produccion,Procesos_Count,Intensidad_Promedio\n';
+                let count = 0;
+                table.rows({search: 'applied'}).data().each(function(row) {
+                    if (count >= 150) return false;
+                    const orderId = cleanValue(safeValue(row.order_id, '0'));
+                    const cliente = cleanValue(safeValue(row.customer_client_name, 'Sin cliente'));
+                    const diasLab = cleanValue(safeValue(row.created_to_finished_working_days, '0'));
+                    csv += `${orderId},${cliente},${diasLab},N/A,N/A\n`;
+                    count++;
+                });
+
+                return { metrics, csv, type: 'Planificación de Capacidad', note: `Analizando ${count} órdenes para capacidad` };
+            }
+
+            // NUEVO: Predicción de Retrasos
+            function collectPredictiveDelaysData() {
+                return collectFinishToDeliveryData(); // Reutiliza análisis de entregas con enfoque predictivo
+            }
+
             // Análisis 8: Análisis Total (CSV extendido)
             function collectFullAnalysisData() {
                 const table = $('#production-times-table').DataTable();
@@ -3556,6 +3722,116 @@ Incluye:
 5. 3 acciones inmediatas sugeridas
 
 Genera un informe estructurado pero conciso usando TODOS los datos.`
+                },
+                'working-days-efficiency': {
+                    title: 'Eficiencia Días Laborables',
+                    prompt: `Analiza la eficiencia de produccion considerando solo dias laborables.
+
+IMPORTANTE: Procesa TODAS las filas del CSV.
+
+Columnas normalizadas:
+- Order_ID, Cliente
+- Fecha_Creado_ISO, Fecha_Fin_ISO
+- Tiempo_Creado_a_Fin_Segundos, Tiempo_Creado_a_Fin_Formato
+- Dias_Calendario, Dias_Laborables
+- Eficiencia_Laborable (porcentaje de uso efectivo)
+
+Objetivos del analisis:
+1. Calcular eficiencia promedio de dias laborables
+2. Identificar top 5 ordenes con peor eficiencia (mas dias sin avance)
+3. Detectar patrones de inactividad (fines de semana prolongados, festivos)
+4. Proponer 3 acciones para maximizar uso de dias laborables
+
+Se concreto y cuantifica usando TODOS los datos.`
+                },
+                'calendar-impact': {
+                    title: 'Impacto Calendario Laboral',
+                    prompt: `Analiza el impacto del calendario laboral (festivos, fines de semana) en los tiempos de produccion.
+
+IMPORTANTE: Lee TODAS las filas del CSV.
+
+Columnas normalizadas:
+- Order_ID, Cliente
+- Fecha_Creado_ISO, Fecha_Fin_ISO
+- Dias_No_Laborables_Atravesados
+- Retraso_Atribuible_Calendario_Segundos, Retraso_Atribuible_Calendario_Formato
+- Impacto_Porcentaje
+
+Foco del analisis:
+1. Cuantificar el impacto total del calendario en retrasos
+2. Identificar ordenes mas afectadas por dias festivos
+3. Analizar si hay periodos especificos con mayor impacto (vacaciones, festivos locales)
+4. Proponer 3 estrategias para mitigar el impacto del calendario
+
+Incluye estadisticas agregadas y casos especificos usando TODOS los datos.`
+                },
+                'bottleneck-analysis': {
+                    title: 'Detección de Cuellos de Botella',
+                    prompt: `Identifica y analiza los principales cuellos de botella en la cadena de produccion.
+
+IMPORTANTE: Procesa TODAS las filas del CSV.
+
+Columnas normalizadas:
+- Codigo_Proceso, Nombre_Proceso
+- Ordenes_Afectadas, Clientes_Afectados
+- Duracion_Promedio_Segundos, Duracion_Promedio_Formato
+- Duracion_Maxima_Segundos, Duracion_Maxima_Formato
+- Gap_Promedio_Segundos, Gap_Promedio_Formato
+- Tasa_Utilizacion_Porcentaje
+
+Analisis requerido:
+1. Identificar top 3 procesos cuello de botella (alta utilizacion, duraciones elevadas)
+2. Calcular el impacto en tiempo total de produccion
+3. Analizar correlacion entre duracion de proceso y gaps subsecuentes
+4. Proponer 3 soluciones especificas por cuello de botella identificado
+
+Prioriza por impacto operacional usando TODOS los datos.`
+                },
+                'capacity-planning': {
+                    title: 'Planificación de Capacidad',
+                    prompt: `Analiza la capacidad de produccion y genera recomendaciones para planificacion futura.
+
+IMPORTANTE: El CSV contiene agregados por periodo. Lee TODAS las filas.
+
+Columnas normalizadas:
+- Periodo (fecha/semana)
+- Cantidad_Ordenes, Clientes_Unicos
+- Tiempo_Produccion_Total_Segundos, Tiempo_Produccion_Total_Formato
+- Tiempo_Promedio_Por_Orden_Segundos, Tiempo_Promedio_Por_Orden_Formato
+- Capacidad_Utilizada_Porcentaje
+- Capacidad_Disponible_Estimada_Porcentaje
+
+Objetivos:
+1. Identificar periodos de sobrecarga (>90% utilizacion)
+2. Identificar periodos de baja utilizacion (<50%)
+3. Calcular capacidad optima basada en tendencias
+4. Proponer 3 estrategias de redistribucion de carga
+5. Estimar capacidad adicional necesaria para picos de demanda
+
+Genera recomendaciones cuantificadas usando TODOS los datos.`
+                },
+                'predictive-delays': {
+                    title: 'Predicción de Retrasos',
+                    prompt: `Predice y analiza patrones que indican posibles retrasos futuros.
+
+IMPORTANTE: Procesa TODAS las filas del CSV.
+
+Columnas normalizadas:
+- Order_ID, Cliente, Estado_Actual
+- Fecha_Inicio_Estimada_ISO, Fecha_Fin_Estimada_ISO
+- Progreso_Porcentaje
+- Retraso_Acumulado_Segundos, Retraso_Acumulado_Formato
+- Señales_Alerta (factores de riesgo detectados)
+- Probabilidad_Retraso_Porcentaje
+
+Analisis predictivo:
+1. Identificar ordenes activas con alta probabilidad de retraso (>70%)
+2. Analizar patrones comunes en ordenes con retrasos historicos
+3. Detectar señales tempranas de alerta (gaps elevados, procesos lentos)
+4. Calcular impacto estimado de retrasos proyectados
+5. Proponer 3 acciones preventivas inmediatas para ordenes en riesgo
+
+Se especifico con casos concretos y probabilidades usando TODOS los datos.`
                 }
             };
 
@@ -3605,6 +3881,21 @@ Genera un informe estructurado pero conciso usando TODOS los datos.`
                         break;
                     case 'top-bottom':
                         data = collectTopBottomData();
+                        break;
+                    case 'working-days-efficiency':
+                        data = collectWorkingDaysEfficiencyData();
+                        break;
+                    case 'calendar-impact':
+                        data = collectCalendarImpactData();
+                        break;
+                    case 'bottleneck-analysis':
+                        data = collectBottleneckAnalysisData();
+                        break;
+                    case 'capacity-planning':
+                        data = collectCapacityPlanningData();
+                        break;
+                    case 'predictive-delays':
+                        data = collectPredictiveDelaysData();
                         break;
                     case 'full':
                         data = collectFullAnalysisData();

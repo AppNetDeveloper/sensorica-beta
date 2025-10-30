@@ -55,8 +55,16 @@ return [
     |
     | Controla si el Kanban industrial (machine.html) debe ocultar las órdenes
     | pendientes cuyo proceso previo aún no ha finalizado (ready_after_datetime
-    | en el futuro). Se habilita/deshabilita mediante env
-    | PRODUCTION_FILTER_NOT_READY_KANBAN (true por defecto).
+    | en el futuro). Se habilita/deshabilita mediante tabla settings (global)
+    | o mediante env PRODUCTION_FILTER_NOT_READY_KANBAN (true por defecto).
     */
-    'filter_not_ready_machine_kanban' => env('PRODUCTION_FILTER_NOT_READY_KANBAN', true),
+    'filter_not_ready_machine_kanban' => (function() {
+        try {
+            $value = \App\Models\Setting::getGlobal('PRODUCTION_FILTER_NOT_READY_KANBAN', env('PRODUCTION_FILTER_NOT_READY_KANBAN', 'true'));
+            return $value === 'true' || $value === true || $value === '1' || $value === 1;
+        } catch (\Exception $e) {
+            // Si falla (ej: migraciones no ejecutadas), usar valor de .env
+            return env('PRODUCTION_FILTER_NOT_READY_KANBAN', true);
+        }
+    })(),
 ];

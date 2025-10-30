@@ -759,7 +759,7 @@ class CustomerOriginalOrderController extends Controller
     {
         $tz = config('app.timezone');
         $defaultEnd = Carbon::now($tz);
-        $defaultStart = (clone $defaultEnd)->subDays(30);
+        $defaultStart = (clone $defaultEnd)->subDays(7);
 
         $processOptions = Process::orderBy('sequence')->get(['id', 'code', 'description']);
         $grupoOptions = OriginalOrderProcess::query()

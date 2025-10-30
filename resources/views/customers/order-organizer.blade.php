@@ -17,7 +17,32 @@
 @section('content')
 <div class="card">
     <div class="card-header">
-        <h5 class="mb-0">{{ __('Processes') }}</h5>
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">{{ __('Processes') }}</h5>
+            
+            @can('kanban-filter-toggle')
+                <div class="d-flex align-items-center gap-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" 
+                               id="kanbanFilterToggle" 
+                               {{ $filterEnabled ? 'checked' : '' }}
+                               style="width: 3rem; height: 1.5rem; cursor: pointer;">
+                        <label class="form-check-label ms-2" for="kanbanFilterToggle" style="cursor: pointer;">
+                            <i class="fas fa-filter me-1"></i>
+                            <span id="filterStatusText">
+                                {{ $filterEnabled ? __('Filtro activado') : __('Filtro desactivado') }}
+                            </span>
+                        </label>
+                    </div>
+                    <small class="text-muted" id="filterHelpText">
+                        {{ $filterEnabled 
+                            ? __('Órdenes no listas ocultas en Kanban') 
+                            : __('Todas las órdenes visibles en Kanban') 
+                        }}
+                    </small>
+                </div>
+            @endcan
+        </div>
     </div>
     <div class="card-body">
         @if($groupedProcesses->count() > 0)
@@ -77,6 +102,38 @@
 .card-body a.btn {
     transition: all 0.2s ease;
     font-weight: 500;
+}
+
+/* Estilos para el toggle switch del filtro */
+#kanbanFilterToggle {
+    cursor: pointer;
+}
+
+#kanbanFilterToggle:checked {
+    background-color: #28a745;
+    border-color: #28a745;
+}
+
+#kanbanFilterToggle:not(:checked) {
+    background-color: #6c757d;
+    border-color: #6c757d;
+}
+
+#kanbanFilterToggle:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.form-check-label {
+    user-select: none;
+}
+
+#filterStatusText {
+    font-weight: 600;
+}
+
+#filterHelpText {
+    font-size: 0.875rem;
 }
 
 /* Estilos para el tablero Kanban */
@@ -178,6 +235,71 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Toggle switch para el filtro de Kanban
+    const kanbanFilterToggle = document.getElementById('kanbanFilterToggle');
+    
+    if (kanbanFilterToggle) {
+        kanbanFilterToggle.addEventListener('change', async function() {
+            const isChecked = this.checked;
+            const statusText = document.getElementById('filterStatusText');
+            const helpText = document.getElementById('filterHelpText');
+            
+            // Deshabilitar el switch durante la petición
+            this.disabled = true;
+            
+            try {
+                const response = await fetch('{{ route("customers.kanban-filter-toggle", $customer) }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Actualizar textos según el nuevo estado
+                    if (data.value) {
+                        statusText.textContent = '{{ __("Filtro activado") }}';
+                        helpText.textContent = '{{ __("Órdenes no listas ocultas en Kanban") }}';
+                    } else {
+                        statusText.textContent = '{{ __("Filtro desactivado") }}';
+                        helpText.textContent = '{{ __("Todas las órdenes visibles en Kanban") }}';
+                    }
+                    
+                    // Mostrar notificación de éxito
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'success',
+                            title: '{{ __("Configuración actualizada") }}',
+                            text: data.message,
+                            timer: 3000,
+                            showConfirmButton: false,
+                            toast: true,
+                            position: 'top-end'
+                        });
+                    } else {
+                        alert(data.message);
+                    }
+                } else {
+                    // Error en la respuesta
+                    this.checked = !isChecked; // Revertir el estado
+                    alert(data.message || '{{ __("Error al cambiar la configuración") }}');
+                }
+            } catch (error) {
+                console.error('Error toggling filter:', error);
+                this.checked = !isChecked; // Revertir el estado
+                alert('{{ __("Error de conexión al servidor") }}');
+            } finally {
+                // Rehabilitar el switch
+                this.disabled = false;
+            }
+        });
+    }
+    
+
     // Variables globales
     let draggedItem = null;
     const kanbanBoard = document.querySelector('.kanban-board');

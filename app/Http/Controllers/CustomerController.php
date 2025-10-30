@@ -301,11 +301,48 @@ return "<div class='action-buttons-row d-flex flex-wrap' style='display: none; g
             return $position;
         });
             
+        // Obtener el estado actual del filtro (primero de settings, luego de .env)
+        $filterEnabled = \App\Models\Setting::getGlobal('PRODUCTION_FILTER_NOT_READY_KANBAN', 'true');
+        $filterEnabled = $filterEnabled === 'true' || $filterEnabled === true || $filterEnabled === '1';
+
         return view('customers.order-organizer', [
             'customer' => $customer,
             'groupedProcesses' => $sortedProcesses,
-            'totalLines' => $productionLines->count()
+            'totalLines' => $productionLines->count(),
+            'filterEnabled' => $filterEnabled
         ]);
+    }
+
+    /**
+     * Toggle Kanban filter setting
+     *
+     * @param Customer $customer
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function toggleKanbanFilter(Customer $customer)
+    {
+        try {
+            $newValue = \App\Models\Setting::toggleGlobal('PRODUCTION_FILTER_NOT_READY_KANBAN', true);
+            
+            // Limpiar cache de configuración para que se recargue el nuevo valor
+            \Artisan::call('config:clear');
+            \Cache::forget('production.filter_not_ready_machine_kanban');
+            
+            return response()->json([
+                'success' => true,
+                'value' => $newValue,
+                'message' => $newValue 
+                    ? __('El filtro está activado. Las órdenes no listas se ocultarán.')
+                    : __('El filtro está desactivado. Se mostrarán todas las órdenes.')
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error toggling Kanban filter: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => __('Error al cambiar la configuración del filtro.')
+            ], 500);
+        }
     }
 
     public function hourlyTotals(Customer $customer)

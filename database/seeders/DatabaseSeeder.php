@@ -47,6 +47,8 @@ class DatabaseSeeder extends Seeder
             'productionline-process-view', 'productionline-process-create', 'productionline-process-edit', 'productionline-process-delete',
             'productionline-show', 'productionline-create', 'productionline-edit', 'productionline-delete',
             'productionline-sensors', 'productionline-orders', 'productionline-kanban', 'productionline-incidents', 'productionline-weight-stats', 'productionline-production-stats', 'productionline-live-view', 'productionline-live-machine',
+            // Kanban filter toggle permission
+            'kanban-filter-toggle',
             // Maintenance module permissions
             'maintenance-show', 'maintenance-create', 'maintenance-edit', 'maintenance-delete',
         ];

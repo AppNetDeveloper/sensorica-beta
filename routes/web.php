@@ -171,6 +171,10 @@ Route::prefix('customers')->name('customers.')->group(function () {
         Route::get('order-organizer', [CustomerController::class, 'showOrderOrganizer'])
             ->name('order-organizer');
             
+        Route::post('kanban-filter-toggle', [CustomerController::class, 'toggleKanbanFilter'])
+            ->name('kanban-filter-toggle')
+            ->middleware('permission:kanban-filter-toggle');
+            
         Route::get('order-kanban/{process}', [CustomerController::class, 'showOrderKanban'])
             ->name('order-kanban')
             ->where('process', '[0-9]+');
