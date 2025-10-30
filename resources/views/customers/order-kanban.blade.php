@@ -626,6 +626,7 @@
         justify-content: center;
         font-size: 1.1rem;
         flex-shrink: 0;
+        margin-left: 0.95rem;
     }
     .kanban-kpi-card.kpi-mean {
         border-color: rgba(16, 185, 129, 0.4);

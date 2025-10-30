@@ -106,10 +106,14 @@ class UpdateAccumulatedTimes extends Command
             
             // Identificar las órdenes en fabricación (status=1) por línea de producción
             // para poder sumar su tiempo teórico al acumulado de las órdenes en espera
+            // Usamos un array de arrays para soportar múltiples órdenes en fabricación por línea
             $inProgressOrdersByLine = [];
             foreach ($activeOrders as $order) {
                 if ($order->status === 1 && $order->production_line_id) {
-                    $inProgressOrdersByLine[$order->production_line_id] = $order;
+                    if (!isset($inProgressOrdersByLine[$order->production_line_id])) {
+                        $inProgressOrdersByLine[$order->production_line_id] = [];
+                    }
+                    $inProgressOrdersByLine[$order->production_line_id][] = $order;
                 }
             }
             
@@ -124,23 +128,24 @@ class UpdateAccumulatedTimes extends Command
                     $accumulatedSeconds = 0;
                     $this->info("Procesando línea de producción ID: {$currentLineId}");
                     
-                    // Si hay una orden en fabricación para esta línea, sumamos su tiempo teórico al acumulado
+                    // Si hay órdenes en fabricación para esta línea, sumamos sus tiempos teóricos al acumulado
                     if (isset($inProgressOrdersByLine[$currentLineId])) {
-                        $inProgressOrder = $inProgressOrdersByLine[$currentLineId];
-                        $theoreticalTime = $inProgressOrder->theoretical_time ?? 0;
-                        
-                        if ($theoreticalTime > 0) {
-                            // El tiempo teórico ya está en segundos, lo usamos directamente
-                            $accumulatedSeconds += $theoreticalTime;
-                            $this->info("  * Sumando tiempo teórico de la orden en fabricación ID: {$inProgressOrder->id}: {$theoreticalTime} segundos");
-                        } else {
-                            // Si no tiene tiempo teórico, buscamos en el proceso original
-                            $originalProcess = OriginalOrderProcess::find($inProgressOrder->original_order_process_id);
-                            if ($originalProcess && $originalProcess->time) {
-                                // El tiempo del proceso original está en minutos, convertir a segundos
-                                $theoreticalSeconds = $originalProcess->time * 60;
-                                $accumulatedSeconds += $theoreticalSeconds;
-                                $this->info("  * Sumando tiempo del proceso original para orden en fabricación ID: {$inProgressOrder->id}: {$originalProcess->time} minutos ({$theoreticalSeconds} segundos)");
+                        foreach ($inProgressOrdersByLine[$currentLineId] as $inProgressOrder) {
+                            $theoreticalTime = $inProgressOrder->theoretical_time ?? 0;
+                            
+                            if ($theoreticalTime > 0) {
+                                // El tiempo teórico ya está en segundos, lo usamos directamente
+                                $accumulatedSeconds += $theoreticalTime;
+                                $this->info("  * Sumando tiempo teórico de la orden en fabricación ID: {$inProgressOrder->id}: {$theoreticalTime} segundos");
+                            } else {
+                                // Si no tiene tiempo teórico, buscamos en el proceso original
+                                $originalProcess = OriginalOrderProcess::find($inProgressOrder->original_order_process_id);
+                                if ($originalProcess && $originalProcess->time) {
+                                    // El tiempo del proceso original está en minutos, convertir a segundos
+                                    $theoreticalSeconds = $originalProcess->time * 60;
+                                    $accumulatedSeconds += $theoreticalSeconds;
+                                    $this->info("  * Sumando tiempo del proceso original para orden en fabricación ID: {$inProgressOrder->id}: {$originalProcess->time} minutos ({$theoreticalSeconds} segundos)");
+                                }
                             }
                         }
                     }
@@ -198,48 +203,47 @@ class UpdateAccumulatedTimes extends Command
                     $accumulatedSeconds += $estimatedSeconds;
                     $this->info("    * Incrementando acumulado en {$estimatedSeconds} segundos para la siguiente orden");
                     
-                    // Solo calculamos fechas estimadas para órdenes pendientes (status=0) con línea de producción asignada
-                    if ($order->status === 0 && $order->production_line_id) {
-                        $this->info("    * Calculando fechas estimadas para la orden ID: {$order->id}");
-                        
-                        // Obtener el OEE promedio para esta línea de producción
-                        try {
-                            if (!isset($oeeAverageByLine[$order->production_line_id])) {
-                                $oeeAverageByLine[$order->production_line_id] = $this->getAverageOEE($order->production_line_id, $oeeHistoryDays, $oeeMinimumPercentage);
-                            }
-                            
-                            $lineOEE = $oeeAverageByLine[$order->production_line_id];
-                            $this->info("    * OEE promedio para la línea: {$lineOEE}%");
-                        } catch (\Exception $e) {
-                            // Si hay error al obtener OEE, usar el mínimo por defecto
-                            $lineOEE = $oeeMinimumPercentage;
-                            $this->warn("    * Error al obtener OEE para la línea {$order->production_line_id}. Usando valor mínimo: {$lineOEE}%");
-                            Log::warning("Error al obtener OEE para la línea {$order->production_line_id}: {$e->getMessage()}");
+                    // Calcular fechas estimadas para esta orden pendiente
+                    $this->info("    * Calculando fechas estimadas para la orden ID: {$order->id}");
+                    
+                    // Obtener el OEE promedio para esta línea de producción
+                    try {
+                        if (!isset($oeeAverageByLine[$order->production_line_id])) {
+                            $oeeAverageByLine[$order->production_line_id] = $this->getAverageOEE($order->production_line_id, $oeeHistoryDays, $oeeMinimumPercentage);
                         }
                         
+                        $lineOEE = $oeeAverageByLine[$order->production_line_id];
+                        $this->info("    * OEE promedio para la línea: {$lineOEE}%");
+                    } catch (\Exception $e) {
+                        // Si hay error al obtener OEE, usar el mínimo por defecto
+                        $lineOEE = $oeeMinimumPercentage;
+                        $this->warn("    * Error al obtener OEE para la línea {$order->production_line_id}. Usando valor mínimo: {$lineOEE}%");
+                        Log::warning("Error al obtener OEE para la línea {$order->production_line_id}: {$e->getMessage()}");
+                    }
+                    
+                    try {
+                        // Paso 1: Obtener la línea de producción y su cliente asociado
                         try {
-                            // Paso 1: Obtener la línea de producción y su cliente asociado
-                            try {
-                                $productionLine = \App\Models\ProductionLine::find($order->production_line_id);
-                                if (!$productionLine || !$productionLine->customer_id) {
-                                    $this->warn("    * No se encontró la línea de producción o no tiene cliente asociado");
-                                    // Si no hay línea o cliente, ponemos fechas en null y continuamos
-                                    $order->estimated_start_datetime = null;
-                                    $order->estimated_end_datetime = null;
-                                    $order->save();
-                                    continue;
-                                }
-                                $customerId = $productionLine->customer_id;
-                                $this->info("    * Cliente ID asociado a la línea: {$customerId}");
-                            } catch (\Exception $e) {
-                                $this->error("    * Error al obtener la línea de producción: {$e->getMessage()}");
-                                Log::error("Error al obtener la línea de producción ID {$order->production_line_id}: {$e->getMessage()}");
-                                // Si hay error, ponemos fechas en null y continuamos
+                            $productionLine = \App\Models\ProductionLine::find($order->production_line_id);
+                            if (!$productionLine || !$productionLine->customer_id) {
+                                $this->warn("    * No se encontró la línea de producción o no tiene cliente asociado");
+                                // Si no hay línea o cliente, ponemos fechas en null y continuamos
                                 $order->estimated_start_datetime = null;
                                 $order->estimated_end_datetime = null;
                                 $order->save();
                                 continue;
                             }
+                            $customerId = $productionLine->customer_id;
+                            $this->info("    * Cliente ID asociado a la línea: {$customerId}");
+                        } catch (\Exception $e) {
+                            $this->error("    * Error al obtener la línea de producción: {$e->getMessage()}");
+                            Log::error("Error al obtener la línea de producción ID {$order->production_line_id}: {$e->getMessage()}");
+                            // Si hay error, ponemos fechas en null y continuamos
+                            $order->estimated_start_datetime = null;
+                            $order->estimated_end_datetime = null;
+                            $order->save();
+                            continue;
+                        }
                             
                             // Paso 2: Obtener la disponibilidad de la línea (días y turnos)
                             try {
@@ -542,13 +546,12 @@ class UpdateAccumulatedTimes extends Command
                             
                             $this->info("    * Fechas estimadas calculadas: Inicio: {$estimatedStartDate->format('Y-m-d H:i:s')}, Fin: {$estimatedEndDate->format('Y-m-d H:i:s')}");
                             
-                        } catch (\Exception $e) {
-                            $this->error("    * Error al calcular fechas estimadas: {$e->getMessage()}");
-                            // En caso de error, ponemos fechas en null
-                            $order->estimated_start_datetime = null;
-                            $order->estimated_end_datetime = null;
-                            $order->save();
-                        }
+                    } catch (\Exception $e) {
+                        $this->error("    * Error al calcular fechas estimadas: {$e->getMessage()}");
+                        // En caso de error, ponemos fechas en null
+                        $order->estimated_start_datetime = null;
+                        $order->estimated_end_datetime = null;
+                        $order->save();
                     }
                 }
             }
@@ -574,9 +577,9 @@ class UpdateAccumulatedTimes extends Command
 
     /**
      * Encadenar ready_after_datetime por grupos de procesos dentro de cada OriginalOrder.
-     * Para cada grupo (original_order_id + grupo_numero), ordena por sequence del Process
-     * y establece ready_after_datetime del elemento i con el estimated_end_datetime del elemento i-1.
-     * Si no hay estimated_end_datetime disponible, no establece valor.
+     * Para cada grupo (original_order_id + grupo_numero), ordena por sequence del Process.
+     * IMPORTANTE: Procesos con el MISMO sequence son PARALELOS y todos dependen del último
+     * proceso del sequence ANTERIOR, NO se encadenan entre ellos.
      */
     protected function updateGroupReadyAfter($orders)
     {
@@ -611,41 +614,65 @@ class UpdateAccumulatedTimes extends Command
                 return $oop && $oop->process ? ($oop->process->sequence ?? PHP_INT_MAX) : PHP_INT_MAX;
             })->values();
 
-            // Encadenar: para i>0, ready_after_datetime = estimated_end_datetime de i-1
-            for ($i = 0; $i < $sorted->count(); $i++) {
-                /** @var ProductionOrder $current */
-                $current = $sorted[$i];
-
-                if ($i === 0) {
-                    // El primero del grupo no depende de otro. Lo dejamos como está.
-                    continue;
+            // Agrupar por sequence para detectar procesos paralelos
+            $bySequence = [];
+            foreach ($sorted as $order) {
+                $oop = $processByOOP->get($order->original_order_process_id);
+                $seq = $oop && $oop->process ? ($oop->process->sequence ?? 0) : 0;
+                if (!isset($bySequence[$seq])) {
+                    $bySequence[$seq] = [];
                 }
-
-                /** @var ProductionOrder $prev */
-                $prev = $sorted[$i - 1];
-
-                // Preferimos fecha real de fin si existe; si no, usamos la estimada
-                $readyAfter = $prev->finished_at ?: $prev->estimated_end_datetime;
-
-                // Si hay valor, persistirlo (aunque no exista cast en el modelo)
-                if (!empty($readyAfter)) {
-                    // Evitar escritura si no cambia, para reducir saves
-                    if ($current->ready_after_datetime != $readyAfter) {
-                        $current->ready_after_datetime = $readyAfter;
-                        // Si no hay estimated_start_datetime, alinearlo con ready_after + margen de seguridad
-                        if (empty($current->estimated_start_datetime)) {
-                            try {
-                                $safetyHours = (int) Config::get('production.ready_after_safety_hours', 6);
-                                $current->estimated_start_datetime = Carbon::parse($readyAfter)->addHours($safetyHours);
-                            } catch (\Throwable $e) {
-                                // Fallback: si por alguna razón falla el parse, usar ready_after directamente
-                                $current->estimated_start_datetime = $readyAfter;
+                $bySequence[$seq][] = $order;
+            }
+            
+            // Ordenar las claves de sequence
+            ksort($bySequence);
+            
+            // Variable para guardar el último proceso del sequence anterior
+            $lastProcessOfPrevSequence = null;
+            
+            // Iterar por cada sequence
+            foreach ($bySequence as $sequence => $ordersInSequence) {
+                $this->info("[ready_after] Procesando sequence {$sequence} con " . count($ordersInSequence) . " órdenes");
+                
+                // Para cada orden en este sequence
+                foreach ($ordersInSequence as $current) {
+                    // Si no hay proceso previo (es el primer sequence), no hacer nada
+                    if ($lastProcessOfPrevSequence === null) {
+                        $this->info("[ready_after] PO {$current->id} es del primer sequence, no tiene dependencia previa");
+                        continue;
+                    }
+                    
+                    // Preferimos fecha real de fin si existe; si no, usamos la estimada
+                    $readyAfter = $lastProcessOfPrevSequence->finished_at ?: $lastProcessOfPrevSequence->estimated_end_datetime;
+                    
+                    // Si hay valor, persistirlo
+                    if (!empty($readyAfter)) {
+                        // Evitar escritura si no cambia, para reducir saves
+                        if ($current->ready_after_datetime != $readyAfter) {
+                            $current->ready_after_datetime = $readyAfter;
+                            // Si no hay estimated_start_datetime, alinearlo con ready_after + margen de seguridad
+                            if (empty($current->estimated_start_datetime)) {
+                                try {
+                                    $safetyHours = (int) Config::get('production.ready_after_safety_hours', 6);
+                                    $current->estimated_start_datetime = Carbon::parse($readyAfter)->addHours($safetyHours);
+                                } catch (\Throwable $e) {
+                                    // Fallback: si por alguna razón falla el parse, usar ready_after directamente
+                                    $current->estimated_start_datetime = $readyAfter;
+                                }
                             }
+                            $current->save();
+                            $this->info("[ready_after] PO {$current->id} (seq {$sequence}) disponible desde {$readyAfter} (prev PO {$lastProcessOfPrevSequence->id})");
+                        } else {
+                            $this->info("[ready_after] PO {$current->id} (seq {$sequence}) ya tiene ready_after correcto: {$readyAfter}");
                         }
-                        $current->save();
-                        $this->info("[ready_after] PO {$current->id} disponible desde {$readyAfter} (prev PO {$prev->id})");
                     }
                 }
+                
+                // Actualizar el último proceso: usar el ÚLTIMO del array actual (o el primero, da igual si son paralelos)
+                // porque todos los del mismo sequence terminan "al mismo tiempo" conceptualmente
+                $lastProcessOfPrevSequence = end($ordersInSequence);
+                reset($ordersInSequence); // Resetear el puntero interno
             }
         }
     }
