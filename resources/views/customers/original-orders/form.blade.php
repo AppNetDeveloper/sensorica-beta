@@ -147,6 +147,12 @@
                                     @error('processes')
                                         <div class="alert alert-danger">{{ $message }}</div>
                                     @enderror
+                                    @php
+                                        $processTimeError = $errors->has('process_times') || collect($errors->getMessages())->keys()->contains(fn($key) => str_starts_with($key, 'process_times.'));
+                                    @endphp
+                                    @if($processTimeError)
+                                        <div class="alert alert-danger">@lang('Please provide a production time in seconds for every selected process.')</div>
+                                    @endif
                                     <div class="mb-3" style="max-height: 200px; overflow-y: auto; border: 1px solid #ced4da; padding: .375rem .75rem; border-radius: .25rem;">
                                         <div class="input-group">
                                             <select id="process_selector" class="form-control">
@@ -182,6 +188,7 @@
                                                 <tr>
                                                     <th>@lang('Code')</th>
                                                     <th>@lang('Name')</th>
+                                                    <th class="text-center">@lang('Production Time (s)')</th>
                                                     <th class="text-center">@lang('Finished')</th>
                                                     <th class="text-right">@lang('Actions')</th>
                                                 </tr>
@@ -207,9 +214,19 @@
                                                             $isFinished = isset(old('finished')[$uniqueId]) || 
                                                                 ($pivot && $pivot->pivot->finished);
                                                         @endphp
+                                                        @php
+                                                            $timeFieldName = 'process_times.' . $uniqueId;
+                                                            $timeValue = old('process_times.' . $uniqueId, $pivot?->pivot->time ?? '');
+                                                        @endphp
                                                         <tr data-unique-id="{{ $uniqueId }}" data-process-id="{{ $process->id }}">
                                                             <td>{{ $process->code }}</td>
                                                             <td>{{ $process->name }}</td>
+                                                            <td class="text-center" style="max-width: 160px;">
+                                                                <input type="number" name="process_times[{{ $uniqueId }}]" class="form-control form-control-sm process-time-input @error($timeFieldName) is-invalid @enderror" min="1" step="0.01" value="{{ $timeValue }}" required>
+                                                                @error($timeFieldName)
+                                                                    <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
+                                                                @enderror
+                                                            </td>
                                                             <td class="text-center">
                                                                 <div class="custom-control custom-switch">
                                                                     <input type="checkbox" class="custom-control-input" 
@@ -230,7 +247,7 @@
                                                         </tr>
                                                         {{-- Fila para los artículos del proceso --}}
                                                         <tr class="process-articles" data-process-row="{{ $uniqueId }}">
-                                                            <td colspan="4" class="p-0 border-0">
+                                                            <td colspan="5" class="p-0 border-0">
                                                                 <div class="articles-container" style="display: none;">
                                                                     <div class="d-flex justify-content-between align-items-center mb-2">
                                                                         <h6 class="mb-0">@lang('Related Articles')</h6>
@@ -394,6 +411,9 @@ $(document).ready(function() {
             <tr data-unique-id="${uniqueId}" data-process-id="${process.id}">
                 <td>${process.code}</td>
                 <td>${process.name}</td>
+                <td class="text-center" style="max-width: 160px;">
+                    <input type="number" name="process_times[${uniqueId}]" class="form-control form-control-sm process-time-input" min="1" step="0.01" required>
+                </td>
                 <td class="text-center">
                     <div class="custom-control custom-switch">
                         <input type="checkbox" class="custom-control-input" id="finished_${uniqueId}" name="finished[${uniqueId}]" value="1">
@@ -409,7 +429,7 @@ $(document).ready(function() {
                 </td>
             </tr>
             <tr class="process-articles" data-process-row="${uniqueId}">
-                <td colspan="4" class="p-0 border-0">
+                <td colspan="5" class="p-0 border-0">
                     <div class="articles-container" style="display: none;">
                          <h6 class="mb-2">@lang('Related Articles')</h6>
                          <div class="articles-list" data-process-id="${uniqueId}">
@@ -494,6 +514,35 @@ $(document).ready(function() {
             event.preventDefault();
             showProcessRequiredAlert();
             $('html, body').animate({ scrollTop: $('#processes_table').offset().top - 100 }, 400);
+            return;
+        }
+
+        let invalidTime = false;
+        $('.process-time-input').each(function() {
+            const value = parseFloat($(this).val());
+            if (isNaN(value) || value <= 0) {
+                invalidTime = true;
+                $(this).addClass('is-invalid');
+            } else {
+                $(this).removeClass('is-invalid');
+            }
+        });
+
+        if (invalidTime) {
+            event.preventDefault();
+            if (!document.getElementById('process-time-alert')) {
+                const alert = document.createElement('div');
+                alert.id = 'process-time-alert';
+                alert.className = 'alert alert-danger mt-3';
+                alert.innerHTML = `<i class="fas fa-exclamation-triangle me-1"></i>{{ __('Enter a production time (in seconds) greater than zero for each process.') }}`;
+                document.getElementById('processes_table').closest('.card').prepend(alert);
+            }
+            $('html, body').animate({ scrollTop: $('#processes_table').offset().top - 100 }, 400);
+        } else {
+            const alert = document.getElementById('process-time-alert');
+            if (alert) {
+                alert.remove();
+            }
         }
     });
 });

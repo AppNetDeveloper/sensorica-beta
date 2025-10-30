@@ -142,6 +142,32 @@ Módulo completo para la configuración y monitoreo de sensores industriales:
 - **Histórico de Lecturas**: Almacenamiento y consulta de datos históricos.
 - **Calibración de Sensores**: Herramientas para ajustar y calibrar sensores.
 
+#### Cálculo automático de tiempos óptimos
+
+El comando Artisan `php artisan production:calculate-optimal-time` mantiene sincronizados los tiempos óptimos de producción siguiendo una arquitectura de tres capas diseñada para balancear aprendizaje automático, valores operativos y configuración base del cliente:
+
+1. **`optimal_sensor_times` (historial maestro)**
+   - Guarda el mejor tiempo encontrado por combinación *sensor × línea × producto*.
+   - Se crea el registro si no existía y se actualiza cuando:
+     - El nuevo cálculo es **menor** al registrado, o
+     - El nuevo cálculo es **mayor** pero supera el umbral `min_correction_percentage`, aplicando un límite con `max_correction_percentage`.
+   - Evita actualizaciones cuando el incremento no supera el porcentaje mínimo definido en el sensor.
+
+2. **`sensors.optimal_production_time` (cache operativo)**
+   - Copia el valor desde `optimal_sensor_times` únicamente si el sensor tiene activado `auto_update_sensor_optimal_time`.
+   - Solo guarda cuando el valor cambia para minimizar escrituras innecesarias.
+   - Si todavía no hay historial, utiliza el cálculo en tiempo real como valor inicial.
+
+3. **`product_lists.optimal_production_time` (baseline del cliente)**
+   - Conserva el tiempo inicial proporcionado por el cliente y solo se actualiza cuando se encuentra un valor **menor**.
+   - Sirve como respaldo cuando no existe historial en `optimal_sensor_times` (p.ej., producto nuevo).
+
+##### Configuración y UI
+
+- En la edición de un sensor se pueden ajustar los porcentajes `min_correction_percentage` (umbral mínimo) y `max_correction_percentage` (tope máximo aplicable al nuevo valor).
+- Para habilitar la actualización automática del campo `optimal_production_time` en `sensors`, se debe activar `auto_update_sensor_optimal_time` desde la misma vista.
+- Los logs del comando detallan claramente la fuente del valor aplicado y cuándo se omiten actualizaciones por no superar los umbrales.
+
 ### Integración con APIs Externas
 
 Sistema flexible para la integración con sistemas externos:

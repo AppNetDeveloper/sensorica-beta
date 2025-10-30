@@ -53,6 +53,8 @@ class Sensor extends Model
         'count_week_1', // contador de la semana 1
         'min_correction_percentage', //vamos que  empieza a corregir por ejemplo 80% de la velocidad real si es por debajo  de 20 % de la velocidad optima la actual corrige
         'max_correction_percentage', // despues de correcion se correccion por ejemplo 98% de la velocidad real si es por encima de 90 % de la velocidad optima la actual corrige
+        'auto_optimal_time_enabled', // habilita o deshabilita el cálculo automático del tiempo óptimo
+        'auto_update_sensor_optimal_time', // permite que el cálculo automático actualice el campo optimal_production_time del sensor
          
     ];
     

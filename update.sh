@@ -196,6 +196,7 @@ declare -A ENV_VARS=(
     ["CALLBACK_MAX_ATTEMPTS"]="20"
     ["ORDER_MIN_ACTIVE_SECONDS"]="60"
     ["PRODUCTION_FILTER_NOT_READY_KANBAN"]="true"
+    ["PRODUCTION_MIN_SAMPLE_SIZE_FOR_OPTIMAL_TIME"]="400"
 )
 
 ENV_FILE=".env"
@@ -485,4 +486,6 @@ echo 'limpiar cache'
     php artisan db:seed --class=HourlyTotalsPermissionsSeeder --force -n
     php artisan db:seed --class=ArticlePermissionsSeeder --force -n
     php artisan db:seed --class=ProductionLineArticlePermissionsSeedermor --force -n
+    php artisan db:seed --class=OptimalSensorTimePermissionsSeeder --force -n
+    php artisan db:seed --class=OptimalSensorTimePermissionsSeeder --force -n
     echo "Proceso completado con éxito..."

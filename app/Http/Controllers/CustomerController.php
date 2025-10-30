@@ -160,6 +160,10 @@ if (auth()->user()->can('productionline-weight-stats')) {
 if (auth()->user()->can('productionline-production-stats')) {
     $statsActions[] = "<a href='{$liveViewUrlProd}' target='_blank' class='btn btn-sm btn-warning me-1 mb-1'><i class='fas fa-chart-line'></i> " . __('Production Stats') . "</a>";
     $statsActions[] = "<a href='{$customerSensorsUrl}' class='btn btn-sm btn-outline-success me-1 mb-1'><i class='fas fa-microchip'></i> " . __('Sensors') . "</a>";
+    if (auth()->user()->can('productionline-kanban')) {
+        $optimalTimesUrl = route('customers.optimal-sensor-times.index', $customer->id);
+        $statsActions[] = "<a href='{$optimalTimesUrl}' class='btn btn-sm btn-outline-info me-1 mb-1'><i class='fas fa-clock'></i> " . __('Optimal Times') . "</a>";
+    }
 }
 if (!empty($statsActions)) {
     $allButtons .= "<div class='btn-group-section'><div class='btn-group-label'><i class='fas fa-chart-bar me-1'></i>" . __('Estadísticas') . "</div>" . implode('', $statsActions) . "</div>";

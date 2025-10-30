@@ -55,6 +55,8 @@ class SensorController extends Controller
             'productName' => 'nullable|string',
             'count_week_0' => 'nullable|integer|min:0',
             'count_week_1' => 'nullable|integer|min:0',
+            'auto_optimal_time_enabled' => 'nullable|boolean',
+            'auto_update_sensor_optimal_time' => 'nullable|boolean',
         ]);
 
         if ($validator->fails()) {
@@ -111,6 +113,8 @@ class SensorController extends Controller
             'productName' => 'nullable|string',
             'count_week_0' => 'nullable|integer|min:0',
             'count_week_1' => 'nullable|integer|min:0',
+            'auto_optimal_time_enabled' => 'nullable|boolean',
+            'auto_update_sensor_optimal_time' => 'nullable|boolean',
         ]);
 
         if ($validator->fails()) {

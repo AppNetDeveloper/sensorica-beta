@@ -367,6 +367,29 @@ Route::prefix('customers')->name('customers.')->group(function () {
         // Listado de sensores por cliente
         Route::get('sensors', [CustomerController::class, 'sensorsIndex'])
             ->name('sensors.index');
+
+        // Optimal Sensor Times
+        Route::get('optimal-sensor-times', [\App\Http\Controllers\OptimalSensorTimeController::class, 'index'])
+            ->name('optimal-sensor-times.index')
+            ->middleware('permission:productionline-kanban');
+        Route::get('optimal-sensor-times/{optimalSensorTime}/edit', [\App\Http\Controllers\OptimalSensorTimeController::class, 'edit'])
+            ->name('optimal-sensor-times.edit')
+            ->middleware('permission:optimal-sensor-times-edit');
+        Route::put('optimal-sensor-times/{optimalSensorTime}', [\App\Http\Controllers\OptimalSensorTimeController::class, 'update'])
+            ->name('optimal-sensor-times.update')
+            ->middleware('permission:optimal-sensor-times-edit');
+        Route::get('optimal-sensor-times/{optimalSensorTime}/apply', [\App\Http\Controllers\OptimalSensorTimeController::class, 'apply'])
+            ->name('optimal-sensor-times.apply')
+            ->middleware('permission:optimal-sensor-times-apply');
+        Route::post('optimal-sensor-times/{optimalSensorTime}/apply', [\App\Http\Controllers\OptimalSensorTimeController::class, 'applyStore'])
+            ->name('optimal-sensor-times.apply.store')
+            ->middleware('permission:optimal-sensor-times-apply');
+        Route::post('optimal-sensor-times/settings', [\App\Http\Controllers\OptimalSensorTimeController::class, 'updateSettings'])
+            ->name('optimal-sensor-times.settings')
+            ->middleware('permission:optimal-sensor-times-settings');
+        Route::delete('optimal-sensor-times/{optimalSensorTime}', [\App\Http\Controllers\OptimalSensorTimeController::class, 'destroy'])
+            ->name('optimal-sensor-times.destroy')
+            ->middleware('permission:optimal-sensor-times-delete');
     });
 });
 

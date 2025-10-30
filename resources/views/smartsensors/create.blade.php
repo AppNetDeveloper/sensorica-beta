@@ -52,6 +52,22 @@
         </div>
 
         <div class="form-group">
+            <div class="custom-control custom-checkbox">
+                <input type="checkbox" class="custom-control-input" id="auto_optimal_time_enabled" name="auto_optimal_time_enabled" value="1">
+                <label class="custom-control-label" for="auto_optimal_time_enabled">{{ __('Enable Automatic Optimal Time Calculation') }}</label>
+            </div>
+            <small class="form-text text-muted">{{ __('Enable automatic calculation and storage in optimal_sensor_times and product_lists') }}</small>
+        </div>
+
+        <div class="form-group">
+            <div class="custom-control custom-checkbox">
+                <input type="checkbox" class="custom-control-input" id="auto_update_sensor_optimal_time" name="auto_update_sensor_optimal_time" value="1">
+                <label class="custom-control-label" for="auto_update_sensor_optimal_time">{{ __('Allow Auto-Update of Sensor Optimal Time') }}</label>
+            </div>
+            <small class="form-text text-muted">{{ __('Allow the automatic calculation to update the optimal_production_time field in sensors table') }}</small>
+        </div>
+
+        <div class="form-group">
             <label for="json_api">{{ __('JSON API') }}</label>
             <textarea name="json_api" class="form-control" rows="3"></textarea>
             <small class="form-text text-muted">

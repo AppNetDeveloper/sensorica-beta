@@ -105,6 +105,7 @@ class DatabaseSeeder extends Seeder
             AssetManagementPermissionsSeeder::class,
             ArticlePermissionsSeeder::class,
             ProductionLineArticlePermissionsSeeder::class,
+            OptimalSensorTimePermissionsSeeder::class,
             // Nuevos seeders de activos (descomenta para usar)
             // SimpleAssetSeeder::class,
             // AssetSeeder::class,

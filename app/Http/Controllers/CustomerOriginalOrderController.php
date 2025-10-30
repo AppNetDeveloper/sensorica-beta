@@ -496,8 +496,10 @@ class CustomerOriginalOrderController extends Controller
             'delivery_date' => 'nullable|date',
             'in_stock' => 'sometimes|boolean',
             'order_details' => 'required|json',
-            'processes' => 'required|array',
+            'processes' => 'required|array|min:1',
             'processes.*' => 'exists:processes,id',
+            'process_times' => 'required|array',
+            'process_times.*' => 'required|numeric|min:0.01',
         ]);
 
         // Resolver route_name_id si se proporciona
@@ -515,14 +517,14 @@ class CustomerOriginalOrderController extends Controller
 
         // Attach processes con cálculo de tiempo
         $processData = [];
+        $processTimes = $request->input('process_times', []);
         $orderDetails = json_decode($validated['order_details'], true);
         
-        foreach ($validated['processes'] as $processId) {
+        foreach ($validated['processes'] as $uniqueId => $processId) {
             $process = Process::findOrFail($processId);
-            $time = 0;
-            
-            // Buscar la cantidad en los detalles del pedido
-            if (isset($orderDetails['grupos'])) {
+            $time = isset($processTimes[$uniqueId]) ? (float) $processTimes[$uniqueId] : 0;
+
+            if ($time <= 0 && isset($orderDetails['grupos'])) {
                 foreach ($orderDetails['grupos'] as $grupo) {
                     foreach ($grupo['servicios'] ?? [] as $servicio) {
                         if ($servicio['CodigoArticulo'] === $process->code) {
@@ -532,6 +534,10 @@ class CustomerOriginalOrderController extends Controller
                         }
                     }
                 }
+            }
+
+            if ($time <= 0) {
+                $time = (float) env('DEFAULT_PROCESS_TIME', 1);
             }
             
             $processData[$processId] = [
@@ -1428,6 +1434,8 @@ class CustomerOriginalOrderController extends Controller
             'order_details' => 'required|json',
             'processes' => 'sometimes|array',
             'processes.*' => 'exists:processes,id',
+            'process_times' => 'required_with:processes|array',
+            'process_times.*' => 'required_with:processes|numeric|min:0.01',
             'finished' => 'sometimes|array',
             'processed' => 'nullable|boolean',
             'articles' => 'sometimes|array',
@@ -1454,6 +1462,7 @@ class CustomerOriginalOrderController extends Controller
         $selectedProcesses = $request->input('processes', []);
         $finishedProcesses = $request->input('finished', []);
         $articlesData = $request->input('articles', []);
+        $processTimes = $request->input('process_times', []);
         $orderDetails = json_decode($validated['order_details'], true);
         
         // Obtener los procesos actuales para preservar IDs
@@ -1476,8 +1485,8 @@ class CustomerOriginalOrderController extends Controller
             if (!$process) continue;
             
             // Calcular tiempo basado en los detalles del pedido
-            $time = 0;
-            if (isset($orderDetails['grupos'])) {
+            $time = isset($processTimes[$uniqueId]) ? (float) $processTimes[$uniqueId] : 0;
+            if ($time <= 0 && isset($orderDetails['grupos'])) {
                 foreach ($orderDetails['grupos'] as $grupo) {
                     foreach ($grupo['servicios'] ?? [] as $servicio) {
                         if ($servicio['CodigoArticulo'] === $process->code) {
@@ -1487,6 +1496,10 @@ class CustomerOriginalOrderController extends Controller
                         }
                     }
                 }
+            }
+
+            if ($time <= 0) {
+                $time = (float) env('DEFAULT_PROCESS_TIME', 1);
             }
             
             $isFinished = isset($finishedProcesses[$uniqueId]);
