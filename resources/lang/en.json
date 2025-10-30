@@ -1310,5 +1310,19 @@
   "Iconos de días en KPIs": "Day Icons in KPIs",
   "Días totales transcurridos entre dos fechas (incluye todos los días del calendario, laborables y no laborables). Ejemplo: 9d = 9 días completos.": "Total days elapsed between two dates (includes all calendar days, both working and non-working). Example: 9d = 9 complete days.",
   "Días en los que se trabaja según el calendario laboral configurado (lunes-viernes o calendario personalizado del cliente). Estos son días productivos.": "Days on which work is done according to the configured work calendar (Monday-Friday or custom customer calendar). These are productive days.",
-  "Días en los que NO se trabaja: fines de semana, festivos, vacaciones o paradas de mantenimiento. Suma: Total = Laborables + No laborables.": "Days on which work is NOT done: weekends, holidays, vacations or maintenance shutdowns. Sum: Total = Working + Non-Working."
+  "Días en los que NO se trabaja: fines de semana, festivos, vacaciones o paradas de mantenimiento. Suma: Total = Laborables + No laborables.": "Days on which work is NOT done: weekends, holidays, vacations or maintenance shutdowns. Sum: Total = Working + Non-Working.",
+  "Análisis de Tiempos (Solo Días Laborables)": "Time Analysis (Working Days Only)",
+  "Las siguientes gráficas muestran los tiempos calculados usando únicamente días laborables, excluyendo fines de semana, festivos y paradas de mantenimiento según el calendario configurado.": "The following charts show times calculated using only working days, excluding weekends, holidays and maintenance shutdowns according to the configured calendar.",
+  "Promedio del rango (días laborables)": "Range Average (working days)",
+  "Mediana del rango (días laborables)": "Range Median (working days)",
+  "Días laborables ERP → Finalizado": "Working days ERP → Finished",
+  "Días no laborables ERP → Finalizado": "Non-working days ERP → Finished",
+  "Días laborables Creado → Finalizado": "Working days Created → Finished",
+  "Días no laborables Creado → Finalizado": "Non-working days Created → Finished",
+  "No hay datos suficientes": "Not enough data",
+  "Promedio Recepción Pedido → Pedido Entregado": "Average Order Receipt → Order Delivered",
+  "Mediana Recepción Pedido → Pedido Entregado": "Median Order Receipt → Order Delivered",
+  "Click para configurar filtros de análisis": "Click to configure analysis filters",
+  "Entrega real": "Actual delivery",
+  "Excluir incompletas": "Exclude incomplete"
 }

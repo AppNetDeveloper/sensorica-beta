@@ -1443,5 +1443,19 @@
   "Iconos de días en KPIs": "Iconos de días en KPIs",
   "Días totales transcurridos entre dos fechas (incluye todos los días del calendario, laborables y no laborables). Ejemplo: 9d = 9 días completos.": "Días totales transcurridos entre dos fechas (incluye todos los días del calendario, laborables y no laborables). Ejemplo: 9d = 9 días completos.",
   "Días en los que se trabaja según el calendario laboral configurado (lunes-viernes o calendario personalizado del cliente). Estos son días productivos.": "Días en los que se trabaja según el calendario laboral configurado (lunes-viernes o calendario personalizado del cliente). Estos son días productivos.",
-  "Días en los que NO se trabaja: fines de semana, festivos, vacaciones o paradas de mantenimiento. Suma: Total = Laborables + No laborables.": "Días en los que NO se trabaja: fines de semana, festivos, vacaciones o paradas de mantenimiento. Suma: Total = Laborables + No laborables."
+  "Días en los que NO se trabaja: fines de semana, festivos, vacaciones o paradas de mantenimiento. Suma: Total = Laborables + No laborables.": "Días en los que NO se trabaja: fines de semana, festivos, vacaciones o paradas de mantenimiento. Suma: Total = Laborables + No laborables.",
+  "Análisis de Tiempos (Solo Días Laborables)": "Análisis de Tiempos (Solo Días Laborables)",
+  "Las siguientes gráficas muestran los tiempos calculados usando únicamente días laborables, excluyendo fines de semana, festivos y paradas de mantenimiento según el calendario configurado.": "Las siguientes gráficas muestran los tiempos calculados usando únicamente días laborables, excluyendo fines de semana, festivos y paradas de mantenimiento según el calendario configurado.",
+  "Promedio del rango (días laborables)": "Promedio del rango (días laborables)",
+  "Mediana del rango (días laborables)": "Mediana del rango (días laborables)",
+  "Días laborables ERP → Finalizado": "Días laborables ERP → Finalizado",
+  "Días no laborables ERP → Finalizado": "Días no laborables ERP → Finalizado",
+  "Días laborables Creado → Finalizado": "Días laborables Creado → Finalizado",
+  "Días no laborables Creado → Finalizado": "Días no laborables Creado → Finalizado",
+  "No hay datos suficientes": "No hay datos suficientes",
+  "Promedio Recepción Pedido → Pedido Entregado": "Promedio Recepción Pedido → Pedido Entregado",
+  "Mediana Recepción Pedido → Pedido Entregado": "Mediana Recepción Pedido → Pedido Entregado",
+  "Click para configurar filtros de análisis": "Click para configurar filtros de análisis",
+  "Entrega real": "Entrega real",
+  "Excluir incompletas": "Excluir incompletas"
 }

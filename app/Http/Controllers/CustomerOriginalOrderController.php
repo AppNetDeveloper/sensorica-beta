@@ -867,6 +867,8 @@ class CustomerOriginalOrderController extends Controller
         $detail = $this->transformSingleOrderProductionTimes($originalOrder, $filters);
         $detail['average_timeline'] = $this->computeAverageTimeline($customer, $filters);
         $detail['median_timeline'] = $this->computeMedianTimeline($customer, $filters);
+        $detail['average_timeline_working'] = $this->computeAverageTimelineWorkingDays($customer, $filters);
+        $detail['median_timeline_working'] = $this->computeMedianTimelineWorkingDays($customer, $filters);
         $detail['use_actual_delivery'] = (bool)($filters['use_actual_delivery'] ?? false);
 
         \Log::info('PT order_detail payload', [
@@ -1426,6 +1428,248 @@ class CustomerOriginalOrderController extends Controller
         return $median;
     }
 
+    protected function computeAverageTimelineWorkingDays(Customer $customer, array $filters): array
+    {
+        $tz = config('app.timezone');
+        $useActual = (bool)($filters['use_actual_delivery'] ?? false);
+        $orders = $this->buildProductionTimesBaseQuery($customer, $filters)
+            ->select('id', 'customer_id', 'fecha_pedido_erp', 'created_at', 'finished_at', 'delivery_date', 'actual_delivery_date')
+            ->get();
+
+        $sumErpCreatedDays = 0; $cntErpCreated = 0;
+        $sumCreatedFinishedDays = 0; $cntCreatedFinished = 0;
+        $sumFinishedDeliveryDays = 0; $cntFinishedDelivery = 0;
+
+        $sumErpCreatedNonWorkingDays = 0;
+        $sumCreatedFinishedNonWorkingDays = 0;
+        $sumFinishedDeliveryNonWorkingDays = 0;
+
+        foreach ($orders as $o) {
+            $erp = $o->fecha_pedido_erp ? Carbon::parse($o->fecha_pedido_erp, $tz) : null;
+            $cr = $o->created_at ? $o->created_at->copy()->timezone($tz) : null;
+            $fi = $o->finished_at ? $o->finished_at->copy()->timezone($tz) : null;
+            $delBase = $useActual ? $o->actual_delivery_date : $o->delivery_date;
+            $de = $delBase ? $delBase->copy()->timezone($tz)->endOfDay() : null;
+
+            // ERP → Created
+            if ($erp && $cr) {
+                $workingDays = WorkCalendar::getWorkingDaysBetween($o->customer_id, $erp, $cr);
+                $nonWorkingDays = WorkCalendar::getNonWorkingDaysBetween($o->customer_id, $erp, $cr);
+                $sumErpCreatedDays += $workingDays;
+                $sumErpCreatedNonWorkingDays += $nonWorkingDays;
+                $cntErpCreated++;
+            }
+
+            // Created → Finished
+            if ($cr && $fi) {
+                $workingDays = WorkCalendar::getWorkingDaysBetween($o->customer_id, $cr, $fi);
+                $nonWorkingDays = WorkCalendar::getNonWorkingDaysBetween($o->customer_id, $cr, $fi);
+                $sumCreatedFinishedDays += $workingDays;
+                $sumCreatedFinishedNonWorkingDays += $nonWorkingDays;
+                $cntCreatedFinished++;
+            }
+
+            // Finished → Delivery
+            if ($fi && $de) {
+                $workingDays = WorkCalendar::getWorkingDaysBetween($o->customer_id, $fi, $de);
+                $nonWorkingDays = WorkCalendar::getNonWorkingDaysBetween($o->customer_id, $fi, $de);
+                $sumFinishedDeliveryDays += $workingDays;
+                $sumFinishedDeliveryNonWorkingDays += $nonWorkingDays;
+                $cntFinishedDelivery++;
+            }
+        }
+
+        $avgDays1 = $cntErpCreated ? round($sumErpCreatedDays / $cntErpCreated, 1) : 0;
+        $avgDays2 = $cntCreatedFinished ? round($sumCreatedFinishedDays / $cntCreatedFinished, 1) : 0;
+        $avgDays3 = $cntFinishedDelivery ? round($sumFinishedDeliveryDays / $cntFinishedDelivery, 1) : 0;
+
+        $avgNonWorkingDays1 = $cntErpCreated ? round($sumErpCreatedNonWorkingDays / $cntErpCreated, 1) : 0;
+        $avgNonWorkingDays2 = $cntCreatedFinished ? round($sumCreatedFinishedNonWorkingDays / $cntCreatedFinished, 1) : 0;
+        $avgNonWorkingDays3 = $cntFinishedDelivery ? round($sumFinishedDeliveryNonWorkingDays / $cntFinishedDelivery, 1) : 0;
+
+        // Convertir días a horas para la visualización
+        $avg1Hours = $avgDays1 * 24;
+        $avg2Hours = $avgDays2 * 24;
+        $avg3Hours = $avgDays3 * 24;
+
+        $totalHours = max($avg1Hours + $avg2Hours + $avg3Hours, 1);
+
+        $erpStart = 0;
+        $createdEnd = $avg1Hours;
+        $createdStart = $createdEnd;
+        $finishedEnd = $createdEnd + $avg2Hours;
+        $finishedStart = $finishedEnd;
+        $deliveryEnd = $finishedEnd + $avg3Hours;
+
+        // Calcular totales acumulativos
+        $erpToFinishedDays = $avgDays1 + $avgDays2;
+        $erpToFinishedHours = $erpToFinishedDays * 24;
+        $erpToFinishedNonWorkingDays = $avgNonWorkingDays1 + $avgNonWorkingDays2;
+
+        $erpToDeliveryDays = $avgDays1 + $avgDays2 + $avgDays3;
+        $erpToDeliveryHours = $erpToDeliveryDays * 24;
+        $erpToDeliveryNonWorkingDays = $avgNonWorkingDays1 + $avgNonWorkingDays2 + $avgNonWorkingDays3;
+
+        return [
+            'bounds' => [
+                'start' => 0,
+                'end' => $totalHours,
+                'range' => $totalHours,
+                'start_label' => '0h',
+                'end_label' => round($totalHours, 1) . 'h',
+            ],
+            'erp_start_ts' => $erpStart,
+            'created_end_ts' => $createdEnd,
+            'created_start_ts' => $createdStart,
+            'finished_end_ts' => $finishedEnd,
+            'finished_start_ts' => $finishedStart,
+            'delivery_end_ts' => $deliveryEnd,
+            // Segmentos individuales
+            'erp_to_created_hours' => $avg1Hours,
+            'erp_to_created_days' => $avgDays1,
+            'erp_to_created_non_working_days' => $avgNonWorkingDays1,
+            'created_to_finished_hours' => $avg2Hours,
+            'created_to_finished_days' => $avgDays2,
+            'created_to_finished_non_working_days' => $avgNonWorkingDays2,
+            'finished_to_delivery_hours' => $avg3Hours,
+            'finished_to_delivery_days' => $avgDays3,
+            'finished_to_delivery_non_working_days' => $avgNonWorkingDays3,
+            // Totales acumulativos
+            'erp_to_finished_hours' => $erpToFinishedHours,
+            'erp_to_finished_days' => $erpToFinishedDays,
+            'erp_to_finished_non_working_days' => $erpToFinishedNonWorkingDays,
+            'erp_to_delivery_hours' => $erpToDeliveryHours,
+            'erp_to_delivery_days' => $erpToDeliveryDays,
+            'erp_to_delivery_non_working_days' => $erpToDeliveryNonWorkingDays,
+        ];
+    }
+
+    protected function computeMedianTimelineWorkingDays(Customer $customer, array $filters): array
+    {
+        $tz = config('app.timezone');
+        $useActual = (bool)($filters['use_actual_delivery'] ?? false);
+        $orders = $this->buildProductionTimesBaseQuery($customer, $filters)
+            ->select('id', 'customer_id', 'fecha_pedido_erp', 'created_at', 'finished_at', 'delivery_date', 'actual_delivery_date')
+            ->get();
+
+        $erpCreatedWorkingDays = [];
+        $createdFinishedWorkingDays = [];
+        $finishedDeliveryWorkingDays = [];
+
+        $erpCreatedNonWorkingDays = [];
+        $createdFinishedNonWorkingDays = [];
+        $finishedDeliveryNonWorkingDays = [];
+
+        foreach ($orders as $o) {
+            $erp = $o->fecha_pedido_erp ? Carbon::parse($o->fecha_pedido_erp, $tz) : null;
+            $cr = $o->created_at ? $o->created_at->copy()->timezone($tz) : null;
+            $fi = $o->finished_at ? $o->finished_at->copy()->timezone($tz) : null;
+            $delBase = $useActual ? $o->actual_delivery_date : $o->delivery_date;
+            $de = $delBase ? $delBase->copy()->timezone($tz)->endOfDay() : null;
+
+            // ERP → Created
+            if ($erp && $cr) {
+                $workingDays = WorkCalendar::getWorkingDaysBetween($o->customer_id, $erp, $cr);
+                $nonWorkingDays = WorkCalendar::getNonWorkingDaysBetween($o->customer_id, $erp, $cr);
+                $erpCreatedWorkingDays[] = $workingDays;
+                $erpCreatedNonWorkingDays[] = $nonWorkingDays;
+            }
+
+            // Created → Finished
+            if ($cr && $fi) {
+                $workingDays = WorkCalendar::getWorkingDaysBetween($o->customer_id, $cr, $fi);
+                $nonWorkingDays = WorkCalendar::getNonWorkingDaysBetween($o->customer_id, $cr, $fi);
+                $createdFinishedWorkingDays[] = $workingDays;
+                $createdFinishedNonWorkingDays[] = $nonWorkingDays;
+            }
+
+            // Finished → Delivery
+            if ($fi && $de) {
+                $workingDays = WorkCalendar::getWorkingDaysBetween($o->customer_id, $fi, $de);
+                $nonWorkingDays = WorkCalendar::getNonWorkingDaysBetween($o->customer_id, $fi, $de);
+                $finishedDeliveryWorkingDays[] = $workingDays;
+                $finishedDeliveryNonWorkingDays[] = $nonWorkingDays;
+            }
+        }
+
+        // Función auxiliar para calcular la mediana
+        $calculateMedian = function ($values) {
+            if (empty($values)) return 0;
+            sort($values);
+            $count = count($values);
+            $middle = floor($count / 2);
+            if ($count % 2 == 0) {
+                return ($values[$middle - 1] + $values[$middle]) / 2;
+            } else {
+                return $values[$middle];
+            }
+        };
+
+        $medDays1 = $calculateMedian($erpCreatedWorkingDays);
+        $medDays2 = $calculateMedian($createdFinishedWorkingDays);
+        $medDays3 = $calculateMedian($finishedDeliveryWorkingDays);
+
+        $medNonWorkingDays1 = $calculateMedian($erpCreatedNonWorkingDays);
+        $medNonWorkingDays2 = $calculateMedian($createdFinishedNonWorkingDays);
+        $medNonWorkingDays3 = $calculateMedian($finishedDeliveryNonWorkingDays);
+
+        // Convertir días a horas para la visualización
+        $med1Hours = $medDays1 * 24;
+        $med2Hours = $medDays2 * 24;
+        $med3Hours = $medDays3 * 24;
+
+        $totalHours = max($med1Hours + $med2Hours + $med3Hours, 1);
+
+        $erpStart = 0;
+        $createdEnd = $med1Hours;
+        $createdStart = $createdEnd;
+        $finishedEnd = $createdEnd + $med2Hours;
+        $finishedStart = $finishedEnd;
+        $deliveryEnd = $finishedEnd + $med3Hours;
+
+        // Calcular totales acumulativos
+        $erpToFinishedDays = $medDays1 + $medDays2;
+        $erpToFinishedHours = $erpToFinishedDays * 24;
+        $erpToFinishedNonWorkingDays = $medNonWorkingDays1 + $medNonWorkingDays2;
+
+        $erpToDeliveryDays = $medDays1 + $medDays2 + $medDays3;
+        $erpToDeliveryHours = $erpToDeliveryDays * 24;
+        $erpToDeliveryNonWorkingDays = $medNonWorkingDays1 + $medNonWorkingDays2 + $medNonWorkingDays3;
+
+        return [
+            'bounds' => [
+                'start' => 0,
+                'end' => $totalHours,
+                'range' => $totalHours,
+                'start_label' => '0h',
+                'end_label' => round($totalHours, 1) . 'h',
+            ],
+            'erp_start_ts' => $erpStart,
+            'created_end_ts' => $createdEnd,
+            'created_start_ts' => $createdStart,
+            'finished_end_ts' => $finishedEnd,
+            'finished_start_ts' => $finishedStart,
+            'delivery_end_ts' => $deliveryEnd,
+            // Segmentos individuales
+            'erp_to_created_hours' => $med1Hours,
+            'erp_to_created_days' => $medDays1,
+            'erp_to_created_non_working_days' => $medNonWorkingDays1,
+            'created_to_finished_hours' => $med2Hours,
+            'created_to_finished_days' => $medDays2,
+            'created_to_finished_non_working_days' => $medNonWorkingDays2,
+            'finished_to_delivery_hours' => $med3Hours,
+            'finished_to_delivery_days' => $medDays3,
+            'finished_to_delivery_non_working_days' => $medNonWorkingDays3,
+            // Totales acumulativos
+            'erp_to_finished_hours' => $erpToFinishedHours,
+            'erp_to_finished_days' => $erpToFinishedDays,
+            'erp_to_finished_non_working_days' => $erpToFinishedNonWorkingDays,
+            'erp_to_delivery_hours' => $erpToDeliveryHours,
+            'erp_to_delivery_days' => $erpToDeliveryDays,
+            'erp_to_delivery_non_working_days' => $erpToDeliveryNonWorkingDays,
+        ];
+    }
+
     protected function buildProductionTimesSummary(Collection $orders, array $filters): array
     {
         $summary = new ProductionTimeSummary();
@@ -1753,6 +1997,7 @@ class ProductionTimeSummary
         $orderDurations = $ordersCol->pluck('created_to_finished_seconds')->filter()->values();
         $orderErpDurations = $ordersCol->pluck('erp_to_finished_seconds')->filter()->values();
         $orderErpCreated = $ordersCol->pluck('erp_to_created_seconds')->filter()->values();
+        $orderErpToDelivery = $ordersCol->pluck('erp_to_delivery_seconds')->filter()->values();
 
         // Días laborables para las métricas principales
         $orderCreatedToFinishedWorkingDays = $ordersCol->pluck('created_to_finished_working_days')->filter()->values();
@@ -1763,6 +2008,9 @@ class ProductionTimeSummary
 
         $orderErpToCreatedWorkingDays = $ordersCol->pluck('erp_to_created_working_days')->filter()->values();
         $orderErpToCreatedNonWorkingDays = $ordersCol->pluck('erp_to_created_non_working_days')->filter()->values();
+
+        $orderErpToDeliveryWorkingDays = $ordersCol->pluck('erp_to_delivery_working_days')->filter()->values();
+        $orderErpToDeliveryNonWorkingDays = $ordersCol->pluck('erp_to_delivery_non_working_days')->filter()->values();
 
         $processDurations = $processCol->pluck('duration_seconds')->filter()->values();
         $processGaps = $processCol->pluck('gap_seconds')->filter()->values();
@@ -1843,6 +2091,12 @@ class ProductionTimeSummary
             'orders_p50_erp_to_created_working_days' => self::percentile($orderErpToCreatedWorkingDays, 0.5),
             'orders_avg_erp_to_created_non_working_days' => $orderErpToCreatedNonWorkingDays->avg(),
             'orders_p50_erp_to_created_non_working_days' => self::percentile($orderErpToCreatedNonWorkingDays, 0.5),
+            'orders_avg_erp_to_delivery' => $orderErpToDelivery->avg(),
+            'orders_p50_erp_to_delivery' => self::percentile($orderErpToDelivery, 0.5),
+            'orders_avg_erp_to_delivery_working_days' => $orderErpToDeliveryWorkingDays->avg(),
+            'orders_p50_erp_to_delivery_working_days' => self::percentile($orderErpToDeliveryWorkingDays, 0.5),
+            'orders_avg_erp_to_delivery_non_working_days' => $orderErpToDeliveryNonWorkingDays->avg(),
+            'orders_p50_erp_to_delivery_non_working_days' => self::percentile($orderErpToDeliveryNonWorkingDays, 0.5),
             'process_avg_duration' => $processDurations->avg(),
             'process_p50_duration' => self::percentile($processDurations, 0.5),
             'process_p90_duration' => self::percentile($processDurations, 0.9),

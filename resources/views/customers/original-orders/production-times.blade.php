@@ -14,42 +14,63 @@
 <div class="container-fluid">
     <div class="row mt-3">
         <div class="col-12">
-            <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-white border-0">
-                    <h5 class="mb-0"><i class="fas fa-filter me-2 text-primary"></i>{{ __('Filtros de búsqueda') }}</h5>
+            <div class="card border-0 shadow-sm mb-4" style="border-left: 4px solid #0d6efd !important;">
+                <div class="card-header bg-gradient" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#filters-collapse" aria-expanded="false" aria-controls="filters-collapse">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="flex-grow-1">
+                            <h5 class="mb-0 text-white">
+                                <i class="fas fa-sliders-h me-2"></i>{{ __('Filtros de búsqueda') }}
+                            </h5>
+                            <div id="filter-summary" class="mt-1">
+                                <small class="text-white-50">
+                                    <i class="fas fa-calendar-alt me-1"></i>
+                                    <span id="filter-summary-text">{{ __('Click para configurar filtros de análisis') }}</span>
+                                </small>
+                            </div>
+                        </div>
+                        <button class="btn btn-sm btn-light rounded-circle" type="button" style="width: 32px; height: 32px; padding: 0;">
+                            <i class="fas fa-chevron-down" id="filter-toggle-icon"></i>
+                        </button>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <form id="filters-form" class="row gy-3 gx-3 align-items-end">
-                        <div class="col-md-3">
-                            <label class="form-label mb-2 fw-semibold" for="date_start"><i class="fas fa-calendar-alt me-1"></i>{{ __('Desde') }}</label>
-                            <input type="date" class="form-control" id="date_start" value="{{ $defaultStart }}">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label mb-2 fw-semibold" for="date_end"><i class="fas fa-calendar-check me-1"></i>{{ __('Hasta') }}</label>
-                            <input type="date" class="form-control" id="date_end" value="{{ $defaultEnd }}">
-                        </div>
-                        <div class="col-md-6 text-end">
-                            <button type="button" id="apply-filters" class="btn btn-primary w-100">
-                                <i class="fas fa-filter me-1"></i> {{ __('Filtrar') }}
-                            </button>
-                        </div>
-                        <div class="col-12">
-                            <div class="d-flex flex-wrap gap-3 align-items-center">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="use_actual_delivery">
-                                    <label class="form-check-label" for="use_actual_delivery" id="use_actual_delivery_label">
-                                        {{ __('Fecha de entrega teorica (ERP) / Fecha de entrega real(modulo Logistica)') }}
-                                    </label>
+                <div class="collapse" id="filters-collapse">
+                    <div class="card-body bg-light">
+                        <form id="filters-form" class="row gy-3 gx-3 align-items-end">
+                            <div class="col-md-3">
+                                <label class="form-label mb-2 fw-semibold text-primary" for="date_start"><i class="fas fa-calendar-alt me-1"></i>{{ __('Desde') }}</label>
+                                <input type="date" class="form-control shadow-sm border-primary" id="date_start" value="{{ $defaultStart }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label mb-2 fw-semibold text-primary" for="date_end"><i class="fas fa-calendar-check me-1"></i>{{ __('Hasta') }}</label>
+                                <input type="date" class="form-control shadow-sm border-primary" id="date_end" value="{{ $defaultEnd }}">
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <button type="button" id="apply-filters" class="btn btn-primary btn-lg w-100 shadow-sm" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
+                                    <i class="fas fa-search me-2"></i>{{ __('Filtrar') }}
+                                </button>
+                            </div>
+                            <div class="col-12">
+                                <div class="card border-0 bg-white shadow-sm p-3">
+                                    <div class="d-flex flex-wrap gap-3 align-items-center">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="use_actual_delivery" style="width: 3em; height: 1.5em;">
+                                            <label class="form-check-label ms-2 fw-semibold" for="use_actual_delivery" id="use_actual_delivery_label">
+                                                {{ __('Fecha de entrega teorica (ERP) / Fecha de entrega real(modulo Logistica)') }}
+                                            </label>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="col-12 d-flex flex-wrap gap-3 mt-2">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" value="1" id="exclude_incomplete_orders" checked>
-                                <label class="form-check-label" for="exclude_incomplete_orders">{{ __('Excluir órdenes sin fechas completas') }}</label>
+                            <div class="col-12">
+                                <div class="card border-0 bg-white shadow-sm p-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" value="1" id="exclude_incomplete_orders" checked>
+                                        <label class="form-check-label fw-semibold" for="exclude_incomplete_orders">{{ __('Excluir órdenes sin fechas completas') }}</label>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </form>
+                        </form>
+                    </div>
                 </div>
             </div>
 
@@ -278,6 +299,96 @@
                         </div>
                     </div>
                 </div>
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="card shadow-sm border-0 h-100 hover-lift" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#kpi-erp-delivery-details" aria-expanded="false">
+                        <div class="card-body text-center">
+                            <div class="mb-2">
+                                <i class="fas fa-truck fa-2x text-warning"></i>
+                            </div>
+                            <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Promedio Recepción Pedido → Pedido Entregado') }}</h6>
+                            <h2 class="mb-0 text-dark fw-bold" id="kpi-erp-delivery">-</h2>
+                            <div class="mt-3">
+                                <span class="badge bg-primary text-white fs-6 py-2 px-3 me-2" id="kpi-erp-delivery-total-days" data-bs-toggle="tooltip" title="{{ __('Total días naturales') }}">
+                                    <i class="fas fa-calendar fa-lg me-2"></i>-
+                                </span>
+                                <span class="badge bg-success text-white fs-6 py-2 px-3 me-2" id="kpi-erp-delivery-working-days" data-bs-toggle="tooltip" title="{{ __('Días laborables') }}">
+                                    <i class="fas fa-briefcase fa-lg me-2"></i>-
+                                </span>
+                                <span class="badge bg-secondary text-white fs-6 py-2 px-3" id="kpi-erp-delivery-non-working-days" data-bs-toggle="tooltip" title="{{ __('Días no laborables') }}">
+                                    <i class="fas fa-calendar-times fa-lg me-2"></i>-
+                                </span>
+                            </div>
+                            <div class="collapse mt-3" id="kpi-erp-delivery-details">
+                                <hr class="my-2">
+                                <div class="text-start small">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-muted"><i class="fas fa-clock me-1"></i>{{ __('Total horas') }}:</span>
+                                        <strong id="kpi-erp-delivery-total-hours">-</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-success"><i class="fas fa-business-time me-1"></i>{{ __('Horas laborables') }}:</span>
+                                        <strong id="kpi-erp-delivery-working-hours">-</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-secondary"><i class="fas fa-bed me-1"></i>{{ __('Horas no laborables') }}:</span>
+                                        <strong id="kpi-erp-delivery-non-working-hours">-</strong>
+                                    </div>
+                                </div>
+                                <div class="mt-2">
+                                    <small class="text-muted"><i class="fas fa-info-circle me-1"></i>{{ __('Click para ocultar') }}</small>
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <small class="text-muted"><i class="fas fa-hand-pointer me-1"></i>{{ __('Click para más detalles') }}</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="card shadow-sm border-0 h-100 hover-lift" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#kpi-erp-delivery-median-details" aria-expanded="false">
+                        <div class="card-body text-center">
+                            <div class="mb-2">
+                                <i class="fas fa-shipping-fast fa-2x text-danger"></i>
+                            </div>
+                            <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Mediana Recepción Pedido → Pedido Entregado') }}</h6>
+                            <h2 class="mb-0 text-dark fw-bold" id="kpi-erp-delivery-median">-</h2>
+                            <div class="mt-3">
+                                <span class="badge bg-primary text-white fs-6 py-2 px-3 me-2" id="kpi-erp-delivery-median-total-days" data-bs-toggle="tooltip" title="{{ __('Total días naturales') }}">
+                                    <i class="fas fa-calendar fa-lg me-2"></i>-
+                                </span>
+                                <span class="badge bg-success text-white fs-6 py-2 px-3 me-2" id="kpi-erp-delivery-median-working-days" data-bs-toggle="tooltip" title="{{ __('Días laborables') }}">
+                                    <i class="fas fa-briefcase fa-lg me-2"></i>-
+                                </span>
+                                <span class="badge bg-secondary text-white fs-6 py-2 px-3" id="kpi-erp-delivery-median-non-working-days" data-bs-toggle="tooltip" title="{{ __('Días no laborables') }}">
+                                    <i class="fas fa-calendar-times fa-lg me-2"></i>-
+                                </span>
+                            </div>
+                            <div class="collapse mt-3" id="kpi-erp-delivery-median-details">
+                                <hr class="my-2">
+                                <div class="text-start small">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-muted"><i class="fas fa-clock me-1"></i>{{ __('Total horas') }}:</span>
+                                        <strong id="kpi-erp-delivery-median-total-hours">-</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-success"><i class="fas fa-business-time me-1"></i>{{ __('Horas laborables') }}:</span>
+                                        <strong id="kpi-erp-delivery-median-working-hours">-</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-secondary"><i class="fas fa-bed me-1"></i>{{ __('Horas no laborables') }}:</span>
+                                        <strong id="kpi-erp-delivery-median-non-working-hours">-</strong>
+                                    </div>
+                                </div>
+                                <div class="mt-2">
+                                    <small class="text-muted"><i class="fas fa-info-circle me-1"></i>{{ __('Click para ocultar') }}</small>
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <small class="text-muted"><i class="fas fa-hand-pointer me-1"></i>{{ __('Click para más detalles') }}</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="card border-0 shadow-sm mb-4">
@@ -288,9 +399,11 @@
                             @php($aiUrl = config('services.ai.url'))
                             @php($aiToken = config('services.ai.token'))
                             @if(!empty($aiUrl) && !empty($aiToken))
-                            <div class="btn-group btn-group-sm me-2" role="group">
-                                <button type="button" class="btn btn-dark dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="{{ __('Análisis con IA') }}">
-                                    <i class="bi bi-stars me-1 text-white"></i><span class="d-none d-sm-inline">{{ __('Análisis IA') }}</span>
+                            <div class="btn-group me-2" role="group">
+                                <button type="button" class="btn btn-lg dropdown-toggle shadow-lg position-relative" data-bs-toggle="dropdown" aria-expanded="false" title="{{ __('Análisis con IA') }}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; color: white; font-weight: 600; padding: 12px 24px; transition: all 0.3s ease;">
+                                    <i class="bi bi-stars me-2" style="font-size: 1.2em; animation: sparkle 2s infinite;"></i>
+                                    <span>{{ __('Análisis IA') }}</span>
+                                    <span class="badge bg-warning text-dark ms-2" style="font-size: 0.7em; padding: 3px 8px; animation: pulse 2s infinite;">PRO</span>
                                 </button>
                                 <ul class="dropdown-menu">
                                     <li><h6 class="dropdown-header"><i class="fas fa-brain me-1"></i> {{ __("Tipo de Análisis") }}</h6></li>
@@ -781,12 +894,38 @@
             border-color: #86b7fe;
             box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
         }
-        
-        @keyframes shimmer {
-            0% {
-                background-position: -468px 0;
+
         .dataTables_wrapper {
             padding: 15px !important;
+        }
+
+        /* Animaciones para el botón PRO de IA */
+        @keyframes sparkle {
+            0%, 100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.7;
+                transform: scale(1.2);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7);
+            }
+            50% {
+                transform: scale(1.05);
+                box-shadow: 0 0 0 4px rgba(255, 193, 7, 0);
+            }
+        }
+
+        /* Efecto hover para el botón de IA */
+        .btn-lg.dropdown-toggle:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5) !important;
         }
     </style>
 @endpush
@@ -1121,6 +1260,218 @@
                 chart.render();
             }
 
+            function renderAvgRangeBarWorking(detail) {
+                const key = detail.id ?? detail.order_id;
+                const el = document.querySelector(`#avg-rangebar-working-${key}`);
+                if (!el || typeof ApexCharts === 'undefined') return;
+
+                const avgWorking = detail.average_timeline_working ?? {};
+                const useActual = !!(detail.use_actual_delivery);
+
+                // Data comes in hours, not timestamps
+                const c1s = 0;
+                const c1e = typeof avgWorking.erp_to_created_hours === 'number' ? avgWorking.erp_to_created_hours : null;
+                const c2s = c1e;
+                const c2e = typeof avgWorking.erp_to_finished_hours === 'number' ? avgWorking.erp_to_finished_hours : null;
+                const c3s = c2e;
+                const c3e = typeof avgWorking.erp_to_delivery_hours === 'number' ? avgWorking.erp_to_delivery_hours : null;
+
+                const points = [];
+                if (typeof c1e === 'number' && c1e > c1s) {
+                    points.push({
+                        x: 'Tiempo Recepción Pedido → Puesto en Fabricación (lab.)',
+                        y: [c1s, c1e],
+                        fillColor: '#118DFF'
+                    });
+                }
+                if (typeof c2e === 'number' && c2e > c2s) {
+                    points.push({
+                        x: 'Tiempo Recepción Pedido → Pedido Finalizado (lab.)',
+                        y: [c2s, c2e],
+                        fillColor: '#21A366'
+                    });
+                }
+                if (typeof c3e === 'number' && c3e > c3s) {
+                    points.push({
+                        x: (useActual ? 'Pedido Finalizado → Entrega real (lab.)' : 'Pedido Finalizado → Entrega (lab.)'),
+                        y: [c3s, c3e],
+                        fillColor: '#F2C811'
+                    });
+                }
+
+                try { console.log('[RB-Working] avg points', { key, pointsCount: points.length, points }); } catch(e) {}
+
+                if (!points.length) {
+                    el.innerHTML = '<div class="text-muted small">' + i18n.timelineNoData + '</div>';
+                    return;
+                }
+
+                const options = {
+                    chart: {
+                        type: 'rangeBar',
+                        height: 240,
+                        width: '100%',
+                        id: `avg-rangebar-working-${key}`,
+                        toolbar: {
+                            show: true,
+                            tools: { download: true, selection: true, zoom: true, zoomin: true, zoomout: true, pan: true, reset: true },
+                            export: { csv: { filename: 'timeline_promedio_laborable' }, svg: { filename: 'timeline_promedio_laborable' }, png: { filename: 'timeline_promedio_laborable' } }
+                        },
+                        animations: { enabled: true }
+                    },
+                    plotOptions: { bar: { horizontal: true, barHeight: '70%', borderRadius: 4 } },
+                    series: [{ name: 'Promedio (días lab.)', data: points }],
+                    xaxis: {
+                        type: 'numeric',
+                        labels: {
+                            formatter: function (val) {
+                                const hours = Number(val || 0);
+                                const days = Math.floor(hours / 24);
+                                const remainingHours = Math.floor(hours % 24);
+                                if (days > 0) {
+                                    return days + 'd ' + remainingHours + 'h';
+                                }
+                                return remainingHours + 'h';
+                            }
+                        },
+                        title: { text: 'Tiempo (días laborables)' }
+                    },
+                    dataLabels: { enabled: false },
+                    grid: { strokeDashArray: 3 },
+                    tooltip: {
+                        custom: function({ seriesIndex, dataPointIndex, w }) {
+                            const point = w?.config?.series?.[seriesIndex]?.data?.[dataPointIndex];
+                            if (!point) return '';
+                            const label = normalizeTimelineLabel(point.x);
+                            const hours = (point.y?.[1] || 0) - (point.y?.[0] || 0);
+                            const days = Math.floor(hours / 24);
+                            const remainingHours = Math.floor(hours % 24);
+                            const duration = days > 0 ? `${days}d ${remainingHours}h` : `${remainingHours}h`;
+                            return `<div class="p-2"><strong>${label}</strong><br/><strong>${duration}</strong> (solo días laborables)</div>`;
+                        }
+                    }
+                };
+
+                const chart = new ApexCharts(el, options);
+                chart.render();
+            }
+
+            function renderMedianRangeBarWorking(detail) {
+                const key = detail.id ?? detail.order_id;
+                const el = document.querySelector(`#median-rangebar-working-${key}`);
+                if (!el || typeof ApexCharts === 'undefined') return;
+
+                const medianWorking = detail.median_timeline_working ?? {};
+                const useActual = !!(detail.use_actual_delivery);
+
+                // Data comes in hours
+                const c1s = 0;
+                const c1e = typeof medianWorking.erp_to_created_hours === 'number' ? medianWorking.erp_to_created_hours : null;
+                const c2s = c1e;
+                const c2e = typeof medianWorking.erp_to_finished_hours === 'number' ? medianWorking.erp_to_finished_hours : null;
+                const c3s = c2e;
+                const c3e = typeof medianWorking.erp_to_delivery_hours === 'number' ? medianWorking.erp_to_delivery_hours : null;
+
+                const points = [];
+                if (typeof c1e === 'number' && c1e > c1s) {
+                    points.push({
+                        x: 'Tiempo Recepción Pedido → Puesto en Fabricación (lab.)',
+                        y: [c1s, c1e],
+                        fillColor: '#118DFF'
+                    });
+                }
+                if (typeof c2e === 'number' && c2e > c2s) {
+                    points.push({
+                        x: 'Tiempo Recepción Pedido → Pedido Finalizado (lab.)',
+                        y: [c2s, c2e],
+                        fillColor: '#21A366'
+                    });
+                }
+                if (typeof c3e === 'number' && c3e > c3s) {
+                    points.push({
+                        x: (useActual ? 'Pedido Finalizado → Entrega real (lab.)' : 'Pedido Finalizado → Entrega (lab.)'),
+                        y: [c3s, c3e],
+                        fillColor: '#F2C811'
+                    });
+                }
+
+                try { console.log('[MRB-Working] median points', { key, pointsCount: points.length, points }); } catch(e) {}
+
+                if (!points.length) {
+                    el.innerHTML = '<div class="text-muted small">' + i18n.timelineNoData + '</div>';
+                    return;
+                }
+
+                const options = {
+                    chart: {
+                        type: 'rangeBar',
+                        height: 240,
+                        width: '100%',
+                        id: `median-rangebar-working-${key}`,
+                        toolbar: {
+                            show: true,
+                            tools: { download: true, selection: true, zoom: true, zoomin: true, zoomout: true, pan: true, reset: true },
+                            export: { csv: { filename: 'timeline_mediana_laborable' }, svg: { filename: 'timeline_mediana_laborable' }, png: { filename: 'timeline_mediana_laborable' } }
+                        },
+                        animations: { enabled: true }
+                    },
+                    plotOptions: { bar: { horizontal: true, barHeight: '70%', borderRadius: 4 } },
+                    series: [{ name: 'Mediana (días lab.)', data: points }],
+                    xaxis: {
+                        type: 'numeric',
+                        labels: {
+                            formatter: function(val) {
+                                const hours = Number(val || 0);
+                                const days = Math.floor(hours / 24);
+                                const remainingHours = Math.floor(hours % 24);
+                                if (days > 0) {
+                                    return days + 'd ' + remainingHours + 'h';
+                                }
+                                return remainingHours + 'h';
+                            }
+                        },
+                        title: { text: 'Tiempo (días laborables)' }
+                    },
+                    dataLabels: { enabled: false },
+                    grid: { strokeDashArray: 3 },
+                    tooltip: {
+                        custom: function({ seriesIndex, dataPointIndex, w }) {
+                            const point = w?.config?.series?.[seriesIndex]?.data?.[dataPointIndex];
+                            if (!point || !Array.isArray(point.y) || point.y.length < 2) {
+                                return null;
+                            }
+                            const label = normalizeTimelineLabel(point.x);
+                            const hours = (point.y?.[1] || 0) - (point.y?.[0] || 0);
+                            const days = Math.floor(hours / 24);
+                            const remainingHours = Math.floor(hours % 24);
+                            const duration = days > 0 ? `${days}d ${remainingHours}h` : `${remainingHours}h`;
+                            return `<div class="p-2"><strong>${label}</strong><br/><strong>${duration}</strong> (solo días laborables)</div>`;
+                        }
+                    }
+                };
+
+                const ensureRendered = () => {
+                    const w = el.offsetWidth || 0;
+                    if (w < 10) {
+                        const n = parseInt(el.dataset.retry || '0', 10) + 1;
+                        el.dataset.retry = String(n);
+                        if (n <= 5) {
+                            setTimeout(ensureRendered, 200);
+                            return;
+                        }
+                    }
+                    try {
+                        const chart = new ApexCharts(el, options);
+                        chart.render();
+                    } catch (error) {
+                        console.error('ApexCharts median working render error', error);
+                        el.innerHTML = '<div class="text-danger small">Error al renderizar gráfico de mediana (días lab.)</div>';
+                    }
+                };
+
+                ensureRendered();
+            }
+
             function getTimelineBounds(detail) {
                 const start = detail.fecha_pedido_erp_ts ?? detail.created_at_ts ?? detail.finished_at_ts ?? detail.delivery_date_ts ?? null;
                 const end = detail.delivery_date_ts ?? detail.finished_at_ts ?? detail.created_at_ts ?? detail.fecha_pedido_erp_ts ?? null;
@@ -1299,6 +1650,8 @@
                                 renderOrderRangeBar(detail);
                                 renderAvgRangeBar(detail);
                                 renderMedianRangeBar(detail);
+                                renderAvgRangeBarWorking(detail);
+                                renderMedianRangeBarWorking(detail);
                                 const $childRow = tr.next('tr');
                                 const tooltipEls = $childRow.find('[data-bs-toggle="tooltip"]').toArray();
                                 tooltipEls.forEach(el => { try { new bootstrap.Tooltip(el); } catch (e) {} });
@@ -1428,6 +1781,40 @@
                 $('#kpi-created-finish-median-total-hours').text(createdFinishMedianTotalHours + 'h');
                 $('#kpi-created-finish-median-working-hours').text(createdFinishMedianWorkingHours + 'h (' + createdFinishMedianWorkingDays + 'd × 24h)');
                 $('#kpi-created-finish-median-non-working-hours').text(createdFinishMedianNonWorkingHours + 'h (' + createdFinishMedianNonWorkingDays + 'd × 24h)');
+
+                // ERP to Delivery (promedio)
+                const erpDeliverySeconds = summary?.orders_avg_erp_to_delivery ?? 0;
+                const erpDeliveryWorkingDays = Math.round(summary?.orders_avg_erp_to_delivery_working_days ?? 0);
+                const erpDeliveryNonWorkingDays = Math.round(summary?.orders_avg_erp_to_delivery_non_working_days ?? 0);
+                const erpDeliveryTotalDays = erpDeliveryWorkingDays + erpDeliveryNonWorkingDays;
+                const erpDeliveryTotalHours = Math.round(erpDeliverySeconds / 3600);
+                const erpDeliveryWorkingHours = erpDeliveryWorkingDays * 24;
+                const erpDeliveryNonWorkingHours = erpDeliveryNonWorkingDays * 24;
+
+                $('#kpi-erp-delivery').text(formatSeconds(erpDeliverySeconds));
+                $('#kpi-erp-delivery-total-days').html('<i class="fas fa-calendar fa-lg me-2"></i>' + erpDeliveryTotalDays + 'd');
+                $('#kpi-erp-delivery-working-days').html('<i class="fas fa-briefcase fa-lg me-2"></i>' + erpDeliveryWorkingDays + 'd');
+                $('#kpi-erp-delivery-non-working-days').html('<i class="fas fa-calendar-times fa-lg me-2"></i>' + erpDeliveryNonWorkingDays + 'd');
+                $('#kpi-erp-delivery-total-hours').text(erpDeliveryTotalHours + 'h');
+                $('#kpi-erp-delivery-working-hours').text(erpDeliveryWorkingHours + 'h (' + erpDeliveryWorkingDays + 'd × 24h)');
+                $('#kpi-erp-delivery-non-working-hours').text(erpDeliveryNonWorkingHours + 'h (' + erpDeliveryNonWorkingDays + 'd × 24h)');
+
+                // ERP to Delivery (mediana)
+                const erpDeliveryMedianSeconds = summary?.orders_p50_erp_to_delivery ?? 0;
+                const erpDeliveryMedianWorkingDays = Math.round(summary?.orders_p50_erp_to_delivery_working_days ?? 0);
+                const erpDeliveryMedianNonWorkingDays = Math.round(summary?.orders_p50_erp_to_delivery_non_working_days ?? 0);
+                const erpDeliveryMedianTotalDays = erpDeliveryMedianWorkingDays + erpDeliveryMedianNonWorkingDays;
+                const erpDeliveryMedianTotalHours = Math.round(erpDeliveryMedianSeconds / 3600);
+                const erpDeliveryMedianWorkingHours = erpDeliveryMedianWorkingDays * 24;
+                const erpDeliveryMedianNonWorkingHours = erpDeliveryMedianNonWorkingDays * 24;
+
+                $('#kpi-erp-delivery-median').text(formatSeconds(erpDeliveryMedianSeconds));
+                $('#kpi-erp-delivery-median-total-days').html('<i class="fas fa-calendar fa-lg me-2"></i>' + erpDeliveryMedianTotalDays + 'd');
+                $('#kpi-erp-delivery-median-working-days').html('<i class="fas fa-briefcase fa-lg me-2"></i>' + erpDeliveryMedianWorkingDays + 'd');
+                $('#kpi-erp-delivery-median-non-working-days').html('<i class="fas fa-calendar-times fa-lg me-2"></i>' + erpDeliveryMedianNonWorkingDays + 'd');
+                $('#kpi-erp-delivery-median-total-hours').text(erpDeliveryMedianTotalHours + 'h');
+                $('#kpi-erp-delivery-median-working-hours').text(erpDeliveryMedianWorkingHours + 'h (' + erpDeliveryMedianWorkingDays + 'd × 24h)');
+                $('#kpi-erp-delivery-median-non-working-hours').text(erpDeliveryMedianNonWorkingHours + 'h (' + erpDeliveryMedianNonWorkingDays + 'd × 24h)');
 
                 // Gap metrics
                 $('#kpi-gap').text(formatSeconds(summary?.process_avg_gap));
@@ -1751,6 +2138,83 @@
                         </div>
                     </div>
                 `;
+
+                // Nueva sección: Análisis de Días Laborables
+                const avgTimelineWorking = detail.average_timeline_working ?? {};
+                const medianTimelineWorking = detail.median_timeline_working ?? {};
+                const avgWorkingBounds = avgTimelineWorking.bounds ?? null;
+                const medianWorkingBounds = medianTimelineWorking.bounds ?? null;
+
+                if (avgWorkingBounds || medianWorkingBounds) {
+                    html += `
+                        <div class="mt-4">
+                            <div class="alert alert-info border-0">
+                                <h5 class="mb-2"><i class="fas fa-briefcase me-2"></i>Análisis de Tiempos (Solo Días Laborables)</h5>
+                                <p class="mb-0 small">Las siguientes gráficas muestran los tiempos calculados usando <strong>únicamente días laborables</strong>, excluyendo fines de semana, festivos y paradas de mantenimiento según el calendario configurado.</p>
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <div class="timeline-card">
+                                        <div class="timeline-header d-flex justify-content-between align-items-center mb-3">
+                                            <h6 class="mb-0">💼 Promedio del rango (días laborables)</h6>
+                                            <div class="timeline-legend">
+                                                <span><span class="legend-dot segment-primary"></span>${i18n.timelineLegendErpCreated}</span>
+                                                <span><span class="legend-dot segment-success"></span>${i18n.timelineLegendCreatedFinished}</span>
+                                                <span><span class="legend-dot segment-warning"></span>${useActualDelivery ? i18n.timelineLegendFinishedActualDelivery : i18n.timelineLegendFinishedDelivery}</span>
+                                            </div>
+                                        </div>
+                                        <div id="avg-rangebar-working-${detail.id ?? detail.order_id}" style="height: 240px;"></div>
+                                        ${(() => {
+                                            const awb = avgWorkingBounds;
+                                            if (!awb) return '<div class="text-muted small text-center py-3">No hay datos suficientes</div>';
+                                            const items = [
+                                                { label: '🟢 Días laborables ERP → Finalizado', value: `${avgTimelineWorking.erp_to_finished_days ?? 0}d (${Math.round(avgTimelineWorking.erp_to_finished_hours ?? 0)}h)`, color: 'segment-success' },
+                                                { label: '🔘 Días no laborables ERP → Finalizado', value: `${avgTimelineWorking.erp_to_finished_non_working_days ?? 0}d`, color: 'segment-secondary' },
+                                                { label: '🟢 Días laborables Creado → Finalizado', value: `${avgTimelineWorking.created_to_finished_days ?? 0}d (${Math.round(avgTimelineWorking.created_to_finished_hours ?? 0)}h)`, color: 'segment-success' },
+                                                { label: '🔘 Días no laborables Creado → Finalizado', value: `${avgTimelineWorking.created_to_finished_non_working_days ?? 0}d`, color: 'segment-secondary' }
+                                            ];
+                                            return `<div class="timeline-summary-inline mt-3">${items.map(item => `
+                                                <div class="timeline-chip">
+                                                    <span class="chip-label">${item.label}</span>
+                                                    <span class="chip-value">${item.value}</span>
+                                                </div>
+                                            `).join('')}</div>`;
+                                        })()}
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="timeline-card">
+                                        <div class="timeline-header d-flex justify-content-between align-items-center mb-3">
+                                            <h6 class="mb-0">💼 Mediana del rango (días laborables)</h6>
+                                            <div class="timeline-legend">
+                                                <span><span class="legend-dot segment-primary"></span>${i18n.timelineLegendErpCreated}</span>
+                                                <span><span class="legend-dot segment-success"></span>${i18n.timelineLegendCreatedFinished}</span>
+                                                <span><span class="legend-dot segment-warning"></span>${useActualDelivery ? i18n.timelineLegendFinishedActualDelivery : i18n.timelineLegendFinishedDelivery}</span>
+                                            </div>
+                                        </div>
+                                        <div id="median-rangebar-working-${detail.id ?? detail.order_id}" style="height: 240px;"></div>
+                                        ${(() => {
+                                            const mwb = medianWorkingBounds;
+                                            if (!mwb) return '<div class="text-muted small text-center py-3">No hay datos suficientes</div>';
+                                            const items = [
+                                                { label: '🟢 Días laborables ERP → Finalizado', value: `${medianTimelineWorking.erp_to_finished_days ?? 0}d (${Math.round(medianTimelineWorking.erp_to_finished_hours ?? 0)}h)`, color: 'segment-success' },
+                                                { label: '🔘 Días no laborables ERP → Finalizado', value: `${medianTimelineWorking.erp_to_finished_non_working_days ?? 0}d`, color: 'segment-secondary' },
+                                                { label: '🟢 Días laborables Creado → Finalizado', value: `${medianTimelineWorking.created_to_finished_days ?? 0}d (${Math.round(medianTimelineWorking.created_to_finished_hours ?? 0)}h)`, color: 'segment-success' },
+                                                { label: '🔘 Días no laborables Creado → Finalizado', value: `${medianTimelineWorking.created_to_finished_non_working_days ?? 0}d`, color: 'segment-secondary' }
+                                            ];
+                                            return `<div class="timeline-summary-inline mt-3">${items.map(item => `
+                                                <div class="timeline-chip">
+                                                    <span class="chip-label">${item.label}</span>
+                                                    <span class="chip-value">${item.value}</span>
+                                                </div>
+                                            `).join('')}</div>`;
+                                        })()}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
 
                 try { console.groupEnd('PT Detail'); } catch(e) {}
 
@@ -3261,11 +3725,54 @@ Genera un informe estructurado pero conciso usando TODOS los datos.`
                 });
             });
 
-            $('#btn-ai-reset').on('click', function(){ 
+            $('#btn-ai-reset').on('click', function(){
                 if (currentPromptData && currentPromptData.prompt) {
                     $('#aiPrompt').val(currentPromptData.prompt);
                 }
             });
+
+            // Animar el ícono del toggle del filtro y actualizar el resumen
+            $('#filters-collapse').on('show.bs.collapse', function () {
+                $('#filter-toggle-icon').removeClass('fa-chevron-down').addClass('fa-chevron-up');
+                $('#filter-summary').fadeOut(200);
+            });
+            $('#filters-collapse').on('hide.bs.collapse', function () {
+                $('#filter-toggle-icon').removeClass('fa-chevron-up').addClass('fa-chevron-down');
+                updateFilterSummary();
+                setTimeout(() => $('#filter-summary').fadeIn(200), 100);
+            });
+
+            // Función para actualizar el resumen del filtro
+            function updateFilterSummary() {
+                const start = $('#date_start').val();
+                const end = $('#date_end').val();
+                const useActual = $('#use_actual_delivery').is(':checked');
+                const excludeIncomplete = $('#exclude_incomplete_orders').is(':checked');
+
+                let summaryText = '';
+
+                if (start && end) {
+                    summaryText = `${start} → ${end}`;
+                    if (useActual) {
+                        summaryText += ' • {{ __('Entrega real') }}';
+                    }
+                    if (excludeIncomplete) {
+                        summaryText += ' • {{ __('Excluir incompletas') }}';
+                    }
+                } else {
+                    summaryText = '{{ __('Click para configurar filtros de análisis') }}';
+                }
+
+                $('#filter-summary-text').text(summaryText);
+            }
+
+            // Actualizar el resumen cuando cambian los filtros
+            $('#date_start, #date_end, #use_actual_delivery, #exclude_incomplete_orders').on('change', function() {
+                updateFilterSummary();
+            });
+
+            // Inicializar el resumen al cargar
+            updateFilterSummary();
         });
     </script>
 
