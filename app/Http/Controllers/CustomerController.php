@@ -293,9 +293,12 @@ return "<div class='action-buttons-row d-flex flex-wrap' style='display: none; g
             }
         }
         
-        // Ordenar por la descripción del proceso
+        // Ordenar por la posición en el kanban, luego por descripción si no tienen posición
         $sortedProcesses = $uniqueProcesses->sortBy(function($item) {
-            return $item['process']->description ?: '';
+            $process = $item['process'];
+            // Si tiene posición kanban, usarla; si no, poner al final con valor alto
+            $position = $process->posicion_kanban ?? 9999;
+            return $position;
         });
             
         return view('customers.order-organizer', [

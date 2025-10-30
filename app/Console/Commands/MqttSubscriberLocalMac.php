@@ -604,17 +604,39 @@ class MqttSubscriberLocalMac extends Command
                 ]);
             }
     
-            // Actualizar sensores
-            $updated = Sensor::where('barcoder_id', $barcodeId)->update([
-                'count_order_0'         => 0,
-                'count_order_1'         => 0,
-                'downtime_count'        => 0,
-                'optimal_production_time' => $optimalProductionTime,
-                'orderId'               => $orderId,
-                'quantity'              => $quantity,
-                'uds'                   => $uds,
-                'productName'           => $referId,
-            ]);
+            // Actualizar sensores - separando los que pueden actualizar optimal_production_time de los que no
+            // Primero: actualizar sensores CON auto_update habilitado (incluye optimal_production_time)
+            $updatedWithOptimal = Sensor::where('barcoder_id', $barcodeId)
+                ->where('auto_update_sensor_optimal_time', 1)
+                ->update([
+                    'count_order_0'         => 0,
+                    'count_order_1'         => 0,
+                    'downtime_count'        => 0,
+                    'optimal_production_time' => $optimalProductionTime,
+                    'orderId'               => $orderId,
+                    'quantity'              => $quantity,
+                    'uds'                   => $uds,
+                    'productName'           => $referId,
+                ]);
+            
+            // Segundo: actualizar sensores SIN auto_update (excluye optimal_production_time)
+            $updatedWithoutOptimal = Sensor::where('barcoder_id', $barcodeId)
+                ->where(function($q) {
+                    $q->where('auto_update_sensor_optimal_time', 0)
+                      ->orWhereNull('auto_update_sensor_optimal_time');
+                })
+                ->update([
+                    'count_order_0'         => 0,
+                    'count_order_1'         => 0,
+                    'downtime_count'        => 0,
+                    // NO incluimos optimal_production_time aquí
+                    'orderId'               => $orderId,
+                    'quantity'              => $quantity,
+                    'uds'                   => $uds,
+                    'productName'           => $referId,
+                ]);
+            
+            $updated = $updatedWithOptimal + $updatedWithoutOptimal;
     
             // Confirmar transacción
             DB::commit();
@@ -659,17 +681,39 @@ class MqttSubscriberLocalMac extends Command
                 ]);
             }
     
-            // Actualizar modbuses
-            $updatedCount = Modbus::where('barcoder_id', $barcodeId)->update([
-                'rec_box'               => 0,
-                'total_kg_order'        => 0,
-                'downtime_count'        => 0,
-                'optimal_production_time' => $optimalProductionTime,
-                'orderId'               => $orderId,
-                'quantity'              => $quantity,
-                'uds'                   => $uds,
-                'productName'           => $referId,
-            ]);
+            // Actualizar modbuses - separando los que pueden actualizar optimal_production_time de los que no
+            // Primero: actualizar modbuses CON auto_update habilitado (incluye optimal_production_time)
+            $updatedWithOptimal = Modbus::where('barcoder_id', $barcodeId)
+                ->where('auto_update_sensor_optimal_time', 1)
+                ->update([
+                    'rec_box'               => 0,
+                    'total_kg_order'        => 0,
+                    'downtime_count'        => 0,
+                    'optimal_production_time' => $optimalProductionTime,
+                    'orderId'               => $orderId,
+                    'quantity'              => $quantity,
+                    'uds'                   => $uds,
+                    'productName'           => $referId,
+                ]);
+            
+            // Segundo: actualizar modbuses SIN auto_update (excluye optimal_production_time)
+            $updatedWithoutOptimal = Modbus::where('barcoder_id', $barcodeId)
+                ->where(function($q) {
+                    $q->where('auto_update_sensor_optimal_time', 0)
+                      ->orWhereNull('auto_update_sensor_optimal_time');
+                })
+                ->update([
+                    'rec_box'               => 0,
+                    'total_kg_order'        => 0,
+                    'downtime_count'        => 0,
+                    // NO incluimos optimal_production_time aquí
+                    'orderId'               => $orderId,
+                    'quantity'              => $quantity,
+                    'uds'                   => $uds,
+                    'productName'           => $referId,
+                ]);
+            
+            $updatedCount = $updatedWithOptimal + $updatedWithoutOptimal;
     
             // Confirmar transacción
             DB::commit();

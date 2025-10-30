@@ -35,8 +35,19 @@
                                 <div class="text-center text-muted small mb-2">
                                     {{ $lines->count() }} {{ trans_choice('maquina|maquinas', $lines->count()) }}
                                 </div>
+                                @php
+                                    $bgColor = $process->color ?? '#0d6efd';
+                                    // Calcular si el color es claro u oscuro para ajustar el texto
+                                    $hex = ltrim($bgColor, '#');
+                                    $r = hexdec(substr($hex, 0, 2));
+                                    $g = hexdec(substr($hex, 2, 2));
+                                    $b = hexdec(substr($hex, 4, 2));
+                                    $brightness = (($r * 299) + ($g * 587) + ($b * 114)) / 1000;
+                                    $textColor = $brightness > 155 ? '#000000' : '#ffffff';
+                                @endphp
                                 <a href="{{ route('customers.order-kanban', ['customer' => $customer->id, 'process' => $process->id]) }}" 
-                                   class="btn btn-primary w-100 mt-auto">
+                                   class="btn w-100 mt-auto"
+                                   style="background-color: {{ $bgColor }}; border-color: {{ $bgColor }}; color: {{ $textColor }};">
                                     <i class="ti ti-layout-kanban me-2"></i> {{ __('Organize Orders') }}
                                 </a>
                             </div>
@@ -55,6 +66,19 @@
 
 @push('css')
 <style>
+/* Estilos para las tarjetas de procesos */
+.card-body a.btn:hover {
+    filter: brightness(0.9);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    transition: all 0.2s ease;
+}
+
+.card-body a.btn {
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+
 /* Estilos para el tablero Kanban */
 .kanban-board {
     display: flex;

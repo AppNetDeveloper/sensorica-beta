@@ -11,6 +11,7 @@ use App\Models\OriginalOrderArticle;
 use Illuminate\Support\Facades\DB;
 use App\Models\ProductionOrder;
 use App\Models\RouteName;
+use App\Models\WorkCalendar;
 use Symfony\Component\Process\Process as SymfonyProcess;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
@@ -1101,6 +1102,26 @@ class CustomerOriginalOrderController extends Controller
         $createdToDelivery = $diff($createdAt, $deliveryDate);
         $finishedToDelivery = $diff($finishedAt, $deliveryDate);
 
+        // Calcular días laborables usando el calendario del cliente
+        $customerId = $order->customer_id;
+        $erpToCreatedWorkingDays = ($erpDate && $createdAt) ? WorkCalendar::getWorkingDaysBetween($customerId, $erpDate, $createdAt) : null;
+        $erpToCreatedNonWorkingDays = ($erpDate && $createdAt) ? WorkCalendar::getNonWorkingDaysBetween($customerId, $erpDate, $createdAt) : null;
+
+        $erpToFinishedWorkingDays = ($erpDate && $finishedAt) ? WorkCalendar::getWorkingDaysBetween($customerId, $erpDate, $finishedAt) : null;
+        $erpToFinishedNonWorkingDays = ($erpDate && $finishedAt) ? WorkCalendar::getNonWorkingDaysBetween($customerId, $erpDate, $finishedAt) : null;
+
+        $createdToFinishedWorkingDays = ($createdAt && $finishedAt) ? WorkCalendar::getWorkingDaysBetween($customerId, $createdAt, $finishedAt) : null;
+        $createdToFinishedNonWorkingDays = ($createdAt && $finishedAt) ? WorkCalendar::getNonWorkingDaysBetween($customerId, $createdAt, $finishedAt) : null;
+
+        $erpToDeliveryWorkingDays = ($erpDate && $deliveryDate) ? WorkCalendar::getWorkingDaysBetween($customerId, $erpDate, $deliveryDate) : null;
+        $erpToDeliveryNonWorkingDays = ($erpDate && $deliveryDate) ? WorkCalendar::getNonWorkingDaysBetween($customerId, $erpDate, $deliveryDate) : null;
+
+        $createdToDeliveryWorkingDays = ($createdAt && $deliveryDate) ? WorkCalendar::getWorkingDaysBetween($customerId, $createdAt, $deliveryDate) : null;
+        $createdToDeliveryNonWorkingDays = ($createdAt && $deliveryDate) ? WorkCalendar::getNonWorkingDaysBetween($customerId, $createdAt, $deliveryDate) : null;
+
+        $finishedToDeliveryWorkingDays = ($finishedAt && $deliveryDate) ? WorkCalendar::getWorkingDaysBetween($customerId, $finishedAt, $deliveryDate) : null;
+        $finishedToDeliveryNonWorkingDays = ($finishedAt && $deliveryDate) ? WorkCalendar::getNonWorkingDaysBetween($customerId, $finishedAt, $deliveryDate) : null;
+
         if ($erpDate && !$finishedAt) {
             $timeline->addMilestone('NOW', Carbon::now($tz));
         }
@@ -1189,16 +1210,34 @@ class CustomerOriginalOrderController extends Controller
             'actual_delivery_date_ts' => optional($actualDelivery)?->timestamp,
             'erp_to_created_seconds' => $erpToCreated,
             'erp_to_created_formatted' => $this->formatSeconds($erpToCreated),
+            'erp_to_created_working_days' => $erpToCreatedWorkingDays,
+            'erp_to_created_non_working_days' => $erpToCreatedNonWorkingDays,
+            'erp_to_created_calendar_days' => $erpToCreated ? round($erpToCreated / 86400, 1) : null,
             'erp_to_finished_seconds' => $erpToFinished,
             'erp_to_finished_formatted' => $this->formatSeconds($erpToFinished),
+            'erp_to_finished_working_days' => $erpToFinishedWorkingDays,
+            'erp_to_finished_non_working_days' => $erpToFinishedNonWorkingDays,
+            'erp_to_finished_calendar_days' => $erpToFinished ? round($erpToFinished / 86400, 1) : null,
             'created_to_finished_seconds' => $createdToFinished,
             'created_to_finished_formatted' => $this->formatSeconds($createdToFinished),
+            'created_to_finished_working_days' => $createdToFinishedWorkingDays,
+            'created_to_finished_non_working_days' => $createdToFinishedNonWorkingDays,
+            'created_to_finished_calendar_days' => $createdToFinished ? round($createdToFinished / 86400, 1) : null,
             'erp_to_delivery_seconds' => $erpToDelivery,
             'erp_to_delivery_formatted' => $this->formatSeconds($erpToDelivery),
+            'erp_to_delivery_working_days' => $erpToDeliveryWorkingDays,
+            'erp_to_delivery_non_working_days' => $erpToDeliveryNonWorkingDays,
+            'erp_to_delivery_calendar_days' => $erpToDelivery ? round($erpToDelivery / 86400, 1) : null,
             'created_to_delivery_seconds' => $createdToDelivery,
             'created_to_delivery_formatted' => $this->formatSeconds($createdToDelivery),
+            'created_to_delivery_working_days' => $createdToDeliveryWorkingDays,
+            'created_to_delivery_non_working_days' => $createdToDeliveryNonWorkingDays,
+            'created_to_delivery_calendar_days' => $createdToDelivery ? round($createdToDelivery / 86400, 1) : null,
             'finished_to_delivery_seconds' => $finishedToDelivery,
             'finished_to_delivery_formatted' => $this->formatSeconds($finishedToDelivery),
+            'finished_to_delivery_working_days' => $finishedToDeliveryWorkingDays,
+            'finished_to_delivery_non_working_days' => $finishedToDeliveryNonWorkingDays,
+            'finished_to_delivery_calendar_days' => $finishedToDelivery ? round($finishedToDelivery / 86400, 1) : null,
             'processes' => $processRows,
             'timeline' => $timeline->toArray(),
             'order_timeline' => $orderTimeline,
@@ -1715,6 +1754,16 @@ class ProductionTimeSummary
         $orderErpDurations = $ordersCol->pluck('erp_to_finished_seconds')->filter()->values();
         $orderErpCreated = $ordersCol->pluck('erp_to_created_seconds')->filter()->values();
 
+        // Días laborables para las métricas principales
+        $orderCreatedToFinishedWorkingDays = $ordersCol->pluck('created_to_finished_working_days')->filter()->values();
+        $orderCreatedToFinishedNonWorkingDays = $ordersCol->pluck('created_to_finished_non_working_days')->filter()->values();
+
+        $orderErpToFinishedWorkingDays = $ordersCol->pluck('erp_to_finished_working_days')->filter()->values();
+        $orderErpToFinishedNonWorkingDays = $ordersCol->pluck('erp_to_finished_non_working_days')->filter()->values();
+
+        $orderErpToCreatedWorkingDays = $ordersCol->pluck('erp_to_created_working_days')->filter()->values();
+        $orderErpToCreatedNonWorkingDays = $ordersCol->pluck('erp_to_created_non_working_days')->filter()->values();
+
         $processDurations = $processCol->pluck('duration_seconds')->filter()->values();
         $processGaps = $processCol->pluck('gap_seconds')->filter()->values();
 
@@ -1778,10 +1827,22 @@ class ProductionTimeSummary
             'orders_avg_created_to_finished' => $orderDurations->avg(),
             'orders_p50_created_to_finished' => self::percentile($orderDurations, 0.5),
             'orders_p90_created_to_finished' => self::percentile($orderDurations, 0.9),
+            'orders_avg_created_to_finished_working_days' => $orderCreatedToFinishedWorkingDays->avg(),
+            'orders_p50_created_to_finished_working_days' => self::percentile($orderCreatedToFinishedWorkingDays, 0.5),
+            'orders_avg_created_to_finished_non_working_days' => $orderCreatedToFinishedNonWorkingDays->avg(),
+            'orders_p50_created_to_finished_non_working_days' => self::percentile($orderCreatedToFinishedNonWorkingDays, 0.5),
             'orders_avg_erp_to_finished' => $orderErpDurations->avg(),
             'orders_p50_erp_to_finished' => self::percentile($orderErpDurations, 0.5),
+            'orders_avg_erp_to_finished_working_days' => $orderErpToFinishedWorkingDays->avg(),
+            'orders_p50_erp_to_finished_working_days' => self::percentile($orderErpToFinishedWorkingDays, 0.5),
+            'orders_avg_erp_to_finished_non_working_days' => $orderErpToFinishedNonWorkingDays->avg(),
+            'orders_p50_erp_to_finished_non_working_days' => self::percentile($orderErpToFinishedNonWorkingDays, 0.5),
             'orders_avg_erp_to_created' => $orderErpCreated->avg(),
             'orders_p50_erp_to_created' => self::percentile($orderErpCreated, 0.5),
+            'orders_avg_erp_to_created_working_days' => $orderErpToCreatedWorkingDays->avg(),
+            'orders_p50_erp_to_created_working_days' => self::percentile($orderErpToCreatedWorkingDays, 0.5),
+            'orders_avg_erp_to_created_non_working_days' => $orderErpToCreatedNonWorkingDays->avg(),
+            'orders_p50_erp_to_created_non_working_days' => self::percentile($orderErpToCreatedNonWorkingDays, 0.5),
             'process_avg_duration' => $processDurations->avg(),
             'process_p50_duration' => self::percentile($processDurations, 0.5),
             'process_p90_duration' => self::percentile($processDurations, 0.9),

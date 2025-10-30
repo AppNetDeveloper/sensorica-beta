@@ -73,6 +73,26 @@
                         </div>
                         
                         <div class="mb-3">
+                            <label for="color" class="form-label">@lang('Color')</label>
+                            <input type="color" class="form-control form-control-color @error('color') is-invalid @enderror" 
+                                   id="color" name="color" value="{{ old('color', $process->color ?? '#6c757d') }}">
+                            <small class="form-text text-muted">@lang('Color to represent this process in the Kanban')</small>
+                            @error('color')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="posicion_kanban" class="form-label">@lang('Kanban Position')</label>
+                            <input type="number" min="1" class="form-control @error('posicion_kanban') is-invalid @enderror" 
+                                   id="posicion_kanban" name="posicion_kanban" value="{{ old('posicion_kanban', $process->posicion_kanban) }}">
+                            <small class="form-text text-muted">@lang('Position where this process will be displayed in the Kanban (leave empty to not show)')</small>
+                            @error('posicion_kanban')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                        
+                        <div class="mb-3">
                             <label for="description" class="form-label">@lang('Description')</label>
                             <textarea class="form-control @error('description') is-invalid @enderror" 
                                      id="description" name="description" rows="3">{{ old('description', $process->description) }}</textarea>

@@ -77,24 +77,92 @@
                     </div>
                 </div>
                 <div class="col-12 col-sm-6 col-lg-3">
-                    <div class="card shadow-sm border-0 h-100 hover-lift">
+                    <div class="card shadow-sm border-0 h-100 hover-lift" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#kpi-erp-finish-details" aria-expanded="false">
                         <div class="card-body text-center">
                             <div class="mb-2">
                                 <i class="fas fa-stopwatch fa-2x text-info"></i>
                             </div>
                             <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Promedio Recepción Pedido → Pedido Finalizado') }}</h6>
                             <h2 class="mb-0 text-dark fw-bold" id="kpi-erp-finish">-</h2>
+                            <div class="mt-3" id="kpi-erp-finish-days">
+                                <span class="badge bg-primary text-white fs-6 py-2 px-3 me-2" id="kpi-erp-finish-total-days" data-bs-toggle="tooltip" title="{{ __('Total días naturales') }}">
+                                    <i class="fas fa-calendar fa-lg me-2"></i>-
+                                </span>
+                                <span class="badge bg-success text-white fs-6 py-2 px-3 me-2" id="kpi-erp-finish-working-days" data-bs-toggle="tooltip" title="{{ __('Días laborables') }}">
+                                    <i class="fas fa-briefcase fa-lg me-2"></i>-
+                                </span>
+                                <span class="badge bg-secondary text-white fs-6 py-2 px-3" id="kpi-erp-finish-non-working-days" data-bs-toggle="tooltip" title="{{ __('Días no laborables') }}">
+                                    <i class="fas fa-calendar-times fa-lg me-2"></i>-
+                                </span>
+                            </div>
+                            <div class="collapse mt-3" id="kpi-erp-finish-details">
+                                <hr class="my-2">
+                                <div class="text-start small">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-muted"><i class="fas fa-clock me-1"></i>{{ __('Total horas') }}:</span>
+                                        <strong id="kpi-erp-finish-total-hours">-</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-success"><i class="fas fa-business-time me-1"></i>{{ __('Horas laborables') }}:</span>
+                                        <strong id="kpi-erp-finish-working-hours">-</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-secondary"><i class="fas fa-bed me-1"></i>{{ __('Horas no laborables') }}:</span>
+                                        <strong id="kpi-erp-finish-non-working-hours">-</strong>
+                                    </div>
+                                </div>
+                                <div class="mt-2">
+                                    <small class="text-muted"><i class="fas fa-info-circle me-1"></i>{{ __('Click para ocultar') }}</small>
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <small class="text-muted"><i class="fas fa-hand-pointer me-1"></i>{{ __('Click para más detalles') }}</small>
+                            </div>
                         </div>
                     </div>
                 </div>
                 <div class="col-12 col-sm-6 col-lg-3">
-                    <div class="card shadow-sm border-0 h-100 hover-lift">
+                    <div class="card shadow-sm border-0 h-100 hover-lift" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#kpi-erp-finish-median-details" aria-expanded="false">
                         <div class="card-body text-center">
                             <div class="mb-2">
                                 <i class="fas fa-clock fa-2x text-secondary"></i>
                             </div>
                             <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Mediana Recepción Pedido → Pedido Finalizado') }}</h6>
                             <h2 class="mb-0 text-dark fw-bold" id="kpi-erp-finish-median">-</h2>
+                            <div class="mt-3">
+                                <span class="badge bg-primary text-white fs-6 py-2 px-3 me-2" id="kpi-erp-finish-median-total-days" data-bs-toggle="tooltip" title="{{ __('Total días naturales') }}">
+                                    <i class="fas fa-calendar fa-lg me-2"></i>-
+                                </span>
+                                <span class="badge bg-success text-white fs-6 py-2 px-3 me-2" id="kpi-erp-finish-median-working-days" data-bs-toggle="tooltip" title="{{ __('Días laborables') }}">
+                                    <i class="fas fa-briefcase fa-lg me-2"></i>-
+                                </span>
+                                <span class="badge bg-secondary text-white fs-6 py-2 px-3" id="kpi-erp-finish-median-non-working-days" data-bs-toggle="tooltip" title="{{ __('Días no laborables') }}">
+                                    <i class="fas fa-calendar-times fa-lg me-2"></i>-
+                                </span>
+                            </div>
+                            <div class="collapse mt-3" id="kpi-erp-finish-median-details">
+                                <hr class="my-2">
+                                <div class="text-start small">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-muted"><i class="fas fa-clock me-1"></i>{{ __('Total horas') }}:</span>
+                                        <strong id="kpi-erp-finish-median-total-hours">-</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-success"><i class="fas fa-business-time me-1"></i>{{ __('Horas laborables') }}:</span>
+                                        <strong id="kpi-erp-finish-median-working-hours">-</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-secondary"><i class="fas fa-bed me-1"></i>{{ __('Horas no laborables') }}:</span>
+                                        <strong id="kpi-erp-finish-median-non-working-hours">-</strong>
+                                    </div>
+                                </div>
+                                <div class="mt-2">
+                                    <small class="text-muted"><i class="fas fa-info-circle me-1"></i>{{ __('Click para ocultar') }}</small>
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <small class="text-muted"><i class="fas fa-hand-pointer me-1"></i>{{ __('Click para más detalles') }}</small>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -121,24 +189,92 @@
                     </div>
                 </div>
                 <div class="col-12 col-sm-6 col-lg-3">
-                    <div class="card shadow-sm border-0 h-100 hover-lift">
+                    <div class="card shadow-sm border-0 h-100 hover-lift" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#kpi-created-finish-details" aria-expanded="false">
                         <div class="card-body text-center">
                             <div class="mb-2">
                                 <i class="fas fa-industry fa-2x text-success"></i>
                             </div>
                             <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Promedio lanzamiento producción → fin orden') }}</h6>
                             <h2 class="mb-0 text-dark fw-bold" id="kpi-created-finish">-</h2>
+                            <div class="mt-3">
+                                <span class="badge bg-primary text-white fs-6 py-2 px-3 me-2" id="kpi-created-finish-total-days" data-bs-toggle="tooltip" title="{{ __('Total días naturales') }}">
+                                    <i class="fas fa-calendar fa-lg me-2"></i>-
+                                </span>
+                                <span class="badge bg-success text-white fs-6 py-2 px-3 me-2" id="kpi-created-finish-working-days" data-bs-toggle="tooltip" title="{{ __('Días laborables') }}">
+                                    <i class="fas fa-briefcase fa-lg me-2"></i>-
+                                </span>
+                                <span class="badge bg-secondary text-white fs-6 py-2 px-3" id="kpi-created-finish-non-working-days" data-bs-toggle="tooltip" title="{{ __('Días no laborables') }}">
+                                    <i class="fas fa-calendar-times fa-lg me-2"></i>-
+                                </span>
+                            </div>
+                            <div class="collapse mt-3" id="kpi-created-finish-details">
+                                <hr class="my-2">
+                                <div class="text-start small">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-muted"><i class="fas fa-clock me-1"></i>{{ __('Total horas') }}:</span>
+                                        <strong id="kpi-created-finish-total-hours">-</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-success"><i class="fas fa-business-time me-1"></i>{{ __('Horas laborables') }}:</span>
+                                        <strong id="kpi-created-finish-working-hours">-</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-secondary"><i class="fas fa-bed me-1"></i>{{ __('Horas no laborables') }}:</span>
+                                        <strong id="kpi-created-finish-non-working-hours">-</strong>
+                                    </div>
+                                </div>
+                                <div class="mt-2">
+                                    <small class="text-muted"><i class="fas fa-info-circle me-1"></i>{{ __('Click para ocultar') }}</small>
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <small class="text-muted"><i class="fas fa-hand-pointer me-1"></i>{{ __('Click para más detalles') }}</small>
+                            </div>
                         </div>
                     </div>
                 </div>
                 <div class="col-12 col-sm-6 col-lg-3">
-                    <div class="card shadow-sm border-0 h-100 hover-lift">
+                    <div class="card shadow-sm border-0 h-100 hover-lift" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#kpi-created-finish-median-details" aria-expanded="false">
                         <div class="card-body text-center">
                             <div class="mb-2">
                                 <i class="fas fa-stopwatch fa-2x text-info"></i>
                             </div>
                             <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Mediana lanzamiento producción → fin orden') }}</h6>
                             <h2 class="mb-0 text-dark fw-bold" id="kpi-created-finish-median">-</h2>
+                            <div class="mt-3">
+                                <span class="badge bg-primary text-white fs-6 py-2 px-3 me-2" id="kpi-created-finish-median-total-days" data-bs-toggle="tooltip" title="{{ __('Total días naturales') }}">
+                                    <i class="fas fa-calendar fa-lg me-2"></i>-
+                                </span>
+                                <span class="badge bg-success text-white fs-6 py-2 px-3 me-2" id="kpi-created-finish-median-working-days" data-bs-toggle="tooltip" title="{{ __('Días laborables') }}">
+                                    <i class="fas fa-briefcase fa-lg me-2"></i>-
+                                </span>
+                                <span class="badge bg-secondary text-white fs-6 py-2 px-3" id="kpi-created-finish-median-non-working-days" data-bs-toggle="tooltip" title="{{ __('Días no laborables') }}">
+                                    <i class="fas fa-calendar-times fa-lg me-2"></i>-
+                                </span>
+                            </div>
+                            <div class="collapse mt-3" id="kpi-created-finish-median-details">
+                                <hr class="my-2">
+                                <div class="text-start small">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-muted"><i class="fas fa-clock me-1"></i>{{ __('Total horas') }}:</span>
+                                        <strong id="kpi-created-finish-median-total-hours">-</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-success"><i class="fas fa-business-time me-1"></i>{{ __('Horas laborables') }}:</span>
+                                        <strong id="kpi-created-finish-median-working-hours">-</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-secondary"><i class="fas fa-bed me-1"></i>{{ __('Horas no laborables') }}:</span>
+                                        <strong id="kpi-created-finish-median-non-working-hours">-</strong>
+                                    </div>
+                                </div>
+                                <div class="mt-2">
+                                    <small class="text-muted"><i class="fas fa-info-circle me-1"></i>{{ __('Click para ocultar') }}</small>
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <small class="text-muted"><i class="fas fa-hand-pointer me-1"></i>{{ __('Click para más detalles') }}</small>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -266,8 +402,19 @@
                                 <dt class="col-sm-5 mb-3"><span class="badge bg-primary bg-opacity-10 text-primary me-2"><i class="fas fa-industry"></i></span>{{ __('Tiempo Recepción Pedido → Pedido Finalizado') }}</dt>
                                 <dd class="col-sm-7 mb-3">{{ __('Tiempo neto de fabricación desde la creación en producción hasta la finalización. En el timeline aparece en verde y mide la eficiencia interna de la planta.') }}</dd>
 
-                                <dt class="col-sm-5 mb-0"><span class="badge bg-secondary bg-opacity-10 text-secondary me-2"><i class="fas fa-cogs"></i></span>{{ __('Procesos registrados') }}</dt>
-                                <dd class="col-sm-7 mb-0">{{ __('Número de procesos detectados en la orden. Alimenta el timeline por proceso y la comparativa “Duración / Gap”.') }}</dd>
+                                <dt class="col-sm-5 mb-3"><span class="badge bg-secondary bg-opacity-10 text-secondary me-2"><i class="fas fa-cogs"></i></span>{{ __('Procesos registrados') }}</dt>
+                                <dd class="col-sm-7 mb-3">{{ __('Número de procesos detectados en la orden. Alimenta el timeline por proceso y la comparativa "Duración / Gap".') }}</dd>
+
+                                <dt class="col-sm-12 mb-2 mt-3"><h6 class="text-info mb-0"><i class="fas fa-calendar-alt me-2"></i>{{ __('Iconos de días en KPIs') }}</h6></dt>
+
+                                <dt class="col-sm-5 mb-3"><span class="badge bg-primary bg-opacity-25 text-primary me-2"><i class="fas fa-calendar"></i></span>{{ __('Total días naturales') }}</dt>
+                                <dd class="col-sm-7 mb-3">{{ __('Días totales transcurridos entre dos fechas (incluye todos los días del calendario, laborables y no laborables). Ejemplo: 9d = 9 días completos.') }}</dd>
+
+                                <dt class="col-sm-5 mb-3"><span class="badge bg-success bg-opacity-25 text-success me-2"><i class="fas fa-briefcase"></i></span>{{ __('Días laborables') }}</dt>
+                                <dd class="col-sm-7 mb-3">{{ __('Días en los que se trabaja según el calendario laboral configurado (lunes-viernes o calendario personalizado del cliente). Estos son días productivos.') }}</dd>
+
+                                <dt class="col-sm-5 mb-0"><span class="badge bg-secondary bg-opacity-25 text-secondary me-2"><i class="fas fa-calendar-times"></i></span>{{ __('Días no laborables') }}</dt>
+                                <dd class="col-sm-7 mb-0">{{ __('Días en los que NO se trabaja: fines de semana, festivos, vacaciones o paradas de mantenimiento. Suma: Total = Laborables + No laborables.') }}</dd>
                             </dl>
                         </div>
 
@@ -1213,10 +1360,76 @@
                 latestSummary = summary;
                 $('#kpi-orders-total').text(summary?.orders_total ?? 0);
                 $('#kpi-processes-total').text(summary?.processes_total ?? 0);
-                $('#kpi-erp-finish').text(formatSeconds(summary?.orders_avg_erp_to_finished));
-                $('#kpi-erp-finish-median').text(formatSeconds(summary?.orders_p50_erp_to_finished));
-                $('#kpi-created-finish').text(formatSeconds(summary?.orders_avg_created_to_finished));
-                $('#kpi-created-finish-median').text(formatSeconds(summary?.orders_p50_created_to_finished));
+
+                // ERP to Finish (promedio)
+                const erpFinishSeconds = summary?.orders_avg_erp_to_finished ?? 0;
+                const erpFinishWorkingDays = Math.round(summary?.orders_avg_erp_to_finished_working_days ?? 0);
+                const erpFinishNonWorkingDays = Math.round(summary?.orders_avg_erp_to_finished_non_working_days ?? 0);
+                const erpFinishTotalDays = erpFinishWorkingDays + erpFinishNonWorkingDays;
+                const erpFinishTotalHours = Math.round(erpFinishSeconds / 3600);
+                const erpFinishWorkingHours = erpFinishWorkingDays * 24;
+                const erpFinishNonWorkingHours = erpFinishNonWorkingDays * 24;
+
+                $('#kpi-erp-finish').text(formatSeconds(erpFinishSeconds));
+                $('#kpi-erp-finish-total-days').html('<i class="fas fa-calendar fa-lg me-2"></i>' + erpFinishTotalDays + 'd');
+                $('#kpi-erp-finish-working-days').html('<i class="fas fa-briefcase fa-lg me-2"></i>' + erpFinishWorkingDays + 'd');
+                $('#kpi-erp-finish-non-working-days').html('<i class="fas fa-calendar-times fa-lg me-2"></i>' + erpFinishNonWorkingDays + 'd');
+                $('#kpi-erp-finish-total-hours').text(erpFinishTotalHours + 'h');
+                $('#kpi-erp-finish-working-hours').text(erpFinishWorkingHours + 'h (' + erpFinishWorkingDays + 'd × 24h)');
+                $('#kpi-erp-finish-non-working-hours').text(erpFinishNonWorkingHours + 'h (' + erpFinishNonWorkingDays + 'd × 24h)');
+
+                // ERP to Finish (mediana)
+                const erpFinishMedianSeconds = summary?.orders_p50_erp_to_finished ?? 0;
+                const erpFinishMedianWorkingDays = Math.round(summary?.orders_p50_erp_to_finished_working_days ?? 0);
+                const erpFinishMedianNonWorkingDays = Math.round(summary?.orders_p50_erp_to_finished_non_working_days ?? 0);
+                const erpFinishMedianTotalDays = erpFinishMedianWorkingDays + erpFinishMedianNonWorkingDays;
+                const erpFinishMedianTotalHours = Math.round(erpFinishMedianSeconds / 3600);
+                const erpFinishMedianWorkingHours = erpFinishMedianWorkingDays * 24;
+                const erpFinishMedianNonWorkingHours = erpFinishMedianNonWorkingDays * 24;
+
+                $('#kpi-erp-finish-median').text(formatSeconds(erpFinishMedianSeconds));
+                $('#kpi-erp-finish-median-total-days').html('<i class="fas fa-calendar fa-lg me-2"></i>' + erpFinishMedianTotalDays + 'd');
+                $('#kpi-erp-finish-median-working-days').html('<i class="fas fa-briefcase fa-lg me-2"></i>' + erpFinishMedianWorkingDays + 'd');
+                $('#kpi-erp-finish-median-non-working-days').html('<i class="fas fa-calendar-times fa-lg me-2"></i>' + erpFinishMedianNonWorkingDays + 'd');
+                $('#kpi-erp-finish-median-total-hours').text(erpFinishMedianTotalHours + 'h');
+                $('#kpi-erp-finish-median-working-hours').text(erpFinishMedianWorkingHours + 'h (' + erpFinishMedianWorkingDays + 'd × 24h)');
+                $('#kpi-erp-finish-median-non-working-hours').text(erpFinishMedianNonWorkingHours + 'h (' + erpFinishMedianNonWorkingDays + 'd × 24h)');
+
+                // Created to Finish (promedio)
+                const createdFinishSeconds = summary?.orders_avg_created_to_finished ?? 0;
+                const createdFinishWorkingDays = Math.round(summary?.orders_avg_created_to_finished_working_days ?? 0);
+                const createdFinishNonWorkingDays = Math.round(summary?.orders_avg_created_to_finished_non_working_days ?? 0);
+                const createdFinishTotalDays = createdFinishWorkingDays + createdFinishNonWorkingDays;
+                const createdFinishTotalHours = Math.round(createdFinishSeconds / 3600);
+                const createdFinishWorkingHours = createdFinishWorkingDays * 24;
+                const createdFinishNonWorkingHours = createdFinishNonWorkingDays * 24;
+
+                $('#kpi-created-finish').text(formatSeconds(createdFinishSeconds));
+                $('#kpi-created-finish-total-days').html('<i class="fas fa-calendar fa-lg me-2"></i>' + createdFinishTotalDays + 'd');
+                $('#kpi-created-finish-working-days').html('<i class="fas fa-briefcase fa-lg me-2"></i>' + createdFinishWorkingDays + 'd');
+                $('#kpi-created-finish-non-working-days').html('<i class="fas fa-calendar-times fa-lg me-2"></i>' + createdFinishNonWorkingDays + 'd');
+                $('#kpi-created-finish-total-hours').text(createdFinishTotalHours + 'h');
+                $('#kpi-created-finish-working-hours').text(createdFinishWorkingHours + 'h (' + createdFinishWorkingDays + 'd × 24h)');
+                $('#kpi-created-finish-non-working-hours').text(createdFinishNonWorkingHours + 'h (' + createdFinishNonWorkingDays + 'd × 24h)');
+
+                // Created to Finish (mediana)
+                const createdFinishMedianSeconds = summary?.orders_p50_created_to_finished ?? 0;
+                const createdFinishMedianWorkingDays = Math.round(summary?.orders_p50_created_to_finished_working_days ?? 0);
+                const createdFinishMedianNonWorkingDays = Math.round(summary?.orders_p50_created_to_finished_non_working_days ?? 0);
+                const createdFinishMedianTotalDays = createdFinishMedianWorkingDays + createdFinishMedianNonWorkingDays;
+                const createdFinishMedianTotalHours = Math.round(createdFinishMedianSeconds / 3600);
+                const createdFinishMedianWorkingHours = createdFinishMedianWorkingDays * 24;
+                const createdFinishMedianNonWorkingHours = createdFinishMedianNonWorkingDays * 24;
+
+                $('#kpi-created-finish-median').text(formatSeconds(createdFinishMedianSeconds));
+                $('#kpi-created-finish-median-total-days').html('<i class="fas fa-calendar fa-lg me-2"></i>' + createdFinishMedianTotalDays + 'd');
+                $('#kpi-created-finish-median-working-days').html('<i class="fas fa-briefcase fa-lg me-2"></i>' + createdFinishMedianWorkingDays + 'd');
+                $('#kpi-created-finish-median-non-working-days').html('<i class="fas fa-calendar-times fa-lg me-2"></i>' + createdFinishMedianNonWorkingDays + 'd');
+                $('#kpi-created-finish-median-total-hours').text(createdFinishMedianTotalHours + 'h');
+                $('#kpi-created-finish-median-working-hours').text(createdFinishMedianWorkingHours + 'h (' + createdFinishMedianWorkingDays + 'd × 24h)');
+                $('#kpi-created-finish-median-non-working-hours').text(createdFinishMedianNonWorkingHours + 'h (' + createdFinishMedianNonWorkingDays + 'd × 24h)');
+
+                // Gap metrics
                 $('#kpi-gap').text(formatSeconds(summary?.process_avg_gap));
                 $('#kpi-gap-median').text(formatSeconds(summary?.process_p50_gap));
             }

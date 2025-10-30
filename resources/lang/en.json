@@ -1298,5 +1298,17 @@
   "Minimum threshold to start updating optimal time when it increases (e.g., 20%)": "Minimum threshold to start updating optimal time when it increases (e.g., 20%)",
   "Maximum limit factor when updating increased time (e.g., 98% to cap at 98% of calculated value)": "Maximum limit factor when updating increased time (e.g., 98% to cap at 98% of calculated value)",
   "Correction Percentages Logic": "Correction Percentages Logic",
-  "Updates optimal time only if new calculation is lower OR if higher and exceeds Min Correction % threshold, applying Max Correction % as limit.": "Updates optimal time only if new calculation is lower OR if higher and exceeds Min Correction % threshold, applying Max Correction % as limit."
+  "Updates optimal time only if new calculation is lower OR if higher and exceeds Min Correction % threshold, applying Max Correction % as limit.": "Updates optimal time only if new calculation is lower OR if higher and exceeds Min Correction % threshold, applying Max Correction % as limit.",
+  "Total días naturales": "Total Calendar Days",
+  "Días laborables": "Working Days",
+  "Días no laborables": "Non-Working Days",
+  "Total horas": "Total Hours",
+  "Horas laborables": "Working Hours",
+  "Horas no laborables": "Non-Working Hours",
+  "Click para más detalles": "Click for more details",
+  "Click para ocultar": "Click to hide",
+  "Iconos de días en KPIs": "Day Icons in KPIs",
+  "Días totales transcurridos entre dos fechas (incluye todos los días del calendario, laborables y no laborables). Ejemplo: 9d = 9 días completos.": "Total days elapsed between two dates (includes all calendar days, both working and non-working). Example: 9d = 9 complete days.",
+  "Días en los que se trabaja según el calendario laboral configurado (lunes-viernes o calendario personalizado del cliente). Estos son días productivos.": "Days on which work is done according to the configured work calendar (Monday-Friday or custom customer calendar). These are productive days.",
+  "Días en los que NO se trabaja: fines de semana, festivos, vacaciones o paradas de mantenimiento. Suma: Total = Laborables + No laborables.": "Days on which work is NOT done: weekends, holidays, vacations or maintenance shutdowns. Sum: Total = Working + Non-Working."
 }

@@ -1,5 +1,9 @@
 @extends('layouts.admin')
 
+@php
+    $canEditProcesses = auth()->user()?->can('process-edit') ?? false;
+@endphp
+
 @section('title', __('Process Management'))
 
 @section('breadcrumb')
@@ -37,16 +41,35 @@
                             {{ session('error') }}
                         </div>
                     @endif
+
+                    @can('process-edit')
+                        <div class="d-flex flex-wrap align-items-center justify-content-between mb-3 gap-2">
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                <button type="button" class="btn btn-outline-light text-primary btn-sm border-0 shadow-sm" id="bulk-edit-btn" data-bs-toggle="modal" data-bs-target="#bulkEditModal" disabled>
+                                    <i class="fas fa-layer-group me-1"></i> @lang('Bulk edit selected')
+                                </button>
+                                <span class="text-muted small" id="selected-count">@lang('Selected processes: 0')</span>
+                            </div>
+                            <small class="text-muted">@lang('Select one or more processes to edit color, Kanban position, factor or sequence in bulk.')</small>
+                        </div>
+                    @endcan
                     
                     <div class="table-responsive" style="width: 100%; margin: 0 auto;">
                         <table id="processes-table" class="table table-striped table-hover" style="width: 100%;">
                             <thead class="table-light">
                                 <tr>
+                                    @can('process-edit')
+                                        <th class="text-center" style="width: 50px;">
+                                            <input type="checkbox" id="select-all" class="form-check-input" title="@lang('Select all')">
+                                        </th>
+                                    @endcan
                                     <th>#</th>
                                     <th class="text-uppercase">@lang('CÓDIGO')</th>
                                     <th class="text-uppercase">@lang('NOMBRE')</th>
                                     <th class="text-uppercase">@lang('FACTOR')</th>
                                     <th class="text-uppercase">@lang('SECUENCIA')</th>
+                                    <th class="text-uppercase">@lang('COLOR')</th>
+                                    <th class="text-uppercase">@lang('POS. KANBAN')</th>
                                     <th class="text-uppercase">@lang('DESCRIPCIÓN')</th>
                                     <th class="text-uppercase">@lang('ACCIONES')</th>
                                 </tr>
@@ -54,11 +77,25 @@
                             <tbody>
                                 @forelse($processes as $index => $process)
                                     <tr>
+                                        @can('process-edit')
+                                            <td class="text-center">
+                                                <input type="checkbox" class="form-check-input process-select" value="{{ $process->id }}"
+                                                    data-name="{{ $process->name }}">
+                                            </td>
+                                        @endcan
                                         <td>{{ $index + 1 }}</td>
                                         <td>{{ $process->code }}</td>
                                         <td>{{ $process->name }}</td>
                                         <td class="text-center">{{ number_format($process->factor_correccion, 2) }}</td>
                                         <td>{{ $process->sequence }}</td>
+                                        <td class="text-center">
+                                            @if($process->color)
+                                                <span style="display: inline-block; width: 30px; height: 30px; background-color: {{ $process->color }}; border: 1px solid #ddd; border-radius: 4px;" title="{{ $process->color }}"></span>
+                                            @else
+                                                <span class="text-muted">-</span>
+                                            @endif
+                                        </td>
+                                        <td class="text-center">{{ $process->posicion_kanban ?? '-' }}</td>
                                         <td>{{ $process->description ?? 'N/A' }}</td>
                                         <td>
                                             @can('process-show')
@@ -89,6 +126,67 @@
                             </tbody>
                         </table>
                     </div>
+
+                    @can('process-edit')
+                        <form id="bulk-edit-form" action="{{ route('processes.bulk-update') }}" method="POST">
+                            @csrf
+                            <input type="hidden" name="process_ids" id="process-ids-input">
+
+                            <div class="modal fade" id="bulkEditModal" tabindex="-1" aria-labelledby="bulkEditModalLabel" aria-hidden="true">
+                                <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                                    <div class="modal-content">
+                                        <div class="modal-header bg-primary text-white">
+                                            <h5 class="modal-title" id="bulkEditModalLabel"><i class="fas fa-layer-group me-2"></i>@lang('Bulk edit processes')</h5>
+                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p class="mb-3 text-muted">
+                                                @lang('You can update the selected fields for all chosen processes. Any field left empty will remain unchanged.')
+                                            </p>
+                                            <div class="alert alert-info" role="alert">
+                                                <strong>@lang('Selected processes'):</strong>
+                                                <span id="bulk-selected-names" class="ms-1 text-dark fw-semibold">-</span>
+                                            </div>
+
+                                            <div class="row g-3">
+                                                <div class="col-md-6">
+                                                    <label for="bulk-color" class="form-label">@lang('Color')</label>
+                                                    <input type="color" class="form-control form-control-color" id="bulk-color" name="color">
+                                                    <small class="text-muted">@lang('Set a color for all selected processes. Leave empty to keep current colors.')</small>
+                                                </div>
+
+                                                <div class="col-md-6">
+                                                    <label for="bulk-posicion" class="form-label">@lang('Kanban Position')</label>
+                                                    <input type="number" min="1" class="form-control" id="bulk-posicion" name="posicion_kanban">
+                                                    <small class="text-muted">@lang('Set a position for the Kanban board. Leave empty to keep current positions.')</small>
+                                                </div>
+
+                                                <div class="col-md-6">
+                                                    <label for="bulk-factor" class="form-label">@lang('Correction Factor')</label>
+                                                    <input type="number" step="0.01" min="0.1" class="form-control" id="bulk-factor" name="factor_correccion">
+                                                    <small class="text-muted">@lang('Example: 60.00. Leave empty to avoid changing the factor.')</small>
+                                                </div>
+
+                                                <div class="col-md-6">
+                                                    <label for="bulk-sequence" class="form-label">@lang('Sequence')</label>
+                                                    <input type="number" min="1" class="form-control" id="bulk-sequence" name="sequence">
+                                                    <small class="text-muted">@lang('Defines the process order. Leave empty to keep the current value.')</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer d-flex justify-content-between">
+                                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                                                <i class="fas fa-times me-1"></i>@lang('Cancel')
+                                            </button>
+                                            <button type="submit" class="btn btn-primary">
+                                                <i class="fas fa-save me-1"></i>@lang('Apply changes')
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    @endcan
                 </div>
             </div>
         </div>
@@ -216,9 +314,45 @@
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.bootstrap5.min.js"></script>
     <script>
         $(document).ready(function() {
+            const canEdit = @json($canEditProcesses);
+
+            const columnDefs = [];
+            const defaultOrder = [0, 'asc'];
+
+            if (canEdit) {
+                columnDefs.push(
+                    {
+                        orderable: false,
+                        targets: [0, 6, 8, 9],
+                        searchable: false,
+                        className: 'text-center'
+                    },
+                    {
+                        orderable: true,
+                        targets: [1, 2, 3, 4, 5, 7],
+                        className: 'text-center'
+                    }
+                );
+                defaultOrder[0] = 1; // Ordenar por la columna de índice cuando hay checkbox
+            } else {
+                columnDefs.push(
+                    {
+                        orderable: false,
+                        targets: [0, 5, 7, 8],
+                        searchable: false,
+                        className: 'text-center'
+                    },
+                    {
+                        orderable: true,
+                        targets: [1, 2, 3, 4, 6],
+                        className: 'text-center'
+                    }
+                );
+            }
+
             const table = $('#processes-table').DataTable({
                 responsive: {
-                    details: false  // Deshabilitar detalles responsivos para evitar duplicación
+                    details: false // Deshabilitar detalles responsivos para evitar duplicación
                 },
                 scrollX: false, // Desactivar scrollX para evitar duplicación de encabezados
                 pagingType: 'simple_numbers',
@@ -242,20 +376,8 @@
                      "<'row'<'col-sm-12'tr>>" +
                      "<'row mt-3'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7 d-flex justify-content-end'p>>",
                 autoWidth: false, // Evitar cálculo automático de ancho
-                order: [[0, 'asc']],
-                columnDefs: [
-                    { 
-                        orderable: true, 
-                        targets: [0, 1, 2, 3, 4],
-                        className: 'text-center'
-                    },
-                    { 
-                        orderable: false, 
-                        targets: [5], 
-                        searchable: false,
-                        className: 'text-center'
-                    }
-                ],
+                order: [defaultOrder],
+                columnDefs: columnDefs,
                 lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "{{ __('All') }}"]],
                 pageLength: 10,
                 initComplete: function() {
@@ -264,12 +386,12 @@
                     $('#processes-table_length label').addClass('font-weight-normal');
                     $('#processes-table_filter label').addClass('font-weight-normal');
                     $('#processes-table_paginate').addClass('mt-3');
-                    
+
                     // Añade íconos a los botones de ordenación
                     setTimeout(function() {
                         // Limpiar cualquier ícono existente primero
                         $('.sorting i, .sorting_asc i, .sorting_desc i').remove();
-                        
+
                         // Añadir nuevos íconos
                         $('.sorting').append(' <i class="fas fa-sort text-muted"></i>');
                         $('.sorting_asc').append(' <i class="fas fa-sort-up"></i>');
@@ -282,6 +404,68 @@
             @if(session('success') || session('error'))
                 table.draw(false);
             @endif
+
+            if (!canEdit) {
+                return;
+            }
+
+            const selectAll = $('#select-all');
+            const bulkEditBtn = $('#bulk-edit-btn');
+            const selectedCount = $('#selected-count');
+            const selectedNamesSpan = $('#bulk-selected-names');
+            const processIdsContainer = $('#process-ids-input');
+            const modalElement = document.getElementById('bulkEditModal');
+            const bulkForm = $('#bulk-edit-form');
+
+            function updateSelectionState() {
+                const checkedBoxes = $('.process-select:checked');
+                const totalBoxes = $('.process-select');
+                const ids = checkedBoxes.map(function() { return $(this).val(); }).get();
+                const names = checkedBoxes.map(function() { return $(this).data('name'); }).get();
+
+                selectAll.prop('checked', checkedBoxes.length && checkedBoxes.length === totalBoxes.length);
+                bulkEditBtn.prop('disabled', checkedBoxes.length === 0);
+
+                selectedCount.text("{{ __('Selected processes:') }} " + checkedBoxes.length);
+                selectedNamesSpan.text(names.length ? names.join(', ') : '-');
+
+                processIdsContainer.val(JSON.stringify(ids));
+            }
+
+            // Manejo de selección de filas
+            $(document).on('change', '.process-select', updateSelectionState);
+
+            selectAll.on('change', function() {
+                const isChecked = $(this).is(':checked');
+                $('.process-select').prop('checked', isChecked);
+                updateSelectionState();
+            });
+
+            // Limpiar inputs al cerrar el modal
+            modalElement.addEventListener('hidden.bs.modal', function () {
+                $('#bulk-color').val('');
+                $('#bulk-posicion').val('');
+                $('#bulk-factor').val('');
+                $('#bulk-sequence').val('');
+            });
+
+            // Antes de enviar, transformar el valor JSON a campos ocultos tipo array
+            bulkForm.on('submit', function(event) {
+                const ids = JSON.parse(processIdsContainer.val() || '[]');
+
+                if (!ids.length) {
+                    event.preventDefault();
+                    bulkEditBtn.prop('disabled', true);
+                    return;
+                }
+
+                // Limpiar inputs anteriores
+                bulkForm.find('input[name="process_ids[]"]').remove();
+
+                ids.forEach(function(id) {
+                    bulkForm.append('<input type="hidden" name="process_ids[]" value="' + id + '">');
+                });
+            });
         });
     </script>
 @endpush

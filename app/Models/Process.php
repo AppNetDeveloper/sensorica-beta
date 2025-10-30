@@ -9,7 +9,7 @@ class Process extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['code', 'name', 'sequence', 'description', 'factor_correccion'];
+    protected $fillable = ['code', 'name', 'sequence', 'description', 'factor_correccion', 'color', 'posicion_kanban'];
     
     protected $attributes = [
         'factor_correccion' => 1.00

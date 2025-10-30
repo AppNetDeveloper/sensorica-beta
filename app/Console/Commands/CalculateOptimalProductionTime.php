@@ -456,33 +456,40 @@ private function processSensorOtherTypes(Sensor $sensor)
             //actualizamos el sensor
             // Si el tiempo calculado es mayor que el valor almacenado en product_lists, se asigna este último.
                 // Buscar el registro en optimal_sensor_times utilizando sensor_id y product_list_id
-                try {
-                    $optimalSensorRecord = OptimalSensorTime::where('sensor_id', $sensor->id)
-                        ->where('product_list_id', $modelProductId)
-                        ->first();
-
-                    if ($optimalSensorRecord) {
-                        // Si se encontró el registro, comparamos el tiempo óptimo calculado con el almacenado
-                        if ($sensor->auto_update_sensor_optimal_time) {
-                            if ($calculatedOptimalTime > $optimalSensorRecord->optimal_time) {
-                                $sensor->optimal_production_time = $optimalSensorRecord->optimal_time;
-                            } else {
-                                $sensor->optimal_production_time = $calculatedOptimalTime;
-                            }
-                            $this->info("Sensor {$sensor->name} actualizado con optimal_production_time: {$sensor->optimal_production_time} basado en optimal_sensor_times.");
-                        }
-                    } else {
-                        // Si no se encuentra el registro en optimal_sensor_times, se asigna el tiempo calculado
-                        if ($sensor->auto_update_sensor_optimal_time) {
-                            $sensor->optimal_production_time = $calculatedOptimalTime;
-                            $this->info("Sensor {$sensor->name} actualizado con optimal_production_time calculado: {$sensor->optimal_production_time} (sin registro en optimal_sensor_times).");
-                        }
-                    }
-                } catch (\Exception $e) {
-                    $this->error("Error al actualizar el tiempo óptimo del sensor {$sensor->name} basado en optimal_sensor_times: " . $e->getMessage());
-                }
+                // Actualizar sensor.optimal_production_time si auto_update está habilitado
                 if ($sensor->auto_update_sensor_optimal_time) {
-                    $sensor->save();
+                    try {
+                        // Buscar el registro en optimal_sensor_times
+                        $optimalSensorRecord = OptimalSensorTime::where('sensor_id', $sensor->id)
+                            ->where('product_list_id', $modelProductId)
+                            ->first();
+
+                        // Determinar el nuevo valor (mismo criterio que antes, pero con lógica unificada)
+                        if ($optimalSensorRecord) {
+                            // Existe registro: usar el menor entre calculado y registrado
+                            $nuevoValor = ($calculatedOptimalTime > $optimalSensorRecord->optimal_time) 
+                                ? $optimalSensorRecord->optimal_time 
+                                : $calculatedOptimalTime;
+                        } else {
+                            // No existe registro: usar el calculado
+                            $nuevoValor = $calculatedOptimalTime;
+                        }
+
+                        // Solo actualizar si el valor cambió (evitar escrituras innecesarias)
+                        if ($sensor->optimal_production_time != $nuevoValor) {
+                            $valorAnterior = $sensor->optimal_production_time;
+                            $sensor->optimal_production_time = $nuevoValor;
+                            $sensor->save();
+                            $origen = $optimalSensorRecord ? 'optimal_sensor_times' : 'cálculo en tiempo real';
+                            $this->info("Sensor {$sensor->name}: optimal_production_time actualizado de {$valorAnterior}s a {$nuevoValor}s (origen: {$origen})");
+                        } else {
+                            $this->info("Sensor {$sensor->name}: optimal_production_time sin cambios ({$nuevoValor}s). No se actualiza.");
+                        }
+                    } catch (\Exception $e) {
+                        $this->error("Error al actualizar el tiempo óptimo del sensor {$sensor->name}: " . $e->getMessage());
+                    }
+                } else {
+                    $this->info("Sensor {$sensor->name}: auto_update_sensor_optimal_time DESHABILITADO. NO se modifica optimal_production_time.");
                 }
     
                 // Actualizar product_lists si el nuevo valor aporta mejora o es la primera vez

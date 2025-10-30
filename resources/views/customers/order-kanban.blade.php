@@ -1066,6 +1066,7 @@
         let masterOrderList = @json($processOrders);
         const customerId = {{ $customer->id }};
         const productionLinesData = @json($productionLines);
+        const processColor = "{{ $process->color ?? '#6c757d' }}";
         const globalMeanKpiValue = document.getElementById('globalMeanKpiValue');
         const globalMedianKpiValue = document.getElementById('globalMedianKpiValue');
         
@@ -2605,7 +2606,8 @@
             
             let innerHTML;
             if (column.type === 'final_states') {
-                innerHTML = `<div class="column-header" style="border-left: 4px solid ${column.color};">
+                const headerBg = `linear-gradient(135deg, ${processColor}15 0%, var(--header-bg) 30%)`;
+                innerHTML = `<div class="column-header" style="background: ${headerBg}; border-left: 6px solid ${processColor};">
                                 <div style="display: flex; justify-content: space-between; align-items: center;">
                                     <h3 class="column-title">${column.name}</h3>
                                     ${headerStatsHtml}
@@ -2636,7 +2638,8 @@
                 columnElement.addEventListener('drop', drop);
             } else if (column.productionLineId) {
                 // Columnas de líneas de producción con información completa
-                innerHTML = `<div class="column-header ${headerStatusClass}" style="border-left: 4px solid ${column.color};">
+                const headerBg = `linear-gradient(135deg, ${processColor}15 0%, var(--header-bg) 30%)`;
+                innerHTML = `<div class="column-header ${headerStatusClass}" style="background: ${headerBg}; border-left: 6px solid ${processColor};">
                                 <div style="display: flex; justify-content: space-between; align-items: center;">
                                     <h3 class="column-title">${column.name}</h3>
                                     ${headerStatsHtml}
@@ -2666,7 +2669,8 @@
                              <div class="column-cards"></div>`;
             } else {
                 // Columnas fijas como "Pendientes de asignar"
-                innerHTML = `<div class="column-header" style="border-left: 4px solid ${column.color};">
+                const headerBg = `linear-gradient(135deg, ${processColor}15 0%, var(--header-bg) 30%)`;
+                innerHTML = `<div class="column-header" style="background: ${headerBg}; border-left: 6px solid ${processColor};">
                                 <div style="display: flex; justify-content: space-between; align-items: center;">
                                     <h3 class="column-title">${column.name}</h3>
                                     ${headerStatsHtml}

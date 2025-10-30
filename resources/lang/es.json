@@ -1431,5 +1431,17 @@
   "Minimum threshold to start updating optimal time when it increases (e.g., 20%)": "Umbral mínimo para empezar a actualizar el tiempo óptimo cuando aumenta (ej: 20%)",
   "Maximum limit factor when updating increased time (e.g., 98% to cap at 98% of calculated value)": "Factor límite máximo al actualizar tiempo aumentado (ej: 98% para limitar al 98% del valor calculado)",
   "Correction Percentages Logic": "Lógica de Porcentajes de Corrección",
-  "Updates optimal time only if new calculation is lower OR if higher and exceeds Min Correction % threshold, applying Max Correction % as limit.": "Actualiza el tiempo óptimo solo si el nuevo cálculo es menor O si es mayor y supera el umbral de % Mínimo de Corrección, aplicando % Máximo de Corrección como límite."
+  "Updates optimal time only if new calculation is lower OR if higher and exceeds Min Correction % threshold, applying Max Correction % as limit.": "Actualiza el tiempo óptimo solo si el nuevo cálculo es menor O si es mayor y supera el umbral de % Mínimo de Corrección, aplicando % Máximo de Corrección como límite.",
+  "Total días naturales": "Total días naturales",
+  "Días laborables": "Días laborables",
+  "Días no laborables": "Días no laborables",
+  "Total horas": "Total horas",
+  "Horas laborables": "Horas laborables",
+  "Horas no laborables": "Horas no laborables",
+  "Click para más detalles": "Click para más detalles",
+  "Click para ocultar": "Click para ocultar",
+  "Iconos de días en KPIs": "Iconos de días en KPIs",
+  "Días totales transcurridos entre dos fechas (incluye todos los días del calendario, laborables y no laborables). Ejemplo: 9d = 9 días completos.": "Días totales transcurridos entre dos fechas (incluye todos los días del calendario, laborables y no laborables). Ejemplo: 9d = 9 días completos.",
+  "Días en los que se trabaja según el calendario laboral configurado (lunes-viernes o calendario personalizado del cliente). Estos son días productivos.": "Días en los que se trabaja según el calendario laboral configurado (lunes-viernes o calendario personalizado del cliente). Estos son días productivos.",
+  "Días en los que NO se trabaja: fines de semana, festivos, vacaciones o paradas de mantenimiento. Suma: Total = Laborables + No laborables.": "Días en los que NO se trabaja: fines de semana, festivos, vacaciones o paradas de mantenimiento. Suma: Total = Laborables + No laborables."
 }
