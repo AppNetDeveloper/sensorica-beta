@@ -332,6 +332,14 @@
             --placeholder-bg: rgba(96, 165, 250, 0.2);
             --progress-bg: #4a5568; --progress-bar-bg: #48bb78;
         }
+        
+        /* Bordes atenuados en modo oscuro */
+        body.dark .kanban-column {
+            border: 0.5px solid rgba(51, 65, 85, 0.2);
+        }
+        body.dark .column-header {
+            border-bottom: 0.5px solid rgba(51, 65, 85, 0.15);
+        }
 
         #kanbanContainer { display: flex; flex-direction: column; height: calc(100vh - 220px); overflow: hidden; }
         .kanban-board { display: flex; gap: 1rem; padding: 1rem; overflow-x: auto; overflow-y: hidden; background-color: var(--kanban-bg); flex: 1; min-height: 0; align-items: stretch; }
@@ -339,9 +347,9 @@
         .kanban-board::-webkit-scrollbar-track { background: transparent; }
         .kanban-board::-webkit-scrollbar-thumb { background-color: var(--scrollbar-thumb); border-radius: 10px; border: 2px solid var(--kanban-bg); }
 
-        .kanban-column { flex: 0 0 340px; background-color: var(--column-bg); border-radius: 12px; min-width: 340px; display: flex; flex-direction: column; border: 1px solid var(--column-border); box-shadow: 0 1px 4px rgba(0,0,0,0.05); max-height: 100%; overflow: hidden; }
+        .kanban-column { flex: 0 0 340px; background-color: var(--column-bg); border-radius: 12px; min-width: 340px; display: flex; flex-direction: column; border: 0.5px solid rgba(229, 231, 235, 0.25); box-shadow: 0 1px 4px rgba(0,0,0,0.05); max-height: 100%; overflow: hidden; }
         .kanban-column.drag-over { border-color: var(--primary-color); }
-        .column-header { padding: 0.75rem 1rem; position: sticky; top: 0; background-color: var(--header-bg); z-index: 10; border-bottom: 1px solid var(--column-border); transition: all 0.3s ease; min-height: 60px; flex-shrink: 0; height: auto; }
+        .column-header { padding: 0.75rem 1rem; position: sticky; top: 0; background-color: var(--header-bg); z-index: 10; border-bottom: 0.5px solid rgba(229, 231, 235, 0.2); transition: all 0.3s ease; min-height: 60px; flex-shrink: 0; height: auto; }
         .column-header-running { border-top: 3px solid #28a745 !important; }
         .column-header-paused { border-top: 3px solid #ffc107 !important; }
         .column-header-stopped { border-top: 3px solid #6c757d !important; }
