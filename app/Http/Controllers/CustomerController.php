@@ -301,8 +301,8 @@ return "<div class='action-buttons-row d-flex flex-wrap' style='display: none; g
             return $position;
         });
             
-        // Obtener el estado actual del filtro (primero de settings, luego de .env)
-        $filterEnabled = \App\Models\Setting::getGlobal('PRODUCTION_FILTER_NOT_READY_KANBAN', 'true');
+        // Obtener el estado actual del filtro (prioriza .env, default false si no existe)
+        $filterEnabled = \App\Models\Setting::getGlobal('PRODUCTION_FILTER_NOT_READY_KANBAN', false);
         $filterEnabled = $filterEnabled === 'true' || $filterEnabled === true || $filterEnabled === '1';
 
         return view('customers.order-organizer', [
@@ -322,22 +322,23 @@ return "<div class='action-buttons-row d-flex flex-wrap' style='display: none; g
     public function toggleKanbanFilter(Customer $customer)
     {
         try {
-            $newValue = \App\Models\Setting::toggleGlobal('PRODUCTION_FILTER_NOT_READY_KANBAN', true);
-            
-            // Limpiar cache de configuración para que se recargue el nuevo valor
+            $newValue = \App\Models\Setting::toggleGlobal('PRODUCTION_FILTER_NOT_READY_KANBAN', false);
+
+            // Limpiar caches para asegurar que se recargue el nuevo valor
             \Artisan::call('config:clear');
+            \Artisan::call('cache:clear');
             \Cache::forget('production.filter_not_ready_machine_kanban');
-            
+
             return response()->json([
                 'success' => true,
                 'value' => $newValue,
-                'message' => $newValue 
-                    ? __('El filtro está activado. Las órdenes no listas se ocultarán.')
-                    : __('El filtro está desactivado. Se mostrarán todas las órdenes.')
+                'message' => $newValue
+                    ? __('Filtro activado. Las órdenes no listas se ocultarán en Kanban.')
+                    : __('Filtro desactivado. Todas las órdenes serán visibles en Kanban.')
             ]);
         } catch (\Exception $e) {
             \Log::error('Error toggling Kanban filter: ' . $e->getMessage());
-            
+
             return response()->json([
                 'success' => false,
                 'message' => __('Error al cambiar la configuración del filtro.')
@@ -1096,6 +1097,12 @@ return "<div class='action-buttons-row d-flex flex-wrap' style='display: none; g
             'token' => 'nullable|string|max:255',
             'callback_finish_process' => 'nullable|boolean',
             'callback_url' => 'nullable|url|required_if:callback_finish_process,1',
+            // Nuevos campos de configuración de tiempos
+            'api_timeout' => 'required|integer|min:5|max:300',
+            'lock_timeout' => 'required|integer|min:5|max:180',
+            'search_delay' => 'required|integer|min:0|max:5000',
+            'lock_timeout_tolerance' => 'required|numeric|min:0|max:0.50',
+            'enable_parallel_processing' => 'nullable|boolean',
             'field_mappings' => 'nullable|array',
             'field_mappings.*.source_field' => 'required_with:field_mappings|string',
             'field_mappings.*.target_field' => 'required_with:field_mappings|string',
@@ -1156,6 +1163,12 @@ return "<div class='action-buttons-row d-flex flex-wrap' style='display: none; g
                 'token' => $validatedData['token'] ?? null,
                 'callback_finish_process' => $validatedData['callback_finish_process'] ?? false,
                 'callback_url' => $validatedData['callback_url'] ?? null,
+                // Nuevos campos de configuración de tiempos
+                'api_timeout' => $validatedData['api_timeout'] ?? 30,
+                'lock_timeout' => $validatedData['lock_timeout'] ?? 30,
+                'search_delay' => $validatedData['search_delay'] ?? 100,
+                'lock_timeout_tolerance' => $validatedData['lock_timeout_tolerance'] ?? 0.10,
+                'enable_parallel_processing' => $validatedData['enable_parallel_processing'] ?? true,
             ]);
 
             // Sincronizar los mapeos de campos de orders si existen

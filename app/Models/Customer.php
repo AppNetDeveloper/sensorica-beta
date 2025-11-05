@@ -36,7 +36,12 @@ class Customer extends Model
         'order_listing_url',
         'order_detail_url',
         'callback_finish_process',
-        'callback_url'
+        'callback_url',
+        'api_timeout',
+        'lock_timeout',
+        'search_delay',
+        'enable_parallel_processing',
+        'lock_timeout_tolerance'
     ];
 
     /**
@@ -87,6 +92,8 @@ class Customer extends Model
      */
     protected $casts = [
         'callback_finish_process' => 'boolean',
+        'enable_parallel_processing' => 'boolean',
+        'lock_timeout_tolerance' => 'decimal:2',
     ];
 
     public function originalOrders()
@@ -138,5 +145,60 @@ class Customer extends Model
     public function assetReceipts(): HasMany
     {
         return $this->hasMany(AssetReceipt::class);
+    }
+
+    /**
+     * Obtiene el timeout de API en segundos
+     */
+    public function getApiTimeout(): int
+    {
+        return $this->api_timeout ?? 30;
+    }
+
+    /**
+     * Obtiene el timeout de bloqueo en minutos
+     */
+    public function getLockTimeout(): int
+    {
+        return $this->lock_timeout ?? 30;
+    }
+
+    /**
+     * Obtiene el delay de búsqueda en milisegundos
+     */
+    public function getSearchDelay(): int
+    {
+        return $this->search_delay ?? 100;
+    }
+
+    /**
+     * Obtiene la tolerancia del timeout de bloqueo
+     */
+    public function getLockTimeoutTolerance(): float
+    {
+        return $this->lock_timeout_tolerance ?? 0.10;
+    }
+
+    /**
+     * Verifica si el procesamiento paralelo está habilitado
+     */
+    public function isParallelProcessingEnabled(): bool
+    {
+        return $this->enable_parallel_processing ?? true;
+    }
+
+    /**
+     * Obtiene el timeout de bloqueo con tolerancia
+     */
+    public function getEffectiveLockTimeout(): int
+    {
+        $baseTimeout = $this->getLockTimeout();
+        $tolerance = $this->getLockTimeoutTolerance();
+
+        // Aplicar tolerancia aleatoria para evitar sincronización
+        // Reducir el tiempo en lugar de aumentarlo para evitar bloqueos demasiado largos
+        $randomTolerance = (mt_rand() / mt_getrandmax()) * $tolerance;
+
+        return (int)ceil($baseTimeout * (1 - $randomTolerance));
     }
 }

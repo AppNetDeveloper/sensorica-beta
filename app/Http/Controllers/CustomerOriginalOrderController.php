@@ -16,11 +16,16 @@ use Symfony\Component\Process\Process as SymfonyProcess;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
+use App\Services\CustomerLockManager;
 
 class CustomerOriginalOrderController extends Controller
 {
-    public function __construct()
+    private CustomerLockManager $lockManager;
+
+    public function __construct(CustomerLockManager $lockManager)
     {
+        $this->lockManager = $lockManager;
+
         $this->middleware('permission:original-order-list|original-order-create|original-order-edit|original-order-delete', ['only' => ['index', 'show']]);
         $this->middleware('permission:original-order-create', ['only' => ['create', 'store']]);
         $this->middleware('permission:original-order-edit', ['only' => ['edit', 'update']]);
@@ -77,37 +82,33 @@ class CustomerOriginalOrderController extends Controller
     {
         $this->authorize('original-order-create');
 
-        $lockFile = storage_path('app/orders_check.lock');
+        // Verificar si el cliente ya está siendo procesado usando CustomerLockManager
+        if ($this->lockManager->isLocked($customer)) {
+            $lockInfo = $this->lockManager->getLockInfo($customer);
+            $minutes = round($lockInfo['age_minutes']);
 
-        if (file_exists($lockFile)) {
-            $lockTime = file_get_contents($lockFile);
-            $lockAge = time() - (int)$lockTime;
-
-            // Si el bloqueo tiene menos de 30 minutos, consideramos que otra instancia está en ejecución
-            if ($lockAge < 1800) {
-                $minutes = round($lockAge / 60);
-                return response()->json([
-                    'success' => false,
-                    'message' => __('Ya hay una importación en curso desde hace {minutes} min. Por favor, inténtelo de nuevo más tarde.', ['minutes' => $minutes])
-                ], 429); // HTTP 429: Too Many Requests
-            }
+            return response()->json([
+                'success' => false,
+                'message' => __('Ya hay una importación en curso para este cliente desde hace {minutes} min. Por favor, inténtelo de nuevo más tarde.', ['minutes' => $minutes])
+            ], 429); // HTTP 429: Too Many Requests
         }
 
-        // Ejecutamos el comando directamente en segundo plano
+        // Ejecutamos el comando directamente en segundo plano para ESTE CLIENTE específico
         try {
             // Registramos el inicio de la importación
-            Log::info("Iniciando importación manual de pedidos para todos los clientes.");
-            
+            Log::info("Iniciando importación manual de pedidos para el cliente: {$customer->name} (ID: {$customer->id})");
+
             // Ejecutamos el comando artisan en segundo plano sin esperar respuesta
             // usando shell_exec con nohup para garantizar que siga ejecutándose
+            // IMPORTANTE: Agregamos --customer-id para procesar solo este cliente
             $artisanPath = base_path('artisan');
-            $logFile = storage_path('logs/orders-import-manual.log');
-            $command = "nohup php {$artisanPath} orders:check > {$logFile} 2>&1 &";
+            $logFile = storage_path("logs/orders-import-customer-{$customer->id}.log");
+            $command = "nohup php {$artisanPath} orders:check --customer-id={$customer->id} > {$logFile} 2>&1 &";
             shell_exec($command);
-            
+
             Log::info("Comando de importación iniciado en segundo plano: {$command}");
         } catch (\Exception $e) {
-            Log::error("Error al ejecutar el comando de importación en segundo plano: " . $e->getMessage());
+            Log::error("Error al ejecutar el comando de importación en segundo plano para cliente {$customer->id}: " . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => __('Error al iniciar la importación: ') . $e->getMessage()

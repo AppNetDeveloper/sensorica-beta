@@ -49,23 +49,30 @@
                                     <i class="fas fa-search me-2"></i>{{ __('Filtrar') }}
                                 </button>
                             </div>
-                            <div class="col-12">
-                                <div class="card border-0 bg-white shadow-sm p-3">
-                                    <div class="d-flex flex-wrap gap-3 align-items-center">
-                                        <div class="form-check form-switch">
-                                            <input class="form-check-input" type="checkbox" id="use_actual_delivery" style="width: 3em; height: 1.5em;">
-                                            <label class="form-check-label ms-2 fw-semibold" for="use_actual_delivery" id="use_actual_delivery_label">
-                                                {{ __('Fecha de entrega teorica (ERP) / Fecha de entrega real(modulo Logistica)') }}
-                                            </label>
-                                        </div>
+                            <div class="col-md-6">
+                                <div class="card border-0 bg-white shadow-sm p-3 h-100">
+                                    <label class="form-label fw-semibold text-dark mb-2">
+                                        <i class="fas fa-calendar-alt me-2 text-primary"></i>{{ __('Tipo de Fecha de Entrega') }}
+                                    </label>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="use_actual_delivery" style="width: 3em; height: 1.5em;">
+                                        <label class="form-check-label ms-2" for="use_actual_delivery">
+                                            <span class="fw-semibold">{{ __('Usar fecha real de entrega (Logística)') }}</span><br>
+                                            <small class="text-muted">{{ __('Si está desactivado, usa fecha programada (ERP)') }}</small>
+                                        </label>
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-12">
-                                <div class="card border-0 bg-white shadow-sm p-3">
+                            <div class="col-md-6">
+                                <div class="card border-0 bg-white shadow-sm p-3 h-100">
+                                    <label class="form-label fw-semibold text-dark mb-2">
+                                        <i class="fas fa-filter me-2 text-info"></i>{{ __('Filtrado de Datos') }}
+                                    </label>
                                     <div class="form-check">
                                         <input class="form-check-input" type="checkbox" value="1" id="exclude_incomplete_orders" checked>
-                                        <label class="form-check-label fw-semibold" for="exclude_incomplete_orders">{{ __('Excluir órdenes sin fechas completas') }}</label>
+                                        <label class="form-check-label fw-semibold" for="exclude_incomplete_orders">
+                                            {{ __('Excluir órdenes sin fechas completas') }}
+                                        </label>
                                     </div>
                                 </div>
                             </div>
@@ -75,14 +82,14 @@
             </div>
 
             <div class="row g-4 mb-4" id="kpi-cards">
-                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="col-12 col-sm-6 col-lg-3">
                     <div class="card shadow-sm border-0 h-100 hover-lift">
                         <div class="card-body text-center">
                             <div class="mb-2">
-                                <i class="fas fa-box fa-2x text-primary"></i>
+                                <i class="fas fa-chart-line fa-2x text-warning"></i>
                             </div>
-                            <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Órdenes analizadas') }}</h6>
-                            <h2 class="mb-0 text-dark fw-bold" id="kpi-orders-total">0</h2>
+                            <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Promedio Tiempo de Espera Operacion / Máquina') }}</h6>
+                            <h2 class="mb-0 text-dark fw-bold" id="kpi-gap">-</h2>
                         </div>
                     </div>
                 </div>
@@ -90,10 +97,10 @@
                     <div class="card shadow-sm border-0 h-100 hover-lift">
                         <div class="card-body text-center">
                             <div class="mb-2">
-                                <i class="fas fa-tasks fa-2x text-success"></i>
+                                <i class="fas fa-equals fa-2x text-muted"></i>
                             </div>
-                            <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Procesos analizados') }}</h6>
-                            <h2 class="mb-0 text-dark fw-bold" id="kpi-processes-total">0</h2>
+                            <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Mediana Tiempo de Espera Operacion / Máquina') }}</h6>
+                            <h2 class="mb-0 text-dark fw-bold" id="kpi-gap-median">-</h2>
                         </div>
                     </div>
                 </div>
@@ -103,7 +110,7 @@
                             <div class="mb-2">
                                 <i class="fas fa-stopwatch fa-2x text-info"></i>
                             </div>
-                            <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Promedio Recepción Pedido → Pedido Finalizado') }}</h6>
+                            <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Promedio Pedido Cliente → Fin Producción') }}</h6>
                             <h2 class="mb-0 text-dark fw-bold" id="kpi-erp-finish">-</h2>
                             <div class="mt-3" id="kpi-erp-finish-days">
                                 <span class="badge bg-primary text-white fs-6 py-2 px-3 me-2" id="kpi-erp-finish-total-days" data-bs-toggle="tooltip" title="{{ __('Total días naturales') }}">
@@ -148,7 +155,7 @@
                             <div class="mb-2">
                                 <i class="fas fa-clock fa-2x text-secondary"></i>
                             </div>
-                            <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Mediana Recepción Pedido → Pedido Finalizado') }}</h6>
+                            <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Mediana Pedido Cliente → Fin Producción') }}</h6>
                             <h2 class="mb-0 text-dark fw-bold" id="kpi-erp-finish-median">-</h2>
                             <div class="mt-3">
                                 <span class="badge bg-primary text-white fs-6 py-2 px-3 me-2" id="kpi-erp-finish-median-total-days" data-bs-toggle="tooltip" title="{{ __('Total días naturales') }}">
@@ -184,28 +191,6 @@
                             <div class="mt-2">
                                 <small class="text-muted"><i class="fas fa-hand-pointer me-1"></i>{{ __('Click para más detalles') }}</small>
                             </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-12 col-sm-6 col-lg-3">
-                    <div class="card shadow-sm border-0 h-100 hover-lift">
-                        <div class="card-body text-center">
-                            <div class="mb-2">
-                                <i class="fas fa-chart-line fa-2x text-warning"></i>
-                            </div>
-                            <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Promedio Tiempo de Espera Operacion / Máquina') }}</h6>
-                            <h2 class="mb-0 text-dark fw-bold" id="kpi-gap">-</h2>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-12 col-sm-6 col-lg-3">
-                    <div class="card shadow-sm border-0 h-100 hover-lift">
-                        <div class="card-body text-center">
-                            <div class="mb-2">
-                                <i class="fas fa-equals fa-2x text-muted"></i>
-                            </div>
-                            <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Mediana Tiempo de Espera Operacion / Máquina') }}</h6>
-                            <h2 class="mb-0 text-dark fw-bold" id="kpi-gap-median">-</h2>
                         </div>
                     </div>
                 </div>
@@ -305,7 +290,7 @@
                             <div class="mb-2">
                                 <i class="fas fa-truck fa-2x text-warning"></i>
                             </div>
-                            <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Promedio Recepción Pedido → Pedido Entregado') }}</h6>
+                            <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Promedio Pedido Cliente → Pedido Entregado') }}</h6>
                             <h2 class="mb-0 text-dark fw-bold" id="kpi-erp-delivery">-</h2>
                             <div class="mt-3">
                                 <span class="badge bg-primary text-white fs-6 py-2 px-3 me-2" id="kpi-erp-delivery-total-days" data-bs-toggle="tooltip" title="{{ __('Total días naturales') }}">
@@ -350,7 +335,7 @@
                             <div class="mb-2">
                                 <i class="fas fa-shipping-fast fa-2x text-danger"></i>
                             </div>
-                            <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Mediana Recepción Pedido → Pedido Entregado') }}</h6>
+                            <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Mediana Pedido Cliente → Pedido Entregado') }}</h6>
                             <h2 class="mb-0 text-dark fw-bold" id="kpi-erp-delivery-median">-</h2>
                             <div class="mt-3">
                                 <span class="badge bg-primary text-white fs-6 py-2 px-3 me-2" id="kpi-erp-delivery-median-total-days" data-bs-toggle="tooltip" title="{{ __('Total días naturales') }}">
@@ -492,12 +477,12 @@
                                     <th></th>
                                     <th>{{ __('Pedido') }}</th>
                                     <th>{{ __('Cliente') }}</th>
-                                    <th>{{ __('Fecha Recepción Pedido') }}</th>
-                                    <th>{{ __('Fecha Puesto en Fabricación') }}</th>
-                                    <th>{{ __('Fecha Pedido Finalizado') }}</th>
-                                    <th>{{ __('Tiempo Recepción Pedido → Puesto en Fabricación') }}</th>
-                                    <th>{{ __('Tiempo Puesto en Fabricación → Pedido Finalizado') }}</th>
-                                    <th>{{ __('Tiempo Recepción Pedido → Pedido Finalizado') }}</th>
+                                    <th>{{ __('Fecha Pedido Cliente') }}</th>
+                                    <th>{{ __('Fecha Lanzamiento Producción') }}</th>
+                                    <th>{{ __('Fecha Fin Producción') }}</th>
+                                    <th>{{ __('Tiempo Pedido Cliente → Lanzamiento Producción') }}</th>
+                                    <th>{{ __('Tiempo Lanzamiento Producción → Fin Producción') }}</th>
+                                    <th>{{ __('Tiempo Pedido Cliente → Fin Producción') }}</th>
                                 </tr>
                             </thead>
                             <tbody></tbody>
@@ -545,13 +530,13 @@
                         <div class="col-md-6">
                             <h6 class="text-primary mb-3"><i class="fas fa-clipboard-list me-2"></i>{{ __('KPIs de orden') }}</h6>
                             <dl class="row mb-0">
-                                <dt class="col-sm-5 mb-3"><span class="badge bg-primary bg-opacity-10 text-primary me-2"><i class="fas fa-clipboard-list"></i></span>{{ __('Tiempo Recepción Pedido → Puesto en Fabricación') }}</dt>
+                                <dt class="col-sm-5 mb-3"><span class="badge bg-primary bg-opacity-10 text-primary me-2"><i class="fas fa-clipboard-list"></i></span>{{ __('Tiempo Pedido Cliente → Lanzamiento Producción') }}</dt>
                                 <dd class="col-sm-7 mb-3">{{ __('Tiempo desde que el pedido se registra en el ERP hasta que entra en producción. Se representa en azul en el timeline interactivo y alimenta el cálculo promedio.') }}</dd>
 
-                                <dt class="col-sm-5 mb-3"><span class="badge bg-success bg-opacity-10 text-success me-2"><i class="fas fa-flag-checkered"></i></span>{{ __('Tiempo Recepción Pedido → Pedido Finalizado') }}</dt>
+                                <dt class="col-sm-5 mb-3"><span class="badge bg-success bg-opacity-10 text-success me-2"><i class="fas fa-flag-checkered"></i></span>{{ __('Tiempo Pedido Cliente → Fin Producción') }}</dt>
                                 <dd class="col-sm-7 mb-3">{{ __('Duración total del pedido desde el ERP hasta la finalización. Ayuda a identificar cuellos de botella globales y se refleja como suma de los tramos azul y verde.') }}</dd>
 
-                                <dt class="col-sm-5 mb-3"><span class="badge bg-primary bg-opacity-10 text-primary me-2"><i class="fas fa-industry"></i></span>{{ __('Tiempo Recepción Pedido → Pedido Finalizado') }}</dt>
+                                <dt class="col-sm-5 mb-3"><span class="badge bg-primary bg-opacity-10 text-primary me-2"><i class="fas fa-industry"></i></span>{{ __('Tiempo Pedido Cliente → Fin Producción') }}</dt>
                                 <dd class="col-sm-7 mb-3">{{ __('Tiempo neto de fabricación desde la creación en producción hasta la finalización. En el timeline aparece en verde y mide la eficiencia interna de la planta.') }}</dd>
 
                                 <dt class="col-sm-5 mb-3"><span class="badge bg-secondary bg-opacity-10 text-secondary me-2"><i class="fas fa-cogs"></i></span>{{ __('Procesos registrados') }}</dt>
@@ -619,6 +604,39 @@
             transform: translateY(-5px);
             box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
         }
+
+        /* === Mejoras sutiles para KPI cards === */
+        #kpi-cards .card {
+            border-left: 4px solid transparent;
+        }
+        #kpi-cards .card:nth-child(1) { border-left-color: #0d6efd; }
+        #kpi-cards .card:nth-child(2) { border-left-color: #198754; }
+        #kpi-cards .card:nth-child(3) { border-left-color: #0dcaf0; }
+        #kpi-cards .card:nth-child(4) { border-left-color: #ffc107; }
+        #kpi-cards .card:nth-child(5) { border-left-color: #6c757d; }
+        #kpi-cards .card:nth-child(6) { border-left-color: #6f42c1; }
+        #kpi-cards .card:nth-child(7) { border-left-color: #198754; }
+        #kpi-cards .card:nth-child(8) { border-left-color: #0dcaf0; }
+
+        /* Mejor espaciado */
+        #kpi-cards .card-body h2 {
+            font-size: 2.25rem;
+            margin-bottom: 0.5rem;
+        }
+        #kpi-cards .card-body h6 {
+            line-height: 1.4;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            #kpi-cards .card {
+                border-left-width: 3px;
+            }
+            #kpi-cards .card-body h2 {
+                font-size: 1.75rem;
+            }
+        }
+
         #production-times-table_wrapper .dataTables_filter { 
             margin-bottom: 15px; 
         }
@@ -987,19 +1005,19 @@
             };
 
             const i18n = {
-                erpToCreated: @json(__('Tiempo Recepción Pedido → Puesto en Fabricación')),
-                erpToFinished: @json(__('Tiempo Recepción Pedido → Pedido Finalizado')),
-                createdToFinished: @json(__('Tiempo Recepción Pedido → Pedido Finalizado')),
+                erpToCreated: @json(__('Tiempo Pedido Cliente → Lanzamiento Producción')),
+                erpToFinished: @json(__('Tiempo Pedido Cliente → Fin Producción')),
+                createdToFinished: @json(__('Tiempo Pedido Cliente → Fin Producción')),
                 processes: @json(__('Procesos')),
-                erpRegistered: @json(__('Recepción Pedido')),
+                erpRegistered: @json(__('Pedido Cliente')),
                 noErpDate: @json(__('Sin fecha de recepción registrada')),
-                createdAt: @json(__('Puesto en Fabricación')),
-                finishedAt: @json(__('Pedido Finalizado')),
+                createdAt: @json(__('Lanzamiento Producción')),
+                finishedAt: @json(__('Fin Producción')),
                 position: @json(__('Posición')),
                 duration: @json(__('Duración')),
                 gap: @json(__('Gap')),
-                erpToProcess: @json(__('Recepción Pedido → Proceso')),
-                createdToProcess: @json(__('Puesto en Fabricación → Proceso')),
+                erpToProcess: @json(__('Pedido Cliente → Proceso')),
+                createdToProcess: @json(__('Lanzamiento Producción → Proceso')),
                 timelineTitle: @json(__('Timeline de procesos')),
                 timelineDetail: @json(__('Detalle de procesos')),
                 noProcesses: @json(__('Sin procesos registrados para esta orden')),
@@ -1009,24 +1027,24 @@
                 minutesSuffix: @json(__('min')),
                 orderId: @json(__('Pedido')),
                 timelineOrdersTitle: @json(__('Cronología de fechas')),
-                timelineFromErp: @json(__('Ruta desde Recepción Pedido')),
-                timelineFromCreated: @json(__('Ruta desde Puesto en Fabricación')),
-                timelineLegendErpCreated: @json(__('Tiempo Recepción Pedido →  Puesto en Fabricación')),
-                timelineLegendCreatedFinished: @json(__('Tiempo Recepción Pedido → Pedido Finalizado')),
-                timelineLegendFinishedDelivery: @json(__('Pedido Finalizado → Entrega')),
-                timelineLegendCreatedProcess: @json(__('Tiempo Puesto en Fabricación → Proceso')),
+                timelineFromErp: @json(__('Ruta desde Pedido Cliente')),
+                timelineFromCreated: @json(__('Ruta desde Lanzamiento Producción')),
+                timelineLegendErpCreated: @json(__('Tiempo Pedido Cliente →  Lanzamiento Producción')),
+                timelineLegendCreatedFinished: @json(__('Tiempo Pedido Cliente → Fin Producción')),
+                timelineLegendFinishedDelivery: @json(__('Fin Producción → Entrega')),
+                timelineLegendCreatedProcess: @json(__('Tiempo Lanzamiento Producción → Proceso')),
                 timelineLegendProcessDelivery: @json(__('Tiempo Proceso → Entrega')),
                 timelineProcessPath: @json(__('Ruta al proceso')),
                 timelineNoData: @json(__('Sin datos suficientes para mostrar la cronología')),
                 timelineStart: @json(__('Inicio')),
                 timelineEnd: @json(__('Fin')),
-                erpDateLabel: @json(__('Fecha Recepción Pedido')),
-                createdDateLabel: @json(__('Puesto en Fabricación')),
-                finishedDateLabel: @json(__('Fecha Pedido Finalizado')),
+                erpDateLabel: @json(__('Fecha Pedido Cliente')),
+                createdDateLabel: @json(__('Lanzamiento Producción')),
+                finishedDateLabel: @json(__('Fecha Fin Producción')),
                 deliveryDateLabel: @json(__('Fecha de entrega prevista')),
                 actualDeliveryLabel: @json(__('Fecha de entrega real')),
                 toggleActualDeliveryLabel: @json(__('Usar fecha real de entrega (actual_delivery_date) en lugar de fecha ERP programada')),
-                timelineLegendFinishedActualDelivery: @json(__('Pedido Finalizado → Entrega real')),
+                timelineLegendFinishedActualDelivery: @json(__('Fin Producción → Entrega real')),
                 timelineLegendProcessActualDelivery: @json(__('Proceso → Entrega real')),
                 timelineOrdersAverageTitle: @json(__('Promedio del rango')),
                 timelineOrdersMedianTitle: @json(__('Mediana del rango'))
@@ -1035,10 +1053,10 @@
             const normalizeTimelineLabel = (raw) => {
                 if (!raw || typeof raw !== 'string') return '-';
                 return raw
-                    .replace('ERP → Creado', '{{ __('Tiempo Recepción Pedido → Puesto en Fabricación') }}')
-                    .replace('Tiempo Recepción Pedido → Pedido Finalizado', '{{ __('Tiempo Recepción Pedido → Pedido Finalizado') }}')
-                    .replace('Fin → Entrega real', '{{ __('Pedido Finalizado → Entrega real') }}')
-                    .replace('Fin → Entrega', '{{ __('Pedido Finalizado → Entrega') }}');
+                    .replace('ERP → Creado', '{{ __('Tiempo Pedido Cliente → Lanzamiento Producción') }}')
+                    .replace('Tiempo Pedido Cliente → Fin Producción', '{{ __('Tiempo Pedido Cliente → Fin Producción') }}')
+                    .replace('Fin → Entrega real', '{{ __('Fin Producción → Entrega real') }}')
+                    .replace('Fin → Entrega', '{{ __('Fin Producción → Entrega') }}');
             };
 
             const computeDurationLabel = (start, end, isDatetime) => {
@@ -1066,13 +1084,13 @@
 
                 const points = [];
                 if (typeof erp === 'number' && typeof created === 'number' && created > erp) {
-                    points.push({ x: 'Tiempo Recepción Pedido → Puesto en Fabricación', y: [erp * 1000, created * 1000], fillColor: '#118DFF' });
+                    points.push({ x: '📥 → 🏭 Pedido Cliente → Lanzamiento Producción', y: [erp * 1000, created * 1000], fillColor: '#118DFF' });
                 }
                 if (typeof created === 'number' && typeof finished === 'number' && finished > created) {
-                    points.push({ x: 'Tiempo Recepción Pedido → Pedido Finalizado', y: [created * 1000, finished * 1000], fillColor: '#21A366' });
+                    points.push({ x: '📥 → ✅ Pedido Cliente → Fin Producción', y: [created * 1000, finished * 1000], fillColor: '#21A366' });
                 }
                 if (typeof finished === 'number' && typeof delivery === 'number' && delivery > finished) {
-                    points.push({ x: (useActual ? 'Pedido Finalizado → Entrega real' : 'Pedido Finalizado → Entrega'), y: [finished * 1000, delivery * 1000], fillColor: '#F2C811' });
+                    points.push({ x: (useActual ? '✅ → 🚚 Fin Producción → Entrega real' : '✅ → 🚚 Fin Producción → Entrega'), y: [finished * 1000, delivery * 1000], fillColor: '#F2C811' });
                 }
 
                 try { console.log('[RB] order points', { key, pointsCount: points.length, points }); } catch(e) {}
@@ -1154,9 +1172,9 @@
                 const c3e = median.delivery_end_ts ?? 0;
 
                 const points = [];
-                if (c1e > c1s) points.push({ x: 'Tiempo Recepción Pedido → Puesto en Fabricación', y: [c1s, c1e], fillColor: '#118DFF' });
-                if (c2e > c2s) points.push({ x: 'Tiempo Recepción Pedido → Pedido Finalizado', y: [c2s, c2e], fillColor: '#21A366' });
-                if (c3e > c3s) points.push({ x: (useActual ? 'Pedido Finalizado → Entrega real' : 'Pedido Finalizado → Entrega'), y: [c3s, c3e], fillColor: '#F2C811' });
+                if (c1e > c1s) points.push({ x: '📥 → 🏭 Pedido Cliente → Lanzamiento Producción', y: [c1s, c1e], fillColor: '#118DFF' });
+                if (c2e > c2s) points.push({ x: '📥 → ✅ Pedido Cliente → Fin Producción', y: [c2s, c2e], fillColor: '#21A366' });
+                if (c3e > c3s) points.push({ x: (useActual ? '✅ → 🚚 Fin Producción → Entrega real' : '✅ → 🚚 Fin Producción → Entrega'), y: [c3s, c3e], fillColor: '#F2C811' });
 
                 try { console.log('[MRB] median points', { key, pointsCount: points.length, points }); } catch(e) {}
 
@@ -1246,9 +1264,9 @@
                 const c3e = typeof avg.delivery_end_ts === 'number' ? avg.delivery_end_ts : null;
 
                 const points = [];
-                if (typeof c1e === 'number' && c1e > c1s) points.push({ x: 'Tiempo Recepción Pedido → Puesto en Fabricación', y: [c1s, c1e], fillColor: '#118DFF' });
-                if (typeof c2e === 'number' && c2e > c2s) points.push({ x: 'Tiempo Recepción Pedido → Pedido Finalizado', y: [c2s, c2e], fillColor: '#21A366' });
-                if (typeof c3e === 'number' && c3e > c3s) points.push({ x: (useActual ? 'Pedido Finalizado → Entrega real' : 'Pedido Finalizado → Entrega'), y: [c3s, c3e], fillColor: '#F2C811' });
+                if (typeof c1e === 'number' && c1e > c1s) points.push({ x: '📥 → 🏭 Pedido Cliente → Lanzamiento Producción', y: [c1s, c1e], fillColor: '#118DFF' });
+                if (typeof c2e === 'number' && c2e > c2s) points.push({ x: '📥 → ✅ Pedido Cliente → Fin Producción', y: [c2s, c2e], fillColor: '#21A366' });
+                if (typeof c3e === 'number' && c3e > c3s) points.push({ x: (useActual ? '✅ → 🚚 Fin Producción → Entrega real' : '✅ → 🚚 Fin Producción → Entrega'), y: [c3s, c3e], fillColor: '#F2C811' });
 
                 try { console.log('[RB] avg points', { key, pointsCount: points.length, points }); } catch(e) {}
 
@@ -1318,21 +1336,21 @@
                 const points = [];
                 if (typeof c1e === 'number' && c1e > c1s) {
                     points.push({
-                        x: 'Tiempo Recepción Pedido → Puesto en Fabricación (lab.)',
+                        x: 'Tiempo Pedido Cliente → Lanzamiento Producción (lab.)',
                         y: [c1s, c1e],
                         fillColor: '#118DFF'
                     });
                 }
                 if (typeof c2e === 'number' && c2e > c2s) {
                     points.push({
-                        x: 'Tiempo Recepción Pedido → Pedido Finalizado (lab.)',
+                        x: 'Tiempo Pedido Cliente → Fin Producción (lab.)',
                         y: [c2s, c2e],
                         fillColor: '#21A366'
                     });
                 }
                 if (typeof c3e === 'number' && c3e > c3s) {
                     points.push({
-                        x: (useActual ? 'Pedido Finalizado → Entrega real (lab.)' : 'Pedido Finalizado → Entrega (lab.)'),
+                        x: (useActual ? 'Fin Producción → Entrega real (lab.)' : 'Fin Producción → Entrega (lab.)'),
                         y: [c3s, c3e],
                         fillColor: '#F2C811'
                     });
@@ -1414,21 +1432,21 @@
                 const points = [];
                 if (typeof c1e === 'number' && c1e > c1s) {
                     points.push({
-                        x: 'Tiempo Recepción Pedido → Puesto en Fabricación (lab.)',
+                        x: 'Tiempo Pedido Cliente → Lanzamiento Producción (lab.)',
                         y: [c1s, c1e],
                         fillColor: '#118DFF'
                     });
                 }
                 if (typeof c2e === 'number' && c2e > c2s) {
                     points.push({
-                        x: 'Tiempo Recepción Pedido → Pedido Finalizado (lab.)',
+                        x: 'Tiempo Pedido Cliente → Fin Producción (lab.)',
                         y: [c2s, c2e],
                         fillColor: '#21A366'
                     });
                 }
                 if (typeof c3e === 'number' && c3e > c3s) {
                     points.push({
-                        x: (useActual ? 'Pedido Finalizado → Entrega real (lab.)' : 'Pedido Finalizado → Entrega (lab.)'),
+                        x: (useActual ? 'Fin Producción → Entrega real (lab.)' : 'Fin Producción → Entrega (lab.)'),
                         y: [c3s, c3e],
                         fillColor: '#F2C811'
                     });
@@ -1750,8 +1768,7 @@
 
             function updateSummary(summary) {
                 latestSummary = summary;
-                $('#kpi-orders-total').text(summary?.orders_total ?? 0);
-                $('#kpi-processes-total').text(summary?.processes_total ?? 0);
+                // Los KPIs de tiempo de espera ya se actualizan más abajo en las líneas 1900-1901
 
                 // ERP to Finish (promedio)
                 const erpFinishSeconds = summary?.orders_avg_erp_to_finished ?? 0;
@@ -2125,10 +2142,10 @@
                                         const de = typeof avgTimeline.delivery_end_ts === 'number' ? avgTimeline.delivery_end_ts : null;
                                         if (!ab || ce == null || fe == null || de == null) return '';
                                         const items = [
-                                            { label: 'Recepción Pedido → Pedido Finalizado', value: formatSeconds(fe), color: 'segment-success' },
-                                            { label: useActualDelivery ? 'Recepción Pedido → Entrega Pedido' : 'Recepción Pedido → Entrega Pedido', value: formatSeconds(de), color: 'segment-warning' },
-                                            { label: 'Tiempo Puesto en Producción → Pedido Finalizado', value: formatSeconds(Math.max(0, fe - ce)), color: 'segment-success' },
-                                            { label: useActualDelivery ? 'Puesto en Fabricación → Entrega Pedido' : 'Tiempo Puesto en Producción → Entrega Pedido', value: formatSeconds(Math.max(0, de - ce)), color: 'segment-warning' }
+                                            { label: '<i class="fas fa-inbox text-primary"></i> → <i class="fas fa-check-circle text-success"></i> Pedido Cliente → Fin Producción', value: formatSeconds(fe), color: 'segment-success' },
+                                            { label: useActualDelivery ? '<i class="fas fa-inbox text-primary"></i> → <i class="fas fa-truck text-warning"></i> Pedido Cliente → Entrega a Cliente' : '<i class="fas fa-inbox text-primary"></i> → <i class="fas fa-truck text-warning"></i> Pedido Cliente → Entrega a Cliente', value: formatSeconds(de), color: 'segment-warning' },
+                                            { label: '<i class="fas fa-industry text-info"></i> → <i class="fas fa-check-circle text-success"></i> Tiempo Lanzamiento Producción → Fin Producción', value: formatSeconds(Math.max(0, fe - ce)), color: 'segment-success' },
+                                            { label: useActualDelivery ? '<i class="fas fa-industry text-info"></i> → <i class="fas fa-truck text-warning"></i> Lanzamiento Producción → Entrega a Cliente' : '<i class="fas fa-industry text-info"></i> → <i class="fas fa-truck text-warning"></i> Tiempo Lanzamiento Producción → Entrega a Cliente', value: formatSeconds(Math.max(0, de - ce)), color: 'segment-warning' }
                                         ];
                                         return `<div class="timeline-summary-inline mt-3">${items.map(item => `
                                             <div class="timeline-chip">
@@ -2159,10 +2176,10 @@
                                         const de = typeof medianTimeline.delivery_end_ts === 'number' ? medianTimeline.delivery_end_ts : null;
                                         if (!mb || ce == null || fe == null || de == null) return '';
                                         const items = [
-                                            { label: 'Tiempo Recepción Pedido → Pedido Finalizado:', value: formatSeconds(fe), color: 'segment-success' },
-                                            { label: useActualDelivery ? 'Recepción Pedido  → Entrega Pedido' : 'Recepción Pedido  → Entrega Pedido', value: formatSeconds(de), color: 'segment-warning' },
-                                            { label: 'Tiempo Puesto en Producción → Pedido Finalizado: ', value: formatSeconds(Math.max(0, fe - ce)), color: 'segment-success' },
-                                            { label: useActualDelivery ? 'Tiempo Puesto en Producción → Entrega Pedido' : 'Tiempo Puesto en Producción → Entrega Pedido:', value: formatSeconds(Math.max(0, de - ce)), color: 'segment-warning' }
+                                            { label: '<i class="fas fa-inbox text-primary"></i> → <i class="fas fa-check-circle text-success"></i> Tiempo Pedido Cliente → Fin Producción', value: formatSeconds(fe), color: 'segment-success' },
+                                            { label: useActualDelivery ? '<i class="fas fa-inbox text-primary"></i> → <i class="fas fa-truck text-warning"></i> Pedido Cliente → Entrega a Cliente' : '<i class="fas fa-inbox text-primary"></i> → <i class="fas fa-truck text-warning"></i> Pedido Cliente → Entrega a Cliente', value: formatSeconds(de), color: 'segment-warning' },
+                                            { label: '<i class="fas fa-industry text-info"></i> → <i class="fas fa-check-circle text-success"></i> Tiempo Lanzamiento Producción → Fin Producción', value: formatSeconds(Math.max(0, fe - ce)), color: 'segment-success' },
+                                            { label: useActualDelivery ? '<i class="fas fa-industry text-info"></i> → <i class="fas fa-truck text-warning"></i> Tiempo Lanzamiento Producción → Entrega a Cliente' : '<i class="fas fa-industry text-info"></i> → <i class="fas fa-truck text-warning"></i> Tiempo Lanzamiento Producción → Entrega a Cliente', value: formatSeconds(Math.max(0, de - ce)), color: 'segment-warning' }
                                         ];
                                         return `<div class="timeline-summary-inline mt-3">${items.map(item => `
                                             <div class="timeline-chip">
@@ -2207,10 +2224,10 @@
                                             const awb = avgWorkingBounds;
                                             if (!awb) return '<div class="text-muted small text-center py-3">No hay datos suficientes</div>';
                                             const items = [
-                                                { label: '🟢 Días laborables ERP → Finalizado', value: `${avgTimelineWorking.erp_to_finished_days ?? 0}d (${Math.round(avgTimelineWorking.erp_to_finished_hours ?? 0)}h)`, color: 'segment-success' },
-                                                { label: '🔘 Días no laborables ERP → Finalizado', value: `${avgTimelineWorking.erp_to_finished_non_working_days ?? 0}d`, color: 'segment-secondary' },
-                                                { label: '🟢 Días laborables Creado → Finalizado', value: `${avgTimelineWorking.created_to_finished_days ?? 0}d (${Math.round(avgTimelineWorking.created_to_finished_hours ?? 0)}h)`, color: 'segment-success' },
-                                                { label: '🔘 Días no laborables Creado → Finalizado', value: `${avgTimelineWorking.created_to_finished_non_working_days ?? 0}d`, color: 'segment-secondary' }
+                                                { label: '🟢 Días laborables Pedido Cliente → Fin Producción', value: `${(avgTimelineWorking.erp_to_finished_days ?? 0).toFixed(1)}d (${Math.round(avgTimelineWorking.erp_to_finished_hours ?? 0)}h)`, color: 'segment-success' },
+                                                { label: '🔘 Días no laborables Pedido Cliente → Fin Producción', value: `${(avgTimelineWorking.erp_to_finished_non_working_days ?? 0).toFixed(1)}d`, color: 'segment-secondary' },
+                                                { label: '🟢 Días laborables Puesto en fabricación → Fin Producción', value: `${(avgTimelineWorking.created_to_finished_days ?? 0).toFixed(1)}d (${Math.round(avgTimelineWorking.created_to_finished_hours ?? 0)}h)`, color: 'segment-success' },
+                                                { label: '🔘 Días no laborables Puesto en fabricación → Fin Producción', value: `${(avgTimelineWorking.created_to_finished_non_working_days ?? 0).toFixed(1)}d`, color: 'segment-secondary' }
                                             ];
                                             return `<div class="timeline-summary-inline mt-3">${items.map(item => `
                                                 <div class="timeline-chip">
@@ -2236,10 +2253,10 @@
                                             const mwb = medianWorkingBounds;
                                             if (!mwb) return '<div class="text-muted small text-center py-3">No hay datos suficientes</div>';
                                             const items = [
-                                                { label: '🟢 Días laborables ERP → Finalizado', value: `${medianTimelineWorking.erp_to_finished_days ?? 0}d (${Math.round(medianTimelineWorking.erp_to_finished_hours ?? 0)}h)`, color: 'segment-success' },
-                                                { label: '🔘 Días no laborables ERP → Finalizado', value: `${medianTimelineWorking.erp_to_finished_non_working_days ?? 0}d`, color: 'segment-secondary' },
-                                                { label: '🟢 Días laborables Creado → Finalizado', value: `${medianTimelineWorking.created_to_finished_days ?? 0}d (${Math.round(medianTimelineWorking.created_to_finished_hours ?? 0)}h)`, color: 'segment-success' },
-                                                { label: '🔘 Días no laborables Creado → Finalizado', value: `${medianTimelineWorking.created_to_finished_non_working_days ?? 0}d`, color: 'segment-secondary' }
+                                                { label: '🟢 Días laborables Pedido Cliente → Fin Producción', value: `${(medianTimelineWorking.erp_to_finished_days ?? 0).toFixed(1)}d (${Math.round(medianTimelineWorking.erp_to_finished_hours ?? 0)}h)`, color: 'segment-success' },
+                                                { label: '🔘 Días no laborables Pedido Cliente → Fin Producción', value: `${(medianTimelineWorking.erp_to_finished_non_working_days ?? 0).toFixed(1)}d`, color: 'segment-secondary' },
+                                                { label: '🟢 Días laborables Puesto en fabricación → Fin Producción', value: `${(medianTimelineWorking.created_to_finished_days ?? 0).toFixed(1)}d (${Math.round(medianTimelineWorking.created_to_finished_hours ?? 0)}h)`, color: 'segment-success' },
+                                                { label: '🔘 Días no laborables Puesto en fabricación → Fin Producción', value: `${(medianTimelineWorking.created_to_finished_non_working_days ?? 0).toFixed(1)}d`, color: 'segment-secondary' }
                                             ];
                                             return `<div class="timeline-summary-inline mt-3">${items.map(item => `
                                                 <div class="timeline-chip">
@@ -2587,12 +2604,12 @@
                 return `${prefix}${formatTime(Math.abs(parsed))}`;
             }
 
-            // Análisis 1: Tiempo Recepción Pedido → Puesto en Fabricación
+            // Análisis 1: Tiempo Pedido Cliente → Lanzamiento Producción
             function collectErpToCreatedData() {
                 const table = $('#production-times-table').DataTable();
                 if (!table) {
                     console.error('[AI] DataTable no inicializada');
-                    return { metrics: {}, csv: '', type: 'Tiempo Recepción Pedido → Puesto en Fabricación' };
+                    return { metrics: {}, csv: '', type: 'Tiempo Pedido Cliente → Lanzamiento Producción' };
                 }
 
                 const metrics = {
@@ -2608,11 +2625,11 @@
                 };
 
                 // CSV mejorado con días laborables y no laborables
-                let csv = 'Order_ID,Cliente,Fecha_ERP_ISO,Fecha_Creado_ISO,Tiempo_Segundos,Tiempo_Formato,Dias_Laborables,Dias_No_Laborables,Dias_Totales\n';
+                let csv = 'Order_ID,Cliente,Fecha_Pedido_Cliente_ISO,Fecha_Lanzamiento_Produccion_ISO,Tiempo_Segundos,Tiempo_Formato,Dias_Laborables,Dias_No_Laborables,Dias_Totales\n';
                 let count = 0;
                 const maxRows = 150;
 
-                console.log('[AI] Recolectando datos ERP→Creación...');
+                console.log('[AI] Recolectando datos Pedido Cliente→Lanzamiento Producción...');
                 const rowsData = table.rows({search: 'applied'}).data();
                 console.log('[AI] Total rows disponibles:', rowsData.length);
                 
@@ -2620,8 +2637,8 @@
                     console.warn('[AI] No hay datos en la tabla. Asegúrate de haber aplicado los filtros primero.');
                     return {
                         metrics,
-                        csv: 'Order_ID,Cliente,Fecha_ERP_ISO,Fecha_Creado_ISO,Tiempo_Segundos,Tiempo_Formato,Dias_Laborables,Dias_No_Laborables,Dias_Totales\n',
-                        type: 'Tiempo Recepción Pedido → Puesto en Fabricación',
+                        csv: 'Order_ID,Cliente,Fecha_Pedido_Cliente_ISO,Fecha_Lanzamiento_Produccion_ISO,Tiempo_Segundos,Tiempo_Formato,Dias_Laborables,Dias_No_Laborables,Dias_Totales\n',
+                        type: 'Tiempo Pedido Cliente → Lanzamiento Producción',
                         note: 'Sin datos disponibles'
                     };
                 }
@@ -2654,15 +2671,15 @@
                 console.log('[AI] Primeras 200 caracteres del CSV:', csv.substring(0, 200));
                 
                 const note = count >= maxRows ? `Mostrando primeras ${maxRows} órdenes` : `Total: ${count} órdenes`;
-                return { metrics, csv, type: 'Tiempo Recepción Pedido → Puesto en Fabricación', note };
+                return { metrics, csv, type: 'Tiempo Pedido Cliente → Lanzamiento Producción', note };
             }
 
-            // Análisis 2: Tiempo Puesto en Fabricación → Pedido Finalizado
+            // Análisis 2: Tiempo Lanzamiento Producción → Fin Producción
             function collectCreatedToFinishedData() {
                 const table = $('#production-times-table').DataTable();
                 if (!table) {
                     console.error('[AI] DataTable no inicializada');
-                    return { metrics: {}, csv: '', type: 'Tiempo Puesto en Fabricación → Pedido Finalizado' };
+                    return { metrics: {}, csv: '', type: 'Tiempo Lanzamiento Producción → Fin Producción' };
                 }
 
                 const metrics = {
@@ -2672,8 +2689,8 @@
                     dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
                 };
 
-                // CSV: Order_ID, Cliente, Fecha_Creado_ISO, Fecha_Fin_ISO, Tiempo_Creado_a_Fin_Segundos, Tiempo_Creado_a_Fin_Formato
-                let csv = 'Order_ID,Cliente,Fecha_Creado_ISO,Fecha_Fin_ISO,Tiempo_Creado_a_Fin_Segundos,Tiempo_Creado_a_Fin_Formato\n';
+                // CSV: Order_ID, Cliente, Fecha_Lanzamiento_Produccion_ISO, Fecha_Fin_Produccion_ISO, Tiempo_Lanzamiento_a_Fin_Produccion_Segundos, Tiempo_Lanzamiento_a_Fin_Produccion_Formato
+                let csv = 'Order_ID,Cliente,Fecha_Lanzamiento_Produccion_ISO,Fecha_Fin_Produccion_ISO,Tiempo_Lanzamiento_a_Fin_Produccion_Segundos,Tiempo_Lanzamiento_a_Fin_Produccion_Formato\n';
                 let count = 0;
                 const maxRows = 150;
 
@@ -2692,15 +2709,15 @@
                 });
 
                 const note = count >= maxRows ? `Mostrando primeras ${maxRows} órdenes` : `Total: ${count} órdenes`;
-                return { metrics, csv, type: 'Tiempo Puesto en Fabricación → Pedido Finalizado', note };
+                return { metrics, csv, type: 'Tiempo Lanzamiento Producción → Fin Producción', note };
             }
 
-            // Análisis adicional: Pedido Finalizado → Entrega
+            // Análisis adicional: Fin Producción → Entrega
             function collectFinishToDeliveryData() {
                 const table = $('#production-times-table').DataTable();
                 if (!table) {
                     console.error('[AI] DataTable no inicializada');
-                    return { metrics: {}, csv: '', type: 'Pedido Finalizado → Entrega' };
+                    return { metrics: {}, csv: '', type: 'Fin Producción → Entrega' };
                 }
 
                 const header = 'Order_ID,Cliente,Fecha_Fin_ISO,Fecha_Entrega_Usada_ISO,Fecha_Entrega_Planificada_ISO,Fecha_Entrega_Real_ISO,Tiempo_Fin_a_Entrega_Segundos,Tiempo_Fin_a_Entrega_Formato,Retraso_vs_Plan_Segundos,Retraso_vs_Plan_Formato\n';
@@ -2730,7 +2747,7 @@
                         deliveryReference,
                         dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
                     };
-                    return { metrics, csv: header, type: 'Pedido Finalizado → Entrega', note: 'Sin datos disponibles' };
+                    return { metrics, csv: header, type: 'Fin Producción → Entrega', note: 'Sin datos disponibles' };
                 }
 
                 let count = 0;
@@ -2787,7 +2804,7 @@
                 };
 
                 const note = count >= maxRows ? `Mostrando primeras ${maxRows} órdenes` : `Total: ${count} órdenes`;
-                return { metrics, csv, type: 'Pedido Finalizado → Entrega', note };
+                return { metrics, csv, type: 'Fin Producción → Entrega', note };
             }
 
             // Análisis 3: Rendimiento de Órdenes (mantener como referencia)
@@ -2806,8 +2823,8 @@
                     dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
                 };
 
-                // CSV reducido: Order_ID, Cliente, Fecha_ERP_ISO, Tiempo_ERP_a_Fin_Segundos, Tiempo_ERP_a_Fin_Formato, Tiempo_Creado_a_Fin_Segundos, Tiempo_Creado_a_Fin_Formato
-                let csv = 'Order_ID,Cliente,Fecha_ERP_ISO,Tiempo_ERP_a_Fin_Segundos,Tiempo_ERP_a_Fin_Formato,Tiempo_Creado_a_Fin_Segundos,Tiempo_Creado_a_Fin_Formato\n';
+                // CSV reducido: Order_ID, Cliente, Fecha_Pedido_Cliente_ISO, Tiempo_Pedido_Cliente_a_Fin_Produccion_Segundos, Tiempo_Pedido_Cliente_a_Fin_Produccion_Formato, Tiempo_Lanzamiento_a_Fin_Produccion_Segundos, Tiempo_Lanzamiento_a_Fin_Produccion_Formato
+                let csv = 'Order_ID,Cliente,Fecha_Pedido_Cliente_ISO,Tiempo_Pedido_Cliente_a_Fin_Produccion_Segundos,Tiempo_Pedido_Cliente_a_Fin_Produccion_Formato,Tiempo_Lanzamiento_a_Fin_Produccion_Segundos,Tiempo_Lanzamiento_a_Fin_Produccion_Formato\n';
                 let count = 0;
                 const maxRows = 150;
 
@@ -2939,7 +2956,7 @@
                     return { metrics: {}, csv: '', type: 'Alertas de brechas' };
                 }
 
-                const header = 'Order_ID,Cliente,Procesos_Afectados,Gap_Total_Segundos,Gap_Total_Formato,Gap_Maximo_Segundos,Gap_Maximo_Formato,Gap_Promedio_Segundos,Gap_Promedio_Formato\n';
+                const header = 'Order_ID,Cliente,Procesos_Afectados,Tiempo_Espera_Total_Segundos,Tiempo_Espera_Total_Formato,Tiempo_Espera_Maximo_Segundos,Tiempo_Espera_Maximo_Formato,Tiempo_Espera_Promedio_Segundos,Tiempo_Espera_Promedio_Formato\n';
                 let csv = header;
                 const rows = table.rows({search: 'applied'}).data();
 
@@ -3017,12 +3034,12 @@
                 return { metrics, csv, type: 'Alertas de brechas', note };
             }
 
-            // Análisis 4: Gaps por Proceso
+            // Análisis 4: Tiempos de espera por Proceso
             function collectProcessGapsData() {
                 const table = $('#production-times-table').DataTable();
                 if (!table) {
                     console.error('[AI] DataTable no inicializada');
-                    return { metrics: {}, csv: '', type: 'Gaps por Proceso' };
+                    return { metrics: {}, csv: '', type: 'Tiempos de espera por Proceso' };
                 }
 
                 const metrics = {
@@ -3031,8 +3048,8 @@
                     dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
                 };
 
-                // CSV: Order_ID, Codigo_Proceso, Nombre_Proceso, Gap_Segundos, Gap_Formato, Duracion_Segundos, Duracion_Formato
-                let csv = 'Order_ID,Codigo_Proceso,Nombre_Proceso,Gap_Segundos,Gap_Formato,Duracion_Segundos,Duracion_Formato\n';
+                // CSV: Order_ID, Codigo_Proceso, Nombre_Proceso, Tiempo_Espera_Segundos, Tiempo_Espera_Formato, Duracion_Segundos, Duracion_Formato
+                let csv = 'Order_ID,Codigo_Proceso,Nombre_Proceso,Tiempo_Espera_Segundos,Tiempo_Espera_Formato,Duracion_Segundos,Duracion_Formato\n';
                 let count = 0;
                 const maxRows = 100;
 
@@ -3059,7 +3076,7 @@
                 });
 
                 const note = count >= maxRows ? `Mostrando primeros ${maxRows} procesos` : `Total: ${count} procesos`;
-                return { metrics, csv, type: 'Gaps por Proceso', note };
+                return { metrics, csv, type: 'Tiempos de espera por Proceso', note };
             }
 
             // Análisis 5: Por Cliente
@@ -3105,8 +3122,8 @@
                     totalOrders++;
                 });
 
-                // CSV: Cliente, Cantidad_Ordenes, Ordenes_IDs, Tiempo_ERP_a_Fin_Promedio_Segundos, Tiempo_ERP_a_Fin_Promedio_Formato, Tiempo_Creado_a_Fin_Promedio_Segundos, Tiempo_Creado_a_Fin_Promedio_Formato
-                let csv = 'Cliente,Cantidad_Ordenes,Ordenes_IDs,Tiempo_ERP_a_Fin_Promedio_Segundos,Tiempo_ERP_a_Fin_Promedio_Formato,Tiempo_Creado_a_Fin_Promedio_Segundos,Tiempo_Creado_a_Fin_Promedio_Formato\n';
+                // CSV: Cliente, Cantidad_Ordenes, Ordenes_IDs, Tiempo_Pedido_Cliente_a_Fin_Produccion_Promedio_Segundos, Tiempo_Pedido_Cliente_a_Fin_Produccion_Promedio_Formato, Tiempo_Lanzamiento_a_Fin_Produccion_Promedio_Segundos, Tiempo_Lanzamiento_a_Fin_Produccion_Promedio_Formato
+                let csv = 'Cliente,Cantidad_Ordenes,Ordenes_IDs,Tiempo_Pedido_Cliente_a_Fin_Produccion_Promedio_Segundos,Tiempo_Pedido_Cliente_a_Fin_Produccion_Promedio_Formato,Tiempo_Lanzamiento_a_Fin_Produccion_Promedio_Segundos,Tiempo_Lanzamiento_a_Fin_Produccion_Promedio_Formato\n';
                 for (const [cliente, data] of Object.entries(clientData)) {
                     const orderIds = data.orders.slice(0, 5).map(o => o.orderId).join(' | ');
                     const suffix = data.count > 5 ? ` (+${data.count - 5} más)` : '';
@@ -3174,8 +3191,8 @@
                 allProcesses.sort((a, b) => b.durationSec - a.durationSec);
                 const slowest = allProcesses.slice(0, 30);
 
-                // CSV: Order_ID, Codigo_Proceso, Nombre_Proceso, Duracion_Segundos, Duracion_Formato, Gap_Segundos, Gap_Formato
-                let csv = 'Order_ID,Codigo_Proceso,Nombre_Proceso,Duracion_Segundos,Duracion_Formato,Gap_Segundos,Gap_Formato\n';
+                // CSV: Order_ID, Codigo_Proceso, Nombre_Proceso, Duracion_Segundos, Duracion_Formato, Tiempo_Espera_Segundos, Tiempo_Espera_Formato
+                let csv = 'Order_ID,Codigo_Proceso,Nombre_Proceso,Duracion_Segundos,Duracion_Formato,Tiempo_Espera_Segundos,Tiempo_Espera_Formato\n';
                 slowest.forEach(proc => {
                     const duracionSec = typeof proc.durationSec === 'number' ? String(proc.durationSec) : '0';
                     const gapSec = durationToSeconds(proc.gap || '00:00:00');
@@ -3215,7 +3232,7 @@
                 const top10 = allOrders.slice(0, 10);
                 const bottom10 = allOrders.slice(-10);
 
-                let csv = 'Tipo,Order_ID,Cliente,Tiempo_ERP_a_Fin_Segundos,Tiempo_ERP_a_Fin_Formato,Tiempo_Creado_a_Fin_Segundos,Tiempo_Creado_a_Fin_Formato\n';
+                let csv = 'Tipo,Order_ID,Cliente,Tiempo_Pedido_Cliente_a_Fin_Produccion_Segundos,Tiempo_Pedido_Cliente_a_Fin_Produccion_Formato,Tiempo_Lanzamiento_a_Fin_Produccion_Segundos,Tiempo_Lanzamiento_a_Fin_Produccion_Formato\n';
                 csv += '# TOP 10 (Más rápidas)\n';
                 top10.forEach(o => {
                     const erpSegRaw = durationToSeconds(o.tiempoTotal || '00:00:00');
@@ -3244,29 +3261,31 @@
 
                 const metrics = {
                     ordersTotal: $('#kpi-orders-total').text() || '0',
-                    avgErpFinishWorkingDays: Math.round(latestSummary?.orders_avg_erp_to_finished_working_days ?? 0) + 'd',
-                    avgErpFinishNonWorkingDays: Math.round(latestSummary?.orders_avg_erp_to_finished_non_working_days ?? 0) + 'd',
-                    avgCreatedFinishWorkingDays: Math.round(latestSummary?.orders_avg_created_to_finished_working_days ?? 0) + 'd',
-                    avgCreatedFinishNonWorkingDays: Math.round(latestSummary?.orders_avg_created_to_finished_non_working_days ?? 0) + 'd',
-                    efficiencyRatio: latestSummary?.orders_avg_erp_to_finished_working_days > 0
-                        ? `${((latestSummary.orders_avg_erp_to_finished_working_days / (latestSummary.orders_avg_erp_to_finished_working_days + latestSummary.orders_avg_erp_to_finished_non_working_days)) * 100).toFixed(1)}%`
+                    avgWorkingDays: Math.round(latestSummary?.orders_avg_created_to_finished_working_days ?? 0) + 'd',
+                    avgCalendarDays: Math.round(latestSummary?.orders_avg_created_to_finished_calendar_days ?? 0) + 'd',
+                    efficiencyRatio: latestSummary?.orders_avg_created_to_finished_working_days > 0 && latestSummary?.orders_avg_created_to_finished_calendar_days > 0
+                        ? `${((latestSummary.orders_avg_created_to_finished_working_days / latestSummary.orders_avg_created_to_finished_calendar_days) * 100).toFixed(1)}%`
                         : '-',
                     dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
                 };
 
-                let csv = 'Order_ID,Cliente,ERP_Fin_Dias_Lab,ERP_Fin_Dias_NoLab,Creado_Fin_Dias_Lab,Creado_Fin_Dias_NoLab,Eficiencia_Pct\n';
+                let csv = 'Order_ID,Cliente,Fecha_Creado_ISO,Fecha_Fin_ISO,Tiempo_Creado_a_Fin_Segundos,Tiempo_Creado_a_Fin_Formato,Dias_Calendario,Dias_Laborables,Eficiencia_Laborable\n';
                 let count = 0;
                 table.rows({search: 'applied'}).data().each(function(row) {
                     if (count >= 150) return false;
                     const orderId = cleanValue(safeValue(row.order_id, '0'));
                     const cliente = cleanValue(safeValue(row.customer_client_name, 'Sin cliente'));
-                    const erpFinLab = cleanValue(safeValue(row.erp_to_finished_working_days, '0'));
-                    const erpFinNoLab = cleanValue(safeValue(row.erp_to_finished_non_working_days, '0'));
-                    const creFinLab = cleanValue(safeValue(row.created_to_finished_working_days, '0'));
-                    const creFinNoLab = cleanValue(safeValue(row.created_to_finished_non_working_days, '0'));
-                    const totalDays = parseInt(erpFinLab) + parseInt(erpFinNoLab);
-                    const efficiency = totalDays > 0 ? ((parseInt(erpFinLab) / totalDays) * 100).toFixed(1) : '0';
-                    csv += `${orderId},${cliente},${erpFinLab},${erpFinNoLab},${creFinLab},${creFinNoLab},${efficiency}\n`;
+                    const fechaCreadoIso = cleanValue(normalizeDateTime(row.created_at));
+                    const fechaFinIso = cleanValue(normalizeDateTime(row.finished_at));
+                    const tiempoCreadoFinFormato = safeValue(row.created_to_finished_formatted, '00:00:00');
+                    const tiempoCreadoFinSegundosRaw = durationToSeconds(tiempoCreadoFinFormato);
+                    const tiempoCreadoFinSegundos = cleanValue(tiempoCreadoFinSegundosRaw !== '' ? tiempoCreadoFinSegundosRaw : '0');
+                    const diasCalendario = cleanValue(safeValue(row.created_to_finished_calendar_days, '0'));
+                    const diasLaborables = cleanValue(safeValue(row.created_to_finished_working_days, '0'));
+                    const diasCal = parseInt(diasCalendario) || 0;
+                    const diasLab = parseInt(diasLaborables) || 0;
+                    const eficiencia = diasCal > 0 ? `${((diasLab / diasCal) * 100).toFixed(1)}%` : '0%';
+                    csv += `${orderId},${cliente},${fechaCreadoIso},${fechaFinIso},${tiempoCreadoFinSegundos},${cleanValue(tiempoCreadoFinFormato)},${diasCalendario},${diasLaborables},${eficiencia}\n`;
                     count++;
                 });
 
@@ -3297,12 +3316,14 @@
                     dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
                 };
 
-                let csv = 'Order_ID,Cliente,Total_Dias_NoLaborables,Total_Dias_Laborables,Pct_Impacto_NoLaborables,Dias_Totales\n';
+                let csv = 'Order_ID,Cliente,Fecha_Creado_ISO,Fecha_Fin_ISO,Dias_No_Laborables_Atravesados,Retraso_Atribuible_Calendario_Segundos,Retraso_Atribuible_Calendario_Formato,Impacto_Porcentaje\n';
                 let count = 0;
                 table.rows({search: 'applied'}).data().each(function(row) {
                     if (count >= 150) return false;
                     const orderId = cleanValue(safeValue(row.order_id, '0'));
                     const cliente = cleanValue(safeValue(row.customer_client_name, 'Sin cliente'));
+                    const fechaCreadoIso = cleanValue(normalizeDateTime(row.created_at));
+                    const fechaFinIso = cleanValue(normalizeDateTime(row.finished_at));
                     const erpCreNoLab = parseInt(safeValue(row.erp_to_created_non_working_days, '0'));
                     const creFinNoLab = parseInt(safeValue(row.created_to_finished_non_working_days, '0'));
                     const erpCreLab = parseInt(safeValue(row.erp_to_created_working_days, '0'));
@@ -3310,8 +3331,11 @@
                     const totalNoLab = erpCreNoLab + creFinNoLab;
                     const totalLab = erpCreLab + creFinLab;
                     const totalDias = totalNoLab + totalLab;
-                    const impact = totalDias > 0 ? ((totalNoLab / totalDias) * 100).toFixed(1) : '0';
-                    csv += `${orderId},${cliente},${totalNoLab},${totalLab},${impact},${totalDias}\n`;
+                    // Estimamos el retraso como días no laborables * 24 horas en segundos
+                    const retrasoSegundos = totalNoLab * 24 * 3600;
+                    const retrasoFormato = formatTime(retrasoSegundos);
+                    const impact = totalDias > 0 ? `${((totalNoLab / totalDias) * 100).toFixed(1)}%` : '0%';
+                    csv += `${orderId},${cliente},${fechaCreadoIso},${fechaFinIso},${totalNoLab},${retrasoSegundos},${retrasoFormato},${impact}\n`;
                     count++;
                 });
 
@@ -3320,7 +3344,7 @@
 
             // NUEVO: Detección de Cuellos de Botella
             function collectBottleneckAnalysisData() {
-                return collectProcessGapsData(); // Reutiliza análisis de gaps pero con contexto diferente
+                return collectProcessGapsData(); // Reutiliza análisis de tiempos de espera pero con contexto diferente
             }
 
             // NUEVO: Planificación de Capacidad
@@ -3328,31 +3352,227 @@
                 const table = $('#production-times-table').DataTable();
                 if (!table) return { metrics: {}, csv: '', type: 'Planificación de Capacidad' };
 
-                const metrics = {
-                    ordersTotal: $('#kpi-orders-total').text() || '0',
-                    processesTotal: $('#kpi-processes-total').text() || '0',
-                    avgWorkingDaysPerOrder: Math.round(latestSummary?.orders_avg_created_to_finished_working_days ?? 0) + 'd',
-                    dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`,
-                    recommendedCapacity: 'Ver análisis IA para recomendaciones'
-                };
+                // Agrupar órdenes por semana
+                const periodData = {};
+                const clientsByPeriod = {};
 
-                let csv = 'Order_ID,Cliente,Dias_Laborables_Produccion,Procesos_Count,Intensidad_Promedio\n';
-                let count = 0;
                 table.rows({search: 'applied'}).data().each(function(row) {
-                    if (count >= 150) return false;
-                    const orderId = cleanValue(safeValue(row.order_id, '0'));
-                    const cliente = cleanValue(safeValue(row.customer_client_name, 'Sin cliente'));
-                    const diasLab = cleanValue(safeValue(row.created_to_finished_working_days, '0'));
-                    csv += `${orderId},${cliente},${diasLab},N/A,N/A\n`;
-                    count++;
+                    // Usar fecha de lanzamiento para agrupar
+                    const fechaCreado = row.created_at;
+                    if (!fechaCreado || fechaCreado === '0000-00-00 00:00:00') return;
+
+                    const date = new Date(fechaCreado);
+                    if (isNaN(date.getTime())) return;
+
+                    // Obtener semana (formato: YYYY-Wxx)
+                    const year = date.getFullYear();
+                    const weekNum = getWeekNumber(date);
+                    const periodo = `${year}-W${String(weekNum).padStart(2, '0')}`;
+
+                    if (!periodData[periodo]) {
+                        periodData[periodo] = {
+                            ordenes: 0,
+                            tiempoTotalSegundos: 0,
+                            clientes: new Set()
+                        };
+                    }
+
+                    periodData[periodo].ordenes++;
+
+                    // Sumar tiempo de producción
+                    const tiempoFormato = safeValue(row.created_to_finished_formatted, '00:00:00');
+                    const tiempoSegundosRaw = durationToSeconds(tiempoFormato);
+                    const tiempoSegundos = tiempoSegundosRaw !== '' ? parseInt(tiempoSegundosRaw, 10) : 0;
+                    if (!isNaN(tiempoSegundos)) {
+                        periodData[periodo].tiempoTotalSegundos += tiempoSegundos;
+                    }
+
+                    // Contar clientes únicos
+                    const cliente = row.customer_client_name || 'Sin cliente';
+                    periodData[periodo].clientes.add(cliente);
                 });
 
-                return { metrics, csv, type: 'Planificación de Capacidad', note: `Analizando ${count} órdenes para capacidad` };
+                // Calcular capacidad estimada (asumimos 40 horas laborables por semana = 144000 segundos)
+                const capacidadSemanalSegundos = 40 * 3600;
+
+                // CSV: Periodo, Cantidad_Ordenes, Clientes_Unicos, Tiempo_Produccion_Total_Segundos, Tiempo_Produccion_Total_Formato, Tiempo_Promedio_Por_Orden_Segundos, Tiempo_Promedio_Por_Orden_Formato, Capacidad_Utilizada_Porcentaje, Capacidad_Disponible_Estimada_Porcentaje
+                let csv = 'Periodo,Cantidad_Ordenes,Clientes_Unicos,Tiempo_Produccion_Total_Segundos,Tiempo_Produccion_Total_Formato,Tiempo_Promedio_Por_Orden_Segundos,Tiempo_Promedio_Por_Orden_Formato,Capacidad_Utilizada_Porcentaje,Capacidad_Disponible_Estimada_Porcentaje\n';
+
+                // Ordenar periodos
+                const periodosOrdenados = Object.keys(periodData).sort();
+
+                periodosOrdenados.forEach(periodo => {
+                    const data = periodData[periodo];
+                    const tiempoTotal = data.tiempoTotalSegundos;
+                    const tiempoTotalFormato = formatTime(tiempoTotal);
+                    const tiempoPromedio = data.ordenes > 0 ? Math.round(tiempoTotal / data.ordenes) : 0;
+                    const tiempoPromedioFormato = formatTime(tiempoPromedio);
+
+                    // Estimar capacidad utilizada (tiempo total / capacidad semanal * 100)
+                    const capacidadUtilizada = capacidadSemanalSegundos > 0
+                        ? Math.min(100, ((tiempoTotal / capacidadSemanalSegundos) * 100)).toFixed(1)
+                        : '0.0';
+                    const capacidadDisponible = (100 - parseFloat(capacidadUtilizada)).toFixed(1);
+
+                    csv += `${periodo},${data.ordenes},${data.clientes.size},${tiempoTotal},${tiempoTotalFormato},${tiempoPromedio},${tiempoPromedioFormato},${capacidadUtilizada}%,${capacidadDisponible}%\n`;
+                });
+
+                const metrics = {
+                    periodosAnalizados: periodosOrdenados.length,
+                    ordersTotal: $('#kpi-orders-total').text() || '0',
+                    avgWorkingDaysPerOrder: Math.round(latestSummary?.orders_avg_created_to_finished_working_days ?? 0) + 'd',
+                    dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
+                };
+
+                return { metrics, csv, type: 'Planificación de Capacidad', note: `${periodosOrdenados.length} periodos semanales analizados` };
+            }
+
+            // Función auxiliar para calcular número de semana
+            function getWeekNumber(date) {
+                const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+                const dayNum = d.getUTCDay() || 7;
+                d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+                const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+                return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
             }
 
             // NUEVO: Predicción de Retrasos
             function collectPredictiveDelaysData() {
-                return collectFinishToDeliveryData(); // Reutiliza análisis de entregas con enfoque predictivo
+                const table = $('#production-times-table').DataTable();
+                if (!table) return { metrics: {}, csv: '', type: 'Predicción de Retrasos' };
+
+                const now = new Date();
+
+                // CSV: Order_ID, Cliente, Estado_Actual, Fecha_Inicio_Estimada_ISO, Fecha_Fin_Estimada_ISO, Progreso_Porcentaje, Retraso_Acumulado_Segundos, Retraso_Acumulado_Formato, Señales_Alerta, Probabilidad_Retraso_Porcentaje
+                let csv = 'Order_ID,Cliente,Estado_Actual,Fecha_Inicio_Estimada_ISO,Fecha_Fin_Estimada_ISO,Progreso_Porcentaje,Retraso_Acumulado_Segundos,Retraso_Acumulado_Formato,Señales_Alerta,Probabilidad_Retraso_Porcentaje\n';
+
+                let count = 0;
+                const maxRows = 150;
+                let highRiskCount = 0;
+                let mediumRiskCount = 0;
+                let lowRiskCount = 0;
+
+                table.rows({search: 'applied'}).data().each(function(row) {
+                    if (count >= maxRows) return false;
+
+                    const orderId = cleanValue(safeValue(row.order_id, '0'));
+                    const cliente = cleanValue(safeValue(row.customer_client_name, 'Sin cliente'));
+
+                    // Determinar estado
+                    const fechaFin = row.finished_at;
+                    const tieneFinalizacion = fechaFin && fechaFin !== '0000-00-00 00:00:00';
+                    let estadoActual = tieneFinalizacion ? 'Finalizado' : 'En proceso';
+
+                    // Para órdenes finalizadas, analizar si tuvieron problemas (contexto predictivo)
+                    const fechaCreadoIso = cleanValue(normalizeDateTime(row.created_at));
+                    const fechaFinIso = cleanValue(normalizeDateTime(row.finished_at));
+                    const fechaEntregaIso = cleanValue(normalizeDateTime(row.delivery_date));
+
+                    // Calcular progreso (si está finalizado = 100%, si no, estimamos basado en tiempo transcurrido)
+                    let progreso = 100;
+                    if (!tieneFinalizacion && row.created_at) {
+                        const fechaCreado = new Date(row.created_at);
+                        if (!isNaN(fechaCreado.getTime())) {
+                            // Estimar progreso basado en tiempo promedio
+                            const tiempoTranscurrido = (now - fechaCreado) / 1000; // segundos
+                            const tiempoPromedio = (latestSummary?.orders_avg_created_to_finished || 0);
+                            if (tiempoPromedio > 0) {
+                                progreso = Math.min(95, Math.round((tiempoTranscurrido / tiempoPromedio) * 100));
+                                estadoActual = progreso < 30 ? 'Inicio' : (progreso < 70 ? 'En proceso' : 'Finalizando');
+                            } else {
+                                progreso = 50; // Valor por defecto
+                            }
+                        }
+                    }
+
+                    // Calcular retraso acumulado
+                    let retrasoSegundos = 0;
+                    let señales = [];
+
+                    // Analizar gaps elevados
+                    const processes = Array.isArray(row.processes) ? row.processes : [];
+                    let totalGap = 0;
+                    let maxGap = 0;
+                    processes.forEach(proc => {
+                        const gapSec = typeof proc.gap_seconds === 'number' ? proc.gap_seconds : 0;
+                        totalGap += gapSec;
+                        if (gapSec > maxGap) maxGap = gapSec;
+                    });
+
+                    if (totalGap > 7200) { // > 2 horas
+                        señales.push('gaps_elevados');
+                        retrasoSegundos += totalGap;
+                    }
+
+                    // Analizar procesos lentos
+                    const duracionPromedio = processes.length > 0
+                        ? processes.reduce((sum, p) => sum + (p.duration_seconds || 0), 0) / processes.length
+                        : 0;
+                    if (duracionPromedio > 3600) { // > 1 hora promedio
+                        señales.push('procesos_lentos');
+                    }
+
+                    // Analizar retraso vs entrega planificada
+                    const delayVsPlan = typeof row.order_delivery_delay_seconds === 'number' ? row.order_delivery_delay_seconds : 0;
+                    if (delayVsPlan > 0) {
+                        señales.push('retraso_vs_planificado');
+                        retrasoSegundos += delayVsPlan;
+                    }
+
+                    // Calcular probabilidad de retraso
+                    let probabilidad = 0;
+
+                    // Factor 1: Retraso acumulado
+                    if (retrasoSegundos > 86400) probabilidad += 30; // > 1 día
+                    else if (retrasoSegundos > 43200) probabilidad += 20; // > 12 horas
+                    else if (retrasoSegundos > 7200) probabilidad += 10; // > 2 horas
+
+                    // Factor 2: Gaps elevados
+                    if (totalGap > 14400) probabilidad += 25; // > 4 horas de gaps
+                    else if (totalGap > 7200) probabilidad += 15; // > 2 horas de gaps
+
+                    // Factor 3: Progreso vs tiempo
+                    if (!tieneFinalizacion && progreso < 50) {
+                        const tiempoTranscurrido = processes.length > 0 ?
+                            processes.reduce((sum, p) => sum + (p.duration_seconds || 0) + (p.gap_seconds || 0), 0) : 0;
+                        if (tiempoTranscurrido > latestSummary?.orders_avg_created_to_finished / 2) {
+                            probabilidad += 20; // Lleva mucho tiempo y poco progreso
+                            señales.push('progreso_lento');
+                        }
+                    }
+
+                    // Factor 4: Procesos lentos
+                    if (duracionPromedio > 7200) probabilidad += 15; // > 2 horas promedio
+
+                    // Ajustar probabilidad final
+                    probabilidad = Math.min(100, Math.max(0, probabilidad));
+
+                    // Clasificar por riesgo
+                    if (probabilidad > 70) highRiskCount++;
+                    else if (probabilidad > 40) mediumRiskCount++;
+                    else lowRiskCount++;
+
+                    const retrasoFormato = formatTime(Math.abs(retrasoSegundos));
+                    const señalesTexto = señales.length > 0 ? señales.join('; ') : 'ninguna';
+
+                    csv += `${orderId},${cliente},${estadoActual},${fechaCreadoIso},${fechaFinIso || fechaEntregaIso},${progreso}%,${retrasoSegundos},${retrasoFormato},${señalesTexto},${probabilidad}%\n`;
+                    count++;
+                });
+
+                const metrics = {
+                    ordersAnalyzed: count,
+                    highRisk: highRiskCount,
+                    mediumRisk: mediumRiskCount,
+                    lowRisk: lowRiskCount,
+                    dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
+                };
+
+                return {
+                    metrics,
+                    csv,
+                    type: 'Predicción de Retrasos',
+                    note: `${count} órdenes analizadas: ${highRiskCount} alto riesgo, ${mediumRiskCount} riesgo medio, ${lowRiskCount} bajo riesgo`
+                };
             }
 
             // Análisis 8: Análisis Total (CSV extendido)
@@ -3374,7 +3594,7 @@
                 };
 
                 // CSV completo con todas las columnas visibles (normalizadas)
-                let csv = 'Order_ID,Cliente,Fecha_Pedido_ERP_ISO,Fecha_Creado_ISO,Fecha_Finalizado_ISO,Tiempo_ERP_a_Creado_Segundos,Tiempo_ERP_a_Creado_Formato,Tiempo_ERP_a_Fin_Segundos,Tiempo_ERP_a_Fin_Formato,Tiempo_Creado_a_Fin_Segundos,Tiempo_Creado_a_Fin_Formato\n';
+                let csv = 'Order_ID,Cliente,Fecha_Pedido_Cliente_ISO,Fecha_Lanzamiento_Produccion_ISO,Fecha_Fin_Produccion_ISO,Tiempo_Pedido_Cliente_a_Lanzamiento_Segundos,Tiempo_Pedido_Cliente_a_Lanzamiento_Formato,Tiempo_Pedido_Cliente_a_Fin_Produccion_Segundos,Tiempo_Pedido_Cliente_a_Fin_Produccion_Formato,Tiempo_Lanzamiento_a_Fin_Produccion_Segundos,Tiempo_Lanzamiento_a_Fin_Produccion_Formato\n';
                 let count = 0;
                 const maxRows = 150;
 
@@ -3521,317 +3741,713 @@
             // Configuración de prompts por tipo de análisis
             const analysisPrompts = {
                 'erp-to-created': {
-                    title: 'Tiempo Recepción Pedido → Puesto en Fabricación',
-                    prompt: `Analiza los tiempos entre la recepcion del pedido y su puesta en fabricacion.
+                    title: 'Tiempo Pedido Cliente → Lanzamiento Producción',
+                    prompt: `Eres un analista de producción experto. Analiza los tiempos desde que el cliente hace el pedido hasta que se lanza la orden en fabricación.
 
-IMPORTANTE: A continuacion recibiras un archivo CSV completo. Lee TODAS las filas del CSV para realizar el analisis.
-
-El CSV contiene las columnas normalizadas:
-- Order_ID: Identificador de la orden
+FORMATO DE DATOS:
+Recibirás un CSV con las siguientes columnas (separadas por comas):
+- Order_ID: Identificador único de la orden
 - Cliente: Nombre del cliente
-- Fecha_ERP_ISO: Marca temporal ISO del registro en ERP
-- Fecha_Creado_ISO: Marca temporal ISO de la creacion en produccion
-- Tiempo_ERP_a_Creado_Segundos: Diferencia en segundos entre ERP y creacion
-- Tiempo_ERP_a_Creado_Formato: Mismo tiempo en formato HH:MM:SS
+- Fecha_Pedido_Cliente_ISO: Fecha del pedido en formato ISO (YYYY-MM-DDTHH:MM:SS)
+- Fecha_Lanzamiento_Produccion_ISO: Fecha de lanzamiento en formato ISO
+- Tiempo_Segundos: Duración total en segundos (número entero)
+- Tiempo_Formato: Duración en formato HH:MM:SS
+- Dias_Laborables: Días laborables transcurridos (número entero)
+- Dias_No_Laborables: Días no laborables transcurridos (número entero)
+- Dias_Totales: Total de días calendario (número entero)
 
-Objetivos del analisis:
-1. Identificar ordenes con mayores retrasos en inicio de produccion (top 5)
-2. Detectar patrones de retraso por cliente
-3. Calcular tiempo promedio vs casos problematicos
-4. Proponer 3 acciones especificas para acelerar el paso de ERP a produccion
+IMPORTANTE: Procesa TODAS las filas del CSV. Ignora filas con valores vacíos o "0000-00-00" en fechas.
 
-Se breve, concreto y cuantifica los hallazgos usando TODOS los datos del CSV.`
+ANÁLISIS REQUERIDO:
+1. **Top 5 órdenes con mayores retrasos**: Identifica las 5 órdenes con mayor tiempo de espera. Para cada una indica: Order_ID, Cliente, Tiempo_Formato, Dias_Laborables, y días de retraso vs promedio.
+
+2. **Patrones por cliente**: Agrupa por cliente y calcula:
+   - Tiempo promedio de espera por cliente (en días laborables)
+   - Clientes con >20% más tiempo que la media general
+   - Tendencias: ¿hay clientes sistemáticamente lentos?
+
+3. **Análisis de eficiencia**:
+   - Calcula media y mediana de Tiempo_Segundos
+   - Identifica outliers (órdenes con >150% de la mediana)
+   - Calcula % de días laborables vs total
+
+4. **Recomendaciones accionables**: Proporciona 3 acciones específicas priorizadas por impacto estimado para reducir estos tiempos.
+
+FORMATO DE SALIDA:
+Estructura tu respuesta en secciones claras con números y porcentajes concretos. Usa tablas cuando sea apropiado.`
                 },
                 'created-to-finished': {
-                    title: 'Tiempo Puesto en Fabricación → Pedido Finalizado',
-                    prompt: `Analiza los tiempos de ciclo de produccion (desde puesta en fabricacion hasta finalizacion del pedido).
+                    title: 'Tiempo Lanzamiento Producción → Fin Producción',
+                    prompt: `Eres un analista de operaciones manufactureras. Analiza el tiempo de ciclo real de producción (desde que la orden entra en planta hasta que sale terminada).
 
-IMPORTANTE: Lee TODAS las filas del CSV completo que recibiras a continuacion.
+FORMATO DE DATOS:
+Recibirás un CSV con las siguientes columnas (separadas por comas):
+- Order_ID: Identificador único de la orden
+- Cliente: Nombre del cliente
+- Fecha_Lanzamiento_Produccion_ISO: Fecha de inicio en formato ISO (YYYY-MM-DDTHH:MM:SS)
+- Fecha_Fin_Produccion_ISO: Fecha de finalización en formato ISO
+- Tiempo_Lanzamiento_a_Fin_Produccion_Segundos: Duración del ciclo en segundos (número entero)
+- Tiempo_Lanzamiento_a_Fin_Produccion_Formato: Duración en formato HH:MM:SS
 
-Columnas normalizadas del CSV:
-- Order_ID, Cliente
-- Fecha_Creado_ISO, Fecha_Fin_ISO
-- Tiempo_Creado_a_Fin_Segundos, Tiempo_Creado_a_Fin_Formato
+IMPORTANTE: Procesa TODAS las filas del CSV. Las fechas vacías o "0000-00-00" indican órdenes aún en proceso.
 
-Foco del analisis:
-1. Identificar ordenes con ciclos mas largos (top 5)
-2. Comparar con promedio y mediana del periodo
-3. Detectar tendencias o patrones temporales
-4. Proponer 3 medidas especificas para reducir tiempo de ciclo
+ANÁLISIS REQUERIDO:
+1. **Top 5 ciclos más largos**: Identifica las 5 órdenes con mayor tiempo de ciclo. Para cada una: Order_ID, Cliente, Tiempo_Formato, y % de desviación vs mediana.
 
-Prioriza hallazgos accionables usando TODOS los datos.`
+2. **Distribución estadística**:
+   - Media y mediana de Tiempo_Lanzamiento_a_Fin_Produccion_Segundos
+   - Percentil 90 (P90) y percentil 95 (P95)
+   - Coeficiente de variación (desviación estándar / media)
+   - Identifica órdenes fuera de 2 desviaciones estándar
+
+3. **Patrones temporales**:
+   - Agrupa por semana o mes (según Fecha_Lanzamiento)
+   - Detecta tendencias: ¿los ciclos aumentan o disminuyen?
+   - Identifica periodos problemáticos con ciclos >120% del promedio
+
+4. **Análisis por cliente**:
+   - Clientes con ciclos consistentemente más largos
+   - Variabilidad por cliente (std dev)
+
+5. **Recomendaciones**: 3 medidas concretas priorizadas por ROI estimado para reducir el tiempo de ciclo promedio en al menos 15%.
+
+FORMATO DE SALIDA:
+Usa secciones numeradas con métricas cuantificadas. Incluye comparaciones porcentuales y valores absolutos.`
                 },
                 'finish-to-delivery': {
-                    title: 'Pedido Finalizado → Entrega',
-                    prompt: `Analiza el tramo final desde la finalizacion del pedido hasta la entrega.
+                    title: 'Fin Producción → Entrega',
+                    prompt: `Eres un analista de logística y cumplimiento de entregas. Analiza el tiempo desde que la producción termina hasta que el producto llega al cliente.
 
-IMPORTANTE: Procesa TODAS las filas del CSV.
+FORMATO DE DATOS:
+Recibirás un CSV con las siguientes columnas (separadas por comas):
+- Order_ID: Identificador único de la orden
+- Cliente: Nombre del cliente
+- Fecha_Fin_ISO: Fecha de finalización de producción en formato ISO (YYYY-MM-DDTHH:MM:SS)
+- Fecha_Entrega_Usada_ISO: Fecha de entrega considerada para el análisis (real o planificada según configuración)
+- Fecha_Entrega_Planificada_ISO: Fecha comprometida originalmente
+- Fecha_Entrega_Real_ISO: Fecha de entrega efectiva (puede estar vacía si aún no se entregó)
+- Tiempo_Fin_a_Entrega_Segundos: Duración post-producción en segundos (número entero)
+- Tiempo_Fin_a_Entrega_Formato: Duración en formato HH:MM:SS
+- Retraso_vs_Plan_Segundos: Diferencia vs planificado en segundos (positivo=retraso, negativo=adelanto)
+- Retraso_vs_Plan_Formato: Diferencia en formato +/-HH:MM:SS
 
-Columnas normalizadas:
-- Order_ID, Cliente
-- Fecha_Fin_ISO, Fecha_Entrega_Usada_ISO
-- Fecha_Entrega_Planificada_ISO, Fecha_Entrega_Real_ISO
-- Tiempo_Fin_a_Entrega_Segundos, Tiempo_Fin_a_Entrega_Formato
-- Retraso_vs_Plan_Segundos, Retraso_vs_Plan_Formato
+IMPORTANTE: Procesa TODAS las filas del CSV. Valores vacíos en fechas reales indican entregas pendientes.
 
-Objetivos:
-1. Identificar pedidos con mayor retraso entre fin y entrega (top 5)
-2. Comparar cumplimiento versus SLA (entregas a tiempo vs tarde)
-3. Detectar clientes o tipos con mayor retraso recurrente
-4. Sugerir 3 acciones para reducir retrasos post-produccion
+ANÁLISIS REQUERIDO:
+1. **Top 5 retrasos críticos**: Órdenes con mayor Retraso_vs_Plan_Segundos. Para cada una: Order_ID, Cliente, Tiempo_Fin_a_Entrega_Formato, Retraso_vs_Plan_Formato.
 
-Incluye una breve nota sobre si se esta usando fecha real o programada de entrega.`
+2. **Cumplimiento de SLA**:
+   - % de órdenes entregadas a tiempo (Retraso_vs_Plan_Segundos ≤ 0)
+   - % de órdenes con retrasos <24h, 24-48h, >48h
+   - Retraso promedio solo de órdenes retrasadas
+   - Impacto: suma total de horas/días de retraso acumulado
+
+3. **Análisis por cliente**:
+   - Clientes con tasa de retraso >30%
+   - Top 3 clientes más afectados por volumen de retrasos
+   - Clientes con entregas consistentemente adelantadas
+
+4. **Patrones temporales**:
+   - Días de la semana con más retrasos
+   - Tendencia temporal de Tiempo_Fin_a_Entrega_Segundos
+
+5. **Recomendaciones**: 3 acciones priorizadas para alcanzar ≥95% de cumplimiento SLA, con impacto estimado en días de reducción.
+
+FORMATO DE SALIDA:
+Inicia indicando si se usa fecha real o planificada. Estructura con métricas claras y porcentajes de cumplimiento.`
                 },
                 'process-gaps': {
-                    title: 'Gaps entre Procesos',
-                    prompt: `Analiza los gaps (tiempos muertos) entre procesos consecutivos.
+                    title: 'Tiempos de espera entre Procesos',
+                    prompt: `Eres un ingeniero de procesos lean manufacturing. Analiza los tiempos de espera (gaps) entre procesos consecutivos para identificar desperdicios y cuellos de botella.
 
-IMPORTANTE: Procesa TODAS las filas del CSV.
+FORMATO DE DATOS:
+Recibirás un CSV con las siguientes columnas (separadas por comas):
+- Order_ID: Identificador de la orden
+- Codigo_Proceso: Código único del proceso
+- Nombre_Proceso: Descripción del proceso
+- Tiempo_Espera_Segundos: Tiempo de espera ANTES de este proceso en segundos (número entero)
+- Tiempo_Espera_Formato: Tiempo de espera en formato HH:MM:SS
+- Duracion_Segundos: Duración de ejecución del proceso en segundos (número entero)
+- Duracion_Formato: Duración en formato HH:MM:SS
 
-Columnas normalizadas:
-- Order_ID, Codigo_Proceso, Nombre_Proceso
-- Gap_Segundos, Gap_Formato
-- Duracion_Segundos, Duracion_Formato
+IMPORTANTE: Procesa TODAS las filas del CSV. Cada fila representa un proceso dentro de una orden.
 
-Focus del analisis:
-1. Identificar procesos con mayores tiempos de espera (top 10)
-2. Detectar patrones de gaps entre procesos especificos
-3. Comparar duracion de proceso vs tiempo de espera
-4. Proponer 3 acciones especificas para optimizar
+ANÁLISIS REQUERIDO:
+1. **Top 10 gaps más largos**: Procesos con mayor Tiempo_Espera_Segundos. Para cada uno: Order_ID, Codigo_Proceso, Nombre_Proceso, Tiempo_Espera_Formato, Duracion_Formato.
 
-Se conciso y cuantifica impacto usando TODOS los datos.`
+2. **Ratio Value-Added vs Non-Value-Added**:
+   - Suma total de Duracion_Segundos (tiempo productivo)
+   - Suma total de Tiempo_Espera_Segundos (tiempo desperdiciado)
+   - Ratio: Espera / Duración (idealmente <0.5)
+   - % del tiempo total que es espera
+
+3. **Análisis por tipo de proceso**:
+   - Agrupa por Codigo_Proceso o Nombre_Proceso
+   - Identifica procesos con gaps promedio >1 hora
+   - Procesos con alta variabilidad en tiempos de espera (std dev)
+
+4. **Impacto por orden**:
+   - Agrupa por Order_ID
+   - Órdenes con mayor gap acumulado total
+   - Correlación entre número de procesos y gap total
+
+5. **Recomendaciones**: 3 acciones específicas priorizadas por reducción potencial de lead time, indicando procesos específicos a optimizar y reducción esperada en horas/días.
+
+FORMATO DE SALIDA:
+Usa métricas lean (VA/NVA ratio, lead time reduction). Incluye códigos/nombres de procesos específicos en las recomendaciones.`
                 },
                 'by-client': {
                     title: 'Análisis por Cliente',
-                    prompt: `Analiza el rendimiento agrupado por cliente.
+                    prompt: `Eres un analista de cuentas clave y operaciones. Analiza el rendimiento de producción segmentado por cliente para identificar patrones y oportunidades de mejora por cuenta.
 
-IMPORTANTE: Procesa TODAS las filas del CSV.
+FORMATO DE DATOS:
+Recibirás un CSV con las siguientes columnas (separadas por comas):
+- Cliente: Nombre del cliente
+- Cantidad_Ordenes: Número de órdenes procesadas (número entero)
+- Ordenes_IDs: Lista de IDs de órdenes (separados por punto y coma o similar)
+- Tiempo_Pedido_Cliente_a_Fin_Produccion_Promedio_Segundos: Lead time completo promedio en segundos
+- Tiempo_Pedido_Cliente_a_Fin_Produccion_Promedio_Formato: Lead time en formato HH:MM:SS
+- Tiempo_Lanzamiento_a_Fin_Produccion_Promedio_Segundos: Tiempo de ciclo promedio en segundos
+- Tiempo_Lanzamiento_a_Fin_Produccion_Promedio_Formato: Tiempo de ciclo en formato HH:MM:SS
 
-Columnas normalizadas:
-- Cliente, Cantidad_Ordenes, Ordenes_IDs
-- Tiempo_ERP_a_Fin_Promedio_Segundos, Tiempo_ERP_a_Fin_Promedio_Formato
-- Tiempo_Creado_a_Fin_Promedio_Segundos, Tiempo_Creado_a_Fin_Promedio_Formato
+IMPORTANTE: Procesa TODAS las filas del CSV. Cada fila representa un cliente único con sus métricas agregadas.
 
-Objetivos:
-1. Identificar top 5 clientes con mas ordenes
-2. Comparar tiempos promedio por cliente
-3. Detectar clientes con patrones de retraso
-4. Proponer 3 estrategias diferenciadas
+ANÁLISIS REQUERIDO:
+1. **Segmentación por volumen**:
+   - Top 5 clientes por Cantidad_Ordenes (clientes estratégicos)
+   - Clientes con 1-3 órdenes (clientes esporádicos)
+   - Concentración: % de órdenes en top 3 clientes
 
-Manten el analisis breve usando TODOS los datos.`
+2. **Performance por cliente**:
+   - Cliente con mejor lead time (menor Tiempo_Pedido_Cliente_a_Fin_Produccion_Promedio_Segundos)
+   - Cliente con peor lead time
+   - Diferencia entre mejor y peor (en días)
+   - Clientes con lead time >150% de la mediana general
+
+3. **Análisis de eficiencia**:
+   - Para cada cliente top 5, calcula:
+     * Tiempo administrativo promedio = Lead time - Tiempo de ciclo
+     * % de tiempo en producción vs administrativo
+   - Identifica clientes con alta fricción administrativa
+
+4. **Priorización estratégica**:
+   - Clientes a mejorar urgente: alto volumen + mal performance
+   - Clientes a estudiar: bajo volumen + excelente performance
+   - Clientes estables: alto volumen + buen performance
+
+5. **Recomendaciones**: 3 estrategias diferenciadas por segmento de cliente (ej: clientes de alto volumen con procesos dedicados, clientes esporádicos con slots estándar), con impacto esperado en días de reducción.
+
+FORMATO DE SALIDA:
+Usa tablas para comparar clientes. Incluye nombres de clientes específicos y métricas cuantificadas.`
                 },
                 'order-type-critical': {
                     title: 'Órdenes críticas por tipo',
-                    prompt: `Agrupa las ordenes por tipo de producto o ruta y detecta donde hay retrasos criticos.
+                    prompt: `Eres un planner de producción. Analiza el desempeño de entregas segmentado por tipo de producto para identificar qué categorías presentan más problemas de cumplimiento.
 
-IMPORTANTE: Analiza TODAS las filas del CSV.
+FORMATO DE DATOS:
+Recibirás un CSV con las siguientes columnas (separadas por comas):
+- Order_ID: Identificador de la orden
+- Cliente: Nombre del cliente
+- Tipo_Producto: Categoría o ruta de producción
+- Estado_Entrega: Estado actual (ej: "Entregado", "En proceso", "Retrasado")
+- Fecha_Fin_ISO: Fecha de fin de producción en formato ISO
+- Fecha_Entrega_Usada_ISO: Fecha de entrega utilizada para análisis
+- Fecha_Entrega_Planificada_ISO: Fecha comprometida
+- Fecha_Entrega_Real_ISO: Fecha efectiva de entrega
+- Tiempo_Fin_a_Entrega_Segundos: Tiempo post-producción en segundos
+- Tiempo_Fin_a_Entrega_Formato: Tiempo en formato HH:MM:SS
+- Retraso_vs_Plan_Segundos: Diferencia vs plan en segundos (positivo=retraso)
+- Retraso_vs_Plan_Formato: Diferencia en formato +/-HH:MM:SS
 
-Columnas normalizadas:
-- Order_ID, Cliente, Tipo_Producto
-- Estado_Entrega (Retraso/A tiempo/Adelantado)
-- Fecha_Fin_ISO, Fecha_Entrega_Usada_ISO
-- Tiempo_Fin_a_Entrega_Segundos, Tiempo_Fin_a_Entrega_Formato
-- Retraso_vs_Plan_Segundos, Retraso_vs_Plan_Formato
+IMPORTANTE: Procesa TODAS las filas del CSV. Valores positivos en Retraso_vs_Plan_Segundos indican entregas tardías.
 
-Objetivos:
-1. Identificar los 3 tipos de producto con mayor incidencia de retrasos
-2. Cuantificar el retraso promedio por tipo (en segundos y formato HH:MM:SS)
-3. Señalar casos criticos concretos (orden y cliente)
-4. Sugerir acciones orientadas por tipo para mejorar el cumplimiento
+ANÁLISIS REQUERIDO:
+1. **Ranking de tipos problemáticos**:
+   - Agrupa por Tipo_Producto
+   - Para cada tipo: cantidad total de órdenes, % con retraso, retraso promedio
+   - Top 3 tipos con mayor incidencia de retrasos (por %)
+   - Top 3 tipos con mayor retraso promedio (en horas)
 
-Se breve y cuantifica siempre que sea posible.`
+2. **Análisis de severidad**:
+   - Por cada tipo problemático:
+     * Órdenes críticas (retraso >48h): cantidad y %
+     * Retraso máximo registrado
+     * Retraso acumulado total (suma de todos los retrasos)
+
+3. **Casos críticos específicos**:
+   - Top 5 órdenes con mayor retraso: Order_ID, Cliente, Tipo_Producto, Retraso_vs_Plan_Formato
+   - Identifica si hay clientes específicos recurrentes
+
+4. **Performance comparativa**:
+   - Tipo con mejor cumplimiento (menor % retrasos)
+   - Tipo con peor cumplimiento
+   - Diferencia en días promedio entre mejor y peor tipo
+
+5. **Recomendaciones por tipo**: Para cada uno de los 3 tipos más problemáticos, proporciona 1-2 acciones específicas (ej: "Tipo X: asignar slot dedicado en proceso Y, impacto esperado -2 días").
+
+FORMATO DE SALIDA:
+Usa tablas comparativas por tipo. Incluye nombres específicos de tipos de producto y casos críticos con Order_ID.`
                 },
                 'gap-alerts': {
                     title: 'Alertas de brechas acumuladas',
-                    prompt: `Detecta ordenes con brechas acumuladas elevadas entre procesos.
+                    prompt: `Eres un analista de flow management. Identifica órdenes con tiempos de espera acumulados críticos que están impactando severamente el lead time.
 
-IMPORTANTE: Procesa TODAS las filas del CSV.
+FORMATO DE DATOS:
+Recibirás un CSV con órdenes que superan el umbral de 2 horas de espera acumulada. Columnas:
+- Order_ID: Identificador de la orden
+- Cliente: Nombre del cliente
+- Procesos_Afectados: Número de procesos con espera significativa (número entero)
+- Tiempo_Espera_Total_Segundos: Suma de todos los gaps de la orden en segundos
+- Tiempo_Espera_Total_Formato: Suma en formato HH:MM:SS
+- Tiempo_Espera_Maximo_Segundos: Gap más largo individual en segundos
+- Tiempo_Espera_Maximo_Formato: Gap máximo en formato HH:MM:SS
+- Tiempo_Espera_Promedio_Segundos: Gap promedio por proceso en segundos
+- Tiempo_Espera_Promedio_Formato: Gap promedio en formato HH:MM:SS
 
-Columnas normalizadas:
-- Order_ID, Cliente
-- Procesos_Afectados
-- Gap_Total_Segundos, Gap_Total_Formato
-- Gap_Maximo_Segundos, Gap_Maximo_Formato
-- Gap_Promedio_Segundos, Gap_Promedio_Formato
+IMPORTANTE: Procesa TODAS las filas del CSV. Todas las órdenes ya superan el umbral mínimo de 2 horas.
 
-Analisis solicitado:
-1. Identificar ordenes que superan el umbral definido (2 horas)
-2. Destacar top 5 ordenes con mayor gap total
-3. Analizar si hay clientes/procesos repetidos entre las alertas
-4. Proponer 3 medidas para reducir estas brechas acumuladas
+ANÁLISIS REQUERIDO:
+1. **Clasificación de severidad**:
+   - Crítico (>8h espera total): cantidad y lista de Order_ID
+   - Alto (4-8h espera total): cantidad
+   - Medio (2-4h espera total): cantidad
+   - % de órdenes en cada categoría
 
-Entrega el analisis de forma concisa y priorizada.`
+2. **Top 5 órdenes más afectadas**:
+   - Order_ID, Cliente, Tiempo_Espera_Total_Formato, Procesos_Afectados
+   - Impacto: cuántos días de lead time representa ese gap
+
+3. **Análisis de recurrencia**:
+   - Clientes que aparecen 2+ veces en la lista
+   - % de órdenes afectadas por cliente recurrente
+   - Suma de gaps por cliente
+
+4. **Patrones de gaps**:
+   - Correlación entre Procesos_Afectados y Tiempo_Espera_Total
+   - ¿Muchos gaps pequeños o pocos gaps grandes?
+   - Ratio entre gap máximo y gap promedio por orden
+
+5. **Recomendaciones**: 3 medidas priorizadas por impacto (ej: "Investigar proceso X que aparece en 70% de gaps críticos", "Implementar buffer management en cliente Y"), con reducción esperada en horas de espera.
+
+FORMATO DE SALIDA:
+Usa semáforo de criticidad (Crítico/Alto/Medio). Incluye Order_IDs y clientes específicos.`
                 },
                 'slow-processes': {
                     title: 'Procesos Lentos',
-                    prompt: `Analiza los procesos mas lentos del periodo.
+                    prompt: `Eres un ingeniero de métodos y tiempos. Analiza los procesos más lentos para identificar oportunidades de optimización y reducción de tiempos de ciclo.
 
-IMPORTANTE: Procesa TODAS las filas del CSV (top 30 procesos mas lentos).
-IMPORTANTE: Analiza TODAS las filas del CSV (top 30 procesos mas lentos).
+FORMATO DE DATOS:
+Recibirás un CSV con los 30 procesos individuales más lentos del periodo. Columnas:
+- Order_ID: Identificador de la orden
+- Codigo_Proceso: Código único del proceso
+- Nombre_Proceso: Descripción del proceso
+- Duracion_Segundos: Tiempo de ejecución real en segundos (número entero)
+- Duracion_Formato: Duración en formato HH:MM:SS
+- Tiempo_Espera_Segundos: Gap antes de este proceso en segundos
+- Tiempo_Espera_Formato: Gap en formato HH:MM:SS
 
-Columnas normalizadas:
-- Order_ID, Codigo_Proceso, Nombre_Proceso
-- Duracion_Segundos, Duracion_Formato
-- Gap_Segundos, Gap_Formato
+IMPORTANTE: Procesa TODAS las 30 filas del CSV. Estos son los casos individuales más extremos de duración larga.
 
-Centra el analisis en:
-1. Identificar top 10 procesos con mayor duracion
-2. Detectar procesos que aparecen frecuentemente
-3. Comparar duracion vs gaps asociados
-4. Proponer 3 acciones especificas para optimizar
+ANÁLISIS REQUERIDO:
+1. **Top 10 procesos más lentos**:
+   - Order_ID, Codigo_Proceso, Nombre_Proceso, Duracion_Formato
+   - Para cada uno: cuántas horas/días representa
+   - % del lead time total que consume cada proceso
 
-Se especifico y prioriza por impacto usando TODOS los datos.`
+2. **Análisis de recurrencia**:
+   - Agrupa por Codigo_Proceso o Nombre_Proceso
+   - Procesos que aparecen 2+ veces en el top 30
+   - Frecuencia de aparición: ¿es un problema sistemático o casos aislados?
+   - Duración promedio por tipo de proceso recurrente
+
+3. **Comparación Duración vs Gap**:
+   - Para cada proceso top 10: ratio Gap/Duración
+   - Procesos con gap mayor que su propia duración (indicador de scheduling pobre)
+   - Suma total de tiempo productivo vs tiempo de espera en top 30
+
+4. **Identificación de patrones**:
+   - ¿Hay clientes específicos asociados a procesos lentos?
+   - ¿Hay procesos específicos consistentemente lentos?
+   - Variabilidad: compara instancias del mismo Codigo_Proceso
+
+5. **Recomendaciones**: 3 acciones priorizadas por reducción potencial (ej: "Proceso X aparece 5 veces con promedio 8h, investigar setup time - impacto potencial -20h/orden", "Optimizar secuencia para reducir gaps en proceso Y").
+
+FORMATO DE SALIDA:
+Usa tablas con Order_ID y códigos de proceso específicos. Cuantifica impacto en horas/días.`
                 },
                 'top-bottom': {
                     title: 'Comparativa Top/Bottom',
-                    prompt: `Compara las 10 ordenes mas rapidas vs las 10 mas lentas.
+                    prompt: `Eres un analista de benchmarking interno. Compara las órdenes más rápidas vs las más lentas para identificar qué hace diferentes a las mejores y cómo replicar esas prácticas.
 
-IMPORTANTE: El CSV contiene 20 filas (10 TOP + 10 BOTTOM). Lee TODAS.
+FORMATO DE DATOS:
+Recibirás un CSV con exactamente 20 filas (10 TOP + 10 BOTTOM). Columnas:
+- Tipo: "TOP" para las 10 más rápidas, "BOTTOM" para las 10 más lentas
+- Order_ID: Identificador de la orden
+- Cliente: Nombre del cliente
+- Tiempo_Pedido_Cliente_a_Fin_Produccion_Segundos: Lead time completo en segundos
+- Tiempo_Pedido_Cliente_a_Fin_Produccion_Formato: Lead time en formato HH:MM:SS
+- Tiempo_Lanzamiento_a_Fin_Produccion_Segundos: Ciclo de producción en segundos
+- Tiempo_Lanzamiento_a_Fin_Produccion_Formato: Ciclo en formato HH:MM:SS
 
-Columnas normalizadas:
-- Tipo, Order_ID, Cliente
-- Tiempo_ERP_a_Fin_Segundos, Tiempo_ERP_a_Fin_Formato
-- Tiempo_Creado_a_Fin_Segundos, Tiempo_Creado_a_Fin_Formato
+IMPORTANTE: Procesa las 20 filas completas. Analiza por separado el grupo TOP y el grupo BOTTOM.
 
-Analisis requerido:
-1. Identificar factores comunes en ordenes rapidas (TOP)
-2. Identificar factores comunes en ordenes lentas (BOTTOM)
-3. Detectar 3 diferencias clave entre grupos
-4. Proponer como replicar practicas del TOP
+ANÁLISIS REQUERIDO:
+1. **Métricas del grupo TOP (10 mejores)**:
+   - Lead time promedio y rango (min-max)
+   - Ciclo de producción promedio
+   - Tiempo administrativo promedio = (Lead time - Ciclo)
+   - Lista de clientes que aparecen en TOP
 
-Manten el analisis conciso usando TODOS los datos.`
+2. **Métricas del grupo BOTTOM (10 peores)**:
+   - Lead time promedio y rango (min-max)
+   - Ciclo de producción promedio
+   - Tiempo administrativo promedio
+   - Lista de clientes que aparecen en BOTTOM
+
+3. **Diferencias cuantificadas**:
+   - Diferencia en lead time: TOP vs BOTTOM en días
+   - Diferencia en ciclo de producción: TOP vs BOTTOM en días
+   - Diferencia en tiempo administrativo: TOP vs BOTTOM en días
+   - Ratio: Lead time BOTTOM / Lead time TOP (ej: "2.5x más lento")
+
+4. **Factores diferenciadores (3 clave)**:
+   - ¿Hay clientes específicos solo en TOP o solo en BOTTOM?
+   - ¿El ciclo de producción es similar pero el tiempo admin diferente?
+   - ¿Ambos tiempos (ciclo y admin) son problemáticos en BOTTOM?
+
+5. **Plan de replicación**: 3 acciones concretas para llevar órdenes BOTTOM al nivel TOP:
+   - Basadas en las diferencias identificadas
+   - Cuantifica el impacto esperado en días
+   - Prioriza por facilidad de implementación
+
+FORMATO DE SALIDA:
+Usa formato comparativo (Tabla TOP vs BOTTOM). Incluye nombres de clientes y Order_IDs específicos.`
                 },
                 'full': {
                     title: 'Análisis Total',
-                    prompt: `Realiza un analisis integral de todos los datos de tiempos de produccion.
+                    prompt: `Eres un director de operaciones. Realiza un análisis ejecutivo integral de toda la cadena de producción, identificando oportunidades estratégicas de mejora.
 
-IMPORTANTE: El CSV contiene hasta 150 ordenes. Procesa TODAS las filas.
+FORMATO DE DATOS:
+Recibirás un CSV con hasta 150 órdenes. Columnas:
+- Order_ID, Cliente: Identificación básica
+- Fecha_Pedido_Cliente_ISO, Fecha_Lanzamiento_Produccion_ISO, Fecha_Fin_Produccion_ISO: Timestamps en formato ISO
+- Tiempo_Pedido_Cliente_a_Lanzamiento_Segundos/Formato: Tiempo administrativo pre-producción
+- Tiempo_Pedido_Cliente_a_Fin_Produccion_Segundos/Formato: Lead time completo (pedido → fin)
+- Tiempo_Lanzamiento_a_Fin_Produccion_Segundos/Formato: Ciclo de producción real
 
-Columnas normalizadas:
-- Order_ID, Cliente
-- Fecha_Pedido_ERP_ISO, Fecha_Creado_ISO, Fecha_Finalizado_ISO
-- Tiempo_ERP_a_Creado_Segundos, Tiempo_ERP_a_Creado_Formato
-- Tiempo_ERP_a_Fin_Segundos, Tiempo_ERP_a_Fin_Formato
-- Tiempo_Creado_a_Fin_Segundos, Tiempo_Creado_a_Fin_Formato
+IMPORTANTE: Procesa TODAS las filas del CSV para obtener una visión completa del periodo.
 
-Incluye:
-1. Resumen ejecutivo con hallazgos principales
-2. Analisis de tendencias generales
-3. Identificacion de 5 cuellos de botella criticos
-4. 5 recomendaciones priorizadas (corto vs medio plazo)
-5. 3 acciones inmediatas sugeridas
+ANÁLISIS REQUERIDO:
+1. **Resumen Ejecutivo** (3-4 párrafos):
+   - Estado general del periodo: volumen de órdenes, clientes atendidos
+   - Lead time promedio actual vs objetivo (si puedes inferir)
+   - Principal hallazgo: ¿dónde está el mayor problema?
+   - Oportunidad principal de mejora cuantificada
 
-Genera un informe estructurado pero conciso usando TODOS los datos.`
+2. **Métricas clave de performance**:
+   - Lead time: media, mediana, P90, P95
+   - Ciclo de producción: media, mediana, P90, P95
+   - Tiempo administrativo: media y % del lead time total
+   - Variabilidad: coeficiente de variación
+   - Top 3 clientes por volumen y su lead time promedio
+
+3. **Análisis de tendencias temporales**:
+   - Agrupa por semana/mes según rango de fechas
+   - ¿Los tiempos mejoran, empeoran o se mantienen estables?
+   - Detecta periodos problemáticos específicos
+
+4. **Identificación de 5 cuellos de botella críticos**:
+   Para cada uno indica:
+   - Dónde ocurre (tiempo admin, ciclo producción, entrega)
+   - Magnitud del problema (horas/días)
+   - % de órdenes afectadas
+   - Impacto estimado en el lead time total
+
+5. **Recomendaciones priorizadas** (5 acciones):
+   Clasifica en:
+   - Quick wins (implementación <1 mes, impacto medio)
+   - Iniciativas estratégicas (implementación 1-3 meses, alto impacto)
+   Para cada recomendación: impacto esperado en días de reducción
+
+6. **Plan de acción inmediato** (3 acciones para implementar esta semana):
+   - Específicas y accionables
+   - Con responsable sugerido
+   - Con métrica de éxito
+
+FORMATO DE SALIDA:
+Estructura tipo informe ejecutivo con secciones claras. Usa datos cuantificados y comparaciones. Prioriza insights accionables.`
                 },
                 'working-days-efficiency': {
                     title: 'Eficiencia Días Laborables',
-                    prompt: `Analiza la eficiencia de produccion considerando solo dias laborables.
+                    prompt: `Eres un analista de productividad laboral. Evalúa qué tan eficientemente se aprovechan los días laborables de producción.
 
-IMPORTANTE: Procesa TODAS las filas del CSV.
+FORMATO DE DATOS:
+Recibirás un CSV con las siguientes columnas:
+- Order_ID: Identificador de la orden
+- Cliente: Nombre del cliente
+- Fecha_Creado_ISO: Fecha de lanzamiento en formato ISO
+- Fecha_Fin_ISO: Fecha de finalización en formato ISO
+- Tiempo_Creado_a_Fin_Segundos: Duración total en segundos
+- Tiempo_Creado_a_Fin_Formato: Duración en formato HH:MM:SS
+- Dias_Calendario: Días calendario totales transcurridos (número entero)
+- Dias_Laborables: Días laborables dentro del periodo (número entero)
+- Eficiencia_Laborable: Ratio o % de aprovechamiento (puede ser número o texto con %)
 
-Columnas normalizadas:
-- Order_ID, Cliente
-- Fecha_Creado_ISO, Fecha_Fin_ISO
-- Tiempo_Creado_a_Fin_Segundos, Tiempo_Creado_a_Fin_Formato
-- Dias_Calendario, Dias_Laborables
-- Eficiencia_Laborable (porcentaje de uso efectivo)
+IMPORTANTE: Procesa TODAS las filas del CSV. Dias_Laborables excluye fines de semana y festivos.
 
-Objetivos del analisis:
-1. Calcular eficiencia promedio de dias laborables
-2. Identificar top 5 ordenes con peor eficiencia (mas dias sin avance)
-3. Detectar patrones de inactividad (fines de semana prolongados, festivos)
-4. Proponer 3 acciones para maximizar uso de dias laborables
+ANÁLISIS REQUERIDO:
+1. **Métricas de eficiencia global**:
+   - Promedio de Dias_Laborables por orden
+   - Promedio de Dias_Calendario por orden
+   - Ratio promedio: Dias_Laborables / Dias_Calendario
+   - % de tiempo perdido en días no laborables
 
-Se concreto y cuantifica usando TODOS los datos.`
+2. **Top 5 órdenes con peor eficiencia**:
+   - Order_ID, Cliente, Dias_Laborables, Dias_Calendario, Eficiencia_Laborable
+   - Para cada una: cuántos días adicionales vs promedio
+   - ¿Qué tienen en común? (cliente, duración, fechas)
+
+3. **Análisis de patrones de inactividad**:
+   - Órdenes que atraviesan períodos largos de días no laborables
+   - Identifica órdenes con alta proporción de días festivos/fines de semana
+   - Detecta si hay inicio/fin de órdenes que caen sistemáticamente en viernes/lunes (indicador de planificación pobre)
+
+4. **Análisis temporal**:
+   - Agrupa por mes o semana
+   - Identifica períodos con alta proporción de días no laborables (vacaciones, fiestas)
+   - Impacto de cada periodo problemático
+
+5. **Recomendaciones**: 3 acciones para maximizar uso de días laborables:
+   - Ajustes en scheduling para evitar arranques antes de festivos
+   - Optimización de lanzamientos considerando calendario
+   - Posible implementación de turnos/días especiales
+   - Impacto esperado: reducción en días calendario manteniendo días laborables
+
+FORMATO DE SALIDA:
+Usa ratios y porcentajes. Identifica periodos específicos con festivos. Cuantifica oportunidad de mejora en días.`
                 },
                 'calendar-impact': {
                     title: 'Impacto Calendario Laboral',
-                    prompt: `Analiza el impacto del calendario laboral (festivos, fines de semana) en los tiempos de produccion.
+                    prompt: `Eres un analista de planificación estratégica. Cuantifica el impacto real del calendario laboral (festivos, fines de semana) en los tiempos de producción y entregas.
 
-IMPORTANTE: Lee TODAS las filas del CSV.
+FORMATO DE DATOS:
+Recibirás un CSV con las siguientes columnas:
+- Order_ID: Identificador de la orden
+- Cliente: Nombre del cliente
+- Fecha_Creado_ISO: Fecha de lanzamiento en formato ISO
+- Fecha_Fin_ISO: Fecha de finalización en formato ISO
+- Dias_No_Laborables_Atravesados: Número de días no laborables en el periodo (número entero)
+- Retraso_Atribuible_Calendario_Segundos: Tiempo perdido por calendario en segundos
+- Retraso_Atribuible_Calendario_Formato: Tiempo en formato HH:MM:SS
+- Impacto_Porcentaje: % del lead time atribuible al calendario (puede incluir símbolo %)
 
-Columnas normalizadas:
-- Order_ID, Cliente
-- Fecha_Creado_ISO, Fecha_Fin_ISO
-- Dias_No_Laborables_Atravesados
-- Retraso_Atribuible_Calendario_Segundos, Retraso_Atribuible_Calendario_Formato
-- Impacto_Porcentaje
+IMPORTANTE: Procesa TODAS las filas del CSV. Este análisis aísla el impacto específico del calendario.
 
-Foco del analisis:
-1. Cuantificar el impacto total del calendario en retrasos
-2. Identificar ordenes mas afectadas por dias festivos
-3. Analizar si hay periodos especificos con mayor impacto (vacaciones, festivos locales)
-4. Proponer 3 estrategias para mitigar el impacto del calendario
+ANÁLISIS REQUERIDO:
+1. **Impacto global del calendario**:
+   - Total de órdenes analizadas
+   - Suma total de Retraso_Atribuible_Calendario_Segundos (convertir a días)
+   - Promedio de días no laborables por orden
+   - Impacto_Porcentaje promedio: qué % del lead time se pierde en calendario
+   - Órdenes con 0 impacto vs órdenes muy afectadas (>20% impacto)
 
-Incluye estadisticas agregadas y casos especificos usando TODOS los datos.`
+2. **Top 10 órdenes más afectadas**:
+   - Order_ID, Cliente, Dias_No_Laborables_Atravesados, Retraso_Atribuible_Calendario_Formato, Impacto_Porcentaje
+   - Para cada una: cuántos días de retraso puro por calendario
+   - ¿Hay clientes recurrentes?
+
+3. **Análisis temporal de periodos problemáticos**:
+   - Agrupa por mes o fecha según Fecha_Creado_ISO
+   - Identifica meses con más órdenes afectadas
+   - Periodos específicos: vacaciones de verano, Navidad, festivos locales
+   - Cuantifica impacto de cada periodo (días perdidos totales)
+
+4. **Patrones de afectación**:
+   - Relación entre duración de orden y días no laborables atravesados
+   - ¿Las órdenes largas sufren proporcionalmente más o menos?
+   - Distribución: cuántas órdenes tienen 0-2 días, 3-5 días, >5 días no laborables
+
+5. **Estrategias de mitigación** (3 priorizadas):
+   - Basadas en los periodos problemáticos identificados
+   - Ajustes de lanzamiento pre-festivos
+   - Buffers de tiempo en estimaciones
+   - Posibles esquemas de producción en días especiales
+   - Cuantifica reducción esperada en días de lead time
+
+FORMATO DE SALIDA:
+Usa estadísticas agregadas y casos específicos. Identifica periodos/meses problemáticos con nombres (ej: "Agosto 2024", "Semana Santa").`
                 },
                 'bottleneck-analysis': {
                     title: 'Detección de Cuellos de Botella',
-                    prompt: `Identifica y analiza los principales cuellos de botella en la cadena de produccion.
+                    prompt: `Eres un ingeniero industrial especializado en Theory of Constraints. Identifica los cuellos de botella críticos que limitan la capacidad del sistema de producción.
 
-IMPORTANTE: Procesa TODAS las filas del CSV.
+FORMATO DE DATOS:
+Recibirás un CSV con datos agregados por tipo de proceso. Columnas:
+- Codigo_Proceso: Código único del proceso
+- Nombre_Proceso: Descripción del proceso
+- Ordenes_Afectadas: Número de órdenes que pasan por este proceso (número entero)
+- Clientes_Afectados: Número de clientes distintos (número entero)
+- Duracion_Promedio_Segundos: Tiempo promedio de ejecución en segundos
+- Duracion_Promedio_Formato: Duración promedio en HH:MM:SS
+- Duracion_Maxima_Segundos: Caso más lento registrado en segundos
+- Duracion_Maxima_Formato: Duración máxima en HH:MM:SS
+- Tiempo_Espera_Promedio_Segundos: Gap promedio antes de este proceso en segundos
+- Tiempo_Espera_Promedio_Formato: Gap promedio en HH:MM:SS
+- Tasa_Utilizacion_Porcentaje: % de utilización del recurso (puede incluir símbolo %)
 
-Columnas normalizadas:
-- Codigo_Proceso, Nombre_Proceso
-- Ordenes_Afectadas, Clientes_Afectados
-- Duracion_Promedio_Segundos, Duracion_Promedio_Formato
-- Duracion_Maxima_Segundos, Duracion_Maxima_Formato
-- Gap_Promedio_Segundos, Gap_Promedio_Formato
-- Tasa_Utilizacion_Porcentaje
+IMPORTANTE: Procesa TODAS las filas del CSV. Cada fila representa un tipo de proceso con sus estadísticas agregadas.
 
-Analisis requerido:
-1. Identificar top 3 procesos cuello de botella (alta utilizacion, duraciones elevadas)
-2. Calcular el impacto en tiempo total de produccion
-3. Analizar correlacion entre duracion de proceso y gaps subsecuentes
-4. Proponer 3 soluciones especificas por cuello de botella identificado
+ANÁLISIS REQUERIDO:
+1. **Identificación de cuellos de botella (Top 3)**:
+   Criterios combinados:
+   - Alta tasa de utilización (idealmente >80%)
+   - Alta duración promedio
+   - Alto tiempo de espera subsecuente (indicador de cola)
+   - Alto volumen de órdenes afectadas
 
-Prioriza por impacto operacional usando TODOS los datos.`
+   Para cada cuello de botella: Codigo_Proceso, Nombre_Proceso, Duracion_Promedio_Formato, Tasa_Utilizacion_Porcentaje, Ordenes_Afectadas
+
+2. **Cuantificación del impacto**:
+   Para cada cuello de botella:
+   - Duración total acumulada: Duracion_Promedio × Ordenes_Afectadas (en días)
+   - % del tiempo total de producción que consume
+   - Clientes afectados directamente
+   - Variabilidad: ratio Duracion_Maxima / Duracion_Promedio
+
+3. **Análisis de correlación proceso-espera**:
+   - Para cada proceso: ratio Tiempo_Espera_Promedio / Duracion_Promedio
+   - Procesos con alto ratio (>1.0) indican scheduling pobre
+   - Procesos con bajo ratio pero alta duración son cuellos de botella "puros"
+   - Identifica si los gaps ocurren ANTES o DESPUÉS de los cuellos de botella
+
+4. **Análisis de capacidad**:
+   - Procesos al límite: Tasa_Utilizacion >90% (riesgo alto)
+   - Procesos sobrecargados: 70-90% utilización (monitorear)
+   - Procesos con capacidad: <70% utilización
+   - Capacidad adicional necesaria estimada (en %)
+
+5. **Soluciones específicas por cuello de botella** (3 para cada uno):
+   - Soluciones operativas (paralelización, turnos, redistribución)
+   - Soluciones de proceso (reducir setup time, mejorar métodos)
+   - Inversiones (equipamiento adicional si justificado)
+   - Para cada solución: impacto estimado en reducción de duración o aumento de capacidad
+
+FORMATO DE SALIDA:
+Prioriza por impacto operacional usando matriz (Impacto vs Esfuerzo). Usa códigos y nombres de procesos específicos. Cuantifica todo en horas/días.`
                 },
                 'capacity-planning': {
                     title: 'Planificación de Capacidad',
-                    prompt: `Analiza la capacidad de produccion y genera recomendaciones para planificacion futura.
+                    prompt: `Eres un planner de capacidad estratégica. Analiza la utilización de capacidad actual y proyecta necesidades futuras basadas en patrones históricos.
 
-IMPORTANTE: El CSV contiene agregados por periodo. Lee TODAS las filas.
+FORMATO DE DATOS:
+Recibirás un CSV con datos agregados por periodo temporal. Columnas:
+- Periodo: Identificador del periodo (semana, mes, etc.)
+- Cantidad_Ordenes: Número de órdenes en el periodo (número entero)
+- Clientes_Unicos: Clientes distintos atendidos (número entero)
+- Tiempo_Produccion_Total_Segundos: Suma de tiempos de producción en segundos
+- Tiempo_Produccion_Total_Formato: Suma en formato HH:MM:SS
+- Tiempo_Promedio_Por_Orden_Segundos: Promedio por orden en segundos
+- Tiempo_Promedio_Por_Orden_Formato: Promedio en HH:MM:SS
+- Capacidad_Utilizada_Porcentaje: % de capacidad usada (puede incluir símbolo %)
+- Capacidad_Disponible_Estimada_Porcentaje: % de capacidad libre
 
-Columnas normalizadas:
-- Periodo (fecha/semana)
-- Cantidad_Ordenes, Clientes_Unicos
-- Tiempo_Produccion_Total_Segundos, Tiempo_Produccion_Total_Formato
-- Tiempo_Promedio_Por_Orden_Segundos, Tiempo_Promedio_Por_Orden_Formato
-- Capacidad_Utilizada_Porcentaje
-- Capacidad_Disponible_Estimada_Porcentaje
+IMPORTANTE: Procesa TODAS las filas del CSV. Cada fila representa un periodo temporal distinto.
 
-Objetivos:
-1. Identificar periodos de sobrecarga (>90% utilizacion)
-2. Identificar periodos de baja utilizacion (<50%)
-3. Calcular capacidad optima basada en tendencias
-4. Proponer 3 estrategias de redistribucion de carga
-5. Estimar capacidad adicional necesaria para picos de demanda
+ANÁLISIS REQUERIDO:
+1. **Identificación de periodos críticos**:
+   - Periodos con sobrecarga (Capacidad_Utilizada >90%): listar con fecha/periodo
+   - Periodos con baja utilización (<50%): listar con fecha/periodo
+   - Periodos óptimos (70-85% utilización): listar
+   - % de periodos en cada categoría
 
-Genera recomendaciones cuantificadas usando TODOS los datos.`
+2. **Análisis de tendencias históricas**:
+   - Tendencia de Cantidad_Ordenes: ¿aumenta, disminuye o es estable?
+   - Tendencia de Capacidad_Utilizada: ¿mejora o empeora?
+   - Variabilidad: desviación estándar de Cantidad_Ordenes
+   - Estacionalidad: ¿hay patrones mensuales/trimestrales?
+
+3. **Cálculo de capacidad óptima**:
+   - Capacidad actual estimada (basada en periodos pico)
+   - Utilización promedio actual
+   - Utilización objetivo: 75-80% para permitir flexibilidad
+   - Gap de capacidad: diferencia entre actual y óptimo
+
+4. **Análisis de picos de demanda**:
+   - Top 3 periodos de mayor carga: Periodo, Cantidad_Ordenes, Capacidad_Utilizada
+   - Capacidad adicional necesaria para esos picos (en %)
+   - Impacto si los picos se repiten: ¿cuánta capacidad extra se necesita?
+
+5. **Estrategias de redistribución de carga** (3 priorizadas):
+   - Nivelación de carga: mover órdenes de periodos sobrecargados a periodos con capacidad
+   - Cuantifica: cuántas órdenes mover y a qué periodos
+   - Anticipación: lanzar órdenes antes en periodos de baja utilización
+   - Impacto estimado: mejora en % de utilización y reducción de sobrecarga
+
+6. **Recomendaciones de capacidad adicional**:
+   - Basada en tendencias y picos
+   - Capacidad adicional necesaria (en % o en órdenes/periodo)
+   - ROI estimado: impacto en lead time y cumplimiento
+   - Priorización: ¿capacidad permanente o temporal?
+
+FORMATO DE SALIDA:
+Usa gráficos conceptuales de utilización por periodo. Cuantifica todo en % de capacidad y número de órdenes. Incluye nombres de periodos específicos.`
                 },
                 'predictive-delays': {
                     title: 'Predicción de Retrasos',
-                    prompt: `Predice y analiza patrones que indican posibles retrasos futuros.
+                    prompt: `Eres un analista de gestión de riesgos operacionales. Identifica órdenes activas en riesgo de retraso y patrones predictivos para actuar preventivamente.
 
-IMPORTANTE: Procesa TODAS las filas del CSV.
+FORMATO DE DATOS:
+Recibirás un CSV con órdenes activas y su análisis de riesgo. Columnas:
+- Order_ID: Identificador de la orden
+- Cliente: Nombre del cliente
+- Estado_Actual: Estado de la orden (ej: "En proceso", "Bloqueada", etc.)
+- Fecha_Inicio_Estimada_ISO: Fecha de inicio esperada en formato ISO
+- Fecha_Fin_Estimada_ISO: Fecha de fin planificada en formato ISO
+- Progreso_Porcentaje: % de completitud actual (número o con símbolo %)
+- Retraso_Acumulado_Segundos: Retraso actual respecto a lo esperado en segundos
+- Retraso_Acumulado_Formato: Retraso en formato HH:MM:SS
+- Señales_Alerta: Indicadores de riesgo (puede ser texto descriptivo o códigos)
+- Probabilidad_Retraso_Porcentaje: Probabilidad estimada de retraso final (número o con %)
 
-Columnas normalizadas:
-- Order_ID, Cliente, Estado_Actual
-- Fecha_Inicio_Estimada_ISO, Fecha_Fin_Estimada_ISO
-- Progreso_Porcentaje
-- Retraso_Acumulado_Segundos, Retraso_Acumulado_Formato
-- Señales_Alerta (factores de riesgo detectados)
-- Probabilidad_Retraso_Porcentaje
+IMPORTANTE: Procesa TODAS las filas del CSV. Estas son órdenes ACTIVAS que aún pueden ser salvadas.
 
-Analisis predictivo:
-1. Identificar ordenes activas con alta probabilidad de retraso (>70%)
-2. Analizar patrones comunes en ordenes con retrasos historicos
-3. Detectar señales tempranas de alerta (gaps elevados, procesos lentos)
-4. Calcular impacto estimado de retrasos proyectados
-5. Proponer 3 acciones preventivas inmediatas para ordenes en riesgo
+ANÁLISIS REQUERIDO:
+1. **Clasificación de riesgo**:
+   - Alto riesgo (Probabilidad >70%): cantidad y lista de Order_ID
+   - Riesgo medio (40-70%): cantidad
+   - Riesgo bajo (<40%): cantidad
+   - % de órdenes activas en cada categoría
 
-Se especifico con casos concretos y probabilidades usando TODOS los datos.`
+2. **Órdenes críticas que requieren acción inmediata**:
+   Para cada orden con Probabilidad >70%:
+   - Order_ID, Cliente, Progreso_Porcentaje, Retraso_Acumulado_Formato, Señales_Alerta
+   - Días hasta Fecha_Fin_Estimada
+   - Severidad del riesgo (alto progreso + alto retraso = crítico)
+
+3. **Análisis de patrones predictivos**:
+   - Señales de alerta más comunes en órdenes de alto riesgo
+   - Correlación entre Progreso_Porcentaje y Probabilidad_Retraso
+   - ¿Hay clientes específicos con múltiples órdenes en riesgo?
+   - Estados que correlacionan con alto riesgo
+
+4. **Análisis de señales tempranas**:
+   - Órdenes con bajo progreso pero ya con retraso acumulado
+   - Órdenes con Señales_Alerta específicas (ej: "gaps elevados", "proceso lento")
+   - Patrones: ¿el retraso ocurre al inicio o se acumula gradualmente?
+
+5. **Impacto proyectado**:
+   - Suma de Retraso_Acumulado de órdenes de alto riesgo (en días)
+   - Si todas las órdenes de alto riesgo se retrasan: cuántos días totales de retraso
+   - Clientes más afectados por volumen de órdenes en riesgo
+
+6. **Plan de acción preventivo** (3 acciones inmediatas priorizadas):
+   - Para órdenes específicas: Order_ID, acción correctiva, impacto esperado
+   - Acciones sistémicas: resolver señales de alerta recurrentes
+   - Timeline: acciones para esta semana vs próximas 2 semanas
+   - Métrica de éxito: reducir X órdenes de alto riesgo a medio/bajo riesgo
+
+FORMATO DE SALIDA:
+Usa semáforo de riesgo (Alto/Medio/Bajo). Lista Order_IDs específicos con recomendaciones. Cuantifica impacto en días de retraso evitados.`
                 }
             };
 
@@ -4069,7 +4685,7 @@ Se especifico con casos concretos y probabilidades usando TODOS los datos.`
 
     <!-- AI Prompt Modal -->
     <div class="modal fade" id="aiPromptModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-dialog modal-dialog-scrollable" style="max-width: 80%; width: 80%;">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="aiPromptModalTitle"><i class="fas fa-robot me-2"></i>{{ __('Análisis IA') }}</h5>
@@ -4128,7 +4744,7 @@ Se especifico con casos concretos y probabilidades usando TODOS los datos.`
 
     <!-- AI Result Modal -->
     <div class="modal fade" id="aiResultModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-dialog modal-dialog-scrollable" style="max-width: 80%; width: 80%;">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">{{ __('Resultado IA') }}</h5>

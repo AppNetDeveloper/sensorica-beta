@@ -870,6 +870,78 @@
         if (callbackMappingsContainer) {
             updateCallbackMoveButtons();
         }
+
+        // ========== SECCIÓN PARA CONFIGURACIÓN DE TIEMPOS ==========
+
+        // Función para actualizar el resumen de configuración
+        function updateConfigurationSummary() {
+            const lockTimeout = parseFloat(document.getElementById('lock_timeout').value) || 30;
+            const tolerance = parseFloat(document.getElementById('lock_timeout_tolerance').value) || 0.10;
+            const parallelEnabled = document.getElementById('enable_parallel_processing').checked;
+
+            // Calcular timeout efectivo
+            const effectiveTimeout = Math.ceil(lockTimeout * (1 - tolerance));
+            const minTimeout = effectiveTimeout; // El timeout efectivo es más pequeño
+            const maxTimeout = lockTimeout; // El timeout base es más grande
+
+            // Actualizar elementos del resumen
+            const effectiveTimeoutEl = document.getElementById('effective-timeout');
+            const processingTypeEl = document.getElementById('processing-type');
+            const timeoutRangeEl = document.getElementById('timeout-range');
+
+            if (effectiveTimeoutEl) {
+                effectiveTimeoutEl.textContent = effectiveTimeout + ' minutos';
+            }
+
+            if (processingTypeEl) {
+                processingTypeEl.textContent = parallelEnabled ? 'Paralelo' : 'Secuencial';
+                processingTypeEl.className = parallelEnabled ? 'badge bg-success' : 'badge bg-warning';
+            }
+
+            if (timeoutRangeEl) {
+                timeoutRangeEl.textContent = `${minTimeout} - ${maxTimeout} minutos`;
+            }
+        }
+
+        // Añadir event listeners para los campos de configuración
+        const configFields = ['lock_timeout', 'lock_timeout_tolerance', 'enable_parallel_processing'];
+        configFields.forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                field.addEventListener('input', updateConfigurationSummary);
+                field.addEventListener('change', updateConfigurationSummary);
+            }
+        });
+
+        // Inicializar el resumen al cargar la página
+        updateConfigurationSummary();
+
+        // Validación de valores mínimos y máximos
+        function validateConfigField(field) {
+            const value = parseFloat(field.value);
+            const min = parseFloat(field.min);
+            const max = parseFloat(field.max);
+
+            if (value < min) {
+                field.value = min;
+                showToast(`Valor mínimo para ${field.previousElementSibling.textContent} es ${min}`, 'warning');
+            } else if (value > max) {
+                field.value = max;
+                showToast(`Valor máximo para ${field.previousElementSibling.textContent} es ${max}`, 'warning');
+            }
+
+            updateConfigurationSummary();
+        }
+
+        // Añadir validación en tiempo real para los campos numéricos
+        const numericFields = ['api_timeout', 'lock_timeout', 'search_delay', 'lock_timeout_tolerance'];
+        numericFields.forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                field.addEventListener('blur', () => validateConfigField(field));
+                field.addEventListener('change', () => validateConfigField(field));
+            }
+        });
     });
 </script>
 @endpush
@@ -1044,7 +1116,155 @@
                             </div>
                         </div>
                     </div>
-                    
+
+                    <!-- Sección de Configuración de Tiempos y Bloqueos -->
+                    <div class="card mt-4">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">{{ __('Configuración de Tiempos y Bloqueos') }}</h6>
+                            <small class="text-muted">{{ __('Configuración para sincronización y procesamiento de pedidos') }}</small>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group mb-3">
+                                        <label for="api_timeout" class="form-label">{{ __('Timeout API (segundos)') }}</label>
+                                        <input type="number"
+                                               name="api_timeout"
+                                               id="api_timeout"
+                                               class="form-control"
+                                               value="{{ old('api_timeout', $customer->api_timeout ?? 30) }}"
+                                               min="5"
+                                               max="300"
+                                               required>
+                                        <small class="form-text text-muted">
+                                            {{ __('Tiempo máximo de espera para llamadas a la API (5-300 segundos)') }}
+                                        </small>
+                                        @error('api_timeout')
+                                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <div class="form-group mb-3">
+                                        <label for="lock_timeout" class="form-label">{{ __('Timeout Bloqueo (minutos)') }}</label>
+                                        <input type="number"
+                                               name="lock_timeout"
+                                               id="lock_timeout"
+                                               class="form-control"
+                                               value="{{ old('lock_timeout', $customer->lock_timeout ?? 30) }}"
+                                               min="5"
+                                               max="180"
+                                               required>
+                                        <small class="form-text text-muted">
+                                            {{ __('Tiempo máximo de bloqueo para este cliente (5-180 minutos)') }}
+                                        </small>
+                                        @error('lock_timeout')
+                                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group mb-3">
+                                        <label for="search_delay" class="form-label">{{ __('Delay entre Procesamientos (ms)') }}</label>
+                                        <input type="number"
+                                               name="search_delay"
+                                               id="search_delay"
+                                               class="form-control"
+                                               value="{{ old('search_delay', $customer->search_delay ?? 100) }}"
+                                               min="0"
+                                               max="5000"
+                                               step="50"
+                                               required>
+                                        <small class="form-text text-muted">
+                                            {{ __('Pausa entre procesamiento de pedidos para no sobrecargar la API (0-5000 ms)') }}
+                                        </small>
+                                        @error('search_delay')
+                                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <div class="form-group mb-3">
+                                        <label for="lock_timeout_tolerance" class="form-label">{{ __('Tolerancia de Bloqueo (%)') }}</label>
+                                        <input type="number"
+                                               name="lock_timeout_tolerance"
+                                               id="lock_timeout_tolerance"
+                                               class="form-control"
+                                               value="{{ old('lock_timeout_tolerance', $customer->lock_timeout_tolerance ?? 0.10) }}"
+                                               min="0"
+                                               max="0.50"
+                                               step="0.01"
+                                               required>
+                                        <small class="form-text text-muted">
+                                            {{ __('Reducción aleatoria para evitar bloqueos largos (0-50%). Default: 10%') }}
+                                        </small>
+                                        @error('lock_timeout_tolerance')
+                                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="form-check form-switch mb-3">
+                                        <input type="hidden" name="enable_parallel_processing" value="0">
+                                        <input type="checkbox"
+                                               name="enable_parallel_processing"
+                                               class="form-check-input"
+                                               id="enable_parallel_processing"
+                                               value="1"
+                                               {{ old('enable_parallel_processing', $customer->enable_parallel_processing ?? true) ? 'checked' : '' }}>
+                                        <label class="form-check-label" for="enable_parallel_processing">
+                                            {{ __('Habilitar Procesamiento Paralelo') }}
+                                        </label>
+                                        <small class="form-text text-muted d-block">
+                                            {{ __('Permite que este cliente se procese en paralelo con otros clientes. Si se desactiva, el procesamiento será secuencial.') }}
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Resumen de configuración -->
+                            <div class="alert alert-info mt-3">
+                                <h6 class="alert-heading">{{ __('📊 Resumen de Configuración') }}</h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <small class="d-block">
+                                            <strong>Timeout efectivo:</strong>
+                                            <span id="effective-timeout">
+                                                {{ round(($customer->lock_timeout ?? 30) * (1 + ($customer->lock_timeout_tolerance ?? 0.10))) }}
+                                            </span> minutos
+                                        </small>
+                                        <small class="d-block">
+                                            <strong>Tipo de procesamiento:</strong>
+                                            <span id="processing-type">
+                                                {{ ($customer->enable_parallel_processing ?? true) ? 'Paralelo' : 'Secuencial' }}
+                                            </span>
+                                        </small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <small class="d-block">
+                                            <strong>Rango de timeout:</strong>
+                                            <span id="timeout-range">
+                                                {{ $customer->lock_timeout ?? 30 }} - {{ round(($customer->lock_timeout ?? 30) * (1 + ($customer->lock_timeout_tolerance ?? 0.10))) }}
+                                            </span> minutos
+                                        </small>
+                                        <small class="d-block">
+                                            <strong>Archivo de bloqueo:</strong>
+                                            <code>customer_{{ $customer->id }}_orders_check.lock</code>
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Sección de Mapeo de Campos -->
                     <div class="card mt-4">
                         <div class="card-header bg-light d-flex justify-content-between align-items-center">

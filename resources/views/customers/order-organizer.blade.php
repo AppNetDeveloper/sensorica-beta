@@ -15,51 +15,69 @@
 @endsection
 
 @section('content')
-<div class="card">
-    <div class="card-header">
+<div class="card border-0 shadow-lg">
+    <div class="card-header bg-gradient-primary text-white border-0 py-4">
         <div class="d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">{{ __('Processes') }}</h5>
-            
+            <div>
+                <h4 class="card-title mb-1">
+                    <i class="fas fa-tasks me-2"></i>{{ __('Processes') }}
+                </h4>
+                <p class="card-text mb-0 opacity-75">
+                    {{ $customer->name }} - {{ __('Organize your production processes') }}
+                </p>
+            </div>
+
             @can('kanban-filter-toggle')
-                <div class="d-flex align-items-center gap-3">
+                <div class="d-flex align-items-center gap-3 bg-white bg-opacity-10 px-3 py-2 rounded-pill">
                     <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" role="switch" 
-                               id="kanbanFilterToggle" 
+                        <input class="form-check-input" type="checkbox" role="switch"
+                               id="kanbanFilterToggle"
                                {{ $filterEnabled ? 'checked' : '' }}
                                style="width: 3rem; height: 1.5rem; cursor: pointer;">
-                        <label class="form-check-label ms-2" for="kanbanFilterToggle" style="cursor: pointer;">
+                        <label class="form-check-label ms-2" for="kanbanFilterToggle" style="cursor: pointer; color: #000000 !important; text-shadow: 0 1px 2px rgba(0,0,0,0.1);">
                             <i class="fas fa-filter me-1"></i>
-                            <span id="filterStatusText">
+                            <span id="filterStatusText" class="fw-semibold" style="color: #000000 !important; text-shadow: 0 1px 2px rgba(0,0,0,0.1);">
                                 {{ $filterEnabled ? __('Filtro activado') : __('Filtro desactivado') }}
                             </span>
                         </label>
                     </div>
-                    <small class="text-muted" id="filterHelpText">
-                        {{ $filterEnabled 
-                            ? __('Órdenes no listas ocultas en Kanban') 
-                            : __('Todas las órdenes visibles en Kanban') 
+                    <small id="filterHelpText" style="color: #000000 !important; text-shadow: 0 1px 2px rgba(0,0,0,0.1); font-weight: 500;">
+                        {{ $filterEnabled
+                            ? __('Órdenes no listas ocultas en Kanban')
+                            : __('Todas las órdenes visibles en Kanban')
                         }}
                     </small>
                 </div>
             @endcan
         </div>
     </div>
-    <div class="card-body">
+    <div class="card-body p-4">
         @if($groupedProcesses->count() > 0)
-            <div class="row">
+            <div class="row g-4">
                 @foreach($groupedProcesses as $processData)
                     @php
                         $process = $processData['process'];
                         $lines = $processData['lines'];
                     @endphp
-                    <div class="col-md-4 col-lg-3 mb-4">
-                        <div class="card h-100 border-0 shadow-sm">
-                            <div class="card-body d-flex flex-column">
-                                <h5 class="card-title text-center mb-2">{{ $process->description ?: 'Sin descripción' }}</h5>
-
-                                <div class="text-center text-muted small mb-2">
-                                    {{ $lines->count() }} {{ trans_choice('maquina|maquinas', $lines->count()) }}
+                    <div class="col-md-6 col-lg-4 col-xl-3">
+                        <div class="card h-100 border-0 shadow-md hover-lift process-card">
+                            <div class="card-body d-flex flex-column p-4">
+                                <!-- Icono y título del proceso -->
+                                <div class="text-center mb-3">
+                                    <div class="process-icon mb-3">
+                                        <i class="fas fa-industry fa-2x"></i>
+                                    </div>
+                                    <h5 class="card-title mb-2 fw-semibold">{{ $process->description ?: 'Sin descripción' }}</h5>
                                 </div>
+
+                                <!-- Información de líneas -->
+                                <div class="text-center mb-3">
+                                    <span class="badge bg-light text-dark px-3 py-2">
+                                        <i class="fas fa-cogs me-1"></i>
+                                        {{ $lines->count() }} {{ trans_choice('maquina|maquinas', $lines->count()) }}
+                                    </span>
+                                </div>
+
                                 @php
                                     $bgColor = $process->color ?? '#0d6efd';
                                     // Calcular si el color es claro u oscuro para ajustar el texto
@@ -70,19 +88,30 @@
                                     $brightness = (($r * 299) + ($g * 587) + ($b * 114)) / 1000;
                                     $textColor = $brightness > 155 ? '#000000' : '#ffffff';
                                 @endphp
-                                <a href="{{ route('customers.order-kanban', ['customer' => $customer->id, 'process' => $process->id]) }}" 
-                                   class="btn w-100 mt-auto"
-                                   style="background-color: {{ $bgColor }}; border-color: {{ $bgColor }}; color: {{ $textColor }};">
-                                    <i class="ti ti-layout-kanban me-2"></i> {{ __('Organize Orders') }}
-                                </a>
+
+                                <!-- Botón de acción -->
+                                <div class="mt-auto">
+                                    <a href="{{ route('customers.order-kanban', ['customer' => $customer->id, 'process' => $process->id]) }}"
+                                       class="btn w-100 py-3 process-button"
+                                       style="background-color: {{ $bgColor }}; border-color: {{ $bgColor }}; color: {{ $textColor }};">
+                                        <i class="ti ti-layout-kanban me-2"></i>
+                                        <span class="fw-semibold">{{ __('Organize Orders') }}</span>
+                                    </a>
+                                </div>
                             </div>
                         </div>
                     </div>
                 @endforeach
             </div>
         @else
-            <div class="alert alert-info mb-0">
-                <i class="ti ti-info-circle me-2"></i> {{ __('No production lines found for this customer.') }}
+            <div class="alert alert-info border-0 shadow-sm">
+                <div class="d-flex align-items-center">
+                    <i class="ti ti-info-circle me-3 fa-2x"></i>
+                    <div>
+                        <h5 class="alert-heading mb-1">{{ __('No production lines found') }}</h5>
+                        <p class="mb-0">{{ __('No production lines found for this customer.') }}</p>
+                    </div>
+                </div>
             </div>
         @endif
     </div>
@@ -91,32 +120,79 @@
 
 @push('css')
 <style>
-/* Estilos para las tarjetas de procesos */
-.card-body a.btn:hover {
-    filter: brightness(0.9);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    transition: all 0.2s ease;
+/* Estilos mejorados para las tarjetas de procesos */
+.process-card {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 12px;
+    overflow: hidden;
 }
 
-.card-body a.btn {
-    transition: all 0.2s ease;
-    font-weight: 500;
+.process-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 24px rgba(0,0,0,0.15);
 }
 
-/* Estilos para el toggle switch del filtro */
+.process-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    color: white;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.process-button {
+    border-radius: 8px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.process-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s;
+}
+
+.process-button:hover::before {
+    left: 100%;
+}
+
+.process-button:hover {
+    transform: scale(1.02);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+    filter: brightness(1.1);
+}
+
+/* Estilos para el toggle switch del filtro mejorados */
 #kanbanFilterToggle {
     cursor: pointer;
+    background-color: rgba(255,255,255,0.2);
+    border-color: rgba(255,255,255,0.3);
 }
 
 #kanbanFilterToggle:checked {
     background-color: #28a745;
     border-color: #28a745;
+    box-shadow: 0 0 10px rgba(40, 167, 69, 0.5);
 }
 
 #kanbanFilterToggle:not(:checked) {
     background-color: #6c757d;
     border-color: #6c757d;
+    box-shadow: 0 0 10px rgba(108, 117, 125, 0.3);
 }
 
 #kanbanFilterToggle:disabled {
@@ -130,10 +206,89 @@
 
 #filterStatusText {
     font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    color: #000000 !important;
+}
+
+.form-check-label {
+    color: #000000 !important;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
 #filterHelpText {
     font-size: 0.875rem;
+    color: #000000 !important;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    font-weight: 500;
+}
+
+/* Asegurar que los elementos del filtro siempre sean negros */
+.bg-white.bg-opacity-10 .form-check-label,
+.bg-white.bg-opacity-10 #filterStatusText,
+.bg-white.bg-opacity-10 #filterHelpText {
+    color: #000000 !important;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+/* Animación de entrada para las tarjetas */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.process-card {
+    animation: fadeInUp 0.5s ease-out;
+}
+
+.process-card:nth-child(1) { animation-delay: 0.1s; }
+.process-card:nth-child(2) { animation-delay: 0.2s; }
+.process-card:nth-child(3) { animation-delay: 0.3s; }
+.process-card:nth-child(4) { animation-delay: 0.4s; }
+.process-card:nth-child(5) { animation-delay: 0.5s; }
+.process-card:nth-child(6) { animation-delay: 0.6s; }
+
+/* Efectos de sombra adicionales */
+.process-card {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+}
+
+.process-card:hover {
+    box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+}
+
+/* Sombra para el contenedor principal */
+.card.border-0.shadow-lg {
+    box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+}
+
+/* Sombra para botones de proceso */
+.process-button {
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.process-button:hover {
+    box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+}
+
+/* Sombra para iconos de proceso */
+.process-icon {
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+/* Sombra para badges */
+.badge {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* Efecto de sombra para el header */
+.card-header {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
 }
 
 /* Estilos para el tablero Kanban */
@@ -260,7 +415,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const data = await response.json();
                 
                 if (data.success) {
-                    // Actualizar textos según el nuevo estado
+                    // Actualizar textos según el nuevo estado manteniendo estilos
                     if (data.value) {
                         statusText.textContent = '{{ __("Filtro activado") }}';
                         helpText.textContent = '{{ __("Órdenes no listas ocultas en Kanban") }}';
@@ -268,6 +423,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         statusText.textContent = '{{ __("Filtro desactivado") }}';
                         helpText.textContent = '{{ __("Todas las órdenes visibles en Kanban") }}';
                     }
+
+                    // Forzar estilos negros después de actualizar
+                    statusText.style.color = '#000000 !important';
+                    statusText.style.textShadow = '0 1px 2px rgba(0,0,0,0.1)';
+                    helpText.style.color = '#000000 !important';
+                    helpText.style.textShadow = '0 1px 2px rgba(0,0,0,0.1)';
+                    statusText.parentElement.style.color = '#000000 !important';
+                    statusText.parentElement.style.textShadow = '0 1px 2px rgba(0,0,0,0.1)';
                     
                     // Mostrar notificación de éxito
                     if (typeof Swal !== 'undefined') {

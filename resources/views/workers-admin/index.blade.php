@@ -61,53 +61,553 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
     {{-- Extensión Responsive de DataTables --}}
     <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.4.1/css/responsive.dataTables.min.css">
+    {{-- Font Awesome para iconos --}}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
-        /* Espacio entre botones DataTables y la tabla */
+        /* Estilos modernos para la página */
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        /* Card principal con glassmorfismo */
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
+            overflow: hidden;
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-bottom: none;
+            padding: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            50% { transform: translate(-20px, -20px) rotate(180deg); }
+        }
+
+        .card-title {
+            color: white;
+            font-weight: 700;
+            font-size: 2rem;
+            margin: 0;
+            position: relative;
+            z-index: 1;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        /* Breadcrumb moderno */
+        .breadcrumb {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 1rem 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        .breadcrumb-item a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .breadcrumb-item a:hover {
+            color: #764ba2;
+            transform: translateX(3px);
+        }
+
+        .breadcrumb-item.active {
+            color: #6c757d;
+            font-weight: 600;
+        }
+
+        /* Tabla moderna */
+        .table-responsive {
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            margin: 2rem auto;
+            background: white;
+        }
+
+        #workersTable {
+            margin: 0;
+            border: none;
+        }
+
+        #workersTable thead {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        }
+
+        #workersTable thead th {
+            border: none;
+            padding: 1.2rem;
+            font-weight: 700;
+            color: #495057;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        #workersTable tbody tr {
+            transition: all 0.3s ease;
+            border-bottom: 1px solid #f1f3f4;
+        }
+
+        #workersTable tbody tr:hover {
+            background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%);
+            transform: scale(1.01);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+        }
+
+        #workersTable tbody td {
+            padding: 1rem;
+            vertical-align: middle;
+            border: none;
+        }
+
+        /* Botones de acción mejorados */
+        .action-btn {
+            padding: 0.4rem 0.8rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+            border: none;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin: 0.2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .action-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .action-btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn-edit {
+            background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+            color: #212529;
+        }
+
+        .btn-edit:hover {
+            color: #212529;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4);
+        }
+
+        .btn-delete {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+        }
+
+        .btn-delete:hover {
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+        }
+
+        .btn-toggle {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+
+        .btn-reset-email {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            color: white;
+        }
+
+        .btn-reset-whatsapp {
+            background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
+            color: white;
+        }
+
+        .btn-reset-pin {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            color: #333;
+        }
+
+        /* Botones DataTables */
         .dt-buttons {
-            margin-bottom: 1rem;
+            margin: 2rem 0;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            justify-content: center;
         }
 
-        /* Alineación de botones de acciones en la tabla */
-        button {
-            margin-right: 5px;
+        .dt-button,
+        .buttons-html5,
+        .dt-button:active,
+        .dt-button:focus,
+        .buttons-html5:active,
+        .buttons-html5:focus {
+            color: white !important;
+            border: none !important;
+            border-radius: 12px;
+            padding: 0.8rem 1.5rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-size: 0.9rem;
+            position: relative;
+            overflow: hidden;
+            text-decoration: none !important;
+            background: none !important;
+            box-shadow: none !important;
         }
 
-        /* Clase para que la tabla se muestre más angosta y centrada */
-        .my-narrow-table {
-            max-width: 90%; /* Ajusta este valor según necesites (80%, 900px, etc.) */
-            margin: 0 auto; /* Centra horizontalmente el contenido */
+        .dt-button::before,
+        .buttons-html5::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
         }
 
-        /* SweetAlert worker modal polishing */
-        .worker-modal .swal2-html-container{ margin: 0 !important; }
+        .dt-button:hover::before,
+        .buttons-html5:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn-add-worker,
+        .dt-button.btn-add-worker,
+        .buttons-html5.btn-add-worker {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3) !important;
+        }
+
+        .btn-add-worker:hover,
+        .dt-button.btn-add-worker:hover,
+        .buttons-html5.btn-add-worker:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4) !important;
+        }
+
+        .btn-import-excel,
+        .dt-button.btn-import-excel,
+        .buttons-html5.btn-import-excel {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%) !important;
+            box-shadow: 0 4px 15px rgba(17, 153, 142, 0.3) !important;
+        }
+
+        .btn-import-excel:hover,
+        .dt-button.btn-import-excel:hover,
+        .buttons-html5.btn-import-excel:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(17, 153, 142, 0.4) !important;
+        }
+
+        .btn-export-excel,
+        .dt-button.btn-export-excel,
+        .buttons-html5.btn-export-excel {
+            background: linear-gradient(135deg, #fc4a1a 0%, #f7b733 100%) !important;
+            box-shadow: 0 4px 15px rgba(252, 74, 26, 0.3) !important;
+        }
+
+        .btn-export-excel:hover,
+        .dt-button.btn-export-excel:hover,
+        .buttons-html5.btn-export-excel:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(252, 74, 26, 0.4) !important;
+        }
+
+        .btn-monitor,
+        .dt-button.btn-monitor,
+        .buttons-html5.btn-monitor {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%) !important;
+            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3) !important;
+        }
+
+        .btn-monitor:hover,
+        .dt-button.btn-monitor:hover,
+        .buttons-html5.btn-monitor:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(79, 172, 254, 0.4) !important;
+        }
+
+        .btn-print,
+        .dt-button.btn-print,
+        .buttons-html5.btn-print {
+            background: linear-gradient(135deg, #8e2de2 0%, #4a00e0 100%) !important;
+            box-shadow: 0 4px 15px rgba(142, 45, 226, 0.3) !important;
+        }
+
+        .btn-print:hover,
+        .dt-button.btn-print:hover,
+        .buttons-html5.btn-print:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(142, 45, 226, 0.4) !important;
+        }
+
+        /* Alerta de información */
+        .alert-info {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            border: none;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+            box-shadow: 0 4px 15px rgba(33, 150, 243, 0.1);
+            border-left: 5px solid #2196f3;
+        }
+
+        .alert-info strong {
+            color: #1565c0;
+            font-weight: 700;
+        }
+
+        /* SweetAlert worker modal mejorado */
+        .worker-modal .swal2-popup {
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.98);
+        }
+
+        .worker-modal .swal2-title {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 700;
+            font-size: 1.8rem;
+        }
+
+        .worker-modal .swal2-html-container{
+            margin: 0 !important;
+            padding: 1.5rem;
+        }
+
         .worker-modal .wm-grid{
-            display: grid; 
-            grid-template-columns: 200px 1fr; 
-            gap: 10px 16px; 
-            align-items: center; 
+            display: grid;
+            grid-template-columns: 220px 1fr;
+            gap: 15px 20px;
+            align-items: center;
             width: 100%;
         }
-        .worker-modal label{ 
-            font-weight: 600; 
-            color: #333; 
-            margin: 0; 
+
+        .worker-modal label{
+            font-weight: 700;
+            color: #667eea;
+            margin: 0;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
-        .worker-modal .swal2-input{ 
-            width: 100% !important; 
-            margin: 0 !important; 
-            background: #fff !important; 
-            border: 1px solid #ced4da !important; 
-            color: #333 !important; 
-            box-shadow: none !important; 
-            height: 2.4rem; 
-            padding: 0 .75rem; 
-            border-radius: .375rem; 
+
+        .worker-modal .swal2-input{
+            width: 100% !important;
+            margin: 0 !important;
+            background: #f8f9fa !important;
+            border: 2px solid #e9ecef !important;
+            color: #495057 !important;
+            box-shadow: none !important;
+            height: 2.8rem;
+            padding: 0.75rem 1rem !important;
+            border-radius: 10px !important;
+            transition: all 0.3s ease !important;
+            font-size: 1rem;
         }
-        .worker-modal small { grid-column: 2 / span 1; color: #666; }
+
+        .worker-modal .swal2-input:focus {
+            border-color: #667eea !important;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
+            background: white !important;
+        }
+
+        .worker-modal .swal2-confirm {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 12px;
+            padding: 0.8rem 2rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+        }
+
+        .worker-modal .swal2-confirm:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .worker-modal .swal2-cancel {
+            background: #6c757d;
+            border: none;
+            border-radius: 12px;
+            padding: 0.8rem 2rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+        }
+
+        .worker-modal small {
+            grid-column: 2 / span 1;
+            color: #6c757d;
+            font-style: italic;
+            font-size: 0.9rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .card-title {
+                font-size: 1.5rem;
+            }
+
+            .dt-buttons {
+                justify-content: flex-start;
+                overflow-x: auto;
+                padding: 0 1rem;
+            }
+
+            .action-btn {
+                font-size: 0.7rem;
+                padding: 0.3rem 0.6rem;
+            }
+        }
+
         @media (max-width: 640px){
-            .worker-modal .wm-grid{ grid-template-columns: 1fr; }
-            .worker-modal small{ grid-column: auto; }
+            .worker-modal .wm-grid{
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .worker-modal small{
+                grid-column: auto;
+            }
+
+            .worker-modal .swal2-popup {
+                width: 95% !important;
+                margin: 1rem !important;
+            }
+        }
+
+        /* Loading spinner personalizado */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Animaciones para los toast notifications */
+        .animated-toast {
+            animation: slideInRight 0.3s ease-out;
+        }
+
+        @keyframes slideInRight {
+            0% {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            100% {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .animated-toast.swal2-show {
+            animation: slideInRight 0.3s ease-out;
+        }
+
+        .animated-toast.swal2-hide {
+            animation: slideOutRight 0.3s ease-out;
+        }
+
+        @keyframes slideOutRight {
+            0% {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            100% {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+
+        /* Mejorar efecto hover en todas las filas */
+        #workersTable tbody tr {
+            position: relative;
+        }
+
+        #workersTable tbody tr::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+
+        #workersTable tbody tr:hover::after {
+            transform: scaleX(1);
         }
     </style>
 @endpush
@@ -158,35 +658,43 @@
                         data: null,
                         render: function (data) {
                             return `
-                                <button class="edit-btn btn btn-sm btn-secondary"
-                                        data-id="${data.id}"
-                                        data-name="${data.name}"
-                                        data-email="${data.email || ''}"
-                                        data-phone="${data.phone || ''}">
-                                    Editar
-                                </button>
-                                <button class="delete-btn btn btn-sm btn-danger"
-                                        data-id="${data.id}">
-                                    Eliminar
-                                </button>
-                                <button class="toggle-active-btn btn btn-sm ${data.active ? 'btn-warning' : 'btn-success'}"
-                                        data-id="${data.id}"
-                                        data-active="${data.active}">
-                                    ${data.active ? 'Deshabilitar' : 'Habilitar'}
-                                </button>
-                                <button class="reset-email-btn btn btn-sm btn-warning"
-                                        data-email="${data.email || ''}">
-                                    Reset Pass Email
-                                </button>
-                                <button class="reset-whatsapp-btn btn btn-sm btn-success"
-                                        data-phone="${data.phone || ''}">
-                                    Reset Pass WhatsApp
-                                </button>
-                                <button class="reset-pin-whatsapp-btn btn btn-sm btn-info"
-                                        data-phone="${data.phone || ''}"
-                                        data-id="${data.id}">
-                                    Reset PIN WhatsApp
-                                </button>
+                                <div class="d-flex flex-wrap gap-1">
+                                    <button class="action-btn btn-edit"
+                                            data-id="${data.id}"
+                                            data-name="${data.name}"
+                                            data-email="${data.email || ''}"
+                                            data-phone="${data.phone || ''}"
+                                            title="Editar trabajador">
+                                        <i class="fas fa-edit"></i> Editar
+                                    </button>
+                                    <button class="action-btn btn-delete"
+                                            data-id="${data.id}"
+                                            title="Eliminar trabajador">
+                                        <i class="fas fa-trash"></i> Eliminar
+                                    </button>
+                                    <button class="action-btn btn-toggle"
+                                            data-id="${data.id}"
+                                            data-active="${data.active}"
+                                            title="${data.active ? 'Deshabilitar trabajador' : 'Habilitar trabajador'}">
+                                        <i class="fas ${data.active ? 'fa-user-slash' : 'fa-user-check'}"></i> ${data.active ? 'Deshab.' : 'Habilitar'}
+                                    </button>
+                                    <button class="action-btn btn-reset-email"
+                                            data-email="${data.email || ''}"
+                                            title="Resetear contraseña por email">
+                                        <i class="fas fa-envelope"></i> Email
+                                    </button>
+                                    <button class="action-btn btn-reset-whatsapp"
+                                            data-phone="${data.phone || ''}"
+                                            title="Resetear contraseña por WhatsApp">
+                                        <i class="fab fa-whatsapp"></i> WhatsApp
+                                    </button>
+                                    <button class="action-btn btn-reset-pin"
+                                            data-phone="${data.phone || ''}"
+                                            data-id="${data.id}"
+                                            title="Resetear PIN por WhatsApp">
+                                        <i class="fas fa-key"></i> PIN
+                                    </button>
+                                </div>
                             `;
                         }
                     }
@@ -198,8 +706,7 @@
                 buttons: [
                     {
                         text: '<i class="fas fa-user-plus"></i> Añadir Trabajador',
-                        className: 'btn btn-success btn-lg',
-                        style: 'font-size: 1.2rem; padding: 0.75rem 1.5rem;',
+                        className: 'btn-add-worker',
                         action: function () {
                             Swal.fire({
                                 title: 'Añadir Trabajador',
@@ -261,7 +768,17 @@
                                         contentType: 'application/json',
                                         data: JSON.stringify({ id, name, email, phone, password, pin }),
                                         success: function () {
-                                            Swal.fire('Trabajador añadido o actualizado', '', 'success');
+                                            Swal.fire({
+                                                icon: 'success',
+                                                title: '¡Excelente!',
+                                                text: 'Trabajador añadido o actualizado correctamente',
+                                                showConfirmButton: false,
+                                                timer: 2000,
+                                                backdrop: `rgba(102, 126, 234, 0.1)`,
+                                                customClass: {
+                                                    popup: 'animated-toast'
+                                                }
+                                            });
                                             table.ajax.reload();
                                         },
                                         error: function (xhr) {
@@ -277,16 +794,16 @@
                         }
                     },
                     {
-                        text: 'Importar Excel',
-                        className: 'btn btn-success',
+                        text: '<i class="fas fa-file-import"></i> Importar Excel',
+                        className: 'btn-import-excel',
                         action: function () {
                             $('#excelFileInput').click();
                         }
                     },
                     {
                         extend: 'excelHtml5',
-                        text: 'Exportar a Excel',
-                        className: 'btn btn-success',
+                        text: '<i class="fas fa-file-export"></i> Exportar Excel',
+                        className: 'btn-export-excel',
                         title: null,
                         exportOptions: {
                             columns: [0, 1, 2, 3, 4],
@@ -300,28 +817,56 @@
                         }
                     },
                     {
-                        text: 'Monitor',
-                        className: 'btn btn-primary', // Estilo del botón
+                        text: '<i class="fas fa-desktop"></i> Monitor',
+                        className: 'btn-monitor',
                         action: function () {
                             const url = '/workers/workers-live.html?shift=true&order=true&name=true&id=true&nameSize=1.2rem&numberSize=2rem&idSize=1rem&labelSize=1rem';
-                            window.open(url, '_blank'); // Abre el enlace en una nueva pestaña
+                            window.open(url, '_blank');
                         }
                     },
                     {
-                        text: 'Imprimir Listado',
-                        className: 'btn btn-primary', // Estilo del botón
+                        text: '<i class="fas fa-print"></i> Imprimir Listado',
+                        className: 'btn-print',
                         action: function () {
                             const url = '/workers/export.html';
-                            window.open(url, '_blank'); // Abre el enlace en una nueva pestaña
+                            window.open(url, '_blank');
                         }
                     }
                 ]
             });
 
+            // ---- Mejoras visuales y de experiencia de usuario ----
+
+            // Añadir efecto de carga personalizado
+            $(document).ajaxStart(function() {
+                if (!$('.loading-overlay').length) {
+                    $('body').append('<div class="loading-overlay"><div class="loading-spinner"></div></div>');
+                }
+            });
+
+            $(document).ajaxStop(function() {
+                $('.loading-overlay').fadeOut(300, function() {
+                    $(this).remove();
+                });
+            });
+
+            // Animación de entrada para las filas de la tabla
+            $('#workersTable').on('draw.dt', function() {
+                $('#workersTable tbody tr').each(function(index) {
+                    $(this).css({
+                        'opacity': 0,
+                        'transform': 'translateY(20px)'
+                    }).delay(index * 50).animate({
+                        'opacity': 1,
+                        'transform': 'translateY(0)'
+                    }, 300);
+                });
+            });
+
             // ---- Eventos CRUD / Reset Pass / Excel ----
             
             // Editar trabajador
-            $('#workersTable tbody').on('click', '.edit-btn', function () {
+            $('#workersTable tbody').on('click', '.btn-edit', function () {
                 const currentId    = $(this).data('id');
                 const currentName  = $(this).data('name');
                 const currentEmail = $(this).data('email');
@@ -390,7 +935,17 @@
                             contentType: 'application/json',
                             data: JSON.stringify(payload),
                             success: function () {
-                                Swal.fire('Trabajador actualizado', '', 'success');
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: '¡Actualizado!',
+                                    text: 'Trabajador actualizado correctamente',
+                                    showConfirmButton: false,
+                                    timer: 2000,
+                                    backdrop: `rgba(102, 126, 234, 0.1)`,
+                                    customClass: {
+                                        popup: 'animated-toast'
+                                    }
+                                });
                                 table.ajax.reload();
                             },
                             error: function (xhr) {
@@ -406,7 +961,7 @@
             });
 
             // Eliminar trabajador
-            $('#workersTable tbody').on('click', '.delete-btn', function () {
+            $('#workersTable tbody').on('click', '.btn-delete', function () {
                 const id = $(this).data('id');
                 Swal.fire({
                     title: '¿Estás seguro?',
@@ -421,7 +976,17 @@
                             url: `${workersApiUrl}/${id}`,
                             method: 'DELETE',
                             success: function () {
-                                Swal.fire('Trabajador eliminado', '', 'success');
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: '¡Eliminado!',
+                                    text: 'Trabajador eliminado correctamente',
+                                    showConfirmButton: false,
+                                    timer: 2000,
+                                    backdrop: `rgba(102, 126, 234, 0.1)`,
+                                    customClass: {
+                                        popup: 'animated-toast'
+                                    }
+                                });
                                 table.ajax.reload();
                             },
                             error: function (xhr) {
@@ -437,7 +1002,7 @@
             });
 
             // Toggle estado activo del trabajador
-            $('#workersTable tbody').on('click', '.toggle-active-btn', function () {
+            $('#workersTable tbody').on('click', '.btn-toggle', function () {
                 const id = $(this).data('id');
                 const currentActive = $(this).data('active');
                 const actionText = currentActive ? 'deshabilitar' : 'habilitar';
@@ -472,7 +1037,7 @@
             });
 
             // Resetear contraseña por email
-            $('#workersTable tbody').on('click', '.reset-email-btn', function () {
+            $('#workersTable tbody').on('click', '.btn-reset-email', function () {
                 const email = $(this).data('email');
                 if (!email) {
                     Swal.fire({
@@ -512,7 +1077,7 @@
             });
 
             // Resetear contraseña por WhatsApp
-            $('#workersTable tbody').on('click', '.reset-whatsapp-btn', function () {
+            $('#workersTable tbody').on('click', '.btn-reset-whatsapp', function () {
                 const phone = $(this).data('phone');
                 if (!phone) {
                     Swal.fire({
@@ -552,7 +1117,7 @@
             });
 
             // Resetear PIN por WhatsApp (handler fuera del bloque de error y junto al resto de handlers)
-            $('#workersTable tbody').on('click', '.reset-pin-whatsapp-btn', function () {
+            $('#workersTable tbody').on('click', '.btn-reset-pin', function () {
                 const phone = $(this).data('phone');
                 const operatorId = $(this).data('id');
                 if (!phone && !operatorId) {

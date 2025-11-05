@@ -10,7 +10,6 @@ use App\Models\OriginalOrderProcess;
 use App\Models\OriginalOrderArticle;
 use App\Models\RouteName;
 use App\Concerns\ConsoleLoggableCommand;
-use App\Services\CustomerLockManager;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -20,30 +19,57 @@ use Illuminate\Support\Facades\Artisan;
 class CheckOrdersFromApi extends Command
 {
     use ConsoleLoggableCommand;
-    protected $signature = 'orders:check {--customer-id= : Procesar solo un cliente específico}';
+    protected $signature = 'orders:check';
     protected $description = 'Verifica pedidos desde la API y los compara con la base de datos local';
-
-    private CustomerLockManager $lockManager;
-
-    public function __construct(CustomerLockManager $lockManager)
-    {
-        parent::__construct();
-        $this->lockManager = $lockManager;
-    }
 
     public function handle()
     {
-        // Limpiar bloqueos expirados al inicio
-        $cleaned = $this->lockManager->cleanupExpiredLocks();
-        if ($cleaned > 0) {
-            $this->logInfo("🧹 Limpieza: Se eliminaron {$cleaned} bloqueos expirados");
+        // Verificar si ya hay una instancia en ejecución usando un archivo de bloqueo
+        $lockFile = storage_path('app/orders_check.lock');
+        
+        if (file_exists($lockFile)) {
+            $lockTime = file_get_contents($lockFile);
+            $lockAge = time() - (int)$lockTime;
+            
+            // Si el bloqueo tiene menos de 30 minutos, consideramos que otra instancia está en ejecución
+            if ($lockAge < 1800) {
+                $this->error('🔒 Ya existe una instancia del comando en ejecución desde hace ' . round($lockAge/60) . ' minutos');
+                $this->line('Si crees que es un error, elimina manualmente el archivo: ' . $lockFile);
+                return 1; // Salir con código de error
+            } else {
+                // El bloqueo es viejo (más de 30 minutos), probablemente un proceso que falló
+                $this->error('⚠️ Se encontró un bloqueo antiguo (> 30 min). Eliminando automáticamente.');
+                // Eliminar el archivo de bloqueo antiguo
+                if (@unlink($lockFile)) {
+                    $this->line('🗑️ Bloqueo antiguo eliminado. Continuando con la ejecución.');
+                } else {
+                    $this->error('❌ No se pudo eliminar el archivo de bloqueo antiguo. Verifica los permisos.');
+                    $this->line('Intenta eliminar manualmente: ' . $lockFile);
+                    return 1; // Salir con código de error si no se puede eliminar el bloqueo
+                }
+                // Continuamos y crearemos un nuevo bloqueo
+            }
         }
-
-        $this->logInfo('=== Iniciando verificación de pedidos desde API con bloqueos individuales ===');
+        
+        // Crear archivo de bloqueo con timestamp actual
+        file_put_contents($lockFile, time());
+        
+        // Registrar función para eliminar el bloqueo al finalizar (incluso si hay errores)
+        register_shutdown_function(function() use ($lockFile) {
+            if (file_exists($lockFile)) {
+                @unlink($lockFile);
+            }
+        });
+        
+        $this->logInfo('=== Iniciando verificación de pedidos desde API ===');
         $this->logLine('📊 Conectando a la base de datos...');
-
-        // Obtener clientes a procesar
-        $customers = $this->getCustomersToProcess();
+        
+        // Conectarse a la DB y obtener clientes con las 2 URLs configuradas
+        $customers = Customer::whereNotNull('order_listing_url')
+            ->whereNotNull('order_detail_url')
+            ->whereHas('fieldMappings')
+            ->with('fieldMappings')
+            ->get();
 
         if ($customers->isEmpty()) {
             $this->logWarning('❌ No se encontraron clientes con las URLs configuradas y mapeos definidos.');
@@ -52,227 +78,49 @@ class CheckOrdersFromApi extends Command
         }
 
         $this->logInfo("✅ Encontrados {$customers->count()} clientes para procesar");
-
-        $processedCustomers = 0;
-        $failedCustomers = 0;
-        $skippedCustomers = 0;
-
+        
         foreach ($customers as $customer) {
-            $result = $this->processCustomerWithLock($customer);
-
-            if ($result === 'success') {
-                $processedCustomers++;
-            } elseif ($result === 'failed') {
-                $failedCustomers++;
-            } elseif ($result === 'skipped') {
-                $skippedCustomers++;
-            }
-        }
-
-        $this->newLine();
-        $this->info("=== Resumen de Ejecución ===");
-        $this->line("✅ Clientes procesados exitosamente: {$processedCustomers}");
-        $this->line("⏭️ Clientes omitidos (bloqueados): {$skippedCustomers}");
-        $this->line("❌ Clientes con errores: {$failedCustomers}");
-        $this->line('📝 Logs detallados disponibles en el sistema de logs de Laravel');
-        $this->line('💡 Para revisar errores específicos, consulta los logs del sistema');
-
-        // Limpieza de órdenes sin procesos
-        $this->newLine();
-        $this->info('🧽 Iniciando limpieza de órdenes sin procesos asociados...');
-
-        try {
-            // Buscar órdenes sin procesos asociados y que no estén procesadas
-            $ordersWithoutProcesses = OriginalOrder::where('processed', 0)
-                ->whereDoesntHave('processes')
-                ->get();
-            $count = $ordersWithoutProcesses->count();
-            $this->logLine("Consulta optimizada: solo revisando órdenes con processed=0");
-
-            if ($count > 0) {
-                $this->line("🗑️ Encontradas {$count} órdenes sin procesos asociados");
-
-                // Registrar en logs antes de eliminar
-                $orderIds = $ordersWithoutProcesses->pluck('order_id')->toArray();
-                $this->logLine("Eliminando órdenes sin procesos: " . implode(', ', $orderIds));
-
-                // Eliminar las órdenes
-                foreach ($ordersWithoutProcesses as $order) {
-                    $this->logLine("  🗑️ Eliminando orden {$order->order_id} (ID: {$order->id})");
-                    $order->delete();
-                }
-
-                $this->info("✅ Se eliminaron {$count} órdenes sin procesos asociados");
-            } else {
-                $this->line("ℹ️ No se encontraron órdenes sin procesos asociados");
-            }
-        } catch (\Exception $e) {
-            $this->error("❌ Error al limpiar órdenes sin procesos: " . $e->getMessage());
-            Log::error('Error al limpiar órdenes sin procesos', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-        }
-
-        // Ejecutar comando secundario solo si hubo procesamientos exitosos
-        if ($processedCustomers > 0) {
-            $this->executeSecondaryCommand();
-        }
-
-        return $failedCustomers > 0 ? 1 : 0;
-    }
-
-    private function getCustomersToProcess()
-    {
-        $query = Customer::whereNotNull('order_listing_url')
-            ->whereNotNull('order_detail_url')
-            ->whereHas('fieldMappings')
-            ->with('fieldMappings');
-
-        // Si se especificó un cliente específico
-        if ($customerId = $this->option('customer-id')) {
-            $query->where('id', $customerId);
-        }
-
-        return $query->get();
-    }
-
-    private function processCustomerWithLock(Customer $customer): string
-    {
-        $this->newLine();
-        $this->logInfo("=== Procesando cliente: {$customer->name} (ID: {$customer->id}) ===");
-
-        // Verificar si el procesamiento paralelo está habilitado
-        if (!$customer->isParallelProcessingEnabled()) {
-            $this->logWarning("⚠️ El procesamiento paralelo está deshabilitado para este cliente");
-            return $this->processCustomerOrders($customer) ? 'success' : 'failed';
-        }
-
-        // Verificar si el cliente ya está siendo procesado
-        if ($this->lockManager->isLocked($customer)) {
-            $lockInfo = $this->lockManager->getLockInfo($customer);
-            $this->logWarning("🔒 Cliente {$customer->name} ya está siendo procesado");
-            $this->logWarning("⏱️ Bloqueo activo desde hace {$lockInfo['age_minutes']} minutos");
-            $this->logWarning("🕐 Timeout configurado: {$lockInfo['timeout_minutes']} minutos");
-            $this->logWarning("📁 Archivo de bloqueo: {$lockInfo['file_path']}");
-
-            if ($lockInfo['tolerance_used'] != 0) {
-                $toleranceText = $lockInfo['tolerance_used'] < 0 ? "-{$lockInfo['tolerance_used']}" : "+{$lockInfo['tolerance_used']}";
-                $this->logInfo("🎲 Tolerancia aplicada: {$toleranceText} minutos");
-            }
-
-            return 'skipped';
-        }
-
-        // Adquirir bloqueo para este cliente
-        if (!$this->lockManager->acquireLock($customer)) {
-            $this->logError("❌ No se pudo adquirir el bloqueo para el cliente {$customer->name}");
-            return 'failed';
-        }
-
-        try {
-            // Registrar función para liberar el bloqueo automáticamente
-            register_shutdown_function(function() use ($customer) {
-                $this->lockManager->releaseLock($customer);
-            });
-
-            $this->logInfo("🔒 Bloqueo adquirido para el cliente {$customer->name}");
+            $this->newLine();
+            $this->logInfo("=== Procesando cliente: {$customer->name} ===");
             $this->logLine("🔗 URL Listado: {$customer->order_listing_url}");
             $this->logLine("🔗 URL Detalle: {$customer->order_detail_url}");
-            $this->logInfo("⏱️ Timeout API: {$customer->getApiTimeout()} segundos");
-            $this->logInfo("⏱️ Timeout Lock: {$customer->getLockTimeout()} minutos");
-            $this->logInfo("⏱️ Delay: {$customer->getSearchDelay()} ms");
+            
+            try {
+                // Llamar al order_listing_url
+                $this->logLine("🌐 Conectando a la API de listado de pedidos...");
+                $response = Http::timeout(30)->get($customer->order_listing_url);
+                
+                if (!$response->successful()) {
+                    $this->logError("❌ Error al obtener pedidos para el cliente {$customer->name}: HTTP {$response->status()}");
+                    $this->logLine("📝 Registrando error en logs del sistema...");
+                    Log::error("Error API para cliente {$customer->name}", [
+                        'customer_id' => $customer->id,
+                        'url' => $customer->order_listing_url,
+                        'status' => $response->status(),
+                        'response' => $response->body()
+                    ]);
+                    continue;
+                }
 
-            // Procesar los pedidos del cliente
-            $result = $this->processCustomerOrders($customer);
+                $this->logLine("✅ Respuesta exitosa de la API");
+                $orders = $response->json();
+                
+                if (empty($orders)) {
+                    $this->logWarning("⚠️ No se encontraron pedidos para el cliente: {$customer->name}");
+                    $this->logLine("📝 Registrando ausencia de pedidos en logs...");
 
-            if ($result) {
-                $this->logInfo("✅ Cliente {$customer->name} procesado exitosamente");
-                return 'success';
-            } else {
-                return 'failed';
-            }
+                    continue;
+                }
 
-        } catch (\Exception $e) {
-            $this->logError("❌ Error procesando cliente {$customer->name}: " . $e->getMessage());
-            Log::error('Error procesando cliente', [
-                'customer_id' => $customer->id,
-                'customer_name' => $customer->name,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            return 'failed';
-        } finally {
-            // Liberar el bloqueo
-            $this->lockManager->releaseLock($customer);
-            $this->logInfo("🔓 Bloqueo liberado para el cliente {$customer->name}");
-        }
-    }
-
-    private function executeSecondaryCommand(): void
-    {
-        $this->newLine();
-        $this->info('✅ Verificación de pedidos completada. Ejecutando ahora: orders:list-stock');
-
-        try {
-            // Ejecuta el comando 'orders:list-stock'
-            Artisan::call('orders:list-stock');
-
-            // Opcional: puedes capturar y mostrar la salida del comando ejecutado
-            $salidaDelComando = Artisan::output();
-            $this->line("--- Salida de orders:list-stock ---");
-            $this->line($salidaDelComando);
-            $this->line("------------------------------------");
-
-        } catch (\Exception $e) {
-            $this->error('❌ Ocurrió un error al ejecutar el comando orders:list-stock.');
-            $this->error($e->getMessage());
-            Log::error("Fallo al ejecutar orders:list-stock desde orders:check: " . $e->getMessage());
-        }
-    }
-
-    private function processCustomerOrders(Customer $customer): bool
-    {
-        try {
-            // Llamar al order_listing_url
-            $this->logLine("🌐 Conectando a la API de listado de pedidos...");
-            $response = Http::timeout($customer->getApiTimeout())->get($customer->order_listing_url);
-
-            if (!$response->successful()) {
-                $this->logError("❌ Error al obtener pedidos para el cliente {$customer->name}: HTTP {$response->status()}");
-                $this->logLine("📝 Registrando error en logs del sistema...");
-                Log::error("Error API para cliente {$customer->name}", [
-                    'customer_id' => $customer->id,
-                    'url' => $customer->order_listing_url,
-                    'status' => $response->status(),
-                    'response' => $response->body()
-                ]);
-                return false;
-            }
-
-            $this->logLine("✅ Respuesta exitosa de la API");
-            $orders = $response->json();
-
-            if (empty($orders)) {
-                $this->logWarning("⚠️ No se encontraron pedidos para el cliente: {$customer->name}");
-                $this->logLine("📝 Registrando ausencia de pedidos en logs...");
-                return true; // No hay pedidos, pero no es un error
-            }
-
-            $this->logInfo("📦 Encontrados " . count($orders) . " pedidos en la API");
-            $this->logLine("🔄 Iniciando procesamiento de pedidos...");
-
-            // Procesar cada pedido aplicando los mapeos
-            foreach ($orders as $index => $order) {
-                $this->logInfo("--- Procesando pedido " . ($index + 1) . " ---");
-
-                try {
-                    // Aplicar delay configurable entre procesamientos
-                    if ($index > 0) {
-                        usleep($customer->getSearchDelay() * 1000); // Convertir a microsegundos
-                    }
-
-                    $this->logLine("🔍 Aplicando mapeos de campos...");
+                $this->logInfo("📦 Encontrados " . count($orders) . " pedidos en la API");
+                $this->logLine("🔄 Iniciando procesamiento de pedidos...");
+                
+                // Procesar cada pedido aplicando los mapeos
+                foreach ($orders as $index => $order) {
+                    $this->logInfo("--- Procesando pedido " . ($index + 1) . " ---");
+                    
+                    try {
+                        $this->logLine("🔍 Aplicando mapeos de campos...");
                         // Aplicar mapeos de campos
                         $mappedData = [];
                         $orderId = null;
@@ -403,19 +251,19 @@ class CheckOrdersFromApi extends Command
 
                                 // Verificar y actualizar el stock de los artículos existentes
                                 $this->logLine("🔍 Verificando stock de artículos para la orden {$orderId}...");
-
-                                // Aplicar delay configurable
-                                usleep($customer->getSearchDelay() * 1000);
-
+                                
+                                // Pequeño sleep para distribuir la carga en el servidor
+                                usleep(100000); // 100ms de pausa entre verificaciones de órdenes
+                                
                                 try {
                                     // Obtener los detalles de la orden desde la API
                                     $detailUrl = str_replace('{order_id}', $orderId, $customer->order_detail_url);
                                     $this->logLine("  🌐 Obteniendo detalles de la orden desde: {$detailUrl}");
-
-                                    // Delay antes de cada llamada HTTP
-                                    usleep($customer->getSearchDelay() * 1000);
-
-                                    $response = Http::timeout($customer->getApiTimeout())->get($detailUrl);
+                                    
+                                    // Sleep adicional antes de cada llamada HTTP a la API
+                                    usleep(100000); // 100ms de pausa antes de cada llamada HTTP
+                                    
+                                    $response = Http::timeout(30)->get($detailUrl);
                                     
                                     if (!$response->successful()) {
                                         $this->logError("  ❌ Error al obtener detalles del pedido {$orderId}: HTTP {$response->status()}");
@@ -493,10 +341,11 @@ class CheckOrdersFromApi extends Command
                             } else {
                                 $this->logLine("✗ El order_id {$orderId} NO EXISTE en la base de datos", 'comment');
                                 $this->logLine("→ Procesando y creando nuevo pedido...", 'info');
-
-                                // Aplicar delay configurable
-                                usleep($customer->getSearchDelay() * 1000);
-
+                                $this->logLine("📝 Registrando nueva orden en logs...");
+                                
+                                // Pequeño sleep para distribuir la carga en el servidor durante la creación
+                                usleep(100000); // 100ms de pausa entre creaciones de órdenes
+                                
                                 try {
                                     // Agregar customer_id a los datos mapeados
                                     $mappedData['customer_id'] = $customer->id;
@@ -568,24 +417,135 @@ class CheckOrdersFromApi extends Command
                             'error' => $e->getMessage(),
                             'trace' => $e->getTraceAsString()
                         ]);
-                        // Continuar con el siguiente pedido
-                        continue;
                     }
                 }
+                
+            } catch (\Exception $e) {
+                $this->logError("Error procesando cliente {$customer->name}: " . $e->getMessage());
+                $this->logLine("📝 Registrando error crítico en logs...");
+                Log::error('Error procesando cliente', [
+                    'customer_id' => $customer->id,
+                    'customer_name' => $customer->name,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+            }
+        }
 
-            return true;
-
+        $this->newLine();
+        $this->info('=== Proceso completado exitosamente ===');
+        $this->line('📊 Generando resumen de la ejecución...');
+        $this->line('✅ Todos los clientes han sido procesados');
+        $this->line('📝 Logs detallados disponibles en el sistema de logs de Laravel');
+        $this->line('💡 Para revisar errores específicos, consulta los logs del sistema');
+        $this->newLine();
+        $this->line('🎉 Comando CheckOrdersFromApi finalizado correctamente');
+        
+        // ================================================================
+        // LIMPIEZA DE ÓRDENES SIN PROCESOS
+        // ================================================================
+        $this->newLine();
+        $this->info('🧽 Iniciando limpieza de órdenes sin procesos asociados...');
+        
+        try {
+            // Buscar órdenes sin procesos asociados y que no estén procesadas
+            $ordersWithoutProcesses = OriginalOrder::where('processed', 0)
+                ->whereDoesntHave('processes')
+                ->get();
+            $count = $ordersWithoutProcesses->count();
+            $this->logLine("Consulta optimizada: solo revisando órdenes con processed=0");
+            
+            if ($count > 0) {
+                $this->line("🗑️ Encontradas {$count} órdenes sin procesos asociados");
+                
+                // Registrar en logs antes de eliminar
+                $orderIds = $ordersWithoutProcesses->pluck('order_id')->toArray();
+                $this->logLine("Eliminando órdenes sin procesos: " . implode(', ', $orderIds));
+                
+                // Eliminar las órdenes
+                foreach ($ordersWithoutProcesses as $order) {
+                    $this->logLine("  🗑️ Eliminando orden {$order->order_id} (ID: {$order->id})");
+                    $order->delete();
+                }
+                
+                $this->info("✅ Se eliminaron {$count} órdenes sin procesos asociados");
+            } else {
+                $this->line("ℹ️ No se encontraron órdenes sin procesos asociados");
+            }
         } catch (\Exception $e) {
-            $this->logError("Error procesando cliente {$customer->name}: " . $e->getMessage());
-            $this->logLine("📝 Registrando error crítico en logs...");
-            Log::error('Error procesando cliente', [
-                'customer_id' => $customer->id,
-                'customer_name' => $customer->name,
+            $this->error("❌ Error al limpiar órdenes sin procesos: " . $e->getMessage());
+            Log::error('Error al limpiar órdenes sin procesos', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            return false;
         }
+
+        // ================================================================
+        // INICIO DE LA MODIFICACIÓN: Llamar al segundo comando
+        // ================================================================
+        $this->newLine();
+        $this->info('✅ Verificación de pedidos completada. Ejecutando ahora: orders:list-stock');
+
+        try {
+            // Ejecuta el comando 'orders:list-stock'
+            Artisan::call('orders:list-stock');
+            
+            // Opcional: puedes capturar y mostrar la salida del comando ejecutado
+            $salidaDelComando = Artisan::output();
+            $this->line("--- Salida de orders:list-stock ---");
+            $this->line($salidaDelComando);
+            $this->line("------------------------------------");
+
+        } catch (\Exception $e) {
+            $this->error('❌ Ocurrió un error al ejecutar el comando orders:list-stock.');
+            $this->error($e->getMessage());
+            Log::error("Fallo al ejecutar orders:list-stock desde orders:check: " . $e->getMessage());
+        }
+        // ================================================================
+        // FIN DE LA MODIFICACIÓN
+        // ================================================================
+        // ================================================================
+        // Eliminar el archivo de bloqueo al finalizar (complementa el registro de shutdown_function)
+        $this->line('🔓 Eliminando archivo de bloqueo...');
+        try{
+            if (file_exists($lockFile)) {
+                unlink($lockFile);
+                $this->line('✅ Archivo de bloqueo eliminado con éxito.');
+            } else {
+                $this->line('ℹ️ El archivo de bloqueo ya no existe.');
+            }
+        }catch(\Exception $e){
+            $this->error('❌ Ocurrió un error al eliminar el archivo .lock.');
+            $this->error($e->getMessage());
+            Log::error("Fallo al eliminar el archivo .lock desde orders:check: " . $e->getMessage());
+            
+            // Intento alternativo: usar otros métodos para eliminar el archivo
+            try{
+                // Intentar con system para usar comandos del sistema
+                system("rm -f {$lockFile}");
+                
+                // Verificar si el archivo fue eliminado
+                if (!file_exists($lockFile)) {
+                    $this->line('✅ Archivo de bloqueo eliminado con éxito usando comando del sistema.');
+                } else {
+                    // Último recurso: cambiar permisos y luego eliminar
+                    @chmod($lockFile, 0777); // Dar todos los permisos
+                    if (@unlink($lockFile)) {
+                        $this->line('✅ Archivo de bloqueo eliminado con éxito después de cambiar permisos.');
+                    } else {
+                        $this->error('❌ No se pudo eliminar el archivo de bloqueo.');
+                        Log::error("No se pudo eliminar el archivo de bloqueo después de múltiples intentos.");
+                    }
+                }
+            }catch(\Exception $e2){
+                $this->error('❌ Error en el intento alternativo de eliminación.');
+                $this->error($e2->getMessage());
+                Log::error("Segundo fallo al gestionar el archivo .lock: " . $e2->getMessage());
+            }
+        }
+        // ================================================================
+        
+        return 0;
     }
 
     private function processOrderDetails(Customer $customer, OriginalOrder $order, string $orderId)
@@ -596,7 +556,7 @@ class CheckOrdersFromApi extends Command
             
             $this->logInfo("  → Llamando a la API de detalles: {$detailUrl}");
             $this->logLine("  🌐 Enviando petición HTTP para obtener detalles...");
-            $response = Http::timeout($customer->getApiTimeout())->get($detailUrl);
+            $response = Http::timeout(30)->get($detailUrl);
             
             if (!$response->successful()) {
                 $this->logError("  ❌ Error al obtener detalles del pedido {$orderId}: HTTP {$response->status()}");

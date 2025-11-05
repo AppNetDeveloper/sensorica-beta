@@ -19,7 +19,7 @@ class ProcessController extends Controller
         $this->middleware('permission:process-show|process-create|process-edit|process-delete', ['only' => ['index', 'show']]);
         $this->middleware('permission:process-create', ['only' => ['create', 'store']]);
         $this->middleware('permission:process-edit', ['only' => ['edit', 'update', 'bulkUpdate']]);
-        $this->middleware('permission:process-delete', ['only' => ['destroy']]);
+        $this->middleware('permission:process-delete', ['only' => ['destroy', 'bulkDelete']]);
     }
 
     /**
@@ -161,5 +161,33 @@ class ProcessController extends Controller
 
         return redirect()->route('processes.index')
             ->with('success', 'Procesos actualizados correctamente.');
+    }
+
+    /**
+     * Remove multiple processes from storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function bulkDelete(Request $request)
+    {
+        $validated = $request->validate([
+            'process_ids' => 'required|array|min:1',
+            'process_ids.*' => 'integer|distinct|exists:processes,id',
+        ]);
+
+        try {
+            $processes = Process::whereIn('id', $validated['process_ids'])->get();
+            $deletedCount = $processes->count();
+
+            // Delete the processes
+            Process::whereIn('id', $validated['process_ids'])->delete();
+
+            return redirect()->route('processes.index')
+                ->with('success', "Se han eliminado correctamente {$deletedCount} procesos.");
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->with('error', 'No se pudieron eliminar los procesos seleccionados. Asegúrese de que no estén siendo utilizados en líneas de producción o pedidos activos.');
+        }
     }
 }

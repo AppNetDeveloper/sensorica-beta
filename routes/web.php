@@ -734,6 +734,8 @@ Route::delete('users/delete/ajax/{id}', [UserController::class, 'deleteAjax'])->
 // Rutas para la gestión de procesos
 Route::post('processes/bulk-update', [ProcessController::class, 'bulkUpdate'])
     ->name('processes.bulk-update');
+Route::delete('processes/bulk-delete', [ProcessController::class, 'bulkDelete'])
+    ->name('processes.bulk-delete');
 Route::resource('processes', ProcessController::class);
 
 // Rutas para familias de artículos y artículos
