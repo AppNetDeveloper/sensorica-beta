@@ -106,6 +106,325 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #555;
         }
+
+        /* ===== ESTILOS PARA MODAL DE RESULTADOS IA ===== */
+        /* Contenido del resultado */
+        .ai-result-content {
+            font-size: 1rem;
+            line-height: 1.6;
+            color: #333;
+            transition: font-size 0.2s ease;
+            max-height: 65vh;
+            overflow-y: auto;
+            padding: 1rem;
+            background: white;
+            border-radius: 8px;
+        }
+
+        /* Tablas Markdown con estilos Bootstrap */
+        .ai-result-content table {
+            margin-bottom: 1.5rem;
+            font-size: 0.95rem;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .ai-result-content table thead th {
+            background-color: #0d6efd;
+            color: white;
+            font-weight: 600;
+            padding: 0.75rem;
+            border: none;
+            text-align: left;
+            white-space: nowrap;
+        }
+
+        .ai-result-content table tbody td {
+            padding: 0.65rem 0.75rem;
+            border-top: 1px solid #dee2e6;
+            vertical-align: top;
+        }
+
+        .ai-result-content table tbody tr:nth-of-type(odd) {
+            background-color: rgba(0, 0, 0, 0.02);
+        }
+
+        .ai-result-content table tbody tr:hover {
+            background-color: #f8f9fa;
+            transition: background-color 0.15s ease-in-out;
+        }
+
+        /* Encabezados */
+        .ai-result-content h1, .ai-result-content h2, .ai-result-content h3,
+        .ai-result-content h4, .ai-result-content h5, .ai-result-content h6 {
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            font-weight: 600;
+            color: #212529;
+        }
+
+        .ai-result-content h1 { font-size: 1.8rem; border-bottom: 2px solid #0d6efd; padding-bottom: 0.3rem; }
+        .ai-result-content h2 { font-size: 1.5rem; color: #0d6efd; }
+        .ai-result-content h3 { font-size: 1.3rem; color: #495057; }
+        .ai-result-content h4 { font-size: 1.1rem; }
+        .ai-result-content h5 { font-size: 1rem; }
+
+        /* Listas */
+        .ai-result-content ul, .ai-result-content ol {
+            margin-bottom: 1rem;
+            padding-left: 1.5rem;
+        }
+
+        .ai-result-content li {
+            margin-bottom: 0.35rem;
+        }
+
+        /* Párrafos y separadores */
+        .ai-result-content p {
+            margin-bottom: 1rem;
+        }
+
+        .ai-result-content hr {
+            margin: 1.5rem 0;
+            border: none;
+            border-top: 2px solid #e9ecef;
+        }
+
+        /* Código */
+        .ai-result-content code {
+            background-color: #f8f9fa;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #d63384;
+        }
+
+        .ai-result-content pre {
+            background-color: #f8f9fa;
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            border-left: 4px solid #0d6efd;
+        }
+
+        .ai-result-content pre code {
+            background: none;
+            padding: 0;
+            color: #212529;
+        }
+
+        /* Blockquotes */
+        .ai-result-content blockquote {
+            padding: 0.5rem 1rem;
+            margin: 1rem 0;
+            border-left: 4px solid #0dcaf0;
+            background-color: #f8f9fa;
+            font-style: italic;
+        }
+
+        /* Enlaces */
+        .ai-result-content a {
+            color: #0d6efd;
+            text-decoration: none;
+        }
+
+        .ai-result-content a:hover {
+            text-decoration: underline;
+        }
+
+        /* Barra de progreso de scroll */
+        .scroll-progress-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #0d6efd 0%, #0dcaf0 100%);
+            width: 0%;
+            transition: width 0.1s ease;
+            z-index: 1050;
+            border-radius: 0 2px 2px 0;
+        }
+
+        /* Botón volver arriba */
+        #btnScrollTop {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 45px;
+            height: 45px;
+            border-radius: 50% !important;
+            background: #0d6efd;
+            color: white;
+            border: none;
+            box-shadow: 0 4px 12px rgba(13, 110, 253, 0.3);
+            cursor: pointer;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            z-index: 1055;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #btnScrollTop.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        #btnScrollTop:hover {
+            background: #0b5ed7;
+            transform: translateY(-3px);
+            box-shadow: 0 6px 16px rgba(13, 110, 253, 0.4);
+        }
+
+        /* Controles de fuente */
+        .font-controls .btn {
+            font-family: monospace;
+            font-weight: bold;
+            min-width: 36px;
+        }
+
+        /* Modal en fullscreen personalizado */
+        .modal-fullscreen-custom {
+            max-width: 100% !important;
+            width: 100% !important;
+            height: 100vh;
+            margin: 0 !important;
+        }
+
+        .modal-fullscreen-custom .modal-content {
+            height: 100vh;
+            border-radius: 0 !important;
+        }
+
+        .modal-fullscreen-custom .ai-result-content {
+            max-height: calc(100vh - 200px);
+        }
+
+        /* Tabs personalizados */
+        .nav-tabs .nav-link {
+            border: 1px solid transparent;
+            border-radius: 6px 6px 0 0;
+            color: #6c757d;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .nav-tabs .nav-link:hover {
+            border-color: #e9ecef #e9ecef #dee2e6;
+            background-color: #f8f9fa;
+            color: #495057;
+        }
+
+        .nav-tabs .nav-link.active {
+            background-color: white;
+            border-color: #dee2e6 #dee2e6 #fff;
+            color: #0d6efd;
+        }
+
+        /* Toolbar de acciones */
+        .ai-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            background: #f8f9fa;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .ai-toolbar .btn-group-sm .btn {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        /* Toast personalizado */
+        .copy-toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #198754;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 9999;
+            animation: slideInRight 0.3s ease, slideOutRight 0.3s ease 2.7s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOutRight {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+
+        /* Metadatos del análisis */
+        .ai-metadata {
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
+
+        .ai-metadata i {
+            color: #0d6efd;
+        }
+
+        /* Responsive ajustes */
+        @media (max-width: 768px) {
+            .modal-dialog[style*="80%"] {
+                max-width: 95% !important;
+                width: 95% !important;
+            }
+
+            .ai-toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .ai-toolbar .btn-group {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .ai-result-content {
+                font-size: 0.9rem;
+            }
+
+            .ai-result-content table {
+                font-size: 0.85rem;
+            }
+
+            #btnScrollTop {
+                bottom: 20px;
+                right: 20px;
+                width: 40px;
+                height: 40px;
+            }
+        }
+
     </style>
 @endpush
 
@@ -1327,7 +1646,7 @@
 
                 // Cerrar modal de procesamiento
                 bootstrap.Modal.getInstance(document.getElementById('aiProcessingModal')).hide();
-                
+
                 // Mostrar resultado
                 $('#aiResultPrompt').text(userPromptForDisplay);
                 const content = (last && last.task && last.task.response != null) ? last.task.response : last;
@@ -1339,24 +1658,69 @@
                     rawText = String(content);
                 }
 
+                // Establecer metadatos del análisis
+                const now = new Date();
+                const timestamp = now.toLocaleString('es-ES', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+                $('#aiResultTimestamp').text(timestamp);
+
+                // Calcular estadísticas del texto
+                const wordCount = (rawText || '').trim().split(/\s+/).filter(w => w.length > 0).length;
+                const lineCount = (rawText || '').split('\n').length;
+                const charCount = (rawText || '').length;
+                $('#aiResultStats').text(`${wordCount} palabras, ${lineCount} líneas, ${charCount} caracteres`);
+
+                // Establecer texto plano
                 $('#aiResultText').text(rawText || '');
 
+                // Convertir Markdown a HTML con marked.js
                 const htmlTarget = $('#aiResultHtml');
-                if (window.DOMPurify && typeof DOMPurify.sanitize === 'function') {
-                    const sanitized = DOMPurify.sanitize(rawText || '', {
-                        ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'style', 'src', 'alt', 'title'],
-                        ALLOWED_TAGS: false
-                    });
-                    htmlTarget.html(sanitized && sanitized.trim() ? sanitized : '<p class="text-muted mb-0">Sin contenido HTML para mostrar.</p>');
+                if (window.marked && window.DOMPurify) {
+                    try {
+                        console.log('[AI] Parseando Markdown con marked.js...');
+
+                        // Convertir Markdown a HTML
+                        let htmlContent = marked.parse(rawText || '');
+                        console.log('[AI] Markdown parseado correctamente');
+
+                        // Agregar clases de Bootstrap a las tablas
+                        htmlContent = htmlContent.replace(/<table>/g, '<table class="table table-striped table-bordered table-hover">');
+
+                        // Sanitizar el HTML con DOMPurify
+                        const sanitized = DOMPurify.sanitize(htmlContent, {
+                            ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'style', 'src', 'alt', 'title', 'colspan', 'rowspan'],
+                            ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+                                          'ul', 'ol', 'li', 'table', 'thead', 'tbody', 'tr', 'th', 'td',
+                                          'a', 'code', 'pre', 'blockquote', 'hr', 'span', 'div']
+                        });
+
+                        htmlTarget.html(sanitized);
+                        console.log('[AI] HTML sanitizado e inyectado en el DOM');
+                    } catch (err) {
+                        console.error('[AI] Error al parsear Markdown:', err);
+                        htmlTarget.html('<p class="text-danger">Error al procesar el contenido Markdown.</p>');
+                    }
                 } else {
+                    console.warn('[AI] marked.js o DOMPurify no disponible, mostrando texto plano');
                     htmlTarget.text(rawText || '');
                 }
 
-                const rawTabTrigger = document.getElementById('ai-tab-raw');
-                if (rawTabTrigger && bootstrap && bootstrap.Tab) {
-                    bootstrap.Tab.getOrCreateInstance(rawTabTrigger).show();
+                // Mostrar la tab de "Vista Formateada" por defecto
+                const renderedTabTrigger = document.getElementById('ai-tab-rendered');
+                if (renderedTabTrigger && bootstrap && bootstrap.Tab) {
+                    bootstrap.Tab.getOrCreateInstance(renderedTabTrigger).show();
                 }
 
+                // Inicializar funcionalidades del modal (copiar, descargar, imprimir, etc.)
+                initAIResultModalFeatures(rawText, userPromptForDisplay);
+
+                // Mostrar modal
                 const resultModal = new bootstrap.Modal(document.getElementById('aiResultModal'));
                 resultModal.show();
             } catch (err) {
@@ -1368,76 +1732,557 @@
             }
         }
 
+        /**
+         * Inicializa las funcionalidades interactivas del modal de resultados IA
+         * @param {string} rawText - Texto sin procesar del análisis
+         * @param {string} analysisType - Tipo de análisis realizado
+         */
+        function initAIResultModalFeatures(rawText, analysisType) {
+            console.log('[AI Modal] Inicializando funcionalidades interactivas...');
+
+            // Estado de tamaño de fuente (100% por defecto)
+            let currentFontSize = 100;
+
+            // ===== 1. COPIAR AL PORTAPAPELES =====
+            $('#btnCopyResult').off('click').on('click', function() {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(rawText).then(() => {
+                        console.log('[AI Modal] Texto copiado al portapapeles');
+                        showToast('✓ Copiado al portapapeles', 'success');
+                    }).catch(err => {
+                        console.error('[AI Modal] Error al copiar:', err);
+                        showToast('✗ Error al copiar', 'danger');
+                    });
+                } else {
+                    // Fallback para navegadores antiguos
+                    const textarea = document.createElement('textarea');
+                    textarea.value = rawText;
+                    textarea.style.position = 'fixed';
+                    textarea.style.opacity = '0';
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    try {
+                        document.execCommand('copy');
+                        showToast('✓ Copiado al portapapeles', 'success');
+                    } catch (err) {
+                        showToast('✗ Error al copiar', 'danger');
+                    }
+                    document.body.removeChild(textarea);
+                }
+            });
+
+            // ===== 2. DESCARGAR ARCHIVO .MD =====
+            $('#btnDownloadResult').off('click').on('click', function() {
+                try {
+                    const timestamp = new Date().toISOString().replace(/[:]/g, '-').split('.')[0];
+                    const filename = `analisis-ia-${timestamp}.md`;
+
+                    const blob = new Blob([rawText], { type: 'text/markdown;charset=utf-8' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+
+                    console.log('[AI Modal] Archivo descargado:', filename);
+                    showToast('✓ Archivo descargado', 'success');
+                } catch (err) {
+                    console.error('[AI Modal] Error al descargar:', err);
+                    showToast('✗ Error al descargar', 'danger');
+                }
+            });
+
+            // ===== 3. IMPRIMIR / PDF =====
+            $('#btnPrintResult').off('click').on('click', function() {
+                try {
+                    const printWindow = window.open('', '_blank');
+                    const htmlContent = $('#aiResultHtml').html();
+
+                    printWindow.document.write(`
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                            <meta charset="UTF-8">
+                            <title>Análisis IA - ${analysisType}</title>
+                            <style>
+                                body {
+                                    font-family: Arial, sans-serif;
+                                    line-height: 1.6;
+                                    padding: 20px;
+                                    max-width: 1200px;
+                                    margin: 0 auto;
+                                }
+                                h1, h2, h3, h4, h5, h6 {
+                                    margin-top: 1.5rem;
+                                    margin-bottom: 0.75rem;
+                                    color: #212529;
+                                }
+                                table {
+                                    width: 100%;
+                                    border-collapse: collapse;
+                                    margin-bottom: 1.5rem;
+                                    font-size: 0.9rem;
+                                }
+                                table thead th {
+                                    background-color: #0d6efd;
+                                    color: white;
+                                    padding: 0.75rem;
+                                    border: 1px solid #0d6efd;
+                                    text-align: left;
+                                }
+                                table tbody td {
+                                    padding: 0.65rem;
+                                    border: 1px solid #dee2e6;
+                                }
+                                table tbody tr:nth-child(odd) {
+                                    background-color: #f8f9fa;
+                                }
+                                pre {
+                                    background-color: #f8f9fa;
+                                    padding: 1rem;
+                                    border-radius: 4px;
+                                    overflow-x: auto;
+                                }
+                                code {
+                                    background-color: #f8f9fa;
+                                    padding: 0.2rem 0.4rem;
+                                    border-radius: 3px;
+                                    font-family: 'Courier New', monospace;
+                                }
+                                @media print {
+                                    body { padding: 10px; }
+                                    table { page-break-inside: auto; }
+                                    tr { page-break-inside: avoid; page-break-after: auto; }
+                                }
+                            </style>
+                        </head>
+                        <body>
+                            <h1>Análisis IA: ${analysisType}</h1>
+                            <p><strong>Generado:</strong> ${new Date().toLocaleString('es-ES')}</p>
+                            <hr>
+                            ${htmlContent}
+                        </body>
+                        </html>
+                    `);
+
+                    printWindow.document.close();
+                    printWindow.focus();
+
+                    // Esperar a que se cargue el contenido antes de imprimir
+                    setTimeout(() => {
+                        printWindow.print();
+                    }, 250);
+
+                    console.log('[AI Modal] Ventana de impresión abierta');
+                } catch (err) {
+                    console.error('[AI Modal] Error al imprimir:', err);
+                    showToast('✗ Error al imprimir', 'danger');
+                }
+            });
+
+            // ===== 4. PANTALLA COMPLETA =====
+            $('#btnFullscreen').off('click').on('click', function() {
+                const dialog = $('#aiResultModalDialog');
+                const icon = $(this).find('i');
+
+                if (dialog.hasClass('modal-fullscreen-custom')) {
+                    dialog.removeClass('modal-fullscreen-custom');
+                    icon.removeClass('fa-compress').addClass('fa-expand');
+                    $(this).attr('title', 'Pantalla completa');
+                    console.log('[AI Modal] Saliendo de pantalla completa');
+                } else {
+                    dialog.addClass('modal-fullscreen-custom');
+                    icon.removeClass('fa-expand').addClass('fa-compress');
+                    $(this).attr('title', 'Salir de pantalla completa');
+                    console.log('[AI Modal] Entrando en pantalla completa');
+                }
+            });
+
+            // ===== 5. CONTROL DE TAMAÑO DE FUENTE =====
+            function updateFontSize() {
+                $('.ai-result-content').css('font-size', currentFontSize + '%');
+                console.log('[AI Modal] Tamaño de fuente:', currentFontSize + '%');
+            }
+
+            $('#btnFontDecrease').off('click').on('click', function() {
+                if (currentFontSize > 70) {
+                    currentFontSize -= 10;
+                    updateFontSize();
+                    showToast(`Tamaño: ${currentFontSize}%`, 'info');
+                }
+            });
+
+            $('#btnFontReset').off('click').on('click', function() {
+                currentFontSize = 100;
+                updateFontSize();
+                showToast('Tamaño: 100% (normal)', 'info');
+            });
+
+            $('#btnFontIncrease').off('click').on('click', function() {
+                if (currentFontSize < 150) {
+                    currentFontSize += 10;
+                    updateFontSize();
+                    showToast(`Tamaño: ${currentFontSize}%`, 'info');
+                }
+            });
+
+            // ===== 6. BARRA DE PROGRESO DE SCROLL Y BOTÓN "VOLVER ARRIBA" =====
+            const scrollContainers = $('.ai-result-content, #aiResultText');
+            const btnScrollTop = $('#btnScrollTop');
+
+            scrollContainers.off('scroll').on('scroll', function() {
+                const scrollTop = $(this).scrollTop();
+                const scrollHeight = $(this)[0].scrollHeight - $(this).outerHeight();
+                const scrollPercent = scrollHeight > 0 ? (scrollTop / scrollHeight) * 100 : 0;
+
+                $('#aiScrollProgress').css('width', scrollPercent + '%');
+
+                // Mostrar/ocultar botón "Volver arriba"
+                if (scrollTop > 300) {
+                    btnScrollTop.addClass('show');
+                } else {
+                    btnScrollTop.removeClass('show');
+                }
+            });
+
+            // Click en botón "Volver arriba"
+            btnScrollTop.off('click').on('click', function() {
+                scrollContainers.animate({ scrollTop: 0 }, 400);
+                console.log('[AI Modal] Volviendo arriba');
+            });
+
+            // ===== 7. LIMPIEZA AL CERRAR EL MODAL =====
+            $('#aiResultModal').off('hidden.bs.modal').on('hidden.bs.modal', function() {
+                console.log('[AI Modal] Modal cerrado, limpiando event handlers...');
+
+                // Resetear tamaño de fuente
+                currentFontSize = 100;
+                $('.ai-result-content').css('font-size', '100%');
+
+                // Quitar clase fullscreen si está activa
+                $('#aiResultModalDialog').removeClass('modal-fullscreen-custom');
+                $('#btnFullscreen').find('i').removeClass('fa-compress').addClass('fa-expand');
+
+                // Ocultar botón "Volver arriba"
+                btnScrollTop.removeClass('show');
+
+                // Reset scroll progress
+                $('#aiScrollProgress').css('width', '0%');
+
+                // Limpiar event handlers
+                $('#btnCopyResult, #btnDownloadResult, #btnPrintResult, #btnFullscreen').off('click');
+                $('#btnFontDecrease, #btnFontReset, #btnFontIncrease').off('click');
+                scrollContainers.off('scroll');
+                btnScrollTop.off('click');
+            });
+
+            console.log('[AI Modal] Funcionalidades interactivas inicializadas correctamente');
+        }
+
+        /**
+         * Muestra un toast de notificación temporal
+         * @param {string} message - Mensaje a mostrar
+         * @param {string} type - Tipo de toast: success, danger, info
+         */
+        function showToast(message, type = 'success') {
+            const bgColor = type === 'success' ? '#198754' : type === 'danger' ? '#dc3545' : '#0dcaf0';
+            const toast = $(`
+                <div class="copy-toast" style="background: ${bgColor};">
+                    <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'danger' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i>
+                    <span>${message}</span>
+                </div>
+            `);
+
+            $('body').append(toast);
+
+            // Auto-remover después de 3 segundos
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
         $(function(){
             // Prompts ultra-simplificados para agentes especialistas
             const analysisPrompts = {
                 'oee-general': {
                     title: 'Análisis General de OEE',
-                    prompt: `Identifica mejores/peores líneas, tendencia general y 3 recomendaciones prioritarias.`
+                    prompt: `Eres un experto en manufactura lean y OEE (Overall Equipment Effectiveness). Analiza el rendimiento general de todas las líneas de producción.
+
+FORMATO DE DATOS:
+Recibirás un CSV con las siguientes columnas (separadas por comas):
+- Linea: Nombre/ID de la línea de producción
+- OEE_Porcentaje: OEE calculado en % (número decimal o con símbolo %)
+- Duracion_Segundos: Duración total del periodo en segundos (número entero)
+- Duracion_Formato: Duración en formato HH:MM:SS
+- Disponibilidad_Porcentaje: % de disponibilidad operativa
+- Rendimiento_Porcentaje: % de rendimiento vs velocidad teórica
+- Calidad_Porcentaje: % de calidad (unidades buenas)
+
+IMPORTANTE: Procesa TODAS las filas del CSV para obtener una visión completa.
+
+ANÁLISIS REQUERIDO:
+1. **Ranking de líneas**: Top 5 mejores y Bottom 5 peores por OEE. Para cada una: Linea, OEE_Porcentaje, y desviación vs media general.
+
+2. **Estadísticas globales**:
+   - OEE promedio, mediana, desviación estándar
+   - % de líneas con OEE >85% (clase mundial), 70-85% (bueno), <70% (necesita mejora)
+
+3. **Análisis de componentes OEE**:
+   - Cuál componente (Disponibilidad, Rendimiento, Calidad) es el más débil en promedio
+   - Líneas con disponibilidad baja (<80%)
+   - Líneas con rendimiento bajo (<85%)
+   - Líneas con problemas de calidad (<95%)
+
+4. **Tendencia general**: Si los datos lo permiten, detecta si el OEE está mejorando, empeorando o estable.
+
+5. **Recomendaciones**: 3 acciones prioritarias con impacto cuantificado (ej: "Mejorar disponibilidad en línea X puede aumentar OEE +8%").
+
+FORMATO DE SALIDA:
+Estructura en secciones con tablas cuando sea apropiado. Usa números y porcentajes concretos.`
                 },
                 'stops': {
                     title: 'Análisis de Paradas',
-                    prompt: `Identifica líneas con más paradas, impacto de falta material y 3 acciones correctivas.`
+                    prompt: `Eres un especialista en análisis de downtime y optimización de flujo de producción. Identifica las causas principales de paradas y su impacto.
+
+FORMATO DE DATOS:
+Recibirás un CSV con las siguientes columnas:
+- Linea: Nombre/ID de la línea
+- Paradas_Cantidad: Número de paradas ocurridas (número entero)
+- Paradas_Segundos: Tiempo total de paradas en segundos
+- Paradas_Formato: Tiempo en formato HH:MM:SS
+- Falta_Material_Segundos: Tiempo de paradas por falta de material
+- Falta_Material_Formato: En formato HH:MM:SS
+- OEE_Porcentaje: OEE resultante
+
+IMPORTANTE: Procesa TODAS las filas del CSV.
+
+ANÁLISIS REQUERIDO:
+1. **Top 5 líneas críticas**: Líneas con más tiempo de paradas. Para cada una: Linea, Paradas_Cantidad, Paradas_Formato, % del tiempo total.
+
+2. **Análisis de frecuencia vs duración**:
+   - Líneas con muchas paradas cortas (alta cantidad, baja duración promedio)
+   - Líneas con pocas paradas largas (baja cantidad, alta duración promedio)
+   - MTBF (Mean Time Between Failures) estimado
+
+3. **Impacto de falta de material**:
+   - % del total de paradas atribuible a falta de material
+   - Líneas donde falta material >50% de paradas
+   - Impacto en OEE por falta de material
+
+4. **Correlación paradas-OEE**:
+   - ¿Las líneas con más paradas tienen peor OEE?
+   - Identificar líneas que recuperan bien a pesar de paradas
+
+5. **Acciones correctivas**: 3 medidas priorizadas por ROI estimado (ej: "Mejorar suministro de material en línea X reduciría paradas en 30%").
+
+FORMATO DE SALIDA:
+Usa tablas comparativas. Cuantifica todo en horas/minutos y porcentajes.`
                 },
                 'performance': {
                     title: 'Análisis de Rendimiento',
-                    prompt: `Identifica desviaciones UPM real/teórico, tiempo lento y 3 mejoras de velocidad.`
+                    prompt: `Eres un ingeniero de métodos y tiempos especializado en optimización de velocidad de líneas. Analiza las desviaciones de rendimiento.
+
+FORMATO DE DATOS:
+Recibirás un CSV con las siguientes columnas:
+- Linea: Nombre/ID de la línea
+- UPM_Real: Unidades por minuto reales (número decimal)
+- UPM_Teorico: Unidades por minuto teóricas/diseño (número decimal)
+- Rendimiento_Porcentaje: % de eficiencia de velocidad (UPM_Real/UPM_Teorico * 100)
+- Tiempo_Lento_Segundos: Tiempo operando bajo velocidad óptima
+- Tiempo_Lento_Formato: En formato HH:MM:SS
+- OEE_Porcentaje: OEE resultante
+
+IMPORTANTE: Procesa TODAS las filas del CSV.
+
+ANÁLISIS REQUERIDO:
+1. **Desviaciones de rendimiento**: Top 5 líneas con mayor gap entre UPM_Real y UPM_Teorico. Para cada una: Linea, UPM_Real, UPM_Teorico, Gap absoluto, Gap %.
+
+2. **Distribución de rendimientos**:
+   - % de líneas con rendimiento >90% (óptimo)
+   - % de líneas entre 80-90% (aceptable)
+   - % de líneas <80% (crítico)
+
+3. **Análisis de tiempo lento**:
+   - Líneas con mayor Tiempo_Lento_Segundos
+   - Correlación entre tiempo lento y rendimiento
+   - Impacto estimado en producción (unidades perdidas)
+
+4. **Potencial de mejora**:
+   - Si todas las líneas operaran a UPM_Teorico, cuántas unidades adicionales/día
+   - Líneas con mayor potencial de mejora (alto gap + alto volumen)
+
+5. **Mejoras de velocidad**: 3 medidas priorizadas (ej: "Optimizar proceso en línea X puede aumentar UPM de 45 a 52, +15% rendimiento").
+
+FORMATO DE SALIDA:
+Usa tablas con comparaciones UPM Real vs Teórico. Cuantifica en unidades/minuto y unidades perdidas/día.`
                 },
                 'operators': {
                     title: 'Análisis de Operadores',
-                    prompt: `Identifica patrones tiempo ganado/perdido y 3 recomendaciones de gestión.`
+                    prompt: `Eres un especialista en gestión de talento y productividad laboral. Analiza el impacto de operadores en el rendimiento de las líneas.
+
+FORMATO DE DATOS:
+Recibirás un CSV con las siguientes columnas:
+- Linea: Nombre/ID de la línea
+- Operadores: Lista de operadores asignados (puede ser nombres o códigos)
+- Turno: Turno de trabajo (ej: Mañana, Tarde, Noche)
+- Tiempo_Ganado_Segundos: Tiempo ganado sobre estándar (positivo=adelanto)
+- Tiempo_Ganado_Formato: En formato HH:MM:SS o +/-HH:MM:SS
+- Tiempo_Perdido_Segundos: Tiempo perdido vs estándar (positivo=retraso)
+- Tiempo_Perdido_Formato: En formato HH:MM:SS
+- OEE_Porcentaje: OEE logrado
+
+IMPORTANTE: Procesa TODAS las filas del CSV.
+
+ANÁLISIS REQUERIDO:
+1. **Rendimiento por equipo**: Top 5 equipos con mejor balance Tiempo_Ganado vs Tiempo_Perdido. Incluye: Linea, Operadores, Turno, Balance neto.
+
+2. **Patrones por turno**:
+   - Turno con mejor desempeño promedio
+   - Turno con más tiempo perdido
+   - Diferencia entre mejor y peor turno
+
+3. **Análisis de consistencia**:
+   - Operadores/equipos con alta variabilidad (unas veces bien, otras mal)
+   - Operadores/equipos consistentemente buenos
+   - Operadores/equipos que necesitan soporte
+
+4. **Impacto en OEE**:
+   - Correlación entre tiempo ganado/perdido y OEE
+   - Líneas donde el factor humano es crítico (alta variación con diferentes operadores)
+
+5. **Recomendaciones de gestión**: 3 acciones priorizadas (ej: "Capacitar operador Y en línea Z puede reducir tiempo perdido en 40%", "Replicar mejores prácticas de turno X").
+
+FORMATO DE SALIDA:
+Usa tablas por turno y operador. Respeta la privacidad pero sé específico en identificar patrones accionables.`
                 },
                 'comparison': {
                     title: 'Comparativa Alto/Bajo',
-                    prompt: `Compara top 10 vs bottom 10, diferencias clave y plan de acción.`
+                    prompt: `Eres un analista de benchmarking interno. Compara las líneas de mejor desempeño vs las de peor desempeño para identificar factores diferenciadores.
+
+FORMATO DE DATOS:
+Recibirás un CSV con las siguientes columnas:
+- Tipo: "TOP" para las 10 mejores líneas, "BOTTOM" para las 10 peores
+- Linea: Nombre/ID de la línea
+- OEE_Porcentaje: OEE resultante
+- Disponibilidad_Porcentaje, Rendimiento_Porcentaje, Calidad_Porcentaje: Componentes del OEE
+- Duracion_Segundos, Duracion_Formato: Tiempo total analizado
+- Paradas_Segundos, Tiempo_Lento_Segundos: Métricas de ineficiencia
+
+IMPORTANTE: Procesa las 20 filas completas (10 TOP + 10 BOTTOM).
+
+ANÁLISIS REQUERIDO:
+1. **Métricas del grupo TOP (10 mejores)**:
+   - OEE promedio y rango (min-max)
+   - Disponibilidad, Rendimiento, Calidad promedio
+   - Tiempo de paradas promedio
+   - Tiempo lento promedio
+
+2. **Métricas del grupo BOTTOM (10 peores)**:
+   - OEE promedio y rango
+   - Disponibilidad, Rendimiento, Calidad promedio
+   - Tiempo de paradas promedio
+   - Tiempo lento promedio
+
+3. **Diferencias cuantificadas**:
+   - Gap en OEE: TOP vs BOTTOM (en puntos porcentuales)
+   - Gap en cada componente (Disponibilidad, Rendimiento, Calidad)
+   - Ratio: OEE BOTTOM / OEE TOP (ej: "1.5x peor")
+
+4. **Factores diferenciadores (3 clave)**:
+   - ¿Qué hace diferente a las TOP? (ej: menos paradas, mejor velocidad, etc.)
+   - ¿Cuál es el problema principal de las BOTTOM?
+   - ¿Hay patrones comunes? (ej: todas las TOP tienen bajo tiempo lento)
+
+5. **Plan de acción**: 3 pasos concretos para llevar líneas BOTTOM al nivel TOP, con impacto estimado en puntos de OEE.
+
+FORMATO DE SALIDA:
+Usa formato comparativo (Tabla TOP vs BOTTOM). Incluye nombres de líneas específicas.`
                 },
                 'availability-performance': {
                     title: 'Disponibilidad vs Rendimiento',
-                    prompt: `Analiza la relación entre disponibilidad operativa y rendimiento real de las líneas.
+                    prompt: `Eres un analista de TPM (Total Productive Maintenance). Analiza la relación entre disponibilidad operativa y rendimiento para identificar si el problema es tiempo de operación o eficiencia durante la operación.
+
+FORMATO DE DATOS:
+Recibirás un CSV con las siguientes columnas:
+- Linea: Nombre/ID de la línea
+- OEE_Porcentaje: OEE resultante
+- Disponibilidad_Porcentaje: % de tiempo disponible para producir
+- Rendimiento_Porcentaje: % de eficiencia durante operación
+- Duracion_Segundos, Duracion_Formato: Tiempo total del periodo
+- Tiempo_Disponible_Segundos, Tiempo_Disponible_Formato: Tiempo efectivamente disponible
+- Tiempo_Incidencias_Segundos, Tiempo_Incidencias_Formato: Tiempo perdido en incidencias
 
 IMPORTANTE: Procesa TODAS las filas del CSV.
 
-Columnas normalizadas:
-- Linea
-- OEE_Porcentaje
-- Duracion_Segundos, Duracion_Formato
-- Tiempo_Disponible_Segundos, Tiempo_Disponible_Formato
-- Tiempo_Incidencias_Segundos, Tiempo_Incidencias_Formato
+ANÁLISIS REQUERIDO:
+1. **Clasificación de líneas**:
+   - Alta disponibilidad (>85%) + Alto rendimiento (>85%) = Clase mundial
+   - Alta disponibilidad + Bajo rendimiento = Problema de velocidad/eficiencia
+   - Baja disponibilidad + Alto rendimiento = Problema de paradas/incidencias
+   - Baja disponibilidad + Bajo rendimiento = Crítico, múltiples problemas
 
-Objetivos:
-1. Identificar líneas donde las incidencias reducen significativamente el tiempo disponible
-2. Comparar disponibilidad vs OEE y detectar desviaciones
-3. Priorizar 3 acciones para equilibrar disponibilidad y rendimiento
+2. **Top 5 líneas por impacto de incidencias**:
+   - Líneas donde Tiempo_Incidencias reduce más el Tiempo_Disponible
+   - % de tiempo total perdido en incidencias
+   - Impacto estimado en OEE
 
-Entrega conclusiones concretas y cuantificadas.`
+3. **Análisis de correlación**:
+   - ¿Hay correlación entre disponibilidad y rendimiento?
+   - Líneas donde mejorar disponibilidad tendría mayor impacto
+   - Líneas donde mejorar rendimiento tendría mayor impacto
+
+4. **Desbalances críticos**:
+   - Líneas con alto rendimiento pero baja disponibilidad (desperdicio de capacidad)
+   - Líneas con alta disponibilidad pero bajo rendimiento (operación ineficiente)
+
+5. **Acciones priorizadas**: 3 medidas para equilibrar disponibilidad y rendimiento, con impacto estimado en puntos de OEE.
+
+FORMATO DE SALIDA:
+Usa matriz 2x2 (Disponibilidad vs Rendimiento) para clasificar líneas. Cuantifica todo en % y tiempos.`
                 },
                 'shift-variations': {
                     title: 'Variaciones por Turno/Operador',
-                    prompt: `Analiza diferencias de rendimiento entre turnos y operadores.
+                    prompt: `Eres un especialista en análisis de turnos y variabilidad operativa. Identifica diferencias de rendimiento entre turnos para encontrar mejores prácticas y áreas de mejora.
 
-IMPORTANTE: Procesa TODAS las filas del CSV.
-
-Columnas normalizadas:
+FORMATO DE DATOS:
+Recibirás un CSV con las siguientes columnas:
 - Linea, Turno, Operadores
 - OEE_Porcentaje
 - Duracion_Segundos, Duracion_Formato
 - Tiempo_Lento_Segundos, Tiempo_Lento_Formato
 - Tiempo_Ganado_Segundos, Tiempo_Ganado_Formato
 
-Objetivos:
-1. Detectar turnos y equipos con mejor/peor desempeño
-2. Identificar factores comunes en tiempos lentos o ganados
-3. Recomendar 3 acciones para homogeneizar resultados entre turnos
+IMPORTANTE: Procesa TODAS las filas del CSV.
 
-Sintetiza hallazgos y apoya con cifras.`
+ANÁLISIS REQUERIDO:
+1. **Ranking por turno**: OEE promedio por turno (Mañana, Tarde, Noche). Mejor vs peor turno con gap cuantificado.
+
+2. **Top 5 combinaciones exitosas**: Línea + Turno + Operadores con mejor OEE y menor tiempo lento.
+
+3. **Identificación de patrones**:
+   - Turnos con consistentemente más tiempo ganado
+   - Turnos con más tiempo lento
+   - Líneas donde la variación entre turnos es mayor (alta dependencia del factor humano)
+
+4. **Análisis de causas**:
+   - ¿El tiempo lento es por fatiga (peor en turnos largos)?
+   - ¿Hay efecto aprendizaje (mejora en turnos específicos)?
+   - ¿Hay equipos específicos que elevan o bajan el promedio?
+
+5. **Acciones de homogeneización**: 3 recomendaciones para reducir variabilidad entre turnos en al menos 20%.
+
+FORMATO DE SALIDA:
+Usa tablas por turno. Identifica mejores prácticas específicas para replicar.`
                 },
                 'idle-time': {
                     title: 'Consumo de Tiempo Improductivo',
-                    prompt: `Evalúa cómo se distribuye el tiempo improductivo (lento, paradas, falta de material).
+                    prompt: `Eres un especialista en análisis de desperdicios y optimización lean. Evalúa cómo se distribuye el tiempo improductivo (muda) en las líneas.
 
-IMPORTANTE: Procesa TODAS las filas del CSV.
-
-Columnas normalizadas:
+FORMATO DE DATOS:
+Recibirás un CSV con las siguientes columnas:
 - Linea
 - OEE_Porcentaje
 - Tiempo_Lento_Segundos, Tiempo_Lento_Formato
@@ -1445,39 +2290,109 @@ Columnas normalizadas:
 - Falta_Material_Segundos, Falta_Material_Formato
 - Tiempo_Neto_Produccion_Segundos, Tiempo_Neto_Produccion_Formato
 
-Objetivos:
-1. Identificar las líneas con mayor peso de tiempo improductivo
-2. Diferenciar qué causa (lento, paradas, falta material) domina en cada caso
-3. Priorizar 3 iniciativas para recuperar tiempo productivo
+IMPORTANTE: Procesa TODAS las filas del CSV.
 
-Resume de forma accionable.`
+ANÁLISIS REQUERIDO:
+1. **Top 5 líneas con mayor tiempo improductivo total**: Suma de Tiempo_Lento + Paradas + Falta_Material. Para cada una: Linea, Total improductivo, % del tiempo total.
+
+2. **Análisis de composición**:
+   Para cada línea, calcular % de cada tipo:
+   - % Tiempo lento vs total improductivo
+   - % Paradas vs total improductivo
+   - % Falta material vs total improductivo
+
+3. **Clasificación por causa dominante**:
+   - Líneas donde tiempo lento >50% del improductivo (problema de velocidad)
+   - Líneas donde paradas >50% del improductivo (problema de confiabilidad)
+   - Líneas donde falta material >50% del improductivo (problema de suministro)
+
+4. **Ratio productivo/improductivo**:
+   - Calcular Tiempo_Neto_Produccion / Tiempo_Improductivo_Total para cada línea
+   - Benchmark: mejor y peor ratio
+
+5. **Iniciativas de recuperación**: 3 acciones priorizadas por impacto potencial en horas productivas recuperadas/día.
+
+FORMATO DE SALIDA:
+Usa gráficos de composición (%). Cuantifica oportunidad en horas/día recuperables.`
                 },
                 'shift-profitability': {
                     title: 'Rentabilidad por Turno',
-                    prompt: `Evalúa el desempeño y rentabilidad operativa por turno, por línea.
+                    prompt: `Eres un analista financiero de operaciones. Evalúa la rentabilidad y eficiencia operativa por turno para identificar los turnos más y menos rentables.
 
-IMPORTANTE: Procesa TODAS las filas del CSV.
-
-Columnas normalizadas:
+FORMATO DE DATOS:
+Recibirás un CSV con las siguientes columnas:
 - Linea
 - Turno_Id, Turno, Inicio_Turno, Fin_Turno
 - Ordenes, OEE_Promedio
 - Duracion_Total_Segundos, Duracion_Total_Formato
-- Improductivo_Segundos, Improductivo_Formato (suma de lento+paradas+falta material+preparación)
+- Improductivo_Segundos, Improductivo_Formato (suma lento+paradas+falta material+preparación)
 - Neto_Segundos, Neto_Formato (Duracion_Total - Improductivo)
 - Lento_Segundos, Paradas_Segundos, Falta_Material_Segundos, Preparacion_Segundos
 - Kg_Turno_Main, Cajas_Turno_Main
 
-Objetivos:
-1. Identificar turnos más y menos productivos (OEE, Neto_Segundos) por línea
-2. Detectar drivers de improductivo dominantes por turno (lento/paradas/falta material/preparación)
-3. Proponer 3 acciones priorizadas por línea y turno para mejorar rentabilidad
+IMPORTANTE: Procesa TODAS las filas del CSV.
 
-Entrega conclusiones concretas, cuantificadas y priorizadas.`
+ANÁLISIS REQUERIDO:
+1. **Ranking de rentabilidad por turno**: Para cada línea, ordenar turnos por:
+   - Mayor Neto_Segundos (tiempo productivo neto)
+   - Mayor OEE_Promedio
+   - Mayor output (Kg_Turno_Main, Cajas_Turno_Main)
+
+2. **Análisis de tiempo improductivo**:
+   - % de Improductivo_Segundos vs Duracion_Total por turno
+   - Desglose por causa dominante en cada turno (Lento/Paradas/Falta Material/Preparacion)
+
+3. **Eficiencia comparativa**:
+   - Turno más eficiente: mayor output con menor tiempo improductivo
+   - Turno menos eficiente: menor output con mayor tiempo improductivo
+   - Gap de productividad en Kg/hora entre mejor y peor turno
+
+4. **Patrones por línea**:
+   - Líneas donde hay gran variación entre turnos (>30% diferencia en OEE)
+   - Líneas estables entre turnos (<10% variación)
+
+5. **Acciones para mejorar rentabilidad**: 3 medidas priorizadas por línea y turno, con impacto estimado en % de mejora de tiempo neto y output.
+
+FORMATO DE SALIDA:
+Usa tablas comparativas por turno. Cuantifica en horas netas, Kg/h, y % de utilización.`
                 },
                 'full': {
                     title: 'Análisis Total (CSV extendido)',
-                    prompt: `Genera conclusiones globales. Resume insights clave, riesgos y oportunidades usando todos los datos disponibles.`
+                    prompt: `Eres un director de operaciones. Genera un análisis ejecutivo integral de todas las líneas de producción, identificando tendencias globales, riesgos críticos y oportunidades estratégicas.
+
+FORMATO DE DATOS:
+Recibirás un CSV extendido con todas las columnas disponibles del sistema.
+
+IMPORTANTE: Procesa TODAS las filas del CSV para obtener una visión holística.
+
+ANÁLISIS REQUERIDO:
+1. **Resumen Ejecutivo** (3-4 párrafos):
+   - Estado general del OEE: promedio, tendencia, benchmark
+   - Principal hallazgo crítico
+   - Principal oportunidad de mejora cuantificada
+
+2. **Métricas clave globales**:
+   - OEE: media, mediana, P90, P95
+   - Disponibilidad, Rendimiento, Calidad: promedios
+   - Tiempo improductivo total: horas/día perdidas
+   - Top 3 líneas por volumen y su OEE
+
+3. **Identificación de 5 riesgos críticos**:
+   Para cada uno:
+   - Dónde ocurre (línea, turno)
+   - Magnitud del problema
+   - % de líneas o tiempo afectado
+   - Impacto estimado en el OEE global
+
+4. **Identificación de 5 oportunidades estratégicas**:
+   - Quick wins (implementación <1 mes, impacto medio)
+   - Iniciativas estratégicas (1-3 meses, alto impacto)
+   - Para cada una: impacto esperado en puntos de OEE
+
+5. **Plan de acción inmediato**: 3 acciones para implementar esta semana, con responsable sugerido y métrica de éxito.
+
+FORMATO DE SALIDA:
+Estructura tipo informe ejecutivo con secciones claras. Usa datos cuantificados y comparaciones. Prioriza insights accionables.`
                 }
             };
 
@@ -1644,36 +2559,91 @@ Entrega conclusiones concretas, cuantificadas y priorizadas.`
         </div>
     </div>
 
-    <!-- AI Result Modal -->
+    <!-- AI Result Modal (Mejorado) -->
     <div class="modal fade" id="aiResultModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-dialog modal-dialog-scrollable" id="aiResultModalDialog" style="max-width: 80%; width: 80%;">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">@lang('Resultado IA')</h5>
+                    <div class="flex-grow-1">
+                        <h5 class="modal-title mb-1">@lang('Resultado IA')</h5>
+                        <small class="text-muted ai-metadata">
+                            <i class="fas fa-clock me-1"></i><span id="aiResultTimestamp"></span>
+                            <span class="mx-2">|</span>
+                            <i class="fas fa-align-left me-1"></i><span id="aiResultStats"></span>
+                        </small>
+                    </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
-                    <p class="text-muted"><strong>@lang('Tipo de Análisis'):</strong> <span id="aiResultPrompt"></span></p>
+                <div class="modal-body position-relative">
+                    <!-- Barra de progreso de scroll -->
+                    <div class="scroll-progress-bar" id="aiScrollProgress"></div>
+
+                    <!-- Tipo de análisis -->
+                    <p class="text-muted mb-3"><strong>@lang('Tipo de Análisis'):</strong> <span id="aiResultPrompt"></span></p>
+
+                    <!-- Barra de herramientas -->
+                    <div class="ai-toolbar">
+                        <!-- Control de tamaño de fuente -->
+                        <div class="btn-group btn-group-sm font-controls" role="group" aria-label="Controles de fuente">
+                            <button type="button" class="btn btn-outline-secondary" id="btnFontDecrease" title="Reducir tamaño">
+                                <i class="fas fa-minus"></i> A-
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" id="btnFontReset" title="Tamaño normal">
+                                A
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" id="btnFontIncrease" title="Aumentar tamaño">
+                                <i class="fas fa-plus"></i> A+
+                            </button>
+                        </div>
+
+                        <!-- Botones de acción -->
+                        <div class="btn-group btn-group-sm" role="group" aria-label="Acciones">
+                            <button type="button" class="btn btn-outline-primary" id="btnCopyResult" title="Copiar al portapapeles">
+                                <i class="fas fa-copy"></i> Copiar
+                            </button>
+                            <button type="button" class="btn btn-outline-success" id="btnDownloadResult" title="Descargar como archivo">
+                                <i class="fas fa-download"></i> Descargar
+                            </button>
+                            <button type="button" class="btn btn-outline-info" id="btnPrintResult" title="Imprimir o guardar como PDF">
+                                <i class="fas fa-print"></i> Imprimir
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" id="btnFullscreen" title="Pantalla completa">
+                                <i class="fas fa-expand"></i> Pantalla completa
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Tabs -->
                     <ul class="nav nav-tabs mb-3" id="aiResultTabs" role="tablist">
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="ai-tab-rendered" data-bs-toggle="tab" data-bs-target="#aiResultRendered" type="button" role="tab" aria-controls="aiResultRendered" aria-selected="false">
-                                <i class="fas fa-code me-1"></i>HTML Interpretado
+                            <button class="nav-link active" id="ai-tab-rendered" data-bs-toggle="tab" data-bs-target="#aiResultRendered" type="button" role="tab" aria-controls="aiResultRendered" aria-selected="true">
+                                <i class="fas fa-eye me-1"></i>Vista Formateada
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="ai-tab-raw" data-bs-toggle="tab" data-bs-target="#aiResultRaw" type="button" role="tab" aria-controls="aiResultRaw" aria-selected="true">
+                            <button class="nav-link" id="ai-tab-raw" data-bs-toggle="tab" data-bs-target="#aiResultRaw" type="button" role="tab" aria-controls="aiResultRaw" aria-selected="false">
                                 <i class="fas fa-file-alt me-1"></i>Texto Plano
                             </button>
                         </li>
                     </ul>
+
+                    <!-- Contenido de las tabs -->
                     <div class="tab-content" id="aiResultTabContent">
-                        <div class="tab-pane fade" id="aiResultRendered" role="tabpanel" aria-labelledby="ai-tab-rendered">
-                            <div id="aiResultHtml" class="border rounded p-3 bg-light" style="min-height: 200px; overflow:auto;"></div>
+                        <!-- Tab: Vista Formateada (Markdown parseado) -->
+                        <div class="tab-pane fade show active" id="aiResultRendered" role="tabpanel" aria-labelledby="ai-tab-rendered">
+                            <div id="aiResultHtml" class="ai-result-content"></div>
                         </div>
-                        <div class="tab-pane fade show active" id="aiResultRaw" role="tabpanel" aria-labelledby="ai-tab-raw">
-                            <pre id="aiResultText" class="bg-light p-3 rounded" style="white-space: pre-wrap; min-height: 200px; overflow:auto;"></pre>
+
+                        <!-- Tab: Texto Plano -->
+                        <div class="tab-pane fade" id="aiResultRaw" role="tabpanel" aria-labelledby="ai-tab-raw">
+                            <pre id="aiResultText" class="bg-light p-3 rounded" style="white-space: pre-wrap; min-height: 200px; overflow: auto;"></pre>
                         </div>
                     </div>
+
+                    <!-- Botón flotante "Volver arriba" -->
+                    <button type="button" id="btnScrollTop" class="btn btn-primary" title="Volver arriba">
+                        <i class="fas fa-arrow-up"></i>
+                    </button>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@lang('Close')</button>
@@ -1684,6 +2654,22 @@ Entrega conclusiones concretas, cuantificadas y priorizadas.`
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+    <!-- Librerías para parsing de Markdown y seguridad -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
+    <script>
+        // Configurar marked.js para mejor compatibilidad con Markdown
+        if (window.marked) {
+            marked.setOptions({
+                breaks: true,        // Convertir saltos de línea en <br>
+                gfm: true,          // GitHub Flavored Markdown
+                headerIds: true,    // Generar IDs para encabezados
+                mangle: false,      // No modificar emails
+                sanitize: false     // No sanitizar (lo haremos con DOMPurify)
+            });
+        }
+    </script>
 
     <script>
         const token = new URLSearchParams(window.location.search).get('token');

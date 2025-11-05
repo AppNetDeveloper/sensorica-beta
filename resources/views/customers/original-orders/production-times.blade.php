@@ -984,6 +984,239 @@
             transform: translateY(-2px) scale(1.02);
             box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5) !important;
         }
+
+        /* === Estilos para el resultado de IA con Markdown === */
+        .ai-result-content {
+            background-color: #ffffff;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            line-height: 1.8;
+        }
+
+        .ai-result-content h1,
+        .ai-result-content h2,
+        .ai-result-content h3,
+        .ai-result-content h4,
+        .ai-result-content h5,
+        .ai-result-content h6 {
+            color: #2c3e50;
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .ai-result-content h1 { font-size: 2rem; border-bottom: 2px solid #e9ecef; padding-bottom: 0.5rem; }
+        .ai-result-content h2 { font-size: 1.75rem; border-bottom: 1px solid #e9ecef; padding-bottom: 0.4rem; }
+        .ai-result-content h3 { font-size: 1.5rem; color: #495057; }
+        .ai-result-content h4 { font-size: 1.25rem; color: #495057; }
+
+        .ai-result-content p {
+            margin-bottom: 1rem;
+            color: #495057;
+        }
+
+        .ai-result-content strong {
+            color: #2c3e50;
+            font-weight: 600;
+        }
+
+        .ai-result-content ul,
+        .ai-result-content ol {
+            margin-bottom: 1rem;
+            padding-left: 2rem;
+        }
+
+        .ai-result-content li {
+            margin-bottom: 0.5rem;
+            color: #495057;
+        }
+
+        .ai-result-content code {
+            background-color: #f8f9fa;
+            color: #e83e8c;
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
+            font-size: 0.9em;
+        }
+
+        .ai-result-content pre {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            overflow-x: auto;
+            margin-bottom: 1rem;
+        }
+
+        .ai-result-content pre code {
+            background-color: transparent;
+            color: #212529;
+            padding: 0;
+        }
+
+        .ai-result-content blockquote {
+            border-left: 4px solid #0d6efd;
+            padding-left: 1rem;
+            margin: 1rem 0;
+            color: #6c757d;
+            font-style: italic;
+        }
+
+        .ai-result-content hr {
+            margin: 1.5rem 0;
+            border: 0;
+            border-top: 2px solid #e9ecef;
+        }
+
+        /* Tablas con estilo Bootstrap mejorado */
+        .ai-result-content table {
+            margin-bottom: 1.5rem;
+            font-size: 0.95rem;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        }
+
+        .ai-result-content table thead th {
+            background-color: #0d6efd;
+            color: white;
+            font-weight: 600;
+            text-align: left;
+            padding: 0.75rem;
+            vertical-align: middle;
+            border-bottom: 2px solid #0a58ca;
+        }
+
+        .ai-result-content table tbody td {
+            padding: 0.75rem;
+            vertical-align: middle;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .ai-result-content table tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .ai-result-content table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Zebra striping para tablas */
+        .ai-result-content table.table-striped tbody tr:nth-of-type(odd) {
+            background-color: rgba(0, 0, 0, 0.02);
+        }
+
+        /* Mejor legibilidad en tablas con mucho contenido */
+        .ai-result-content table td strong {
+            color: #0d6efd;
+        }
+
+        /* Responsive tables */
+        @media (max-width: 768px) {
+            .ai-result-content {
+                padding: 1rem;
+                font-size: 0.9rem;
+            }
+
+            .ai-result-content table {
+                font-size: 0.85rem;
+            }
+
+            .ai-result-content table thead th,
+            .ai-result-content table tbody td {
+                padding: 0.5rem;
+            }
+        }
+
+        /* === Barra de progreso de scroll === */
+        .scroll-progress-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #0d6efd 0%, #0dcaf0 100%);
+            width: 0%;
+            transition: width 0.1s ease;
+            z-index: 1000;
+            border-radius: 0 3px 3px 0;
+        }
+
+        /* === Botón volver arriba === */
+        #btnScrollTop {
+            opacity: 0;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            transform: translateY(10px);
+        }
+
+        #btnScrollTop.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        #btnScrollTop:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.2) !important;
+        }
+
+        /* === Modal en pantalla completa === */
+        .modal-fullscreen-custom {
+            max-width: 100% !important;
+            width: 100% !important;
+            margin: 0 !important;
+            height: 100vh;
+        }
+
+        .modal-fullscreen-custom .modal-content {
+            height: 100vh;
+            border-radius: 0;
+        }
+
+        /* === Animación para botones === */
+        .btn-toolbar .btn {
+            transition: all 0.2s ease;
+        }
+
+        .btn-toolbar .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-toolbar .btn:active {
+            transform: translateY(0);
+        }
+
+        /* === Toast de confirmación === */
+        .copy-toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            background: #198754;
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            animation: slideInRight 0.3s ease, slideOutRight 0.3s ease 2.7s;
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOutRight {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
     </style>
 @endpush
 
@@ -996,7 +1229,14 @@
     <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.45.2/dist/apexcharts.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.4/dist/purify.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
     <script>
+        // Configurar marked para usar clases de Bootstrap en las tablas
+        marked.setOptions({
+            breaks: true,
+            gfm: true
+        });
+
         $(function () {
             const routes = {
                 data: "{{ route('customers.production-times.data', $customer) }}",
@@ -3711,24 +3951,62 @@
 
                     $('#aiResultText').text(rawText || '');
 
+                    // Convertir Markdown a HTML
                     const htmlTarget = $('#aiResultHtml');
-                    if (window.DOMPurify && typeof DOMPurify.sanitize === 'function') {
-                        const sanitized = DOMPurify.sanitize(rawText || '', {
-                            ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'style', 'src', 'alt', 'title'],
-                            ALLOWED_TAGS: false
-                        });
-                        htmlTarget.html(sanitized && sanitized.trim() ? sanitized : '<p class="text-muted mb-0">Sin contenido HTML para mostrar.</p>');
+                    if (window.marked && window.DOMPurify) {
+                        try {
+                            // Convertir Markdown a HTML
+                            let htmlContent = marked.parse(rawText || '');
+
+                            // Agregar clases de Bootstrap a las tablas
+                            htmlContent = htmlContent.replace(/<table>/g, '<table class="table table-striped table-bordered table-hover">');
+
+                            // Sanitizar el HTML
+                            const sanitized = DOMPurify.sanitize(htmlContent, {
+                                ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'style', 'src', 'alt', 'title', 'colspan', 'rowspan'],
+                                ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+                                              'ul', 'ol', 'li', 'table', 'thead', 'tbody', 'tr', 'th', 'td',
+                                              'a', 'code', 'pre', 'blockquote', 'hr', 'span', 'div']
+                            });
+
+                            htmlTarget.html(sanitized && sanitized.trim() ? sanitized : '<p class="text-muted mb-0">Sin contenido para mostrar.</p>');
+                        } catch (err) {
+                            console.error('[AI] Error al parsear Markdown:', err);
+                            htmlTarget.html('<pre class="bg-light p-3 rounded">' + $('<div>').text(rawText).html() + '</pre>');
+                        }
                     } else {
-                        htmlTarget.text(rawText || '');
+                        htmlTarget.html('<pre class="bg-light p-3 rounded">' + $('<div>').text(rawText).html() + '</pre>');
                     }
 
-                    const rawTabTrigger = document.getElementById('ai-tab-raw');
-                    if (rawTabTrigger && bootstrap && bootstrap.Tab) {
-                        bootstrap.Tab.getOrCreateInstance(rawTabTrigger).show();
+                    // Mostrar por defecto el tab de HTML Interpretado (ahora con Markdown parseado)
+                    const renderedTabTrigger = document.getElementById('ai-tab-rendered');
+                    if (renderedTabTrigger && bootstrap && bootstrap.Tab) {
+                        bootstrap.Tab.getOrCreateInstance(renderedTabTrigger).show();
                     }
+
+                    // Actualizar timestamp y estadísticas
+                    const now = new Date();
+                    $('#aiResultTimestamp').text(now.toLocaleString('es-ES', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    }));
+
+                    // Calcular estadísticas del texto
+                    const words = rawText.trim().split(/\s+/).length;
+                    const lines = rawText.split('\n').length;
+                    const chars = rawText.length;
+                    $('#aiResultStats').text(`${words} palabras, ${lines} líneas, ${chars} caracteres`);
 
                     const resultModal = new bootstrap.Modal(document.getElementById('aiResultModal'));
                     resultModal.show();
+
+                    // Inicializar funcionalidades del modal después de mostrarlo
+                    setTimeout(() => {
+                        initAIResultModalFeatures(rawText, userPromptForDisplay);
+                    }, 100);
                 } catch (err) {
                     console.error('[AI] Unexpected error:', err);
                     // Cerrar modal de procesamiento si está abierto
@@ -3736,6 +4014,164 @@
                     if (procModal) procModal.hide();
                     alert('{{ __("Error al procesar solicitud de IA") }}');
                 }
+            }
+
+            // Función para inicializar las funcionalidades del modal de resultados IA
+            function initAIResultModalFeatures(rawText, analysisType) {
+                let currentFontSize = 100; // Porcentaje
+
+                // Copiar al portapapeles
+                $('#btnCopyResult').off('click').on('click', function() {
+                    navigator.clipboard.writeText(rawText).then(() => {
+                        showToast('✓ Copiado al portapapeles', 'success');
+                        $(this).html('<i class="fas fa-check"></i>');
+                        setTimeout(() => {
+                            $(this).html('<i class="fas fa-copy"></i>');
+                        }, 2000);
+                    }).catch(err => {
+                        console.error('Error al copiar:', err);
+                        showToast('Error al copiar', 'error');
+                    });
+                });
+
+                // Descargar archivo
+                $('#btnDownloadResult').off('click').on('click', function() {
+                    const blob = new Blob([rawText], { type: 'text/markdown;charset=utf-8' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+                    a.download = `analisis-ia-${timestamp}.md`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    showToast('✓ Archivo descargado', 'success');
+                });
+
+                // Imprimir
+                $('#btnPrintResult').off('click').on('click', function() {
+                    const printWindow = window.open('', '', 'width=800,height=600');
+                    const htmlContent = $('#aiResultHtml').html();
+                    printWindow.document.write(`
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                            <title>Análisis IA - ${analysisType}</title>
+                            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+                            <style>
+                                body { padding: 20px; font-family: Arial, sans-serif; }
+                                table { width: 100%; margin-bottom: 1rem; border-collapse: collapse; }
+                                table thead th { background-color: #0d6efd; color: white; padding: 0.5rem; }
+                                table tbody td { padding: 0.5rem; border: 1px solid #dee2e6; }
+                                h1, h2, h3 { margin-top: 1.5rem; color: #2c3e50; }
+                                @media print {
+                                    .no-print { display: none; }
+                                }
+                            </style>
+                        </head>
+                        <body>
+                            <h1>Análisis IA: ${analysisType}</h1>
+                            <p><small>Generado: ${new Date().toLocaleString('es-ES')}</small></p>
+                            <hr>
+                            ${htmlContent}
+                        </body>
+                        </html>
+                    `);
+                    printWindow.document.close();
+                    setTimeout(() => {
+                        printWindow.print();
+                        printWindow.close();
+                    }, 250);
+                });
+
+                // Pantalla completa
+                let isFullscreen = false;
+                $('#btnFullscreen').off('click').on('click', function() {
+                    const dialog = $('#aiResultModalDialog');
+                    if (!isFullscreen) {
+                        dialog.addClass('modal-fullscreen-custom');
+                        $(this).html('<i class="fas fa-compress"></i>');
+                        isFullscreen = true;
+                    } else {
+                        dialog.removeClass('modal-fullscreen-custom');
+                        $(this).html('<i class="fas fa-expand"></i>');
+                        isFullscreen = false;
+                    }
+                });
+
+                // Control de tamaño de fuente
+                $('#btnFontIncrease').off('click').on('click', function() {
+                    if (currentFontSize < 150) {
+                        currentFontSize += 10;
+                        updateFontSize();
+                    }
+                });
+
+                $('#btnFontDecrease').off('click').on('click', function() {
+                    if (currentFontSize > 70) {
+                        currentFontSize -= 10;
+                        updateFontSize();
+                    }
+                });
+
+                $('#btnFontReset').off('click').on('click', function() {
+                    currentFontSize = 100;
+                    updateFontSize();
+                });
+
+                function updateFontSize() {
+                    $('.ai-result-content').css('font-size', currentFontSize + '%');
+                    $('#aiResultText').css('font-size', currentFontSize + '%');
+                }
+
+                // Barra de progreso de scroll
+                const scrollContainers = $('#aiResultHtml, #aiResultText');
+                scrollContainers.off('scroll').on('scroll', function() {
+                    const scrollTop = $(this).scrollTop();
+                    const scrollHeight = $(this)[0].scrollHeight - $(this).outerHeight();
+                    const scrollPercent = (scrollTop / scrollHeight) * 100;
+                    $('#aiScrollProgress').css('width', scrollPercent + '%');
+
+                    // Mostrar/ocultar botón "volver arriba"
+                    if (scrollTop > 300) {
+                        $('#btnScrollTop').addClass('show');
+                    } else {
+                        $('#btnScrollTop').removeClass('show');
+                    }
+                });
+
+                // Botón volver arriba
+                $('#btnScrollTop').off('click').on('click', function() {
+                    const activeTab = $('#aiResultTabs .nav-link.active').attr('data-bs-target');
+                    $(activeTab + ' > *').animate({ scrollTop: 0 }, 400);
+                });
+
+                // Limpiar al cerrar modal
+                $('#aiResultModal').off('hidden.bs.modal').on('hidden.bs.modal', function() {
+                    currentFontSize = 100;
+                    isFullscreen = false;
+                    $('#aiResultModalDialog').removeClass('modal-fullscreen-custom');
+                    $('#btnFullscreen').html('<i class="fas fa-expand"></i>');
+                    $('.ai-result-content').css('font-size', '100%');
+                    $('#aiResultText').css('font-size', '100%');
+                    $('#aiScrollProgress').css('width', '0%');
+                    $('#btnScrollTop').removeClass('show');
+                });
+            }
+
+            // Función para mostrar toast de confirmación
+            function showToast(message, type = 'success') {
+                const bgColor = type === 'success' ? '#198754' : '#dc3545';
+                const toast = $(`
+                    <div class="copy-toast" style="background: ${bgColor};">
+                        <i class="fas fa-${type === 'success' ? 'check' : 'times'}-circle me-2"></i>${message}
+                    </div>
+                `);
+                $('body').append(toast);
+                setTimeout(() => {
+                    toast.remove();
+                }, 3000);
             }
 
             // Configuración de prompts por tipo de análisis
@@ -4744,37 +5180,96 @@ Usa semáforo de riesgo (Alto/Medio/Bajo). Lista Order_IDs específicos con reco
 
     <!-- AI Result Modal -->
     <div class="modal fade" id="aiResultModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-scrollable" style="max-width: 80%; width: 80%;">
+        <div class="modal-dialog modal-dialog-scrollable" style="max-width: 80%; width: 80%;" id="aiResultModalDialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">{{ __('Resultado IA') }}</h5>
+                    <div class="flex-grow-1">
+                        <h5 class="modal-title mb-1">{{ __('Resultado IA') }}</h5>
+                        <small class="text-muted">
+                            <i class="fas fa-clock me-1"></i><span id="aiResultTimestamp"></span>
+                            <span class="mx-2">|</span>
+                            <i class="fas fa-align-left me-1"></i><span id="aiResultStats"></span>
+                        </small>
+                    </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
-                    <p class="text-muted"><strong>{{ __('Tipo de Análisis') }}:</strong> <span id="aiResultPrompt"></span></p>
+                <div class="modal-body position-relative">
+                    <!-- Barra de herramientas -->
+                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                        <div>
+                            <p class="text-muted mb-0"><strong>{{ __('Tipo de Análisis') }}:</strong> <span id="aiResultPrompt"></span></p>
+                        </div>
+                        <div class="btn-toolbar gap-2" role="toolbar">
+                            <!-- Control de tamaño de fuente -->
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn btn-outline-secondary" id="btnFontDecrease" title="Reducir tamaño">
+                                    <i class="fas fa-minus"></i> A
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" id="btnFontReset" title="Tamaño normal">
+                                    A
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" id="btnFontIncrease" title="Aumentar tamaño">
+                                    <i class="fas fa-plus"></i> A
+                                </button>
+                            </div>
+
+                            <!-- Botones de acción -->
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn btn-outline-primary" id="btnCopyResult" title="Copiar al portapapeles">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-success" id="btnDownloadResult" title="Descargar">
+                                    <i class="fas fa-download"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-info" id="btnPrintResult" title="Imprimir">
+                                    <i class="fas fa-print"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" id="btnFullscreen" title="Pantalla completa">
+                                    <i class="fas fa-expand"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tabs -->
                     <ul class="nav nav-tabs mb-3" id="aiResultTabs" role="tablist">
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="ai-tab-rendered" data-bs-toggle="tab" data-bs-target="#aiResultRendered" type="button" role="tab" aria-controls="aiResultRendered" aria-selected="false">
-                                <i class="fas fa-code me-1"></i>{{ __('HTML Interpretado') }}
+                            <button class="nav-link active" id="ai-tab-rendered" data-bs-toggle="tab" data-bs-target="#aiResultRendered" type="button" role="tab" aria-controls="aiResultRendered" aria-selected="true">
+                                <i class="fas fa-table me-1"></i>{{ __('Vista Formateada') }}
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="ai-tab-raw" data-bs-toggle="tab" data-bs-target="#aiResultRaw" type="button" role="tab" aria-controls="aiResultRaw" aria-selected="true">
+                            <button class="nav-link" id="ai-tab-raw" data-bs-toggle="tab" data-bs-target="#aiResultRaw" type="button" role="tab" aria-controls="aiResultRaw" aria-selected="false">
                                 <i class="fas fa-file-alt me-1"></i>{{ __('Texto Plano') }}
                             </button>
                         </li>
                     </ul>
+
+                    <!-- Barra de progreso de scroll -->
+                    <div class="scroll-progress-bar" id="aiScrollProgress"></div>
+
+                    <!-- Contenido -->
                     <div class="tab-content" id="aiResultTabContent">
-                        <div class="tab-pane fade" id="aiResultRendered" role="tabpanel" aria-labelledby="ai-tab-rendered">
-                            <div id="aiResultHtml" class="border rounded p-3 bg-light" style="min-height: 200px; overflow:auto;"></div>
+                        <div class="tab-pane fade show active" id="aiResultRendered" role="tabpanel" aria-labelledby="ai-tab-rendered">
+                            <div id="aiResultHtml" class="ai-result-content" style="min-height: 200px; max-height: 70vh; overflow-y: auto;"></div>
                         </div>
-                        <div class="tab-pane fade show active" id="aiResultRaw" role="tabpanel" aria-labelledby="ai-tab-raw">
-                            <pre id="aiResultText" class="bg-light p-3 rounded" style="white-space: pre-wrap; min-height: 200px; overflow:auto;"></pre>
+                        <div class="tab-pane fade" id="aiResultRaw" role="tabpanel" aria-labelledby="ai-tab-raw">
+                            <pre id="aiResultText" class="bg-light p-3 rounded" style="white-space: pre-wrap; min-height: 200px; max-height: 70vh; overflow-y: auto;"></pre>
                         </div>
                     </div>
+
+                    <!-- Botón volver arriba -->
+                    <button type="button" class="btn btn-primary btn-sm rounded-circle position-fixed"
+                            id="btnScrollTop"
+                            style="bottom: 100px; right: 30px; display: none; z-index: 1050; width: 40px; height: 40px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"
+                            title="Volver arriba">
+                        <i class="fas fa-arrow-up"></i>
+                    </button>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('Close') }}</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>{{ __('Cerrar') }}
+                    </button>
                 </div>
             </div>
         </div>
