@@ -68,6 +68,11 @@
 <div class="card">
   <div class="card-header d-flex justify-content-between align-items-center">
     <h5 class="mb-0">{{ __('Rutas') }}</h5>
+    <div class="d-flex gap-2">
+      <a href="{{ route('customers.routes.daily', $customer->id) }}" class="btn btn-primary btn-sm">
+        <i class="ti ti-calendar-day"></i> {{ __('Daily View') }}
+      </a>
+    </div>
   </div>
   <div class="card-body">
     @php
@@ -378,7 +383,7 @@
 
 <!-- Modal detalle de cliente -->
 <div class="modal fade" id="clientDetailsModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+  <div class="modal-dialog modal-dialog-scrollable" style="max-width: 80%;">
     <div class="modal-content">
       <div class="modal-header bg-primary text-white">
         <div>
@@ -389,11 +394,14 @@
           <button type="button" class="btn btn-warning btn-sm" id="toggleLegendBtn" title="{{ __('Show/Hide user guide') }}">
             <i class="ti ti-help"></i> {{ __('Help') }}
           </button>
-          <button type="button" class="btn btn-light btn-sm" id="printClientDetailsBtn">
-            <i class="ti ti-printer"></i> {{ __('Print') }}
+          <button type="button" class="btn btn-warning btn-sm" id="emailClientDetailsBtn" title="{{ __('Send by email') }}">
+            <i class="ti ti-mail"></i> {{ __('Email') }}
           </button>
-          <button type="button" class="btn btn-light btn-sm" id="exportClientDetailsBtn">
-            <i class="ti ti-file-download"></i> {{ __('Export PDF') }}
+          <button type="button" class="btn btn-success btn-sm" id="exportClientDetailsBtn" title="{{ __('Download PDF') }}">
+            <i class="ti ti-download"></i> {{ __('Download PDF') }}
+          </button>
+          <button type="button" class="btn btn-light btn-sm" id="printClientDetailsBtn" title="{{ __('Print') }}">
+            <i class="ti ti-printer"></i> {{ __('Print') }}
           </button>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
@@ -1370,7 +1378,7 @@ document.addEventListener('DOMContentLoaded', function() {
     modal.hide();
   });
 
-  // Drag & Drop functionality
+  // Drag & Drop functionality - MEJORADO Y PROFESIONAL
   let draggedClient = null;
 
   // Drag start - cuando se empieza a arrastrar un cliente
@@ -1383,7 +1391,15 @@ document.addEventListener('DOMContentLoaded', function() {
         routeId: e.target.dataset.routeId,
         dayIndex: e.target.dataset.dayIndex
       };
-      e.target.style.opacity = '0.5';
+
+      // Agregar clases para animaciones profesionales
+      e.target.classList.add('dragging');
+
+      // Marcar todos los vehículos como valid-drop-target
+      document.querySelectorAll('.vehicle-drop-zone').forEach(zone => {
+        zone.classList.add('valid-drop-target');
+      });
+
       console.log('Dragging client:', draggedClient);
     }
   });
@@ -1391,7 +1407,11 @@ document.addEventListener('DOMContentLoaded', function() {
   // Drag end - cuando se termina de arrastrar
   document.addEventListener('dragend', function(e) {
     if (e.target.classList.contains('draggable-client')) {
-      e.target.style.opacity = '1';
+      // Limpiar todas las clases
+      e.target.classList.remove('dragging');
+      document.querySelectorAll('.vehicle-drop-zone').forEach(zone => {
+        zone.classList.remove('valid-drop-target', 'drag-over');
+      });
       draggedClient = null;
     }
   });
@@ -1409,7 +1429,12 @@ document.addEventListener('DOMContentLoaded', function() {
   document.addEventListener('dragleave', function(e) {
     if (e.target.closest('.vehicle-drop-zone')) {
       const dropZone = e.target.closest('.vehicle-drop-zone');
-      dropZone.classList.remove('drag-over');
+      // Solo remover si realmente salimos del elemento
+      const rect = dropZone.getBoundingClientRect();
+      if (e.clientX < rect.left || e.clientX >= rect.right ||
+          e.clientY < rect.top || e.clientY >= rect.bottom) {
+        dropZone.classList.remove('drag-over');
+      }
     }
   });
 
@@ -1418,7 +1443,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const dropZone = e.target.closest('.vehicle-drop-zone');
     if (dropZone && draggedClient) {
       e.preventDefault();
-      dropZone.classList.remove('drag-over');
+
+      // Limpiar todas las clases visuales
+      dropZone.classList.remove('drag-over', 'valid-drop-target');
+      document.querySelectorAll('.vehicle-drop-zone').forEach(z => {
+        z.classList.remove('valid-drop-target', 'drag-over');
+      });
       
       const vehicleId = dropZone.dataset.vehicleId;
       const routeId = dropZone.dataset.routeId;

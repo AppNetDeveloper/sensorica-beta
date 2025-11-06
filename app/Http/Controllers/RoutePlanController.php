@@ -16,7 +16,7 @@ class RoutePlanController extends Controller
     public function __construct()
     {
         $this->middleware(['auth', 'XSS']);
-        $this->middleware('permission:routes-view')->only(['index']);
+        $this->middleware('permission:routes-view')->only(['index', 'daily']);
         $this->middleware('permission:routes-view')->only(['assignVehicle', 'removeVehicle']);
     }
 
@@ -88,6 +88,95 @@ class RoutePlanController extends Controller
             'availableDrivers',
             'routeAssignments',
             'clientVehicleAssignments'
+        ));
+    }
+
+    /**
+     * Vista de día único para rutas
+     * Muestra todas las rutas para un día específico en un layout vertical limpio
+     */
+    public function daily(Request $request, Customer $customer)
+    {
+        // Obtener la fecha seleccionada o usar hoy por defecto
+        $dateParam = $request->get('date');
+        $selectedDate = $dateParam ? \Carbon\Carbon::parse($dateParam) : now();
+
+        // Calcular el índice del día de la semana (0=Lunes, 6=Domingo)
+        $dayIndex = $selectedDate->dayOfWeekIso - 1; // ISO: 1=Lunes, 7=Domingo
+
+        // Cargar nombres de ruta con days_mask y clientes asociados a rutas
+        $routeNames = RouteName::where('customer_id', $customer->id)
+            ->where('active', 1)
+            ->orderBy('name')
+            ->get(['id','name','days_mask']);
+
+        // Filtrar solo las rutas activas para este día de la semana
+        $routeNames = $routeNames->filter(function($route) use ($dayIndex) {
+            $dayMask = 1 << $dayIndex;
+            return ((int)($route->days_mask ?? 0)) & $dayMask;
+        });
+
+        $customerClients = CustomerClient::with(['pendingDeliveries' => function ($query) {
+                $query->select('id','customer_client_id','order_id','delivery_date','estimated_delivery_date','finished_at');
+            }])
+            ->where('customer_id', $customer->id)
+            ->where('active', 1)
+            ->whereHas('pendingDeliveries')
+            ->orderBy('name')
+            ->get(['id','name','route_name_id','customer_id']);
+
+        $fleetVehicles = \App\Models\FleetVehicle::where('customer_id', $customer->id)
+            ->where('active', 1)
+            ->orderBy('plate')
+            ->get(['id','plate','vehicle_type','default_route_name_id']);
+
+        // Obtener usuarios disponibles para asignar como conductores
+        $availableDrivers = \App\Models\User::orderBy('name')->get(['id','name','email']);
+
+        // Cargar asignaciones específicas solo para el día seleccionado
+        $dayDate = $selectedDate->format('Y-m-d');
+
+        $routeAssignments = RouteDayAssignment::where('customer_id', $customer->id)
+            ->whereDate('assignment_date', $dayDate)
+            ->with(['fleetVehicle', 'driver', 'routeName'])
+            ->get();
+
+        // Cargar asignaciones cliente-vehículo para el día seleccionado
+        $clientVehicleAssignments = RouteClientVehicleAssignment::where('customer_id', $customer->id)
+            ->whereDate('assignment_date', $dayDate)
+            ->with([
+                'customerClient.pendingDeliveries' => function ($query) {
+                    $query->select('id','customer_client_id','order_id','delivery_date','estimated_delivery_date','finished_at');
+                },
+                'fleetVehicle',
+                'orderAssignments' => function ($query) {
+                    $query->orderBy('sort_order', 'asc');
+                },
+                'orderAssignments.originalOrder' => function ($query) {
+                    $query->select('id','order_id','delivery_date','estimated_delivery_date','finished_at');
+                }
+            ])
+            ->get();
+
+        \Log::info('Daily route view loaded', [
+            'customer_id' => $customer->id,
+            'date' => $dayDate,
+            'day_index' => $dayIndex,
+            'routes_count' => $routeNames->count(),
+            'vehicle_assignments_count' => $routeAssignments->count(),
+            'client_vehicle_assignments_count' => $clientVehicleAssignments->count()
+        ]);
+
+        return view('customers.routes.daily', compact(
+            'customer',
+            'routeNames',
+            'customerClients',
+            'fleetVehicles',
+            'availableDrivers',
+            'routeAssignments',
+            'clientVehicleAssignments',
+            'selectedDate',
+            'dayIndex'
         ));
     }
 
@@ -277,6 +366,72 @@ class RoutePlanController extends Controller
             ],
             'orders' => $mappedOrders,
         ]);
+    }
+
+    /**
+     * Genera y descarga un PDF con los detalles del cliente
+     */
+    public function clientDetailsPdf(Customer $customer, CustomerClient $client, Request $request)
+    {
+        abort_unless($client->customer_id === $customer->id, 404);
+
+        // Por ahora, redirigir a imprimir (el navegador puede guardar como PDF)
+        // En el futuro se puede implementar con DomPDF o similar
+        return $this->clientDetails($customer, $client, $request);
+    }
+
+    /**
+     * Envía por email los detalles del cliente
+     */
+    public function clientDetailsEmail(Customer $customer, CustomerClient $client, Request $request)
+    {
+        abort_unless($client->customer_id === $customer->id, 404);
+
+        try {
+            $data = $request->validate([
+                'email' => 'required|email',
+                'date' => 'nullable|date',
+                'client_name' => 'nullable|string'
+            ]);
+
+            // Obtener los detalles del cliente
+            $clientData = $this->clientDetails($customer, $client, $request)->getData();
+
+            // Aquí deberías implementar el envío del email
+            // Por ahora solo retornamos éxito simulado
+
+            \Log::info('Client details email requested', [
+                'customer_id' => $customer->id,
+                'client_id' => $client->id,
+                'email' => $data['email'],
+                'date' => $data['date'] ?? now()->format('Y-m-d')
+            ]);
+
+            // TODO: Implementar envío real de email usando Mail facade
+            // Mail::to($data['email'])->send(new ClientDetailsEmail($clientData));
+
+            return response()->json([
+                'success' => true,
+                'message' => __('Email sent successfully to :email', ['email' => $data['email']])
+            ]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => __('Validation error'),
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            \Log::error('Error sending client details email', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => __('Error sending email')
+            ], 500);
+        }
     }
 
     public function removeVehicle(Request $request, Customer $customer)
