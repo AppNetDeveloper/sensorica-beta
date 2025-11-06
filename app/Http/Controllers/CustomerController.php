@@ -551,9 +551,6 @@ return "<div class='action-buttons-row d-flex flex-wrap' style='display: none; g
      */
     public function showOrderKanban(Customer $customer, \App\Models\Process $process)
     {
-        // Guardar el proceso y cliente actuales en la sesión para que getKanbanData pueda acceder a ellos
-        session(['current_process_id' => $process->id]);
-        session(['current_customer_id' => $customer->id]);
         // Verificar que el proceso pertenece al cliente y obtener las líneas de producción
         $productionLines = $customer->productionLines()
             ->whereHas('processes', function($query) use ($process) {
@@ -566,19 +563,27 @@ return "<div class='action-buttons-row d-flex flex-wrap' style='display: none; g
             return redirect()->back()->with('error', 'No se encontraron líneas de producción para este proceso.');
         }
         
-        // Obtener todas las órdenes para este proceso específico
+        // Obtener todas las órdenes para este proceso específico y este cliente
     // Para status 0 y 1 (pendientes y en progreso) mostramos todas
     // Para status 2, 3, 4 y 5 (completadas, pausadas, canceladas e incidencias) solo mostramos las de los últimos 3 días
     $query = \App\Models\ProductionOrder::where('process_category', $process->description)
-        ->with(['originalOrder']); // Filtrar por la categoría del proceso actual
-    
+        ->with(['originalOrder'])
+        ->where(function($q) use ($customer) {
+            // Filtrar por customer_id a través de la relación con original_orders
+            // O mostrar si original_order_id es NULL (órdenes compartidas entre todos los centros)
+            $q->whereHas('originalOrder', function($subq) use ($customer) {
+                $subq->where('customer_id', $customer->id);
+            })
+            ->orWhereNull('original_order_id');
+        }); // Filtrar por la categoría del proceso actual y por el cliente
+
     // Aplicamos filtros por status
     $query->where(function($q) {
         $fiveDaysAgo = now()->subDays(5)->startOfDay();
-        
+
         // Status 0 y 1 (pendientes y en progreso) - mostrar todas
         $q->whereIn('status', [0, 1]);
-        
+
         // Status 3, 4 y 5 (incidencias, pausadas, canceladas) - solo últimos 5 días
         $q->orWhere(function($subq) use ($fiveDaysAgo) {
             $subq->whereIn('status', [3, 4, 5])
@@ -592,6 +597,14 @@ return "<div class='action-buttons-row d-flex flex-wrap' style='display: none; g
     // Consulta separada para status 2 (finalizadas) - últimos 5 días con límite de 100 tarjetas
     $status2Query = \App\Models\ProductionOrder::where('process_category', $process->description)
         ->with(['originalOrder'])
+        ->where(function($q) use ($customer) {
+            // Filtrar por customer_id a través de la relación con original_orders
+            // O mostrar si original_order_id es NULL (órdenes compartidas entre todos los centros)
+            $q->whereHas('originalOrder', function($subq) use ($customer) {
+                $subq->where('customer_id', $customer->id);
+            })
+            ->orWhereNull('original_order_id');
+        })
         ->where('status', 2)
         ->where('finished_at', '>=', now()->subDays(5)->startOfDay())
         ->orderBy('orden', 'desc')
@@ -747,27 +760,30 @@ return "<div class='action-buttons-row d-flex flex-wrap' style='display: none; g
      *
      * @return \Illuminate\Http\JsonResponse
      */
-    public function getKanbanData()
+    public function getKanbanData(Customer $customer, \App\Models\Process $process)
     {
-        // Recuperar el customer actual de la sesión
-        $customerId = session('current_customer_id');
-        $customer = \App\Models\Customer::findOrFail($customerId);
-        // Recuperar el proceso actual de la sesión
-        $processId = session('current_process_id');
-        $process = \App\Models\Process::findOrFail($processId);
-        
-        // Obtener todas las órdenes para este proceso específico
+
+        // Obtener todas las órdenes para este proceso específico y este cliente
         // Para status 0 y 1 (pendientes y en progreso) mostramos todas
         // Para status 2, 3, 4 y 5 (completadas, pausadas, canceladas e incidencias) solo mostramos las de los últimos 5 días
-        $query = \App\Models\ProductionOrder::where('process_category', $process->description); // Filtrar por la categoría del proceso actual
+        $query = \App\Models\ProductionOrder::where('process_category', $process->description)
+            ->with(['originalOrder'])
+            ->where(function($q) use ($customer) {
+                // Filtrar por customer_id a través de la relación con original_orders
+                // O mostrar si original_order_id es NULL (órdenes compartidas entre todos los centros)
+                $q->whereHas('originalOrder', function($subq) use ($customer) {
+                    $subq->where('customer_id', $customer->id);
+                })
+                ->orWhereNull('original_order_id');
+            }); // Filtrar por la categoría del proceso actual y por el cliente
 
         // Aplicamos filtros por status
         $query->where(function($q) {
             $fiveDaysAgo = now()->subDays(5)->startOfDay();
-            
+
             // Status 0 y 1 (pendientes y en progreso) - mostrar todas
             $q->whereIn('status', [0, 1]);
-            
+
             // Status 3, 4 y 5 (incidencias, pausadas, canceladas) - solo últimos 5 días
             $q->orWhere(function($subq) use ($fiveDaysAgo) {
                 $subq->whereIn('status', [3, 4, 5])
@@ -777,9 +793,18 @@ return "<div class='action-buttons-row d-flex flex-wrap' style='display: none; g
 
         // Ejecutamos la primera consulta para obtener órdenes con status 0, 1, 3, 4, 5
         $mainOrders = $query->get();
-        
+
         // Consulta separada para status 2 (finalizadas) - últimos 5 días con límite de 100 tarjetas
         $status2Query = \App\Models\ProductionOrder::where('process_category', $process->description)
+            ->with(['originalOrder'])
+            ->where(function($q) use ($customer) {
+                // Filtrar por customer_id a través de la relación con original_orders
+                // O mostrar si original_order_id es NULL (órdenes compartidas entre todos los centros)
+                $q->whereHas('originalOrder', function($subq) use ($customer) {
+                    $subq->where('customer_id', $customer->id);
+                })
+                ->orWhereNull('original_order_id');
+            })
             ->where('status', 2)
             ->where('finished_at', '>=', now()->subDays(5)->startOfDay())
             ->orderBy('orden', 'desc')
@@ -888,6 +913,7 @@ return "<div class='action-buttons-row d-flex flex-wrap' style='display: none; g
                         'theoretical_time' => $tiempoTeoricoFormateado,
                         'customerId' => $order->customerId ?? 'Sin Cliente',
                         'original_order_id' => $order->original_order_id ?? 'Sin Orden Original',
+                        'ref_order' => optional($order->originalOrder)->ref_order,
                         'articles_descriptions' => $articlesDescriptions,
                         'orden' => $order->orden ?? 0,
                         'has_stock' => $order->has_stock ?? 1,

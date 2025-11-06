@@ -687,11 +687,14 @@
         const kanbanChartsToggle = document.querySelector('#kanbanChartsToggle');
         const kanbanChartsBody = document.querySelector('#kanbanChartsBody');
         const chartsPanelStorageKey = `kanbanChartsPanelCollapsed_{{ $customer->id }}`;
+        // Inicializar vacío, se llenará después cuando productionLinesData esté disponible
         const activeLineIds = new Set();
         let hourlyChart = null;
         let waitTimeChart = null;
         let hourlyRefreshTimer = null;
         let waitTimeRefreshTimer = null;
+        let kanbanRefreshTimer = null; // Timer para actualización del kanban cada 10s
+        let productionLineStatusTimer = null; // Timer para estados de líneas cada 30s
         const hourlyRanges = {
             '1d': { label: '{{ __('Últimas 24 horas') }}', durationMs: 24 * 60 * 60 * 1000 },
             '1w': { label: '{{ __('Últimos 7 días') }}', durationMs: 7 * 24 * 60 * 60 * 1000 },
@@ -822,13 +825,21 @@
         }
 
         function computeLineIdsFromColumns() {
+            // Solo actualizar si hay columnas en el DOM, sino mantener los IDs iniciales
+            const columns = document.querySelectorAll('.kanban-column[data-production-line-id]');
+            if (columns.length === 0) {
+                console.log('⏸️ DOM no listo, manteniendo IDs iniciales:', Array.from(activeLineIds));
+                return;
+            }
+
             activeLineIds.clear();
-            document.querySelectorAll('.kanban-column[data-production-line-id]').forEach(column => {
+            columns.forEach(column => {
                 const id = column.getAttribute('data-production-line-id');
                 if (id) {
                     activeLineIds.add(parseInt(id, 10));
                 }
             });
+            console.log('🔄 Líneas actualizadas desde DOM:', Array.from(activeLineIds));
         }
 
         function fetchHourlyData(rangeKey = '1d') {
@@ -1078,7 +1089,13 @@
         const processColor = "{{ $process->color ?? '#6c757d' }}";
         const globalMeanKpiValue = document.getElementById('globalMeanKpiValue');
         const globalMedianKpiValue = document.getElementById('globalMedianKpiValue');
-        
+
+        // Inicializar activeLineIds con los IDs de las líneas de producción desde el backend
+        @can('hourly-totals-view')
+        productionLinesData.forEach(line => activeLineIds.add(line.id));
+        console.log('📊 Gráficos inicializados con líneas:', Array.from(activeLineIds));
+        @endcan
+
         let hasUnsavedChanges = false;
         let draggedCard = null;
         let cachedDropPosition = null; // Cachear posición detectada durante dragOver
@@ -3498,7 +3515,7 @@
         
         // Obtener estados iniciales y configurar actualización periódica
         fetchProductionLineStatuses();
-        setInterval(fetchProductionLineStatuses, 30000); // Actualizar cada 30 segundos
+        productionLineStatusTimer = setInterval(fetchProductionLineStatuses, 30000); // Actualizar cada 30 segundos
         
         // --- 6. GUARDADO DE DATOS Y OTROS EVENTOS ---
         
@@ -3907,9 +3924,9 @@
                 if (hasUnsavedChanges) return;
                 
                 console.log('🔄 Actualizando datos del Kanban...');
-                
+
                 // Obtener datos actualizados del servidor
-                const response = await fetch('{{ route("kanban.data") }}');
+                const response = await fetch('{{ route("customers.kanban.data", [$customer->id, $process->id]) }}');
                 
                 if (!response.ok) {
                     throw new Error('Error al obtener datos actualizados');
@@ -4112,17 +4129,17 @@
         }
         
         // Actualización automática cada 10 segundos
-        setInterval(() => {
+        kanbanRefreshTimer = setInterval(() => {
             // No actualizar si hay una operación de drag & drop en curso
             if (draggedCard) {
                 console.log('🔄 Actualización automática pausada: operación de drag & drop en curso');
                 return;
             }
-            
+
             savePendingSearchValue();
             refreshKanbanData();
             updateGlobalKpis(); // Trigger global KPI refresh after data updates and KPI events
-            
+
             // Restaurar el foco si el campo lo tenía antes de la actualización
             setTimeout(() => {
                 if (wasPendingSearchFocused) {
@@ -4133,7 +4150,28 @@
                 }
             }, 100); // Pequeño retraso para asegurar que el DOM está actualizado
         }, 10000);
-        
+
+        // Page Visibility API - Manejar cambios de visibilidad de la pestaña
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                // Pestaña en segundo plano
+                console.log('🌙 Pestaña en segundo plano - pausando actualizaciones automáticas');
+                // Los setInterval seguirán ejecutándose pero throttled por el navegador
+                // Opcionalmente se podrían limpiar aquí si se desea pausar completamente
+            } else {
+                // Pestaña activa de nuevo
+                console.log('☀️ Pestaña activa - actualizando datos inmediatamente');
+
+                // Actualizar inmediatamente cuando la pestaña vuelve a estar activa
+                if (!draggedCard && !hasUnsavedChanges) {
+                    savePendingSearchValue();
+                    refreshKanbanData();
+                    updateGlobalKpis();
+                    fetchProductionLineStatuses();
+                }
+            }
+        });
+
         searchInput.addEventListener('input', () => setTimeout(() => distributeAndRender(true), 300));
         
         // Función para aplicar el filtro de búsqueda en la columna de pendientes

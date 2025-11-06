@@ -182,6 +182,10 @@ Route::prefix('customers')->name('customers.')->group(function () {
             ->name('order-kanban')
             ->where('process', '[0-9]+');
 
+        Route::get('order-kanban/{process}/data', [CustomerController::class, 'getKanbanData'])
+            ->name('kanban.data')
+            ->where('process', '[0-9]+');
+
         Route::get('hourly-totals', [CustomerController::class, 'hourlyTotals'])
             ->name('hourly-totals')
             ->middleware('permission:hourly-totals-view');
@@ -403,10 +407,6 @@ Route::prefix('customers')->name('customers.')->group(function () {
     });
 });
 
-
-// Ruta para obtener datos del Kanban mediante AJAX (para actualización automática)
-Route::get('kanban-data', [CustomerController::class, 'getKanbanData'])
-    ->name('kanban.data');
 
 // Rutas para colores RFID
 Route::get('production-lines/{production_line_id}/rfid/colors', [RfidColorController::class, 'index'])
