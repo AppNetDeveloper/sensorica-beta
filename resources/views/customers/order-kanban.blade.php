@@ -2833,7 +2833,30 @@
 
             const refOrderHtml = order.ref_order ? `<div class="text-xs text-muted mt-1"><i class="fas fa-tag me-1" title="{{ __('Order Reference') }}"></i>${order.ref_order}</div>` : '';
 
+            // Badge de transferencia
+            let transferBadgeHtml = '';
+            if (order.transferred_to && order.transferred_to.status === 'active') {
+                transferBadgeHtml = `
+                    <div class="alert alert-warning mb-2 py-2 px-3 d-flex align-items-center" style="font-size: 0.875rem; border-left: 4px solid #ff9800;">
+                        <i class="fas fa-exchange-alt me-2" style="font-size: 1.2rem;"></i>
+                        <div>
+                            <strong>TRANSFERIDO A:</strong> ${order.transferred_to.customer_name}
+                            ${order.transferred_to.transferred_at ? `<span class="ms-2 text-muted small">(${order.transferred_to.transferred_at})</span>` : ''}
+                        </div>
+                    </div>`;
+            } else if (order.transferred_from && order.transferred_from.status === 'active') {
+                transferBadgeHtml = `
+                    <div class="alert alert-info mb-2 py-2 px-3 d-flex align-items-center" style="font-size: 0.875rem; border-left: 4px solid #2196f3;">
+                        <i class="fas fa-arrow-circle-down me-2" style="font-size: 1.2rem;"></i>
+                        <div>
+                            <strong>RECIBIDO DE:</strong> ${order.transferred_from.customer_name}
+                            ${order.transferred_from.transferred_at ? `<span class="ms-2 text-muted small">(${order.transferred_from.transferred_at})</span>` : ''}
+                        </div>
+                    </div>`;
+            }
+
             card.innerHTML = `
+                ${transferBadgeHtml}
                 <div class="kanban-card-header" onclick="this.parentElement.classList.toggle('collapsed')">
                     <div class="me-2" style="flex-grow: 1;">
                         <div class="fw-bold text-sm d-flex align-items-center">#${order.order_id}${urgencyIconHtml}${stockIconHtml}${priorityIconHtml}${carIconHtml}${barcodeBadgeHtml}</div>
@@ -3639,7 +3662,101 @@
             const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, timerProgressBar: true });
             Toast.fire({ icon: type, title: message });
         }
-                
+
+        function showTransferModal(orderId, order) {
+            // Construir opciones del select con otros customers
+            const otherCustomers = @json($otherCustomers);
+            const customerOptions = otherCustomers.map(customer =>
+                `<option value="${customer.id}">${customer.name}</option>`
+            ).join('');
+
+            Swal.fire({
+                title: `Transferir Orden #${order.order_id}`,
+                html: `
+                    <div class="text-start">
+                        <div class="mb-3">
+                            <label for="targetCustomer" class="form-label fw-bold">Centro de producción destino:</label>
+                            <select id="targetCustomer" class="form-select">
+                                <option value="">-- Seleccionar centro --</option>
+                                ${customerOptions}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="transferNotes" class="form-label fw-bold">Notas (opcional):</label>
+                            <textarea id="transferNotes" class="form-control" rows="3" placeholder="Motivo de la transferencia, observaciones, etc."></textarea>
+                        </div>
+                        <div class="alert alert-info small">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Se creará una nueva tarjeta en el centro destino y esta tarjeta quedará marcada como transferida.
+                        </div>
+                    </div>
+                `,
+                showCancelButton: true,
+                confirmButtonText: '<i class="fas fa-exchange-alt me-1"></i> Transferir',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#10b981',
+                preConfirm: () => {
+                    const targetCustomerId = document.getElementById('targetCustomer').value;
+                    const notes = document.getElementById('transferNotes').value;
+
+                    if (!targetCustomerId) {
+                        Swal.showValidationMessage('Debes seleccionar un centro de producción destino');
+                        return false;
+                    }
+
+                    // Mostrar loading
+                    Swal.showLoading();
+
+                    return fetch('{{ route("production-orders.transfer") }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({
+                            production_order_id: orderId,
+                            target_customer_id: targetCustomerId,
+                            notes: notes
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            return data;
+                        } else {
+                            throw new Error(data.message || 'Error al transferir la orden');
+                        }
+                    })
+                    .catch(error => {
+                        Swal.showValidationMessage(`Error: ${error.message}`);
+                        return false;
+                    });
+                }
+            }).then((result) => {
+                if (result.isConfirmed && result.value) {
+                    const data = result.value.data || result.value;
+                    const targetCustomerName = data.target_customer_name || 'otro centro';
+                    const newOrderId = data.new_order_id || '';
+
+                    Swal.fire({
+                        title: '¡Transferencia exitosa!',
+                        html: `
+                            <p>La orden #${order.order_id} ha sido transferida a <strong>${targetCustomerName}</strong>.</p>
+                            <p class="small text-muted mb-0">Nueva orden creada: #${newOrderId}</p>
+                        `,
+                        icon: 'success',
+                        timer: 4000,
+                        showConfirmButton: true
+                    });
+
+                    // Recargar los datos del kanban para reflejar los cambios
+                    setTimeout(() => {
+                        refreshKanbanData();
+                    }, 1500);
+                }
+            });
+        }
+
         function showCardMenu(orderId) {
             const order = masterOrderList.find(o => o.id == orderId);
             if (!order) return;
@@ -3667,6 +3784,9 @@
                         <button id="viewIncidentsBtn" class="btn btn-danger w-100">{{ __('View Incidents') }}</button>
                         <button id="viewOriginalOrderBtn" class="btn btn-info w-100" ${isOriginalOrderDisabled ? 'disabled' : ''}>
                             {{ __('View Original Order') }}
+                        </button>
+                        <button id="transferBtn" class="btn btn-success w-100">
+                            <i class="fas fa-exchange-alt me-2"></i>{{ __('Transferir a otro centro') }}
                         </button>
                     </div>`,
                 didOpen: () => {
@@ -3807,6 +3927,12 @@
                             Swal.close();
                         });
                     }
+
+                    // Evento para transferir a otro centro
+                    popup.querySelector('#transferBtn').addEventListener('click', () => {
+                        Swal.close();
+                        showTransferModal(orderId, order);
+                    });
                 }
             });
         }

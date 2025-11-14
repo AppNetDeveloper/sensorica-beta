@@ -100,6 +100,7 @@ Route::middleware(['auth', 'XSS'])->group(function () {
 Route::post('production-orders/update-batch', [ProductionOrderController::class, 'updateBatch'])->name('production-orders.update-batch')->middleware(['auth', 'XSS']);
 Route::post('production-orders/toggle-priority', [ProductionOrderController::class, 'togglePriority'])->name('production-orders.toggle-priority')->middleware(['auth', 'XSS']);
 Route::post('production-orders/update-note', [ProductionOrderController::class, 'updateNote'])->name('production-orders.update-note')->middleware(['auth', 'XSS']);
+Route::post('production-orders/transfer', [ProductionOrderController::class, 'transferToCustomer'])->name('production-orders.transfer')->middleware(['auth', 'XSS']);
 
 // API para obtener información de la línea de producción y hora del servidor
 Route::get('api/production-line-info', [ProductionLineInfoController::class, 'getInfo'])->name('api.production-line-info');

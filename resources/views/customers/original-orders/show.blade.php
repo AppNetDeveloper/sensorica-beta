@@ -27,6 +27,65 @@
                     </div>
                 </div>
                 <div class="card-body">
+                    {{-- Sección de transferencia --}}
+                    @if($transferredTo)
+                        <div class="alert alert-warning d-flex align-items-center mb-4" style="border-left: 5px solid #ff9800;">
+                            <i class="fas fa-exchange-alt me-3" style="font-size: 2rem;"></i>
+                            <div class="flex-grow-1">
+                                <h5 class="mb-2">
+                                    <i class="fas fa-arrow-right me-2"></i>
+                                    <strong>PEDIDO TRANSFERIDO A: {{ $transferredTo->toCustomer->name }}</strong>
+                                </h5>
+                                <p class="mb-2">
+                                    <i class="fas fa-clock me-1"></i>
+                                    <strong>Fecha de transferencia:</strong> {{ $transferredTo->transferred_at->format('d/m/Y H:i') }}
+                                </p>
+                                @if($transferredTo->notes)
+                                    <p class="mb-2 text-muted">
+                                        <i class="fas fa-sticky-note me-1"></i>
+                                        <strong>Notas:</strong> {{ $transferredTo->notes }}
+                                    </p>
+                                @endif
+                                @if($transferredTo->originalOrderTarget)
+                                    <a href="{{ route('customers.original-orders.show', [$transferredTo->toCustomer->id, $transferredTo->originalOrderTarget->id]) }}"
+                                       class="btn btn-warning btn-sm">
+                                        <i class="fas fa-external-link-alt me-1"></i>
+                                        Ver pedido transferido ({{ $transferredTo->originalOrderTarget->order_id }})
+                                    </a>
+                                @endif
+                            </div>
+                        </div>
+                    @endif
+
+                    @if($transferredFrom)
+                        <div class="alert alert-info d-flex align-items-center mb-4" style="border-left: 5px solid #2196f3;">
+                            <i class="fas fa-arrow-circle-down me-3" style="font-size: 2rem;"></i>
+                            <div class="flex-grow-1">
+                                <h5 class="mb-2">
+                                    <i class="fas fa-arrow-left me-2"></i>
+                                    <strong>PEDIDO RECIBIDO DE: {{ $transferredFrom->fromCustomer->name }}</strong>
+                                </h5>
+                                <p class="mb-2">
+                                    <i class="fas fa-clock me-1"></i>
+                                    <strong>Fecha de transferencia:</strong> {{ $transferredFrom->transferred_at->format('d/m/Y H:i') }}
+                                </p>
+                                @if($transferredFrom->notes)
+                                    <p class="mb-2 text-muted">
+                                        <i class="fas fa-sticky-note me-1"></i>
+                                        <strong>Notas:</strong> {{ $transferredFrom->notes }}
+                                    </p>
+                                @endif
+                                @if($transferredFrom->originalOrderSource)
+                                    <a href="{{ route('customers.original-orders.show', [$transferredFrom->fromCustomer->id, $transferredFrom->originalOrderSource->id]) }}"
+                                       class="btn btn-info btn-sm">
+                                        <i class="fas fa-external-link-alt me-1"></i>
+                                        Ver pedido original ({{ $transferredFrom->originalOrderSource->order_id }})
+                                    </a>
+                                @endif
+                            </div>
+                        </div>
+                    @endif
+
                     <div class="row">
                         <div class="col-md-6">
                             <h4>@lang('Order Information')</h4>

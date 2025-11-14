@@ -448,4 +448,175 @@ class ProductionOrderController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Transferir una tarjeta (production_order) de un customer a otro
+     */
+    public function transferToCustomer(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'production_order_id' => 'required|integer|exists:production_orders,id',
+                'target_customer_id' => 'required|integer|exists:customers,id',
+                'notes' => 'nullable|string|max:1000',
+            ]);
+
+            DB::beginTransaction();
+
+            // 1. Obtener la production_order origen
+            $sourceProductionOrder = ProductionOrder::with(['originalOrder', 'originalOrderProcess'])
+                ->findOrFail($validated['production_order_id']);
+
+            if (!$sourceProductionOrder->original_order_id || !$sourceProductionOrder->original_order_process_id) {
+                throw new \RuntimeException('La tarjeta no tiene original_order o original_order_process asociado');
+            }
+
+            $sourceOriginalOrder = $sourceProductionOrder->originalOrder;
+            $sourceProcess = $sourceProductionOrder->originalOrderProcess;
+            $sourceCustomerId = $sourceOriginalOrder->customer_id;
+            $targetCustomerId = $validated['target_customer_id'];
+
+            // Validar que no sea el mismo customer
+            if ($sourceCustomerId == $targetCustomerId) {
+                throw new \RuntimeException('No se puede transferir al mismo customer');
+            }
+
+            // 2. Obtener customer destino
+            $targetCustomer = \App\Models\Customer::findOrFail($targetCustomerId);
+
+            // 3. Generar nombre limpio del customer destino (sin caracteres raros)
+            $cleanCustomerName = preg_replace('/[^A-Za-z0-9]/', '', $targetCustomer->name);
+            $cleanCustomerName = strtoupper(substr($cleanCustomerName, 0, 10));
+
+            // 4. Generar order_id único con sufijo del customer destino
+            $baseOrderId = (string) $sourceOriginalOrder->order_id;
+            $candidate = $baseOrderId . '-' . $cleanCustomerName;
+            $i = 2;
+            while (\App\Models\OriginalOrder::where('order_id', $candidate)->exists()) {
+                $candidate = $baseOrderId . "-{$cleanCustomerName}-{$i}";
+                $i++;
+            }
+
+            // 5. Clonar OriginalOrder para el customer destino
+            $newOriginalOrder = \App\Models\OriginalOrder::create([
+                'order_id' => $candidate,
+                'customer_id' => $targetCustomerId,
+                'customer_client_id' => $sourceOriginalOrder->customer_client_id,
+                'route_name_id' => $sourceOriginalOrder->route_name_id,
+                'client_number' => $sourceOriginalOrder->client_number,
+                'address' => $sourceOriginalOrder->address,
+                'phone' => $sourceOriginalOrder->phone,
+                'cif_nif' => $sourceOriginalOrder->cif_nif,
+                'ref_order' => $sourceOriginalOrder->ref_order, // Mantener ref_order original
+                'order_details' => $sourceOriginalOrder->order_details,
+                'processed' => false, // Sistema creará tarjeta automáticamente
+                'finished_at' => null,
+                'delivery_date' => $sourceOriginalOrder->delivery_date,
+                'estimated_delivery_date' => $sourceOriginalOrder->estimated_delivery_date,
+                'in_stock' => $sourceOriginalOrder->in_stock,
+                'fecha_pedido_erp' => $sourceOriginalOrder->fecha_pedido_erp,
+            ]);
+
+            // 6. Clonar SOLO el proceso específico
+            // NOTA: finished y finished_at no están en fillable y tienen validaciones en eventos
+            // Usamos DB::table para evitar completamente los eventos del modelo
+            $newProcessId = DB::table('original_order_processes')->insertGetId([
+                'original_order_id' => $newOriginalOrder->id,
+                'process_id' => $sourceProcess->process_id,
+                'time' => $sourceProcess->time,
+                'box' => $sourceProcess->box,
+                'units_box' => $sourceProcess->units_box,
+                'number_of_pallets' => $sourceProcess->number_of_pallets,
+                'grupo_numero' => $sourceProcess->grupo_numero, // Mantener mismo grupo
+                'in_stock' => $sourceProcess->in_stock ?? 1,
+                'created' => false, // Sistema creará production_order
+                'finished' => false,
+                'finished_at' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            // Verificar que el proceso se creó correctamente
+            if (!$newProcessId) {
+                throw new \RuntimeException('No se pudo crear el proceso clonado');
+            }
+
+            // Cargar el proceso recién creado como modelo para usarlo en las relaciones
+            $newProcess = \App\Models\OriginalOrderProcess::find($newProcessId);
+
+            // 7. Clonar artículos del proceso (solo campos que existen en la tabla)
+            $sourceArticles = \App\Models\OriginalOrderArticle::where('original_order_process_id', $sourceProcess->id)->get();
+            foreach ($sourceArticles as $article) {
+                \App\Models\OriginalOrderArticle::create([
+                    'original_order_process_id' => $newProcess->id,
+                    'codigo_articulo' => $article->codigo_articulo,
+                    'descripcion_articulo' => $article->descripcion_articulo,
+                    'grupo_articulo' => $article->grupo_articulo,
+                    'in_stock' => $article->in_stock ?? 1,
+                ]);
+            }
+
+            // 8. Registrar la transferencia
+            $transfer = \App\Models\ProductionOrderTransfer::create([
+                'production_order_id_source' => $sourceProductionOrder->id,
+                'production_order_id_target' => null, // Se actualizará cuando se cree automáticamente
+                'from_customer_id' => $sourceCustomerId,
+                'to_customer_id' => $targetCustomerId,
+                'original_order_id_source' => $sourceOriginalOrder->id,
+                'original_order_id_target' => $newOriginalOrder->id,
+                'original_order_process_id_source' => $sourceProcess->id,
+                'original_order_process_id_target' => $newProcess->id,
+                'transferred_by' => auth()->id(),
+                'transferred_at' => now(),
+                'notes' => $validated['notes'] ?? null,
+                'status' => 'active',
+            ]);
+
+            // 9. Marcar la tarjeta original con nota
+            $transferNote = "\n[TRANSFERIDO A: {$targetCustomer->name} el " . now()->format('d/m/Y H:i') . "]";
+            $sourceProductionOrder->update([
+                'note' => ($sourceProductionOrder->note ?? '') . $transferNote
+            ]);
+
+            DB::commit();
+
+            Log::info('Tarjeta transferida exitosamente', [
+                'production_order_id' => $sourceProductionOrder->id,
+                'from_customer' => $sourceCustomerId,
+                'to_customer' => $targetCustomerId,
+                'new_original_order_id' => $newOriginalOrder->id,
+                'transfer_id' => $transfer->id,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => "Tarjeta transferida exitosamente a {$targetCustomer->name}",
+                'data' => [
+                    'transfer_id' => $transfer->id,
+                    'new_order_id' => $newOriginalOrder->order_id,
+                    'target_customer_name' => $targetCustomer->name,
+                ]
+            ]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Error de validación',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('Error al transferir tarjeta', [
+                'production_order_id' => $request->input('production_order_id'),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al transferir tarjeta: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }

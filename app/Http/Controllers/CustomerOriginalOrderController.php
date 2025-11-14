@@ -571,12 +571,24 @@ class CustomerOriginalOrderController extends Controller
         // Depurar los procesos cargados
         \Log::info('Procesos cargados para la orden ' . $originalOrder->id . ':');
         foreach ($originalOrder->processes as $process) {
-            \Log::info("Proceso ID: {$process->id}, Código: {$process->code}, finished: " . 
-                      ($process->pivot->finished ? 'true' : 'false') . 
+            \Log::info("Proceso ID: {$process->id}, Código: {$process->code}, finished: " .
+                      ($process->pivot->finished ? 'true' : 'false') .
                       ", finished_at: " . ($process->pivot->finished_at ?? 'null'));
         }
-        
-        return view('customers.original-orders.show', compact('customer', 'originalOrder'));
+
+        // Buscar si este pedido fue transferido a otro customer
+        $transferredTo = \App\Models\ProductionOrderTransfer::where('original_order_id_source', $originalOrder->id)
+            ->where('status', 'active')
+            ->with(['toCustomer', 'originalOrderTarget'])
+            ->first();
+
+        // Buscar si este pedido fue recibido de otro customer
+        $transferredFrom = \App\Models\ProductionOrderTransfer::where('original_order_id_target', $originalOrder->id)
+            ->where('status', 'active')
+            ->with(['fromCustomer', 'originalOrderSource'])
+            ->first();
+
+        return view('customers.original-orders.show', compact('customer', 'originalOrder', 'transferredTo', 'transferredFrom'));
     }
 
     public function edit(Customer $customer, OriginalOrder $originalOrder)

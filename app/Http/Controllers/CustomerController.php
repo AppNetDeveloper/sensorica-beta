@@ -567,7 +567,7 @@ return "<div class='action-buttons-row d-flex flex-wrap' style='display: none; g
     // Para status 0 y 1 (pendientes y en progreso) mostramos todas
     // Para status 2, 3, 4 y 5 (completadas, pausadas, canceladas e incidencias) solo mostramos las de los últimos 3 días
     $query = \App\Models\ProductionOrder::where('process_category', $process->description)
-        ->with(['originalOrder'])
+        ->with(['originalOrder', 'transferredTo.toCustomer', 'transferredFrom.fromCustomer'])
         ->where(function($q) use ($customer) {
             // Filtrar por customer_id a través de la relación con original_orders
             // O mostrar si original_order_id es NULL (órdenes compartidas entre todos los centros)
@@ -596,7 +596,7 @@ return "<div class='action-buttons-row d-flex flex-wrap' style='display: none; g
 
     // Consulta separada para status 2 (finalizadas) - últimos 5 días con límite de 100 tarjetas
     $status2Query = \App\Models\ProductionOrder::where('process_category', $process->description)
-        ->with(['originalOrder'])
+        ->with(['originalOrder', 'transferredTo.toCustomer', 'transferredFrom.fromCustomer'])
         ->where(function($q) use ($customer) {
             // Filtrar por customer_id a través de la relación con original_orders
             // O mostrar si original_order_id es NULL (órdenes compartidas entre todos los centros)
@@ -727,6 +727,17 @@ return "<div class='action-buttons-row d-flex flex-wrap' style='display: none; g
                 // AFTER aggregation for UI usage
                 'after' => $afterItems,
                 'after_count' => $afterItems->count(),
+                // Transfer information
+                'transferred_to' => $order->transferredTo ? [
+                    'customer_name' => $order->transferredTo->toCustomer->name ?? 'Desconocido',
+                    'transferred_at' => optional($order->transferredTo->transferred_at)->format('d/m/Y H:i'),
+                    'status' => $order->transferredTo->status,
+                ] : null,
+                'transferred_from' => $order->transferredFrom ? [
+                    'customer_name' => $order->transferredFrom->fromCustomer->name ?? 'Desconocido',
+                    'transferred_at' => optional($order->transferredFrom->transferred_at)->format('d/m/Y H:i'),
+                    'status' => $order->transferredFrom->status,
+                ] : null,
                 ];
             });
         
@@ -748,11 +759,17 @@ return "<div class='action-buttons-row d-flex flex-wrap' style='display: none; g
         // Registrar en el log para depuración
         \Log::info('Líneas de producción para el proceso ' . $process->id . ':', $productionLinesData);
         
+        // Obtener todos los customers excepto el actual para el modal de transferencia
+        $otherCustomers = Customer::where('id', '!=', $customer->id)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
         return view('customers.order-kanban', [
             'customer' => $customer,
             'process' => $process,
             'productionLines' => $productionLinesData,
-            'processOrders' => $processOrders
+            'processOrders' => $processOrders,
+            'otherCustomers' => $otherCustomers
         ]);
     }
     /**
@@ -767,7 +784,7 @@ return "<div class='action-buttons-row d-flex flex-wrap' style='display: none; g
         // Para status 0 y 1 (pendientes y en progreso) mostramos todas
         // Para status 2, 3, 4 y 5 (completadas, pausadas, canceladas e incidencias) solo mostramos las de los últimos 5 días
         $query = \App\Models\ProductionOrder::where('process_category', $process->description)
-            ->with(['originalOrder'])
+            ->with(['originalOrder', 'transferredTo.toCustomer', 'transferredFrom.fromCustomer'])
             ->where(function($q) use ($customer) {
                 // Filtrar por customer_id a través de la relación con original_orders
                 // O mostrar si original_order_id es NULL (órdenes compartidas entre todos los centros)
@@ -939,6 +956,17 @@ return "<div class='action-buttons-row d-flex flex-wrap' style='display: none; g
                         'after' => $afterItems,
                         'after_count' => $afterItems->count(),
                         'note' => $order->note,
+                        // Transfer information
+                        'transferred_to' => $order->transferredTo ? [
+                            'customer_name' => $order->transferredTo->toCustomer->name ?? 'Desconocido',
+                            'transferred_at' => optional($order->transferredTo->transferred_at)->format('d/m/Y H:i'),
+                            'status' => $order->transferredTo->status,
+                        ] : null,
+                        'transferred_from' => $order->transferredFrom ? [
+                            'customer_name' => $order->transferredFrom->fromCustomer->name ?? 'Desconocido',
+                            'transferred_at' => optional($order->transferredFrom->transferred_at)->format('d/m/Y H:i'),
+                            'status' => $order->transferredFrom->status,
+                        ] : null,
                     ];
                 });
 

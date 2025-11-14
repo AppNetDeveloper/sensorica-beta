@@ -152,7 +152,23 @@ class ProductionOrder extends Model
         // local key on this model: original_order_process_id
         return $this->hasMany(\App\Models\OriginalOrderProcessFile::class, 'original_order_process_id', 'original_order_process_id');
     }
-    
+
+    /**
+     * Transferencia de la que esta tarjeta fue ENVIADA a otro customer
+     */
+    public function transferredTo()
+    {
+        return $this->hasOne(\App\Models\ProductionOrderTransfer::class, 'production_order_id_source');
+    }
+
+    /**
+     * Transferencia de la que esta tarjeta fue RECIBIDA desde otro customer
+     */
+    public function transferredFrom()
+    {
+        return $this->hasOne(\App\Models\ProductionOrderTransfer::class, 'production_order_id_target');
+    }
+
     /**
      * Boot method to handle model events.
      */
