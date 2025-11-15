@@ -27,9 +27,56 @@
                             @php($aiToken = config('services.ai.token'))
                             @if(!empty($aiUrl) && !empty($aiToken))
                             <div class="btn-group btn-group-sm me-2" role="group" aria-label="IA">
-                                <button type="button" class="btn btn-dark" id="btn-ai-open" data-bs-toggle="modal" data-bs-target="#aiPromptModal" title="@lang('Análisis con IA')">
-                                    <i class="bi bi-stars me-1 text-white"></i><span class="d-none d-sm-inline">@lang('Análisis IA')</span>
+                                <button type="button" class="btn btn-dark dropdown-toggle position-relative" data-bs-toggle="dropdown" aria-expanded="false" title="@lang('Análisis con IA')" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; font-weight: 600;">
+                                    <i class="bi bi-stars me-1"></i>
+                                    <span class="d-none d-sm-inline">@lang('Análisis IA')</span>
+                                    <span class="badge bg-warning text-dark ms-1" style="font-size: 0.65em;">PRO</span>
                                 </button>
+                                <ul class="dropdown-menu dropdown-menu-end shadow-lg" style="min-width: 350px; max-height: 600px; overflow-y: auto;">
+                                    <li><h6 class="dropdown-header bg-gradient text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin: -0.5rem -0.5rem 0.5rem -0.5rem; padding: 0.75rem 1rem;">
+                                        <i class="fas fa-brain me-2"></i>{{ __("Análisis Inteligente de Confirmaciones QC") }}
+                                        <span class="badge bg-warning text-dark ms-2" style="font-size: 0.7em;">PRO</span>
+                                    </h6></li>
+
+                                    <!-- SECCIÓN 1: Análisis General -->
+                                    <li><h6 class="dropdown-header text-primary"><i class="fas fa-chart-bar me-1"></i> {{ __("Análisis General") }}</h6></li>
+                                    <li><a class="dropdown-item" href="#" data-analysis="general">
+                                        <i class="fas fa-clipboard-check text-success me-2"></i>{{ __("Visión General de Confirmaciones") }}
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="#" data-analysis="quality-trends">
+                                        <i class="fas fa-chart-line text-primary me-2"></i>{{ __("Tendencias de Calidad") }}
+                                    </a></li>
+
+                                    <li><hr class="dropdown-divider"></li>
+
+                                    <!-- SECCIÓN 2: Por Línea/Operador -->
+                                    <li><h6 class="dropdown-header text-info"><i class="fas fa-users me-1"></i> {{ __("Por Línea y Operador") }}</h6></li>
+                                    <li><a class="dropdown-item" href="#" data-analysis="by-line">
+                                        <i class="fas fa-industry text-info me-2"></i>{{ __("Rendimiento por Línea") }}
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="#" data-analysis="by-operator">
+                                        <i class="fas fa-user-check text-primary me-2"></i>{{ __("Rendimiento por Operador") }}
+                                    </a></li>
+
+                                    <li><hr class="dropdown-divider"></li>
+
+                                    <!-- SECCIÓN 3: Tiempos -->
+                                    <li><h6 class="dropdown-header text-warning"><i class="fas fa-clock me-1"></i> {{ __("Análisis de Tiempos") }}</h6></li>
+                                    <li><a class="dropdown-item" href="#" data-analysis="confirmation-times">
+                                        <i class="fas fa-stopwatch text-warning me-2"></i>{{ __("Tiempos de Confirmación") }}
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="#" data-analysis="time-patterns">
+                                        <i class="fas fa-calendar-alt text-info me-2"></i>{{ __("Patrones Temporales") }}
+                                    </a></li>
+
+                                    <li><hr class="dropdown-divider"></li>
+
+                                    <!-- SECCIÓN 4: Análisis Completo -->
+                                    <li><h6 class="dropdown-header text-dark"><i class="fas fa-layer-group me-1"></i> {{ __("Análisis Completo") }}</h6></li>
+                                    <li><a class="dropdown-item" href="#" data-analysis="full">
+                                        <i class="fas fa-brain text-dark me-2"></i>{{ __("Análisis Integral") }}
+                                    </a></li>
+                                </ul>
                             </div>
                             @endif
                             <div class="btn-group btn-group-sm" role="group" aria-label="Kanban">
@@ -213,30 +260,48 @@
             const AI_TOKEN = @json(config('services.ai.token'));
 
             function collectCurrentRows() {
-                const rows = $('#qc-confirmations-table').DataTable().rows({ page: 'current' }).nodes();
-                const out = [];
-                $('#qc-confirmations-table').DataTable().rows({ page: 'current' }).every(function(rowIdx){
+                const table = $('#qc-confirmations-table').DataTable();
+                const rows = table.rows({ search: 'applied' }).nodes();
+
+                // Header CSV
+                let csv = 'Index,Original_Order,Production_Order,Info,Notes,Confirmed_At,Line_ID,Operator_ID\n';
+                let count = 0;
+                const maxRows = 200;
+
+                table.rows({ search: 'applied' }).every(function(rowIdx){
+                    if (count >= maxRows) return false;
+
                     const tr = $(rows[rowIdx]);
                     const cells = $(this.node()).find('td');
-                    out.push({
-                        index: $(cells[0]).text().trim(),
-                        original_order: $(cells[1]).text().trim(),
-                        production_order: $(cells[2]).text().trim(),
-                        info: $(cells[3]).text().trim(),
-                        notes: $(cells[4]).text().trim(),
-                        confirmed_at: $(cells[5]).text().trim(),
-                        line_id: (tr.data('line-id') || '').toString(),
-                        operator_id: (tr.data('operator-id') || '').toString(),
-                        confirmed_date: (tr.data('created-at') || '').toString()
-                    });
+
+                    // Limpiar valores para CSV (eliminar comas y saltos de línea)
+                    const cleanValue = (val) => {
+                        if (!val) return '';
+                        return String(val).replace(/,/g, ';').replace(/\n/g, ' ').replace(/\r/g, '').trim();
+                    };
+
+                    const index = cleanValue($(cells[0]).text());
+                    const original_order = cleanValue($(cells[1]).text());
+                    const production_order = cleanValue($(cells[2]).text());
+                    const info = cleanValue($(cells[3]).text());
+                    const notes = cleanValue($(cells[4]).text());
+                    const confirmed_at = cleanValue($(cells[5]).text());
+                    const line_id = cleanValue(tr.data('line-id') || '');
+                    const operator_id = cleanValue(tr.data('operator-id') || '');
+
+                    csv += `${index},${original_order},${production_order},${info},${notes},${confirmed_at},${line_id},${operator_id}\n`;
+                    count++;
                 });
+
                 const filters = {
                     line: $('#filter-line').val() || '',
                     operator: $('#filter-operator').val() || '',
                     date_from: $('#filter-date-from').val() || '',
                     date_to: $('#filter-date-to').val() || ''
                 };
-                return { rows: out, filters };
+
+                console.log(`[AI] CSV generado con ${count} filas`);
+                return { csv, filters, rowCount: count };
             }
 
             function showLoading(show) {
@@ -248,18 +313,12 @@
                 if (!AI_URL || !AI_TOKEN) { alert('AI config missing'); return; }
                 showLoading(true);
                 try {
-                    const payload = collectCurrentRows();
-                    console.log('[AI][QC Confirmations] Collected rows:', payload.rows.length, 'filters:', payload.filters);
-                    let combinedPrompt;
-                    try {
-                        combinedPrompt = `${prompt}\n\n=== Datos para analizar (JSON) ===\n${JSON.stringify(payload, null, 2)}`;
-                    } catch (e) {
-                        combinedPrompt = `${prompt}\n\n=== Datos para analizar (JSON) ===\n[Error serializando datos]`;
-                    }
-                    console.log('[AI] Combined prompt length:', combinedPrompt.length);
-                    console.log('[AI] Combined prompt preview:', combinedPrompt.substring(0, 500));
+                    console.log('[AI][QC Confirmations] Enviando prompt');
+                    console.log('[AI] Prompt length:', prompt.length);
+                    console.log('[AI] Prompt preview:', prompt.substring(0, 500));
                     const fd = new FormData();
-                    fd.append('prompt', combinedPrompt);
+                    fd.append('prompt', prompt);
+                    fd.append('agent', 'data_analysis');
 
                     console.log('[AI] Starting task POST ...');
                     console.log('[AI] Using URL:', AI_URL);
@@ -310,20 +369,220 @@
                 }
             }
 
-            // Default prompt + reset
-            const defaultPromptQC = {!! json_encode(__('Actúa como supervisor de control de calidad. Sintetiza las confirmaciones listadas destacando líneas y operadores con mayor actividad, variaciones inusuales en tiempos de confirmación y notas relevantes. Sugiere alertas o acciones preventivas basadas en los hallazgos.')) !!};
-            $('#aiPromptModal').on('shown.bs.modal', function(){
-                const $ta = $('#aiPrompt');
-                if (!$ta.val()) $ta.val(defaultPromptQC);
-                $ta.trigger('focus');
+            // Configuración de prompts por tipo de análisis
+            const analysisPrompts = {
+                'general': {
+                    title: 'Visión General de Confirmaciones',
+                    prompt: `Eres un supervisor de control de calidad. Analiza las confirmaciones QC para obtener una visión general del estado de calidad.
+
+FORMATO DE DATOS CSV:
+Index,Original_Order,Production_Order,Info,Notes,Confirmed_At,Line_ID,Operator_ID
+
+ANÁLISIS REQUERIDO:
+1. **Resumen ejecutivo**: Total de confirmaciones, estado general de calidad
+2. **Líneas más activas**: Top 5 líneas por número de confirmaciones
+3. **Operadores más activos**: Top 5 operadores por número de confirmaciones
+4. **Distribución temporal**: Patrones por día/hora de mayor actividad
+5. **Notas relevantes**: Resumen de observaciones más importantes
+6. **Recomendaciones**: 3 acciones prioritarias basadas en los hallazgos
+
+FORMATO DE SALIDA:
+Usa secciones numeradas con datos cuantificados. Sé conciso y enfócate en hallazgos accionables.`
+                },
+                'quality-trends': {
+                    title: 'Tendencias de Calidad',
+                    prompt: `Eres un analista de tendencias de calidad. Identifica patrones y tendencias en las confirmaciones QC.
+
+FORMATO DE DATOS CSV:
+Index,Original_Order,Production_Order,Info,Notes,Confirmed_At,Line_ID,Operator_ID
+
+ANÁLISIS REQUERIDO:
+1. **Tendencias temporales**: ¿La calidad mejora, empeora o se mantiene estable?
+2. **Patrones por día/semana**: Días con más/menos confirmaciones
+3. **Evolución por línea**: Líneas con tendencias positivas o negativas
+4. **Evolución por operador**: Operadores con tendencias de mejora o deterioro
+5. **Predicciones**: ¿Qué problemas podrían surgir próximamente?
+6. **Alertas tempranas**: Señales de advertencia detectadas
+
+FORMATO DE SALIDA:
+Usa gráficas conceptuales (texto). Identifica tendencias claras con datos cuantitativos.`
+                },
+                'by-line': {
+                    title: 'Rendimiento por Línea',
+                    prompt: `Eres un analista de producción. Compara el rendimiento de calidad entre diferentes líneas de producción.
+
+FORMATO DE DATOS CSV:
+Index,Original_Order,Production_Order,Info,Notes,Confirmed_At,Line_ID,Operator_ID
+
+ANÁLISIS REQUERIDO:
+1. **Ranking de líneas**: Por número de confirmaciones (mayor a menor)
+2. **Comparativa de actividad**: Líneas más/menos activas
+3. **Distribución de confirmaciones**: ¿Hay líneas con cargas desbalanceadas?
+4. **Notas por línea**: Observaciones más frecuentes en cada línea
+5. **Líneas problemáticas**: Identificar líneas que requieren atención
+6. **Mejores prácticas**: Líneas con mejor desempeño y por qué
+
+FORMATO DE SALIDA:
+Tablas comparativas. Ranking claro. Identifica líneas de alto y bajo rendimiento.`
+                },
+                'by-operator': {
+                    title: 'Rendimiento por Operador',
+                    prompt: `Eres un supervisor de equipo. Analiza el rendimiento y patrones de los operadores en confirmaciones QC.
+
+FORMATO DE DATOS CSV:
+Index,Original_Order,Production_Order,Info,Notes,Confirmed_At,Line_ID,Operator_ID
+
+ANÁLISIS REQUERIDO:
+1. **Ranking de operadores**: Por número de confirmaciones
+2. **Productividad**: Operadores con mayor/menor número de confirmaciones
+3. **Distribución de carga**: ¿Hay operadores sobrecargados o subutilizados?
+4. **Calidad de notas**: Operadores con observaciones más detalladas/útiles
+5. **Patrones individuales**: Operadores con patrones únicos (horarios, líneas)
+6. **Desarrollo y capacitación**: Áreas de mejora identificadas
+
+FORMATO DE SALIDA:
+Sé objetivo y constructivo. Usa datos cuantitativos. Reconoce fortalezas y áreas de mejora.`
+                },
+                'confirmation-times': {
+                    title: 'Tiempos de Confirmación',
+                    prompt: `Eres un analista de eficiencia operativa. Analiza los tiempos en que se realizan las confirmaciones QC.
+
+FORMATO DE DATOS CSV:
+Index,Original_Order,Production_Order,Info,Notes,Confirmed_At,Line_ID,Operator_ID
+
+ANÁLISIS REQUERIDO:
+1. **Distribución horaria**: ¿A qué horas se confirman más órdenes?
+2. **Tiempos de respuesta**: ¿Cuánto tiempo pasa entre eventos?
+3. **Picos de actividad**: Identificar horas/días de mayor carga
+4. **Tiempos muertos**: Períodos con poca o ninguna actividad
+5. **Eficiencia por turno**: Si aplica, comparar turnos
+6. **Optimización**: Sugerencias para distribuir mejor la carga
+
+FORMATO DE SALIDA:
+Presenta horarios en formato claro. Identifica patrones de tiempo. Cuantifica todo.`
+                },
+                'time-patterns': {
+                    title: 'Patrones Temporales',
+                    prompt: `Eres un analista de patrones operativos. Identifica patrones temporales en las confirmaciones QC.
+
+FORMATO DE DATOS CSV:
+Index,Original_Order,Production_Order,Info,Notes,Confirmed_At,Line_ID,Operator_ID
+
+ANÁLISIS REQUERIDO:
+1. **Patrones diarios**: ¿Hay días de la semana con más confirmaciones?
+2. **Patrones semanales**: Tendencias semana a semana
+3. **Patrones por hora**: Horas pico vs horas valle
+4. **Correlaciones**: ¿Ciertos operadores trabajan en ciertos horarios/líneas?
+5. **Anomalías temporales**: Detectar días/horas inusuales
+6. **Estacionalidad**: Si hay suficientes datos, detectar patrones estacionales
+
+FORMATO DE SALIDA:
+Identifica patrones claros. Usa ejemplos específicos con fechas/horas. Cuantifica frecuencias.`
+                },
+                'full': {
+                    title: 'Análisis Integral',
+                    prompt: `Eres un director de control de calidad. Realiza un análisis ejecutivo integral de todas las confirmaciones QC.
+
+FORMATO DE DATOS CSV:
+Index,Original_Order,Production_Order,Info,Notes,Confirmed_At,Line_ID,Operator_ID
+
+ANÁLISIS REQUERIDO:
+1. **Resumen Ejecutivo**: Estado general, principal hallazgo, oportunidad principal
+2. **Métricas Clave**:
+   - Total de confirmaciones en el período
+   - Número de líneas activas
+   - Número de operadores activos
+   - Promedio de confirmaciones por día
+   - Distribución de actividad
+
+3. **Análisis por Dimensión**:
+   - Top 5 líneas más activas
+   - Top 5 operadores más activos
+   - Distribución temporal (días/horas)
+   - Notas y observaciones más relevantes
+
+4. **Tendencias y Patrones**:
+   - ¿Qué tendencias se observan?
+   - ¿Hay patrones preocupantes?
+   - ¿Qué señales de alerta existen?
+
+5. **Plan de Acción Estratégico**:
+   - 3 Quick wins (acción inmediata)
+   - 3 Iniciativas de mediano plazo
+   - Metas cuantificadas de mejora
+
+FORMATO DE SALIDA:
+Lenguaje ejecutivo. Enfócate en impacto de negocio. Cuantifica todo. Prioriza acciones.`
+                }
+            };
+
+            // Variable global para almacenar el prompt actual
+            let currentPromptData = null;
+
+            // Click en opciones del dropdown de análisis
+            $('.dropdown-item[data-analysis]').on('click', function(e) {
+                e.preventDefault();
+                const analysisType = $(this).data('analysis');
+                const config = analysisPrompts[analysisType];
+
+                if (!config) {
+                    console.error('[AI] Tipo de análisis no configurado:', analysisType);
+                    return;
+                }
+
+                console.log('[AI] Tipo seleccionado:', analysisType, config.title);
+
+                // Recolectar datos
+                const payload = collectCurrentRows();
+
+                if (!payload.csv || payload.rowCount === 0) {
+                    alert('No hay datos disponibles para analizar.');
+                    return;
+                }
+
+                // Construir prompt completo con datos CSV
+                const combinedPrompt = `${config.prompt}
+
+=== DATOS CSV ===
+${payload.csv}
+
+=== Filtros Aplicados ===
+Línea: ${payload.filters.line || 'Todas'}
+Operador: ${payload.filters.operator || 'Todos'}
+Fecha desde: ${payload.filters.date_from || 'Sin límite'}
+Fecha hasta: ${payload.filters.date_to || 'Sin límite'}
+
+Total de confirmaciones: ${payload.rowCount}`;
+
+                // Guardar datos del prompt actual
+                currentPromptData = {
+                    type: analysisType,
+                    title: config.title,
+                    prompt: config.prompt,
+                    data: payload,
+                    combinedPrompt: combinedPrompt
+                };
+
+                // Mostrar modal con prompt editable
+                $('#aiPrompt').val(combinedPrompt);
+                const modal = new bootstrap.Modal(document.getElementById('aiPromptModal'));
+                modal.show();
             });
-            $('#btn-ai-reset').on('click', function(){
-                $('#aiPrompt').val(defaultPromptQC);
+
+            // Botón "Restaurar prompt original"
+            $('#btn-ai-reset').on('click', function() {
+                if (currentPromptData && currentPromptData.combinedPrompt) {
+                    $('#aiPrompt').val(currentPromptData.combinedPrompt);
+                }
             });
 
             // Send from modal
             $('#btn-ai-send').on('click', function(){
-                const prompt = ($('#aiPrompt').val() || '').trim() || defaultPromptQC;
+                const prompt = ($('#aiPrompt').val() || '').trim();
+                if (!prompt) {
+                    alert('El prompt no puede estar vacío');
+                    return;
+                }
                 startAiTask(prompt);
             });
         });

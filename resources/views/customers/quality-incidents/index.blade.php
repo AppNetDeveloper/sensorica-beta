@@ -25,9 +25,67 @@
                         <div class="btn-toolbar" role="toolbar" aria-label="Toolbar">
                             @if(!empty(config('services.ai.url')) && !empty(config('services.ai.token')))
                             <div class="btn-group btn-group-sm me-2" role="group" aria-label="IA">
-                                <button type="button" class="btn btn-dark" id="btn-ai-open" data-bs-toggle="modal" data-bs-target="#aiPromptModal" title="@lang('Análisis con IA')">
-                                    <i class="bi bi-stars me-1 text-white"></i><span class="d-none d-sm-inline">@lang('Análisis IA')</span>
+                                <button type="button" class="btn btn-dark dropdown-toggle position-relative" data-bs-toggle="dropdown" aria-expanded="false" title="@lang('Análisis con IA')" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; font-weight: 600;">
+                                    <i class="bi bi-stars me-1"></i>
+                                    <span class="d-none d-sm-inline">@lang('Análisis IA')</span>
+                                    <span class="badge bg-warning text-dark ms-1" style="font-size: 0.65em;">PRO</span>
                                 </button>
+                                <ul class="dropdown-menu dropdown-menu-end shadow-lg" style="min-width: 350px; max-height: 600px; overflow-y: auto;">
+                                    <li><h6 class="dropdown-header bg-gradient text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin: -0.5rem -0.5rem 0.5rem -0.5rem; padding: 0.75rem 1rem;">
+                                        <i class="fas fa-brain me-2"></i>{{ __("Análisis Inteligente de Incidencias QC") }}
+                                        <span class="badge bg-warning text-dark ms-2" style="font-size: 0.7em;">PRO</span>
+                                    </h6></li>
+
+                                    <!-- SECCIÓN 1: Análisis General -->
+                                    <li><h6 class="dropdown-header text-danger"><i class="fas fa-exclamation-triangle me-1"></i> {{ __("Análisis de Incidencias") }}</h6></li>
+                                    <li><a class="dropdown-item" href="#" data-analysis="general">
+                                        <i class="fas fa-chart-pie text-danger me-2"></i>{{ __("Visión General de Incidencias") }}
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="#" data-analysis="critical-incidents">
+                                        <i class="fas fa-exclamation-circle text-danger me-2"></i>{{ __("Incidencias Críticas") }}
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="#" data-analysis="recurring-issues">
+                                        <i class="fas fa-redo text-warning me-2"></i>{{ __("Problemas Recurrentes") }}
+                                    </a></li>
+
+                                    <li><hr class="dropdown-divider"></li>
+
+                                    <!-- SECCIÓN 2: Por Línea/Operador -->
+                                    <li><h6 class="dropdown-header text-info"><i class="fas fa-users me-1"></i> {{ __("Por Línea y Operador") }}</h6></li>
+                                    <li><a class="dropdown-item" href="#" data-analysis="by-line">
+                                        <i class="fas fa-industry text-info me-2"></i>{{ __("Incidencias por Línea") }}
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="#" data-analysis="by-operator">
+                                        <i class="fas fa-user-times text-primary me-2"></i>{{ __("Incidencias por Operador") }}
+                                    </a></li>
+
+                                    <li><hr class="dropdown-divider"></li>
+
+                                    <!-- SECCIÓN 3: Causas Raíz -->
+                                    <li><h6 class="dropdown-header text-warning"><i class="fas fa-search me-1"></i> {{ __("Causas y Patrones") }}</h6></li>
+                                    <li><a class="dropdown-item" href="#" data-analysis="root-causes">
+                                        <i class="fas fa-microscope text-warning me-2"></i>{{ __("Análisis de Causas Raíz") }}
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="#" data-analysis="defect-patterns">
+                                        <i class="fas fa-project-diagram text-info me-2"></i>{{ __("Patrones de Defectos") }}
+                                    </a></li>
+
+                                    <li><hr class="dropdown-divider"></li>
+
+                                    <!-- SECCIÓN 4: Tendencias -->
+                                    <li><h6 class="dropdown-header text-primary"><i class="fas fa-chart-line me-1"></i> {{ __("Tendencias Temporales") }}</h6></li>
+                                    <li><a class="dropdown-item" href="#" data-analysis="time-trends">
+                                        <i class="fas fa-calendar-check text-primary me-2"></i>{{ __("Evolución Temporal") }}
+                                    </a></li>
+
+                                    <li><hr class="dropdown-divider"></li>
+
+                                    <!-- SECCIÓN 5: Análisis Completo -->
+                                    <li><h6 class="dropdown-header text-dark"><i class="fas fa-layer-group me-1"></i> {{ __("Análisis Completo") }}</h6></li>
+                                    <li><a class="dropdown-item" href="#" data-analysis="full">
+                                        <i class="fas fa-brain text-dark me-2"></i>{{ __("Análisis Integral") }}
+                                    </a></li>
+                                </ul>
                             </div>
                             @endif
                             <div class="btn-group btn-group-sm" role="group" aria-label="Kanban">
@@ -762,74 +820,217 @@
                 }
             }
 
-            // Default prompt + reset
-            const defaultPromptQI = `Eres un experto en control de calidad (QC) y metodologías Six Sigma/Lean. Analiza las incidencias de calidad proporcionadas y genera un informe detallado para mejorar los procesos.
+            // Configuración de prompts por tipo de análisis
+            const analysisPrompts = {
+                'general': {
+                    title: 'Visión General de Incidencias',
+                    prompt: `Eres un experto en control de calidad. Analiza las incidencias QC para obtener una visión general del estado de calidad.
 
-FORMATO DE DATOS:
-Recibirás un CSV con las siguientes columnas (separadas por comas), donde cada fila representa una incidencia de calidad:
-- Index: Número de orden en la tabla
-- Original_Order: Referencia de la orden original
-- Original_Order_QC: ID del registro QC
-- Process: Proceso donde ocurrió la incidencia
-- Info: Información detallada de la incidencia
-- Reason: Motivo/razón de la incidencia
-- Created_At: Fecha y hora de detección
-- Line_ID: ID de la línea de producción
-- Operator_ID: ID del operador involucrado
-
-IMPORTANTE: Procesa TODAS las filas del CSV para obtener análisis completo. Ignora filas con valores vacíos.
+FORMATO DE DATOS CSV:
+Index,Original_Order,Original_Order_QC,Process,Info,Reason,Created_At,Line_ID,Operator_ID
 
 ANÁLISIS REQUERIDO:
-
-1. **Resumen Ejecutivo**:
-   - Total de incidencias QC analizadas
-   - Tasa de defectos (incidencias / total órdenes si disponible)
-   - Distribución temporal: tendencia diaria/semanal
-
-2. **Agrupación por Línea de Producción**:
-   - Top 5 líneas con más incidencias QC
-   - Para cada línea: cantidad, % del total, procesos más problemáticos
-   - Líneas críticas que requieren atención inmediata
-
-3. **Agrupación por Operador**:
-   - Operadores con mayor número de incidencias reportadas
-   - Distribución: ¿hay concentración o está disperso?
-   - Identificar si hay necesidad de capacitación específica
-
-4. **Análisis de Causas Raíz (Top 5)**:
-   - Razones más frecuentes de incidencias QC
-   - Para cada razón: cantidad, % del total, procesos afectados
-   - Clasificación por tipo: material, proceso, mano de obra, máquina, método
-
-5. **Análisis de Procesos**:
-   - Procesos con mayor tasa de incidencias
-   - Identificar cuellos de botella en calidad
-   - Procesos que requieren revisión urgente
-
-6. **Acciones Correctivas Priorizadas**:
-   - 5 acciones concretas con mayor impacto
-   - Para cada acción: impacto estimado (% reducción esperada), urgencia (Alta/Media/Baja), recursos necesarios
-   - Quick wins: mejoras rápidas y de alto impacto
-
-7. **KPIs Recomendados**:
-   - Métricas clave para monitorear calidad
-   - Objetivos sugeridos basados en los datos actuales
+1. **Resumen ejecutivo**: Total de incidencias, estado general de calidad
+2. **Top 5 líneas** con más incidencias
+3. **Top 5 procesos** más problemáticos
+4. **Top 5 razones** más frecuentes
+5. **Distribución temporal**: Tendencias por día/semana
+6. **Recomendaciones**: 3 acciones prioritarias
 
 FORMATO DE SALIDA:
-Estructura tu respuesta con:
-- Tablas comparativas en formato Markdown
-- Números y porcentajes concretos
-- Priorización clara de acciones
-- Métricas cuantificables
+Usa tablas Markdown. Números y porcentajes concretos. Prioriza acciones.`
+                },
+                'critical-incidents': {
+                    title: 'Incidencias Críticas',
+                    prompt: `Eres un especialista en gestión de crisis de calidad. Identifica y analiza las incidencias más críticas.
 
-Utiliza encabezados, listas, negritas y tablas para mejor legibilidad.`;
-            $('#aiPromptModal').on('shown.bs.modal', function(){
-                const $ta = $('#aiPrompt');
+FORMATO DE DATOS CSV:
+Index,Original_Order,Original_Order_QC,Process,Info,Reason,Created_At,Line_ID,Operator_ID
 
-                // Si el textarea está vacío, generar el prompt completo con CSV
-                if (!$ta.val()) {
-                    const payload = collectCurrentRows();
-                    const fullPrompt = `${defaultPromptQI}
+ANÁLISIS REQUERIDO:
+1. **Criterios de criticidad**: Define qué hace crítica una incidencia
+2. **Top 10 incidencias críticas**: Por impacto, frecuencia o gravedad
+3. **Procesos de alto riesgo**: Procesos con incidencias graves
+4. **Líneas problemáticas**: Líneas con incidencias críticas recurrentes
+5. **Plan de contención**: Acciones inmediatas para contener riesgos
+6. **Escalamiento**: Qué requiere atención de gerencia
+
+FORMATO DE SALIDA:
+Enfócate en urgencia y gravedad. Usa clasificación Alta/Media/Baja.`
+                },
+                'recurring-issues': {
+                    title: 'Problemas Recurrentes',
+                    prompt: `Eres un analista de confiabilidad de calidad. Identifica patrones de problemas que se repiten.
+
+FORMATO DE DATOS CSV:
+Index,Original_Order,Original_Order_QC,Process,Info,Reason,Created_At,Line_ID,Operator_ID
+
+ANÁLISIS REQUERIDO:
+1. **Problemas más recurrentes**: Combinación Línea+Proceso+Razón que más se repite
+2. **Frecuencia de repetición**: ¿Cada cuánto ocurren?
+3. **Patrones temporales**: ¿Se repiten en días/horas específicos?
+4. **Efectividad de correcciones**: ¿Las soluciones funcionan o el problema regresa?
+5. **Causas sistémicas**: ¿Por qué estos problemas no se resuelven?
+6. **Plan preventivo**: Acciones para eliminar recurrencia
+
+FORMATO DE SALIDA:
+Identifica patrones claros. Usa ejemplos específicos. Cuantifica recurrencia.`
+                },
+                'by-line': {
+                    title: 'Incidencias por Línea',
+                    prompt: `Eres un analista de producción. Compara el desempeño de calidad entre líneas de producción.
+
+FORMATO DE DATOS CSV:
+Index,Original_Order,Original_Order_QC,Process,Info,Reason,Created_At,Line_ID,Operator_ID
+
+ANÁLISIS REQUERIDO:
+1. **Ranking de líneas**: Por número de incidencias (mayor a menor)
+2. **Comparativa de tasas**: Incidencias por línea normalizado
+3. **Procesos problemáticos por línea**: Qué procesos fallan en cada línea
+4. **Razones específicas por línea**: Causas más comunes en cada línea
+5. **Líneas críticas**: Que requieren intervención urgente
+6. **Mejores prácticas**: Líneas con mejor desempeño y por qué
+
+FORMATO DE SALIDA:
+Tablas comparativas. Ranking claro. Identifica líneas de alto y bajo rendimiento.`
+                },
+                'by-operator': {
+                    title: 'Incidencias por Operador',
+                    prompt: `Eres un supervisor de equipo. Analiza el desempeño de los operadores en relación a incidencias QC.
+
+FORMATO DE DATOS CSV:
+Index,Original_Order,Original_Order_QC,Process,Info,Reason,Created_At,Line_ID,Operator_ID
+
+ANÁLISIS REQUERIDO:
+1. **Ranking de operadores**: Por número de incidencias asociadas
+2. **Distribución de incidencias**: ¿Hay operadores con más problemas?
+3. **Tipos de incidencias por operador**: Qué problemas tiene cada uno
+4. **Procesos problemáticos por operador**: En qué procesos tienen más incidencias
+5. **Necesidades de capacitación**: Áreas específicas de mejora
+6. **Operadores modelo**: Con mejor desempeño y sus prácticas
+
+FORMATO DE SALIDA:
+Sé objetivo y constructivo. Enfócate en desarrollo y capacitación.`
+                },
+                'root-causes': {
+                    title: 'Análisis de Causas Raíz',
+                    prompt: `Eres un experto en metodologías Six Sigma y análisis de causa raíz. Profundiza en las causas de las incidencias.
+
+FORMATO DE DATOS CSV:
+Index,Original_Order,Original_Order_QC,Process,Info,Reason,Created_At,Line_ID,Operator_ID
+
+ANÁLISIS REQUERIDO:
+1. **Top 10 causas raíz**: Por frecuencia
+2. **Clasificación 5M**: Método, Mano de obra, Máquina, Material, Medio ambiente
+3. **Análisis Pareto**: ¿Qué causas representan el 80% de incidencias?
+4. **Causas por proceso**: Qué causa afecta más a cada proceso
+5. **Causas evitables vs inevitables**: Priorizar lo que se puede prevenir
+6. **Plan de eliminación**: Cómo eliminar las top 5 causas raíz
+
+FORMATO DE SALIDA:
+Usa diagramas conceptuales en texto. Aplica principio de Pareto. Prioriza por impacto.`
+                },
+                'defect-patterns': {
+                    title: 'Patrones de Defectos',
+                    prompt: `Eres un analista de patrones de calidad. Identifica patrones y correlaciones en los defectos.
+
+FORMATO DE DATOS CSV:
+Index,Original_Order,Original_Order_QC,Process,Info,Reason,Created_At,Line_ID,Operator_ID
+
+ANÁLISIS REQUERIDO:
+1. **Patrones por proceso**: ¿Ciertos procesos tienen ciertos tipos de defectos?
+2. **Patrones por línea**: ¿Ciertas líneas tienen problemas específicos?
+3. **Correlaciones**: ¿Hay relación entre Línea+Proceso+Razón?
+4. **Secuencias de defectos**: ¿Unos defectos llevan a otros?
+5. **Clusters de problemas**: Grupos de incidencias relacionadas
+6. **Predictibilidad**: ¿Se pueden predecir próximas incidencias?
+
+FORMATO DE SALIDA:
+Identifica correlaciones claras. Usa ejemplos específicos. Visualiza patrones.`
+                },
+                'time-trends': {
+                    title: 'Evolución Temporal',
+                    prompt: `Eres un analista de tendencias de calidad. Analiza cómo evolucionan las incidencias en el tiempo.
+
+FORMATO DE DATOS CSV:
+Index,Original_Order,Original_Order_QC,Process,Info,Reason,Created_At,Line_ID,Operator_ID
+
+ANÁLISIS REQUERIDO:
+1. **Tendencia general**: ¿Las incidencias aumentan, disminuyen o se mantienen?
+2. **Patrones diarios**: Días de la semana con más incidencias
+3. **Patrones horarios**: Si hay datos de hora, ¿cuándo ocurren más?
+4. **Evolución por línea**: Líneas que mejoran o empeoran
+5. **Evolución por proceso**: Procesos que mejoran o empeoran
+6. **Predicción**: ¿Qué esperar en próximos períodos?
+
+FORMATO DE SALIDA:
+Gráficas conceptuales en texto. Identifica tendencias claras. Proyecta futuro.`
+                },
+                'full': {
+                    title: 'Análisis Integral',
+                    prompt: `Eres un director de calidad. Realiza un análisis ejecutivo integral de todas las incidencias QC.
+
+FORMATO DE DATOS CSV:
+Index,Original_Order,Original_Order_QC,Process,Info,Reason,Created_At,Line_ID,Operator_ID
+
+ANÁLISIS REQUERIDO:
+1. **Resumen Ejecutivo**: Estado general, hallazgo principal, oportunidad principal
+2. **Métricas Clave**:
+   - Total de incidencias
+   - Tasa de defectos estimada
+   - Distribución temporal
+   - Top 5 líneas, procesos y razones
+
+3. **Análisis de Causas Raíz**:
+   - Clasificación 5M
+   - Análisis Pareto
+   - Causas evitables vs inevitables
+
+4. **Problemas Críticos y Recurrentes**:
+   - Incidencias que requieren atención inmediata
+   - Problemas que no se resuelven
+
+5. **Tendencias**:
+   - Evolución temporal
+   - Líneas/procesos que mejoran o empeoran
+
+6. **Plan de Acción Estratégico**:
+   - 3 Quick wins (acción inmediata, alto impacto)
+   - 3 Iniciativas de mediano plazo
+   - Metas cuantificadas de mejora
+   - KPIs recomendados
+
+FORMATO DE SALIDA:
+Lenguaje ejecutivo. Enfócate en impacto de negocio. Cuantifica todo. Prioriza acciones.`
+                }
+            };
+
+            // Variable global para almacenar el prompt actual
+            let currentPromptData = null;
+
+            // Click en opciones del dropdown de análisis
+            $('.dropdown-item[data-analysis]').on('click', function(e) {
+                e.preventDefault();
+                const analysisType = $(this).data('analysis');
+                const config = analysisPrompts[analysisType];
+
+                if (!config) {
+                    console.error('[AI] Tipo de análisis no configurado:', analysisType);
+                    return;
+                }
+
+                console.log('[AI] Tipo seleccionado:', analysisType, config.title);
+
+                // Recolectar datos
+                const payload = collectCurrentRows();
+
+                if (!payload.csv || payload.rowCount === 0) {
+                    alert('No hay datos disponibles para analizar.');
+                    return;
+                }
+
+                // Construir prompt completo con datos
+                const combinedPrompt = `${config.prompt}
 
 === Datos para analizar (CSV) ===
 ${payload.csv}
@@ -842,29 +1043,26 @@ Fecha hasta: ${payload.filters.date_to || 'Sin límite'}
 
 Total de incidencias: ${payload.rowCount}`;
 
-                    $ta.val(fullPrompt);
-                    console.log('[AI][QC] Prompt completo generado con', payload.rowCount, 'filas de CSV');
-                }
-                $ta.trigger('focus');
+                // Guardar datos del prompt actual
+                currentPromptData = {
+                    type: analysisType,
+                    title: config.title,
+                    prompt: config.prompt,
+                    data: payload,
+                    combinedPrompt: combinedPrompt
+                };
+
+                // Mostrar modal con prompt editable
+                $('#aiPrompt').val(combinedPrompt);
+                const modal = new bootstrap.Modal(document.getElementById('aiPromptModal'));
+                modal.show();
             });
 
-            $('#btn-ai-reset').on('click', function(){
-                // Al resetear, regenerar con datos actuales
-                const payload = collectCurrentRows();
-                const fullPrompt = `${defaultPromptQI}
-
-=== Datos para analizar (CSV) ===
-${payload.csv}
-
-=== Filtros Aplicados ===
-Línea: ${payload.filters.line || 'Todas'}
-Operador: ${payload.filters.operator || 'Todos'}
-Fecha desde: ${payload.filters.date_from || 'Sin límite'}
-Fecha hasta: ${payload.filters.date_to || 'Sin límite'}
-
-Total de incidencias: ${payload.rowCount}`;
-
-                $('#aiPrompt').val(fullPrompt);
+            // Botón "Restaurar prompt original"
+            $('#btn-ai-reset').on('click', function() {
+                if (currentPromptData && currentPromptData.combinedPrompt) {
+                    $('#aiPrompt').val(currentPromptData.combinedPrompt);
+                }
             });
 
             /**

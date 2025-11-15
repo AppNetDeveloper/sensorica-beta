@@ -4232,9 +4232,9 @@ ANÁLISIS REQUERIDO:
 
 2. **Distribución estadística**:
    - Media y mediana de Tiempo_Lanzamiento_a_Fin_Produccion_Segundos
-   - Percentil 90 (P90) y percentil 95 (P95)
-   - Coeficiente de variación (desviación estándar / media)
-   - Identifica órdenes fuera de 2 desviaciones estándar
+   - Tiempo que el 90% de órdenes NO supera (representa casos lentos típicos) y tiempo que el 95% de órdenes NO supera (representa casos extremos). Expresa ambos valores en formato legible como "X horas" o "X días Y horas"
+   - Coeficiente de variación (desviación estándar / media) - explica si hay mucha inconsistencia entre tiempos
+   - Identifica órdenes fuera de 2 desviaciones estándar (casos excepcionales que requieren atención)
 
 3. **Patrones temporales**:
    - Agrupa por semana o mes (según Fecha_Lanzamiento)
@@ -4581,10 +4581,10 @@ ANÁLISIS REQUERIDO:
    - Oportunidad principal de mejora cuantificada
 
 2. **Métricas clave de performance**:
-   - Lead time: media, mediana, P90, P95
-   - Ciclo de producción: media, mediana, P90, P95
+   - Lead time: media, mediana, tiempo que el 90% de órdenes no supera (casos lentos típicos), tiempo que el 95% de órdenes no supera (casos extremos). Presenta todos los valores en formato legible como "X días Y horas"
+   - Ciclo de producción: media, mediana, tiempo que el 90% de órdenes no supera (casos lentos típicos), tiempo que el 95% de órdenes no supera (casos extremos). Usa formato legible
    - Tiempo administrativo: media y % del lead time total
-   - Variabilidad: coeficiente de variación
+   - Variabilidad: coeficiente de variación - indica qué tan predecible es el proceso
    - Top 3 clientes por volumen y su lead time promedio
 
 3. **Análisis de tendencias temporales**:

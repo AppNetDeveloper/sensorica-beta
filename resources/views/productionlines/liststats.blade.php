@@ -614,42 +614,68 @@
                         @php($aiToken = config('services.ai.token'))
                         @if(!empty($aiUrl) && !empty($aiToken))
                         <div class="btn-group btn-group-sm me-2" role="group">
-                            <button type="button" class="btn btn-dark dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="@lang('Análisis con IA')">
-                                <i class="bi bi-stars me-1 text-white"></i><span class="d-none d-sm-inline">@lang('Análisis IA')</span>
+                            <button type="button" class="btn btn-dark dropdown-toggle position-relative" data-bs-toggle="dropdown" aria-expanded="false" title="@lang('Análisis con IA')" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; font-weight: 600;">
+                                <i class="bi bi-stars me-1"></i>
+                                <span class="d-none d-sm-inline">@lang('Análisis IA')</span>
+                                <span class="badge bg-warning text-dark ms-1" style="font-size: 0.65em;">PRO</span>
                             </button>
-                            <ul class="dropdown-menu">
-                                <li><h6 class="dropdown-header"><i class="fas fa-brain me-1"></i> Tipo de Análisis</h6></li>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-lg" style="min-width: 380px; max-height: 600px; overflow-y: auto;">
+                                <li><h6 class="dropdown-header bg-gradient text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin: -0.5rem -0.5rem 0.5rem -0.5rem; padding: 0.75rem 1rem;">
+                                    <i class="fas fa-brain me-2"></i>{{ __("Análisis Inteligente de OEE") }}
+                                    <span class="badge bg-warning text-dark ms-2" style="font-size: 0.7em;">PRO</span>
+                                </h6></li>
+
+                                <!-- SECCIÓN 1: Análisis de OEE -->
+                                <li><h6 class="dropdown-header text-primary"><i class="fas fa-chart-line me-1"></i> {{ __("OEE y Rendimiento") }}</h6></li>
                                 <li><a class="dropdown-item" href="#" data-analysis="oee-general">
-                                    <i class="fas fa-chart-line text-success me-2"></i>Análisis General de OEE
-                                </a></li>
-                                <li><a class="dropdown-item" href="#" data-analysis="stops">
-                                    <i class="fas fa-pause-circle text-danger me-2"></i>Análisis de Paradas
+                                    <i class="fas fa-chart-line text-success me-2"></i>{{ __("Análisis General de OEE") }}
                                 </a></li>
                                 <li><a class="dropdown-item" href="#" data-analysis="performance">
-                                    <i class="fas fa-tachometer-alt text-primary me-2"></i>Rendimiento por Línea
-                                </a></li>
-                                <li><a class="dropdown-item" href="#" data-analysis="operators">
-                                    <i class="fas fa-users text-info me-2"></i>Eficiencia de Operadores
-                                </a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="#" data-analysis="comparison">
-                                    <i class="fas fa-balance-scale text-warning me-2"></i>Comparativa Top/Bottom
+                                    <i class="fas fa-tachometer-alt text-primary me-2"></i>{{ __("Rendimiento por Línea") }}
                                 </a></li>
                                 <li><a class="dropdown-item" href="#" data-analysis="availability-performance">
-                                    <i class="fas fa-exchange-alt text-primary me-2"></i>Disponibilidad vs Rendimiento
+                                    <i class="fas fa-exchange-alt text-primary me-2"></i>{{ __("Disponibilidad vs Rendimiento") }}
                                 </a></li>
-                                <li><a class="dropdown-item" href="#" data-analysis="shift-variations">
-                                    <i class="fas fa-user-clock text-info me-2"></i>Variaciones por Turno/Operador
-                                </a></li>
-                                <li><a class="dropdown-item" href="#" data-analysis="shift-profitability">
-                                    <i class="fas fa-money-bill-trend-up text-success me-2"></i>Rentabilidad por Turno
+
+                                <li><hr class="dropdown-divider"></li>
+
+                                <!-- SECCIÓN 2: Paradas y Tiempo -->
+                                <li><h6 class="dropdown-header text-danger"><i class="fas fa-pause-circle me-1"></i> {{ __("Paradas y Tiempo Improductivo") }}</h6></li>
+                                <li><a class="dropdown-item" href="#" data-analysis="stops">
+                                    <i class="fas fa-pause-circle text-danger me-2"></i>{{ __("Análisis de Paradas") }}
                                 </a></li>
                                 <li><a class="dropdown-item" href="#" data-analysis="idle-time">
-                                    <i class="fas fa-hourglass-half text-danger me-2"></i>Consumo de Tiempo Improductivo
+                                    <i class="fas fa-hourglass-half text-danger me-2"></i>{{ __("Consumo de Tiempo Improductivo") }}
                                 </a></li>
+
                                 <li><hr class="dropdown-divider"></li>
+
+                                <!-- SECCIÓN 3: Operadores y Turnos -->
+                                <li><h6 class="dropdown-header text-info"><i class="fas fa-users me-1"></i> {{ __("Operadores y Turnos") }}</h6></li>
+                                <li><a class="dropdown-item" href="#" data-analysis="operators">
+                                    <i class="fas fa-users text-info me-2"></i>{{ __("Eficiencia de Operadores") }}
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" data-analysis="shift-variations">
+                                    <i class="fas fa-user-clock text-info me-2"></i>{{ __("Variaciones por Turno/Operador") }}
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" data-analysis="shift-profitability">
+                                    <i class="fas fa-money-bill-trend-up text-success me-2"></i>{{ __("Rentabilidad por Turno") }}
+                                </a></li>
+
+                                <li><hr class="dropdown-divider"></li>
+
+                                <!-- SECCIÓN 4: Análisis Comparativos -->
+                                <li><h6 class="dropdown-header text-warning"><i class="fas fa-balance-scale me-1"></i> {{ __("Análisis Comparativos") }}</h6></li>
+                                <li><a class="dropdown-item" href="#" data-analysis="comparison">
+                                    <i class="fas fa-balance-scale text-warning me-2"></i>{{ __("Comparativa Top/Bottom") }}
+                                </a></li>
+
+                                <li><hr class="dropdown-divider"></li>
+
+                                <!-- SECCIÓN 5: Análisis Completo -->
+                                <li><h6 class="dropdown-header text-dark"><i class="fas fa-layer-group me-1"></i> {{ __("Análisis Completo") }}</h6></li>
                                 <li><a class="dropdown-item" href="#" data-analysis="full">
-                                    <i class="fas fa-layer-group text-dark me-2"></i>Análisis Total (CSV extendido)
+                                    <i class="fas fa-brain text-dark me-2"></i>{{ __("Análisis Total (CSV extendido)") }}
                                 </a></li>
                             </ul>
                         </div>
