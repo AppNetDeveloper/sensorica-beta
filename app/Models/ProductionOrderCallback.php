@@ -49,27 +49,29 @@ class ProductionOrderCallback extends Model
     public static function generatePayload(ProductionOrder $productionOrder, Customer $customer)
     {
         $payload = [];
-        
+
         foreach ($customer->callbackFieldMappings as $mapping) {
             $value = null;
-            
-            // Manejar el campo especial processes_code
+
+            // Manejar campos especiales que requieren navegación de relaciones
             if ($mapping->source_field === 'processes_code') {
                 $value = self::getProcessCode($productionOrder);
+            } elseif ($mapping->source_field === 'original_orders_order_id') {
+                $value = self::getOriginalOrdersOrderId($productionOrder);
             } else {
                 // Obtener valor directo del ProductionOrder
                 $value = $productionOrder->{$mapping->source_field} ?? null;
             }
-            
+
             // Aplicar transformación si existe
             if ($mapping->transformation && !is_null($value)) {
                 $value = $mapping->applyTransformation($value);
             }
-            
+
             // Agregar al payload
             $payload[$mapping->target_field] = $value;
         }
-        
+
         return $payload;
     }
 
@@ -84,14 +86,29 @@ class ProductionOrderCallback extends Model
 
         // Buscar el OriginalOrderProcess
         $originalOrderProcess = \App\Models\OriginalOrderProcess::find($productionOrder->original_order_process_id);
-        
+
         if (!$originalOrderProcess || !$originalOrderProcess->process_id) {
             return null;
         }
 
         // Buscar el Process y obtener su code
         $process = \App\Models\Process::find($originalOrderProcess->process_id);
-        
+
         return $process ? $process->code : null;
+    }
+
+    /**
+     * Obtiene el order_id de la tabla original_orders
+     */
+    private static function getOriginalOrdersOrderId(ProductionOrder $productionOrder)
+    {
+        if (!$productionOrder->original_order_id) {
+            return null;
+        }
+
+        // Buscar el OriginalOrder
+        $originalOrder = \App\Models\OriginalOrder::find($productionOrder->original_order_id);
+
+        return $originalOrder ? $originalOrder->order_id : null;
     }
 }

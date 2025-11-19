@@ -1065,7 +1065,8 @@ return "<div class='action-buttons-row d-flex flex-wrap' style='display: none; g
             // Define callback standard fields (campos de production_orders)
             $callbackStandardFields = [
                 'id' => 'ID de la Orden de Producción',
-                'order_id' => 'ID del Pedido',
+                'order_id' => 'ID del Pedido (production_orders)',
+                'original_orders_order_id' => 'Order ID del ERP (original_orders.order_id)',
                 'production_line_id' => 'ID de Línea de Producción',
                 'status' => 'Estado (0=Pendiente, 1=En Curso, 2=Finalizada)',
                 'box' => 'Número de Cajas',
@@ -1077,7 +1078,7 @@ return "<div class='action-buttons-row d-flex flex-wrap' style='display: none; g
                 'process_category' => 'Categoría del Proceso',
                 'delivery_date' => 'Fecha de Entrega',
                 'customerId' => 'ID del Cliente',
-                'original_order_id' => 'ID de Orden Original',
+                'original_order_id' => 'ID de Orden Original (tabla original_orders)',
                 'original_order_process_id' => 'ID de Proceso de Orden Original',
                 'processes_code' => 'Código del Proceso (desde original_order_process_id → processes.code)',
                 'grupo_numero' => 'Número de Grupo',
@@ -1490,7 +1491,8 @@ return "<div class='action-buttons-row d-flex flex-wrap' style='display: none; g
                 // Campos estándar para callback (campos de production_orders)
                 $standardFields = [
                     'id' => 'ID de la Orden de Producción',
-                    'order_id' => 'ID del Pedido',
+                    'order_id' => 'ID del Pedido (production_orders)',
+                    'original_orders_order_id' => 'Order ID del ERP (original_orders.order_id)',
                     'production_line_id' => 'ID de Línea de Producción',
                     'status' => 'Estado (0=Pendiente, 1=En Curso, 2=Finalizada)',
                     'box' => 'Número de Cajas',
@@ -1502,7 +1504,7 @@ return "<div class='action-buttons-row d-flex flex-wrap' style='display: none; g
                     'process_category' => 'Categoría del Proceso',
                     'delivery_date' => 'Fecha de Entrega',
                     'customerId' => 'ID del Cliente',
-                    'original_order_id' => 'ID de Orden Original',
+                    'original_order_id' => 'ID de Orden Original (tabla original_orders)',
                     'original_order_process_id' => 'ID de Proceso de Orden Original',
                     'processes_code' => 'Código del Proceso (desde original_order_process_id → processes.code)',
                     'grupo_numero' => 'Número de Grupo',
