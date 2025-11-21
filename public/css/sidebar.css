@@ -1,0 +1,427 @@
+/**
+ * ============================================
+ * SIDEBAR MODERNO - Estilos Profesionales
+ * ============================================
+ * Diseño actualizado con efectos modernos,
+ * animaciones suaves y mejor experiencia de usuario
+ */
+
+/* ============================================
+   SIDEBAR BASE STYLES
+   ============================================ */
+.dash-sidebar {
+    width: 250px;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.05);
+}
+
+/* ============================================
+   SIDEBAR MINIMIZADO
+   ============================================ */
+body.dash-minimenu .dash-sidebar {
+    width: 80px;
+}
+
+body.dash-minimenu .dash-header {
+    left: 80px;
+}
+
+body.dash-minimenu .page-main-header {
+    margin-left: 80px;
+}
+
+body.dash-minimenu .dash-container {
+    margin-left: 80px !important;
+    transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ============================================
+   ENLACES DEL SIDEBAR
+   ============================================ */
+.dash-sidebar .dash-link {
+    padding: 12px 20px;
+    margin: 4px 10px;
+    border-radius: 8px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+}
+
+/* Efecto hover con gradiente moderno */
+.dash-sidebar .dash-link:hover {
+    transform: translateX(4px);
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%);
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.15);
+}
+
+/* Estado activo */
+.dash-sidebar .dash-item.active .dash-link {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(168, 85, 247, 0.15) 100%);
+    border-left: 3px solid #6366f1;
+    font-weight: 600;
+}
+
+/* Efecto ripple al hacer click */
+.dash-sidebar .dash-link::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(99, 102, 241, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.dash-sidebar .dash-link:active::after {
+    width: 300px;
+    height: 300px;
+}
+
+/* ============================================
+   ICONOS
+   ============================================ */
+.dash-sidebar .dash-micon {
+    font-size: 20px;
+    margin-right: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dash-sidebar .dash-link:hover .dash-micon {
+    transform: scale(1.1);
+}
+
+/* ============================================
+   TEXTO DEL MENÚ
+   ============================================ */
+.dash-sidebar .dash-mtext {
+    transition: opacity 0.2s ease;
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+body.dash-minimenu .dash-sidebar .dash-mtext {
+    opacity: 0;
+    visibility: hidden;
+}
+
+/* ============================================
+   SIDEBAR MINIMIZADO - ENLACES
+   ============================================ */
+body.dash-minimenu .dash-sidebar .dash-link {
+    padding: 14px 10px;
+    text-align: center;
+    justify-content: center;
+    margin: 4px 5px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body.dash-minimenu .dash-sidebar .dash-micon {
+    margin-right: 0;
+    font-size: 20px;
+}
+
+/* ============================================
+   HEADER DEL LOGO
+   ============================================ */
+.dash-sidebar .m-header {
+    padding: 20px 15px;
+    height: auto;
+    min-height: 70px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: padding 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* Logo normal - tamaño completo */
+.dash-sidebar .m-header img,
+.dash-sidebar .m-header .c-sidebar-brand-full,
+.dash-sidebar .m-header .navbar-brand-img {
+    max-width: 100% !important;
+    height: 45px !important;
+    width: auto !important;
+    object-fit: contain !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Cuando el sidebar está minimizado */
+body.dash-minimenu .dash-sidebar .m-header {
+    padding: 15px 5px;
+    min-height: 70px;
+    justify-content: center;
+}
+
+body.dash-minimenu .dash-sidebar .m-header .b-brand {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    overflow: hidden;
+}
+
+/* Logo minimizado - ajustar tamaño para que quepa en 80px */
+body.dash-minimenu .dash-sidebar .m-header img,
+body.dash-minimenu .dash-sidebar .m-header .c-sidebar-brand-full,
+body.dash-minimenu .dash-sidebar .m-header .navbar-brand-img {
+    max-width: 60px !important;
+    height: 35px !important;
+    width: auto !important;
+    object-fit: contain !important;
+    margin: 0 auto !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: block !important;
+}
+
+/* ============================================
+   CATEGORÍAS / SEPARADORES
+   ============================================ */
+.dash-category-header {
+    padding: 16px 20px 8px;
+    margin-top: 12px;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.dash-category-header:first-child {
+    margin-top: 0;
+    border-top: none;
+}
+
+.dash-category-text {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: rgba(0, 0, 0, 0.4);
+    display: block;
+}
+
+body.dash-minimenu .dash-category-header {
+    padding: 12px 8px 8px;
+    text-align: center;
+}
+
+body.dash-minimenu .dash-category-text {
+    display: none;
+}
+
+/* Mostrar solo un punto en categorías cuando está minimizado */
+body.dash-minimenu .dash-category-header::after {
+    content: '•';
+    font-size: 16px;
+    color: rgba(0, 0, 0, 0.3);
+    display: block;
+}
+
+/* ============================================
+   BOTÓN MINIMIZADOR
+   ============================================ */
+#sidebar-minimizer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    padding: 15px 0;
+    background-color: transparent;
+    border: none;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    cursor: pointer;
+    margin-top: auto;
+    margin-bottom: 10px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    z-index: 100;
+}
+
+#sidebar-minimizer:hover {
+    background-color: rgba(99, 102, 241, 0.05);
+}
+
+/* Icono del minimizador */
+#sidebar-minimizer .sidebar-toggle-icon {
+    font-size: 20px;
+    opacity: 0.6;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    color: #6366f1;
+}
+
+#sidebar-minimizer:hover .sidebar-toggle-icon {
+    opacity: 1;
+    transform: scale(1.15);
+}
+
+/* ============================================
+   TOOLTIPS PARA SIDEBAR MINIMIZADO
+   ============================================ */
+body.dash-minimenu .dash-sidebar .dash-link {
+    position: relative;
+}
+
+/* Los tooltips de Bootstrap se manejan automáticamente */
+
+/* ============================================
+   SCROLLBAR PERSONALIZADO
+   ============================================ */
+.dash-sidebar .navbar-content {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(99, 102, 241, 0.3) transparent;
+}
+
+.dash-sidebar .navbar-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.dash-sidebar .navbar-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.dash-sidebar .navbar-content::-webkit-scrollbar-thumb {
+    background-color: rgba(99, 102, 241, 0.3);
+    border-radius: 10px;
+    transition: background-color 0.3s ease;
+}
+
+.dash-sidebar .navbar-content::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(99, 102, 241, 0.5);
+}
+
+/* ============================================
+   RESPONSIVE - MOBILE
+   ============================================ */
+@media (max-width: 992px) {
+    /* Ocultar botón minimizador en móviles */
+    #sidebar-minimizer {
+        display: none !important;
+    }
+
+    /* Restablecer sidebar en móviles */
+    body.dash-minimenu .dash-sidebar {
+        width: 250px !important;
+    }
+
+    body.dash-minimenu .dash-header {
+        left: 0 !important;
+    }
+
+    body.dash-minimenu .page-main-header {
+        margin-left: 0 !important;
+    }
+
+    body.dash-minimenu .dash-sidebar .dash-mtext {
+        display: inline !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+
+    body.dash-minimenu .dash-sidebar .dash-micon {
+        margin-right: 12px !important;
+        font-size: 20px !important;
+    }
+
+    body.dash-minimenu .dash-container {
+        margin-left: 0 !important;
+    }
+
+    body.dash-minimenu .dash-sidebar .m-header {
+        padding: 20px 15px !important;
+    }
+
+    body.dash-minimenu .dash-sidebar .m-header img {
+        max-width: 100% !important;
+        height: 45px !important;
+    }
+
+    body.dash-minimenu .dash-sidebar .dash-link {
+        justify-content: flex-start !important;
+        text-align: left !important;
+        padding: 12px 20px !important;
+    }
+
+    /* Mostrar texto de categorías en móvil */
+    body.dash-minimenu .dash-category-text {
+        display: block !important;
+    }
+
+    body.dash-minimenu .dash-category-header::after {
+        display: none !important;
+    }
+}
+
+/* ============================================
+   MODO OSCURO (si se activa)
+   ============================================ */
+.dark-mode .dash-sidebar .dash-link:hover {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(168, 85, 247, 0.15) 100%);
+    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.2);
+}
+
+.dark-mode .dash-sidebar .dash-item.active .dash-link {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(168, 85, 247, 0.2) 100%);
+    border-left: 3px solid #8b5cf6;
+}
+
+.dark-mode .dash-category-text {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.dark-mode #sidebar-minimizer:hover {
+    background-color: rgba(139, 92, 246, 0.1);
+}
+
+.dark-mode #sidebar-minimizer .sidebar-toggle-icon {
+    color: #8b5cf6;
+}
+
+/* ============================================
+   ANIMACIONES ADICIONALES
+   ============================================ */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.dash-sidebar .dash-item {
+    animation: slideIn 0.3s ease-out backwards;
+}
+
+/* Delay escalonado para cada item */
+.dash-sidebar .dash-item:nth-child(1) { animation-delay: 0.05s; }
+.dash-sidebar .dash-item:nth-child(2) { animation-delay: 0.1s; }
+.dash-sidebar .dash-item:nth-child(3) { animation-delay: 0.15s; }
+.dash-sidebar .dash-item:nth-child(4) { animation-delay: 0.2s; }
+.dash-sidebar .dash-item:nth-child(5) { animation-delay: 0.25s; }
+.dash-sidebar .dash-item:nth-child(6) { animation-delay: 0.3s; }
+.dash-sidebar .dash-item:nth-child(7) { animation-delay: 0.35s; }
+.dash-sidebar .dash-item:nth-child(8) { animation-delay: 0.4s; }
+.dash-sidebar .dash-item:nth-child(9) { animation-delay: 0.45s; }
+.dash-sidebar .dash-item:nth-child(10) { animation-delay: 0.5s; }
+
+/* ============================================
+   MEJORAS DE ACCESIBILIDAD
+   ============================================ */
+.dash-sidebar .dash-link:focus {
+    outline: 2px solid #6366f1;
+    outline-offset: 2px;
+}
+
+.dash-sidebar .dash-link:focus:not(:focus-visible) {
+    outline: none;
+}
+
+/* ============================================
+   FIN DE ESTILOS
+   ============================================ */

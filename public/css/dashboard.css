@@ -1,0 +1,405 @@
+/**
+ * ============================================
+ * DASHBOARD MODERNO - Estilos Profesionales
+ * ============================================
+ */
+
+/* ============================================
+   REDUCIR ESPACIO SUPERIOR DEL DASHBOARD
+   ============================================ */
+.dash-content {
+    padding-top: 10px !important;
+}
+
+/* Ocultar el título del dashboard */
+.dash-content .page-header {
+    display: none;
+}
+
+/* ============================================
+   TARJETAS DE ESTADÍSTICAS MODERNAS
+   ============================================ */
+.modern-stat-card {
+    border: none;
+    border-radius: 16px;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    height: 100%;
+    position: relative;
+}
+
+.modern-stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+.modern-stat-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.15);
+}
+
+.modern-stat-card:hover::before {
+    opacity: 1;
+}
+
+.stat-card-body {
+    padding: 28px 32px;
+}
+
+.stat-icon-wrapper {
+    width: 70px;
+    height: 70px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 34px;
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.stat-icon-wrapper::before {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.3) 0%, transparent 70%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.modern-stat-card:hover .stat-icon-wrapper::before {
+    opacity: 1;
+}
+
+.stat-icon-wrapper i {
+    color: white;
+    position: relative;
+    z-index: 1;
+}
+
+.stat-content h6 {
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: #6c757d;
+    margin-bottom: 10px;
+}
+
+.stat-content h3 {
+    font-size: 36px;
+    font-weight: 700;
+    color: #212529;
+    margin: 0;
+    line-height: 1;
+}
+
+/* Gradientes específicos para cada tipo de card */
+.stat-card-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.stat-card-info {
+    background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%);
+}
+
+.stat-card-success {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.stat-card-danger {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+
+.stat-card-warning {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+.stat-card-purple {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+}
+
+.stat-card-indigo {
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+}
+
+.stat-card-teal {
+    background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+}
+
+/* Texto blanco en las cards con gradiente */
+.stat-card-primary .stat-content h6,
+.stat-card-info .stat-content h6,
+.stat-card-success .stat-content h6,
+.stat-card-danger .stat-content h6,
+.stat-card-warning .stat-content h6,
+.stat-card-purple .stat-content h6,
+.stat-card-indigo .stat-content h6,
+.stat-card-teal .stat-content h6 {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.stat-card-primary .stat-content h3,
+.stat-card-info .stat-content h3,
+.stat-card-success .stat-content h3,
+.stat-card-danger .stat-content h3,
+.stat-card-warning .stat-content h3,
+.stat-card-purple .stat-content h3,
+.stat-card-indigo .stat-content h3,
+.stat-card-teal .stat-content h3 {
+    color: white;
+}
+
+/* ============================================
+   TABLA DE ESTADO MODERNA
+   ============================================ */
+.modern-table-card {
+    border: none;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.modern-table-card .card-header {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-bottom: 2px solid #e9ecef;
+    padding: 20px 24px;
+}
+
+.modern-table-card .card-header h5 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: #212529;
+}
+
+.modern-table-card .table {
+    margin-bottom: 0;
+}
+
+.modern-table-card .table thead th {
+    background-color: #f8f9fa;
+    color: #495057;
+    font-weight: 600;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid #dee2e6;
+    padding: 16px 20px;
+}
+
+.modern-table-card .table tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+.modern-table-card .table tbody tr:hover {
+    background-color: rgba(99, 102, 241, 0.05);
+}
+
+.modern-table-card .table tbody td {
+    padding: 16px 20px;
+    vertical-align: middle;
+    color: #495057;
+    font-size: 14px;
+}
+
+/* Badges modernos */
+.modern-badge {
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.modern-badge i {
+    font-size: 14px;
+}
+
+.badge-active {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+}
+
+.badge-paused {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+}
+
+.badge-stopped {
+    background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+    color: white;
+}
+
+.badge-incident {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+}
+
+.badge-inactive {
+    background: #e9ecef;
+    color: #6c757d;
+}
+
+/* ============================================
+   CARD DE BIENVENIDA
+   ============================================ */
+.welcome-card {
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    background: linear-gradient(135deg, #f8f9fa 0%, white 100%);
+}
+
+.welcome-icon {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+}
+
+.welcome-icon i {
+    font-size: 40px;
+    color: white;
+}
+
+/* ============================================
+   CARD DE GRÁFICO
+   ============================================ */
+.chart-card {
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.chart-card .card-body {
+    padding: 24px;
+}
+
+.chart-card .card-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #212529;
+}
+
+.btn-chart-toggle {
+    border-radius: 10px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    border: 2px solid #e9ecef;
+    background: white;
+    color: #6c757d;
+    transition: all 0.3s ease;
+}
+
+.btn-chart-toggle.active,
+.btn-chart-toggle:hover {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    color: white;
+    border-color: transparent;
+}
+
+/* ============================================
+   ANIMACIONES
+   ============================================ */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-card {
+    animation: fadeInUp 0.6s ease-out backwards;
+}
+
+.animate-card:nth-child(1) { animation-delay: 0.1s; }
+.animate-card:nth-child(2) { animation-delay: 0.2s; }
+.animate-card:nth-child(3) { animation-delay: 0.3s; }
+.animate-card:nth-child(4) { animation-delay: 0.4s; }
+.animate-card:nth-child(5) { animation-delay: 0.5s; }
+.animate-card:nth-child(6) { animation-delay: 0.6s; }
+.animate-card:nth-child(7) { animation-delay: 0.7s; }
+.animate-card:nth-child(8) { animation-delay: 0.8s; }
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 768px) {
+    .page-title-box h4 {
+        font-size: 24px;
+    }
+
+    .stat-content h3 {
+        font-size: 28px;
+    }
+
+    .stat-icon-wrapper {
+        width: 48px;
+        height: 48px;
+        font-size: 22px;
+    }
+
+    .modern-table-card .table thead th,
+    .modern-table-card .table tbody td {
+        padding: 12px 16px;
+        font-size: 13px;
+    }
+}
+
+/* ============================================
+   DARK MODE
+   ============================================ */
+.dark-mode .page-title-box h4 {
+    color: #e0e0e0;
+}
+
+.dark-mode .modern-stat-card {
+    background: #2a2a2a;
+}
+
+.dark-mode .modern-table-card {
+    background: #2a2a2a;
+}
+
+.dark-mode .modern-table-card .card-header {
+    background: #1e1e1e;
+    border-bottom-color: #3a3a3a;
+}
+
+.dark-mode .modern-table-card .table thead th {
+    background-color: #1e1e1e;
+    color: #e0e0e0;
+    border-bottom-color: #3a3a3a;
+}
+
+.dark-mode .modern-table-card .table tbody td {
+    color: #e0e0e0;
+}
+
+.dark-mode .modern-table-card .table tbody tr:hover {
+    background-color: rgba(139, 92, 246, 0.15);
+}

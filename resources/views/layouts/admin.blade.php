@@ -82,172 +82,19 @@ else{
         <link href="{{ asset('css/bootstrap-datetimepicker.css') }}" rel="stylesheet">
     {{--  <link href="{{ asset('css/style.css') }}" rel="stylesheet">  --}}
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+        <!-- Sidebar Moderno CSS -->
+        <link href="{{ asset('css/sidebar.css') }}" rel="stylesheet">
+
+        <!-- Header Moderno CSS -->
+        <link href="{{ asset('css/header.css') }}" rel="stylesheet">
+
+        <!-- Footer Moderno CSS -->
+        <link href="{{ asset('css/footer.css') }}" rel="stylesheet">
+
     @stack('style')
     @laravelPWA
-    
-    <!-- Estilos para el sidebar minimizado y el botón minimizador -->
-    <style>
-        /* Estilos para el sidebar minimizado */
-        body.dash-minimenu .dash-sidebar {
-            width: 80px;
-        }
-        
-        body.dash-minimenu .dash-header {
-            left: 80px;
-        }
-        
-        body.dash-minimenu .page-main-header {
-            margin-left: 80px;
-        }
-        
-        body.dash-minimenu .dash-container {
-            margin-left: 80px !important;
-            transition: margin-left 0.3s ease;
-        }
-        
-        body.dash-minimenu .dash-sidebar .dash-link {
-            padding: 10px 15px !important;
-            text-align: center !important;
-            justify-content: center !important;
-            transition: padding 0.3s ease;
-        }
-        
-        /* Mantener el logo principal grande cuando el sidebar está minimizado */
-        body.dash-minimenu .dash-sidebar .m-header {
-            padding: 15px 10px !important;
-            height: auto !important;
-            min-height: 70px;
-            justify-content: center !important;
-            transition: padding 0.3s ease;
-        }
-        
-        body.dash-minimenu .dash-sidebar .m-header .b-brand {
-            width: 100%;
-            display: flex;
-            justify-content: center;
-            padding-left: 5px; /* Añadir un poco más de espacio a la izquierda */
-        }
-        
-        body.dash-minimenu .dash-sidebar .m-header img.c-sidebar-brand-full {
-            max-width: none !important;
-            max-height: 50px !important;
-            height: auto !important;
-            margin: 0 auto !important;
-            transition: all 0.3s ease;
-            display: block;
-            transform: translateX(7px); /* Mover el logo un poco más a la derecha */
-        }
-        
-        /* Estilos para el sidebar normal (no minimizado) */
-        .dash-sidebar {
-            transition: width 0.3s ease;
-        }
-        
-        .dash-sidebar .dash-mtext {
-            transition: opacity 0.2s ease;
-        }
-        
-        .dash-container {
-            transition: margin-left 0.3s ease;
-        }
-        
-        /* Mostrar tooltips al pasar el cursor sobre los iconos cuando está minimizado */
-        body.dash-minimenu .dash-sidebar .dash-link:hover::after {
-            content: attr(title);
-            position: absolute;
-            left: 80px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 5px 10px;
-            border-radius: 3px;
-            white-space: nowrap;
-            z-index: 99;
-            font-size: 12px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        }
-        
-        /* Botón minimizador con logo */
-        #sidebar-minimizer {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            width: 100%;
-            padding: 15px 0;
-            background-color: transparent;
-            border: none;
-            border-top: 1px solid rgba(0,0,0,0.05);
-            cursor: pointer;
-            margin-top: 20px;
-            margin-bottom: 10px;
-            transition: all 0.3s ease;
-            position: relative;
-            z-index: 100;
-        }
-        
-        #sidebar-minimizer:hover {
-            background-color: rgba(0,0,0,0.03);
-        }
-        
-        /* Estilos para el icono de comprimir/descomprimir */
-        #sidebar-minimizer .sidebar-logo-icon {
-            max-width: 24px;
-            height: auto;
-            opacity: 0.8;
-            transition: all 0.3s ease;
-        }
-        
-        #sidebar-minimizer:hover .sidebar-logo-icon {
-            opacity: 1;
-            transform: scale(1.1);
-        }
-        
-        /* Rotar la imagen cuando el sidebar está minimizado */
-        body.dash-minimenu #sidebar-minimizer .sidebar-logo-icon {
-            transform: rotate(180deg);
-        }
-        
-        /* Estilo ya definido arriba */
-        
-        @media (max-width: 992px) {
-            #sidebar-minimizer {
-                display: none !important;
-            }
-        }
-        
-        /* Asegurar que el sidebar minimizado no afecte la vista en móviles */
-        @media (max-width: 992px) {
-            body.dash-minimenu .dash-sidebar {
-                width: 250px !important;
-            }
-            
-            body.dash-minimenu .dash-sidebar .dash-mtext {
-                display: inline !important;
-                opacity: 1;
-            }
-            
-            body.dash-minimenu .dash-sidebar .dash-micon {
-                margin-right: 10px !important;
-                width: auto !important;
-            }
-            
-            body.dash-minimenu .dash-container {
-                margin-left: 0 !important;
-            }
-            
-            body.dash-minimenu .dash-sidebar .m-header img {
-                max-width: 100% !important;
-                height: 66px !important;
-            }
-            
-            /* Ocultar el botón minimizador en móviles */
-            #sidebar-minimizer {
-                display: none !important;
-            }
-        }
-    </style>
-    
+
     <!-- Estilos para el botón de instalación PWA -->
     <style>
         #installPWA {
@@ -290,7 +137,7 @@ else{
     <!-- [ Mobile header ] start -->
     <div class="dash-mob-header dash-header">
         <div class="pcm-logo">
-            <img src="{{ $logo . (!empty($company_logo) ? $company_logo : 'dark_logo.png') }}" alt="" class="logo logo-lg" style="max-height: 40px;" />
+            <img src="{{ $logo . (!empty($company_logo) ? $company_logo : 'dark_logo.png') }}" alt="" class="logo logo-lg" style="max-height: 50px;" />
         </div>
         <div class="pcm-toolbar">
             <a href="#!" class="dash-head-link" id="mobile-collapse">
@@ -568,6 +415,30 @@ else{
     </script>
 
     @include('layouts.includes.alerts')
+
+    {{-- Inicializar tooltips de Bootstrap para el sidebar --}}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Inicializar todos los tooltips
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl, {
+                    trigger: 'hover',
+                    container: 'body'
+                });
+            });
+
+            // Destruir tooltips cuando el sidebar está expandido
+            document.body.addEventListener('classChange', function() {
+                if (!document.body.classList.contains('dash-minimenu')) {
+                    tooltipList.forEach(function(tooltip) {
+                        tooltip.hide();
+                    });
+                }
+            });
+        });
+    </script>
+
     @yield('javascript')
 
     @stack('scripts')

@@ -20,18 +20,21 @@ $settings = Utility::settings();
                 <!-- ======== Cambiar el logo aquí ============ -->
                 @if (isset($settings['dark_mode']))
                     @if ($settings['dark_mode'] == 'on')
-                        <img class="c-sidebar-brand-full pt-3 mt-2 mb-1"
+                        <img class="c-sidebar-brand-full pt-2 mt-1 mb-1 navbar-brand-img"
                              src="{{ $logo . (!empty($company_logo) ? $company_logo : 'light_logo.png') }}"
-                             height="66" class="navbar-brand-img">
+                             alt="Logo"
+                             style="height: 45px !important; width: auto !important; max-width: 100% !important; object-fit: contain !important;">
                     @else
-                        <img class="c-sidebar-brand-full pt-3 mt-2 mb-1"
+                        <img class="c-sidebar-brand-full pt-2 mt-1 mb-1 navbar-brand-img"
                              src="{{ $logo . (!empty($company_logo) ? $company_logo : 'dark_logo.png') }}"
-                             height="66" class="navbar-brand-img">
+                             alt="Logo"
+                             style="height: 45px !important; width: auto !important; max-width: 100% !important; object-fit: contain !important;">
                     @endif
                 @else
-                    <img class="c-sidebar-brand-full pt-3 mt-2 mb-1"
+                    <img class="c-sidebar-brand-full pt-2 mt-1 mb-1 navbar-brand-img"
                          src="{{ $logo . (!empty($company_logo) ? $company_logo : 'dark_logo.png') }}"
-                         height="66" class="navbar-brand-img">
+                         alt="Logo"
+                         style="height: 45px !important; width: auto !important; max-width: 100% !important; object-fit: contain !important;">
                 @endif
             </a>
         </div>
@@ -48,8 +51,8 @@ $settings = Utility::settings();
                 {{-- Enlace para transportistas --}}
                 @can('deliveries-view')
                     <li class="dash-item dash-hasmenu {{ request()->is('my-deliveries*') ? 'active' : '' }}">
-                        <a class="dash-link" href="{{ route('deliveries.my-deliveries') }}" title="{{ __('My Deliveries') }}">
-                            <span class="dash-micon"><i class="fas fa-truck-loading"></i></span>
+                        <a class="dash-link" href="{{ route('deliveries.my-deliveries') }}" title="{{ __('My Deliveries') }}" data-bs-toggle="tooltip" data-bs-placement="right">
+                            <span class="dash-micon"><i class="ti ti-truck-delivery"></i></span>
                             <span class="dash-mtext custom-weight">{{ __('My Deliveries') }}</span>
                         </a>
                     </li>
@@ -65,8 +68,8 @@ $settings = Utility::settings();
                 @endrole
                 @role('admin')
                     <li class="dash-item dash-hasmenu {{ request()->is('ia_prompts*') ? 'active' : '' }}">
-                        <a class="dash-link" title="{{ __('IA') }}" href="{{ route('ia_prompts.index') }}">
-                            <span class="dash-micon"><i class="fa-solid fa-vial-virus"></i></span>
+                        <a class="dash-link" title="{{ __('IA') }}" href="{{ route('ia_prompts.index') }}" data-bs-toggle="tooltip" data-bs-placement="right">
+                            <span class="dash-micon"><i class="ti ti-robot"></i></span>
                             <span class="dash-mtext custom-weight">{{ __('IA') }}</span>
                         </a>
                     </li>
@@ -82,10 +85,17 @@ $settings = Utility::settings();
                 @endcan
                 
 
+                {{-- Separador: Sistema --}}
+                <li class="dash-item">
+                    <div class="dash-category-header">
+                        <span class="dash-category-text">{{ __('System') }}</span>
+                    </div>
+                </li>
+
                 @if (auth()->user()->hasRole('admin') || auth()->user()->can('server-show'))
                     <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
-                        <a class="dash-link" href="{{ route('server.index') }}">
-                            <span class="dash-micon"><i class="fa-solid fa-server"></i></span>
+                        <a class="dash-link" href="{{ route('server.index') }}" title="{{ __('Server') }}" data-bs-toggle="tooltip" data-bs-placement="right">
+                            <span class="dash-micon"><i class="ti ti-server"></i></span>
                             <span class="dash-mtext custom-weight">{{ __('Server') }}</span>
                         </a>
                     </li>
@@ -93,8 +103,8 @@ $settings = Utility::settings();
 
                 @if (auth()->user()->hasRole('admin') || auth()->user()->can('servermonitor show'))
                     <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
-                        <a class="dash-link" href="{{ route('servermonitor.index') }}">
-                            <span class="dash-micon"><i class="bi bi-cpu"></i></span>
+                        <a class="dash-link" href="{{ route('servermonitor.index') }}" title="{{ __('Server Monitor') }}" data-bs-toggle="tooltip" data-bs-placement="right">
+                            <span class="dash-micon"><i class="ti ti-activity"></i></span>
                             <span class="dash-mtext custom-weight">{{ __('Server Monitor') }}</span>
                         </a>
                     </li>
@@ -102,8 +112,8 @@ $settings = Utility::settings();
 
                 @if (auth()->user()->hasRole('admin') || auth()->user()->can('whatsapp show'))
                     <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
-                        <a class="dash-link" href="{{ route('whatsapp.notifications') }}">
-                            <span class="dash-micon"><i class="bi bi-whatsapp"></i></span>
+                        <a class="dash-link" href="{{ route('whatsapp.notifications') }}" title="{{ __('Whatsapp Server') }}" data-bs-toggle="tooltip" data-bs-placement="right">
+                            <span class="dash-micon"><i class="ti ti-brand-whatsapp"></i></span>
                             <span class="dash-mtext custom-weight">{{ __('Whatsapp Server') }}</span>
                         </a>
                     </li>
@@ -111,37 +121,44 @@ $settings = Utility::settings();
 
                 @if (auth()->user()->hasRole('admin') || auth()->user()->can('telegram show'))
                     <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
-                        <a class="dash-link" href="{{ route('telegram.index') }}">
-                            <span class="dash-micon"><i class="bi bi-telegram"></i></span>
+                        <a class="dash-link" href="{{ route('telegram.index') }}" title="{{ __('Telegram Server') }}" data-bs-toggle="tooltip" data-bs-placement="right">
+                            <span class="dash-micon"><i class="ti ti-brand-telegram"></i></span>
                             <span class="dash-mtext custom-weight">{{ __('Telegram Server') }}</span>
                         </a>
                     </li>
                 @endif
 
 
-                
+
+                {{-- Separador: Gestión de Usuarios --}}
+                <li class="dash-item">
+                    <div class="dash-category-header">
+                        <span class="dash-category-text">{{ __('User Management') }}</span>
+                    </div>
+                </li>
+
                 <!-- Gestión de usuarios, roles y permisos según permisos del usuario -->
                 @can('show-user')
                     <li class="dash-item dash-hasmenu {{ request()->is('users*') ? 'active' : '' }}">
-                        <a class="dash-link" title="{{ __('Users') }}" href="{{ route('users.index') }}">
-                            <span class="dash-micon"><i class="ti ti-user"></i></span>
+                        <a class="dash-link" title="{{ __('Users') }}" href="{{ route('users.index') }}" data-bs-toggle="tooltip" data-bs-placement="right">
+                            <span class="dash-micon"><i class="ti ti-users"></i></span>
                             <span class="dash-mtext custom-weight">{{ __('Users') }}</span>
                         </a>
                     </li>
                 @endcan
-                
+
                 @can('manage-role')
                     <li class="dash-item dash-hasmenu {{ request()->is('roles*') ? 'active' : '' }}">
-                        <a class="dash-link" title="{{ __('Roles') }}" href="{{ route('manage-role.index') }}">
-                            <span class="dash-micon"><i class="ti ti-briefcase"></i></span>
+                        <a class="dash-link" title="{{ __('Roles') }}" href="{{ route('manage-role.index') }}" data-bs-toggle="tooltip" data-bs-placement="right">
+                            <span class="dash-micon"><i class="ti ti-shield-check"></i></span>
                             <span class="dash-mtext custom-weight">{{ __('Roles') }}</span>
                         </a>
                     </li>
                 @endcan
-                
+
                 @can('manage-permission')
                     <li class="dash-item dash-hasmenu {{ request()->is('permission*') ? 'active' : '' }}">
-                        <a class="dash-link" href="{{ route('manage-permission.index') }}">
+                        <a class="dash-link" href="{{ route('manage-permission.index') }}" data-bs-toggle="tooltip" data-bs-placement="right" title="{{ __('Permissions') }}">
                             <span class="dash-micon"><i class="ti ti-lock"></i></span>
                             <span class="dash-mtext custom-weight">{{ __('Permissions') }}</span>
                         </a>
@@ -149,10 +166,17 @@ $settings = Utility::settings();
                 @endcan
 
 
+                {{-- Separador: Gestión de Producción --}}
+                <li class="dash-item">
+                    <div class="dash-category-header">
+                        <span class="dash-category-text">{{ __('Production') }}</span>
+                    </div>
+                </li>
+
                 @if (auth()->user()->hasRole('admin') || auth()->user()->can('customer-show') || auth()->user()->can('productionline-show'))
                     <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
-                        <a class="dash-link" href="{{ route('customers.index') }}">
-                            <span class="dash-micon"><i class="fa-regular fa-building"></i></span>
+                        <a class="dash-link" href="{{ route('customers.index') }}" title="{{ __('Customers') }}" data-bs-toggle="tooltip" data-bs-placement="right">
+                            <span class="dash-micon"><i class="ti ti-building"></i></span>
                             <span class="dash-mtext custom-weight">{{ __('Customers') }}</span>
                         </a>
                     </li>
@@ -160,8 +184,8 @@ $settings = Utility::settings();
 
                 @if (auth()->user()->hasRole('admin') || auth()->user()->can('workers-show'))
                     <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
-                        <a class="dash-link" href="{{ route('workers-admin.index') }}">
-                            <span class="dash-micon"><i class="fa-regular fa-user"></i></span>
+                        <a class="dash-link" href="{{ route('workers-admin.index') }}" title="{{ __('Workers') }}" data-bs-toggle="tooltip" data-bs-placement="right">
+                            <span class="dash-micon"><i class="ti ti-user-check"></i></span>
                             <span class="dash-mtext custom-weight">{{ __('Workers') }}</span>
                         </a>
                     </li>
@@ -169,8 +193,8 @@ $settings = Utility::settings();
 
                 @if (auth()->user()->hasRole('admin') || auth()->user()->can('product-show'))
                     <li class="dash-item dash-hasmenu {{ request()->is('confections*') ? 'active' : '' }}">
-                        <a class="dash-link" href="{{ route('confections.index') }}">
-                            <span class="dash-micon"><i class="fa-regular fa-lemon"></i></span>
+                        <a class="dash-link" href="{{ route('confections.index') }}" title="{{ __('Confections') }}" data-bs-toggle="tooltip" data-bs-placement="right">
+                            <span class="dash-micon"><i class="ti ti-lemon"></i></span>
                             <span class="dash-mtext custom-weight">{{ __('Confections') }}</span>
                         </a>
                     </li>
@@ -178,8 +202,8 @@ $settings = Utility::settings();
 
                 @if (auth()->user()->hasRole('admin') || auth()->user()->can('process-show'))
                     <li class="dash-item dash-hasmenu {{ request()->is('processes*') ? 'active' : '' }}">
-                        <a class="dash-link" href="{{ route('processes.index') }}">
-                            <span class="dash-micon"><i class="fa-solid fa-gears"></i></span>
+                        <a class="dash-link" href="{{ route('processes.index') }}" title="{{ __('Processes') }}" data-bs-toggle="tooltip" data-bs-placement="right">
+                            <span class="dash-micon"><i class="ti ti-settings-automation"></i></span>
                             <span class="dash-mtext custom-weight">{{ __('Processes') }}</span>
                         </a>
                     </li>
@@ -187,8 +211,8 @@ $settings = Utility::settings();
 
                 @if (auth()->user()->hasRole('admin') || auth()->user()->can('article-family-show'))
                     <li class="dash-item dash-hasmenu {{ request()->is('article-families*') ? 'active' : '' }}">
-                        <a class="dash-link" href="{{ route('article-families.index') }}">
-                            <span class="dash-micon"><i class="fas fa-folder-tree"></i></span>
+                        <a class="dash-link" href="{{ route('article-families.index') }}" title="{{ __('Article Families') }}" data-bs-toggle="tooltip" data-bs-placement="right">
+                            <span class="dash-micon"><i class="ti ti-folders"></i></span>
                             <span class="dash-mtext custom-weight">{{ __('Article Families') }}</span>
                         </a>
                     </li>
@@ -196,8 +220,8 @@ $settings = Utility::settings();
 
                 @if (auth()->user()->hasRole('admin') || auth()->user()->can('shift-show'))
                     <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
-                        <a class="dash-link" href="{{ route('shift.index') }}">
-                            <span class="dash-micon"><i class="fa-regular fa-clock"></i></span>
+                        <a class="dash-link" href="{{ route('shift.index') }}" title="{{ __('Shift') }}" data-bs-toggle="tooltip" data-bs-placement="right">
+                            <span class="dash-micon"><i class="ti ti-clock"></i></span>
                             <span class="dash-mtext custom-weight">{{ __('Shift') }}</span>
                         </a>
                     </li>
@@ -205,8 +229,8 @@ $settings = Utility::settings();
 
                 @if (auth()->user()->hasRole('admin') || auth()->user()->can('worker-post-show'))
                     <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
-                        <a class="dash-link" href="{{ route('worker-post.index') }}">
-                            <span class="dash-micon"><i class="fa-regular fa-address-book"></i></span>
+                        <a class="dash-link" href="{{ route('worker-post.index') }}" title="{{ __('Worker Post') }}" data-bs-toggle="tooltip" data-bs-placement="right">
+                            <span class="dash-micon"><i class="ti ti-briefcase"></i></span>
                             <span class="dash-mtext custom-weight">{{ __('Worker Post') }}</span>
                         </a>
                     </li>
@@ -214,25 +238,18 @@ $settings = Utility::settings();
 
                 @if (auth()->user()->hasRole('admin') || auth()->user()->can('rfid-post-show'))
                     <li class="dash-item dash-hasmenu {{ request()->is('home*') ? 'active' : '' }}">
-                        <a class="dash-link" href="{{ route('rfid.post.index') }}">
-                            <span class="dash-micon"><i class="fa-regular fa-id-card"></i></span>
+                        <a class="dash-link" href="{{ route('rfid.post.index') }}" title="{{ __('Asignar Confeccion') }}" data-bs-toggle="tooltip" data-bs-placement="right">
+                            <span class="dash-micon"><i class="ti ti-tag"></i></span>
                             <span class="dash-mtext custom-weight">{{ __('Asignar Confeccion') }}</span>
                         </a>
                     </li>
                 @endif
-                <li class="dash-item">
-                    <div class="btn btn-custom d-block text-center" style="cursor: default;">
-                        <!-- Contenido que desees, por ejemplo, un texto o icono -->
-                       
-                    </div>
-                </li>
-                    
                 @include('layouts.menu')
             </ul>
-            
-            <!-- Botón minimizador del sidebar con icono de comprimir/descomprimir -->
+
+            <!-- Botón minimizador del sidebar con icono moderno -->
             <div id="sidebar-minimizer" class="dash-sidebar-minimizer" aria-label="Minimizar sidebar">
-                <img src="{{ asset('assets/images/comprimir.png') }}" alt="Comprimir/Descomprimir" class="sidebar-logo-icon" />
+                <i class="ti ti-chevrons-left sidebar-toggle-icon"></i>
             </div>
             
             <!-- Script inline para manejar el clic en el botón minimizador y generar tooltips automáticamente -->
@@ -261,10 +278,16 @@ $settings = Utility::settings();
                     updateMinimizeIcon();
                 }
                 
-                // Función para actualizar la imagen según el estado (ya no necesitamos cambiar el icono)
+                // Función para actualizar el icono según el estado
                 function updateMinimizeIcon() {
-                    // Ya no necesitamos cambiar el icono, la imagen de comprimir/descomprimir es suficiente
-                    // La rotación de la imagen se maneja con CSS cuando el sidebar está minimizado
+                    const icon = document.querySelector('#sidebar-minimizer .sidebar-toggle-icon');
+                    if (icon) {
+                        if (document.body.classList.contains('dash-minimenu')) {
+                            icon.className = 'ti ti-chevrons-right sidebar-toggle-icon';
+                        } else {
+                            icon.className = 'ti ti-chevrons-left sidebar-toggle-icon';
+                        }
+                    }
                 }
                 
                 // Asignar el event listener directamente al botón

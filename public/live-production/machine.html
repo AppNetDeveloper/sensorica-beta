@@ -4418,7 +4418,16 @@ async function updateOrderStatus(orderId, newStatus) {
                                     input.setAttribute('autocorrect', 'off');
                                     input.setAttribute('name', 'no-pin-save');
                                     input.setAttribute('inputmode', 'numeric');
+
+                                    // Mostrar el teclado virtual para el input del PIN
+                                    setTimeout(() => {
+                                        showVirtualKeyboard(input);
+                                    }, 100);
                                 }
+                            },
+                            willClose: () => {
+                                // Ocultar el teclado virtual cuando se cierre el modal del PIN
+                                hideVirtualKeyboard();
                             },
                             inputValidator: (value) => { if (!value) return 'Debes introducir tu PIN'; }
                         });
