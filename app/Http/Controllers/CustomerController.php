@@ -21,7 +21,44 @@ class CustomerController extends Controller
 {
     public function index()
     {
-        return view('customers.index');
+        // Cargar customers con estadísticas para la vista moderna
+        $customers = Customer::withCount([
+            'productionLines',
+            'originalOrders as pending_orders_count' => function ($query) {
+                $query->whereNull('finished_at');
+            },
+            'originalOrders as completed_orders_count' => function ($query) {
+                $query->whereNotNull('finished_at');
+            },
+            'assets',
+            'vendorOrders as pending_vendor_orders_count' => function ($query) {
+                $query->where('status', '!=', 'completed');
+            }
+        ])->with(['productionLines' => function ($query) {
+            $query->with('lastShiftHistory');
+        }])->orderBy('name')->get();
+
+        // Calcular estadísticas adicionales por customer
+        foreach ($customers as $customer) {
+            // Líneas activas
+            $activeLines = 0;
+            foreach ($customer->productionLines as $line) {
+                if ($line->lastShiftHistory) {
+                    $action = strtolower(trim($line->lastShiftHistory->action ?? ''));
+                    $type = strtolower(trim($line->lastShiftHistory->type ?? ''));
+                    if ($action == 'start' || ($type === 'stop' && $action === 'end')) {
+                        $activeLines++;
+                    }
+                }
+            }
+            $customer->active_lines_count = $activeLines;
+
+            // Mantenimientos pendientes (sin end_datetime)
+            $customer->pending_maintenance_count = \App\Models\Maintenance::where('customer_id', $customer->id)
+                ->whereNull('end_datetime')->count();
+        }
+
+        return view('customers.index', compact('customers'));
     }
 
     public function getCustomers(Request $request)

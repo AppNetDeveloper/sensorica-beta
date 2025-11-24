@@ -25,7 +25,24 @@ class RoleController extends Controller
     public function index(RolesDataTable $dataTable)
     {
         if (\Auth::user()->can('manage-role')) {
-            return $dataTable->render('roles.index');
+            // Cargar roles con conteo de permisos y usuarios
+            $roles = Role::where('name', '!=', 'admin')
+                ->withCount('permissions')
+                ->with(['permissions' => function($q) {
+                    $q->select('id', 'name')->limit(10);
+                }])
+                ->orderBy('name')
+                ->get();
+
+            // Contar usuarios por rol
+            foreach ($roles as $role) {
+                $role->users_count = User::role($role->name)->count();
+            }
+
+            // Total de permisos disponibles
+            $totalPermissions = Permission::count();
+
+            return view('roles.index', compact('roles', 'totalPermissions'));
         } else {
             return redirect()->back()->with('error', 'Permission denied.');
         }

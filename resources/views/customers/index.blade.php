@@ -1,337 +1,889 @@
 @extends('layouts.admin')
-@section('title', __('Customers'))
+@section('title', __('Production Centers'))
 @section('breadcrumb')
     <ul class="breadcrumb">
         <li class="breadcrumb-item"><a href="{{ route('home') }}">{{ __('Dashboard') }}</a></li>
-        <li class="breadcrumb-item">{{ __('Customers') }}</li>
+        <li class="breadcrumb-item">{{ __('Production Centers') }}</li>
     </ul>
 @endsection
 
 @section('content')
-    <div class="row">
-        <div class="col-lg-12">
-            <div class="mb-3 d-flex justify-content-between">
-                <div>
-                    {{-- Botón para añadir clientes con un icono --}}
-                    @can('productionline-create')
-                        <a href="{{ route('customers.create') }}" class="btn btn-primary">
-                            <i class="fas fa-plus me-1"></i> {{ __('Add Customers') }}
-                        </a>
-                    @endcan
-                </div>
-                <div>
-                    {{-- Botón para eliminar clientes seleccionados --}}
-                    @can('productionline-delete')
-                        <button id="bulk-delete" class="btn btn-danger d-none">
-                            <i class="fas fa-trash me-1"></i> {{ __('Delete Selected') }}
-                        </button>
-                    @endcan
+<div class="production-centers-container">
+    {{-- Header con título, buscador y botón añadir --}}
+    <div class="pc-header mb-4">
+        <div class="row align-items-center">
+            <div class="col-md-4">
+                <h4 class="pc-title mb-0">
+                    <i class="ti ti-building-factory me-2"></i>{{ __('Production Centers') }}
+                    <span class="badge bg-primary ms-2">{{ $customers->count() }}</span>
+                </h4>
+            </div>
+            <div class="col-md-5">
+                <div class="pc-search-box">
+                    <i class="ti ti-search"></i>
+                    <input type="text" id="searchCustomers" class="form-control" placeholder="{{ __('Search production centers...') }}">
                 </div>
             </div>
-            <div class="card">
-                <div class="card-body">
-                    {{-- *** CAMBIO: Añadido margen superior mt-4 aquí *** --}}
-                    <div class="table-responsive mt-4">
-                        <div class="container-fluid">
-                            {{-- Añade la clase 'dt-responsive' y 'nowrap' para el correcto funcionamiento de DataTables Responsive --}}
-                            <table class="table table-bordered data-table dt-responsive nowrap" style="width:100%" data-buttons-container=".dt-buttons">
-                                <thead>
-                                    <tr>
-                                        @can('productionline-delete')
-                                        <th>
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" id="select-all">
-                                            </div>
-                                        </th>
-                                        @endcan
-                                        <th>ID</th>
-                                        <th>{{ __('Name') }}</th>
-                                        <th>{{ __('Created At') }}</th>
-                                        <th>{{ __('Action') }}</th> {{-- Asegúrate que esta columna sea la última --}}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {{-- El cuerpo se llena vía AJAX --}}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
+            <div class="col-md-3 text-end">
+                @can('productionline-create')
+                <a href="{{ route('customers.create') }}" class="btn btn-primary">
+                    <i class="ti ti-plus me-1"></i> {{ __('Add Center') }}
+                </a>
+                @endcan
             </div>
         </div>
     </div>
+
+    {{-- Grid de Production Centers --}}
+    <div class="row" id="customersGrid">
+        @forelse($customers as $customer)
+        <div class="col-xl-6 col-lg-6 col-md-12 mb-4 customer-card-wrapper" data-name="{{ strtolower($customer->name) }}">
+            <div class="card pc-card h-100">
+                {{-- Header del card --}}
+                <div class="pc-card-header">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="pc-info">
+                            <h5 class="pc-name mb-1">
+                                <i class="ti ti-building-factory-2 me-2"></i>{{ $customer->name }}
+                            </h5>
+                            <small class="text-white-50">
+                                <i class="ti ti-calendar me-1"></i>{{ __('Created') }}: {{ $customer->created_at->format('d/m/Y') }}
+                            </small>
+                        </div>
+                        <div class="pc-actions-top">
+                            @can('productionline-edit')
+                            <a href="{{ route('customers.edit', $customer->id) }}" class="btn btn-sm btn-light" title="{{ __('Edit') }}">
+                                <i class="ti ti-edit"></i>
+                            </a>
+                            @endcan
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Mini KPIs --}}
+                <div class="pc-kpis">
+                    <div class="row g-2">
+                        <div class="col-4">
+                            <div class="pc-kpi-item">
+                                <div class="pc-kpi-icon bg-success-light">
+                                    <i class="ti ti-player-play text-success"></i>
+                                </div>
+                                <div class="pc-kpi-data">
+                                    <span class="pc-kpi-value">{{ $customer->active_lines_count }}</span>
+                                    <span class="pc-kpi-label">{{ __('Active') }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="pc-kpi-item">
+                                <div class="pc-kpi-icon bg-primary-light">
+                                    <i class="ti ti-chart-line text-primary"></i>
+                                </div>
+                                <div class="pc-kpi-data">
+                                    <span class="pc-kpi-value">{{ $customer->production_lines_count }}</span>
+                                    <span class="pc-kpi-label">{{ __('Lines') }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="pc-kpi-item">
+                                <div class="pc-kpi-icon bg-warning-light">
+                                    <i class="ti ti-clipboard-list text-warning"></i>
+                                </div>
+                                <div class="pc-kpi-data">
+                                    <span class="pc-kpi-value">{{ $customer->pending_orders_count }}</span>
+                                    <span class="pc-kpi-label">{{ __('Pending') }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        @if($customer->pending_maintenance_count > 0)
+                        <div class="col-4">
+                            <div class="pc-kpi-item pc-kpi-alert">
+                                <div class="pc-kpi-icon bg-danger-light">
+                                    <i class="ti ti-tool text-danger"></i>
+                                </div>
+                                <div class="pc-kpi-data">
+                                    <span class="pc-kpi-value text-danger">{{ $customer->pending_maintenance_count }}</span>
+                                    <span class="pc-kpi-label">{{ __('Maint.') }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        @endif
+                        @if($customer->assets_count > 0)
+                        <div class="col-4">
+                            <div class="pc-kpi-item">
+                                <div class="pc-kpi-icon bg-info-light">
+                                    <i class="ti ti-box text-info"></i>
+                                </div>
+                                <div class="pc-kpi-data">
+                                    <span class="pc-kpi-value">{{ $customer->assets_count }}</span>
+                                    <span class="pc-kpi-label">{{ __('Assets') }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        @endif
+                        @if($customer->completed_orders_count > 0)
+                        <div class="col-4">
+                            <div class="pc-kpi-item">
+                                <div class="pc-kpi-icon bg-secondary-light">
+                                    <i class="ti ti-circle-check text-secondary"></i>
+                                </div>
+                                <div class="pc-kpi-data">
+                                    <span class="pc-kpi-value">{{ $customer->completed_orders_count }}</span>
+                                    <span class="pc-kpi-label">{{ __('Done') }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        @endif
+                    </div>
+                </div>
+
+                {{-- Acciones organizadas por categorías --}}
+                <div class="pc-card-body">
+                    {{-- FÁBRICA --}}
+                    @if(auth()->user()->can('productionline-kanban') || auth()->user()->can('productionline-show') || auth()->user()->can('productionline-orders') || auth()->user()->can('workcalendar-list'))
+                    <div class="pc-action-group">
+                        <div class="pc-action-label">
+                            <i class="ti ti-building-factory"></i> {{ __('Factory') }}
+                        </div>
+                        <div class="pc-action-buttons">
+                            @can('productionline-kanban')
+                            <a href="{{ route('customers.order-organizer', $customer->id) }}" class="pc-btn pc-btn-primary" title="{{ __('Kanban') }}">
+                                <i class="ti ti-layout-kanban"></i>
+                                <span>Kanban</span>
+                            </a>
+                            @endcan
+                            @can('productionline-show')
+                            <a href="{{ route('productionlines.index', ['customer_id' => $customer->id]) }}" class="pc-btn pc-btn-secondary" title="{{ __('Production Lines') }}">
+                                <i class="ti ti-chart-line"></i>
+                                <span>{{ __('Lines') }}</span>
+                            </a>
+                            @endcan
+                            @can('productionline-orders')
+                            <a href="{{ route('customers.original-orders.index', $customer->id) }}" class="pc-btn pc-btn-dark" title="{{ __('Orders') }}">
+                                <i class="ti ti-clipboard-list"></i>
+                                <span>{{ __('Orders') }}</span>
+                            </a>
+                            @endcan
+                            @can('workcalendar-list')
+                            <a href="{{ route('customers.work-calendars.index', $customer->id) }}" class="pc-btn pc-btn-info" title="{{ __('Work Calendar') }}">
+                                <i class="ti ti-calendar"></i>
+                                <span>{{ __('Calendar') }}</span>
+                            </a>
+                            @endcan
+                        </div>
+                    </div>
+                    @endif
+
+                    {{-- ALMACÉN --}}
+                    @if(auth()->user()->can('assets-view') || auth()->user()->can('vendor-suppliers-view') || auth()->user()->can('vendor-orders-view'))
+                    <div class="pc-action-group">
+                        <div class="pc-action-label">
+                            <i class="ti ti-package"></i> {{ __('Warehouse') }}
+                        </div>
+                        <div class="pc-action-buttons">
+                            @can('assets-view')
+                            <a href="{{ route('customers.assets.index', $customer->id) }}" class="pc-btn pc-btn-primary" title="{{ __('Assets') }}">
+                                <i class="ti ti-box"></i>
+                                <span>{{ __('Assets') }}</span>
+                            </a>
+                            <a href="{{ route('customers.assets.inventory', $customer->id) }}" class="pc-btn pc-btn-outline" title="{{ __('Inventory') }}">
+                                <i class="ti ti-chart-bar"></i>
+                                <span>{{ __('Inventory') }}</span>
+                            </a>
+                            @endcan
+                            @can('vendor-suppliers-view')
+                            <a href="{{ route('customers.vendor-suppliers.index', $customer->id) }}" class="pc-btn pc-btn-outline" title="{{ __('Suppliers') }}">
+                                <i class="ti ti-building"></i>
+                                <span>{{ __('Suppliers') }}</span>
+                            </a>
+                            @endcan
+                            @can('vendor-orders-view')
+                            <a href="{{ route('customers.vendor-orders.index', $customer->id) }}" class="pc-btn pc-btn-outline" title="{{ __('Purchase Orders') }}">
+                                <i class="ti ti-file-invoice"></i>
+                                <span>{{ __('Purchases') }}</span>
+                            </a>
+                            @endcan
+                        </div>
+                    </div>
+                    @endif
+
+                    {{-- MANTENIMIENTO --}}
+                    @can('maintenance-show')
+                    <div class="pc-action-group">
+                        <div class="pc-action-label">
+                            <i class="ti ti-tool"></i> {{ __('Maintenance') }}
+                        </div>
+                        <div class="pc-action-buttons">
+                            <a href="{{ route('customers.maintenances.index', $customer->id) }}" class="pc-btn {{ $customer->pending_maintenance_count > 0 ? 'pc-btn-danger' : 'pc-btn-primary' }}" title="{{ __('Maintenance') }}">
+                                <i class="ti ti-tool"></i>
+                                <span>{{ __('Maintenance') }}</span>
+                                @if($customer->pending_maintenance_count > 0)
+                                <span class="pc-badge">{{ $customer->pending_maintenance_count }}</span>
+                                @endif
+                            </a>
+                        </div>
+                    </div>
+                    @endcan
+
+                    {{-- LOGÍSTICA --}}
+                    @if(auth()->user()->can('routes-view') || auth()->user()->can('fleet-view') || auth()->user()->can('customer-clients-view'))
+                    <div class="pc-action-group">
+                        <div class="pc-action-label">
+                            <i class="ti ti-truck"></i> {{ __('Logistics') }}
+                        </div>
+                        <div class="pc-action-buttons">
+                            @can('routes-view')
+                            <a href="{{ route('customers.routes.index', $customer->id) }}" class="pc-btn pc-btn-primary" title="{{ __('Routes') }}">
+                                <i class="ti ti-route"></i>
+                                <span>{{ __('Routes') }}</span>
+                            </a>
+                            @endcan
+                            @can('fleet-view')
+                            <a href="{{ route('customers.fleet-vehicles.index', $customer->id) }}" class="pc-btn pc-btn-outline" title="{{ __('Fleet') }}">
+                                <i class="ti ti-truck"></i>
+                                <span>{{ __('Fleet') }}</span>
+                            </a>
+                            @endcan
+                            @can('customer-clients-view')
+                            <a href="{{ route('customers.clients.index', $customer->id) }}" class="pc-btn pc-btn-outline" title="{{ __('Clients') }}">
+                                <i class="ti ti-users"></i>
+                                <span>{{ __('Clients') }}</span>
+                            </a>
+                            @endcan
+                        </div>
+                    </div>
+                    @endif
+
+                    {{-- INCIDENCIAS Y CALIDAD --}}
+                    @can('productionline-incidents')
+                    <div class="pc-action-group">
+                        <div class="pc-action-label">
+                            <i class="ti ti-alert-triangle"></i> {{ __('Quality & Incidents') }}
+                        </div>
+                        <div class="pc-action-buttons">
+                            <a href="{{ route('customers.qc-confirmations.index', $customer->id) }}" class="pc-btn pc-btn-info" title="{{ __('QC Confirmations') }}">
+                                <i class="ti ti-clipboard-check"></i>
+                                <span>QC</span>
+                            </a>
+                            <a href="{{ route('customers.production-order-incidents.index', $customer->id) }}" class="pc-btn pc-btn-warning" title="{{ __('Production Incidents') }}">
+                                <i class="ti ti-alert-triangle"></i>
+                                <span>{{ __('Incidents') }}</span>
+                            </a>
+                            <a href="{{ route('customers.quality-incidents.index', $customer->id) }}" class="pc-btn pc-btn-outline" title="{{ __('Quality Issues') }}">
+                                <i class="ti ti-flask"></i>
+                                <span>{{ __('Quality') }}</span>
+                            </a>
+                        </div>
+                    </div>
+                    @endcan
+
+                    {{-- ESTADÍSTICAS --}}
+                    @can('original-order-list')
+                    <div class="pc-action-group">
+                        <div class="pc-action-label">
+                            <i class="ti ti-chart-pie"></i> {{ __('Statistics') }}
+                        </div>
+                        <div class="pc-action-buttons">
+                            <a href="{{ route('customers.production-times.view', $customer->id) }}" class="pc-btn pc-btn-outline" title="{{ __('Production Times') }}">
+                                <i class="ti ti-clock"></i>
+                                <span>{{ __('Times') }}</span>
+                            </a>
+                            <a href="{{ route('customers.original-orders.finished-processes.view', $customer->id) }}" class="pc-btn pc-btn-outline" title="{{ __('Finished Processes') }}">
+                                <i class="ti ti-chart-line"></i>
+                                <span>{{ __('Processes') }}</span>
+                            </a>
+                        </div>
+                    </div>
+                    @endcan
+
+                    {{-- CONFIGURACIÓN --}}
+                    @if(auth()->user()->can('productionline-edit') || auth()->user()->can('productionline-delete'))
+                    <div class="pc-action-group pc-action-group-config">
+                        <div class="pc-action-label">
+                            <i class="ti ti-settings"></i> {{ __('Settings') }}
+                        </div>
+                        <div class="pc-action-buttons">
+                            @can('productionline-edit')
+                            <a href="{{ route('customers.edit', $customer->id) }}" class="pc-btn pc-btn-outline-dark" title="{{ __('Edit Center') }}">
+                                <i class="ti ti-edit"></i>
+                                <span>{{ __('Edit') }}</span>
+                            </a>
+                            @endcan
+                            @can('sensor-show')
+                            <a href="{{ route('customers.sensors.index', $customer->id) }}" class="pc-btn pc-btn-outline-dark" title="{{ __('Sensors') }}">
+                                <i class="ti ti-cpu"></i>
+                                <span>{{ __('Sensors') }}</span>
+                            </a>
+                            @endcan
+                            @can('productionline-delete')
+                            <button type="button" class="pc-btn pc-btn-outline-danger btn-delete-customer"
+                                    data-id="{{ $customer->id }}"
+                                    data-name="{{ $customer->name }}"
+                                    title="{{ __('Delete Center') }}">
+                                <i class="ti ti-trash"></i>
+                                <span>{{ __('Delete') }}</span>
+                            </button>
+                            @endcan
+                        </div>
+                    </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+        @empty
+        <div class="col-12">
+            <div class="card pc-empty-state">
+                <div class="card-body text-center py-5">
+                    <i class="ti ti-building-factory display-1 text-muted mb-3"></i>
+                    <h4>{{ __('No production centers found') }}</h4>
+                    <p class="text-muted">{{ __('Start by adding your first production center') }}</p>
+                    @can('productionline-create')
+                    <a href="{{ route('customers.create') }}" class="btn btn-primary mt-3">
+                        <i class="ti ti-plus me-1"></i> {{ __('Add Production Center') }}
+                    </a>
+                    @endcan
+                </div>
+            </div>
+        </div>
+        @endforelse
+    </div>
+</div>
 @endsection
 
 @push('style')
-    {{-- DataTables CSS --}}
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
-    {{-- DataTables Responsive CSS --}}
-    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
-    {{-- Font Awesome para iconos (Asegúrate de tenerlo cargado en tu layout principal o inclúyelo aquí) --}}
-    {{-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" /> --}}
+<style>
+/* Container */
+.production-centers-container {
+    padding: 0;
+}
+
+/* Header */
+.pc-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 16px;
+    padding: 24px;
+    color: white;
+    margin-bottom: 24px;
+}
+
+.pc-title {
+    color: white;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+}
+
+.pc-title .badge {
+    font-size: 0.8rem;
+    padding: 6px 12px;
+}
+
+/* Search Box */
+.pc-search-box {
+    position: relative;
+}
+
+.pc-search-box i {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #667eea;
+    font-size: 1.1rem;
+}
+
+.pc-search-box input {
+    padding-left: 48px;
+    border-radius: 50px;
+    border: none;
+    height: 46px;
+    font-size: 0.95rem;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.pc-search-box input:focus {
+    box-shadow: 0 4px 20px rgba(102,126,234,0.3);
+}
+
+/* Card Principal */
+.pc-card {
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.pc-card:hover {
+    box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+    transform: translateY(-2px);
+}
+
+/* Card Header */
+.pc-card-header {
+    background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
+    padding: 20px;
+    color: white;
+}
+
+.pc-name {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0;
+    color: white;
+}
+
+.pc-actions-top .btn {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: white;
+}
+
+.pc-actions-top .btn:hover {
+    background: rgba(255,255,255,0.3);
+    color: white;
+}
+
+/* Mini KPIs */
+.pc-kpis {
+    padding: 16px 20px;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.pc-kpi-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.pc-kpi-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+}
+
+.pc-kpi-data {
+    display: flex;
+    flex-direction: column;
+}
+
+.pc-kpi-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: #1e293b;
+}
+
+.pc-kpi-label {
+    font-size: 0.7rem;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.pc-kpi-alert {
+    animation: pulse-alert 2s infinite;
+}
+
+@keyframes pulse-alert {
+    0%, 100% { box-shadow: 0 2px 8px rgba(220,53,69,0.1); }
+    50% { box-shadow: 0 2px 15px rgba(220,53,69,0.3); }
+}
+
+/* Background colors for KPI icons */
+.bg-success-light { background: rgba(34,197,94,0.15); }
+.bg-primary-light { background: rgba(59,130,246,0.15); }
+.bg-warning-light { background: rgba(245,158,11,0.15); }
+.bg-danger-light { background: rgba(239,68,68,0.15); }
+.bg-info-light { background: rgba(14,165,233,0.15); }
+.bg-secondary-light { background: rgba(100,116,139,0.15); }
+
+/* Card Body - Acciones */
+.pc-card-body {
+    padding: 16px 20px;
+}
+
+.pc-action-group {
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.pc-action-group:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.pc-action-group-config {
+    background: #f8fafc;
+    margin: 0 -20px -16px -20px;
+    padding: 16px 20px;
+    border-radius: 0 0 16px 16px;
+}
+
+.pc-action-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.pc-action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+/* Botones de acción */
+.pc-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+    position: relative;
+}
+
+.pc-btn i {
+    font-size: 1rem;
+}
+
+.pc-btn span {
+    white-space: nowrap;
+}
+
+.pc-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* Variantes de botones */
+.pc-btn-primary {
+    background: #3b82f6;
+    color: white;
+}
+.pc-btn-primary:hover {
+    background: #2563eb;
+    color: white;
+}
+
+.pc-btn-secondary {
+    background: #64748b;
+    color: white;
+}
+.pc-btn-secondary:hover {
+    background: #475569;
+    color: white;
+}
+
+.pc-btn-dark {
+    background: #1e293b;
+    color: white;
+}
+.pc-btn-dark:hover {
+    background: #0f172a;
+    color: white;
+}
+
+.pc-btn-info {
+    background: #0ea5e9;
+    color: white;
+}
+.pc-btn-info:hover {
+    background: #0284c7;
+    color: white;
+}
+
+.pc-btn-warning {
+    background: #f59e0b;
+    color: white;
+}
+.pc-btn-warning:hover {
+    background: #d97706;
+    color: white;
+}
+
+.pc-btn-danger {
+    background: #ef4444;
+    color: white;
+}
+.pc-btn-danger:hover {
+    background: #dc2626;
+    color: white;
+}
+
+.pc-btn-outline {
+    background: white;
+    color: #475569;
+    border-color: #e2e8f0;
+}
+.pc-btn-outline:hover {
+    background: #f8fafc;
+    color: #1e293b;
+    border-color: #cbd5e1;
+}
+
+.pc-btn-outline-dark {
+    background: transparent;
+    color: #64748b;
+    border-color: #cbd5e1;
+}
+.pc-btn-outline-dark:hover {
+    background: white;
+    color: #1e293b;
+}
+
+.pc-btn-outline-danger {
+    background: transparent;
+    color: #ef4444;
+    border-color: #fecaca;
+}
+.pc-btn-outline-danger:hover {
+    background: #fef2f2;
+    color: #dc2626;
+    border-color: #ef4444;
+}
+
+/* Badge en botón */
+.pc-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background: white;
+    color: #ef4444;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+/* Empty State */
+.pc-empty-state {
+    border: 2px dashed #e2e8f0;
+    background: #f8fafc;
+}
+
+/* Responsive */
+@media (max-width: 991.98px) {
+    .pc-header .row {
+        gap: 16px;
+    }
+    .pc-header .col-md-4,
+    .pc-header .col-md-5,
+    .pc-header .col-md-3 {
+        text-align: center !important;
+    }
+    .pc-title {
+        justify-content: center;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .pc-kpi-item {
+        flex-direction: column;
+        text-align: center;
+        padding: 10px 6px;
+    }
+    .pc-kpi-icon {
+        margin-bottom: 4px;
+    }
+    .pc-btn span {
+        display: none;
+    }
+    .pc-btn {
+        padding: 10px 12px;
+    }
+}
+
+/* Dark mode support */
+[data-theme="dark"] .pc-card {
+    background: #1e293b;
+}
+
+[data-theme="dark"] .pc-kpis {
+    background: #0f172a;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .pc-kpi-item {
+    background: #1e293b;
+}
+
+[data-theme="dark"] .pc-kpi-value {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .pc-action-group {
+    border-color: #334155;
+}
+
+[data-theme="dark"] .pc-action-group-config {
+    background: #0f172a;
+}
+
+/* Animación de entrada */
+.customer-card-wrapper {
+    animation: fadeInUp 0.4s ease forwards;
+    opacity: 0;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.customer-card-wrapper:nth-child(1) { animation-delay: 0.1s; }
+.customer-card-wrapper:nth-child(2) { animation-delay: 0.15s; }
+.customer-card-wrapper:nth-child(3) { animation-delay: 0.2s; }
+.customer-card-wrapper:nth-child(4) { animation-delay: 0.25s; }
+.customer-card-wrapper:nth-child(5) { animation-delay: 0.3s; }
+.customer-card-wrapper:nth-child(6) { animation-delay: 0.35s; }
+</style>
 @endpush
 
 @push('scripts')
-    {{-- jQuery (Asegúrate que esté cargado antes de DataTables) --}}
-    {{-- <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script> --}}
-    {{-- DataTables JS --}}
-    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
-    {{-- DataTables Responsive JS --}}
-    <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
-    <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
-    {{-- Moment.js para formatear fechas (si aún lo necesitas) --}}
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/locale/es.js"></script> {{-- Locale español --}}
-    {{-- DataTables Buttons --}}
-    <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.bootstrap5.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.colVis.min.js"></script>
-    {{-- SweetAlert2 --}}
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+$(document).ready(function() {
+    // Buscador de centros de producción
+    $('#searchCustomers').on('keyup', function() {
+        var searchTerm = $(this).val().toLowerCase();
 
-    <script>
-        $(function () {
-            // Inicializa DataTables con configuración para botones
-            var table = $('.data-table').DataTable({
-                processing: true,
-                serverSide: true,
-                responsive: true,
-                ajax: "{{ route('customers.getCustomers') }}",
-                columns: [
-                    @can('productionline-delete')
-                    {
-                        data: 'checkbox',
-                        name: 'checkbox',
-                        orderable: false,
-                        searchable: false,
-                        width: '5%',
-                        render: function (data, type, row) {
-                            return '<div class="form-check"><input type="checkbox" class="form-check-input row-checkbox" value="' + row.id + '"></div>';
-                        }
-                    },
-                    @endcan
-                    { data: 'id', name: 'id', width: '5%' },
-                    { data: 'name', name: 'name', width: '20%' },
-                    { 
-                        data: 'created_at', 
-                        name: 'created_at',
-                        width: '15%',
-                        render: function(data) {
-                            return data ? moment(data).format('LL') : '-';
-                        }
-                    },
-                    { 
-                        data: 'action', 
-                        name: 'action', 
-                        orderable: false, 
-                        searchable: false,
-                        className: 'text-center',
-                        width: '15%'
-                    },
-                    { 
-                        data: 'action_buttons', 
-                        name: 'action_buttons', 
-                        orderable: false, 
-                        searchable: false,
-                        visible: false
-                    }
-                ],
-                columnDefs: [
-                    @can('productionline-delete')
-                    { responsivePriority: 1, targets: 2 }, // Prioridad 1 para el Nombre
-                    { responsivePriority: 2, targets: -1 }, // Prioridad 2 para la última columna (Acciones)
-                    { responsivePriority: 3, targets: 1 }, // Prioridad 3 para ID
-                    { responsivePriority: 4, targets: 3 }, // Prioridad 4 para Fecha
-                    @else
-                    { responsivePriority: 1, targets: 1 }, // Prioridad 1 para el Nombre
-                    { responsivePriority: 2, targets: -1 }, // Prioridad 2 para la última columna (Acciones)
-                    { responsivePriority: 3, targets: 0 }, // Prioridad 3 para ID
-                    { responsivePriority: 4, targets: 2 }, // Prioridad 4 para Fecha
-                    @endcan
-                    {
-                        targets: -1, // Última columna (Acción)
-                        render: function (data, type, full, meta) {
-                            // Devuelve el HTML que viene del servidor para las acciones
-                            return '<div class="d-flex flex-wrap justify-content-center gap-1">' + data + '</div>';
-                        }
-                    }
-                ],
-                language: {
-                    url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json" // URL para español
-                },
-                dom: 'Bfrtip',
-                buttons: [
-                    'copy', 'csv', 'excel', 'pdf', 'print'
-                ]
-            });
-            
-            // Coloca los botones en el contenedor especificado
-            table.buttons().container().appendTo('.dt-buttons');
-            
-            // Manejo de selección de checkboxes
-            $('#select-all').on('click', function() {
-                $('.row-checkbox').prop('checked', this.checked);
-                updateBulkDeleteButton();
-            });
-            
-            // Actualizar el estado del botón de eliminación masiva cuando se hace clic en un checkbox individual
-            $(document).on('click', '.row-checkbox', function() {
-                if ($('.row-checkbox:checked').length === $('.row-checkbox').length) {
-                    $('#select-all').prop('checked', true);
-                } else {
-                    $('#select-all').prop('checked', false);
-                }
-                updateBulkDeleteButton();
-            });
-            
-            // Función para actualizar el botón de eliminación masiva
-            function updateBulkDeleteButton() {
-                if ($('.row-checkbox:checked').length > 0) {
-                    $('#bulk-delete').removeClass('d-none');
-                } else {
-                    $('#bulk-delete').addClass('d-none');
-                }
+        $('.customer-card-wrapper').each(function() {
+            var customerName = $(this).data('name');
+            if (customerName.indexOf(searchTerm) > -1) {
+                $(this).show();
+            } else {
+                $(this).hide();
             }
-            
-            // Manejo del botón de eliminación masiva
-            $('#bulk-delete').on('click', function() {
-                var selectedIds = [];
-                $('.row-checkbox:checked').each(function() {
-                    selectedIds.push($(this).val());
-                });
-                
-                if (selectedIds.length === 0) {
-                    Swal.fire({
-                        title: '{{ __('Error') }}',
-                        text: '{{ __('Please select at least one item to delete') }}',
-                        icon: 'error'
-                    });
-                    return;
-                }
-                
+        });
+    });
+
+    // Eliminar centro de producción - DOBLE CONFIRMACIÓN
+    $(document).on('click', '.btn-delete-customer', function() {
+        var customerId = $(this).data('id');
+        var customerName = $(this).data('name');
+        var $card = $(this).closest('.customer-card-wrapper');
+
+        // PRIMERA CONFIRMACIÓN
+        Swal.fire({
+            title: '{{ __("Are you sure?") }}',
+            html: '{!! __("You are about to delete the production center") !!} <strong>' + customerName + '</strong>.<br><br>' +
+                  '<span class="text-danger"><i class="ti ti-alert-triangle me-1"></i>{!! __("This will delete ALL associated data:") !!}</span><br>' +
+                  '<small class="text-muted">• {{ __("Production lines") }}<br>• {{ __("Orders") }}<br>• {{ __("Maintenance records") }}<br>• {{ __("Assets") }}<br>• {{ __("And all related data") }}</small>',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#f59e0b',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: '{{ __("Continue") }}',
+            cancelButtonText: '{{ __("Cancel") }}',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // SEGUNDA CONFIRMACIÓN - Escribir nombre para confirmar
                 Swal.fire({
-                    title: '{{ __('Are you sure?') }}',
-                    text: '{{ __('You will not be able to recover these items!') }}',
-                    icon: 'warning',
+                    title: '{{ __("Final confirmation") }}',
+                    html: '<p class="mb-3">{!! __("To confirm deletion, type the name of the production center:") !!}</p>' +
+                          '<p class="fw-bold text-danger mb-3">' + customerName + '</p>',
+                    icon: 'error',
+                    input: 'text',
+                    inputPlaceholder: '{{ __("Type the name here...") }}',
+                    inputAttributes: {
+                        autocapitalize: 'off',
+                        autocomplete: 'off'
+                    },
                     showCancelButton: true,
-                    confirmButtonText: '{{ __('Yes, delete them!') }}',
-                    cancelButtonText: '{{ __('No, cancel!') }}'
+                    confirmButtonColor: '#ef4444',
+                    cancelButtonColor: '#64748b',
+                    confirmButtonText: '{{ __("Delete permanently") }}',
+                    cancelButtonText: '{{ __("Cancel") }}',
+                    reverseButtons: true,
+                    preConfirm: (inputValue) => {
+                        if (inputValue !== customerName) {
+                            Swal.showValidationMessage('{{ __("The name does not match. Please type it exactly.") }}');
+                            return false;
+                        }
+                        return true;
+                    }
                 }).then((result) => {
                     if (result.isConfirmed) {
+                        // Mostrar loading
+                        Swal.fire({
+                            title: '{{ __("Deleting...") }}',
+                            html: '{{ __("Please wait while we delete the production center.") }}',
+                            allowOutsideClick: false,
+                            allowEscapeKey: false,
+                            showConfirmButton: false,
+                            didOpen: () => {
+                                Swal.showLoading();
+                            }
+                        });
+
                         $.ajax({
-                            url: '{{ route('customers.bulk-delete') }}',
-                            type: 'POST',
+                            url: '{{ url("customers") }}/' + customerId,
+                            type: 'DELETE',
                             data: {
-                                ids: selectedIds,
                                 _token: '{{ csrf_token() }}'
                             },
                             success: function(response) {
-                                Swal.fire(
-                                    '{{ __('Deleted!') }}',
-                                    response.message,
-                                    'success'
-                                );
-                                table.ajax.reload();
-                                $('#select-all').prop('checked', false);
-                                $('#bulk-delete').addClass('d-none');
+                                // Animar y eliminar el card
+                                $card.fadeOut(400, function() {
+                                    $(this).remove();
+                                    // Actualizar contador
+                                    var count = $('.customer-card-wrapper:visible').length;
+                                    $('.pc-title .badge').text(count);
+                                });
+
+                                Swal.fire({
+                                    title: '{{ __("Deleted!") }}',
+                                    text: '{{ __("The production center has been deleted.") }}',
+                                    icon: 'success',
+                                    timer: 2000,
+                                    showConfirmButton: false
+                                });
                             },
                             error: function(xhr) {
-                                Swal.fire(
-                                    '{{ __('Error!') }}',
-                                    xhr.responseJSON.message || '{{ __('Something went wrong!') }}',
-                                    'error'
-                                );
+                                var message = xhr.responseJSON?.message || '{{ __("Something went wrong!") }}';
+                                Swal.fire({
+                                    title: '{{ __("Error!") }}',
+                                    text: message,
+                                    icon: 'error'
+                                });
                             }
                         });
                     }
                 });
-            });
-            
-            // Funcionalidad para expandir/contraer filas de acciones
-            $(document).on('click', '.toggle-actions', function() {
-                var customerId = $(this).data('customer-id');
-                var $button = $(this);
-                var $icon = $button.find('i');
-                var $row = $button.closest('tr');
-                var $nextRow = $row.next('.action-row');
-                
-                // Si ya existe una fila expandida, la eliminamos
-                if ($nextRow.length > 0) {
-                    $nextRow.remove();
-                    $icon.removeClass('fa-chevron-up').addClass('fa-chevron-down');
-                    $button.attr('title', '{{ __("Show Actions") }}');
-                    return;
-                }
-                
-                // Obtener los datos de la fila actual
-                var rowData = table.row($row).data();
-                
-                // Crear nueva fila con los botones de acción
-                var $newRow = $('<tr class="action-row"><td colspan="' + table.columns().count() + '">' + rowData.action_buttons + '</td></tr>');
-                
-                // Insertar la nueva fila después de la fila actual
-                $row.after($newRow);
-                
-                // Mostrar la fila de botones con animación
-                $newRow.find('.action-buttons-row').slideDown(300);
-                
-                // Cambiar el icono y tooltip
-                $icon.removeClass('fa-chevron-down').addClass('fa-chevron-up');
-                $button.attr('title', '{{ __("Hide Actions") }}');
-            });
-            
-            // Cerrar filas expandidas cuando se recarga la tabla
-            table.on('draw', function() {
-                $('.action-row').remove();
-                $('.toggle-actions i').removeClass('fa-chevron-up').addClass('fa-chevron-down');
-                $('.toggle-actions').attr('title', '{{ __("Show Actions") }}');
-            });
+            }
         });
-    </script>
-    
-    <style>
-        .btn-group-section {
-            display: inline-block;
-            margin-right: 10px;
-            margin-bottom: 5px;
-        }
-        
-        .btn-group-label {
-            font-weight: 600;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            color: #6c757d;
-            margin-bottom: 4px;
-            letter-spacing: 0.5px;
-        }
-        
-        .action-buttons-row {
-            background-color: #f8f9fa;
-            border-radius: 5px;
-            padding: 15px;
-            margin-top: 5px;
-            border: 1px solid #dee2e6;
-        }
-        
-        .action-row td {
-            background-color: #ffffff;
-            border-top: none !important;
-            padding: 0 !important;
-        }
-        
-        .toggle-actions {
-            transition: all 0.3s ease;
-        }
-        
-        .toggle-actions:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-    </style>
+    });
+});
+</script>
 @endpush

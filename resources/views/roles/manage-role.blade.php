@@ -1,654 +1,979 @@
 @extends('layouts.admin')
-
-@section('title', 'Gestión de Roles')
-
+@section('title', __('Roles Management'))
 @section('breadcrumb')
     <ul class="breadcrumb">
-        <li class="breadcrumb-item">
-            <a href="{{ route('home') }}">{{ __('Dashboard') }}</a>
-        </li>
-        <li class="breadcrumb-item">{{ __('Gestión de Roles') }}</li>
+        <li class="breadcrumb-item"><a href="{{ route('home') }}">{{ __('Dashboard') }}</a></li>
+        <li class="breadcrumb-item">{{ __('Roles') }}</li>
     </ul>
 @endsection
 
 @section('content')
-    <div class="row mt-3"><!-- margen top de 1rem -->
-        <div class="col-lg-12">
-            {{-- Card principal sin borde y con sombra --}}
-            <div class="card border-0 shadow">
-                <div class="card-header border-0">
-                    <h4 class="card-title">Gestión de Roles</h4>
-                </div>
-                <div class="card-body">
-                    {{-- Input (oculto) para subir Excel, si llegas a usarlo --}}
-                    <input type="file" id="excelFileInput" accept=".xlsx" style="display: none;" />
+<div class="roles-management-container">
+    {{-- Header --}}
+    <div class="rm-header mb-4">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <h4 class="rm-title mb-0">
+                    <i class="ti ti-shield-lock me-2"></i>{{ __('Roles Management') }}
+                    <span class="badge bg-white text-primary ms-2" id="rolesCount">0</span>
+                </h4>
+                <p class="text-white-50 mb-0 mt-1">{{ __('Manage user roles and their permissions') }}</p>
+            </div>
+            <div class="col-md-6 text-end">
+                <button type="button" class="btn btn-light" id="btnAddRole">
+                    <i class="ti ti-plus me-1"></i> {{ __('Create Role') }}
+                </button>
+            </div>
+        </div>
+    </div>
 
-                    {{-- Tabla responsiva con el mismo estilo que “Trabajadores” --}}
-                    <div class="table-responsive" style="max-width: 98%; margin: 0 auto;">
-                        <table id="rolesTable" class="display table table-striped table-bordered" style="width:100%">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Nombre del Rol</th>
-                                    <th>Permisos</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
-                    </div> {{-- .table-responsive --}}
-                </div> {{-- .card-body --}}
-            </div> {{-- .card --}}
-        </div> {{-- .col --}}
-    </div> {{-- .row --}}
+    {{-- Stats Cards --}}
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="rm-stats-card rm-stats-primary">
+                <div class="rm-stats-icon">
+                    <i class="ti ti-shield"></i>
+                </div>
+                <div class="rm-stats-info">
+                    <h3 id="statTotalRoles">0</h3>
+                    <span>{{ __('Total Roles') }}</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="rm-stats-card rm-stats-success">
+                <div class="rm-stats-icon">
+                    <i class="ti ti-key"></i>
+                </div>
+                <div class="rm-stats-info">
+                    <h3 id="statTotalPermissions">0</h3>
+                    <span>{{ __('Total Permissions') }}</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="rm-stats-card rm-stats-info">
+                <div class="rm-stats-icon">
+                    <i class="ti ti-users"></i>
+                </div>
+                <div class="rm-stats-info">
+                    <h3 id="statTotalUsers">0</h3>
+                    <span>{{ __('Users with Roles') }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Search Box --}}
+    <div class="rm-search-container mb-4">
+        <div class="rm-search-box">
+            <i class="ti ti-search"></i>
+            <input type="text" id="searchRoles" class="form-control" placeholder="{{ __('Search roles...') }}">
+        </div>
+    </div>
+
+    {{-- Roles Grid --}}
+    <div class="row" id="rolesGrid">
+        {{-- Cards se cargan dinámicamente --}}
+    </div>
+
+    {{-- Loading State --}}
+    <div id="loadingState" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">{{ __('Loading...') }}</span>
+        </div>
+        <p class="mt-3 text-muted">{{ __('Loading roles...') }}</p>
+    </div>
+
+    {{-- Empty State --}}
+    <div id="emptyState" class="col-12 d-none">
+        <div class="card rm-empty-state">
+            <div class="card-body text-center py-5">
+                <i class="ti ti-shield-off display-1 text-muted mb-3"></i>
+                <h4>{{ __('No roles found') }}</h4>
+                <p class="text-muted">{{ __('Start by creating your first role') }}</p>
+                <button type="button" class="btn btn-primary mt-3" id="btnAddRoleEmpty">
+                    <i class="ti ti-plus me-1"></i> {{ __('Create Role') }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @push('style')
-    {{-- Font Awesome para iconos --}}
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    {{-- DataTables CSS --}}
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.4.1/css/responsive.dataTables.min.css">
+<style>
+/* Container */
+.roles-management-container {
+    padding: 0;
+}
 
-    <style>
-        /* Estilos modernos para la página */
-        body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-        }
+/* Header */
+.rm-header {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    border-radius: 16px;
+    padding: 24px;
+    color: white;
+}
 
-        /* Card principal con glassmorfismo */
-        .card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
-            overflow: hidden;
-        }
+.rm-title {
+    color: white;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+}
 
-        .card-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-bottom: none;
-            padding: 2rem;
-            position: relative;
-            overflow: hidden;
-        }
+/* Stats Cards */
+.rm-stats-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+}
 
-        .card-header::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-            animation: float 6s ease-in-out infinite;
-        }
+.rm-stats-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+}
 
-        @keyframes float {
-            0%, 100% { transform: translate(0, 0) rotate(0deg); }
-            50% { transform: translate(-20px, -20px) rotate(180deg); }
-        }
+.rm-stats-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
 
-        .card-title {
-            color: white;
-            font-weight: 700;
-            font-size: 2rem;
-            margin: 0;
-            position: relative;
-            z-index: 1;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
+.rm-stats-primary .rm-stats-icon {
+    background: rgba(99, 102, 241, 0.15);
+    color: #6366f1;
+}
 
-        /* Breadcrumb moderno */
-        .breadcrumb {
-            background: rgba(255, 255, 255, 0.9);
-            border-radius: 15px;
-            padding: 1rem 1.5rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-        }
+.rm-stats-success .rm-stats-icon {
+    background: rgba(34, 197, 94, 0.15);
+    color: #22c55e;
+}
 
-        .breadcrumb-item a {
-            color: #667eea;
-            text-decoration: none;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
+.rm-stats-info .rm-stats-icon {
+    background: rgba(14, 165, 233, 0.15);
+    color: #0ea5e9;
+}
 
-        .breadcrumb-item a:hover {
-            color: #764ba2;
-            transform: translateX(3px);
-        }
+.rm-stats-info h3 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin: 0;
+    color: #1e293b;
+}
 
-        .breadcrumb-item.active {
-            color: #6c757d;
-            font-weight: 600;
-        }
+.rm-stats-info span {
+    color: #64748b;
+    font-size: 0.875rem;
+}
 
-        /* Tabla moderna */
-        .table-responsive {
-            border-radius: 15px;
-            overflow: hidden;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-            background: white;
-            margin: 2rem auto;
-        }
+/* Search Box */
+.rm-search-container {
+    max-width: 400px;
+}
 
-        #rolesTable {
-            margin: 0;
-            border: none;
-        }
+.rm-search-box {
+    position: relative;
+}
 
-        #rolesTable thead {
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        }
+.rm-search-box i {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6366f1;
+    font-size: 1.1rem;
+}
 
-        #rolesTable thead th {
-            border: none;
-            padding: 1.2rem;
-            font-weight: 700;
-            color: #495057;
-            text-transform: uppercase;
-            font-size: 0.85rem;
-            letter-spacing: 0.5px;
-            border-bottom: 2px solid #dee2e6;
-        }
+.rm-search-box input {
+    padding-left: 48px;
+    border-radius: 50px;
+    border: 2px solid #e2e8f0;
+    height: 46px;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+}
 
-        #rolesTable tbody tr {
-            transition: all 0.3s ease;
-            border-bottom: 1px solid #f1f3f4;
-            position: relative;
-        }
+.rm-search-box input:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+}
 
-        #rolesTable tbody tr:hover {
-            background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%);
-            transform: scale(1.01);
-            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
-        }
+/* Role Card */
+.rm-role-card {
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
 
-        #rolesTable tbody tr::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 2px;
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-            transform: scaleX(0);
-            transition: transform 0.3s ease;
-        }
+.rm-role-card:hover {
+    box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+    transform: translateY(-2px);
+}
 
-        #rolesTable tbody tr:hover::after {
-            transform: scaleX(1);
-        }
+/* Card Header */
+.rm-card-header {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    padding: 20px;
+    color: white;
+}
 
-        #rolesTable tbody td {
-            padding: 1rem;
-            vertical-align: middle;
-            border: none;
-        }
+.rm-role-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
 
-        /* Botones de acción mejorados */
-        .action-btn {
-            padding: 0.4rem 0.8rem;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 0.8rem;
-            transition: all 0.3s ease;
-            border: none;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin: 0.2rem;
-            position: relative;
-            overflow: hidden;
-            text-decoration: none;
-            display: inline-block;
-        }
+.rm-role-icon {
+    width: 48px;
+    height: 48px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+}
 
-        .action-btn::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.3);
-            transform: translate(-50%, -50%);
-            transition: width 0.6s, height 0.6s;
-        }
+.rm-role-name {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: white;
+    margin: 0;
+}
 
-        .action-btn:hover::before {
-            width: 300px;
-            height: 300px;
-        }
+/* Stats Row */
+.rm-role-stats {
+    display: flex;
+    padding: 16px 20px;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    gap: 12px;
+}
 
-        .edit-btn {
-            background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
-            color: #212529;
-        }
+.rm-role-stat {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
 
-        .edit-btn:hover {
-            color: #212529;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4);
-        }
+.rm-stat-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+}
 
-        .permissions-btn {
-            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
-            color: white;
-        }
+.rm-stat-data {
+    display: flex;
+    flex-direction: column;
+}
 
-        .permissions-btn:hover {
-            color: white;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(23, 162, 184, 0.4);
-        }
+.rm-stat-value {
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: #1e293b;
+}
 
-        .delete-btn {
-            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
-            color: white;
-        }
+.rm-stat-label {
+    font-size: 0.65rem;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
 
-        .delete-btn:hover {
-            color: white;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
-        }
+/* Background colors */
+.bg-primary-light { background: rgba(99,102,241,0.15); }
+.bg-success-light { background: rgba(34,197,94,0.15); }
+.bg-info-light { background: rgba(14,165,233,0.15); }
 
-        /* Botones de DataTables */
-        .dt-buttons {
-            margin-bottom: 1.5rem;
-            display: flex;
-            gap: 0.5rem;
-        }
+/* Card Body */
+.rm-card-body {
+    padding: 16px 20px;
+}
 
-        .dt-button {
-            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-            border: none;
-            border-radius: 12px;
-            padding: 0.8rem 1.5rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            transition: all 0.3s ease;
-            color: white;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-        }
+.rm-permissions-section {
+    margin-bottom: 8px;
+}
 
-        .dt-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
-            color: white;
-        }
+.rm-permissions-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+}
 
-        .dt-button span {
-            margin-right: 0.5rem;
-        }
+.rm-permissions-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-height: 60px;
+    max-height: 80px;
+    overflow: hidden;
+}
 
-        button {
-            margin-right: 5px;
-        }
+.rm-permission-tag {
+    display: inline-block;
+    padding: 4px 10px;
+    background: #f1f5f9;
+    color: #475569;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 500;
+}
 
-        /* SweetAlert2 personalizado */
-        .swal2-input {
-            border-radius: 12px;
-            border: 2px solid #e9ecef;
-            padding: 0.8rem 1rem;
-            transition: all 0.3s ease;
-        }
+/* Card Footer */
+.rm-card-footer {
+    padding: 16px 20px;
+    background: #f8fafc;
+    display: flex;
+    gap: 8px;
+    border-top: 1px solid #e2e8f0;
+}
 
-        .swal2-input:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-            outline: none;
-        }
+.rm-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    border: none;
+    cursor: pointer;
+    flex: 1;
+}
 
-        .swal2-confirm {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border: none;
-            border-radius: 12px;
-            padding: 0.8rem 2rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            transition: all 0.3s ease;
-        }
+.rm-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
 
-        .swal2-confirm:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-        }
+.rm-btn-primary {
+    background: #6366f1;
+    color: white;
+}
+.rm-btn-primary:hover {
+    background: #4f46e5;
+    color: white;
+}
 
-        /* Responsive */
-        @media (max-width: 768px) {
-            .card-title {
-                font-size: 1.5rem;
-            }
+.rm-btn-info {
+    background: #0ea5e9;
+    color: white;
+}
+.rm-btn-info:hover {
+    background: #0284c7;
+    color: white;
+}
 
-            .action-btn {
-                font-size: 0.7rem;
-                padding: 0.3rem 0.6rem;
-            }
+.rm-btn-danger {
+    background: transparent;
+    color: #ef4444;
+    border: 1px solid #fecaca;
+}
+.rm-btn-danger:hover {
+    background: #fef2f2;
+    color: #dc2626;
+    border-color: #ef4444;
+}
 
-            .dt-button {
-                padding: 0.6rem 1rem;
-                font-size: 0.9rem;
-            }
-        }
-    </style>
+/* Empty State */
+.rm-empty-state {
+    border: 2px dashed #e2e8f0;
+    background: #f8fafc;
+    border-radius: 16px;
+}
+
+/* Animations */
+.rm-card-wrapper {
+    animation: rmFadeInUp 0.4s ease forwards;
+    opacity: 0;
+}
+
+@keyframes rmFadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.rm-card-wrapper:nth-child(1) { animation-delay: 0.05s; }
+.rm-card-wrapper:nth-child(2) { animation-delay: 0.1s; }
+.rm-card-wrapper:nth-child(3) { animation-delay: 0.15s; }
+.rm-card-wrapper:nth-child(4) { animation-delay: 0.2s; }
+.rm-card-wrapper:nth-child(5) { animation-delay: 0.25s; }
+.rm-card-wrapper:nth-child(6) { animation-delay: 0.3s; }
+
+/* Progress bar */
+.rm-progress {
+    height: 6px;
+    border-radius: 3px;
+    background: #e2e8f0;
+    overflow: hidden;
+}
+
+.rm-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+/* Responsive */
+@media (max-width: 991.98px) {
+    .rm-header .row {
+        gap: 16px;
+    }
+    .rm-header .col-md-6 {
+        text-align: center !important;
+    }
+    .rm-title {
+        justify-content: center;
+    }
+    .rm-search-container {
+        max-width: 100%;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .rm-role-stats {
+        flex-direction: column;
+    }
+    .rm-stats-card {
+        margin-bottom: 12px;
+    }
+}
+
+/* Dark mode */
+[data-theme="dark"] .rm-role-card {
+    background: #1e293b;
+}
+
+[data-theme="dark"] .rm-role-stats {
+    background: #0f172a;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .rm-role-stat {
+    background: #1e293b;
+}
+
+[data-theme="dark"] .rm-stat-value {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .rm-card-footer {
+    background: #0f172a;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .rm-permission-tag {
+    background: #334155;
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .rm-stats-card {
+    background: #1e293b;
+}
+
+[data-theme="dark"] .rm-stats-info h3 {
+    color: #f1f5f9;
+}
+
+/* SweetAlert custom styles */
+.permissions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 8px;
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 10px;
+    text-align: left;
+}
+
+.permission-checkbox {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    background: #f8fafc;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.permission-checkbox:hover {
+    background: #e2e8f0;
+}
+
+.permission-checkbox input {
+    margin-right: 10px;
+}
+
+.permission-checkbox label {
+    font-size: 0.85rem;
+    color: #475569;
+    cursor: pointer;
+    margin: 0;
+}
+</style>
 @endpush
 
 @push('scripts')
-    {{-- jQuery --}}
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+$(document).ready(function() {
+    let allRoles = [];
+    let allPermissions = [];
+    let totalPermissions = 0;
 
-    {{-- DataTables núcleo --}}
-    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-    {{-- Extensiones DataTables: Buttons, JSZip, etc. --}}
-    <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
-    {{-- Extensión Responsive de DataTables --}}
-    <script src="https://cdn.datatables.net/responsive/2.4.1/js/dataTables.responsive.min.js"></script>
+    // Cargar datos iniciales
+    loadRoles();
+    loadPermissions();
 
-    {{-- SweetAlert2 --}}
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-    {{-- XLSX para leer Excel (opcional) --}}
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
-    {{-- Protección CSRF (evitar error 419 en peticiones POST/DELETE) --}}
-    <script>
-        $.ajaxSetup({
-            headers: {
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+    // Cargar permisos
+    function loadPermissions() {
+        $.ajax({
+            url: '{{ url("manage-permission/list-all") }}',
+            method: 'GET',
+            success: function(data) {
+                allPermissions = data;
+                totalPermissions = data.length;
+                $('#statTotalPermissions').text(totalPermissions);
             }
         });
-    </script>
+    }
 
-    <script>
-        // URLs definidas para las operaciones CRUD
-        const listAllUrl = 'manage-role/list-all'; 
-        const storeOrUpdateUrl = 'manage-role/store-or-update';
+    // Cargar roles
+    function loadRoles() {
+        $('#loadingState').show();
+        $('#rolesGrid').html('');
+        $('#emptyState').addClass('d-none');
 
-        $(document).ready(function () {
-            const table = $('#rolesTable').DataTable({
-                ajax: {
-                    url: listAllUrl, // GET manage-role/list-all
-                    dataSrc: '',
-                    error: function (xhr) {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error al cargar Roles',
-                            text: `Status: ${xhr.status}. Mensaje: ${xhr.responseJSON?.error || 'Error desconocido'}`
-                        });
-                    }
-                },
-                columns: [
-                    { data: 'id' },
-                    { data: 'name' },
-                    { 
-                        data: 'permissions', 
-                        defaultContent: '', 
-                        render: function (data) {
-                            if (Array.isArray(data)) {
-                                // Extraer el nombre de cada permiso
-                                return data.map(function(permission) {
-                                    return permission.name || '';
-                                }).join(', ');
-                            }
-                            return '';
-                        }
-                    },
-                    {
-                        data: null,
-                        render: function (data) {
-                            return `
-                                <button class="action-btn edit-btn"
-                                    data-id="${data.id}"
-                                    data-name="${data.name}">
-                                    <i class="fas fa-edit"></i> Editar
-                                </button>
-                                <button class="action-btn permissions-btn"
-                                    data-id="${data.id}"
-                                    data-name="${data.name}">
-                                    <i class="fas fa-key"></i> Permisos
-                                </button>
-                                <button class="action-btn delete-btn"
-                                    data-id="${data.id}">
-                                    <i class="fas fa-trash"></i> Eliminar
-                                </button>
-                            `;
-                        }
-                    }
-                ],
-                responsive: true,
-                scrollX: true,
+        $.ajax({
+            url: '{{ url("manage-role/list-all") }}',
+            method: 'GET',
+            success: function(data) {
+                allRoles = data;
+                $('#loadingState').hide();
 
-                dom: 'Bfrtip',
-                buttons: [
-                    {
-                        text: '<i class="fas fa-plus"></i> Añadir Rol',
-                        className: 'dt-button',
-                        action: function () {
-                            Swal.fire({
-                                title: 'Añadir Rol',
-                                html: `
-                                    <input id="roleId" class="swal2-input" placeholder="ID (opcional)">
-                                    <input id="roleName" class="swal2-input" placeholder="Nombre del Rol">
-                                `,
-                                confirmButtonText: 'Guardar',
-                                showCancelButton: true,
-                                preConfirm: () => {
-                                    const id   = $('#roleId').val() || null;
-                                    const name = $('#roleName').val();
-                                    if (!name) {
-                                        Swal.showValidationMessage('El nombre del rol es obligatorio.');
-                                        return false;
+                if (data.length === 0) {
+                    $('#emptyState').removeClass('d-none');
+                    updateStats(0, 0);
+                    return;
+                }
+
+                renderRoles(data);
+                updateStats(data.length, calculateTotalUsers(data));
+            },
+            error: function() {
+                $('#loadingState').hide();
+                Swal.fire('Error', '{{ __("Could not load roles") }}', 'error');
+            }
+        });
+    }
+
+    // Calcular total de usuarios (simulado - se necesitaría endpoint)
+    function calculateTotalUsers(roles) {
+        // Por ahora retornamos 0, idealmente el backend debería enviar este dato
+        return roles.reduce((sum, role) => sum + (role.users_count || 0), 0);
+    }
+
+    // Actualizar estadísticas
+    function updateStats(rolesCount, usersCount) {
+        $('#statTotalRoles').text(rolesCount);
+        $('#rolesCount').text(rolesCount);
+        $('#statTotalUsers').text(usersCount);
+    }
+
+    // Renderizar roles
+    function renderRoles(roles) {
+        let html = '';
+
+        roles.forEach((role, index) => {
+            const permissions = role.permissions || [];
+            const permissionsCount = permissions.length;
+            const percentage = totalPermissions > 0 ? Math.round((permissionsCount / totalPermissions) * 100) : 0;
+
+            // Obtener nombres de permisos
+            const permissionNames = permissions.map(p => typeof p === 'string' ? p : p.name);
+            const displayPermissions = permissionNames.slice(0, 8);
+            const moreCount = permissionNames.length - 8;
+
+            html += `
+                <div class="col-xl-4 col-lg-6 col-md-6 mb-4 rm-card-wrapper" data-name="${role.name.toLowerCase()}" style="animation-delay: ${index * 0.05}s">
+                    <div class="card rm-role-card h-100">
+                        <div class="rm-card-header">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="rm-role-info">
+                                    <div class="rm-role-icon">
+                                        <i class="ti ti-shield-check"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="rm-role-name">${capitalizeFirst(role.name)}</h5>
+                                        <small class="text-white-50">
+                                            <i class="ti ti-hash me-1"></i>ID: ${role.id}
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="rm-role-stats">
+                            <div class="rm-role-stat">
+                                <div class="rm-stat-icon bg-primary-light">
+                                    <i class="ti ti-key text-primary"></i>
+                                </div>
+                                <div class="rm-stat-data">
+                                    <span class="rm-stat-value">${permissionsCount}</span>
+                                    <span class="rm-stat-label">{{ __('Permissions') }}</span>
+                                </div>
+                            </div>
+                            <div class="rm-role-stat">
+                                <div class="rm-stat-icon bg-info-light">
+                                    <i class="ti ti-percentage text-info"></i>
+                                </div>
+                                <div class="rm-stat-data">
+                                    <span class="rm-stat-value">${percentage}%</span>
+                                    <span class="rm-stat-label">{{ __('Access') }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="rm-card-body">
+                            <div class="rm-permissions-section">
+                                <div class="rm-permissions-label">
+                                    <i class="ti ti-lock me-1"></i> {{ __('Permissions') }}
+                                    ${moreCount > 0 ? `<span class="badge bg-light text-secondary ms-1">+${moreCount} {{ __('more') }}</span>` : ''}
+                                </div>
+                                <div class="rm-permissions-tags">
+                                    ${displayPermissions.length > 0
+                                        ? displayPermissions.map(p => `<span class="rm-permission-tag">${p}</span>`).join('')
+                                        : '<span class="text-muted fst-italic">{{ __("No permissions assigned") }}</span>'
                                     }
-                                    return { id, name };
-                                }
-                            }).then((result) => {
-                                if (result.isConfirmed) {
-                                    $.ajax({
-                                        url: storeOrUpdateUrl, // POST manage-role/store-or-update
-                                        method: 'POST',
-                                        contentType: 'application/json',
-                                        data: JSON.stringify(result.value),
-                                        success: function () {
-                                            Swal.fire('Éxito', 'Rol guardado correctamente', 'success');
-                                            table.ajax.reload();
-                                        },
-                                        error: function (xhr) {
-                                            Swal.fire({
-                                                icon: 'error',
-                                                title: 'Error al Guardar',
-                                                text: `Status: ${xhr.status}. ${xhr.responseJSON?.error || 'Error desconocido'}`
-                                            });
-                                        }
-                                    });
-                                }
-                            });
-                        }
+                                </div>
+                            </div>
+
+                            <div class="mt-3">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <small class="text-muted">{{ __('Permissions coverage') }}</small>
+                                    <small class="text-muted">${permissionsCount}/${totalPermissions}</small>
+                                </div>
+                                <div class="rm-progress">
+                                    <div class="rm-progress-bar" style="width: ${percentage}%"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="rm-card-footer">
+                            <button type="button" class="rm-btn rm-btn-info btn-permissions"
+                                    data-id="${role.id}"
+                                    data-name="${role.name}"
+                                    title="{{ __('Manage Permissions') }}">
+                                <i class="ti ti-key"></i>
+                                <span>{{ __('Permissions') }}</span>
+                            </button>
+                            <button type="button" class="rm-btn rm-btn-primary btn-edit"
+                                    data-id="${role.id}"
+                                    data-name="${role.name}"
+                                    title="{{ __('Edit Role') }}">
+                                <i class="ti ti-edit"></i>
+                                <span>{{ __('Edit') }}</span>
+                            </button>
+                            <button type="button" class="rm-btn rm-btn-danger btn-delete"
+                                    data-id="${role.id}"
+                                    data-name="${role.name}"
+                                    title="{{ __('Delete Role') }}">
+                                <i class="ti ti-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        $('#rolesGrid').html(html);
+    }
+
+    // Capitalizar primera letra
+    function capitalizeFirst(str) {
+        return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
+    // Buscador
+    $('#searchRoles').on('keyup', function() {
+        const searchTerm = $(this).val().toLowerCase();
+
+        $('.rm-card-wrapper').each(function() {
+            const name = $(this).data('name');
+            if (name.indexOf(searchTerm) > -1) {
+                $(this).show();
+            } else {
+                $(this).hide();
+            }
+        });
+    });
+
+    // Añadir rol
+    $('#btnAddRole, #btnAddRoleEmpty').on('click', function() {
+        Swal.fire({
+            title: '{{ __("Create Role") }}',
+            html: `
+                <div class="mb-3">
+                    <input id="roleName" class="form-control" placeholder="{{ __('Role name') }}" style="border-radius: 10px; padding: 12px;">
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: '{{ __("Create") }}',
+            cancelButtonText: '{{ __("Cancel") }}',
+            confirmButtonColor: '#6366f1',
+            preConfirm: () => {
+                const name = $('#roleName').val().trim();
+                if (!name) {
+                    Swal.showValidationMessage('{{ __("Role name is required") }}');
+                    return false;
+                }
+                return { name };
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: '{{ url("manage-role/store-or-update") }}',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(result.value),
+                    success: function() {
+                        Swal.fire({
+                            title: '{{ __("Success!") }}',
+                            text: '{{ __("Role created successfully") }}',
+                            icon: 'success',
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+                        loadRoles();
                     },
-                    {
-                        extend: 'excelHtml5',
-                        text: '<i class="fas fa-file-excel"></i> Exportar a Excel',
-                        className: 'dt-button',
-                        title: null,
-                        exportOptions: {
-                            columns: [0,1] // Exporta ID y Nombre
-                        }
+                    error: function(xhr) {
+                        Swal.fire('Error', xhr.responseJSON?.message || '{{ __("Could not create role") }}', 'error');
                     }
-                ]
-            });
+                });
+            }
+        });
+    });
 
-            // Editar rol
-            $('#rolesTable tbody').on('click', '.edit-btn', function() {
-                const currentId   = $(this).data('id');
-                const currentName = $(this).data('name');
+    // Editar rol
+    $(document).on('click', '.btn-edit', function() {
+        const id = $(this).data('id');
+        const name = $(this).data('name');
 
+        Swal.fire({
+            title: '{{ __("Edit Role") }}',
+            html: `
+                <div class="mb-3">
+                    <input id="roleName" class="form-control" value="${name}" style="border-radius: 10px; padding: 12px;">
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: '{{ __("Update") }}',
+            cancelButtonText: '{{ __("Cancel") }}',
+            confirmButtonColor: '#6366f1',
+            preConfirm: () => {
+                const newName = $('#roleName').val().trim();
+                if (!newName) {
+                    Swal.showValidationMessage('{{ __("Role name is required") }}');
+                    return false;
+                }
+                return { id, name: newName };
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: '{{ url("manage-role/store-or-update") }}',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(result.value),
+                    success: function() {
+                        Swal.fire({
+                            title: '{{ __("Success!") }}',
+                            text: '{{ __("Role updated successfully") }}',
+                            icon: 'success',
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+                        loadRoles();
+                    },
+                    error: function(xhr) {
+                        Swal.fire('Error', xhr.responseJSON?.message || '{{ __("Could not update role") }}', 'error');
+                    }
+                });
+            }
+        });
+    });
+
+    // Gestionar permisos
+    $(document).on('click', '.btn-permissions', function() {
+        const roleId = $(this).data('id');
+        const roleName = $(this).data('name');
+        const role = allRoles.find(r => r.id === roleId);
+        const currentPermissions = role?.permissions?.map(p => typeof p === 'string' ? p : p.name) || [];
+
+        let permissionsHtml = '<div class="permissions-grid">';
+        allPermissions.forEach(permission => {
+            const checked = currentPermissions.includes(permission.name) ? 'checked' : '';
+            permissionsHtml += `
+                <div class="permission-checkbox">
+                    <input type="checkbox" id="perm_${permission.id}" value="${permission.name}" ${checked}>
+                    <label for="perm_${permission.id}">${permission.name}</label>
+                </div>
+            `;
+        });
+        permissionsHtml += '</div>';
+
+        Swal.fire({
+            title: `{{ __('Permissions for') }}: ${capitalizeFirst(roleName)}`,
+            html: permissionsHtml,
+            width: '700px',
+            showCancelButton: true,
+            confirmButtonText: '{{ __("Save") }}',
+            cancelButtonText: '{{ __("Cancel") }}',
+            confirmButtonColor: '#6366f1',
+            preConfirm: () => {
+                const selected = [];
+                $('.permissions-grid input:checked').each(function() {
+                    selected.push($(this).val());
+                });
+                return selected;
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: `{{ url('manage-role/update-permissions') }}/${roleId}`,
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ permissions: result.value }),
+                    success: function() {
+                        Swal.fire({
+                            title: '{{ __("Success!") }}',
+                            text: '{{ __("Permissions updated successfully") }}',
+                            icon: 'success',
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+                        loadRoles();
+                    },
+                    error: function(xhr) {
+                        Swal.fire('Error', xhr.responseJSON?.message || '{{ __("Could not update permissions") }}', 'error');
+                    }
+                });
+            }
+        });
+    });
+
+    // Eliminar rol - DOBLE CONFIRMACIÓN
+    $(document).on('click', '.btn-delete', function() {
+        const roleId = $(this).data('id');
+        const roleName = $(this).data('name');
+
+        // PRIMERA CONFIRMACIÓN
+        Swal.fire({
+            title: '{{ __("Are you sure?") }}',
+            html: '{!! __("You are about to delete the role") !!} <strong>' + roleName + '</strong>.<br><br>' +
+                  '<span class="text-danger"><i class="ti ti-alert-triangle me-1"></i>{!! __("Users with this role will lose their permissions.") !!}</span>',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#f59e0b',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: '{{ __("Continue") }}',
+            cancelButtonText: '{{ __("Cancel") }}',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // SEGUNDA CONFIRMACIÓN
                 Swal.fire({
-                    title: 'Editar Rol',
-                    html: `
-                        <input id="roleId" class="swal2-input" value="${currentId}" readonly>
-                        <input id="roleName" class="swal2-input" value="${currentName}">
-                    `,
-                    confirmButtonText: 'Actualizar',
+                    title: '{{ __("Final confirmation") }}',
+                    html: '<p class="mb-3">{!! __("To confirm deletion, type the name of the role:") !!}</p>' +
+                          '<p class="fw-bold text-danger mb-3">' + roleName + '</p>',
+                    icon: 'error',
+                    input: 'text',
+                    inputPlaceholder: '{{ __("Type the role name here...") }}',
+                    inputAttributes: {
+                        autocapitalize: 'off',
+                        autocomplete: 'off'
+                    },
                     showCancelButton: true,
-                    preConfirm: () => {
-                        const id   = $('#roleId').val();
-                        const name = $('#roleName').val();
-                        if (!id || !name) {
-                            Swal.showValidationMessage('ID y nombre son obligatorios.');
+                    confirmButtonColor: '#ef4444',
+                    cancelButtonColor: '#64748b',
+                    confirmButtonText: '{{ __("Delete permanently") }}',
+                    cancelButtonText: '{{ __("Cancel") }}',
+                    reverseButtons: true,
+                    preConfirm: (inputValue) => {
+                        if (inputValue.toLowerCase() !== roleName.toLowerCase()) {
+                            Swal.showValidationMessage('{{ __("The name does not match. Please type it exactly.") }}');
                             return false;
                         }
-                        return { id, name };
+                        return true;
                     }
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        $.ajax({
-                            url: storeOrUpdateUrl, // POST manage-role/store-or-update
-                            method: 'POST',
-                            contentType: 'application/json',
-                            data: JSON.stringify(result.value),
-                            success: function () {
-                                Swal.fire('Éxito', 'Rol actualizado', 'success');
-                                table.ajax.reload();
-                            },
-                            error: function (xhr) {
-                                Swal.fire({
-                                    icon: 'error',
-                                    title: 'Error al Actualizar',
-                                    text: `Status: ${xhr.status}. ${xhr.responseJSON?.error || 'Error desconocido'}`
-                                });
-                            }
+                        Swal.fire({
+                            title: '{{ __("Deleting...") }}',
+                            allowOutsideClick: false,
+                            showConfirmButton: false,
+                            didOpen: () => { Swal.showLoading(); }
                         });
-                    }
-                });
-            });
-            // Gestionar permisos del rol
-            $('#rolesTable tbody').on('click', '.permissions-btn', function() {
-                const roleId = $(this).data('id');
-                const roleName = $(this).data('name');
 
-                // Solicitar todos los permisos y los roles con permisos
-                $.when(
-                    $.ajax({
-                        url: 'manage-permission/list-all',
-                        method: 'GET'
-                    }),
-                    $.ajax({
-                        url: listAllUrl,
-                        method: 'GET'
-                    })
-                ).done(function(allPermissionsData, rolesData) {
-                    const allPermissions = allPermissionsData[0];
-                    const roles = rolesData[0];
-                    const currentRole = roles.find(r => r.id === roleId);
-                    const currentPermissions = currentRole && currentRole.permissions ? currentRole.permissions : [];
-
-                    // Transformar a array de nombres
-                    const currentPermissionsNames = Array.isArray(currentPermissions)
-                        ? currentPermissions.map(p => p.name ? p.name : p)
-                        : [];
-
-                    let permissionsHtml = '';
-                    allPermissions.forEach(permission => {
-                        const checked = currentPermissionsNames.includes(permission.name) ? 'checked' : '';
-                        permissionsHtml += `
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" value="${permission.name}" id="perm_${permission.id}" ${checked}>
-                                <label class="form-check-label" for="perm_${permission.id}">
-                                    ${permission.name}
-                                </label>
-                            </div>
-                        `;
-                    });
-
-                    Swal.fire({
-                        title: `Administrar Permisos para: ${roleName}`,
-                        html: `
-                            <div style="max-height:400px; overflow-y:auto;">
-                                <form id="permissionsForm">
-                                    ${permissionsHtml}
-                                </form>
-                            </div>
-                        `,
-                        focusConfirm: false,
-                        showCancelButton: true,
-                        confirmButtonText: 'Guardar',
-                        preConfirm: () => {
-                            const selectedPermissions = [];
-                            $('#permissionsForm input:checked').each(function() {
-                                selectedPermissions.push($(this).val());
-                            });
-                            return selectedPermissions;
-                        }
-                    }).then(result => {
-                        if(result.isConfirmed) {
-                            $.ajax({
-                                url: `manage-role/update-permissions/${roleId}`, 
-                                method: 'POST',
-                                contentType: 'application/json',
-                                data: JSON.stringify({ permissions: result.value }),
-                                success: function() {
-                                    Swal.fire('Éxito', 'Permisos actualizados correctamente', 'success');
-                                    table.ajax.reload();
-                                },
-                                error: function(xhr) {
-                                    Swal.fire({
-                                        icon: 'error',
-                                        title: 'Error al actualizar permisos',
-                                        text: `Status: ${xhr.status}. ${xhr.responseJSON?.error || 'Error desconocido'}`
-                                    });
-                                }
-                            });
-                        }
-                    });
-
-                }).fail(function() {
-                    Swal.fire('Error', 'No se pudieron cargar los permisos.', 'error');
-                });
-            });
-
-
-            // Eliminar rol
-            $('#rolesTable tbody').on('click', '.delete-btn', function() {
-                const id = $(this).data('id');
-                Swal.fire({
-                    title: '¿Estás seguro?',
-                    text: 'Esta acción no se puede deshacer.',
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonText: 'Sí, eliminar',
-                    cancelButtonText: 'Cancelar'
-                }).then((result) => {
-                    if (result.isConfirmed) {
                         $.ajax({
-                            url: "manage-role/delete/" + id,
+                            url: `{{ url('manage-role/delete') }}/${roleId}`,
                             method: 'DELETE',
                             success: function() {
-                                Swal.fire('Rol eliminado', '', 'success');
-                                table.ajax.reload();
+                                Swal.fire({
+                                    title: '{{ __("Deleted!") }}',
+                                    text: '{{ __("The role has been deleted.") }}',
+                                    icon: 'success',
+                                    timer: 1500,
+                                    showConfirmButton: false
+                                });
+                                loadRoles();
                             },
                             error: function(xhr) {
-                                Swal.fire({
-                                    icon: 'error',
-                                    title: 'Error al Eliminar',
-                                    text: `Status: ${xhr.status}. ${xhr.responseJSON?.error || 'Error desconocido'}`
-                                });
+                                Swal.fire('Error', xhr.responseJSON?.message || '{{ __("Could not delete role") }}', 'error');
                             }
                         });
                     }
                 });
-            });
+            }
         });
-    </script>
+    });
+});
+</script>
 @endpush
