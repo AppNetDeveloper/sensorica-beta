@@ -42,7 +42,7 @@
         <!-- [ sample-page ] start -->
         <!-- analytic card start -->
         @can('manage-user')
-        <div class="col-xl-3 col-md-6 col-12 mb-4 animate-card">
+        <div class="kpi-card-col mb-4 animate-card">
             <a href="users" class="text-decoration-none">
                 <div class="card modern-stat-card stat-card-primary">
                     <div class="stat-card-body">
@@ -61,7 +61,7 @@
         </div>
         @endcan
         @can('manage-role')
-        <div class="col-xl-3 col-md-6 col-12 mb-4 animate-card">
+        <div class="kpi-card-col mb-4 animate-card">
             <a href="roles" class="text-decoration-none">
                 <div class="card modern-stat-card stat-card-info">
                     <div class="stat-card-body">
@@ -80,7 +80,7 @@
         </div>
         @endcan
         @can('manage-module')
-        <div class="col-xl-3 col-md-6 col-12 mb-4 animate-card">
+        <div class="kpi-card-col mb-4 animate-card">
             <a href="modules" class="text-decoration-none">
                 <div class="card modern-stat-card stat-card-success">
                     <div class="stat-card-body">
@@ -99,7 +99,7 @@
         </div>
         @endcan
         @can('manage-langauge')
-        <div class="col-xl-3 col-md-6 col-12 mb-4 animate-card">
+        <div class="kpi-card-col mb-4 animate-card">
             <a href="language" class="text-decoration-none">
                 <div class="card modern-stat-card stat-card-danger">
                     <div class="stat-card-body">
@@ -120,7 +120,7 @@
 
         <!-- Widget de trabajadores si tiene permiso -->
         @can('workers-show')
-        <div class="col-xl-3 col-md-6 col-12 mb-4 animate-card">
+        <div class="kpi-card-col mb-4 animate-card">
             <a href="{{ route('workers-admin.index') }}" class="text-decoration-none">
                 <div class="card modern-stat-card stat-card-warning">
                     <div class="stat-card-body">
@@ -139,10 +139,34 @@
         </div>
         @endcan
 
+        <!-- Widget de Order Organizer (Grupos y Máquinas) - permiso productionline-kanban -->
+        @can('productionline-kanban')
+        @if(isset($orderOrganizerStats) && $orderOrganizerStats)
+        <div class="kpi-card-col mb-4 animate-card">
+            <a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#selectCustomerModal">
+                <div class="card modern-stat-card stat-card-indigo">
+                    <div class="stat-card-body">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="stat-content">
+                                <h6>{{ __('Order Organizer') }}</h6>
+                                <h3>{{ $orderOrganizerStats['groups'] }} <small style="font-size: 0.5em;">{{ __('groups') }}</small></h3>
+                                <small class="text-white-50">{{ $orderOrganizerStats['machines'] }} {{ __('machines') }}</small>
+                            </div>
+                            <div class="stat-icon-wrapper bg-white bg-opacity-25">
+                                <i class="ti ti-layout-kanban"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        @endif
+        @endcan
+
         <!-- Widgets de turnos si tiene permiso -->
         @can('shift-show')
         <!-- Resumen de líneas de producción -->
-        <div class="col-xl-3 col-md-6 col-12 mb-4 animate-card">
+        <div class="kpi-card-col mb-4 animate-card">
             <a href="{{ route('shift.index') }}" class="text-decoration-none">
                 <div class="card modern-stat-card stat-card-purple">
                     <div class="stat-card-body">
@@ -161,7 +185,7 @@
         </div>
 
         <!-- Estado de líneas activas -->
-        <div class="col-xl-3 col-md-6 col-12 mb-4 animate-card">
+        <div class="kpi-card-col mb-4 animate-card">
             <div class="card modern-stat-card stat-card-success">
                 <div class="stat-card-body">
                     <div class="d-flex align-items-center justify-content-between">
@@ -178,12 +202,12 @@
         </div>
 
         <!-- Estado de líneas en pausa o paradas -->
-        <div class="col-xl-3 col-md-6 col-12 mb-4 animate-card">
+        <div class="kpi-card-col mb-4 animate-card">
             <div class="card modern-stat-card stat-card-warning">
                 <div class="stat-card-body">
                     <div class="d-flex align-items-center justify-content-between">
                         <div class="stat-content">
-                            <h6>{{ __('Paused/Stopped') }}</h6>
+                            <h6>{{ __('Paused/Stopped Lines') }}</h6>
                             <h3>{{ $productionLineStats['paused'] + $productionLineStats['stopped'] }}</h3>
                         </div>
                         <div class="stat-icon-wrapper bg-white bg-opacity-25">
@@ -194,23 +218,6 @@
             </div>
         </div>
 
-        <!-- Estado de líneas con incidencias -->
-        <div class="col-xl-3 col-md-6 col-12 mb-4 animate-card">
-            <div class="card modern-stat-card stat-card-danger">
-                <div class="stat-card-body">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <div class="stat-content">
-                            <h6>{{ __('Incidents') }}</h6>
-                            <h3>{{ $productionLineStats['incident'] }}</h3>
-                        </div>
-                        <div class="stat-icon-wrapper bg-white bg-opacity-25">
-                            <i class="ti ti-alert-triangle"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
         <!-- Tabla resumen de líneas de producción -->
         <div class="col-xl-12 col-md-12 mb-4 animate-card">
             <div class="card modern-table-card">
@@ -350,10 +357,79 @@
         </div> <!-- Cierre del row de widgets -->
     @endif
     <!-- [ Main Content ] end -->
+
+    <!-- Modal para seleccionar Centro de Producción -->
+    @can('productionline-kanban')
+    @if(isset($customersForKanban) && $customersForKanban && $customersForKanban->count() > 0)
+    <div class="modal fade" id="selectCustomerModal" tabindex="-1" aria-labelledby="selectCustomerModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="selectCustomerModalLabel">
+                        <i class="ti ti-building me-2"></i>{{ __('Select Production Center') }}
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div class="list-group list-group-flush">
+                        @foreach($customersForKanban as $customer)
+                        <a href="{{ route('customers.order-organizer', $customer->id) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3">
+                            <div>
+                                <i class="ti ti-building-factory me-2 text-primary"></i>
+                                <strong>{{ $customer->name }}</strong>
+                            </div>
+                            <span class="badge bg-primary rounded-pill">
+                                {{ $customer->productionLines->filter(fn($l) => $l->processes->isNotEmpty())->count() }} {{ __('machines') }}
+                            </span>
+                        </a>
+                        @endforeach
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+    @endcan
 @endsection
 @push('style')
     {{--  @include('layouts.includes.datatable_css')  --}}
     {{--  <link href="{{ asset('css/custom.css') }}" rel="stylesheet">  --}}
+    <style>
+        /* KPIs adaptivos: 5 por línea en pantallas muy grandes */
+        @media (min-width: 1400px) {
+            .kpi-card-col {
+                flex: 0 0 20%;
+                max-width: 20%;
+            }
+        }
+        @media (min-width: 1200px) and (max-width: 1399.98px) {
+            .kpi-card-col {
+                flex: 0 0 25%;
+                max-width: 25%;
+            }
+        }
+        @media (min-width: 992px) and (max-width: 1199.98px) {
+            .kpi-card-col {
+                flex: 0 0 33.333333%;
+                max-width: 33.333333%;
+            }
+        }
+        @media (min-width: 768px) and (max-width: 991.98px) {
+            .kpi-card-col {
+                flex: 0 0 50%;
+                max-width: 50%;
+            }
+        }
+        @media (max-width: 767.98px) {
+            .kpi-card-col {
+                flex: 0 0 100%;
+                max-width: 100%;
+            }
+        }
+    </style>
 @endpush
 
 

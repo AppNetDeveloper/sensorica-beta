@@ -41,6 +41,44 @@ class HomeController extends Controller
                 $operatorsCount = $operators->count();
             }
             
+            // Datos de Order Organizer (grupos y máquinas) - solo si tiene permiso productionline-kanban
+            $orderOrganizerStats = null;
+            $customersForKanban = null;
+            if (auth()->user()->can('productionline-kanban')) {
+                // Obtener todos los customers con sus líneas de producción
+                $customers = \App\Models\Customer::with(['productionLines.processes'])->get();
+                $customersForKanban = $customers;
+
+                $totalGroups = 0;
+                $totalMachines = 0;
+
+                foreach ($customers as $customer) {
+                    $customerProductionLines = $customer->productionLines->filter(function ($line) {
+                        return $line->processes->isNotEmpty();
+                    });
+
+                    // Contar grupos únicos (procesos) por customer
+                    $uniqueProcesses = collect();
+                    foreach ($customerProductionLines as $line) {
+                        $process = $line->processes->first();
+                        if ($process) {
+                            $description = $process->description ?: 'Sin descripción';
+                            if (!$uniqueProcesses->has($description)) {
+                                $uniqueProcesses->put($description, true);
+                            }
+                        }
+                    }
+
+                    $totalGroups += $uniqueProcesses->count();
+                    $totalMachines += $customerProductionLines->count();
+                }
+
+                $orderOrganizerStats = [
+                    'groups' => $totalGroups,
+                    'machines' => $totalMachines
+                ];
+            }
+
             // Datos de líneas de producción y turnos - solo si tiene permiso
             $productionLines = null;
             $productionLineStats = null;
@@ -112,10 +150,15 @@ class HomeController extends Controller
                             // Tanto los turnos activos normales como los reanudados cuentan como activos
                             $productionLineStats['active']++;
                         }
-                        // Verificar si es un turno final_pausa (tipo stop, acción end)
+                        // Verificar si es un turno final_pausa (tipo stop, acción end) - línea activa
                         elseif ($line->lastShiftHistory->type === 'stop' && $line->lastShiftHistory->action === 'end') {
-                            // Las líneas que han finalizado una pausa también cuentan como activas
+                            // Las líneas que han finalizado una pausa cuentan como activas
                             $productionLineStats['active']++;
+                        }
+                        // Verificar si es fin de turno normal (tipo shift, acción end) - línea parada
+                        elseif ($line->lastShiftHistory->type === 'shift' && $line->lastShiftHistory->action === 'end') {
+                            // Las líneas que han finalizado un turno cuentan como paradas
+                            $productionLineStats['stopped']++;
                         }
                         // Resto de casos
                         else {
@@ -124,6 +167,7 @@ class HomeController extends Controller
                                     $productionLineStats['paused']++;
                                     break;
                                 case 'stop':
+                                case 'end':
                                     $productionLineStats['stopped']++;
                                     break;
                                 case 'incident':
@@ -142,8 +186,9 @@ class HomeController extends Controller
             }
 
             return view('dashboard.homepage', compact(
-                'user', 'modual', 'role', 'languages', 
-                'operators', 'operatorsCount', 'productionLines', 'productionLineStats'
+                'user', 'modual', 'role', 'languages',
+                'operators', 'operatorsCount', 'productionLines', 'productionLineStats',
+                'orderOrganizerStats', 'customersForKanban'
             ));
         }
     }
