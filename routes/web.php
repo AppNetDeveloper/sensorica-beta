@@ -606,6 +606,7 @@ Route::get('/productionlines/liststats', [ProductionLineController::class, 'list
 Route::get('/', [HomeController::class, 'index'])->name('home')->middleware(['auth', 'XSS', '2fa']);
 
 Route::post('/chart', [HomeController::class, 'chart'])->name('get.chart.data')->middleware(['auth', 'XSS']);
+Route::post('/production-chart', [HomeController::class, 'productionChart'])->name('get.production.chart.data')->middleware(['auth', 'XSS']);
 
 Route::get('notification', [HomeController::class, 'notification']);
 

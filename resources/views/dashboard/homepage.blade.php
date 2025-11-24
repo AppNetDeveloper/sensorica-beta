@@ -41,81 +41,29 @@
         <div class="row">
         <!-- [ sample-page ] start -->
         <!-- analytic card start -->
-        @can('manage-user')
+
+        <!-- Widget de Mantenimiento - permiso maintenance-show -->
+        @can('maintenance-show')
+        @if(isset($maintenanceStats) && $maintenanceStats)
         <div class="kpi-card-col mb-4 animate-card">
-            <a href="users" class="text-decoration-none">
+            <a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#selectCustomerMaintenanceModal">
                 <div class="card modern-stat-card stat-card-primary">
                     <div class="stat-card-body">
                         <div class="d-flex align-items-center justify-content-between">
                             <div class="stat-content">
-                                <h6>{{ __('Total Users') }}</h6>
-                                <h3>{{ $user }}</h3>
+                                <h6>{{ __('Maintenance') }}</h6>
+                                <h3>{{ $maintenanceStats['pending'] }}</h3>
+                                <small class="text-white-50">{{ __('last 7 days') }}</small>
                             </div>
                             <div class="stat-icon-wrapper bg-white bg-opacity-25">
-                                <i class="ti ti-users"></i>
+                                <i class="ti ti-tool"></i>
                             </div>
                         </div>
                     </div>
                 </div>
             </a>
         </div>
-        @endcan
-        @can('manage-role')
-        <div class="kpi-card-col mb-4 animate-card">
-            <a href="roles" class="text-decoration-none">
-                <div class="card modern-stat-card stat-card-info">
-                    <div class="stat-card-body">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <div class="stat-content">
-                                <h6>{{ __('Total Role') }}</h6>
-                                <h3>{{ $role }}</h3>
-                            </div>
-                            <div class="stat-icon-wrapper bg-white bg-opacity-25">
-                                <i class="ti ti-shield-check"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </a>
-        </div>
-        @endcan
-        @can('manage-module')
-        <div class="kpi-card-col mb-4 animate-card">
-            <a href="modules" class="text-decoration-none">
-                <div class="card modern-stat-card stat-card-success">
-                    <div class="stat-card-body">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <div class="stat-content">
-                                <h6>{{ __('Total Module') }}</h6>
-                                <h3>{{ $modual }}</h3>
-                            </div>
-                            <div class="stat-icon-wrapper bg-white bg-opacity-25">
-                                <i class="ti ti-box"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </a>
-        </div>
-        @endcan
-        @can('manage-langauge')
-        <div class="kpi-card-col mb-4 animate-card">
-            <a href="language" class="text-decoration-none">
-                <div class="card modern-stat-card stat-card-danger">
-                    <div class="stat-card-body">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <div class="stat-content">
-                                <h6>{{ __('Total Languages') }}</h6>
-                                <h3>{{ $languages }}</h3>
-                            </div>
-                            <div class="stat-icon-wrapper bg-white bg-opacity-25">
-                                <i class="ti ti-world"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </a>
-        </div>
+        @endif
         @endcan
 
         <!-- Widget de trabajadores si tiene permiso -->
@@ -190,6 +138,71 @@
         @endif
         @endcan
 
+        <!-- Widgets de Incidencias y Control de Calidad - permiso productionline-incidents -->
+        @can('productionline-incidents')
+        @if(isset($incidentsStats) && $incidentsStats)
+        <!-- QC Confirmations (últimas 24h) -->
+        <div class="kpi-card-col mb-4 animate-card">
+            <a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#selectCustomerQcModal">
+                <div class="card modern-stat-card stat-card-info">
+                    <div class="stat-card-body">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="stat-content">
+                                <h6>{{ __('QC Confirmations') }}</h6>
+                                <h3>{{ $incidentsStats['qc_confirmations'] }}</h3>
+                                <small class="text-white-50">{{ __('last 24 hours') }}</small>
+                            </div>
+                            <div class="stat-icon-wrapper bg-white bg-opacity-25">
+                                <i class="ti ti-clipboard-check"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Production Order Incidents (en curso) -->
+        <div class="kpi-card-col mb-4 animate-card">
+            <a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#selectCustomerProductionIncidentsModal">
+                <div class="card modern-stat-card stat-card-danger">
+                    <div class="stat-card-body">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="stat-content">
+                                <h6>{{ __('Production Incidents') }}</h6>
+                                <h3>{{ $incidentsStats['production_incidents'] }}</h3>
+                                <small class="text-white-50">{{ __('active') }}</small>
+                            </div>
+                            <div class="stat-icon-wrapper bg-white bg-opacity-25">
+                                <i class="ti ti-alert-triangle"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Quality Issues -->
+        <div class="kpi-card-col mb-4 animate-card">
+            <a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#selectCustomerQualityIssuesModal">
+                <div class="card modern-stat-card stat-card-warning">
+                    <div class="stat-card-body">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="stat-content">
+                                <h6>{{ __('Quality Issues') }}</h6>
+                                <h3>{{ $incidentsStats['quality_issues'] }}</h3>
+                                <small class="text-white-50">{{ __('last 24 hours') }}</small>
+                            </div>
+                            <div class="stat-icon-wrapper bg-white bg-opacity-25">
+                                <i class="ti ti-flask"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        @endif
+        @endcan
+
         <!-- Widgets de turnos si tiene permiso -->
         @can('shift-show')
         <!-- Resumen de líneas de producción -->
@@ -213,39 +226,79 @@
 
         <!-- Estado de líneas activas -->
         <div class="kpi-card-col mb-4 animate-card">
-            <div class="card modern-stat-card stat-card-success">
-                <div class="stat-card-body">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <div class="stat-content">
-                            <h6>{{ __('Active Lines') }}</h6>
-                            <h3>{{ $productionLineStats['active'] }}</h3>
-                        </div>
-                        <div class="stat-icon-wrapper bg-white bg-opacity-25">
-                            <i class="ti ti-player-play"></i>
+            <a href="{{ route('shift.index') }}" class="text-decoration-none">
+                <div class="card modern-stat-card stat-card-success">
+                    <div class="stat-card-body">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="stat-content">
+                                <h6>{{ __('Active Lines') }}</h6>
+                                <h3>{{ $productionLineStats['active'] }}</h3>
+                            </div>
+                            <div class="stat-icon-wrapper bg-white bg-opacity-25">
+                                <i class="ti ti-player-play"></i>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            </a>
         </div>
 
         <!-- Estado de líneas en pausa o paradas -->
         <div class="kpi-card-col mb-4 animate-card">
-            <div class="card modern-stat-card stat-card-warning">
-                <div class="stat-card-body">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <div class="stat-content">
-                            <h6>{{ __('Paused/Stopped Lines') }}</h6>
-                            <h3>{{ $productionLineStats['paused'] + $productionLineStats['stopped'] }}</h3>
+            <a href="{{ route('shift.index') }}" class="text-decoration-none">
+                <div class="card modern-stat-card stat-card-warning">
+                    <div class="stat-card-body">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="stat-content">
+                                <h6>{{ __('Paused/Stopped Lines') }}</h6>
+                                <h3>{{ $productionLineStats['paused'] + $productionLineStats['stopped'] }}</h3>
+                            </div>
+                            <div class="stat-icon-wrapper bg-white bg-opacity-25">
+                                <i class="ti ti-player-pause"></i>
+                            </div>
                         </div>
-                        <div class="stat-icon-wrapper bg-white bg-opacity-25">
-                            <i class="ti ti-player-pause"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
+        @endcan
+
+        <!-- Gráfica de Pedidos Finalizados - después de todos los KPIs -->
+        @can('productionline-orders')
+        <div class="col-12 mb-4 animate-card">
+            <div class="card chart-card">
+                <div class="card-body">
+                    <div class="row align-items-center mb-4">
+                        <div class="col-sm-5">
+                            <h4 class="card-title mb-0">
+                                <i class="ti ti-chart-bar me-2"></i>
+                                {{ __('Completed Orders') }}
+                            </h4>
                         </div>
+
+                        <div class="col-sm-7 d-none d-md-block">
+                            <div class="btn-group float-end" role="group">
+                                <button type="button" class="btn btn-chart-toggle active" id="option1">
+                                    <i class="ti ti-calendar-week me-1"></i>
+                                    {{ __('Last 7 days') }}
+                                </button>
+                                <button type="button" class="btn btn-chart-toggle" id="option2">
+                                    <i class="ti ti-calendar-month me-1"></i>
+                                    {{ __('Last 30 days') }}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="c-chart-wrapper chartbtn">
+                        <canvas class="chart" id="main-chart" height="300"></canvas>
                     </div>
                 </div>
             </div>
         </div>
+        @endcan
 
         <!-- Tabla resumen de líneas de producción -->
+        @can('shift-show')
         <div class="col-xl-12 col-md-12 mb-4 animate-card">
             <div class="card modern-table-card">
                 <div class="card-header">
@@ -343,42 +396,6 @@
         </div>
         @endcan
 
-        <!-- project-ticket end -->
-
-        {{-- <div class="row"> --}}
-        <div class="col-lg-12 mb-4 animate-card">
-            @role('admin')
-            <div class="card chart-card">
-                <div class="card-body">
-                    <div class="row align-items-center mb-4">
-                        <div class="col-sm-5">
-                            <h4 class="card-title mb-0">
-                                <i class="ti ti-chart-line me-2"></i>
-                                {{ __('Users Growth') }}
-                            </h4>
-                        </div>
-
-                        <div class="col-sm-7 d-none d-md-block">
-                            <div class="btn-group float-end" role="group">
-                                <button type="button" class="btn btn-chart-toggle active" id="option1">
-                                    <i class="ti ti-calendar-month me-1"></i>
-                                    {{ __('Month') }}
-                                </button>
-                                <button type="button" class="btn btn-chart-toggle" id="option2">
-                                    <i class="ti ti-calendar-stats me-1"></i>
-                                    {{ __('Year') }}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="c-chart-wrapper chartbtn">
-                        <canvas class="chart" id="main-chart" height="300"></canvas>
-                    </div>
-                </div>
-            </div>
-            @endrole
-        </div>
-
     </div>
     <!-- [ Main Content ] end -->
         </div> <!-- Cierre del row de widgets -->
@@ -456,6 +473,134 @@
     </div>
     @endif
     @endcan
+
+    <!-- Modal para seleccionar Centro de Producción (QC Confirmations) -->
+    @can('productionline-incidents')
+    @if(isset($customersForIncidents) && $customersForIncidents && $customersForIncidents->count() > 0)
+    <div class="modal fade" id="selectCustomerQcModal" tabindex="-1" aria-labelledby="selectCustomerQcModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title" id="selectCustomerQcModalLabel">
+                        <i class="ti ti-clipboard-check me-2"></i>{{ __('Select Production Center') }}
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div class="list-group list-group-flush">
+                        @foreach($customersForIncidents as $customer)
+                        <a href="{{ route('customers.qc-confirmations.index', $customer->id) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3">
+                            <div>
+                                <i class="ti ti-building-factory me-2 text-info"></i>
+                                <strong>{{ $customer->name }}</strong>
+                            </div>
+                            <span class="badge bg-info rounded-pill">{{ __('QC') }}</span>
+                        </a>
+                        @endforeach
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para seleccionar Centro de Producción (Production Incidents) -->
+    <div class="modal fade" id="selectCustomerProductionIncidentsModal" tabindex="-1" aria-labelledby="selectCustomerProductionIncidentsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="selectCustomerProductionIncidentsModalLabel">
+                        <i class="ti ti-alert-triangle me-2"></i>{{ __('Select Production Center') }}
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div class="list-group list-group-flush">
+                        @foreach($customersForIncidents as $customer)
+                        <a href="{{ route('customers.production-order-incidents.index', $customer->id) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3">
+                            <div>
+                                <i class="ti ti-building-factory me-2 text-danger"></i>
+                                <strong>{{ $customer->name }}</strong>
+                            </div>
+                            <span class="badge bg-danger rounded-pill">{{ __('Incidents') }}</span>
+                        </a>
+                        @endforeach
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para seleccionar Centro de Producción (Quality Issues) -->
+    <div class="modal fade" id="selectCustomerQualityIssuesModal" tabindex="-1" aria-labelledby="selectCustomerQualityIssuesModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title" id="selectCustomerQualityIssuesModalLabel">
+                        <i class="ti ti-flask me-2"></i>{{ __('Select Production Center') }}
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div class="list-group list-group-flush">
+                        @foreach($customersForIncidents as $customer)
+                        <a href="{{ route('customers.quality-incidents.index', $customer->id) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3">
+                            <div>
+                                <i class="ti ti-building-factory me-2 text-warning"></i>
+                                <strong>{{ $customer->name }}</strong>
+                            </div>
+                            <span class="badge bg-warning text-dark rounded-pill">{{ __('Quality') }}</span>
+                        </a>
+                        @endforeach
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+    @endcan
+
+    <!-- Modal para seleccionar Centro de Producción (Maintenance) -->
+    @can('maintenance-show')
+    @if(isset($customersForMaintenance) && $customersForMaintenance && $customersForMaintenance->count() > 0)
+    <div class="modal fade" id="selectCustomerMaintenanceModal" tabindex="-1" aria-labelledby="selectCustomerMaintenanceModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="selectCustomerMaintenanceModalLabel">
+                        <i class="ti ti-tool me-2"></i>{{ __('Select Production Center') }}
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div class="list-group list-group-flush">
+                        @foreach($customersForMaintenance as $customer)
+                        <a href="{{ route('customers.maintenances.index', $customer->id) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3">
+                            <div>
+                                <i class="ti ti-building-factory me-2 text-primary"></i>
+                                <strong>{{ $customer->name }}</strong>
+                            </div>
+                            <span class="badge bg-primary rounded-pill">{{ __('Maintenance') }}</span>
+                        </a>
+                        @endforeach
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+    @endcan
 @endsection
 @push('style')
     {{--  @include('layouts.includes.datatable_css')  --}}
@@ -497,26 +642,29 @@
 
 
 @section('javascript')
-@role('admin')
+@can('productionline-orders')
     <script src="{{ asset('js/Chart.min.js') }}"></script>
     <script src="{{ asset('js/coreui-chartjs.bundle.js') }}"></script>
-    <script src="{{ asset('js/main.js') }}" defer></script>
+    <script src="{{ asset('js/main.js') }}?v={{ time() }}" defer></script>
     <script>
         $(document).on("click", "#option2", function() {
-            getChartData('year');
+            $('#option1').removeClass('active');
+            $(this).addClass('active');
+            getChartData('month');
         });
 
         $(document).on("click", "#option1", function() {
-            getChartData('month');
+            $('#option2').removeClass('active');
+            $(this).addClass('active');
+            getChartData('week');
         });
         $(document).ready(function() {
-            getChartData('month');
+            getChartData('week');
         })
 
         function getChartData(type) {
-
             $.ajax({
-                url: "{{ route('get.chart.data') }}",
+                url: "{{ route('get.production.chart.data') }}",
                 type: 'POST',
                 data: {
                     type: type,
@@ -534,5 +682,5 @@
             });
         }
     </script>
-@endrole
+@endcan
 @endsection

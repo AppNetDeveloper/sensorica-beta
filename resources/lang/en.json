@@ -1487,5 +1487,22 @@
   "Active Lines": "Active Lines",
   "Paused/Stopped Lines": "Paused/Stopped Lines",
   "Production Lines": "Production Lines",
-  "Production Lines Status": "Production Lines Status"
+  "Production Lines Status": "Production Lines Status",
+  "QC Confirmations": "QC Confirmations",
+  "last 24 hours": "last 24 hours",
+  "Production Incidents": "Production Incidents",
+  "active": "active",
+  "Quality Issues": "Quality Issues",
+  "total": "total",
+  "QC": "QC",
+  "Incidents": "Incidents",
+  "Quality": "Quality",
+  "Total Users": "Total Users",
+  "Total Workers": "Total Workers",
+  "Maintenance": "Maintenance",
+  "last 7 days": "last 7 days",
+  "Completed Orders": "Completed Orders",
+  "Last 7 days": "Last 7 days",
+  "Last 30 days": "Last 30 days",
+  "Total Orders": "Total Orders"
 }

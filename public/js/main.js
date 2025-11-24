@@ -33,7 +33,7 @@ const mainChart = new Chart(document.getElementById('main-chart'), {
     labels: [],
     datasets: [
       {
-        label: 'Total Users ',
+        label: 'Total Orders ',
         backgroundColor: coreui.Utils.hexToRgba(coreui.Utils.getStyle('--primary'), 10),
         borderColor: coreui.Utils.getStyle('--primary'),
         pointHoverBackgroundColor: '#fff',

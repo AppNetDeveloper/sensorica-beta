@@ -40,7 +40,21 @@ class HomeController extends Controller
                 $operators = \App\Models\Operator::orderBy('name', 'asc')->get();
                 $operatorsCount = $operators->count();
             }
-            
+
+            // Datos de Mantenimiento - solo si tiene permiso maintenance-show
+            $maintenanceStats = null;
+            $customersForMaintenance = null;
+            if (auth()->user()->can('maintenance-show')) {
+                $customersForMaintenance = \App\Models\Customer::all();
+
+                // Mantenimientos de los últimos 7 días
+                $maintenanceLast7Days = \App\Models\Maintenance::where('created_at', '>=', now()->subDays(7))->count();
+
+                $maintenanceStats = [
+                    'pending' => $maintenanceLast7Days
+                ];
+            }
+
             // Datos de Original Orders (Pedidos) - solo si tiene permiso productionline-orders
             $originalOrdersStats = null;
             $customersForOrders = null;
@@ -64,6 +78,30 @@ class HomeController extends Controller
                     'total' => $totalNotFinished,
                     'in_progress' => $inProgress,
                     'not_started' => $notStarted
+                ];
+            }
+
+            // Datos de Incidencias y Control de Calidad - solo si tiene permiso productionline-incidents
+            $incidentsStats = null;
+            $customersForIncidents = null;
+            if (auth()->user()->can('productionline-incidents')) {
+                $customersForIncidents = \App\Models\Customer::all();
+
+                // QC Confirmations - últimas 24 horas
+                $qcConfirmations24h = \App\Models\QcConfirmation::where('created_at', '>=', now()->subHours(24))->count();
+
+                // Production Order Incidents - en curso (productionOrder.status == 3)
+                $productionIncidentsActive = \App\Models\ProductionOrderIncident::whereHas('productionOrder', function($q) {
+                    $q->where('status', 3);
+                })->count();
+
+                // Quality Issues - últimas 24 horas
+                $qualityIssuesTotal = \App\Models\QualityIssue::where('created_at', '>=', now()->subHours(24))->count();
+
+                $incidentsStats = [
+                    'qc_confirmations' => $qcConfirmations24h,
+                    'production_incidents' => $productionIncidentsActive,
+                    'quality_issues' => $qualityIssuesTotal
                 ];
             }
 
@@ -212,10 +250,11 @@ class HomeController extends Controller
             }
 
             return view('dashboard.homepage', compact(
-                'user', 'modual', 'role', 'languages',
                 'operators', 'operatorsCount', 'productionLines', 'productionLineStats',
                 'orderOrganizerStats', 'customersForKanban',
-                'originalOrdersStats', 'customersForOrders'
+                'originalOrdersStats', 'customersForOrders',
+                'incidentsStats', 'customersForIncidents',
+                'maintenanceStats', 'customersForMaintenance'
             ));
         }
     }
@@ -278,5 +317,75 @@ class HomeController extends Controller
 
             return response()->json(['lable' => $arrLable, 'value' => $arrValue], 200);
         }
+    }
+
+    /**
+     * Obtener datos de producción para la gráfica del dashboard
+     */
+    public function productionChart(Request $request)
+    {
+        if ($request->type == 'week') {
+            // Últimos 7 días
+            $arrLable = [];
+            $arrValue = [];
+
+            for ($i = 6; $i >= 0; $i--) {
+                $date = Carbon::now()->subDays($i);
+                $arrLable[] = $date->format('d M');
+                $arrValue[$date->format('Y-m-d')] = 0;
+            }
+
+            // Pedidos finalizados por día (usando finished_at de original_orders)
+            $orders = \App\Models\OriginalOrder::select(DB::raw('DATE(finished_at) AS finish_date, COUNT(id) AS order_count'))
+                ->whereNotNull('finished_at')
+                ->where('finished_at', '>=', Carbon::now()->subDays(7)->startOfDay())
+                ->where('finished_at', '<=', Carbon::now()->endOfDay())
+                ->groupBy(DB::raw('DATE(finished_at)'))
+                ->get()
+                ->pluck('order_count', 'finish_date')
+                ->toArray();
+
+            foreach ($orders as $key => $val) {
+                if (isset($arrValue[$key])) {
+                    $arrValue[$key] = $val;
+                }
+            }
+            $arrValue = array_values($arrValue);
+
+            return response()->json(['lable' => $arrLable, 'value' => $arrValue], 200);
+        }
+
+        if ($request->type == 'month') {
+            // Últimos 30 días
+            $arrLable = [];
+            $arrValue = [];
+
+            for ($i = 29; $i >= 0; $i--) {
+                $date = Carbon::now()->subDays($i);
+                $arrLable[] = $date->format('d M');
+                $arrValue[$date->format('Y-m-d')] = 0;
+            }
+
+            // Pedidos finalizados por día
+            $orders = \App\Models\OriginalOrder::select(DB::raw('DATE(finished_at) AS finish_date, COUNT(id) AS order_count'))
+                ->whereNotNull('finished_at')
+                ->where('finished_at', '>=', Carbon::now()->subDays(30)->startOfDay())
+                ->where('finished_at', '<=', Carbon::now()->endOfDay())
+                ->groupBy(DB::raw('DATE(finished_at)'))
+                ->get()
+                ->pluck('order_count', 'finish_date')
+                ->toArray();
+
+            foreach ($orders as $key => $val) {
+                if (isset($arrValue[$key])) {
+                    $arrValue[$key] = $val;
+                }
+            }
+            $arrValue = array_values($arrValue);
+
+            return response()->json(['lable' => $arrLable, 'value' => $arrValue], 200);
+        }
+
+        return response()->json(['lable' => [], 'value' => []], 200);
     }
 }
