@@ -670,7 +670,7 @@
         }
 
         /* Efecto de alerta pulsante para incidencias activas */
-        @keyframes alertPulse {
+        @keyframes alertPulseRed {
             0%, 100% {
                 box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
             }
@@ -678,8 +678,44 @@
                 box-shadow: 0 0 0 15px rgba(220, 53, 69, 0);
             }
         }
+        @keyframes alertPulseOrange {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(255, 165, 0, 0.7);
+            }
+            50% {
+                box-shadow: 0 0 0 15px rgba(255, 165, 0, 0);
+            }
+        }
+        @keyframes alertPulseYellow {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7);
+            }
+            50% {
+                box-shadow: 0 0 0 15px rgba(255, 193, 7, 0);
+            }
+        }
+        @keyframes alertPulseCyan {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(23, 162, 184, 0.7);
+            }
+            50% {
+                box-shadow: 0 0 0 15px rgba(23, 162, 184, 0);
+            }
+        }
         .kpi-alert-active {
-            animation: alertPulse 2s infinite;
+            animation: alertPulseRed 2s infinite;
+        }
+        /* Alerta naranja para mantenimiento */
+        [data-kpi="maintenance"].kpi-alert-active {
+            animation: alertPulseOrange 2s infinite;
+        }
+        /* Alerta cyan para QC confirmaciones (0 es malo) */
+        [data-kpi="qcConfirmations"].kpi-alert-active {
+            animation: alertPulseCyan 2s infinite;
+        }
+        /* Alerta amarilla para incidencias de calidad */
+        [data-kpi="qualityIssues"].kpi-alert-active {
+            animation: alertPulseYellow 2s infinite;
         }
 
         /* Mini sparklines */
@@ -781,9 +817,9 @@
     }
 
     function updateKpis(data) {
-        // Maintenance
+        // Maintenance (con alerta si hay mantenimientos sin cerrar)
         if (data.maintenance) {
-            updateKpiCard('maintenance', data.maintenance.value, data.maintenance);
+            updateKpiCardWithAlert('maintenance', data.maintenance.value, data.maintenance);
         }
 
         // Workers
@@ -828,37 +864,19 @@
             previousKpiValues['pendingOrders_total'] = newTotal;
         }
 
-        // QC Confirmations
+        // QC Confirmations (con alerta si hay 0 confirmaciones hoy - mal)
         if (data.qcConfirmations) {
-            updateKpiCard('qcConfirmations', data.qcConfirmations.value, data.qcConfirmations);
+            updateKpiCardWithAlert('qcConfirmations', data.qcConfirmations.value, data.qcConfirmations);
         }
 
         // Production Incidents (con alerta visual)
         if (data.productionIncidents) {
-            var $card = $('[data-kpi="productionIncidents"]');
-            var oldValue = previousKpiValues['productionIncidents'];
-            var newValue = data.productionIncidents.value;
-
-            if (oldValue !== undefined && oldValue !== newValue) {
-                triggerBlink($card);
-            }
-
-            $card.find('.kpi-value').text(newValue);
-            updateSparkline($card, data.productionIncidents.sparkline);
-
-            // Efecto de alerta si hay incidencias activas
-            if (data.productionIncidents.isAlert) {
-                $card.addClass('kpi-alert-active');
-            } else {
-                $card.removeClass('kpi-alert-active');
-            }
-
-            previousKpiValues['productionIncidents'] = newValue;
+            updateKpiCardWithAlert('productionIncidents', data.productionIncidents.value, data.productionIncidents);
         }
 
-        // Quality Issues
+        // Quality Issues (con alerta si hay incidencias hoy)
         if (data.qualityIssues) {
-            updateKpiCard('qualityIssues', data.qualityIssues.value, data.qualityIssues);
+            updateKpiCardWithAlert('qualityIssues', data.qualityIssues.value, data.qualityIssues);
         }
 
         // Production Lines stats
@@ -889,6 +907,42 @@
         // Actualizar sparkline si existe
         if (kpiData && kpiData.sparkline) {
             updateSparkline($card, kpiData.sparkline);
+        }
+
+        // Guardar valor para próxima comparación
+        previousKpiValues[kpiName] = newValue;
+    }
+
+    // Versión con soporte de alerta pulsante
+    function updateKpiCardWithAlert(kpiName, newValue, kpiData) {
+        var $card = $('[data-kpi="' + kpiName + '"]');
+        if ($card.length === 0) return;
+
+        var oldValue = previousKpiValues[kpiName];
+
+        // Detectar cambio y aplicar efecto parpadeo
+        if (oldValue !== undefined && oldValue !== newValue) {
+            triggerBlink($card);
+        }
+
+        // Actualizar valor
+        $card.find('.kpi-value').text(newValue);
+
+        // Actualizar tendencia si existe
+        if (kpiData && kpiData.trend) {
+            updateTrend($card, kpiData.trend);
+        }
+
+        // Actualizar sparkline si existe
+        if (kpiData && kpiData.sparkline) {
+            updateSparkline($card, kpiData.sparkline);
+        }
+
+        // Aplicar o quitar efecto de alerta pulsante
+        if (kpiData && kpiData.isAlert) {
+            $card.addClass('kpi-alert-active');
+        } else {
+            $card.removeClass('kpi-alert-active');
         }
 
         // Guardar valor para próxima comparación

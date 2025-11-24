@@ -3085,6 +3085,16 @@ Claves de traducción específicas del módulo de rutas:
 - **Seguridad**: Validación de pertenencia de cliente a customer en todos los endpoints
 - **Ordenamiento**: Los pedidos se ordenan primero por finalizados, luego por fecha de finalización y fecha de entrega
 
+---
+
+## 📚 Documentación Adicional
+
+| Documento | Descripción |
+|-----------|-------------|
+| [Dashboard Homepage](README_DASHBOARD_CHANGES.md) | KPIs, auto-refresh, sparklines, alertas visuales, gráficas y más |
+
+---
+
 ## 📝 Licencia
 
  Xmart 2025

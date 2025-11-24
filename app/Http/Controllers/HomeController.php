@@ -410,11 +410,16 @@ class HomeController extends Controller
                 $maintenanceSparkline[] = $count;
             }
 
+            // Contar mantenimientos no finalizados (sin end_datetime)
+            $maintenanceNotClosed = \App\Models\Maintenance::whereNull('end_datetime')->count();
+
             $data['maintenance'] = [
                 'value' => $maintenanceLast7Days,
                 'previous' => $maintenancePrev7Days,
                 'trend' => $maintenanceLast7Days > $maintenancePrev7Days ? 'up' : ($maintenanceLast7Days < $maintenancePrev7Days ? 'down' : 'same'),
-                'sparkline' => $maintenanceSparkline
+                'sparkline' => $maintenanceSparkline,
+                'isAlert' => $maintenanceNotClosed > 0, // Alerta si hay mantenimientos sin cerrar
+                'notClosed' => $maintenanceNotClosed
             ];
         }
 
@@ -517,11 +522,16 @@ class HomeController extends Controller
                 $qualitySparkline[] = \App\Models\QualityIssue::whereDate('created_at', $date->toDateString())->count();
             }
 
+            // QC Confirmations del día actual
+            $qcConfirmationsToday = \App\Models\QcConfirmation::whereDate('created_at', now()->toDateString())->count();
+
             $data['qcConfirmations'] = [
                 'value' => $qcConfirmations24h,
                 'previous' => $qcConfirmationsPrev24h,
                 'trend' => $qcConfirmations24h > $qcConfirmationsPrev24h ? 'up' : ($qcConfirmations24h < $qcConfirmationsPrev24h ? 'down' : 'same'),
-                'sparkline' => $qcSparkline
+                'sparkline' => $qcSparkline,
+                'isAlert' => $qcConfirmationsToday == 0, // Alerta si hay 0 confirmaciones hoy (mal)
+                'todayCount' => $qcConfirmationsToday
             ];
 
             $data['productionIncidents'] = [
@@ -530,11 +540,16 @@ class HomeController extends Controller
                 'sparkline' => $incidentsSparkline
             ];
 
+            // Quality Issues del día actual
+            $qualityIssuesToday = \App\Models\QualityIssue::whereDate('created_at', now()->toDateString())->count();
+
             $data['qualityIssues'] = [
                 'value' => $qualityIssues24h,
                 'previous' => $qualityIssuesPrev24h,
                 'trend' => $qualityIssues24h > $qualityIssuesPrev24h ? 'up' : ($qualityIssues24h < $qualityIssuesPrev24h ? 'down' : 'same'),
-                'sparkline' => $qualitySparkline
+                'sparkline' => $qualitySparkline,
+                'isAlert' => $qualityIssuesToday > 0, // Alerta si hay incidencias de calidad hoy
+                'todayCount' => $qualityIssuesToday
             ];
         }
 
