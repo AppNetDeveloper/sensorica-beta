@@ -388,4 +388,185 @@ class HomeController extends Controller
 
         return response()->json(['lable' => [], 'value' => []], 200);
     }
+
+    /**
+     * API para obtener datos de KPIs en tiempo real (auto-refresh)
+     */
+    public function getKpiData()
+    {
+        $data = [];
+
+        // Mantenimiento - últimos 7 días
+        if (auth()->user()->can('maintenance-show')) {
+            $maintenanceLast7Days = \App\Models\Maintenance::where('created_at', '>=', now()->subDays(7))->count();
+            $maintenancePrev7Days = \App\Models\Maintenance::where('created_at', '>=', now()->subDays(14))
+                ->where('created_at', '<', now()->subDays(7))->count();
+
+            // Sparkline últimos 7 días
+            $maintenanceSparkline = [];
+            for ($i = 6; $i >= 0; $i--) {
+                $date = now()->subDays($i);
+                $count = \App\Models\Maintenance::whereDate('created_at', $date->toDateString())->count();
+                $maintenanceSparkline[] = $count;
+            }
+
+            $data['maintenance'] = [
+                'value' => $maintenanceLast7Days,
+                'previous' => $maintenancePrev7Days,
+                'trend' => $maintenanceLast7Days > $maintenancePrev7Days ? 'up' : ($maintenanceLast7Days < $maintenancePrev7Days ? 'down' : 'same'),
+                'sparkline' => $maintenanceSparkline
+            ];
+        }
+
+        // Trabajadores
+        if (auth()->user()->can('workers-show')) {
+            $operatorsCount = \App\Models\Operator::count();
+            $data['workers'] = [
+                'value' => $operatorsCount,
+                'previous' => $operatorsCount,
+                'trend' => 'same',
+                'sparkline' => array_fill(0, 7, $operatorsCount)
+            ];
+        }
+
+        // Order Organizer
+        if (auth()->user()->can('productionline-kanban')) {
+            $customers = \App\Models\Customer::with(['productionLines.processes'])->get();
+            $totalGroups = 0;
+            $totalMachines = 0;
+
+            foreach ($customers as $customer) {
+                $customerProductionLines = $customer->productionLines->filter(function ($line) {
+                    return $line->processes->isNotEmpty();
+                });
+                $uniqueProcesses = collect();
+                foreach ($customerProductionLines as $line) {
+                    $process = $line->processes->first();
+                    if ($process) {
+                        $description = $process->description ?: 'Sin descripción';
+                        if (!$uniqueProcesses->has($description)) {
+                            $uniqueProcesses->put($description, true);
+                        }
+                    }
+                }
+                $totalGroups += $uniqueProcesses->count();
+                $totalMachines += $customerProductionLines->count();
+            }
+
+            $data['orderOrganizer'] = [
+                'groups' => $totalGroups,
+                'machines' => $totalMachines,
+                'trend' => 'same',
+                'sparkline' => array_fill(0, 7, $totalMachines)
+            ];
+        }
+
+        // Pedidos pendientes
+        if (auth()->user()->can('productionline-orders')) {
+            $totalNotFinished = \App\Models\OriginalOrder::whereNull('finished_at')->count();
+            $inProgress = \App\Models\OriginalOrder::whereNull('finished_at')
+                ->whereHas('productionOrders', function($q) {
+                    $q->where('status', '>', 0);
+                })->count();
+            $notStarted = $totalNotFinished - $inProgress;
+
+            // Sparkline - pedidos finalizados por día
+            $ordersSparkline = [];
+            for ($i = 6; $i >= 0; $i--) {
+                $date = now()->subDays($i);
+                $count = \App\Models\OriginalOrder::whereDate('finished_at', $date->toDateString())->count();
+                $ordersSparkline[] = $count;
+            }
+
+            // Comparar con semana anterior
+            $prevWeekPending = \App\Models\OriginalOrder::whereNull('finished_at')
+                ->where('created_at', '<', now()->subDays(7))->count();
+
+            $data['pendingOrders'] = [
+                'total' => $totalNotFinished,
+                'inProgress' => $inProgress,
+                'notStarted' => $notStarted,
+                'previous' => $prevWeekPending,
+                'trend' => $totalNotFinished > $prevWeekPending ? 'up' : ($totalNotFinished < $prevWeekPending ? 'down' : 'same'),
+                'sparkline' => $ordersSparkline
+            ];
+        }
+
+        // Incidencias
+        if (auth()->user()->can('productionline-incidents')) {
+            $qcConfirmations24h = \App\Models\QcConfirmation::where('created_at', '>=', now()->subHours(24))->count();
+            $qcConfirmationsPrev24h = \App\Models\QcConfirmation::where('created_at', '>=', now()->subHours(48))
+                ->where('created_at', '<', now()->subHours(24))->count();
+
+            $productionIncidentsActive = \App\Models\ProductionOrderIncident::whereHas('productionOrder', function($q) {
+                $q->where('status', 3);
+            })->count();
+
+            $qualityIssues24h = \App\Models\QualityIssue::where('created_at', '>=', now()->subHours(24))->count();
+            $qualityIssuesPrev24h = \App\Models\QualityIssue::where('created_at', '>=', now()->subHours(48))
+                ->where('created_at', '<', now()->subHours(24))->count();
+
+            // Sparklines
+            $qcSparkline = [];
+            $incidentsSparkline = [];
+            $qualitySparkline = [];
+            for ($i = 6; $i >= 0; $i--) {
+                $date = now()->subDays($i);
+                $qcSparkline[] = \App\Models\QcConfirmation::whereDate('created_at', $date->toDateString())->count();
+                $incidentsSparkline[] = \App\Models\ProductionOrderIncident::whereDate('created_at', $date->toDateString())->count();
+                $qualitySparkline[] = \App\Models\QualityIssue::whereDate('created_at', $date->toDateString())->count();
+            }
+
+            $data['qcConfirmations'] = [
+                'value' => $qcConfirmations24h,
+                'previous' => $qcConfirmationsPrev24h,
+                'trend' => $qcConfirmations24h > $qcConfirmationsPrev24h ? 'up' : ($qcConfirmations24h < $qcConfirmationsPrev24h ? 'down' : 'same'),
+                'sparkline' => $qcSparkline
+            ];
+
+            $data['productionIncidents'] = [
+                'value' => $productionIncidentsActive,
+                'isAlert' => $productionIncidentsActive > 0,
+                'sparkline' => $incidentsSparkline
+            ];
+
+            $data['qualityIssues'] = [
+                'value' => $qualityIssues24h,
+                'previous' => $qualityIssuesPrev24h,
+                'trend' => $qualityIssues24h > $qualityIssuesPrev24h ? 'up' : ($qualityIssues24h < $qualityIssuesPrev24h ? 'down' : 'same'),
+                'sparkline' => $qualitySparkline
+            ];
+        }
+
+        // Líneas de producción
+        if (auth()->user()->can('shift-show')) {
+            $productionLines = \App\Models\ProductionLine::with('lastShiftHistory')->get();
+            $stats = ['total' => $productionLines->count(), 'active' => 0, 'paused' => 0, 'stopped' => 0];
+
+            foreach ($productionLines as $line) {
+                if ($line->lastShiftHistory) {
+                    if ($line->lastShiftHistory->action == 'start') {
+                        $stats['active']++;
+                    } elseif ($line->lastShiftHistory->type === 'stop' && $line->lastShiftHistory->action === 'end') {
+                        $stats['active']++;
+                    } elseif ($line->lastShiftHistory->type === 'shift' && $line->lastShiftHistory->action === 'end') {
+                        $stats['stopped']++;
+                    } elseif ($line->lastShiftHistory->action == 'pause') {
+                        $stats['paused']++;
+                    } elseif (in_array($line->lastShiftHistory->action, ['stop', 'end'])) {
+                        $stats['stopped']++;
+                    }
+                }
+            }
+
+            $data['productionLines'] = [
+                'total' => $stats['total'],
+                'active' => $stats['active'],
+                'pausedStopped' => $stats['paused'] + $stats['stopped'],
+                'sparkline' => array_fill(0, 7, $stats['active'])
+            ];
+        }
+
+        return response()->json($data);
+    }
 }

@@ -47,13 +47,14 @@
         @if(isset($maintenanceStats) && $maintenanceStats)
         <div class="kpi-card-col mb-4 animate-card">
             <a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#selectCustomerMaintenanceModal">
-                <div class="card modern-stat-card stat-card-primary">
+                <div class="card modern-stat-card stat-card-primary" data-kpi="maintenance">
                     <div class="stat-card-body">
                         <div class="d-flex align-items-center justify-content-between">
                             <div class="stat-content">
-                                <h6>{{ __('Maintenance') }}</h6>
-                                <h3>{{ $maintenanceStats['pending'] }}</h3>
+                                <h6>{{ __('Maintenance') }} <span class="kpi-trend"></span></h6>
+                                <h3 class="kpi-value">{{ $maintenanceStats['pending'] }}</h3>
                                 <small class="text-white-50">{{ __('last 7 days') }}</small>
+                                <div class="kpi-sparkline mt-2"></div>
                             </div>
                             <div class="stat-icon-wrapper bg-white bg-opacity-25">
                                 <i class="ti ti-tool"></i>
@@ -70,12 +71,13 @@
         @can('workers-show')
         <div class="kpi-card-col mb-4 animate-card">
             <a href="{{ route('workers-admin.index') }}" class="text-decoration-none">
-                <div class="card modern-stat-card stat-card-warning">
+                <div class="card modern-stat-card stat-card-warning" data-kpi="workers">
                     <div class="stat-card-body">
                         <div class="d-flex align-items-center justify-content-between">
                             <div class="stat-content">
-                                <h6>{{ __('Total Workers') }}</h6>
-                                <h3>{{ $operatorsCount }}</h3>
+                                <h6>{{ __('Total Workers') }} <span class="kpi-trend"></span></h6>
+                                <h3 class="kpi-value">{{ $operatorsCount }}</h3>
+                                <div class="kpi-sparkline mt-2"></div>
                             </div>
                             <div class="stat-icon-wrapper bg-white bg-opacity-25">
                                 <i class="ti ti-user-check"></i>
@@ -92,13 +94,14 @@
         @if(isset($orderOrganizerStats) && $orderOrganizerStats)
         <div class="kpi-card-col mb-4 animate-card">
             <a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#selectCustomerModal">
-                <div class="card modern-stat-card stat-card-indigo">
+                <div class="card modern-stat-card stat-card-indigo" data-kpi="orderOrganizer">
                     <div class="stat-card-body">
                         <div class="d-flex align-items-center justify-content-between">
                             <div class="stat-content">
-                                <h6>{{ __('Order Organizer') }}</h6>
-                                <h3>{{ $orderOrganizerStats['groups'] }} <small style="font-size: 0.5em;">{{ __('groups') }}</small></h3>
-                                <small class="text-white-50">{{ $orderOrganizerStats['machines'] }} {{ __('machines') }}</small>
+                                <h6>{{ __('Order Organizer') }} <span class="kpi-trend"></span></h6>
+                                <h3><span class="kpi-value" data-field="groups">{{ $orderOrganizerStats['groups'] }}</span> <small style="font-size: 0.5em;">{{ __('groups') }}</small></h3>
+                                <small class="text-white-50"><span class="kpi-machines">{{ $orderOrganizerStats['machines'] }}</span> {{ __('machines') }}</small>
+                                <div class="kpi-sparkline mt-2"></div>
                             </div>
                             <div class="stat-icon-wrapper bg-white bg-opacity-25">
                                 <i class="ti ti-layout-kanban"></i>
@@ -116,16 +119,17 @@
         @if(isset($originalOrdersStats) && $originalOrdersStats)
         <div class="kpi-card-col mb-4 animate-card">
             <a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#selectCustomerOrdersModal">
-                <div class="card modern-stat-card stat-card-teal">
+                <div class="card modern-stat-card stat-card-teal" data-kpi="pendingOrders">
                     <div class="stat-card-body">
                         <div class="d-flex align-items-center justify-content-between">
                             <div class="stat-content">
-                                <h6>{{ __('Pending Orders') }}</h6>
-                                <h3>{{ $originalOrdersStats['total'] }} <small style="font-size: 0.5em;">{{ __('pending') }}</small></h3>
+                                <h6>{{ __('Pending Orders') }} <span class="kpi-trend"></span></h6>
+                                <h3><span class="kpi-value" data-field="total">{{ $originalOrdersStats['total'] }}</span> <small style="font-size: 0.5em;">{{ __('pending') }}</small></h3>
                                 <small class="text-white-50">
-                                    {{ $originalOrdersStats['in_progress'] }} {{ __('in progress') }} |
-                                    {{ $originalOrdersStats['not_started'] }} {{ __('not started') }}
+                                    <span class="kpi-in-progress">{{ $originalOrdersStats['in_progress'] }}</span> {{ __('in progress') }} |
+                                    <span class="kpi-not-started">{{ $originalOrdersStats['not_started'] }}</span> {{ __('not started') }}
                                 </small>
+                                <div class="kpi-sparkline mt-2"></div>
                             </div>
                             <div class="stat-icon-wrapper bg-white bg-opacity-25">
                                 <i class="ti ti-clipboard-list"></i>
@@ -144,13 +148,14 @@
         <!-- QC Confirmations (últimas 24h) -->
         <div class="kpi-card-col mb-4 animate-card">
             <a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#selectCustomerQcModal">
-                <div class="card modern-stat-card stat-card-info">
+                <div class="card modern-stat-card stat-card-info" data-kpi="qcConfirmations">
                     <div class="stat-card-body">
                         <div class="d-flex align-items-center justify-content-between">
                             <div class="stat-content">
-                                <h6>{{ __('QC Confirmations') }}</h6>
-                                <h3>{{ $incidentsStats['qc_confirmations'] }}</h3>
+                                <h6>{{ __('QC Confirmations') }} <span class="kpi-trend"></span></h6>
+                                <h3 class="kpi-value">{{ $incidentsStats['qc_confirmations'] }}</h3>
                                 <small class="text-white-50">{{ __('last 24 hours') }}</small>
+                                <div class="kpi-sparkline mt-2"></div>
                             </div>
                             <div class="stat-icon-wrapper bg-white bg-opacity-25">
                                 <i class="ti ti-clipboard-check"></i>
@@ -164,13 +169,14 @@
         <!-- Production Order Incidents (en curso) -->
         <div class="kpi-card-col mb-4 animate-card">
             <a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#selectCustomerProductionIncidentsModal">
-                <div class="card modern-stat-card stat-card-danger">
+                <div class="card modern-stat-card stat-card-danger" data-kpi="productionIncidents">
                     <div class="stat-card-body">
                         <div class="d-flex align-items-center justify-content-between">
                             <div class="stat-content">
-                                <h6>{{ __('Production Incidents') }}</h6>
-                                <h3>{{ $incidentsStats['production_incidents'] }}</h3>
+                                <h6>{{ __('Production Incidents') }} <span class="kpi-trend"></span></h6>
+                                <h3 class="kpi-value">{{ $incidentsStats['production_incidents'] }}</h3>
                                 <small class="text-white-50">{{ __('active') }}</small>
+                                <div class="kpi-sparkline mt-2"></div>
                             </div>
                             <div class="stat-icon-wrapper bg-white bg-opacity-25">
                                 <i class="ti ti-alert-triangle"></i>
@@ -184,13 +190,14 @@
         <!-- Quality Issues -->
         <div class="kpi-card-col mb-4 animate-card">
             <a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#selectCustomerQualityIssuesModal">
-                <div class="card modern-stat-card stat-card-warning">
+                <div class="card modern-stat-card stat-card-warning" data-kpi="qualityIssues">
                     <div class="stat-card-body">
                         <div class="d-flex align-items-center justify-content-between">
                             <div class="stat-content">
-                                <h6>{{ __('Quality Issues') }}</h6>
-                                <h3>{{ $incidentsStats['quality_issues'] }}</h3>
+                                <h6>{{ __('Quality Issues') }} <span class="kpi-trend"></span></h6>
+                                <h3 class="kpi-value">{{ $incidentsStats['quality_issues'] }}</h3>
                                 <small class="text-white-50">{{ __('last 24 hours') }}</small>
+                                <div class="kpi-sparkline mt-2"></div>
                             </div>
                             <div class="stat-icon-wrapper bg-white bg-opacity-25">
                                 <i class="ti ti-flask"></i>
@@ -637,6 +644,63 @@
                 max-width: 100%;
             }
         }
+
+        /* Efecto de parpadeo cuando el KPI cambia */
+        @keyframes kpiBlink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        .kpi-blink {
+            animation: kpiBlink 0.3s ease-in-out 3;
+        }
+
+        /* Indicadores de tendencia */
+        .kpi-trend {
+            font-size: 0.75rem;
+            margin-left: 5px;
+        }
+        .kpi-trend.trend-up {
+            color: #28a745;
+        }
+        .kpi-trend.trend-down {
+            color: #dc3545;
+        }
+        .kpi-trend.trend-same {
+            color: rgba(255,255,255,0.6);
+        }
+
+        /* Efecto de alerta pulsante para incidencias activas */
+        @keyframes alertPulse {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+            }
+            50% {
+                box-shadow: 0 0 0 15px rgba(220, 53, 69, 0);
+            }
+        }
+        .kpi-alert-active {
+            animation: alertPulse 2s infinite;
+        }
+
+        /* Mini sparklines */
+        .kpi-sparkline {
+            display: flex;
+            align-items: flex-end;
+            gap: 2px;
+            height: 25px;
+            min-width: 60px;
+        }
+        .kpi-sparkline .spark-bar {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.4);
+            border-radius: 2px;
+            min-width: 5px;
+            max-width: 10px;
+            transition: height 0.3s ease;
+        }
+        .kpi-sparkline .spark-bar:last-child {
+            background: rgba(255, 255, 255, 0.9);
+        }
     </style>
 @endpush
 
@@ -683,4 +747,206 @@
         }
     </script>
 @endcan
+
+{{-- Auto-refresh de KPIs --}}
+<script>
+    // Almacenar valores anteriores para detectar cambios
+    var previousKpiValues = {};
+
+    // Intervalo de refresco en milisegundos (2 minutos = 120000)
+    var KPI_REFRESH_INTERVAL = 120000;
+
+    $(document).ready(function() {
+        // Inicializar sparklines con datos actuales
+        initializeSparklines();
+
+        // Cargar datos iniciales de KPIs
+        loadKpiData();
+
+        // Configurar auto-refresh
+        setInterval(loadKpiData, KPI_REFRESH_INTERVAL);
+    });
+
+    function loadKpiData() {
+        $.ajax({
+            url: "{{ route('get.kpi.data') }}",
+            type: 'GET',
+            success: function(data) {
+                updateKpis(data);
+            },
+            error: function(err) {
+                console.log('Error loading KPI data:', err);
+            }
+        });
+    }
+
+    function updateKpis(data) {
+        // Maintenance
+        if (data.maintenance) {
+            updateKpiCard('maintenance', data.maintenance.value, data.maintenance);
+        }
+
+        // Workers
+        if (data.workers) {
+            updateKpiCard('workers', data.workers.value, data.workers);
+        }
+
+        // Order Organizer (tiene grupos y máquinas)
+        if (data.orderOrganizer) {
+            var $card = $('[data-kpi="orderOrganizer"]');
+            var oldGroups = previousKpiValues['orderOrganizer_groups'];
+            var newGroups = data.orderOrganizer.groups;
+
+            if (oldGroups !== undefined && oldGroups !== newGroups) {
+                triggerBlink($card);
+            }
+
+            $card.find('.kpi-value[data-field="groups"]').text(newGroups);
+            $card.find('.kpi-machines').text(data.orderOrganizer.machines);
+            updateTrend($card, data.orderOrganizer.trend);
+            updateSparkline($card, data.orderOrganizer.sparkline);
+
+            previousKpiValues['orderOrganizer_groups'] = newGroups;
+        }
+
+        // Pending Orders (tiene total, inProgress, notStarted)
+        if (data.pendingOrders) {
+            var $card = $('[data-kpi="pendingOrders"]');
+            var oldTotal = previousKpiValues['pendingOrders_total'];
+            var newTotal = data.pendingOrders.total;
+
+            if (oldTotal !== undefined && oldTotal !== newTotal) {
+                triggerBlink($card);
+            }
+
+            $card.find('.kpi-value[data-field="total"]').text(newTotal);
+            $card.find('.kpi-in-progress').text(data.pendingOrders.inProgress);
+            $card.find('.kpi-not-started').text(data.pendingOrders.notStarted);
+            updateTrend($card, data.pendingOrders.trend);
+            updateSparkline($card, data.pendingOrders.sparkline);
+
+            previousKpiValues['pendingOrders_total'] = newTotal;
+        }
+
+        // QC Confirmations
+        if (data.qcConfirmations) {
+            updateKpiCard('qcConfirmations', data.qcConfirmations.value, data.qcConfirmations);
+        }
+
+        // Production Incidents (con alerta visual)
+        if (data.productionIncidents) {
+            var $card = $('[data-kpi="productionIncidents"]');
+            var oldValue = previousKpiValues['productionIncidents'];
+            var newValue = data.productionIncidents.value;
+
+            if (oldValue !== undefined && oldValue !== newValue) {
+                triggerBlink($card);
+            }
+
+            $card.find('.kpi-value').text(newValue);
+            updateSparkline($card, data.productionIncidents.sparkline);
+
+            // Efecto de alerta si hay incidencias activas
+            if (data.productionIncidents.isAlert) {
+                $card.addClass('kpi-alert-active');
+            } else {
+                $card.removeClass('kpi-alert-active');
+            }
+
+            previousKpiValues['productionIncidents'] = newValue;
+        }
+
+        // Quality Issues
+        if (data.qualityIssues) {
+            updateKpiCard('qualityIssues', data.qualityIssues.value, data.qualityIssues);
+        }
+
+        // Production Lines stats
+        if (data.productionLines) {
+            // Este KPI no tiene data-kpi, pero podríamos añadirlo después si se requiere
+        }
+    }
+
+    function updateKpiCard(kpiName, newValue, kpiData) {
+        var $card = $('[data-kpi="' + kpiName + '"]');
+        if ($card.length === 0) return;
+
+        var oldValue = previousKpiValues[kpiName];
+
+        // Detectar cambio y aplicar efecto parpadeo
+        if (oldValue !== undefined && oldValue !== newValue) {
+            triggerBlink($card);
+        }
+
+        // Actualizar valor
+        $card.find('.kpi-value').text(newValue);
+
+        // Actualizar tendencia si existe
+        if (kpiData && kpiData.trend) {
+            updateTrend($card, kpiData.trend);
+        }
+
+        // Actualizar sparkline si existe
+        if (kpiData && kpiData.sparkline) {
+            updateSparkline($card, kpiData.sparkline);
+        }
+
+        // Guardar valor para próxima comparación
+        previousKpiValues[kpiName] = newValue;
+    }
+
+    function triggerBlink($card) {
+        $card.removeClass('kpi-blink');
+        // Forzar reflow para reiniciar animación
+        void $card[0].offsetWidth;
+        $card.addClass('kpi-blink');
+
+        // Remover clase después de la animación (0.3s * 3 = 0.9s)
+        setTimeout(function() {
+            $card.removeClass('kpi-blink');
+        }, 1000);
+    }
+
+    function updateTrend($card, trend) {
+        var $trend = $card.find('.kpi-trend');
+        $trend.removeClass('trend-up trend-down trend-same');
+
+        if (trend === 'up') {
+            $trend.addClass('trend-up').html('<i class="ti ti-arrow-up"></i>');
+        } else if (trend === 'down') {
+            $trend.addClass('trend-down').html('<i class="ti ti-arrow-down"></i>');
+        } else {
+            $trend.addClass('trend-same').html('<i class="ti ti-minus"></i>');
+        }
+    }
+
+    function updateSparkline($card, sparklineData) {
+        if (!sparklineData || sparklineData.length === 0) return;
+
+        var $sparkline = $card.find('.kpi-sparkline');
+        if ($sparkline.length === 0) return;
+
+        var maxVal = Math.max.apply(null, sparklineData);
+        if (maxVal === 0) maxVal = 1; // Evitar división por cero
+
+        var html = '';
+        sparklineData.forEach(function(val) {
+            var height = Math.max(3, (val / maxVal) * 100); // Mínimo 3% de altura
+            html += '<div class="spark-bar" style="height: ' + height + '%;" title="' + val + '"></div>';
+        });
+
+        $sparkline.html(html);
+    }
+
+    function initializeSparklines() {
+        // Inicializar sparklines vacías con barras placeholder
+        $('.kpi-sparkline').each(function() {
+            var html = '';
+            for (var i = 0; i < 7; i++) {
+                html += '<div class="spark-bar" style="height: 20%;"></div>';
+            }
+            $(this).html(html);
+        });
+    }
+</script>
 @endsection
