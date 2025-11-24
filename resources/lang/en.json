@@ -1474,5 +1474,18 @@
   "The PDF document is attached to this email for your review": "The PDF document is attached to this email for your review",
   "This is an automated email, please do not reply": "This is an automated email, please do not reply",
   "Generated on": "Generated on",
-  "Date": "Date"
+  "Date": "Date",
+  "Order Organizer": "Order Organizer",
+  "groups": "groups",
+  "machines": "machines",
+  "Select Production Center": "Select Production Center",
+  "Pending Orders": "Pending Orders",
+  "pending": "pending",
+  "in progress": "in progress",
+  "not started": "not started",
+  "Orders": "Orders",
+  "Active Lines": "Active Lines",
+  "Paused/Stopped Lines": "Paused/Stopped Lines",
+  "Production Lines": "Production Lines",
+  "Production Lines Status": "Production Lines Status"
 }

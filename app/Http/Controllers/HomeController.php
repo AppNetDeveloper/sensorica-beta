@@ -41,6 +41,32 @@ class HomeController extends Controller
                 $operatorsCount = $operators->count();
             }
             
+            // Datos de Original Orders (Pedidos) - solo si tiene permiso productionline-orders
+            $originalOrdersStats = null;
+            $customersForOrders = null;
+            if (auth()->user()->can('productionline-orders')) {
+                $allCustomers = \App\Models\Customer::all();
+                $customersForOrders = $allCustomers;
+
+                // Contar pedidos sin finalizar de todos los customers
+                $totalNotFinished = \App\Models\OriginalOrder::whereNull('finished_at')->count();
+
+                // Contar en curso (tienen production_orders con status > 0)
+                $inProgress = \App\Models\OriginalOrder::whereNull('finished_at')
+                    ->whereHas('productionOrders', function($q) {
+                        $q->where('status', '>', 0);
+                    })->count();
+
+                // Sin iniciar = total sin finalizar - en curso
+                $notStarted = $totalNotFinished - $inProgress;
+
+                $originalOrdersStats = [
+                    'total' => $totalNotFinished,
+                    'in_progress' => $inProgress,
+                    'not_started' => $notStarted
+                ];
+            }
+
             // Datos de Order Organizer (grupos y máquinas) - solo si tiene permiso productionline-kanban
             $orderOrganizerStats = null;
             $customersForKanban = null;
@@ -188,7 +214,8 @@ class HomeController extends Controller
             return view('dashboard.homepage', compact(
                 'user', 'modual', 'role', 'languages',
                 'operators', 'operatorsCount', 'productionLines', 'productionLineStats',
-                'orderOrganizerStats', 'customersForKanban'
+                'orderOrganizerStats', 'customersForKanban',
+                'originalOrdersStats', 'customersForOrders'
             ));
         }
     }

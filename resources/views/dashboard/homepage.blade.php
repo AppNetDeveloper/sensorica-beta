@@ -163,6 +163,33 @@
         @endif
         @endcan
 
+        <!-- Widget de Original Orders (Pedidos) - permiso productionline-orders -->
+        @can('productionline-orders')
+        @if(isset($originalOrdersStats) && $originalOrdersStats)
+        <div class="kpi-card-col mb-4 animate-card">
+            <a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#selectCustomerOrdersModal">
+                <div class="card modern-stat-card stat-card-teal">
+                    <div class="stat-card-body">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="stat-content">
+                                <h6>{{ __('Pending Orders') }}</h6>
+                                <h3>{{ $originalOrdersStats['total'] }} <small style="font-size: 0.5em;">{{ __('pending') }}</small></h3>
+                                <small class="text-white-50">
+                                    {{ $originalOrdersStats['in_progress'] }} {{ __('in progress') }} |
+                                    {{ $originalOrdersStats['not_started'] }} {{ __('not started') }}
+                                </small>
+                            </div>
+                            <div class="stat-icon-wrapper bg-white bg-opacity-25">
+                                <i class="ti ti-clipboard-list"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        @endif
+        @endcan
+
         <!-- Widgets de turnos si tiene permiso -->
         @can('shift-show')
         <!-- Resumen de líneas de producción -->
@@ -380,6 +407,42 @@
                             </div>
                             <span class="badge bg-primary rounded-pill">
                                 {{ $customer->productionLines->filter(fn($l) => $l->processes->isNotEmpty())->count() }} {{ __('machines') }}
+                            </span>
+                        </a>
+                        @endforeach
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+    @endcan
+
+    <!-- Modal para seleccionar Centro de Producción (Original Orders) -->
+    @can('productionline-orders')
+    @if(isset($customersForOrders) && $customersForOrders && $customersForOrders->count() > 0)
+    <div class="modal fade" id="selectCustomerOrdersModal" tabindex="-1" aria-labelledby="selectCustomerOrdersModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-teal text-white" style="background: linear-gradient(135deg, #20c997 0%, #0ca678 100%);">
+                    <h5 class="modal-title" id="selectCustomerOrdersModalLabel">
+                        <i class="ti ti-clipboard-list me-2"></i>{{ __('Select Production Center') }}
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div class="list-group list-group-flush">
+                        @foreach($customersForOrders as $customer)
+                        <a href="{{ route('customers.original-orders.index', $customer->id) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3">
+                            <div>
+                                <i class="ti ti-building-factory me-2 text-teal"></i>
+                                <strong>{{ $customer->name }}</strong>
+                            </div>
+                            <span class="badge bg-teal rounded-pill" style="background-color: #20c997 !important;">
+                                {{ __('Orders') }}
                             </span>
                         </a>
                         @endforeach

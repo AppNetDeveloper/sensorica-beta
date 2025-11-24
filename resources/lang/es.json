@@ -1633,5 +1633,18 @@
   "All rights reserved.": "Todos los derechos reservados.",
   "Privacy Policy": "Política de Privacidad",
   "Terms of Service": "Términos de Servicio",
-  "Cookies": "Cookies"
+  "Cookies": "Cookies",
+  "Order Organizer": "Organizador de Pedidos",
+  "groups": "grupos",
+  "machines": "máquinas",
+  "Select Production Center": "Seleccionar Centro de Producción",
+  "Pending Orders": "Pedidos Pendientes",
+  "pending": "pendientes",
+  "in progress": "en curso",
+  "not started": "sin iniciar",
+  "Orders": "Pedidos",
+  "Active Lines": "Líneas Activas",
+  "Paused/Stopped Lines": "Líneas Pausadas/Paradas",
+  "Production Lines": "Líneas de Producción",
+  "Production Lines Status": "Estado de Líneas de Producción"
 }
