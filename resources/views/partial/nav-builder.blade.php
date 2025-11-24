@@ -23,18 +23,18 @@ $settings = Utility::settings();
                         <img class="c-sidebar-brand-full pt-2 mt-1 mb-1 navbar-brand-img"
                              src="{{ $logo . (!empty($company_logo) ? $company_logo : 'light_logo.png') }}"
                              alt="Logo"
-                             style="height: 45px !important; width: auto !important; max-width: 100% !important; object-fit: contain !important;">
+                             style="height: 80px !important; width: auto !important; max-width: 100% !important; object-fit: contain !important;">
                     @else
                         <img class="c-sidebar-brand-full pt-2 mt-1 mb-1 navbar-brand-img"
                              src="{{ $logo . (!empty($company_logo) ? $company_logo : 'dark_logo.png') }}"
                              alt="Logo"
-                             style="height: 45px !important; width: auto !important; max-width: 100% !important; object-fit: contain !important;">
+                             style="height: 80px !important; width: auto !important; max-width: 100% !important; object-fit: contain !important;">
                     @endif
                 @else
                     <img class="c-sidebar-brand-full pt-2 mt-1 mb-1 navbar-brand-img"
                          src="{{ $logo . (!empty($company_logo) ? $company_logo : 'dark_logo.png') }}"
                          alt="Logo"
-                         style="height: 45px !important; width: auto !important; max-width: 100% !important; object-fit: contain !important;">
+                         style="height: 80px !important; width: auto !important; max-width: 100% !important; object-fit: contain !important;">
                 @endif
             </a>
         </div>
@@ -69,7 +69,7 @@ $settings = Utility::settings();
                 @role('admin')
                     <li class="dash-item dash-hasmenu {{ request()->is('ia_prompts*') ? 'active' : '' }}">
                         <a class="dash-link" title="{{ __('IA') }}" href="{{ route('ia_prompts.index') }}" data-bs-toggle="tooltip" data-bs-placement="right">
-                            <span class="dash-micon"><i class="ti ti-robot"></i></span>
+                            <span class="dash-micon"><i class="fas fa-wand-magic-sparkles"></i></span>
                             <span class="dash-mtext custom-weight">{{ __('IA') }}</span>
                         </a>
                     </li>

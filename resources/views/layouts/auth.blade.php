@@ -57,6 +57,19 @@ if (isset($settings['color'])) {
     {{-- <link rel="stylesheet" href="{{ asset('assets/css/style.css') }}" id="main-style-link"> --}}
     <link rel="stylesheet" href="{{ asset('assets/css/customizer.css') }}">
     <link href="{{ asset('css/custom.css') }}" rel="stylesheet">
+    <style>
+        /* Aumentar tamaño del logo superior */
+        .auth-content .app_logo.top-logo {
+            max-width: 280px !important;
+            height: auto;
+        }
+
+        /* Aumentar tamaño del logo del footer */
+        .dash-footer .app_logo.footer-logo {
+            max-width: 200px !important;
+            height: auto;
+        }
+    </style>
     @laravelPWA
 </head>
 
@@ -71,36 +84,24 @@ if (isset($settings['color'])) {
 
                         @if (isset($settings['dark_mode']))
                             @if ($settings['dark_mode'] == 'on')
-                                <img src="{{ $logo . 'dark_logo.png' }}" class="navbar-brand-img app_logo" alt="logo">
+                                <img src="{{ $logo . 'dark_logo.png' }}" class="navbar-brand-img app_logo top-logo" alt="logo">
                             @else
-                                <img src="{{ $logo . 'light_logo.png' }}" class="navbar-brand-img app_logo"
+                                <img src="{{ $logo . 'light_logo.png' }}" class="navbar-brand-img app_logo top-logo"
                                     alt="logo">
                             @endif
                         @else
-                            <img src="{{ $logo . 'light_logo.png' }}" class="navbar-brand-img app_logo" alt="logo">
+                            <img src="{{ $logo . 'light_logo.png' }}" class="navbar-brand-img app_logo top-logo" alt="logo">
                         @endif
                     </div>
                     @yield('content')
                     <footer class="dash-footer">
                         <div class="footer-wrapper">
                             <span class="text-muted">
-                                @if (isset($settings['dark_mode']))
-                                    @if ($settings['dark_mode'] == 'on')
-                                        <img src="{{ $logo . 'light_logo.png' }}" class="navbar-brand-img app_logo"
-                                            alt="logo">
-                                            @else
-                                            <img src="{{ $logo . 'dark_logo.png' }}" class="navbar-brand-img app_logo"
-                                            alt="logo">
-                                    @endif
-                                @else
-                                    <img src="{{ $logo . 'dark_logo.png' }}" class="navbar-brand-img app_logo"
-                                        alt="logo">
-                                @endif
-                                {{-- <img src="{{ $logo . 'dark_logo.png' }}" class="navbar-brand-img app_logo" alt="logo"> --}}
-                                {{-- <img src="{{ $logo . 'light_logo.png' }}" class="navbar-brand-img app_logo" alt="logo"> --}}
+                                {{-- Logo fijo de Xmart Technologies --}}
+                                <img src="{{ asset('logo.png') }}" class="navbar-brand-img app_logo footer-logo" alt="Xmart Technologies">
                             </span>
                             <div class="ms-auto">Powered by&nbsp;
-                                {{-- <a href="https://quebixtechnology.com/" target="_new">Quebix Technology
+                                {{-- <a href="https://xmartflow.com/" target="_new">Xmart Technologies
                         </a> --}}
                                 &copy; {{ date('Y') }} <a href="#" class="fw-bold ms-1"
                                     target="_blank">{{ config('app.name') }}
