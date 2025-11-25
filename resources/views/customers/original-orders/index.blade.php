@@ -15,138 +15,222 @@
 @endsection
 
 @section('content')
-<div class="container-fluid px-0">
-    <div class="row mt-3 mx-0">
-        <div class="col-12 px-0">
-            <div class="card border-0 shadow" style="width: 100%;">
-                <div class="card-header bg-transparent">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div class="filter-container">
-                            <select id="order-status-filter" class="form-select form-select-sm">
-                                <option value="all" selected>@lang('Todo')</option>
-                                <option value="finished">@lang('Pedido finalizado')</option>
-                                <option value="started">@lang('Pedido Iniciado')</option>
-                                <option value="assigned">@lang('Asignado a máquina')</option>
-                                <option value="planned">@lang('Pendiente Planificar')</option>
-                                <option value="to-create">@lang('Pendiente Crear')</option>
-                            </select>
+<div class="oo-container">
+    {{-- Header Principal --}}
+    <div class="oo-header mb-4">
+        <div class="row align-items-center">
+            <div class="col-lg-4 col-md-12 mb-3 mb-lg-0">
+                <div class="d-flex align-items-center">
+                    <div class="oo-header-icon me-3">
+                        <i class="ti ti-package"></i>
+                    </div>
+                    <div>
+                        <h4 class="oo-title mb-1">{{ __('Original Orders') }}</h4>
+                        <p class="oo-subtitle mb-0">{{ $customer->name }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-8 col-md-12">
+                <div class="d-flex align-items-center justify-content-lg-end gap-2 flex-wrap">
+                    @can('original-order-delete')
+                    <button id="bulk-delete" class="oo-btn oo-btn-danger d-none">
+                        <i class="ti ti-trash"></i>
+                        <span>{{ __('Delete Selected') }}</span>
+                    </button>
+                    @endcan
+                    @can('original-order-list')
+                    <a href="{{ route('customers.original-orders.finished-processes.view', $customer) }}" class="oo-btn oo-btn-outline">
+                        <i class="ti ti-chart-line"></i>
+                        <span>@lang('Procesos finalizados')</span>
+                    </a>
+                    @endcan
+                    @can('original-order-create')
+                    <a href="#" id="import-orders-btn" class="oo-btn oo-btn-success">
+                        <i class="ti ti-refresh"></i>
+                        <span>@lang('Importar ahora')</span>
+                    </a>
+                    <a href="#" id="create-cards-btn" class="oo-btn oo-btn-info">
+                        <i class="ti ti-id"></i>
+                        <span>@lang('Crear Tarjetas')</span>
+                    </a>
+                    <a href="{{ route('customers.original-orders.create', $customer->id) }}" class="oo-btn oo-btn-light">
+                        <i class="ti ti-plus"></i>
+                        <span>@lang('New Order')</span>
+                    </a>
+                    @endcan
+                </div>
+            </div>
+        </div>
+        {{-- Buscador --}}
+        <div class="row mt-4">
+            <div class="col-lg-6 col-md-8">
+                <div class="oo-search-box">
+                    <i class="ti ti-search"></i>
+                    <input type="text" id="searchInput" class="form-control" placeholder="@lang('Search orders...')">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Toast de actualización --}}
+    <div class="position-fixed top-0 end-0 p-3" style="z-index: 9999">
+        <div id="update-time-toast" class="toast align-items-center text-white bg-info border-0" role="alert" aria-live="polite" aria-atomic="true" style="border-radius: 12px;">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="ti ti-refresh me-2 oo-spin"></i> @lang('Actualizando...')
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+
+    {{-- Alertas --}}
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+            <i class="ti ti-check me-2"></i> {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+    @if(session('error'))
+        <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+            <i class="ti ti-x me-2"></i> {{ session('error') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+
+    {{-- Stats Cards --}}
+    <div class="row mb-4">
+        <div class="col-md-3 col-sm-6 mb-3 mb-md-0">
+            <div class="oo-stats-card" data-filter="all">
+                <div class="oo-stats-icon oo-stats-primary">
+                    <i class="ti ti-package"></i>
+                </div>
+                <div class="oo-stats-info">
+                    <h3 id="stats-total">-</h3>
+                    <span>@lang('Total')</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3 mb-md-0">
+            <div class="oo-stats-card" data-filter="finished">
+                <div class="oo-stats-icon oo-stats-success">
+                    <i class="ti ti-circle-check"></i>
+                </div>
+                <div class="oo-stats-info">
+                    <h3 id="stats-finished">-</h3>
+                    <span>@lang('Finalizados')</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3 mb-md-0">
+            <div class="oo-stats-card" data-filter="started">
+                <div class="oo-stats-icon oo-stats-info">
+                    <i class="ti ti-player-play"></i>
+                </div>
+                <div class="oo-stats-info">
+                    <h3 id="stats-started">-</h3>
+                    <span>@lang('En proceso')</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="oo-stats-card" data-filter="planned">
+                <div class="oo-stats-icon oo-stats-warning">
+                    <i class="ti ti-clock"></i>
+                </div>
+                <div class="oo-stats-info">
+                    <h3 id="stats-pending">-</h3>
+                    <span>@lang('Pendientes')</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Filtros --}}
+    <div class="oo-filters mb-4">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <span class="oo-filter-label"><i class="ti ti-filter me-1"></i>@lang('Filter'):</span>
+            <button class="oo-filter-btn active" data-filter="all">@lang('Todo')</button>
+            <button class="oo-filter-btn" data-filter="finished">@lang('Finalizados')</button>
+            <button class="oo-filter-btn" data-filter="started">@lang('Iniciados')</button>
+            <button class="oo-filter-btn" data-filter="assigned">@lang('Asignados')</button>
+            <button class="oo-filter-btn" data-filter="planned">@lang('Pendiente Planificar')</button>
+            <button class="oo-filter-btn" data-filter="to-create">@lang('Pendiente Crear')</button>
+        </div>
+    </div>
+
+    {{-- Loading --}}
+    <div id="loading-container" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-3 text-muted">@lang('Loading orders...')</p>
+    </div>
+
+    {{-- Grid de Orders --}}
+    <div class="row" id="orders-grid" style="display: none;">
+        {{-- Las cards se cargan dinámicamente --}}
+    </div>
+
+    {{-- Empty State --}}
+    <div id="empty-state" class="text-center py-5" style="display: none;">
+        <div class="oo-empty-icon mb-3">
+            <i class="ti ti-package-off"></i>
+        </div>
+        <h5 class="text-muted">@lang('No orders found')</h5>
+        <p class="text-muted">@lang('Try adjusting your filters or search term')</p>
+    </div>
+
+    {{-- Paginación --}}
+    <div id="pagination-container" class="d-flex justify-content-between align-items-center mt-4" style="display: none !important;">
+        <div class="oo-pagination-info">
+            <span id="pagination-info"></span>
+        </div>
+        <nav>
+            <ul class="pagination oo-pagination mb-0" id="pagination">
+            </ul>
+        </nav>
+    </div>
+
+    {{-- Leyenda --}}
+    <div class="oo-legend mt-4">
+        <div class="row g-3">
+            <div class="col-lg-6">
+                <div class="oo-legend-card">
+                    <div class="oo-legend-header">
+                        <div class="oo-legend-icon">
+                            <i class="ti ti-info-circle"></i>
                         </div>
                         <div>
-                            @can('original-order-delete')
-                            <button id="bulk-delete" class="btn btn-danger btn-sm d-none me-2">
-                                <i class="fas fa-trash me-1"></i> {{ __('Delete Selected') }}
-                            </button>
-                            @endcan
-                            @can('original-order-list')
-                            <a href="{{ route('customers.original-orders.finished-processes.view', $customer) }}" class="btn btn-outline-dark btn-sm me-2">
-                                <i class="fas fa-chart-line"></i> @lang('Procesos finalizados')
-                            </a>
-                            @endcan
-                            @can('original-order-create')
-                            <a href="#" id="import-orders-btn" class="btn btn-outline-success btn-sm me-2">
-                                <i class="fas fa-sync-alt"></i> @lang('Importar ahora')
-                            </a>
-                            <a href="#" id="create-cards-btn" class="btn btn-outline-info btn-sm me-2">
-                                <i class="fas fa-id-card"></i> @lang('Crear Tarjetas')
-                            </a>
-                            <a href="{{ route('customers.original-orders.create', $customer->id) }}" class="btn btn-outline-primary btn-sm">
-                                <i class="fas fa-plus"></i> @lang('New Order')
-                            </a>
-                            @endcan
+                            <h6 class="oo-legend-title">@lang('Estados de procesos')</h6>
+                            <small class="text-muted">@lang('Formato: Código (grupo)')</small>
                         </div>
+                    </div>
+                    <div class="oo-legend-items">
+                        <span class="oo-legend-item"><span class="badge bg-success">PRO</span> @lang('Finalizado')</span>
+                        <span class="oo-legend-item"><span class="badge bg-primary">PRO</span> @lang('En fabricación')</span>
+                        <span class="oo-legend-item"><span class="badge bg-info">PRO</span> @lang('Asignado')</span>
+                        <span class="oo-legend-item"><span class="badge bg-danger">PRO</span> @lang('Incidencia')</span>
+                        <span class="oo-legend-item"><span class="badge bg-secondary">PRO</span> @lang('Sin asignar')</span>
                     </div>
                 </div>
-                
-                <!-- Notificación flotante simple de actualización -->
-                <div class="position-fixed top-0 end-0 p-3" style="z-index: 9999">
-                    <div id="update-time-toast" class="toast align-items-center text-white bg-info border-0" role="alert" aria-live="polite" aria-atomic="true">
-                        <div class="d-flex">
-                            <div class="toast-body">
-                                <i class="fas fa-sync-alt me-2 fa-spin"></i> @lang('Actualizando...')
-                            </div>
-                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="col-lg-6">
+                <div class="oo-legend-card">
+                    <div class="oo-legend-header">
+                        <div class="oo-legend-icon oo-legend-icon-orders">
+                            <i class="ti ti-list-check"></i>
+                        </div>
+                        <div>
+                            <h6 class="oo-legend-title">@lang('Estados de pedidos')</h6>
                         </div>
                     </div>
-                </div>
-                <div class="card-body">
-                    @if(session('success'))
-                        <div class="alert alert-success">
-                            {{ session('success') }}
-                        </div>
-                    @endif
-                    @if(session('error'))
-                        <div class="alert alert-danger">
-                            {{ session('error') }}
-                        </div>
-                    @endif
-                    
-                    <div class="table-responsive" style="width: 100%; margin: 0 auto;">
-                        <table id="original-orders-table" class="table table-striped table-hover" style="width: 100%;">
-                            <thead class="table-light">
-                                <tr>
-                                    @can('original-order-delete')
-                                    <th>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="select-all">
-                                        </div>
-                                    </th>
-                                    @endcan
-                                    <th>#</th>
-                                    <th class="text-uppercase">@lang('ORDER ID')</th>
-                                    <th class="text-uppercase">@lang('CLIENT NUMBER')</th>
-                                    <th class="text-uppercase">@lang('PROCESSES')</th>
-                                    <th class="text-uppercase">@lang('ORIGINAL ORDER STATUS')</th>
-                                    <th class="text-uppercase">@lang('CREATED AT')</th>
-                                    <th class="text-uppercase">@lang('ACTIONS')</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <!-- Los datos se cargarán dinámicamente desde el servidor -->
-                            </tbody>
-                        </table>
-                    </div>
-                    
-                    <!-- Leyenda de colores para los procesos -->
-                    <div class="card-footer bg-light p-3 mt-3">
-                        <h5>@lang('Leyenda de estados de procesos')</h5>
-                        <p class="text-muted mb-2">@lang('Formato de tarjeta: Código de proceso (número de grupo)')</p>
-                        <div class="d-flex flex-wrap gap-3">
-                            <div>
-                                <span class="badge bg-success me-1">PRO (1)</span> @lang('Proceso finalizado')
-                            </div>
-                            <div>
-                                <span class="badge bg-primary me-1">PRO (2)</span> @lang('En fabricación')
-                            </div>
-                            <div>
-                                <span class="badge bg-info me-1">PRO (3)</span> @lang('Asignado a máquina')
-                            </div>
-                            <div>
-                                <span class="badge bg-danger me-1">PRO (4)</span> @lang('Con incidencia')
-                            </div>
-
-                            <div>
-                                <span class="badge bg-secondary me-1">PRO (6)</span> @lang('Sin asignar')
-                            </div>
-                        </div>
-                        
-                        <h5 class="mt-3">@lang('Leyenda de estados de pedidos')</h5>
-                        <div class="d-flex flex-wrap gap-3">
-                            <div>
-                                <span class="badge bg-success me-1">@lang('Fecha')</span> @lang('Pedido finalizado')
-                            </div>
-                            <div>
-                                <span class="badge bg-primary me-1">@lang('Pedido Iniciado')</span> @lang('Al menos un proceso iniciado o finalizado')
-                            </div>
-                            <div>
-                                <span class="badge bg-info me-1">@lang('Asignado a máquina')</span> @lang('Al menos un proceso asignado')
-                            </div>
-                            <div>
-                                <span class="badge bg-secondary me-1">@lang('Pendiente Planificar')</span> @lang('Con todos los procesos pendientes de asignar')
-                            </div>
-                            <div>
-                                <span class="badge bg-danger me-1">@lang('Pendiente Crear')</span> @lang('Sin procesos creados (falta de stock)')
-                            </div>
-                        </div>
+                    <div class="oo-legend-items">
+                        <span class="oo-legend-item"><span class="badge bg-success">@lang('Fecha')</span> @lang('Finalizado')</span>
+                        <span class="oo-legend-item"><span class="badge bg-primary">@lang('Iniciado')</span> @lang('En proceso')</span>
+                        <span class="oo-legend-item"><span class="badge bg-info">@lang('Asignado')</span> @lang('A máquina')</span>
+                        <span class="oo-legend-item"><span class="badge bg-secondary">@lang('Pendiente')</span> @lang('Planificar')</span>
+                        <span class="oo-legend-item"><span class="badge bg-danger">@lang('Crear')</span> @lang('Sin stock')</span>
                     </div>
                 </div>
             </div>
@@ -155,419 +239,999 @@
 </div>
 @endsection
 
-@push('styles')
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css">
-    <style>
-        .badge.bg-cyan {
-            background-color: #17a2b8;
-            color: #fff;
-        }
-        /* Texto oscuro solo en la leyenda de estados de pedidos */
-        .d-flex.flex-wrap.gap-3 .badge.bg-cyan {
-            color: #212529;
-        }
-        .table th, .table td {
-            vertical-align: middle;
-        }
-        .btn-sm {
-            padding: 0.25rem 0.5rem;
-            font-size: 0.875rem;
-        }
-        #original-orders-table_wrapper .dt-buttons {
-            margin-bottom: 10px;
-        }
-        .dataTables_wrapper .dataTables_filter {
-            margin-bottom: 10px;
-        }
-        .table th {
-            background-color: #f8f9fa;
-            font-weight: bold;
-        }
-        .card-body {
-            padding: 1.25rem;
-        }
-        #original-orders-table_wrapper {
-            width: 100%;
-        }
-        .container-fluid.px-0 {
-            width: 100%;
-            max-width: 100%;
-        }
-        .row.mx-0 {
-            margin-left: 0;
-            margin-right: 0;
-            width: 100%;
-        }
-        
-        /* Estilos para alinear la paginación a la derecha */
-        .dataTables_paginate {
-            float: right !important;
-            width: 100%;
-            text-align: right !important;
-        }
-        
-        /* Añadir espacio entre la información y la paginación */
-        .dataTables_info {
-            padding-top: 8px;
-            margin-bottom: 10px;
-        }
-    </style>
+@push('style')
+<style>
+/* Container */
+.oo-container {
+    padding: 0;
+}
+
+/* Header */
+.oo-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 16px;
+    padding: 24px;
+    color: white;
+}
+
+.oo-header-icon {
+    width: 56px;
+    height: 56px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.75rem;
+}
+
+.oo-title {
+    color: white;
+    font-weight: 700;
+    font-size: 1.5rem;
+    margin: 0;
+}
+
+.oo-subtitle {
+    color: rgba(255,255,255,0.85);
+    font-size: 0.95rem;
+}
+
+/* Header Buttons */
+.oo-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 18px;
+    border-radius: 50px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+}
+
+.oo-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.oo-btn-light {
+    background: white;
+    color: #667eea;
+}
+.oo-btn-light:hover {
+    background: #f8fafc;
+    color: #5a67d8;
+}
+
+.oo-btn-success {
+    background: #22c55e;
+    color: white;
+}
+.oo-btn-success:hover {
+    background: #16a34a;
+    color: white;
+}
+
+.oo-btn-info {
+    background: #0ea5e9;
+    color: white;
+}
+.oo-btn-info:hover {
+    background: #0284c7;
+    color: white;
+}
+
+.oo-btn-danger {
+    background: #ef4444;
+    color: white;
+}
+.oo-btn-danger:hover {
+    background: #dc2626;
+    color: white;
+}
+
+.oo-btn-outline {
+    background: rgba(255,255,255,0.15);
+    color: white;
+    border: 1px solid rgba(255,255,255,0.3);
+}
+.oo-btn-outline:hover {
+    background: rgba(255,255,255,0.25);
+    color: white;
+}
+
+/* Search Box */
+.oo-search-box {
+    position: relative;
+}
+
+.oo-search-box i {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: rgba(255,255,255,0.6);
+    font-size: 1.1rem;
+}
+
+.oo-search-box input {
+    padding-left: 46px;
+    border-radius: 50px;
+    border: 2px solid rgba(255,255,255,0.3);
+    background: rgba(255,255,255,0.15);
+    color: white;
+    height: 46px;
+    font-size: 0.95rem;
+}
+
+.oo-search-box input::placeholder {
+    color: rgba(255,255,255,0.6);
+}
+
+.oo-search-box input:focus {
+    background: rgba(255,255,255,0.25);
+    border-color: rgba(255,255,255,0.5);
+    box-shadow: none;
+    color: white;
+}
+
+/* Stats Cards */
+.oo-stats-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.oo-stats-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+}
+
+.oo-stats-card.active {
+    border: 2px solid #667eea;
+}
+
+.oo-stats-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+}
+
+.oo-stats-primary {
+    background: rgba(102, 126, 234, 0.15);
+    color: #667eea;
+}
+
+.oo-stats-success {
+    background: rgba(34, 197, 94, 0.15);
+    color: #22c55e;
+}
+
+.oo-stats-info {
+    background: rgba(14, 165, 233, 0.15);
+    color: #0ea5e9;
+}
+
+.oo-stats-warning {
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+}
+
+.oo-stats-info h3 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0;
+    color: #1e293b;
+}
+
+.oo-stats-info span {
+    color: #64748b;
+    font-size: 0.85rem;
+}
+
+/* Filters */
+.oo-filters {
+    display: flex;
+    align-items: center;
+}
+
+.oo-filter-label {
+    color: #64748b;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.oo-filter-btn {
+    padding: 8px 16px;
+    border-radius: 50px;
+    border: 2px solid #e2e8f0;
+    background: white;
+    color: #64748b;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.oo-filter-btn:hover {
+    border-color: #667eea;
+    color: #667eea;
+}
+
+.oo-filter-btn.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-color: transparent;
+    color: white;
+}
+
+/* Order Cards */
+.oo-order-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    overflow: hidden;
+    transition: all 0.3s ease;
+    height: 100%;
+    animation: ooFadeInUp 0.4s ease forwards;
+    opacity: 0;
+}
+
+.oo-order-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+}
+
+@keyframes ooFadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.oo-order-header {
+    padding: 16px 20px;
+    color: white;
+    position: relative;
+}
+
+.oo-order-header.finished {
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+}
+
+.oo-order-header.started {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+}
+
+.oo-order-header.assigned {
+    background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+}
+
+.oo-order-header.planned {
+    background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+}
+
+.oo-order-header.to-create {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+
+.oo-order-id {
+    font-weight: 700;
+    font-size: 1rem;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.oo-order-client {
+    font-size: 0.8rem;
+    opacity: 0.9;
+    margin-top: 4px;
+}
+
+.oo-order-checkbox {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+}
+
+.oo-order-body {
+    padding: 20px;
+}
+
+.oo-order-processes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 16px;
+}
+
+.oo-order-processes .badge {
+    font-size: 0.7rem;
+    padding: 4px 8px;
+    font-weight: 500;
+}
+
+.oo-order-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 12px;
+    border-top: 1px solid #f1f5f9;
+}
+
+.oo-order-date {
+    color: #64748b;
+    font-size: 0.8rem;
+}
+
+.oo-order-status {
+    font-size: 0.75rem;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-weight: 600;
+}
+
+.oo-order-footer {
+    padding: 12px 20px;
+    background: #f8fafc;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.oo-action-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.oo-action-btn-view {
+    background: rgba(14, 165, 233, 0.15);
+    color: #0ea5e9;
+}
+.oo-action-btn-view:hover {
+    background: #0ea5e9;
+    color: white;
+}
+
+.oo-action-btn-edit {
+    background: rgba(59, 130, 246, 0.15);
+    color: #3b82f6;
+}
+.oo-action-btn-edit:hover {
+    background: #3b82f6;
+    color: white;
+}
+
+.oo-action-btn-delete {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+}
+.oo-action-btn-delete:hover {
+    background: #ef4444;
+    color: white;
+}
+
+/* Empty State */
+.oo-empty-icon {
+    width: 80px;
+    height: 80px;
+    background: #f1f5f9;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    font-size: 2.5rem;
+    color: #94a3b8;
+}
+
+/* Pagination */
+.oo-pagination-info {
+    color: #64748b;
+    font-size: 0.9rem;
+}
+
+.oo-pagination .page-item .page-link {
+    border-radius: 8px;
+    margin: 0 3px;
+    border: none;
+    background: #f1f5f9;
+    color: #475569;
+    padding: 8px 14px;
+}
+
+.oo-pagination .page-item .page-link:hover {
+    background: #e2e8f0;
+    color: #1e293b;
+}
+
+.oo-pagination .page-item.active .page-link {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.oo-pagination .page-item.disabled .page-link {
+    background: #f8fafc;
+    color: #cbd5e1;
+}
+
+/* Legend */
+.oo-legend {
+    background: #f8fafc;
+    border-radius: 16px;
+    padding: 24px;
+}
+
+.oo-legend-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    height: 100%;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.oo-legend-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.oo-legend-icon {
+    width: 40px;
+    height: 40px;
+    background: rgba(102,126,234,0.15);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #667eea;
+    font-size: 1.2rem;
+}
+
+.oo-legend-icon-orders {
+    background: rgba(34,197,94,0.15);
+    color: #22c55e;
+}
+
+.oo-legend-title {
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+.oo-legend-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.oo-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    color: #64748b;
+}
+
+/* Spinner */
+.oo-spin {
+    animation: oo-spin 1s linear infinite;
+}
+
+@keyframes oo-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Dark Mode */
+[data-theme="dark"] .oo-stats-card,
+[data-theme="dark"] .oo-order-card {
+    background: #1e293b;
+}
+
+[data-theme="dark"] .oo-stats-info h3 {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .oo-filter-btn {
+    background: #1e293b;
+    border-color: #334155;
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .oo-filter-btn:hover {
+    border-color: #667eea;
+    color: #667eea;
+}
+
+[data-theme="dark"] .oo-order-body {
+    background: #1e293b;
+}
+
+[data-theme="dark"] .oo-order-footer {
+    background: #0f172a;
+}
+
+[data-theme="dark"] .oo-order-meta {
+    border-color: #334155;
+}
+
+[data-theme="dark"] .oo-legend {
+    background: #0f172a;
+}
+
+[data-theme="dark"] .oo-legend-card {
+    background: #1e293b;
+}
+
+[data-theme="dark"] .oo-legend-title {
+    color: #f1f5f9;
+}
+
+/* Responsive */
+@media (max-width: 991.98px) {
+    .oo-btn span {
+        display: none;
+    }
+    .oo-btn {
+        padding: 10px 14px;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .oo-header {
+        padding: 16px;
+    }
+    .oo-header-icon {
+        width: 48px;
+        height: 48px;
+        font-size: 1.4rem;
+    }
+    .oo-title {
+        font-size: 1.25rem;
+    }
+    .oo-filter-btn {
+        padding: 6px 12px;
+        font-size: 0.8rem;
+    }
+}
+</style>
 @endpush
 
 @push('scripts')
-    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
-    <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
-    <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.bootstrap5.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script>
-        $(document).ready(function() {
-            
-            // Inicializar tooltips
-            function initTooltips() {
-                // Destruir tooltips existentes antes de inicializar nuevos
-                $('[data-bs-toggle="tooltip"]').tooltip('dispose');
-                $('[data-bs-toggle="tooltip"]').tooltip();
-            }
-            
-            // Variable para almacenar la instancia de DataTable
-            let dataTable;
-            
-            // Función para inicializar DataTables
-            function initDataTable() {
-                dataTable = $('#original-orders-table').DataTable({
-                    processing: true,
-                    serverSide: true,
-                    responsive: true,
-                    ajax: {
-                        url: '{{ route("customers.original-orders.index", $customer) }}',
-                        data: function(d) {
-                            // Añadir el parámetro de filtro de estado
-                            d.status_filter = window.orderStatusFilter || 'all';
-                        }
-                    },
-                    columns: [
-                        @can('original-order-delete')
-                        {
-                            data: null,
-                            name: null,
-                            orderable: false,
-                            searchable: false,
-                            width: '5%',
-                            render: function (data, type, row) {
-                                return '<div class="form-check"><input type="checkbox" class="form-check-input row-checkbox" value="' + row.id + '"></div>';
-                            }
-                        },
-                        @endcan
-                        {data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false},
-                        {data: 'order_id', name: 'order_id'},
-                        {data: 'client_number', name: 'client_number'},
-                        {data: 'processes', name: 'processes', orderable: false, searchable: false},
-                        {data: 'finished_at', name: 'finished_at'},
-                        {data: 'created_at', name: 'created_at'},
-                        {data: 'actions', name: 'actions', orderable: false, searchable: false},
-                    ],
-                    order: [[1, 'desc']],
-                    language: {
-                        url: '//cdn.datatables.net/plug-ins/1.10.25/i18n/Spanish.json'
-                    },
-                    dom: '<"row mb-3"<"col-sm-12 col-md-6"B><"col-sm-12 col-md-6"f>><"row"<"col-sm-12"tr>><"row mt-3"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7 text-end"p>>',
-                    buttons: [
-                        {
-                            extend: 'pageLength',
-                            className: 'btn btn-secondary'
-                        }
-                    ],
-                    lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
-                    pageLength: 10,
-                    drawCallback: function() {
-                        // Inicializar tooltips para los badges y botones
-                        setTimeout(function() {
-                            // Destruir tooltips existentes antes de inicializar nuevos
-                            $('[data-bs-toggle="tooltip"]').tooltip('dispose');
-                            $('[data-bs-toggle="tooltip"]').tooltip();
-                        }, 100);
-                    }
-                });
-            }
-            
-            // Inicializar DataTable
-            initDataTable();
-            initTooltips();
-            
-            // Funcionalidad de selección masiva
-            $(document).on('change', '#select-all', function() {
-                $('.row-checkbox').prop('checked', $(this).prop('checked'));
-                updateBulkDeleteButton();
-            });
-            
-            $(document).on('change', '.row-checkbox', function() {
-                updateBulkDeleteButton();
-                
-                // Si se deselecciona alguna fila, desmarcar el checkbox "seleccionar todos"
-                if (!$(this).prop('checked')) {
-                    $('#select-all').prop('checked', false);
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+$(document).ready(function() {
+    let currentPage = 1;
+    let currentFilter = 'all';
+    let currentSearch = '';
+    let perPage = 12;
+    let totalOrders = 0;
+    let ordersData = [];
+
+    // Inicializar
+    loadOrders();
+
+    // Event: Búsqueda
+    let searchTimeout;
+    $('#searchInput').on('keyup', function() {
+        clearTimeout(searchTimeout);
+        currentSearch = $(this).val();
+        searchTimeout = setTimeout(function() {
+            currentPage = 1;
+            loadOrders();
+        }, 500);
+    });
+
+    // Event: Filtros
+    $('.oo-filter-btn').on('click', function() {
+        $('.oo-filter-btn').removeClass('active');
+        $(this).addClass('active');
+        currentFilter = $(this).data('filter');
+        currentPage = 1;
+        loadOrders();
+    });
+
+    // Event: Stats cards (filter click)
+    $('.oo-stats-card').on('click', function() {
+        const filter = $(this).data('filter');
+        if (filter) {
+            $('.oo-filter-btn').removeClass('active');
+            $(`.oo-filter-btn[data-filter="${filter}"]`).addClass('active');
+            currentFilter = filter;
+            currentPage = 1;
+            loadOrders();
+        }
+    });
+
+    // Cargar pedidos
+    function loadOrders() {
+        $('#loading-container').show();
+        $('#orders-grid').hide();
+        $('#empty-state').hide();
+        $('#pagination-container').hide();
+
+        $.ajax({
+            url: '{{ route("customers.original-orders.index", $customer) }}',
+            type: 'GET',
+            data: {
+                page: currentPage,
+                per_page: perPage,
+                status_filter: currentFilter,
+                search: currentSearch
+            },
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            },
+            success: function(response) {
+                $('#loading-container').hide();
+
+                if (response.data && response.data.length > 0) {
+                    renderOrders(response.data);
+                    renderPagination(response);
+                    updateStats(response);
+                    $('#orders-grid').show();
+                    $('#pagination-container').css('display', 'flex');
                 } else {
-                    // Si todas las filas están seleccionadas, marcar el checkbox "seleccionar todos"
-                    if ($('.row-checkbox:checked').length === $('.row-checkbox').length) {
-                        $('#select-all').prop('checked', true);
-                    }
+                    $('#empty-state').show();
+                    updateStats({ stats: { total: 0, finished: 0, started: 0, pending: 0 }});
                 }
-            });
-            
-            // Función para actualizar la visibilidad del botón de eliminación masiva
-            function updateBulkDeleteButton() {
-                const selectedCount = $('.row-checkbox:checked').length;
-                if (selectedCount > 0) {
-                    $('#bulk-delete').removeClass('d-none').text(`{{ __('Delete Selected') }} (${selectedCount})`);
-                } else {
-                    $('#bulk-delete').addClass('d-none');
-                }
+            },
+            error: function(xhr) {
+                $('#loading-container').hide();
+                $('#empty-state').show();
+                console.error('Error loading orders:', xhr);
             }
-            
-            // Manejar clic en el botón de eliminación masiva
-            $('#bulk-delete').on('click', function() {
-                const selectedIds = [];
-                $('.row-checkbox:checked').each(function() {
-                    selectedIds.push($(this).val());
-                });
-                
-                if (selectedIds.length === 0) {
-                    return;
-                }
-                
-                // Mostrar confirmación con SweetAlert2
-                Swal.fire({
-                    title: '{{ __('Are you sure?') }}',
-                    text: selectedIds.length === 1 
-                        ? '{{ __('You will not be able to recover this order!') }}' 
-                        : '{{ __('You will not be able to recover these :count orders!', ['count' => '']) }}' + selectedIds.length,
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonText: '{{ __('Yes, delete it!') }}',
-                    cancelButtonText: '{{ __('No, cancel!') }}',
-                    confirmButtonColor: '#d33',
-                    cancelButtonColor: '#3085d6',
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        // Realizar la eliminación mediante AJAX
-                        $.ajax({
-                            url: '{{ route("customers.original-orders.bulk-delete", $customer->id) }}',
-                            type: 'POST',
-                            data: {
-                                _token: '{{ csrf_token() }}',
-                                ids: selectedIds
-                            },
-                            success: function(response) {
-                                if (response.success) {
-                                    // Mostrar mensaje de éxito
-                                    Swal.fire(
-                                        '{{ __('Deleted!') }}',
-                                        response.message,
-                                        'success'
-                                    );
-                                    
-                                    // Recargar la tabla
-                                    dataTable.ajax.reload();
-                                    
-                                    // Resetear el checkbox "seleccionar todos"
-                                    $('#select-all').prop('checked', false);
-                                    
-                                    // Actualizar el botón de eliminación masiva
-                                    updateBulkDeleteButton();
-                                } else {
-                                    // Mostrar mensaje de error
-                                    Swal.fire(
-                                        '{{ __('Error!') }}',
-                                        response.message,
-                                        'error'
-                                    );
-                                }
-                            },
-                            error: function(xhr) {
-                                // Mostrar mensaje de error
-                                const errorMsg = xhr.responseJSON && xhr.responseJSON.message 
-                                    ? xhr.responseJSON.message 
-                                    : '{{ __('An error occurred during deletion.') }}';
-                                    
-                                Swal.fire(
-                                    '{{ __('Error!') }}',
-                                    errorMsg,
-                                    'error'
-                                );
-                            }
-                        });
-                    }
-                });
-            });
-            
-            // Filtro por estado de pedido (server-side)
-            $('#order-status-filter').on('change', function() {
-                // Obtener el valor seleccionado
-                const filterValue = $(this).val();
-                
-                // Almacenar el valor del filtro en una variable global para que DataTables lo use
-                window.orderStatusFilter = filterValue;
-                
-                // Volver a cargar la tabla para aplicar el filtro
-                dataTable.ajax.reload();
-            });
-            
-            // Inicializar el toast de actualización
-            const updateTimeToast = new bootstrap.Toast(document.getElementById('update-time-toast'), {
-                autohide: true,
-                delay: 2000  // Solo mostrar por 2 segundos
-            });
-            
-            // Función para actualizar la tabla manteniendo el estado actual
-            function refreshTableKeepingState() {
-                // Destruir todos los tooltips antes de actualizar la tabla
-                $('[data-bs-toggle="tooltip"]').tooltip('dispose');
-                
-                // Guardar el estado actual
-                const currentPage = dataTable.page();
-                const currentSearch = dataTable.search();
-                const currentOrder = dataTable.order();
-                const currentLength = dataTable.page.len();
-                
-                // Recargar los datos
-                dataTable.ajax.reload(function() {
-                    // Restaurar el estado después de recargar
-                    dataTable.page(currentPage).draw('page');
-                    if (currentSearch) {
-                        dataTable.search(currentSearch).draw('page');
-                    }
-                    dataTable.order(currentOrder).draw('page');
-                    dataTable.page.len(currentLength).draw('page');
-                    
-                    // Mostrar el toast de actualización
-                    updateTimeToast.show();
-                }, false); // false significa que no se resetea la paginación
-            }
-            
-            // Función reutilizable para mostrar notificaciones (toasts)
-            function showToast(message, type = 'info') {
-                const toastEl = document.getElementById('update-time-toast');
-                const toast = new bootstrap.Toast(toastEl);
-                const toastBody = $('#update-time-toast .toast-body');
-                const toastContainer = $('#update-time-toast');
-
-                // Resetear clases de color y añadir la nueva
-                toastContainer.removeClass('bg-info bg-success bg-danger');
-                let icon = '';
-                let colorClass = '';
-
-                switch (type) {
-                    case 'success':
-                        icon = '<i class="fas fa-check-circle me-2"></i>';
-                        colorClass = 'bg-success';
-                        break;
-                    case 'error':
-                        icon = '<i class="fas fa-times-circle me-2"></i>';
-                        colorClass = 'bg-danger';
-                        break;
-                    default: // info
-                        icon = '<i class="fas fa-info-circle me-2"></i>';
-                        colorClass = 'bg-info';
-                        break;
-                }
-                
-                toastContainer.addClass(colorClass);
-                toastEl.querySelector('.toast-body').innerHTML = icon + message;
-                toast.show();
-            }
-
-            // Configurar actualización automática cada minuto
-            setInterval(refreshTableKeepingState, 60000); // 60000 ms = 1 minuto
-
-            // Manejar clic en el botón de importar
-            $('#import-orders-btn').on('click', function(e) {
-                e.preventDefault();
-                const btn = $(this);
-                const originalHtml = btn.html();
-
-                // Deshabilitar botón y mostrar estado de carga
-                btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> @lang("Importando...")');
-
-                $.ajax({
-                    url: '{{ route("customers.original-orders.import", $customer) }}',
-                    type: 'POST',
-                    data: {
-                        _token: '{{ csrf_token() }}'
-                    },
-                    success: function(response) {
-                        if (response.success) {
-                            showToast(response.message, 'success');
-                            setTimeout(refreshTableKeepingState, 2000);
-                        } else {
-                            // Esto puede ocurrir si el servidor responde con 200 OK pero success: false
-                            showToast(response.message || '@lang("Ocurrió un error durante la importación.")', 'error');
-                        }
-                    },
-                    error: function(xhr) {
-                        // Esto se dispara para respuestas de error HTTP (ej. 429, 500)
-                        console.error('Error en la petición de importación:', xhr);
-                        const errorMsg = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : '@lang("No se pudo iniciar la importación.")';
-                        showToast(errorMsg, 'error');
-                    },
-                    complete: function() {
-                        // Restaurar botón
-                        btn.prop('disabled', false).html(originalHtml);
-                        // Restaurar el toast de actualización a su estado original después de un tiempo
-                        setTimeout(() => {
-                            toastContainer = $('#update-time-toast');
-                            toastContainer.removeClass('bg-success bg-danger').addClass('bg-info');
-                            toastContainer.find('.toast-body').html('<i class="fas fa-sync-alt me-2 fa-spin"></i> @lang("Actualizando...")');
-                        }, 5000);
-                    }
-                });
-            });
-            
-            // Manejar clic en el botón de crear tarjetas
-            $('#create-cards-btn').on('click', function(e) {
-                e.preventDefault();
-                const btn = $(this);
-                const originalHtml = btn.html();
-
-                // Deshabilitar botón y mostrar estado de carga
-                btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> @lang("Creando tarjetas...")');
-
-                $.ajax({
-                    url: '{{ route("customers.original-orders.create-cards", $customer) }}',
-                    type: 'POST',
-                    data: {
-                        _token: '{{ csrf_token() }}'
-                    },
-                    success: function(response) {
-                        if (response.success) {
-                            showToast(response.message, 'success');
-                            setTimeout(refreshTableKeepingState, 2000);
-                        } else {
-                            showToast(response.message || '@lang("Ocurrió un error al crear las tarjetas.")', 'error');
-                        }
-                    },
-                    error: function(xhr) {
-                        console.error('Error en la petición de crear tarjetas:', xhr);
-                        const errorMsg = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : '@lang("No se pudieron crear las tarjetas.")';
-                        showToast(errorMsg, 'error');
-                    },
-                    complete: function() {
-                        // Restaurar botón
-                        btn.prop('disabled', false).html(originalHtml);
-                        // Restaurar el toast de actualización a su estado original después de un tiempo
-                        setTimeout(() => {
-                            toastContainer = $('#update-time-toast');
-                            toastContainer.removeClass('bg-success bg-danger').addClass('bg-info');
-                            toastContainer.find('.toast-body').html('<i class="fas fa-sync-alt me-2 fa-spin"></i> @lang("Actualizando...")');
-                        }, 5000);
-                    }
-                });
-            });
         });
-    </script>
+    }
+
+    // Renderizar pedidos
+    function renderOrders(orders) {
+        const grid = $('#orders-grid');
+        grid.empty();
+
+        orders.forEach((order, index) => {
+            const statusClass = getStatusClass(order);
+            const statusBadge = getStatusBadge(order);
+            const processes = renderProcesses(order.processes_html || order.processes);
+
+            const card = `
+                <div class="col-xl-3 col-lg-4 col-md-6 mb-4" style="animation-delay: ${index * 0.05}s">
+                    <div class="oo-order-card">
+                        <div class="oo-order-header ${statusClass}">
+                            <div class="oo-order-id">
+                                <i class="ti ti-package"></i>
+                                ${order.order_id}
+                            </div>
+                            <div class="oo-order-client">${order.client_number}</div>
+                            @can('original-order-delete')
+                            <div class="oo-order-checkbox">
+                                <input type="checkbox" class="form-check-input order-checkbox" value="${order.id}">
+                            </div>
+                            @endcan
+                        </div>
+                        <div class="oo-order-body">
+                            <div class="oo-order-processes">
+                                ${processes}
+                            </div>
+                            <div class="oo-order-meta">
+                                <span class="oo-order-date">
+                                    <i class="ti ti-calendar me-1"></i>${order.created_at}
+                                </span>
+                                ${statusBadge}
+                            </div>
+                        </div>
+                        <div class="oo-order-footer">
+                            @can('original-order-list')
+                            <a href="{{ route('customers.original-orders.index', $customer) }}/${order.id}" class="oo-action-btn oo-action-btn-view" title="@lang('View')">
+                                <i class="ti ti-eye"></i>
+                            </a>
+                            @endcan
+                            @can('original-order-edit')
+                            <a href="{{ route('customers.original-orders.index', $customer) }}/${order.id}/edit" class="oo-action-btn oo-action-btn-edit" title="@lang('Edit')">
+                                <i class="ti ti-edit"></i>
+                            </a>
+                            @endcan
+                            @can('original-order-delete')
+                            <button class="oo-action-btn oo-action-btn-delete delete-order" data-id="${order.id}" title="@lang('Delete')">
+                                <i class="ti ti-trash"></i>
+                            </button>
+                            @endcan
+                        </div>
+                    </div>
+                </div>
+            `;
+            grid.append(card);
+        });
+    }
+
+    // Helpers
+    function getStatusClass(order) {
+        if (order.finished_at && order.finished_at !== '-' && !order.finished_at.includes('Pendiente')) {
+            return 'finished';
+        }
+        if (order.status === 'started' || order.finished_at?.includes('Iniciado')) return 'started';
+        if (order.status === 'assigned' || order.finished_at?.includes('Asignado')) return 'assigned';
+        if (order.status === 'to-create' || order.finished_at?.includes('Crear')) return 'to-create';
+        return 'planned';
+    }
+
+    function getStatusBadge(order) {
+        const status = order.finished_at || '@lang("Pendiente")';
+        let badgeClass = 'bg-secondary';
+
+        if (status.includes('Finalizado') || (status.match(/\d{4}-\d{2}-\d{2}/) && !status.includes('Pendiente'))) {
+            badgeClass = 'bg-success';
+        } else if (status.includes('Iniciado')) {
+            badgeClass = 'bg-primary';
+        } else if (status.includes('Asignado')) {
+            badgeClass = 'bg-info';
+        } else if (status.includes('Crear')) {
+            badgeClass = 'bg-danger';
+        }
+
+        return `<span class="badge ${badgeClass} oo-order-status">${status}</span>`;
+    }
+
+    function renderProcesses(processesHtml) {
+        if (typeof processesHtml === 'string') {
+            return processesHtml;
+        }
+        return '<span class="badge bg-secondary">-</span>';
+    }
+
+    // Paginación
+    function renderPagination(response) {
+        const pagination = $('#pagination');
+        pagination.empty();
+
+        const lastPage = response.last_page || 1;
+        const currentPageNum = response.current_page || 1;
+
+        // Info
+        $('#pagination-info').text(
+            `@lang('Showing') ${response.from || 0} @lang('to') ${response.to || 0} @lang('of') ${response.total || 0}`
+        );
+
+        // Previous
+        pagination.append(`
+            <li class="page-item ${currentPageNum === 1 ? 'disabled' : ''}">
+                <a class="page-link" href="#" data-page="${currentPageNum - 1}">
+                    <i class="ti ti-chevron-left"></i>
+                </a>
+            </li>
+        `);
+
+        // Pages
+        let startPage = Math.max(1, currentPageNum - 2);
+        let endPage = Math.min(lastPage, currentPageNum + 2);
+
+        if (startPage > 1) {
+            pagination.append(`<li class="page-item"><a class="page-link" href="#" data-page="1">1</a></li>`);
+            if (startPage > 2) {
+                pagination.append(`<li class="page-item disabled"><span class="page-link">...</span></li>`);
+            }
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            pagination.append(`
+                <li class="page-item ${i === currentPageNum ? 'active' : ''}">
+                    <a class="page-link" href="#" data-page="${i}">${i}</a>
+                </li>
+            `);
+        }
+
+        if (endPage < lastPage) {
+            if (endPage < lastPage - 1) {
+                pagination.append(`<li class="page-item disabled"><span class="page-link">...</span></li>`);
+            }
+            pagination.append(`<li class="page-item"><a class="page-link" href="#" data-page="${lastPage}">${lastPage}</a></li>`);
+        }
+
+        // Next
+        pagination.append(`
+            <li class="page-item ${currentPageNum === lastPage ? 'disabled' : ''}">
+                <a class="page-link" href="#" data-page="${currentPageNum + 1}">
+                    <i class="ti ti-chevron-right"></i>
+                </a>
+            </li>
+        `);
+    }
+
+    // Event: Paginación
+    $(document).on('click', '.oo-pagination .page-link', function(e) {
+        e.preventDefault();
+        const page = $(this).data('page');
+        if (page && page !== currentPage) {
+            currentPage = page;
+            loadOrders();
+            $('html, body').animate({ scrollTop: 0 }, 300);
+        }
+    });
+
+    // Stats
+    function updateStats(response) {
+        if (response.stats) {
+            $('#stats-total').text(response.stats.total || 0);
+            $('#stats-finished').text(response.stats.finished || 0);
+            $('#stats-started').text(response.stats.started || 0);
+            $('#stats-pending').text(response.stats.pending || 0);
+        } else if (response.total !== undefined) {
+            $('#stats-total').text(response.total);
+        }
+    }
+
+    // Delete order
+    $(document).on('click', '.delete-order', function() {
+        const id = $(this).data('id');
+
+        Swal.fire({
+            title: '{{ __("Are you sure?") }}',
+            text: '{{ __("You will not be able to recover this order!") }}',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: '{{ __("Yes, delete it!") }}',
+            cancelButtonText: '{{ __("Cancel") }}'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: '{{ route("customers.original-orders.index", $customer) }}/' + id,
+                    type: 'DELETE',
+                    data: { _token: '{{ csrf_token() }}' },
+                    success: function(response) {
+                        Swal.fire('{{ __("Deleted!") }}', '{{ __("Order deleted successfully.") }}', 'success');
+                        loadOrders();
+                    },
+                    error: function() {
+                        Swal.fire('{{ __("Error") }}', '{{ __("Could not delete order.") }}', 'error');
+                    }
+                });
+            }
+        });
+    });
+
+    // Bulk delete
+    $(document).on('change', '.order-checkbox', function() {
+        updateBulkDeleteButton();
+    });
+
+    function updateBulkDeleteButton() {
+        const count = $('.order-checkbox:checked').length;
+        if (count > 0) {
+            $('#bulk-delete').removeClass('d-none').find('span').text('{{ __("Delete") }} (' + count + ')');
+        } else {
+            $('#bulk-delete').addClass('d-none');
+        }
+    }
+
+    $('#bulk-delete').on('click', function() {
+        const ids = [];
+        $('.order-checkbox:checked').each(function() {
+            ids.push($(this).val());
+        });
+
+        if (ids.length === 0) return;
+
+        Swal.fire({
+            title: '{{ __("Are you sure?") }}',
+            text: '{{ __("You will not be able to recover these orders!") }}',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            confirmButtonText: '{{ __("Yes, delete!") }}',
+            cancelButtonText: '{{ __("Cancel") }}'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: '{{ route("customers.original-orders.bulk-delete", $customer->id) }}',
+                    type: 'POST',
+                    data: { _token: '{{ csrf_token() }}', ids: ids },
+                    success: function(response) {
+                        Swal.fire('{{ __("Deleted!") }}', response.message, 'success');
+                        loadOrders();
+                        $('#bulk-delete').addClass('d-none');
+                    },
+                    error: function() {
+                        Swal.fire('{{ __("Error") }}', '{{ __("Could not delete orders.") }}', 'error');
+                    }
+                });
+            }
+        });
+    });
+
+    // Import
+    $('#import-orders-btn').on('click', function(e) {
+        e.preventDefault();
+        const btn = $(this);
+        const originalHtml = btn.html();
+        btn.prop('disabled', true).html('<i class="ti ti-loader oo-spin"></i>');
+
+        $.ajax({
+            url: '{{ route("customers.original-orders.import", $customer) }}',
+            type: 'POST',
+            data: { _token: '{{ csrf_token() }}' },
+            success: function(response) {
+                showToast(response.message || '@lang("Import completed")', response.success ? 'success' : 'error');
+                if (response.success) loadOrders();
+            },
+            error: function(xhr) {
+                showToast(xhr.responseJSON?.message || '@lang("Import failed")', 'error');
+            },
+            complete: function() {
+                btn.prop('disabled', false).html(originalHtml);
+            }
+        });
+    });
+
+    // Create cards
+    $('#create-cards-btn').on('click', function(e) {
+        e.preventDefault();
+        const btn = $(this);
+        const originalHtml = btn.html();
+        btn.prop('disabled', true).html('<i class="ti ti-loader oo-spin"></i>');
+
+        $.ajax({
+            url: '{{ route("customers.original-orders.create-cards", $customer) }}',
+            type: 'POST',
+            data: { _token: '{{ csrf_token() }}' },
+            success: function(response) {
+                showToast(response.message || '@lang("Cards created")', response.success ? 'success' : 'error');
+                if (response.success) loadOrders();
+            },
+            error: function(xhr) {
+                showToast(xhr.responseJSON?.message || '@lang("Failed to create cards")', 'error');
+            },
+            complete: function() {
+                btn.prop('disabled', false).html(originalHtml);
+            }
+        });
+    });
+
+    // Toast
+    function showToast(message, type) {
+        const toast = $('#update-time-toast');
+        toast.removeClass('bg-info bg-success bg-danger');
+        toast.addClass(type === 'success' ? 'bg-success' : type === 'error' ? 'bg-danger' : 'bg-info');
+        toast.find('.toast-body').html(`<i class="ti ti-${type === 'success' ? 'check' : type === 'error' ? 'x' : 'info-circle'} me-2"></i>${message}`);
+        new bootstrap.Toast(toast[0]).show();
+    }
+
+    // Auto refresh
+    setInterval(function() {
+        loadOrders();
+    }, 60000);
+});
+</script>
 @endpush

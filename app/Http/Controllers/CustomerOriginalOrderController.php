@@ -123,8 +123,15 @@ class CustomerOriginalOrderController extends Controller
 
     public function index(Request $request, Customer $customer)
     {
-        // Si es una solicitud AJAX (desde DataTables)
+        // Si es una solicitud AJAX
         if ($request->ajax()) {
+            // Detectar si es la nueva vista de cards (Accept: application/json) o DataTables (tiene draw parameter)
+            $isCardView = $request->header('Accept') === 'application/json' && !$request->has('draw');
+
+            if ($isCardView) {
+                return $this->indexCardsView($request, $customer);
+            }
+
             // Log para depuración
             \Log::info('DataTables request', [
                 'all' => $request->all(),
@@ -480,6 +487,196 @@ class CustomerOriginalOrderController extends Controller
         return view('customers.original-orders.index', compact('customer'));
     }
 
+    /**
+     * Método para la nueva vista de cards con paginación
+     */
+    private function indexCardsView(Request $request, Customer $customer)
+    {
+        $search = $request->input('search', '');
+        $perPage = $request->input('per_page', 12);
+        $page = $request->input('page', 1);
+        $statusFilter = $request->input('status_filter', 'all');
+
+        // Iniciar la consulta con relaciones
+        $query = $customer->originalOrders()->with([
+            'processes' => function($query) {
+                $query->withPivot('id', 'finished', 'finished_at', 'grupo_numero');
+                $query->orderBy('sequence', 'asc');
+            }
+        ]);
+
+        // Aplicar búsqueda si se proporciona
+        if (!empty($search)) {
+            $searchTerm = '%' . $search . '%';
+            $query->where(function($q) use ($searchTerm) {
+                $q->where('order_id', 'like', $searchTerm)
+                  ->orWhere('client_number', 'like', $searchTerm);
+            });
+        }
+
+        // Cargar todos los resultados para evaluar estado
+        $ordersAll = $query->orderBy('created_at', 'desc')->get();
+
+        // Cargar todas las órdenes de producción para todos los procesos
+        $processIdsAll = collect();
+        foreach ($ordersAll as $o) {
+            foreach ($o->processes as $p) {
+                $processIdsAll->push($p->pivot->id);
+            }
+        }
+        $allProductionOrders = \App\Models\ProductionOrder::whereIn('original_order_process_id', $processIdsAll->toArray())
+            ->select('id', 'original_order_process_id', 'production_line_id', 'status', 'accumulated_time')
+            ->get()
+            ->groupBy('original_order_process_id');
+
+        // Función para calcular el nivel de estado de pedido
+        $computeStatusLevel = function($order) use ($allProductionOrders) {
+            if ($order->finished_at) {
+                return 4; // Finalizado
+            }
+            $statusLevel = 0;
+            foreach ($order->processes as $process) {
+                $pivotId = $process->pivot->id;
+                if ($process->pivot->finished) {
+                    $statusLevel = 3;
+                    break;
+                }
+                $pos = isset($allProductionOrders[$pivotId]) ? $allProductionOrders[$pivotId] : collect();
+                $isAssigned = false;
+                $isPlanned = false;
+                foreach ($pos as $po) {
+                    if (isset($po->status) && $po->status === 1) {
+                        $statusLevel = 3;
+                        break 2;
+                    }
+                    if ($po->production_line_id) {
+                        $isAssigned = true;
+                    }
+                    $isPlanned = true;
+                }
+                if ($isAssigned) {
+                    $statusLevel = max($statusLevel, 2);
+                } elseif ($isPlanned) {
+                    $statusLevel = max($statusLevel, 1);
+                }
+            }
+            return $statusLevel;
+        };
+
+        // Calcular estadísticas antes del filtro
+        $stats = [
+            'total' => $ordersAll->count(),
+            'finished' => $ordersAll->filter(fn($o) => !is_null($o->finished_at))->count(),
+            'started' => $ordersAll->filter(fn($o) => is_null($o->finished_at) && $computeStatusLevel($o) === 3)->count(),
+            'pending' => $ordersAll->filter(fn($o) => is_null($o->finished_at) && in_array($computeStatusLevel($o), [0, 1, 2]))->count(),
+        ];
+
+        // Aplicar filtro por estado
+        $filtered = $ordersAll->filter(function($order) use ($statusFilter, $computeStatusLevel) {
+            switch ($statusFilter) {
+                case 'finished':
+                    return !is_null($order->finished_at);
+                case 'started':
+                    return is_null($order->finished_at) && $computeStatusLevel($order) === 3;
+                case 'assigned':
+                    return is_null($order->finished_at) && $computeStatusLevel($order) === 2;
+                case 'planned':
+                    return is_null($order->finished_at) && $computeStatusLevel($order) === 1;
+                case 'to-create':
+                    return is_null($order->finished_at) && $computeStatusLevel($order) === 0;
+                case 'all':
+                default:
+                    return true;
+            }
+        });
+
+        // Paginación manual
+        $total = $filtered->count();
+        $lastPage = (int) ceil($total / $perPage);
+        $offset = ($page - 1) * $perPage;
+        $orders = $filtered->slice($offset, $perPage)->values();
+
+        // Preparar datos para la vista de cards
+        $data = [];
+        foreach ($orders as $order) {
+            // Generar HTML para los procesos
+            $processesHtml = '';
+            foreach ($order->processes as $process) {
+                $pivot = $process->pivot;
+                $hasAssignedOrders = isset($allProductionOrders[$pivot->id]) && $allProductionOrders[$pivot->id]->isNotEmpty();
+
+                if ($pivot->finished) {
+                    $badgeClass = 'bg-success';
+                } else {
+                    if ($hasAssignedOrders) {
+                        $productionOrder = $allProductionOrders[$pivot->id]->first();
+                        $status = $productionOrder ? $productionOrder->status : null;
+                        $productionLineId = $productionOrder ? $productionOrder->production_line_id : null;
+
+                        if ($status === 0) {
+                            $badgeClass = is_null($productionLineId) ? 'bg-secondary' : 'bg-info';
+                        } elseif ($status === 1) {
+                            $badgeClass = 'bg-primary';
+                        } elseif ($status > 2) {
+                            $badgeClass = 'bg-danger';
+                        } else {
+                            $badgeClass = 'bg-warning';
+                        }
+                    } else {
+                        $badgeClass = 'bg-secondary';
+                    }
+                }
+
+                $grupoNumero = $pivot->grupo_numero ? ' (' . $pivot->grupo_numero . ')' : '';
+                $processesHtml .= '<span class="badge ' . $badgeClass . ' me-1 mb-1">' . $process->description . $grupoNumero . '</span>';
+            }
+
+            // Determinar estado del pedido
+            $finishedAt = '';
+            $orderStatus = '';
+            if ($order->finished_at) {
+                $finishedAt = $order->finished_at->format('Y-m-d H:i');
+                $orderStatus = 'finished';
+            } else {
+                $level = $computeStatusLevel($order);
+                if ($level == 3) {
+                    $finishedAt = __('Pedido Iniciado');
+                    $orderStatus = 'started';
+                } elseif ($level == 2) {
+                    $finishedAt = __('Asignado a máquina');
+                    $orderStatus = 'assigned';
+                } elseif ($level == 1) {
+                    $finishedAt = __('Pendiente Planificar');
+                    $orderStatus = 'planned';
+                } else {
+                    $finishedAt = __('Pendiente Crear');
+                    $orderStatus = 'to-create';
+                }
+            }
+
+            $data[] = [
+                'id' => $order->id,
+                'order_id' => $order->order_id,
+                'client_number' => $order->client_number,
+                'processes_html' => $processesHtml,
+                'finished_at' => $finishedAt,
+                'status' => $orderStatus,
+                'created_at' => $order->created_at->format('Y-m-d H:i'),
+            ];
+        }
+
+        return response()->json([
+            'data' => $data,
+            'stats' => $stats,
+            'current_page' => (int) $page,
+            'last_page' => $lastPage,
+            'per_page' => (int) $perPage,
+            'total' => $total,
+            'from' => $total > 0 ? $offset + 1 : 0,
+            'to' => $total > 0 ? min($offset + $perPage, $total) : 0,
+        ]);
+    }
+
     public function create(Customer $customer)
     {
         $processes = Process::all();
@@ -681,16 +878,16 @@ class CustomerOriginalOrderController extends Controller
             ->whereHas('originalOrder', function($q) use ($customer) {
                 $q->where('customer_id', $customer->id);
             })
-            ->whereNotNull('finished_at');
+            ->whereNotNull('original_order_processes.finished_at');
 
         $recordsTotal = (clone $baseQuery)->count();
 
         // Aplicar filtro de rango de fechas (si se proveen)
         if ($dateFrom) {
-            $baseQuery->whereDate('finished_at', '>=', $dateFrom);
+            $baseQuery->whereDate('original_order_processes.finished_at', '>=', $dateFrom);
         }
         if ($dateTo) {
-            $baseQuery->whereDate('finished_at', '<=', $dateTo);
+            $baseQuery->whereDate('original_order_processes.finished_at', '<=', $dateTo);
         }
 
         // Búsqueda por texto en order_id o descripción de proceso
@@ -719,8 +916,10 @@ class CustomerOriginalOrderController extends Controller
             $baseQuery->join('processes as p', 'p.id', '=', 'original_order_processes.process_id')
                       ->orderBy('p.description', $orderDir)
                       ->select('original_order_processes.*');
+        } elseif ($orderColumn === 'finished_at') {
+            $baseQuery->orderBy('original_order_processes.finished_at', $orderDir);
         } else {
-            $baseQuery->orderBy($orderColumn, $orderDir);
+            $baseQuery->orderBy('original_order_processes.' . $orderColumn, $orderDir);
         }
 
         // Paginación
@@ -760,11 +959,37 @@ class CustomerOriginalOrderController extends Controller
             ];
         }
 
+        // Calcular estadísticas de todos los registros filtrados (no solo la página actual)
+        $statsQuery = OriginalOrderProcess::query()
+            ->whereHas('originalOrder', function($q) use ($customer) {
+                $q->where('customer_id', $customer->id);
+            })
+            ->whereNotNull('original_order_processes.finished_at');
+
+        if ($dateFrom) {
+            $statsQuery->whereDate('original_order_processes.finished_at', '>=', $dateFrom);
+        }
+        if ($dateTo) {
+            $statsQuery->whereDate('original_order_processes.finished_at', '<=', $dateTo);
+        }
+
+        $statsData = $statsQuery->selectRaw('
+            SUM(COALESCE(box, 0)) as total_boxes,
+            SUM(COALESCE(box, 0) * COALESCE(units_box, 0)) as total_units,
+            SUM(COALESCE(number_of_pallets, 0)) as total_pallets
+        ')->first();
+
         return response()->json([
             'draw' => intval($request->input('draw')),
             'recordsTotal' => $recordsTotal,
             'recordsFiltered' => $recordsFiltered,
             'data' => $data,
+            'stats' => [
+                'total' => $recordsFiltered,
+                'boxes' => (int) ($statsData->total_boxes ?? 0),
+                'units' => (int) ($statsData->total_units ?? 0),
+                'pallets' => (int) ($statsData->total_pallets ?? 0),
+            ],
         ]);
     }
 

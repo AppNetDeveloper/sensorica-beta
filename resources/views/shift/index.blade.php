@@ -848,22 +848,23 @@
 .shifts-table thead th {
     background: #f8fafc;
     border: none;
-    padding: 16px;
-    font-weight: 700;
+    padding: 14px 16px;
+    font-weight: 600;
     color: #475569;
     text-transform: uppercase;
     font-size: 0.75rem;
     letter-spacing: 0.5px;
+    border-bottom: 2px solid #e2e8f0;
 }
 
 .shifts-table tbody td {
-    padding: 16px;
+    padding: 14px 16px;
     vertical-align: middle;
     border-bottom: 1px solid #f1f5f9;
 }
 
 .shifts-table tbody tr {
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
 }
 
 .shifts-table tbody tr:hover {
@@ -1057,6 +1058,7 @@
 [data-theme="dark"] .shifts-table thead th {
     background: #0f172a;
     color: #94a3b8;
+    border-color: #334155;
 }
 
 [data-theme="dark"] .shifts-table tbody td {
@@ -1091,6 +1093,87 @@
     .shifts-stats-card {
         margin-bottom: 12px;
     }
+}
+
+/* DataTables mobile scroll - siempre activo en pantallas pequeñas */
+.shifts-table-card .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+}
+
+.shifts-table-card .table-responsive::-webkit-scrollbar {
+    height: 8px;
+}
+
+.shifts-table-card .table-responsive::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 4px;
+}
+
+.shifts-table-card .table-responsive::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #0ea5e9, #0284c7);
+    border-radius: 4px;
+}
+
+.shifts-table-card .table-responsive::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #0284c7, #0369a1);
+}
+
+@media (max-width: 991.98px) {
+    .shifts-table-card .shifts-table {
+        min-width: 700px !important;
+        width: max-content !important;
+    }
+
+    .shifts-table thead th,
+    .shifts-table tbody td {
+        padding: 10px 12px !important;
+        font-size: 0.8rem !important;
+        white-space: nowrap !important;
+    }
+
+    .shifts-table-btn {
+        width: 32px;
+        height: 32px;
+        font-size: 0.85rem;
+    }
+
+    /* Ocultar paginación info en móvil para dar más espacio */
+    .dataTables_info {
+        font-size: 0.75rem;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .shifts-table-card .shifts-table {
+        min-width: 600px !important;
+    }
+
+    .shifts-table thead th,
+    .shifts-table tbody td {
+        padding: 8px 10px !important;
+        font-size: 0.75rem !important;
+    }
+
+    .shifts-table-btn {
+        width: 28px;
+        height: 28px;
+        font-size: 0.8rem;
+    }
+
+    .shifts-badge {
+        padding: 4px 8px;
+        font-size: 0.65rem;
+    }
+}
+
+/* Dark mode scroll */
+[data-theme="dark"] .shifts-table-card .table-responsive::-webkit-scrollbar-track {
+    background: #1e293b;
+}
+
+[data-theme="dark"] .shifts-table-card .table-responsive::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #0ea5e9, #0284c7);
 }
 </style>
 @endpush
