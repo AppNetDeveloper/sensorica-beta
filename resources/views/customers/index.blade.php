@@ -141,7 +141,7 @@
                 {{-- Acciones organizadas por categorías --}}
                 <div class="pc-card-body">
                     {{-- FÁBRICA --}}
-                    @if(auth()->user()->can('productionline-kanban') || auth()->user()->can('productionline-show') || auth()->user()->can('productionline-orders') || auth()->user()->can('workcalendar-list'))
+                    @if(auth()->user()->can('productionline-kanban') || auth()->user()->can('productionline-show') || auth()->user()->can('productionline-orders') || auth()->user()->can('workcalendar-list') || auth()->user()->can('original-order-list'))
                     <div class="pc-action-group">
                         <div class="pc-action-label">
                             <i class="ti ti-building-factory"></i> {{ __('Factory') }}
@@ -165,6 +165,12 @@
                                 <span>{{ __('Orders') }}</span>
                             </a>
                             @endcan
+                            @can('original-order-list')
+                            <a href="{{ route('customers.original-orders.finished-processes.view', $customer->id) }}" class="pc-btn pc-btn-outline" title="{{ __('Finished Processes') }}">
+                                <i class="ti ti-circle-check"></i>
+                                <span>{{ __('Finished Processes') }}</span>
+                            </a>
+                            @endcan
                             @can('workcalendar-list')
                             <a href="{{ route('customers.work-calendars.index', $customer->id) }}" class="pc-btn pc-btn-info" title="{{ __('Work Calendar') }}">
                                 <i class="ti ti-calendar"></i>
@@ -176,20 +182,38 @@
                     @endif
 
                     {{-- ALMACÉN --}}
-                    @if(auth()->user()->can('assets-view') || auth()->user()->can('vendor-suppliers-view') || auth()->user()->can('vendor-orders-view'))
+                    @if(auth()->user()->can('assets-view') || auth()->user()->can('asset-categories-view') || auth()->user()->can('asset-cost-centers-view') || auth()->user()->can('asset-locations-view') || auth()->user()->can('vendor-suppliers-view') || auth()->user()->can('vendor-items-view') || auth()->user()->can('vendor-orders-view'))
                     <div class="pc-action-group">
                         <div class="pc-action-label">
                             <i class="ti ti-package"></i> {{ __('Warehouse') }}
                         </div>
                         <div class="pc-action-buttons">
                             @can('assets-view')
-                            <a href="{{ route('customers.assets.index', $customer->id) }}" class="pc-btn pc-btn-primary" title="{{ __('Assets') }}">
+                            <a href="{{ route('customers.assets.index', $customer->id) }}" class="pc-btn pc-btn-primary" title="{{ __('Inventory') }}">
                                 <i class="ti ti-box"></i>
-                                <span>{{ __('Assets') }}</span>
-                            </a>
-                            <a href="{{ route('customers.assets.inventory', $customer->id) }}" class="pc-btn pc-btn-outline" title="{{ __('Inventory') }}">
-                                <i class="ti ti-chart-bar"></i>
                                 <span>{{ __('Inventory') }}</span>
+                            </a>
+                            <a href="{{ route('customers.assets.inventory', $customer->id) }}" class="pc-btn pc-btn-outline" title="{{ __('Available Assets') }}">
+                                <i class="ti ti-chart-bar"></i>
+                                <span>{{ __('Available Assets') }}</span>
+                            </a>
+                            @endcan
+                            @can('asset-categories-view')
+                            <a href="{{ route('customers.asset-categories.index', $customer->id) }}" class="pc-btn pc-btn-outline" title="{{ __('Categories') }}">
+                                <i class="ti ti-category"></i>
+                                <span>{{ __('Categories') }}</span>
+                            </a>
+                            @endcan
+                            @can('asset-cost-centers-view')
+                            <a href="{{ route('customers.asset-cost-centers.index', $customer->id) }}" class="pc-btn pc-btn-outline" title="{{ __('Cost Centers') }}">
+                                <i class="ti ti-coin"></i>
+                                <span>{{ __('Cost Centers') }}</span>
+                            </a>
+                            @endcan
+                            @can('asset-locations-view')
+                            <a href="{{ route('customers.asset-locations.index', $customer->id) }}" class="pc-btn pc-btn-outline" title="{{ __('Locations') }}">
+                                <i class="ti ti-map-pin"></i>
+                                <span>{{ __('Locations') }}</span>
                             </a>
                             @endcan
                             @can('vendor-suppliers-view')
@@ -198,10 +222,16 @@
                                 <span>{{ __('Suppliers') }}</span>
                             </a>
                             @endcan
+                            @can('vendor-items-view')
+                            <a href="{{ route('customers.vendor-items.index', $customer->id) }}" class="pc-btn pc-btn-outline" title="{{ __('Products') }}">
+                                <i class="ti ti-package"></i>
+                                <span>{{ __('Products') }}</span>
+                            </a>
+                            @endcan
                             @can('vendor-orders-view')
-                            <a href="{{ route('customers.vendor-orders.index', $customer->id) }}" class="pc-btn pc-btn-outline" title="{{ __('Purchase Orders') }}">
+                            <a href="{{ route('customers.vendor-orders.index', $customer->id) }}" class="pc-btn pc-btn-outline" title="{{ __('Supplier Orders') }}">
                                 <i class="ti ti-file-invoice"></i>
-                                <span>{{ __('Purchases') }}</span>
+                                <span>{{ __('Supplier Orders') }}</span>
                             </a>
                             @endcan
                         </div>
@@ -227,7 +257,7 @@
                     @endcan
 
                     {{-- LOGÍSTICA --}}
-                    @if(auth()->user()->can('routes-view') || auth()->user()->can('fleet-view') || auth()->user()->can('customer-clients-view'))
+                    @if(auth()->user()->can('routes-view') || auth()->user()->can('fleet-view') || auth()->user()->can('customer-clients-view') || auth()->user()->can('route-names-view'))
                     <div class="pc-action-group">
                         <div class="pc-action-label">
                             <i class="ti ti-truck"></i> {{ __('Logistics') }}
@@ -251,6 +281,57 @@
                                 <span>{{ __('Clients') }}</span>
                             </a>
                             @endcan
+                            @can('route-names-view')
+                            <a href="{{ route('customers.route-names.index', $customer->id) }}" class="pc-btn pc-btn-outline" title="{{ __('Route Dictionary') }}">
+                                <i class="ti ti-list"></i>
+                                <span>{{ __('Route Dictionary') }}</span>
+                            </a>
+                            @endcan
+                        </div>
+                    </div>
+                    @endif
+
+                    {{-- ESTADÍSTICAS --}}
+                    @if(auth()->user()->can('original-order-list') || auth()->user()->can('hourly-totals-view') || auth()->user()->can('productionline-weight-stats') || auth()->user()->can('productionline-production-stats'))
+                    <div class="pc-action-group">
+                        <div class="pc-action-label">
+                            <i class="ti ti-chart-pie"></i> {{ __('Statistics') }}
+                        </div>
+                        <div class="pc-action-buttons">
+                            @can('original-order-list')
+                            <a href="{{ route('customers.production-times.view', $customer->id) }}" class="pc-btn pc-btn-outline" title="{{ __('Production Times') }}">
+                                <i class="ti ti-clock"></i>
+                                <span>{{ __('Times') }}</span>
+                            </a>
+                            @endcan
+                            @can('hourly-totals-view')
+                            <a href="{{ route('customers.hourly-totals', $customer->id) }}" class="pc-btn pc-btn-outline" title="{{ __('Hourly Load') }}">
+                                <i class="ti ti-chart-area"></i>
+                                <span>{{ __('Hourly Load') }}</span>
+                            </a>
+                            @endcan
+                            @can('productionline-weight-stats')
+                            <a href="{{ secure_url('/modbuses/liststats/weight?token=' . $customer->token) }}" target="_blank" class="pc-btn pc-btn-success" title="{{ __('Weight Stats') }}">
+                                <i class="ti ti-scale"></i>
+                                <span>{{ __('Weight Stats') }}</span>
+                            </a>
+                            @endcan
+                            @can('productionline-production-stats')
+                            <a href="{{ secure_url('/productionlines/liststats?token=' . $customer->token) }}" target="_blank" class="pc-btn pc-btn-warning" title="{{ __('Production Stats') }}">
+                                <i class="ti ti-chart-line"></i>
+                                <span>{{ __('Production Stats') }}</span>
+                            </a>
+                            <a href="{{ route('customers.sensors.index', $customer->id) }}" class="pc-btn pc-btn-outline" title="{{ __('Sensors') }}">
+                                <i class="ti ti-cpu"></i>
+                                <span>{{ __('Sensors') }}</span>
+                            </a>
+                            @endcan
+                            @can('productionline-kanban')
+                            <a href="{{ route('customers.optimal-sensor-times.index', $customer->id) }}" class="pc-btn pc-btn-outline-info" title="{{ __('Optimal Times') }}">
+                                <i class="ti ti-clock"></i>
+                                <span>{{ __('Optimal Times') }}</span>
+                            </a>
+                            @endcan
                         </div>
                     </div>
                     @endif
@@ -262,61 +343,59 @@
                             <i class="ti ti-alert-triangle"></i> {{ __('Quality & Incidents') }}
                         </div>
                         <div class="pc-action-buttons">
-                            <a href="{{ route('customers.qc-confirmations.index', $customer->id) }}" class="pc-btn pc-btn-info" title="{{ __('QC Confirmations') }}">
-                                <i class="ti ti-clipboard-check"></i>
-                                <span>QC</span>
-                            </a>
-                            <a href="{{ route('customers.production-order-incidents.index', $customer->id) }}" class="pc-btn pc-btn-warning" title="{{ __('Production Incidents') }}">
+                            <a href="{{ route('customers.production-order-incidents.index', $customer->id) }}" class="pc-btn pc-btn-danger" title="{{ __('Incidents') }}">
                                 <i class="ti ti-alert-triangle"></i>
                                 <span>{{ __('Incidents') }}</span>
                             </a>
-                            <a href="{{ route('customers.quality-incidents.index', $customer->id) }}" class="pc-btn pc-btn-outline" title="{{ __('Quality Issues') }}">
+                            <a href="{{ route('customers.quality-incidents.index', $customer->id) }}" class="pc-btn pc-btn-outline-danger" title="{{ __('Quality Incidents') }}">
                                 <i class="ti ti-flask"></i>
-                                <span>{{ __('Quality') }}</span>
+                                <span>{{ __('Quality Incidents') }}</span>
+                            </a>
+                            <a href="{{ route('customers.qc-confirmations.index', $customer->id) }}" class="pc-btn pc-btn-outline" title="{{ __('Quality Control') }}">
+                                <i class="ti ti-clipboard-check"></i>
+                                <span>{{ __('Quality Control') }}</span>
                             </a>
                         </div>
                     </div>
                     @endcan
 
-                    {{-- ESTADÍSTICAS --}}
-                    @can('original-order-list')
+                    {{-- INTEGRACIONES --}}
+                    @can('callbacks.view')
                     <div class="pc-action-group">
                         <div class="pc-action-label">
-                            <i class="ti ti-chart-pie"></i> {{ __('Statistics') }}
+                            <i class="ti ti-plug"></i> {{ __('Integrations') }}
                         </div>
                         <div class="pc-action-buttons">
-                            <a href="{{ route('customers.production-times.view', $customer->id) }}" class="pc-btn pc-btn-outline" title="{{ __('Production Times') }}">
-                                <i class="ti ti-clock"></i>
-                                <span>{{ __('Times') }}</span>
-                            </a>
-                            <a href="{{ route('customers.original-orders.finished-processes.view', $customer->id) }}" class="pc-btn pc-btn-outline" title="{{ __('Finished Processes') }}">
-                                <i class="ti ti-chart-line"></i>
-                                <span>{{ __('Processes') }}</span>
+                            <a href="{{ route('customers.callbacks.index', $customer->id) }}" class="pc-btn pc-btn-outline" title="{{ __('Callbacks') }}">
+                                <i class="ti ti-webhook"></i>
+                                <span>{{ __('Callbacks') }}</span>
                             </a>
                         </div>
                     </div>
                     @endcan
 
-                    {{-- CONFIGURACIÓN --}}
-                    @if(auth()->user()->can('productionline-edit') || auth()->user()->can('productionline-delete'))
-                    <div class="pc-action-group pc-action-group-config">
+                    {{-- AJUSTES --}}
+                    @can('productionline-edit')
+                    <div class="pc-action-group">
                         <div class="pc-action-label">
                             <i class="ti ti-settings"></i> {{ __('Settings') }}
                         </div>
                         <div class="pc-action-buttons">
-                            @can('productionline-edit')
-                            <a href="{{ route('customers.edit', $customer->id) }}" class="pc-btn pc-btn-outline-dark" title="{{ __('Edit Center') }}">
+                            <a href="{{ route('customers.edit', $customer->id) }}" class="pc-btn pc-btn-info" title="{{ __('Edit Center') }}">
                                 <i class="ti ti-edit"></i>
                                 <span>{{ __('Edit') }}</span>
                             </a>
-                            @endcan
-                            @can('sensor-show')
-                            <a href="{{ route('customers.sensors.index', $customer->id) }}" class="pc-btn pc-btn-outline-dark" title="{{ __('Sensors') }}">
-                                <i class="ti ti-cpu"></i>
-                                <span>{{ __('Sensors') }}</span>
-                            </a>
-                            @endcan
-                            @can('productionline-delete')
+                        </div>
+                    </div>
+                    @endcan
+
+                    {{-- CRÍTICO --}}
+                    @can('productionline-delete')
+                    <div class="pc-action-group pc-action-group-danger">
+                        <div class="pc-action-label text-danger">
+                            <i class="ti ti-alert-octagon"></i> {{ __('Critical') }}
+                        </div>
+                        <div class="pc-action-buttons">
                             <button type="button" class="pc-btn pc-btn-outline-danger btn-delete-customer"
                                     data-id="{{ $customer->id }}"
                                     data-name="{{ $customer->name }}"
@@ -324,10 +403,9 @@
                                 <i class="ti ti-trash"></i>
                                 <span>{{ __('Delete') }}</span>
                             </button>
-                            @endcan
                         </div>
                     </div>
-                    @endif
+                    @endcan
                 </div>
             </div>
         </div>
@@ -663,6 +741,26 @@
     background: #fef2f2;
     color: #dc2626;
     border-color: #ef4444;
+}
+
+.pc-btn-success {
+    background: #22c55e;
+    color: white;
+}
+.pc-btn-success:hover {
+    background: #16a34a;
+    color: white;
+}
+
+.pc-btn-outline-info {
+    background: transparent;
+    color: #06b6d4;
+    border-color: #a5f3fc;
+}
+.pc-btn-outline-info:hover {
+    background: #ecfeff;
+    color: #0891b2;
+    border-color: #06b6d4;
 }
 
 /* Badge en botón */

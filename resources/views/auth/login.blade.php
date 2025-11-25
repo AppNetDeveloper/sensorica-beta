@@ -44,7 +44,7 @@
                                     </div>
 
                                     <div class="d-grid">
-                                        <button type="submit" class="btn btn-gradient-primary btn-block mt-2">
+                                        <button type="submit" class="btn btn-primary btn-block mt-2">
                                             {{ __('Sign In') }} </button>
                                     </div>
 

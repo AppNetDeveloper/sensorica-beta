@@ -286,33 +286,10 @@ else{
 <footer class="dash-footer">
     <div class="footer-wrapper">
         <span class="text-muted">
-            Powered by&nbsp;
-            &copy; {{ date('Y') }} <a href="#" class="fw-bold ms-1"
-                target="_blank">{{ config('app.name') }}
-            {{--  <img src="{{ $logo . 'dark_logo.png' }}" class="main-logo" alt="logo">  --}}
-
+            Developer por&nbsp;
+            <a href="https://xmartflow.com/" target="_blank">Xmart Technologies</a>
+            &copy; {{ date('Y') }}
         </span>
-        {{--  <div class="ms-auto ff">Powered by&nbsp;
-            &copy; {{ date('Y') }} <a href="#" class="fw-bold ms-1"
-                target="_blank">{{ config('app.name') }}
-        </div>  --}}
-
-        <div class="py-1">
-            <ul class="list-inline m-0">
-                <li class="list-inline-item">
-                    <a class="link-secondary" href="javascript:"></a>
-                </li>
-                <li class="list-inline-item">
-                    <a class="link-secondary" href="javascript:"> </a>
-                </li>
-                <li class="list-inline-item">
-                    <a class="link-secondary" href="javascript:"></a>
-                </li>
-                <li class="list-inline-item">
-                    <a class="link-secondary" href="javascript:"></a>
-                </li>
-            </ul>
-        </div>
     </div>
 </footer>
 

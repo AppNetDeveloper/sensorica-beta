@@ -1,548 +1,799 @@
 @extends('layouts.admin')
 
-@section('title', 'Gestión de Permisos')
+@section('title', __('Permission Management'))
 
 @section('breadcrumb')
     <ul class="breadcrumb">
         <li class="breadcrumb-item">
             <a href="{{ route('home') }}">{{ __('Dashboard') }}</a>
         </li>
-        <li class="breadcrumb-item">{{ __('Gestión de Permisos') }}</li>
+        <li class="breadcrumb-item">{{ __('Permission Management') }}</li>
     </ul>
 @endsection
 
 @section('content')
-    <div class="row mt-3"><!-- Margen superior de 1rem, igual a "Trabajadores" -->
-        <div class="col-lg-12">
-            {{-- Card principal sin borde y con sombra --}}
-            <div class="card border-0 shadow">
-                <div class="card-header border-0">
-                    <h4 class="card-title">Gestión de Permisos</h4>
+<div class="permissions-container">
+    {{-- Header --}}
+    <div class="permissions-header mb-4">
+        <div class="row align-items-center">
+            <div class="col-lg-5">
+                <div class="d-flex align-items-center">
+                    <div class="permissions-header-icon me-3">
+                        <i class="ti ti-key"></i>
+                    </div>
+                    <div>
+                        <h4 class="permissions-title mb-1">{{ __('Permission Management') }}</h4>
+                        <p class="permissions-subtitle mb-0">{{ __('Manage system access permissions') }}</p>
+                    </div>
                 </div>
-                <div class="card-body">
-                    {{-- Input (oculto) para Excel, si lo usas --}}
-                    <input type="file" id="excelFileInput" accept=".xlsx" style="display: none;" />
+            </div>
+            <div class="col-lg-7">
+                <div class="d-flex align-items-center justify-content-lg-end gap-2 mt-3 mt-lg-0 flex-wrap">
+                    {{-- Buscador --}}
+                    <div class="permissions-search-box">
+                        <i class="ti ti-search"></i>
+                        <input type="text" id="searchPermissions" class="form-control" placeholder="{{ __('Search permissions...') }}">
+                    </div>
+                    {{-- Botones de acción --}}
+                    <button type="button" class="btn btn-light permissions-btn-action" onclick="openAddPermissionModal()">
+                        <i class="ti ti-plus me-1"></i> {{ __('Add') }}
+                    </button>
+                    <button type="button" class="btn btn-light permissions-btn-action" onclick="exportToExcel()">
+                        <i class="ti ti-file-export me-1"></i> {{ __('Export') }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-                    {{-- Contenedor responsivo con la misma estética --}}
-                    <div class="table-responsive" style="max-width: 98%; margin: 0 auto;">
-                        <table id="permissionsTable" class="display table table-striped table-bordered" style="width:100%">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Nombre del Permiso</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
-                    </div> {{-- .table-responsive --}}
-                </div> {{-- .card-body --}}
-            </div> {{-- .card --}}
-        </div> {{-- .col --}}
-    </div> {{-- .row --}}
+    {{-- Stats Cards --}}
+    <div class="row mb-4">
+        <div class="col-md-4 col-sm-6 mb-3 mb-md-0">
+            <div class="permissions-stats-card permissions-stats-primary">
+                <div class="permissions-stats-icon">
+                    <i class="ti ti-key"></i>
+                </div>
+                <div class="permissions-stats-info">
+                    <h3 id="statsTotalPermissions">-</h3>
+                    <span>{{ __('Total Permissions') }}</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 col-sm-6 mb-3 mb-md-0">
+            <div class="permissions-stats-card permissions-stats-success">
+                <div class="permissions-stats-icon">
+                    <i class="ti ti-category"></i>
+                </div>
+                <div class="permissions-stats-info">
+                    <h3 id="statsCategories">-</h3>
+                    <span>{{ __('Categories') }}</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 col-sm-6">
+            <div class="permissions-stats-card permissions-stats-info">
+                <div class="permissions-stats-icon">
+                    <i class="ti ti-shield-check"></i>
+                </div>
+                <div class="permissions-stats-info">
+                    <h3 id="statsGuardName">web</h3>
+                    <span>{{ __('Guard') }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Info Card --}}
+    <div class="permissions-info-card mb-4">
+        <div class="d-flex align-items-start">
+            <div class="permissions-info-icon me-3">
+                <i class="ti ti-info-circle"></i>
+            </div>
+            <div class="permissions-info-content">
+                <strong>{{ __('Information') }}:</strong>
+                <ul class="mb-0 mt-2 ps-3">
+                    <li>{{ __('Permissions define what actions users can perform in the system.') }}</li>
+                    <li>{{ __('Use the naming convention') }}: <code>action-resource</code> ({{ __('e.g.') }}: <code>edit-users</code>, <code>delete-orders</code>)</li>
+                    <li>{{ __('Assign permissions to roles in the Role Management section.') }}</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    {{-- Permissions Grid --}}
+    <div class="row" id="permissionsGrid">
+        {{-- Los permisos se cargan por JavaScript --}}
+    </div>
+
+    {{-- Loading State --}}
+    <div id="permissionsLoading" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">{{ __('Loading') }}...</span>
+        </div>
+        <p class="mt-3 text-muted">{{ __('Loading permissions') }}...</p>
+    </div>
+
+    {{-- Empty State --}}
+    <div id="permissionsEmpty" class="row" style="display: none;">
+        <div class="col-12">
+            <div class="card permissions-empty-state">
+                <div class="card-body text-center py-5">
+                    <div class="permissions-empty-icon mb-4">
+                        <i class="ti ti-key-off"></i>
+                    </div>
+                    <h4>{{ __('No permissions found') }}</h4>
+                    <p class="text-muted mb-4">{{ __('Start by adding your first permission.') }}</p>
+                    <button type="button" class="btn btn-primary" onclick="openAddPermissionModal()">
+                        <i class="ti ti-plus me-1"></i> {{ __('Add Permission') }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- Modal Añadir/Editar Permiso --}}
+<div class="modal fade" id="permissionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header permissions-modal-header">
+                <h5 class="modal-title" id="permissionModalTitle">
+                    <i class="ti ti-plus me-2"></i>
+                    {{ __('Add Permission') }}
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="permissionForm">
+                    <div class="mb-3">
+                        <label class="form-label">{{ __('Permission Name') }} <span class="text-danger">*</span></label>
+                        <div class="permissions-input-group">
+                            <div class="permissions-input-icon"><i class="ti ti-key"></i></div>
+                            <input type="text" id="permissionName" class="form-control permissions-input" placeholder="e.g. edit-users" required>
+                        </div>
+                        <small class="text-muted">{{ __('Use lowercase letters and hyphens. Example:') }} edit-users, delete-orders</small>
+                    </div>
+                    <input type="hidden" id="permissionId" value="">
+                </form>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
+                <button type="button" class="btn btn-primary" onclick="savePermission()">
+                    <i class="ti ti-device-floppy me-1"></i> {{ __('Save') }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @push('style')
-    {{-- Font Awesome para iconos --}}
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    {{-- DataTables CSS --}}
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.4.1/css/responsive.dataTables.min.css">
+<style>
+/* Container */
+.permissions-container {
+    padding: 0;
+}
 
-    <style>
-        /* Estilos modernos para la página */
-        body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-        }
+/* Header */
+.permissions-header {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    border-radius: 16px;
+    padding: 24px;
+    color: white;
+}
 
-        /* Card principal con glassmorfismo */
-        .card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
-            overflow: hidden;
-        }
+.permissions-header-icon {
+    width: 56px;
+    height: 56px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.75rem;
+}
 
-        .card-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-bottom: none;
-            padding: 2rem;
-            position: relative;
-            overflow: hidden;
-        }
+.permissions-title {
+    color: white;
+    font-weight: 700;
+    font-size: 1.5rem;
+    margin: 0;
+}
 
-        .card-header::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-            animation: float 6s ease-in-out infinite;
-        }
+.permissions-subtitle {
+    color: rgba(255,255,255,0.85);
+    font-size: 0.95rem;
+}
 
-        @keyframes float {
-            0%, 100% { transform: translate(0, 0) rotate(0deg); }
-            50% { transform: translate(-20px, -20px) rotate(180deg); }
-        }
+/* Search Box */
+.permissions-search-box {
+    position: relative;
+    min-width: 220px;
+}
 
-        .card-title {
-            color: white;
-            font-weight: 700;
-            font-size: 2rem;
-            margin: 0;
-            position: relative;
-            z-index: 1;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
+.permissions-search-box i {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: rgba(255,255,255,0.7);
+    font-size: 1.1rem;
+}
 
-        /* Breadcrumb moderno */
-        .breadcrumb {
-            background: rgba(255, 255, 255, 0.9);
-            border-radius: 15px;
-            padding: 1rem 1.5rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-        }
+.permissions-search-box input {
+    padding-left: 42px;
+    border-radius: 50px;
+    border: 2px solid rgba(255,255,255,0.3);
+    background: rgba(255,255,255,0.15);
+    color: white;
+    height: 42px;
+    font-size: 0.9rem;
+}
 
-        .breadcrumb-item a {
-            color: #667eea;
-            text-decoration: none;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
+.permissions-search-box input::placeholder {
+    color: rgba(255,255,255,0.7);
+}
 
-        .breadcrumb-item a:hover {
-            color: #764ba2;
-            transform: translateX(3px);
-        }
+.permissions-search-box input:focus {
+    background: rgba(255,255,255,0.25);
+    border-color: rgba(255,255,255,0.5);
+    box-shadow: none;
+    color: white;
+}
 
-        .breadcrumb-item.active {
-            color: #6c757d;
-            font-weight: 600;
-        }
+/* Action Buttons */
+.permissions-btn-action {
+    padding: 8px 16px;
+    border-radius: 50px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    background: white;
+    color: #8b5cf6;
+    border: none;
+}
 
-        /* Tabla moderna */
-        .table-responsive {
-            border-radius: 15px;
-            overflow: hidden;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-            background: white;
-            margin: 2rem auto;
-        }
+.permissions-btn-action:hover {
+    background: #f8fafc;
+    color: #7c3aed;
+}
 
-        #permissionsTable {
-            margin: 0;
-            border: none;
-        }
+/* Stats Cards */
+.permissions-stats-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+}
 
-        #permissionsTable thead {
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        }
+.permissions-stats-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+}
 
-        #permissionsTable thead th {
-            border: none;
-            padding: 1.2rem;
-            font-weight: 700;
-            color: #495057;
-            text-transform: uppercase;
-            font-size: 0.85rem;
-            letter-spacing: 0.5px;
-            border-bottom: 2px solid #dee2e6;
-        }
+.permissions-stats-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
 
-        #permissionsTable tbody tr {
-            transition: all 0.3s ease;
-            border-bottom: 1px solid #f1f3f4;
-            position: relative;
-        }
+.permissions-stats-primary .permissions-stats-icon {
+    background: rgba(139, 92, 246, 0.15);
+    color: #8b5cf6;
+}
 
-        #permissionsTable tbody tr:hover {
-            background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%);
-            transform: scale(1.01);
-            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
-        }
+.permissions-stats-success .permissions-stats-icon {
+    background: rgba(34, 197, 94, 0.15);
+    color: #22c55e;
+}
 
-        #permissionsTable tbody tr::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 2px;
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-            transform: scaleX(0);
-            transition: transform 0.3s ease;
-        }
+.permissions-stats-info .permissions-stats-icon {
+    background: rgba(59, 130, 246, 0.15);
+    color: #3b82f6;
+}
 
-        #permissionsTable tbody tr:hover::after {
-            transform: scaleX(1);
-        }
+.permissions-stats-info h3 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0;
+    color: #1e293b;
+}
 
-        #permissionsTable tbody td {
-            padding: 1rem;
-            vertical-align: middle;
-            border: none;
-        }
+.permissions-stats-info span {
+    color: #64748b;
+    font-size: 0.875rem;
+}
 
-        /* Botones de acción mejorados */
-        .action-btn {
-            padding: 0.4rem 0.8rem;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 0.8rem;
-            transition: all 0.3s ease;
-            border: none;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin: 0.2rem;
-            position: relative;
-            overflow: hidden;
-            text-decoration: none;
-            display: inline-block;
-        }
+/* Info Card */
+.permissions-info-card {
+    background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+    border-radius: 12px;
+    padding: 20px;
+    border-left: 4px solid #8b5cf6;
+}
 
-        .action-btn::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.3);
-            transform: translate(-50%, -50%);
-            transition: width 0.6s, height 0.6s;
-        }
+.permissions-info-icon {
+    width: 40px;
+    height: 40px;
+    background: rgba(139, 92, 246, 0.2);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #8b5cf6;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
 
-        .action-btn:hover::before {
-            width: 300px;
-            height: 300px;
-        }
+.permissions-info-content {
+    color: #5b21b6;
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
 
-        .edit-btn {
-            background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
-            color: #212529;
-        }
+.permissions-info-content code {
+    background: rgba(139, 92, 246, 0.15);
+    color: #7c3aed;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
 
-        .edit-btn:hover {
-            color: #212529;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4);
-        }
+/* Permission Cards */
+.permission-card {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+    animation: fadeInUp 0.4s ease forwards;
+    opacity: 0;
+    cursor: pointer;
+    height: 100%;
+}
 
-        .delete-btn {
-            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
-            color: white;
-        }
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
 
-        .delete-btn:hover {
-            color: white;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
-        }
+.permission-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(139, 92, 246, 0.2);
+}
 
-        /* Botones de DataTables */
-        .dt-buttons {
-            margin-bottom: 1.5rem;
-            display: flex;
-            gap: 0.5rem;
-        }
+.permission-card-body {
+    padding: 20px;
+}
 
-        .dt-button {
-            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-            border: none;
-            border-radius: 12px;
-            padding: 0.8rem 1.5rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            transition: all 0.3s ease;
-            color: white;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-        }
+.permission-icon-wrap {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+}
 
-        .dt-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
-            color: white;
-        }
+.permission-icon-wrap i {
+    font-size: 1.5rem;
+    color: #8b5cf6;
+}
 
-        .dt-button span {
-            margin-right: 0.5rem;
-        }
+.permission-name {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 4px;
+    word-break: break-word;
+}
 
-        button {
-            margin-right: 5px;
-        }
+.permission-id {
+    font-size: 0.8rem;
+    color: #94a3b8;
+}
 
-        /* SweetAlert2 personalizado */
-        .swal2-input {
-            border-radius: 12px;
-            border: 2px solid #e9ecef;
-            padding: 0.8rem 1rem;
-            transition: all 0.3s ease;
-        }
+.permission-card-footer {
+    padding: 12px 20px;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
 
-        .swal2-input:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-            outline: none;
-        }
+.permission-btn {
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    border: none;
+    transition: all 0.2s ease;
+}
 
-        .swal2-confirm {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border: none;
-            border-radius: 12px;
-            padding: 0.8rem 2rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            transition: all 0.3s ease;
-        }
+.permission-btn-edit {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+}
 
-        .swal2-confirm:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-        }
+.permission-btn-edit:hover {
+    background: #3b82f6;
+    color: white;
+}
 
-        /* Responsive */
-        @media (max-width: 768px) {
-            .card-title {
-                font-size: 1.5rem;
-            }
+.permission-btn-delete {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
 
-            .action-btn {
-                font-size: 0.7rem;
-                padding: 0.3rem 0.6rem;
-            }
+.permission-btn-delete:hover {
+    background: #ef4444;
+    color: white;
+}
 
-            .dt-button {
-                padding: 0.6rem 1rem;
-                font-size: 0.9rem;
-            }
-        }
-    </style>
+/* Empty State */
+.permissions-empty-state {
+    border: 2px dashed #e2e8f0;
+    background: #f8fafc;
+    border-radius: 16px;
+}
+
+.permissions-empty-icon {
+    width: 80px;
+    height: 80px;
+    background: #f1f5f9;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    font-size: 2.5rem;
+    color: #94a3b8;
+}
+
+/* Modal Styles */
+.permissions-modal-header {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    color: white;
+    border: none;
+}
+
+.permissions-modal-header .modal-title {
+    font-weight: 600;
+}
+
+.permissions-input-group {
+    position: relative;
+}
+
+.permissions-input-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    font-size: 1rem;
+    z-index: 1;
+}
+
+.permissions-input {
+    padding-left: 42px;
+    border-radius: 10px;
+    border: 2px solid #e2e8f0;
+    height: 46px;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+}
+
+.permissions-input:focus {
+    border-color: #8b5cf6;
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+}
+
+#permissionModal .modal-content {
+    border-radius: 16px;
+    border: none;
+}
+
+/* Dark Mode */
+[data-theme="dark"] .permission-card {
+    background: #1e293b;
+}
+
+[data-theme="dark"] .permission-card-body {
+    background: #1e293b;
+}
+
+[data-theme="dark"] .permission-name {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .permission-id {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .permission-card-footer {
+    background: #0f172a;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .permissions-stats-card {
+    background: #1e293b;
+}
+
+[data-theme="dark"] .permissions-stats-info h3 {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .permissions-info-card {
+    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+    border-left-color: #a78bfa;
+}
+
+[data-theme="dark"] .permissions-info-content {
+    color: #c4b5fd;
+}
+
+[data-theme="dark"] .permissions-info-content code {
+    background: rgba(167, 139, 250, 0.2);
+    color: #a78bfa;
+}
+
+[data-theme="dark"] .permissions-empty-state {
+    background: #0f172a;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .permissions-input {
+    background: #0f172a;
+    border-color: #334155;
+    color: #f1f5f9;
+}
+
+/* Responsive */
+@media (max-width: 767.98px) {
+    .permissions-search-box {
+        width: 100%;
+        min-width: auto;
+    }
+
+    .permissions-btn-action {
+        padding: 6px 12px;
+        font-size: 0.8rem;
+    }
+}
+</style>
 @endpush
 
 @push('scripts')
-    {{-- jQuery --}}
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-    {{-- DataTables núcleo --}}
-    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-    {{-- Extensiones DataTables: Buttons, JSZip, etc. --}}
-    <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
-    {{-- Extensión Responsive de DataTables --}}
-    <script src="https://cdn.datatables.net/responsive/2.4.1/js/dataTables.responsive.min.js"></script>
+<script>
+const permissionsApiUrl = '{{ url("manage-permission") }}';
+let allPermissions = [];
+let isEditMode = false;
 
-    {{-- SweetAlert2 --}}
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+// CSRF Token
+$.ajaxSetup({
+    headers: {
+        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+    }
+});
 
-    {{-- XLSX (opcional) --}}
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadPermissions();
 
-    {{-- CSRF para peticiones POST/DELETE (evitar error 419) --}}
-    <script>
-        $.ajaxSetup({
-            headers: {
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            }
+    // Buscador
+    document.getElementById('searchPermissions')?.addEventListener('keyup', function() {
+        filterPermissions(this.value);
+    });
+});
+
+function loadPermissions() {
+    document.getElementById('permissionsLoading').style.display = 'block';
+    document.getElementById('permissionsGrid').innerHTML = '';
+    document.getElementById('permissionsEmpty').style.display = 'none';
+
+    fetch(`${permissionsApiUrl}/list-all`)
+        .then(response => response.json())
+        .then(data => {
+            allPermissions = data || [];
+            updateStats();
+            renderPermissions(allPermissions);
+            document.getElementById('permissionsLoading').style.display = 'none';
+        })
+        .catch(error => {
+            console.error('Error loading permissions:', error);
+            document.getElementById('permissionsLoading').style.display = 'none';
+            Swal.fire('Error', '{{ __("Could not load permissions") }}', 'error');
         });
-    </script>
+}
 
-    <script>
-        // Ajusta estas rutas a tu configuración en web.php:
-        // Ejemplo:
-        // Route::get('manage-permission/list-all', [PermissionManageController::class, 'listAll'])->name('manage-permission.listAll');
-        // Route::post('manage-permission/store-or-update', [PermissionManageController::class, 'storeOrUpdate'])->name('manage-permission.storeOrUpdate');
-        // Route::delete('manage-permission/delete/{id}', [PermissionManageController::class, 'delete'])->name('manage-permission.delete');
+function updateStats() {
+    document.getElementById('statsTotalPermissions').textContent = allPermissions.length;
 
-        // 1) URL para listar permisos
-        const listAllUrl = 'manage-permission/list-all';
-        // 2) URL para crear/actualizar
-        const storeOrUpdateUrl = 'manage-permission/store-or-update';
-        // 3) Para eliminar, se construye con /manage-permission/delete/{id}
+    // Contar categorías únicas (basado en el prefijo antes del guión)
+    const categories = new Set();
+    allPermissions.forEach(p => {
+        const parts = p.name.split('-');
+        if (parts.length > 1) {
+            categories.add(parts[0]);
+        }
+    });
+    document.getElementById('statsCategories').textContent = categories.size || '-';
+}
 
-        $(document).ready(function () {
-            const table = $('#permissionsTable').DataTable({
-                ajax: {
-                    url: listAllUrl,
-                    dataSrc: '',
-                    error: function (xhr) {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error al cargar Permisos',
-                            text: `Status: ${xhr.status}. Mensaje: ${xhr.responseJSON?.error || 'Error desconocido'}`
-                        });
-                    }
-                },
-                columns: [
-                    { data: 'id' },
-                    { data: 'name' },
-                    {
-                        data: null,
-                        render: function (data) {
-                            return `
-                                <button class="edit-btn btn btn-sm btn-secondary"
-                                    data-id="${data.id}" 
-                                    data-name="${data.name}">
-                                    Editar
-                                </button>
-                                <button class="delete-btn btn btn-sm btn-danger"
-                                    data-id="${data.id}">
-                                    Eliminar
-                                </button>
-                            `;
-                        }
-                    }
-                ],
-                responsive: true,
-                scrollX: true,
+function renderPermissions(permissions) {
+    const grid = document.getElementById('permissionsGrid');
+    grid.innerHTML = '';
 
-                dom: 'Bfrtip',
-                buttons: [
-                    {
-                        text: 'Añadir Permiso',
-                        className: 'btn btn-success',
-                        action: function () {
-                            Swal.fire({
-                                title: 'Añadir Permiso',
-                                html: `
-                                    <input id="permId" class="swal2-input" placeholder="ID (opcional)">
-                                    <input id="permName" class="swal2-input" placeholder="Nombre del Permiso">
-                                `,
-                                confirmButtonText: 'Guardar',
-                                showCancelButton: true,
-                                preConfirm: () => {
-                                    const id   = $('#permId').val() || null;
-                                    const name = $('#permName').val();
-                                    if (!name) {
-                                        Swal.showValidationMessage('El nombre del permiso es obligatorio.');
-                                        return false;
-                                    }
-                                    return { id, name };
-                                }
-                            }).then((result) => {
-                                if (result.isConfirmed) {
-                                    $.ajax({
-                                        url: storeOrUpdateUrl,
-                                        method: 'POST',
-                                        contentType: 'application/json',
-                                        data: JSON.stringify(result.value),
-                                        success: function () {
-                                            Swal.fire('Éxito', 'Permiso guardado correctamente', 'success');
-                                            table.ajax.reload();
-                                        },
-                                        error: function (xhr) {
-                                            Swal.fire({
-                                                icon: 'error',
-                                                title: 'Error al Guardar',
-                                                text: `Status: ${xhr.status}. ${xhr.responseJSON?.error || 'Error desconocido'}`
-                                            });
-                                        }
-                                    });
-                                }
-                            });
-                        }
-                    },
-                    {
-                        extend: 'excelHtml5',
-                        text: 'Exportar a Excel',
-                        className: 'btn btn-success',
-                        title: null,
-                        exportOptions: {
-                            columns: [0,1] // ID y nombre
-                        }
-                    }
-                ]
-            });
+    if (permissions.length === 0) {
+        document.getElementById('permissionsEmpty').style.display = 'block';
+        return;
+    }
 
-            // Editar
-            $('#permissionsTable tbody').on('click', '.edit-btn', function() {
-                const currentId   = $(this).data('id');
-                const currentName = $(this).data('name');
+    document.getElementById('permissionsEmpty').style.display = 'none';
 
-                Swal.fire({
-                    title: 'Editar Permiso',
-                    html: `
-                        <input id="permId" class="swal2-input" value="${currentId}" readonly>
-                        <input id="permName" class="swal2-input" value="${currentName}">
-                    `,
-                    confirmButtonText: 'Actualizar',
-                    showCancelButton: true,
-                    preConfirm: () => {
-                        const id   = $('#permId').val();
-                        const name = $('#permName').val();
-                        if (!id || !name) {
-                            Swal.showValidationMessage('ID y nombre son obligatorios.');
-                            return false;
-                        }
-                        return { id, name };
-                    }
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        $.ajax({
-                            url: storeOrUpdateUrl,
-                            method: 'POST',
-                            contentType: 'application/json',
-                            data: JSON.stringify(result.value),
-                            success: function () {
-                                Swal.fire('Éxito', 'Permiso actualizado', 'success');
-                                table.ajax.reload();
-                            },
-                            error: function (xhr) {
-                                Swal.fire({
-                                    icon: 'error',
-                                    title: 'Error al Actualizar',
-                                    text: `Status: ${xhr.status}. ${xhr.responseJSON?.error || 'Error desconocido'}`
-                                });
-                            }
-                        });
-                    }
-                });
-            });
+    permissions.forEach((permission, index) => {
+        const card = `
+            <div class="col-xl-3 col-lg-4 col-md-6 mb-4 permission-card-wrapper"
+                 data-name="${(permission.name || '').toLowerCase()}"
+                 data-id="${permission.id}"
+                 style="animation-delay: ${index * 0.03}s">
+                <div class="permission-card h-100">
+                    <div class="permission-card-body">
+                        <div class="permission-icon-wrap">
+                            <i class="ti ti-key"></i>
+                        </div>
+                        <div class="permission-name">${permission.name || '-'}</div>
+                        <div class="permission-id">ID: ${permission.id}</div>
+                    </div>
+                    <div class="permission-card-footer">
+                        <button type="button" class="permission-btn permission-btn-edit" onclick="event.stopPropagation(); openEditPermissionModal(${permission.id}, '${permission.name}')">
+                            <i class="ti ti-edit me-1"></i> {{ __('Edit') }}
+                        </button>
+                        <button type="button" class="permission-btn permission-btn-delete" onclick="event.stopPropagation(); deletePermission(${permission.id})">
+                            <i class="ti ti-trash me-1"></i> {{ __('Delete') }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        grid.innerHTML += card;
+    });
+}
 
-            // Eliminar
-            $('#permissionsTable tbody').on('click', '.delete-btn', function() {
-                const id = $(this).data('id');
-                Swal.fire({
-                    title: '¿Estás seguro?',
-                    text: 'Esta acción no se puede deshacer.',
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonText: 'Sí, eliminar',
-                    cancelButtonText: 'Cancelar'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        $.ajax({
-                            // DELETE manage-permission/delete/{id}
-                            url: "{{ url('manage-permission/delete') }}/" + id,
-                            method: 'DELETE',
-                            success: function() {
-                                Swal.fire('Permiso eliminado', '', 'success');
-                                table.ajax.reload();
-                            },
-                            error: function(xhr) {
-                                Swal.fire({
-                                    icon: 'error',
-                                    title: 'Error al Eliminar',
-                                    text: `Status: ${xhr.status}. ${xhr.responseJSON?.error || 'Error desconocido'}`
-                                });
-                            }
-                        });
-                    }
-                });
-            });
+function filterPermissions(searchTerm) {
+    searchTerm = searchTerm.toLowerCase();
+    const filtered = allPermissions.filter(p => {
+        const name = (p.name || '').toLowerCase();
+        const id = String(p.id);
+        return name.includes(searchTerm) || id.includes(searchTerm);
+    });
+    renderPermissions(filtered);
+}
+
+function openAddPermissionModal() {
+    isEditMode = false;
+    document.getElementById('permissionModalTitle').innerHTML = '<i class="ti ti-plus me-2"></i>{{ __("Add Permission") }}';
+    document.getElementById('permissionId').value = '';
+    document.getElementById('permissionName').value = '';
+
+    var modal = new bootstrap.Modal(document.getElementById('permissionModal'));
+    modal.show();
+}
+
+function openEditPermissionModal(id, name) {
+    isEditMode = true;
+    document.getElementById('permissionModalTitle').innerHTML = '<i class="ti ti-edit me-2"></i>{{ __("Edit Permission") }}';
+    document.getElementById('permissionId').value = id;
+    document.getElementById('permissionName').value = name;
+
+    var modal = new bootstrap.Modal(document.getElementById('permissionModal'));
+    modal.show();
+}
+
+function savePermission() {
+    const id = document.getElementById('permissionId').value || null;
+    const name = document.getElementById('permissionName').value.trim();
+
+    if (!name) {
+        Swal.fire('Error', '{{ __("Permission name is required") }}', 'error');
+        return;
+    }
+
+    const payload = { name };
+    if (id) payload.id = parseInt(id);
+
+    fetch(`${permissionsApiUrl}/store-or-update`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify(payload)
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('{{ __("Error saving permission") }}');
+        return response.json();
+    })
+    .then(() => {
+        bootstrap.Modal.getInstance(document.getElementById('permissionModal'))?.hide();
+        Swal.fire({
+            icon: 'success',
+            title: isEditMode ? '{{ __("Updated") }}!' : '{{ __("Added") }}!',
+            text: isEditMode ? '{{ __("Permission updated successfully") }}' : '{{ __("Permission added successfully") }}',
+            timer: 2000,
+            showConfirmButton: false
         });
-    </script>
+        loadPermissions();
+    })
+    .catch(error => {
+        Swal.fire('Error', error.message, 'error');
+    });
+}
+
+function deletePermission(id) {
+    Swal.fire({
+        title: '{{ __("Are you sure?") }}',
+        text: '{{ __("This action cannot be undone. Roles using this permission will lose access.") }}',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        confirmButtonText: '{{ __("Yes, delete") }}',
+        cancelButtonText: '{{ __("Cancel") }}'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            fetch(`${permissionsApiUrl}/delete/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                }
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('{{ __("Error deleting permission") }}');
+                return response.json();
+            })
+            .then(() => {
+                Swal.fire('{{ __("Deleted") }}!', '{{ __("Permission deleted successfully") }}', 'success');
+                loadPermissions();
+            })
+            .catch(error => Swal.fire('Error', error.message, 'error'));
+        }
+    });
+}
+
+function exportToExcel() {
+    if (allPermissions.length === 0) {
+        Swal.fire('{{ __("Warning") }}', '{{ __("No permissions to export") }}', 'warning');
+        return;
+    }
+
+    const data = allPermissions.map(p => ({
+        ID: p.id,
+        '{{ __("Name") }}': p.name
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Permissions');
+    XLSX.writeFile(wb, 'permissions.xlsx');
+}
+</script>
 @endpush

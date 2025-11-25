@@ -66,7 +66,7 @@ if (isset($settings['color'])) {
 
         /* Aumentar tamaño del logo del footer */
         .dash-footer .app_logo.footer-logo {
-            max-width: 200px !important;
+            max-width: 280px !important;
             height: auto;
         }
     </style>
@@ -100,11 +100,9 @@ if (isset($settings['color'])) {
                                 {{-- Logo fijo de Xmart Technologies --}}
                                 <img src="{{ asset('logo.png') }}" class="navbar-brand-img app_logo footer-logo" alt="Xmart Technologies">
                             </span>
-                            <div class="ms-auto">Powered by&nbsp;
-                                {{-- <a href="https://xmartflow.com/" target="_new">Xmart Technologies
-                        </a> --}}
-                                &copy; {{ date('Y') }} <a href="#" class="fw-bold ms-1"
-                                    target="_blank">{{ config('app.name') }}
+                            <div class="ms-auto">Developer por&nbsp;
+                                <a href="https://xmartflow.com/" target="_blank">Xmart Technologies</a>
+                                &copy; {{ date('Y') }}
                             </div>
                         </div>
                     </footer>
