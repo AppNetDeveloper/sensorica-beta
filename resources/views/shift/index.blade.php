@@ -1,1752 +1,1644 @@
 @extends('layouts.admin')
 
-{{-- Título de la página --}}
 @section('title', __('Shift Lists'))
 
-{{-- Migas de pan (opcional) --}}
 @section('breadcrumb')
     <ul class="breadcrumb">
         <li class="breadcrumb-item">
             <a href="{{ route('home') }}">{{ __('Dashboard') }}</a>
         </li>
-        <li class="breadcrumb-item active">{{ __('Shift Lists') }}</li>
+        <li class="breadcrumb-item">{{ __('Shift Lists') }}</li>
     </ul>
 @endsection
 
 @section('content')
-    <div class="row mt-3">
-        <div class="col-lg-12">
-            {{-- Mensajes de éxito de redirect --}}
-            @if (session('success'))
-                <div class="alert alert-success mb-2">{{ session('success') }}</div>
-            @endif
-
-            {{-- Listado de Production Lines con botones de acción --}}
-            <div class="mb-4">
-                <div class="row">
-                    @foreach($productionLines as $line)
-                        <div class="col-md-4 col-lg-3 mb-4">
-                            <div class="production-line-card">
-                                <div class="card-header">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <h5 class="mb-0">{{ $line->name }}</h5>
-                                    </div>
-                                    <div id="status-badge-{{ $line->id }}" class="mt-1 text-center">
-                                        <!-- Estado se actualizará aquí dinámicamente -->
-                                    </div>
-                                </div>
-                                <div class="card-body text-center">
-                                    @php
-                                        // Se asume que $line->lastShiftHistory fue eager loaded en el controlador.
-                                        $last = $line->lastShiftHistory;
-                                    @endphp
-
-                                    <div class="btn-group" role="group" aria-label="Shift Actions">
-                                        @if($last)
-                                            @if($last->type === 'shift' && $last->action === 'start')
-                                                {{-- Turno iniciado: mostrar Pausar y Finalizar Turno --}}
-                                                <button type="button" class="btn btn-outline-warning" style="padding: 1rem 2rem; font-size: 1.25rem;"
-                                                        data-action="inicio_pausa"
-                                                        data-line-id="{{ $line->id }}"
-                                                        title="{{ __('Pause') }}">
-                                                    <i class="fa fa-pause" style="font-size: 2rem;"  aria-hidden="true"></i>
-                                                </button>
-                                                <button type="button" class="btn btn-outline-danger" style="padding: 1rem 2rem; font-size: 1.25rem;"
-                                                        data-action="final_trabajo"
-                                                        data-line-id="{{ $line->id }}"
-                                                        title="{{ __('End Shift') }}">
-                                                    <i class="fa fa-stop" style="font-size: 2rem;" aria-hidden="true"></i>
-                                                </button>
-                                            @elseif($last->type === 'stop' && $last->action === 'start')
-                                                {{-- Pausa iniciada: mostrar sólo Finalizar pausa --}}
-                                                <button type="button" class="btn-outline-warning btn btn-outline-warning" style="padding: 1rem 2rem; font-size: 1.25rem;"
-                                                        data-action="final_pausa"
-                                                        data-line-id="{{ $line->id }}"
-                                                        title="{{ __('Reanudar') }}">
-                                                    <i class="fa fa-play" style="font-size: 2rem;" aria-hidden="true"></i>
-                                                </button>
-                                            @elseif($last->type === 'stop' && $last->action === 'end')
-                                                {{-- Pausa finalizada: mostrar Inicio pausa y Finalizar Turno --}}
-                                                <button type="button" class="btn-outline-warning" style="padding: 1rem 2rem; font-size: 1.25rem;"
-                                                        data-action="inicio_pausa"
-                                                        data-line-id="{{ $line->id }}"
-                                                        title="{{ __('Pause') }}">
-                                                    <i class="fa fa-pause" style="font-size: 2rem;" aria-hidden="true"></i>
-                                                </button>
-                                                <button type="button" class="btn btn-outline-danger" style="padding: 1rem 2rem; font-size: 1.25rem;"
-                                                        data-action="final_trabajo"
-                                                        data-line-id="{{ $line->id }}"
-                                                        title="{{ __('End Shift') }}">
-                                                    <i class="fa fa-stop" style="font-size: 2rem;" aria-hidden="true"></i>
-                                                </button>
-                                            @elseif($last->type === 'shift' && $last->action === 'end')
-                                                {{-- Turno finalizado: mostrar sólo Iniciar Turno --}}
-                                                <button type="button" class="btn btn-outline-success" style="padding: 1rem 2rem; font-size: 1.25rem;"
-                                                        data-action="inicio_trabajo"
-                                                        data-line-id="{{ $line->id }}"
-                                                        title="{{ __('Start Shift') }}">
-                                                    <i class="fa fa-play" style="font-size: 2rem;" aria-hidden="true"></i>
-                                                </button>
-                                            @else
-                                                {{-- Caso por defecto: Iniciar Turno (si no hay historial o estado desconocido) --}}
-                                                <button type="button" class="btn btn-outline-success" style="padding: 1rem 2rem; font-size: 1.25rem;"
-                                                        data-action="inicio_trabajo"
-                                                        data-line-id="{{ $line->id }}"
-                                                        title="{{ __('Start Shift') }}">
-                                                    <i class="fa fa-play" style="font-size: 2rem;" aria-hidden="true"></i>
-                                                </button>
-                                            @endif
-                                        @else
-                                            {{-- Sin historial: opción para iniciar el turno --}}
-                                            <button type="button" class="btn btn-outline-success" style="padding: 1rem 2rem; font-size: 1.25rem;"
-                                                    data-action="inicio_trabajo"
-                                                    data-line-id="{{ $line->id }}"
-                                                    title="{{ __('Start Shift') }}">
-                                                <i class="fa fa-play" style="font-size: 2rem;" aria-hidden="true"></i>
-                                            </button>
-                                        @endif
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-            </div>
-
-            {{-- Filtro para DataTable --}}
-            <div class="mb-3">
-                <label for="productionLineFilter">{{ __('Filter by Production Line') }}</label>
-                <select id="productionLineFilter" class="form-select">
-                    <option value="">{{ __('All') }}</option>
-                    @foreach ($productionLines as $line)
-                        <option value="{{ $line->id }}">{{ $line->name }}</option>
-                    @endforeach
-                </select>
-            </div>
-
-            {{-- Tabla de Turnos (DataTable) --}}
-            <div class="card border-0 shadow">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    {{-- Aquí podrías agregar otros controles o títulos --}}
-                </div>
-                <div class="card-body">
-                    {{-- >>> Añadida clase 'dt-responsive' <<< --}}
-                    <table id="shiftTable" class="table table-striped table-bordered dt-responsive nowrap w-100">
-                        <thead>
-                            <tr>
-                                <th>{{ __('ID') }}</th>
-                                <th>{{ __('Production Line') }}</th>
-                                <th>{{ __('Start') }}</th>
-                                <th>{{ __('End') }}</th>
-                                <th>{{ __('Automation') }}</th>
-                                <th>{{ __('Actions') }}</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Tabla de Historial de Turnos -->
-            <div class="card border-0 shadow mt-4">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0 text-white fs-5">{{ __('Historial de Turnos') }}</h5>
-                </div>
-                <div class="card-body">
-                    <div class="mb-3 row">
-                        <div class="col-md-3">
-                            <label for="historyProductionLineFilter" class="form-label">{{ __('Filtrar por Línea') }}</label>
-                            <select id="historyProductionLineFilter" class="form-select">
-                                <option value="">{{ __('Todas las líneas') }}</option>
-                                @foreach ($productionLines as $line)
-                                    <option value="{{ $line->id }}">{{ $line->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label for="historyTypeFilter" class="form-label">{{ __('Tipo') }}</label>
-                            <select id="historyTypeFilter" class="form-select">
-                                <option value="">{{ __('Todos') }}</option>
-                                <option value="shift">{{ __('Turno') }}</option>
-                                <option value="stop">{{ __('Pausa') }}</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label for="historyActionFilter" class="form-label">{{ __('Acción') }}</label>
-                            <select id="historyActionFilter" class="form-select">
-                                <option value="">{{ __('Todas') }}</option>
-                                <option value="start">{{ __('Inicio') }}</option>
-                                <option value="end">{{ __('Fin') }}</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label for="historyOperatorFilter" class="form-label">{{ __('Usuario') }}</label>
-                            <select id="historyOperatorFilter" class="form-select">
-                                <option value="">{{ __('Todos los usuarios') }}</option>
-                                @foreach ($operators as $operator)
-                                    <option value="{{ $operator->id }}">{{ $operator->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
+<div class="shifts-container">
+    {{-- Header Principal --}}
+    <div class="shifts-header mb-4">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <div class="d-flex align-items-center">
+                    <div class="shifts-header-icon me-3">
+                        <i class="ti ti-calendar-time"></i>
                     </div>
-                    <div class="mb-3 row">
-                        <div class="col-md-9">
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-search"></i></span>
-                                <input type="text" id="historySearchInput" class="form-control" placeholder="{{ __('Buscar...') }}">
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <button id="resetHistoryFilters" class="btn btn-outline-secondary w-100">
-                                <i class="fas fa-undo me-1"></i> {{ __('Restablecer') }}
-                            </button>
-                        </div>
+                    <div>
+                        <h4 class="shifts-title mb-1">{{ __('Shift Lists') }}</h4>
+                        <p class="shifts-subtitle mb-0">{{ __('Manage production line shifts and schedules') }}</p>
                     </div>
-                    <table id="shiftHistoryTable" class="table table-striped table-bordered dt-responsive nowrap w-100">
-                        <thead>
-                            <tr>
-                                <th>{{ __('ID') }}</th>
-                                <th>{{ __('Línea de Producción') }}</th>
-                                <th>{{ __('Tipo') }}</th>
-                                <th>{{ __('Acción') }}</th>
-                                <th>{{ __('Usuario') }}</th>
-                                <th>{{ __('Fecha/Hora') }}</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="d-flex align-items-center justify-content-lg-end gap-2 mt-3 mt-lg-0 flex-wrap">
+                    <button type="button" class="btn btn-light shifts-btn-action" id="btnAddShift">
+                        <i class="ti ti-plus me-1"></i> {{ __('Add Shift') }}
+                    </button>
+                    <button type="button" class="btn btn-light shifts-btn-action shifts-btn-export" id="btnExportExcel">
+                        <i class="ti ti-file-spreadsheet me-1"></i> {{ __('Export') }}
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 
-    {{-- Modal para Crear turno --}}
-    <div class="modal fade" id="createShiftModal" tabindex="-1" aria-labelledby="createShiftModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
+    {{-- Alertas --}}
+    @if (session('success'))
+        <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+            <i class="ti ti-check me-2"></i> {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+
+    {{-- Stats Cards --}}
+    <div class="row mb-4">
+        <div class="col-md-3 col-sm-6 mb-3 mb-md-0">
+            <div class="shifts-stats-card shifts-stats-primary">
+                <div class="shifts-stats-icon">
+                    <i class="ti ti-building-factory"></i>
+                </div>
+                <div class="shifts-stats-info">
+                    <h3>{{ $productionLines->count() }}</h3>
+                    <span>{{ __('Production Lines') }}</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3 mb-md-0">
+            <div class="shifts-stats-card shifts-stats-success">
+                <div class="shifts-stats-icon">
+                    <i class="ti ti-player-play"></i>
+                </div>
+                <div class="shifts-stats-info">
+                    <h3 id="statsActiveShifts">
+                        {{ $productionLines->filter(function($line) {
+                            $last = $line->lastShiftHistory;
+                            return $last && $last->type === 'shift' && $last->action === 'start';
+                        })->count() }}
+                    </h3>
+                    <span>{{ __('Active Shifts') }}</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3 mb-md-0">
+            <div class="shifts-stats-card shifts-stats-warning">
+                <div class="shifts-stats-icon">
+                    <i class="ti ti-player-pause"></i>
+                </div>
+                <div class="shifts-stats-info">
+                    <h3 id="statsPausedShifts">
+                        {{ $productionLines->filter(function($line) {
+                            $last = $line->lastShiftHistory;
+                            return $last && $last->type === 'stop' && $last->action === 'start';
+                        })->count() }}
+                    </h3>
+                    <span>{{ __('Paused') }}</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="shifts-stats-card shifts-stats-info">
+                <div class="shifts-stats-icon">
+                    <i class="ti ti-settings-automation"></i>
+                </div>
+                <div class="shifts-stats-info">
+                    <h3 id="statsAutoShifts">-</h3>
+                    <span>{{ __('Automated') }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Grid de Production Lines --}}
+    <div class="shifts-section-title mb-3">
+        <i class="ti ti-layout-grid me-2"></i>{{ __('Production Lines Control') }}
+    </div>
+    <div class="row mb-4" id="productionLinesGrid">
+        @foreach($productionLines as $line)
+        <div class="col-xl-3 col-lg-4 col-md-6 mb-4 line-card-wrapper" data-line-id="{{ $line->id }}">
+            <div class="card shifts-line-card h-100">
+                @php
+                    $last = $line->lastShiftHistory;
+                    $statusClass = 'stopped';
+                    $statusText = __('Stopped');
+                    $statusIcon = 'ti-player-stop';
+
+                    if ($last) {
+                        if ($last->type === 'shift' && $last->action === 'start') {
+                            $statusClass = 'active';
+                            $statusText = __('Active');
+                            $statusIcon = 'ti-player-play';
+                        } elseif ($last->type === 'stop' && $last->action === 'start') {
+                            $statusClass = 'paused';
+                            $statusText = __('Paused');
+                            $statusIcon = 'ti-player-pause';
+                        } elseif ($last->type === 'stop' && $last->action === 'end') {
+                            $statusClass = 'active';
+                            $statusText = __('Active');
+                            $statusIcon = 'ti-player-play';
+                        } elseif ($last->type === 'shift' && $last->action === 'end') {
+                            $statusClass = 'stopped';
+                            $statusText = __('Stopped');
+                            $statusIcon = 'ti-player-stop';
+                        }
+                    }
+                @endphp
+                <div class="shifts-line-header {{ $statusClass }}">
+                    <div class="shifts-line-status" id="status-badge-{{ $line->id }}">
+                        <span class="status-indicator {{ $statusClass }}"></span>
+                        <span class="status-text">{{ $statusText }}</span>
+                    </div>
+                    <h5 class="shifts-line-name">{{ $line->name }}</h5>
+                </div>
+                <div class="shifts-line-body">
+                    <div class="shifts-line-actions" id="actions-{{ $line->id }}">
+                        @if($last)
+                            @if($last->type === 'shift' && $last->action === 'start')
+                                {{-- Turno iniciado: Pausar y Finalizar --}}
+                                <button type="button" class="shifts-action-btn shifts-btn-pause"
+                                        data-action="inicio_pausa"
+                                        data-line-id="{{ $line->id }}"
+                                        title="{{ __('Pause') }}">
+                                    <i class="ti ti-player-pause"></i>
+                                </button>
+                                <button type="button" class="shifts-action-btn shifts-btn-stop"
+                                        data-action="final_trabajo"
+                                        data-line-id="{{ $line->id }}"
+                                        title="{{ __('End Shift') }}">
+                                    <i class="ti ti-player-stop"></i>
+                                </button>
+                            @elseif($last->type === 'stop' && $last->action === 'start')
+                                {{-- Pausa iniciada: Reanudar --}}
+                                <button type="button" class="shifts-action-btn shifts-btn-resume"
+                                        data-action="final_pausa"
+                                        data-line-id="{{ $line->id }}"
+                                        title="{{ __('Resume') }}">
+                                    <i class="ti ti-player-play"></i>
+                                </button>
+                            @elseif($last->type === 'stop' && $last->action === 'end')
+                                {{-- Pausa finalizada: Pausar y Finalizar --}}
+                                <button type="button" class="shifts-action-btn shifts-btn-pause"
+                                        data-action="inicio_pausa"
+                                        data-line-id="{{ $line->id }}"
+                                        title="{{ __('Pause') }}">
+                                    <i class="ti ti-player-pause"></i>
+                                </button>
+                                <button type="button" class="shifts-action-btn shifts-btn-stop"
+                                        data-action="final_trabajo"
+                                        data-line-id="{{ $line->id }}"
+                                        title="{{ __('End Shift') }}">
+                                    <i class="ti ti-player-stop"></i>
+                                </button>
+                            @elseif($last->type === 'shift' && $last->action === 'end')
+                                {{-- Turno finalizado: Iniciar --}}
+                                <button type="button" class="shifts-action-btn shifts-btn-start"
+                                        data-action="inicio_trabajo"
+                                        data-line-id="{{ $line->id }}"
+                                        title="{{ __('Start Shift') }}">
+                                    <i class="ti ti-player-play"></i>
+                                </button>
+                            @else
+                                {{-- Caso por defecto --}}
+                                <button type="button" class="shifts-action-btn shifts-btn-start"
+                                        data-action="inicio_trabajo"
+                                        data-line-id="{{ $line->id }}"
+                                        title="{{ __('Start Shift') }}">
+                                    <i class="ti ti-player-play"></i>
+                                </button>
+                            @endif
+                        @else
+                            {{-- Sin historial --}}
+                            <button type="button" class="shifts-action-btn shifts-btn-start"
+                                    data-action="inicio_trabajo"
+                                    data-line-id="{{ $line->id }}"
+                                    title="{{ __('Start Shift') }}">
+                                <i class="ti ti-player-play"></i>
+                            </button>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        </div>
+        @endforeach
+    </div>
+
+    {{-- Tabla de Turnos Programados --}}
+    <div class="shifts-section-title mb-3">
+        <i class="ti ti-calendar-time me-2"></i>{{ __('Scheduled Shifts') }}
+    </div>
+    <div class="card shifts-table-card mb-4">
+        <div class="card-body">
+            {{-- Filtro --}}
+            <div class="row pb-3 mb-4 border-bottom">
+                <div class="col-md-4">
+                    <label for="productionLineFilter" class="form-label">{{ __('Filter by Production Line') }}</label>
+                    <select id="productionLineFilter" class="form-select shifts-select">
+                        <option value="">{{ __('All') }}</option>
+                        @foreach ($productionLines as $line)
+                            <option value="{{ $line->id }}">{{ $line->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table id="shiftTable" class="table shifts-table w-100">
+                    <thead>
+                        <tr>
+                            <th>{{ __('ID') }}</th>
+                            <th>{{ __('Production Line') }}</th>
+                            <th>{{ __('Start') }}</th>
+                            <th>{{ __('End') }}</th>
+                            <th>{{ __('Automation') }}</th>
+                            <th>{{ __('Actions') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {{-- Tabla de Historial --}}
+    <div class="shifts-section-title mb-3">
+        <i class="ti ti-history me-2"></i>{{ __('Shift History') }}
+    </div>
+    <div class="card shifts-table-card">
+        <div class="card-body">
+            {{-- Filtros del historial --}}
+            <div class="row g-3 mb-3">
+                <div class="col-lg-3 col-md-6">
+                    <label for="historyProductionLineFilter" class="form-label">{{ __('Production Line') }}</label>
+                    <select id="historyProductionLineFilter" class="form-select shifts-select">
+                        <option value="">{{ __('All') }}</option>
+                        @foreach ($productionLines as $line)
+                            <option value="{{ $line->id }}">{{ $line->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-lg-2 col-md-6">
+                    <label for="historyTypeFilter" class="form-label">{{ __('Type') }}</label>
+                    <select id="historyTypeFilter" class="form-select shifts-select">
+                        <option value="">{{ __('All') }}</option>
+                        <option value="shift">{{ __('Shift') }}</option>
+                        <option value="stop">{{ __('Pause') }}</option>
+                    </select>
+                </div>
+                <div class="col-lg-2 col-md-6">
+                    <label for="historyActionFilter" class="form-label">{{ __('Action') }}</label>
+                    <select id="historyActionFilter" class="form-select shifts-select">
+                        <option value="">{{ __('All') }}</option>
+                        <option value="start">{{ __('Start') }}</option>
+                        <option value="end">{{ __('End') }}</option>
+                    </select>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <label for="historyOperatorFilter" class="form-label">{{ __('User') }}</label>
+                    <select id="historyOperatorFilter" class="form-select shifts-select">
+                        <option value="">{{ __('All') }}</option>
+                        @foreach ($operators as $operator)
+                            <option value="{{ $operator->id }}">{{ $operator->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-lg-2 col-md-12">
+                    <label class="form-label">&nbsp;</label>
+                    <button id="resetHistoryFilters" class="btn btn-outline-secondary w-100">
+                        <i class="ti ti-refresh me-1"></i> {{ __('Reset') }}
+                    </button>
+                </div>
+            </div>
+            {{-- Buscador --}}
+            <div class="row pb-3 mb-4 border-bottom">
+                <div class="col-12">
+                    <div class="shifts-search-box">
+                        <i class="ti ti-search"></i>
+                        <input type="text" id="historySearchInput" class="form-control" placeholder="{{ __('Search...') }}">
+                    </div>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table id="shiftHistoryTable" class="table shifts-table w-100">
+                    <thead>
+                        <tr>
+                            <th>{{ __('ID') }}</th>
+                            <th>{{ __('Production Line') }}</th>
+                            <th>{{ __('Type') }}</th>
+                            <th>{{ __('Action') }}</th>
+                            <th>{{ __('User') }}</th>
+                            <th>{{ __('Date/Time') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- Modal Crear Turno --}}
+<div class="modal fade" id="createShiftModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shifts-modal">
+            <div class="modal-header shifts-modal-header">
+                <h5 class="modal-title">
+                    <i class="ti ti-plus me-2"></i>{{ __('Add Shift') }}
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
             <form id="createShiftForm">
                 @csrf
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="createShiftModalLabel">{{ __('Create Shift') }}</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label for="createProductionLineId" class="form-label">{{ __('Production Line') }}</label>
-                            <select class="form-select" name="production_line_id" id="createProductionLineId" required>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label for="createProductionLineId" class="form-label">{{ __('Production Line') }} <span class="text-danger">*</span></label>
+                        <div class="shifts-input-group">
+                            <div class="shifts-input-icon"><i class="ti ti-building-factory"></i></div>
+                            <select class="form-select shifts-input" name="production_line_id" id="createProductionLineId" required>
                                 <option value="" disabled selected>-- {{ __('Select') }} --</option>
                                 @foreach ($productionLines as $line)
                                     <option value="{{ $line->id }}">{{ $line->name }}</option>
                                 @endforeach
                             </select>
                         </div>
-                        <div class="mb-3">
-                            <label for="createStartTime" class="form-label">{{ __('Start Time') }}</label>
-                            <input type="time" class="form-control" name="start" id="createStartTime" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="createStartTime" class="form-label">{{ __('Start Time') }} <span class="text-danger">*</span></label>
+                            <div class="shifts-input-group">
+                                <div class="shifts-input-icon"><i class="ti ti-clock"></i></div>
+                                <input type="time" class="form-control shifts-input" name="start" id="createStartTime" required>
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label for="createEndTime" class="form-label">{{ __('End Time') }}</label>
-                            <input type="time" class="form-control" name="end" id="createEndTime" required>
+                        <div class="col-md-6 mb-3">
+                            <label for="createEndTime" class="form-label">{{ __('End Time') }} <span class="text-danger">*</span></label>
+                            <div class="shifts-input-group">
+                                <div class="shifts-input-icon"><i class="ti ti-clock-off"></i></div>
+                                <input type="time" class="form-control shifts-input" name="end" id="createEndTime" required>
+                            </div>
                         </div>
-                        <div class="mb-3 form-check">
+                    </div>
+                    <div class="mb-0">
+                        <div class="form-check form-switch shifts-switch">
                             <input type="checkbox" class="form-check-input" id="createActive" name="active" value="1">
-                            <label class="form-check-label" for="createActive">{{ __('Active') }}</label>
-                            <div class="form-text">{{ __('Al activar esta opción, el sistema iniciará y finalizará automáticamente el turno en los horarios configurados (start/end). Si está desactivado, este horario no se usará para automatización.') }}</div>
+                            <label class="form-check-label" for="createActive">
+                                <strong>{{ __('Automation') }}</strong>
+                            </label>
                         </div>
+                        <small class="text-muted">{{ __('When enabled, the system will automatically start and end the shift at the configured times.') }}</small>
                     </div>
-                    <div class="modal-footer">
-                        <button type="submit" class="btn btn-primary">{{ __('Save') }}</button>
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('Close') }}</button>
-                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="ti ti-device-floppy me-1"></i> {{ __('Save') }}
+                    </button>
                 </div>
             </form>
         </div>
     </div>
+</div>
 
-    {{-- Modal para Editar turno --}}
-    <div class="modal fade" id="editShiftModal" tabindex="-1" aria-labelledby="editShiftModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
+{{-- Modal Editar Turno --}}
+<div class="modal fade" id="editShiftModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shifts-modal">
+            <div class="modal-header shifts-modal-header">
+                <h5 class="modal-title">
+                    <i class="ti ti-edit me-2"></i>{{ __('Edit Shift') }}
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
             <form id="editShiftForm">
                 @csrf
                 @method('PUT')
                 <input type="hidden" id="editShiftId" name="id">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="editShiftModalLabel">{{ __('Edit Shift') }}</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label for="editProductionLineId" class="form-label">{{ __('Production Line') }}</label>
-                            <select class="form-select" id="editProductionLineId" name="production_line_id" required>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label for="editProductionLineId" class="form-label">{{ __('Production Line') }} <span class="text-danger">*</span></label>
+                        <div class="shifts-input-group">
+                            <div class="shifts-input-icon"><i class="ti ti-building-factory"></i></div>
+                            <select class="form-select shifts-input" id="editProductionLineId" name="production_line_id" required>
                                 @foreach ($productionLines as $line)
                                     <option value="{{ $line->id }}">{{ $line->name }}</option>
                                 @endforeach
                             </select>
                         </div>
-                        <div class="mb-3">
-                            <label for="editStartTime" class="form-label">{{ __('Start Time') }}</label>
-                            <input type="time" class="form-control" id="editStartTime" name="start" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="editStartTime" class="form-label">{{ __('Start Time') }} <span class="text-danger">*</span></label>
+                            <div class="shifts-input-group">
+                                <div class="shifts-input-icon"><i class="ti ti-clock"></i></div>
+                                <input type="time" class="form-control shifts-input" id="editStartTime" name="start" required>
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label for="editEndTime" class="form-label">{{ __('End Time') }}</label>
-                            <input type="time" class="form-control" id="editEndTime" name="end" required>
+                        <div class="col-md-6 mb-3">
+                            <label for="editEndTime" class="form-label">{{ __('End Time') }} <span class="text-danger">*</span></label>
+                            <div class="shifts-input-group">
+                                <div class="shifts-input-icon"><i class="ti ti-clock-off"></i></div>
+                                <input type="time" class="form-control shifts-input" id="editEndTime" name="end" required>
+                            </div>
                         </div>
-                        <div class="mb-3 form-check">
-                            <input type="hidden" name="active" value="0">
+                    </div>
+                    <div class="mb-0">
+                        <input type="hidden" name="active" value="0">
+                        <div class="form-check form-switch shifts-switch">
                             <input type="checkbox" class="form-check-input" id="editActive" name="active" value="1">
-                            <label class="form-check-label" for="editActive">{{ __('Active') }}</label>
-                            <div class="form-text">{{ __('Al activar esta opción, el sistema iniciará y finalizará automáticamente el turno en los horarios configurados (start/end). Si está desactivado, este horario no se usará para automatización.') }}</div>
+                            <label class="form-check-label" for="editActive">
+                                <strong>{{ __('Automation') }}</strong>
+                            </label>
                         </div>
+                        <small class="text-muted">{{ __('When enabled, the system will automatically start and end the shift at the configured times.') }}</small>
                     </div>
-                    <div class="modal-footer">
-                        <button type="submit" class="btn btn-primary">{{ __('Update') }}</button>
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('Close') }}</button>
-                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="ti ti-device-floppy me-1"></i> {{ __('Update') }}
+                    </button>
                 </div>
             </form>
         </div>
     </div>
+</div>
 
-    {{-- Modal de carga --}}
-    <div class="modal fade" id="loadingModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content bg-transparent border-0 shadow-none">
-                <div class="modal-body text-center">
-                    <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
-                        <span class="visually-hidden">Cargando...</span>
-                    </div>
-                    <h5 class="mt-3 text-white">Reiniciando servicios, por favor espere...</h5>
+{{-- Modal de Carga --}}
+<div class="modal fade" id="loadingModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shifts-loading-modal">
+            <div class="modal-body text-center py-5">
+                <div class="spinner-border text-white" style="width: 3rem; height: 3rem;" role="status">
+                    <span class="visually-hidden">{{ __('Loading...') }}</span>
                 </div>
+                <h5 class="mt-3 text-white mb-0">{{ __('Processing, please wait...') }}</h5>
             </div>
         </div>
     </div>
-
-    <style>
-        #loadingModal .modal-content {
-            background: transparent;
-            border: none;
-            box-shadow: none;
-        }
-        #loadingModal .modal-body {
-            background: rgba(0, 0, 0, 0.7);
-            border-radius: 10px;
-            padding: 2rem;
-            color: white;
-        }
-    </style>
+</div>
 @endsection
 
 @push('style')
-    {{-- Token CSRF para peticiones AJAX --}}
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-
-    {{-- Font Awesome para iconos --}}
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    <style>
-        /* Estilos modernos para la página */
-        body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-        }
-
-        /* Card principal con glassmorfismo */
-        .card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
-            overflow: hidden;
-            margin-bottom: 2rem;
-        }
-
-        .card-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-bottom: none;
-            padding: 2rem;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .card-header::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-            animation: float 6s ease-in-out infinite;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translate(0, 0) rotate(0deg); }
-            50% { transform: translate(-20px, -20px) rotate(180deg); }
-        }
-
-        .card-title {
-            color: white;
-            font-weight: 700;
-            font-size: 2rem;
-            margin: 0;
-            position: relative;
-            z-index: 1;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        /* Breadcrumb moderno */
-        .breadcrumb {
-            background: rgba(255, 255, 255, 0.9);
-            border-radius: 15px;
-            padding: 1rem 1.5rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-        }
-
-        .breadcrumb-item a {
-            color: #667eea;
-            text-decoration: none;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-
-        .breadcrumb-item a:hover {
-            color: #764ba2;
-            transform: translateX(3px);
-        }
-
-        .breadcrumb-item.active {
-            color: #6c757d;
-            font-weight: 600;
-        }
-
-        /* Tarjetas de líneas de producción */
-        .production-line-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
-            overflow: hidden;
-            transition: all 0.3s ease;
-            position: relative;
-        }
-
-        .production-line-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 12px 40px rgba(31, 38, 135, 0.25);
-        }
-
-        .production-line-card .card-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-bottom: none;
-            padding: 1.5rem;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .production-line-card .card-header::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-            animation: float 8s ease-in-out infinite;
-        }
-
-        .production-line-card .card-header h5 {
-            color: white;
-            font-weight: 700;
-            font-size: 1.2rem;
-            margin: 0;
-            position: relative;
-            z-index: 1;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .production-line-card .card-body {
-            padding: 2rem;
-            background: white;
-        }
-
-        /* Botones de control mejorados */
-        .control-btn {
-            border: none;
-            border-radius: 15px;
-            padding: 1.2rem 2rem;
-            font-weight: 600;
-            font-size: 1.1rem;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            position: relative;
-            overflow: hidden;
-            margin: 0.5rem;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 140px;
-        }
-
-        .control-btn::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.3);
-            transform: translate(-50%, -50%);
-            transition: width 0.6s, height 0.6s;
-        }
-
-        .control-btn:hover::before {
-            width: 300px;
-            height: 300px;
-        }
-
-        .control-btn i {
-            font-size: 1.8rem;
-            margin-right: 0.5rem;
-        }
-
-        .btn-start {
-            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-            color: white;
-        }
-
-        .btn-start:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
-            color: white;
-        }
-
-        .btn-pause {
-            background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
-            color: #212529;
-        }
-
-        .btn-pause:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(255, 193, 7, 0.4);
-            color: #212529;
-        }
-
-        .btn-stop {
-            background: linear-gradient(135deg, #dc3545 0%, #e74c3c 100%);
-            color: white;
-        }
-
-        .btn-stop:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
-            color: white;
-        }
-
-        .btn-resume {
-            background: linear-gradient(135deg, #17a2b8 0%, #20c997 100%);
-            color: white;
-        }
-
-        .btn-resume:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(23, 162, 184, 0.4);
-            color: white;
-        }
-
-        /* Estados mejorados */
-        .status-badge {
-            padding: 0.6rem 1rem;
-            border-radius: 12px;
-            font-weight: 600;
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-top: 0.5rem;
-            display: inline-block;
-        }
-
-        /* Formularios mejorados */
-        .form-label {
-            font-weight: 700;
-            color: #495057;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            font-size: 0.85rem;
-        }
-
-        .form-control, .form-select {
-            border: 2px solid #e9ecef;
-            border-radius: 12px;
-            padding: 0.8rem 1rem;
-            transition: all 0.3s ease;
-            background: #f8f9fa;
-        }
-
-        .form-control:focus, .form-select:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-            outline: none;
-            background: white;
-        }
-
-        /* Tablas modernas */
-        .table-responsive {
-            border-radius: 15px;
-            overflow: hidden;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-            background: white;
-        }
-
-        #shiftTable, #shiftHistoryTable {
-            margin: 0;
-            border: none;
-        }
-
-        #shiftTable thead, #shiftHistoryTable thead {
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        }
-
-        #shiftTable thead th, #shiftHistoryTable thead th {
-            border: none;
-            padding: 1.2rem;
-            font-weight: 700;
-            color: #495057;
-            text-transform: uppercase;
-            font-size: 0.85rem;
-            letter-spacing: 0.5px;
-            border-bottom: 2px solid #dee2e6;
-        }
-
-        #shiftTable tbody tr, #shiftHistoryTable tbody tr {
-            transition: all 0.3s ease;
-            border-bottom: 1px solid #f1f3f4;
-            position: relative;
-        }
-
-        #shiftTable tbody tr:hover, #shiftHistoryTable tbody tr:hover {
-            background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%);
-            transform: scale(1.01);
-            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
-        }
-
-        #shiftTable tbody tr::after, #shiftHistoryTable tbody tr::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 2px;
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-            transform: scaleX(0);
-            transition: transform 0.3s ease;
-        }
-
-        #shiftTable tbody tr:hover::after, #shiftHistoryTable tbody tr:hover::after {
-            transform: scaleX(1);
-        }
-
-        #shiftTable tbody td, #shiftHistoryTable tbody td {
-            padding: 1rem;
-            vertical-align: middle;
-            border: none;
-        }
-
-        /* Botones de acción en tablas */
-        .action-btn {
-            padding: 0.4rem 0.8rem;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 0.8rem;
-            transition: all 0.3s ease;
-            border: none;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin: 0.2rem;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .action-btn::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.3);
-            transform: translate(-50%, -50%);
-            transition: width 0.6s, height 0.6s;
-        }
-
-        .action-btn:hover::before {
-            width: 300px;
-            height: 300px;
-        }
-
-        .btn-edit-shift {
-            background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
-            color: #212529;
-        }
-
-        .btn-edit-shift:hover {
-            color: #212529;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4);
-        }
-
-        .btn-delete-shift {
-            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
-            color: white;
-        }
-
-        .btn-delete-shift:hover {
-            color: white;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
-        }
-
-        /* Badges mejorados */
-        .badge {
-            padding: 0.4rem 0.8rem;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        /* Alerts modernos */
-        .alert {
-            border: none;
-            border-radius: 15px;
-            padding: 1rem 1.5rem;
-            margin-bottom: 1.5rem;
-            border-left: 5px solid;
-        }
-
-        .alert-success {
-            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
-            border-left-color: #28a745;
-            color: #155724;
-        }
-
-        .alert-danger {
-            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
-            border-left-color: #dc3545;
-            color: #721c24;
-        }
-
-        /* Estilos para indicador de carga en la tabla */
-        table.loading {
-            position: relative;
-            opacity: 0.6;
-        }
-        table.loading:after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(255, 255, 255, 0.7) url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDQiIGhlaWdodD0iNDQiIHZpZXdCb3g9IjAgMCA0NCA0NCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiBzdHJva2U9IiM2NjY2NjYiPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgc3Ryb2tlLXdpZHRoPSIyIj48Y2lyY2xlIGN4PSIyMiIgY3k9IjIyIiByPSIxIj48YW5pbWF0ZSBhdHRyaWJ1dGVOYW1lPSJyIiBiZWdpbj0iMHMiIGR1cj0iMS44cyIgdmFsdWVzPSIxOyAyMCIgY2FsY01vZGU9InNwbGluZSIga2V5VGltZXM9IjA7IDEiIGtleVNwbGluZXM9IjAuMTY1LCAwLjg0LCAwLjQ0LCAxIiByZXBlYXRDb3VudD0iaW5kZWZpbml0ZSIvPjxhbmltYXRlIGF0dHJpYnV0ZU5hbWU9InN0cm9rZS1vcGFjaXR5IiBiZWdpbj0iMHMiIGR1cj0iMS44cyIgdmFsdWVzPSIxOyAwIiBjYWxjTW9kZT0ic3BsaW5lIiBrZXlUaW1lcz0iMDsgMSIga2V5U3BsaW5lcz0iMC4zLCAwLjYxLCAwLjM1NSwgMSIgcmVwZWF0Q291bnQ9ImluZGVmaW5pdGUiLz48L2NpcmNsZT48Y2lyY2xlIGN4PSIyMiIgY3k9IjIyIiByPSIxIj48YW5pbWF0ZSBhdHRyaWJ1dGVOYW1lPSJyIiBiZWdpbj0iLTAuOXMiIGR1cj0iMS44cyIgdmFsdWVzPSIxOyAyMCIgY2FsY01vZGU9InNwbGluZSIga2V5VGltZXM9IjA7IDEiIGtleVNwbGluZXM9IjAuMTY1LCAwLjg0LCAwLjQ0LCAxIiByZXBlYXRDb3VudD0iaW5kZWZpbml0ZSIvPjxhbmltYXRlIGF0dHJpYnV0ZU5hbWU9InN0cm9rZS1vcGFjaXR5IiBiZWdpbj0iLTAuOXMiIGR1cj0iMS44cyIgdmFsdWVzPSIxOyAwIiBjYWxjTW9kZT0ic3BsaW5lIiBrZXlUaW1lcz0iMDsgMSIga2V5U3BsaW5lcz0iMC4zLCAwLjYxLCAwLjM1NSwgMSIgcmVwZWF0Q291bnQ9ImluZGVmaW5pdGUiLz48L2NpcmNsZT48L2c+PC9zdmc+') no-repeat center center;
-            z-index: 1;
-        }
-
-        /* Modal mejorado */
-        .modal-content {
-            border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
-            backdrop-filter: blur(10px);
-            background: rgba(255, 255, 255, 0.98);
-            border: none;
-        }
-
-        .modal-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-bottom: none;
-            border-radius: 20px 20px 0 0;
-        }
-
-        .modal-title {
-            color: white;
-            font-weight: 700;
-        }
-
-        .btn-close-white {
-            filter: brightness(0) invert(1);
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border: none;
-            border-radius: 12px;
-            padding: 0.8rem 2rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            transition: all 0.3s ease;
-            color: white;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-            color: white;
-        }
-
-        .btn-secondary {
-            background: #6c757d;
-            border: none;
-            border-radius: 12px;
-            padding: 0.8rem 2rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            transition: all 0.3s ease;
-            color: white;
-        }
-
-        .btn-secondary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(108, 117, 125, 0.4);
-            color: white;
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .card-title {
-                font-size: 1.5rem;
-            }
-
-            .control-btn {
-                padding: 1rem 1.5rem;
-                font-size: 1rem;
-                min-width: 120px;
-            }
-
-            .control-btn i {
-                font-size: 1.5rem;
-            }
-
-            .action-btn {
-                font-size: 0.7rem;
-                padding: 0.3rem 0.6rem;
-            }
-        }
-    </style>
-    {{-- DataTables CSS --}}
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
-    {{-- DataTables Responsive CSS --}}
-    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
-    {{-- >>> DataTables Responsive Bootstrap 5 CSS (para icono '+' y estilo) <<< --}}
-    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
-    {{-- Botones de DataTables (para exportar Excel, etc.) --}}
-    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
-    
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+
+<style>
+/* Container */
+.shifts-container {
+    padding: 0;
+}
+
+/* Header */
+.shifts-header {
+    background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+    border-radius: 16px;
+    padding: 24px;
+    color: white;
+}
+
+.shifts-header-icon {
+    width: 56px;
+    height: 56px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.75rem;
+}
+
+.shifts-title {
+    color: white;
+    font-weight: 700;
+    font-size: 1.5rem;
+    margin: 0;
+}
+
+.shifts-subtitle {
+    color: rgba(255,255,255,0.85);
+    font-size: 0.95rem;
+}
+
+/* Action Buttons */
+.shifts-btn-action {
+    padding: 10px 20px;
+    border-radius: 50px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    background: white;
+    color: #0ea5e9;
+    border: none;
+    transition: all 0.3s ease;
+}
+
+.shifts-btn-action:hover {
+    background: #f8fafc;
+    color: #0284c7;
+    transform: translateY(-2px);
+}
+
+.shifts-btn-export {
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%) !important;
+    color: white !important;
+}
+
+.shifts-btn-export:hover {
+    color: white !important;
+    box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4);
+}
+
+/* Stats Cards */
+.shifts-stats-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+}
+
+.shifts-stats-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+}
+
+.shifts-stats-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.shifts-stats-primary .shifts-stats-icon {
+    background: rgba(14, 165, 233, 0.15);
+    color: #0ea5e9;
+}
+
+.shifts-stats-success .shifts-stats-icon {
+    background: rgba(34, 197, 94, 0.15);
+    color: #22c55e;
+}
+
+.shifts-stats-warning .shifts-stats-icon {
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+}
+
+.shifts-stats-info .shifts-stats-icon {
+    background: rgba(99, 102, 241, 0.15);
+    color: #6366f1;
+}
+
+.shifts-stats-info h3 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0;
+    color: #1e293b;
+}
+
+.shifts-stats-info span {
+    color: #64748b;
+    font-size: 0.875rem;
+}
+
+/* Section Title */
+.shifts-section-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+}
+
+.shifts-section-title i {
+    color: #0ea5e9;
+}
+
+/* Production Line Cards */
+.shifts-line-card {
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.shifts-line-card:hover {
+    box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+    transform: translateY(-4px);
+}
+
+.line-card-wrapper {
+    animation: shiftsFadeInUp 0.4s ease forwards;
+    opacity: 0;
+}
+
+@keyframes shiftsFadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.line-card-wrapper:nth-child(1) { animation-delay: 0.05s; }
+.line-card-wrapper:nth-child(2) { animation-delay: 0.1s; }
+.line-card-wrapper:nth-child(3) { animation-delay: 0.15s; }
+.line-card-wrapper:nth-child(4) { animation-delay: 0.2s; }
+.line-card-wrapper:nth-child(5) { animation-delay: 0.25s; }
+.line-card-wrapper:nth-child(6) { animation-delay: 0.3s; }
+.line-card-wrapper:nth-child(7) { animation-delay: 0.35s; }
+.line-card-wrapper:nth-child(8) { animation-delay: 0.4s; }
+
+/* Line Header */
+.shifts-line-header {
+    padding: 20px;
+    text-align: center;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.shifts-line-header.active {
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+}
+
+.shifts-line-header.paused {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+.shifts-line-header.stopped {
+    background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+}
+
+.shifts-line-name {
+    color: white;
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin: 0;
+}
+
+.shifts-line-status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.status-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: white;
+}
+
+.status-indicator.active {
+    animation: pulse-green 2s infinite;
+}
+
+.status-indicator.paused {
+    animation: pulse-yellow 2s infinite;
+}
+
+@keyframes pulse-green {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.7); }
+    50% { box-shadow: 0 0 0 8px rgba(255,255,255,0); }
+}
+
+@keyframes pulse-yellow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.7); }
+    50% { box-shadow: 0 0 0 8px rgba(255,255,255,0); }
+}
+
+.status-text {
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Line Body */
+.shifts-line-body {
+    padding: 20px;
+    background: white;
+}
+
+.shifts-line-actions {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+}
+
+/* Action Buttons in Cards */
+.shifts-action-btn {
+    width: 60px;
+    height: 60px;
+    border-radius: 16px;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.shifts-action-btn:hover {
+    transform: scale(1.1);
+}
+
+.shifts-btn-start {
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+    color: white;
+}
+
+.shifts-btn-start:hover {
+    box-shadow: 0 8px 25px rgba(34, 197, 94, 0.4);
+}
+
+.shifts-btn-pause {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+}
+
+.shifts-btn-pause:hover {
+    box-shadow: 0 8px 25px rgba(245, 158, 11, 0.4);
+}
+
+.shifts-btn-stop {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+}
+
+.shifts-btn-stop:hover {
+    box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);
+}
+
+.shifts-btn-resume {
+    background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+    color: white;
+}
+
+.shifts-btn-resume:hover {
+    box-shadow: 0 8px 25px rgba(14, 165, 233, 0.4);
+}
+
+/* Table Card */
+.shifts-table-card {
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    overflow: hidden;
+}
+
+/* Search Box */
+.shifts-search-box {
+    position: relative;
+}
+
+.shifts-search-box i {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    font-size: 1.1rem;
+}
+
+.shifts-search-box input {
+    padding-left: 42px;
+    border-radius: 10px;
+    border: 2px solid #e2e8f0;
+    height: 46px;
+    width: 100%;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+}
+
+.shifts-search-box input:focus {
+    border-color: #0ea5e9;
+    box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
+}
+
+/* Select */
+.shifts-select {
+    border-radius: 10px;
+    border: 2px solid #e2e8f0;
+    padding: 10px 14px;
+    transition: all 0.3s ease;
+}
+
+.shifts-select:focus {
+    border-color: #0ea5e9;
+    box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
+}
+
+/* Table Styles */
+.shifts-table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.shifts-table thead th {
+    background: #f8fafc;
+    border: none;
+    padding: 16px;
+    font-weight: 700;
+    color: #475569;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+}
+
+.shifts-table tbody td {
+    padding: 16px;
+    vertical-align: middle;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.shifts-table tbody tr {
+    transition: all 0.3s ease;
+}
+
+.shifts-table tbody tr:hover {
+    background: #f8fafc;
+}
+
+/* Badges */
+.shifts-badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.shifts-badge-auto {
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+    color: white;
+}
+
+.shifts-badge-manual {
+    background: #e2e8f0;
+    color: #64748b;
+}
+
+.shifts-badge-shift {
+    background: rgba(14, 165, 233, 0.15);
+    color: #0ea5e9;
+}
+
+.shifts-badge-stop {
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+}
+
+.shifts-badge-start {
+    background: rgba(34, 197, 94, 0.15);
+    color: #22c55e;
+}
+
+.shifts-badge-end {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+}
+
+/* Table Action Buttons */
+.shifts-table-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.shifts-table-btn-edit {
+    background: rgba(59, 130, 246, 0.15);
+    color: #3b82f6;
+}
+
+.shifts-table-btn-edit:hover {
+    background: #3b82f6;
+    color: white;
+}
+
+.shifts-table-btn-delete {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+}
+
+.shifts-table-btn-delete:hover {
+    background: #ef4444;
+    color: white;
+}
+
+/* Modal Styles */
+.shifts-modal {
+    border-radius: 16px;
+    border: none;
+    overflow: hidden;
+}
+
+.shifts-modal-header {
+    background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+    color: white;
+    border: none;
+    padding: 20px 24px;
+}
+
+.shifts-modal-header .modal-title {
+    font-weight: 700;
+}
+
+/* Input Group */
+.shifts-input-group {
+    position: relative;
+}
+
+.shifts-input-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    font-size: 1rem;
+    z-index: 1;
+}
+
+.shifts-input {
+    padding-left: 42px;
+    border-radius: 10px;
+    border: 2px solid #e2e8f0;
+    height: 46px;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+}
+
+.shifts-input:focus {
+    border-color: #0ea5e9;
+    box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
+}
+
+/* Switch */
+.shifts-switch .form-check-input {
+    width: 48px;
+    height: 24px;
+    cursor: pointer;
+}
+
+.shifts-switch .form-check-input:checked {
+    background-color: #0ea5e9;
+    border-color: #0ea5e9;
+}
+
+/* Loading Modal */
+.shifts-loading-modal {
+    background: rgba(0, 0, 0, 0.8);
+    border: none;
+    border-radius: 16px;
+}
+
+/* DataTables Overrides */
+.dataTables_wrapper .dt-buttons {
+    margin-bottom: 16px;
+}
+
+.dataTables_wrapper .dt-buttons .btn {
+    border-radius: 10px;
+    padding: 8px 16px;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.dataTables_info, .dataTables_paginate {
+    margin-top: 16px;
+}
+
+.dataTables_paginate .paginate_button {
+    border-radius: 8px !important;
+    margin: 0 2px;
+}
+
+.dataTables_paginate .paginate_button.current {
+    background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%) !important;
+    border-color: transparent !important;
+    color: white !important;
+}
+
+/* Dark Mode */
+[data-theme="dark"] .shifts-line-card,
+[data-theme="dark"] .shifts-stats-card,
+[data-theme="dark"] .shifts-table-card {
+    background: #1e293b;
+}
+
+[data-theme="dark"] .shifts-line-body {
+    background: #1e293b;
+}
+
+[data-theme="dark"] .shifts-section-title {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .shifts-stats-info h3 {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .shifts-table thead th {
+    background: #0f172a;
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .shifts-table tbody td {
+    border-color: #334155;
+}
+
+[data-theme="dark"] .shifts-table tbody tr:hover {
+    background: #334155;
+}
+
+[data-theme="dark"] .shifts-input,
+[data-theme="dark"] .shifts-select {
+    background: #0f172a;
+    border-color: #334155;
+    color: #f1f5f9;
+}
+
+/* Responsive */
+@media (max-width: 991.98px) {
+    .shifts-header .row {
+        gap: 16px;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .shifts-action-btn {
+        width: 50px;
+        height: 50px;
+        font-size: 1.25rem;
+    }
+
+    .shifts-stats-card {
+        margin-bottom: 12px;
+    }
+}
+</style>
 @endpush
 
 @push('scripts')
-    {{-- jQuery debe cargarse antes que DataTables --}}
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    {{-- DataTables core JS --}}
-    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-    {{-- DataTables Responsive JS --}}
-    <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
-    {{-- >>> DataTables Responsive Bootstrap 5 JS (para icono '+' y funcionalidad) <<< --}}
-    <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
-    {{-- Extensión de botones para DataTables (ej. export to Excel) --}}
-    <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    {{-- SweetAlert2 (alertas) --}}
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-    <script>
-        // Configuración global AJAX con CSRF
-        $.ajaxSetup({
-            headers: {
-                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+<script>
+// Configuración global AJAX con CSRF
+$.ajaxSetup({
+    headers: {
+        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+    }
+});
+
+// URLs
+const baseUrl = window.location.origin;
+const apiIndexUrl = `${baseUrl}/shift-lists/api`;
+const storeUrl = `${baseUrl}/shift-lists`;
+const updateUrlTemplate = `${baseUrl}/shift-lists/:id`;
+const deleteUrlTemplate = `${baseUrl}/shift-lists/:id`;
+
+// Variables globales
+let shiftTable;
+let historyTable;
+let loadingModal = null;
+
+$(document).ready(function() {
+    // Botón añadir turno
+    $('#btnAddShift').on('click', function() {
+        $('#createShiftForm')[0].reset();
+        $('#createShiftModal').modal('show');
+    });
+
+    // Botón exportar Excel
+    $('#btnExportExcel').on('click', function() {
+        if (shiftTable) {
+            shiftTable.button('.buttons-excel').trigger();
+        }
+    });
+
+    // Inicializar DataTable de turnos
+    shiftTable = $('#shiftTable').DataTable({
+        dom: '<"d-none"B>rtip',
+        buttons: [
+            {
+                extend: 'excel',
+                text: '{{ __("Export to Excel") }}',
+                className: 'buttons-excel'
             }
-        });
-
-        // URLs originales
-        const baseUrl = window.location.origin;
-        const apiIndexUrl = `${baseUrl}/shift-lists/api`;
-        const storeUrl    = `${baseUrl}/shift-lists`;
-        const updateUrlTemplate = `${baseUrl}/shift-lists/:id`;
-        const deleteUrlTemplate = `${baseUrl}/shift-lists/:id`;
-
-        $(document).ready(function() {
-            // Inicializar DataTable con filtro de Production Line
-            const table = $('#shiftTable').DataTable({
-                dom: 'Bfrtip',
-                buttons: [
-                    {
-                        text: '{{ __("Add Shift") }}',
-                        className: 'btn btn-primary',
-                        action: function() {
-                             // Resetear formulario antes de mostrar
-                            $('#createShiftForm')[0].reset();
-                            $('#createShiftModal').modal('show');
-                        }
-                    },
-                    {
-                        extend: 'excel',
-                        text: '{{ __("Export to Excel") }}',
-                        className: 'btn btn-success'
-                    }
-                ],
-                order: [[1, 'asc']], // Ordenar por Production Line de forma ascendente por defecto
-                    processing: true, // Indicador de carga
-                // serverSide: false, // Asumiendo carga client-side desde la API
-                ajax: {
-                    url: apiIndexUrl,
-                    dataSrc: 'data', // Asumiendo que la API devuelve { data: [...] }
-                    data: function(d) {
-                        d.production_line = $('#productionLineFilter').val();
-                    },
-                    error: function(xhr, status, error) { // Manejo de errores mejorado
-                        console.error("Error loading DataTable data:", status, error, xhr);
-                        Swal.fire('Error', '{{ __("Error loading data. Check console for details.") }}', 'error');
-                    }
-                },
-                columns: [
-                    { data: 'id', name: 'id' }, // 'name' útil para server-side
-                    { data: 'production_line.name', name: 'production_line.name', defaultContent: '{{ __("No line") }}' },
-                    { data: 'start', name: 'start' },
-                    { data: 'end', name: 'end' },
-                    {
-                        data: 'active',
-                        name: 'active',
-                        orderable: true,
-                        searchable: false,
-                        render: function(data, type, row) {
-                            const isActive = Number(row.active) === 1;
-                            if (type === 'display') {
-                                return isActive
-                                    ? '<span class="badge bg-success"><i class="fas fa-robot me-1"></i> {{ __("Auto") }}</span>'
-                                    : '<span class="badge bg-secondary"><i class="fas fa-hand-paper me-1"></i> {{ __("Manual") }}</span>';
-                            }
-                            return isActive ? 'Auto' : 'Manual';
-                        }
-                    },
-                    {
-                        data: null,
-                        name: 'actions', // Nombre para columna de acciones
-                        orderable: false,
-                        searchable: false,
-                        render: function(data, type, row) { // Usar 'row' para datos completos
-                            const editBtn = `
-                                <button
-                                    class="btn btn-sm btn-primary edit-shift"
-                                    title="{{ __('Edit') }}"
-                                    data-id="${row.id}"
-                                    data-production-line-id="${row.production_line_id}"
-                                    data-start="${row.start}"
-                                    data-end="${row.end}"
-                                    data-active="${row.active ?? 0}"
-                                >
-                                    <i class="fa fa-edit"></i> {{-- Icono Editar --}}
-                                </button>
-                            `;
-                            // Formulario de borrado mejorado con AJAX
-                            const deleteForm = `
-                                <form
-                                    id="deleteForm-${row.id}"
-                                    action="${deleteUrlTemplate.replace(':id', row.id)}"
-                                    method="POST"
-                                    style="display:inline;"
-                                    class="delete-shift-form"
-                                >
-                                    @csrf
-                                    @method('DELETE')
-                                    <button
-                                        type="submit"
-                                        class="btn btn-sm btn-danger"
-                                        title="{{ __('Delete') }}"
-                                        data-id="${row.id}"
-                                    >
-                                        <i class="fa fa-trash"></i> {{-- Icono Borrar --}}
-                                    </button>
-                                </form>
-                            `;
-                            return editBtn + ' ' + deleteForm;
-                        }
-                    }
-                ],
-                responsive: true, // Habilitar responsividad (clave)
-                // scrollX: true, // Puedes descomentar si prefieres scroll horizontal además del colapso
-                language: { // Traducciones (opcional)
-                    url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json'
-                }
-            });
-
-            // Recargar tabla al cambiar filtro
-            $('#productionLineFilter').on('change', function() {
-                table.ajax.reload();
-            });
-
-            // Manejador para el borrado de turnos
-            $(document).on('submit', '.delete-shift-form', function(e) {
-                e.preventDefault();
-                const form = $(this);
-                const id = form.find('button[type="submit"]').data('id');
-                
-                // Mostrar confirmación con SweetAlert2
-                Swal.fire({
-                    title: '{{ __("Are you sure?") }}',
-                    text: '{{ __("You won't be able to revert this!") }}',
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#3085d6',
-                    cancelButtonColor: '#d33',
-                    confirmButtonText: '{{ __("Yes, delete it!") }}',
-                    cancelButtonText: '{{ __("Cancel") }}'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        // Mostrar modal de carga
-                        showLoadingModal();
-                        
-                        // Deshabilitar botón para evitar múltiples envíos
-                        form.find('button[type="submit"]').prop('disabled', true);
-                        
-                        // Enviar la petición de borrado
-                        $.ajax({
-                            url: form.attr('action'),
-                            type: 'POST',
-                            data: form.serialize(),
-                            success: function(response) {
-                                hideLoadingModal();
-                                if (response.success) {
-                                    // Mostrar mensaje de éxito
-                                    Swal.fire(
-                                        '{{ __("Deleted!") }}',
-                                        '{{ __("The shift has been deleted.") }}',
-                                        'success'
-                                    );
-                                    // Recargar la tabla
-                                    table.ajax.reload();
-                                } else {
-                                    // Mostrar error
-                                    Swal.fire(
-                                        '{{ __("Error") }}',
-                                        response.message || '{{ __("Could not delete the shift.") }}',
-                                        'error'
-                                    );
-                                }
-                            },
-                            error: function(xhr) {
-                                hideLoadingModal();
-                                console.error("Delete Error:", xhr);
-                                Swal.fire(
-                                    '{{ __("Error") }}',
-                                    xhr.responseJSON?.message || '{{ __("Server error.") }}',
-                                    'error'
-                                );
-                            },
-                            complete: function() {
-                                // Rehabilitar botón
-                                form.find('button[type="submit"]').prop('disabled', false);
-                            }
-                        });
-                    }
-                });
-                
-                return false;
-            });
-
-            // --- MANEJO MODALES (Crear/Editar) ---
-
-            // Variable global para el modal de carga
-            let loadingModal = null;
-            
-            // Función para mostrar el modal de carga
-            function showLoadingModal() {
-                const modalElement = document.getElementById('loadingModal');
-                if (modalElement) {
-                    // Cerrar cualquier instancia previa
-                    if (loadingModal) {
-                        try { loadingModal.hide(); } catch(e) { console.error('Error al cerrar modal previo:', e); }
-                        loadingModal.dispose();
-                    }
-                    // Crear nueva instancia
-                    loadingModal = new bootstrap.Modal(modalElement, {
-                        backdrop: 'static',
-                        keyboard: false
-                    });
-                    loadingModal.show();
-                }
-                return loadingModal;
+        ],
+        order: [[1, 'asc']],
+        processing: true,
+        ajax: {
+            url: apiIndexUrl,
+            dataSrc: 'data',
+            data: function(d) {
+                d.production_line = $('#productionLineFilter').val();
+            },
+            error: function(xhr, status, error) {
+                console.error("Error loading DataTable data:", status, error, xhr);
+                Swal.fire('Error', '{{ __("Error loading data.") }}', 'error');
             }
-            
-            // Función para ocultar el modal de carga
-            function hideLoadingModal() {
-                if (loadingModal) {
-                    try {
-                        loadingModal.hide();
-                        // Esperar a que termine la animación
-                        const modalElement = document.getElementById('loadingModal');
-                        if (modalElement) {
-                            modalElement.addEventListener('hidden.bs.modal', function handler() {
-                                modalElement.removeEventListener('hidden.bs.modal', handler);
-                                if (loadingModal) {
-                                    loadingModal.dispose();
-                                    loadingModal = null;
-                                }
-                            }, { once: true });
-                        }
-                    } catch (e) {
-                        console.error('Error al ocultar modal:', e);
-                        // Forzar eliminación del backdrop
-                        const backdrops = document.querySelectorAll('.modal-backdrop');
-                        backdrops.forEach(el => el.remove());
-                        // Forzar eliminación de clases de modal abierto
-                        document.body.classList.remove('modal-open');
-                        document.body.style.overflow = '';
-                        document.body.style.paddingRight = '';
-                        loadingModal = null;
+        },
+        columns: [
+            { data: 'id', name: 'id' },
+            { data: 'production_line.name', name: 'production_line.name', defaultContent: '{{ __("No line") }}' },
+            { data: 'start', name: 'start' },
+            { data: 'end', name: 'end' },
+            {
+                data: 'active',
+                name: 'active',
+                orderable: true,
+                searchable: false,
+                render: function(data, type, row) {
+                    const isActive = Number(row.active) === 1;
+                    if (type === 'display') {
+                        return isActive
+                            ? '<span class="shifts-badge shifts-badge-auto"><i class="ti ti-robot me-1"></i>{{ __("Auto") }}</span>'
+                            : '<span class="shifts-badge shifts-badge-manual"><i class="ti ti-hand-stop me-1"></i>{{ __("Manual") }}</span>';
                     }
+                    return isActive ? 'Auto' : 'Manual';
+                }
+            },
+            {
+                data: null,
+                name: 'actions',
+                orderable: false,
+                searchable: false,
+                render: function(data, type, row) {
+                    return `
+                        <button class="shifts-table-btn shifts-table-btn-edit edit-shift me-1"
+                            title="{{ __('Edit') }}"
+                            data-id="${row.id}"
+                            data-production-line-id="${row.production_line_id}"
+                            data-start="${row.start}"
+                            data-end="${row.end}"
+                            data-active="${row.active ?? 0}">
+                            <i class="ti ti-edit"></i>
+                        </button>
+                        <button class="shifts-table-btn shifts-table-btn-delete delete-shift"
+                            title="{{ __('Delete') }}"
+                            data-id="${row.id}">
+                            <i class="ti ti-trash"></i>
+                        </button>
+                    `;
                 }
             }
-            
-            $('#createShiftForm').on('submit', function(e) {
-                e.preventDefault();
-                const form = $(this);
-                
-                // Obtener los valores del formulario manualmente
-                const formData = new FormData();
-                formData.append('_token', $('meta[name="csrf-token"]').attr('content'));
-                formData.append('production_line_id', $('#createProductionLineId').val());
-                formData.append('start', $('#createStartTime').val());
-                formData.append('end', $('#createEndTime').val());
-                formData.append('active', $('#createActive').is(':checked') ? 1 : 0);
-                
-                // Mostrar modal de carga
+        ],
+        responsive: true,
+        language: {
+            url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/{{ app()->getLocale() == "es" ? "es-ES" : "en-GB" }}.json'
+        },
+        drawCallback: function() {
+            // Actualizar estadística de turnos automáticos
+            const data = this.api().data();
+            let autoCount = 0;
+            data.each(function(row) {
+                if (Number(row.active) === 1) autoCount++;
+            });
+            $('#statsAutoShifts').text(autoCount);
+        }
+    });
+
+    // Filtro de línea de producción
+    $('#productionLineFilter').on('change', function() {
+        shiftTable.ajax.reload();
+    });
+
+    // Editar turno
+    $('#shiftTable tbody').on('click', '.edit-shift', function() {
+        const button = $(this);
+        $('#editShiftId').val(button.data('id'));
+        $('#editProductionLineId').val(button.data('production-line-id'));
+        $('#editStartTime').val(button.data('start') ? button.data('start').substring(0, 5) : '');
+        $('#editEndTime').val(button.data('end') ? button.data('end').substring(0, 5) : '');
+        $('#editActive').prop('checked', Number(button.data('active')) === 1);
+        $('#editShiftModal').modal('show');
+    });
+
+    // Eliminar turno
+    $('#shiftTable tbody').on('click', '.delete-shift', function() {
+        const id = $(this).data('id');
+
+        Swal.fire({
+            title: '{{ __("Are you sure?") }}',
+            text: '{{ __("You will not be able to recover this shift!") }}',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: '{{ __("Yes, delete it!") }}',
+            cancelButtonText: '{{ __("Cancel") }}'
+        }).then((result) => {
+            if (result.isConfirmed) {
                 showLoadingModal();
-                
-                // Deshabilitar botones para evitar múltiples envíos
-                const submitButton = form.find('button[type="submit"]');
-                submitButton.prop('disabled', true);
-                
-                // Limpiar errores previos
-                form.find('.is-invalid').removeClass('is-invalid');
-                form.find('.invalid-feedback').remove();
-                
-                // Usar fetch con FormData
-                fetch(storeUrl, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    // Importante: No establecer Content-Type, fetch lo hará automáticamente con el boundary
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        return response.json().then(err => Promise.reject(err));
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.success) {
-                        // Cerrar el modal de carga antes de mostrar el éxito
-                        hideLoadingModal();
-                        
-                        // Cerrar el modal de creación
-                        const createModal = bootstrap.Modal.getInstance(document.getElementById('createShiftModal'));
-                        if (createModal) {
-                            createModal.hide();
-                        }
-                        
-                        // Resetear el formulario
-                        form[0].reset();
-                        
-                        // Mostrar mensaje de éxito
-                        Swal.fire({
-                            title: '{{ __("Success") }}',
-                            text: '{{ __("Shift created successfully") }}',
-                            icon: 'success',
-                            confirmButtonText: 'OK'
-                        });
-                        
-                        // Recargar datos
-                        table.ajax.reload();
-                        updateShiftStatuses();
-                    } else {
-                        throw new Error(data.message || '{{ __("Error creating shift") }}');
-                    }
-                })
-                .catch(error => {
-                    console.error("Create Error:", error);
-                    hideLoadingModal();
-                    
-                    // Mostrar errores de validación si existen
-                    if (error.errors) {
-                        Object.entries(error.errors).forEach(([field, messages]) => {
-                            const input = form.find(`[name="${field}"]`);
-                            if (input.length) {
-                                input.addClass('is-invalid');
-                                const errorDiv = $(`<div class="invalid-feedback">${messages[0]}</div>`);
-                                input.after(errorDiv);
-                            }
-                        });
-                        
-                        // Mostrar el primer error como mensaje general
-                        const firstError = Object.values(error.errors)[0][0];
-                        Swal.fire({
-                            title: '{{ __("Validation Error") }}',
-                            text: firstError || '{{ __("Please correct the errors in the form.") }}',
-                            icon: 'error',
-                            confirmButtonText: 'OK'
-                        });
-                    } else {
-                        Swal.fire({
-                            title: '{{ __("Error") }}',
-                            text: error.message || '{{ __("Server error. Please try again.") }}',
-                            icon: 'error',
-                            confirmButtonText: 'OK'
-                        });
-                    }
-                })
-                .finally(() => {
-                    // Rehabilitar botón de envío
-                    submitButton.prop('disabled', false);
-                });
-            });
-
-            // Cargar datos en modal de edición
-            // Se usa delegación en tbody por si la tabla se redibuja
-            $('#shiftTable tbody').on('click', '.edit-shift', function() {
-                const button = $(this);
-                $('#editShiftId').val(button.data('id'));
-                $('#editProductionLineId').val(button.data('production-line-id'));
-                // Asegurar formato HH:MM para input type="time"
-                $('#editStartTime').val(button.data('start') ? button.data('start').substring(0, 5) : '');
-                $('#editEndTime').val(button.data('end') ? button.data('end').substring(0, 5) : '');
-                const isActive = Number(button.data('active')) === 1;
-                $('#editActive').prop('checked', isActive);
-
-                $('#editShiftModal').modal('show');
-            });
-
-            // Enviar formulario de edición
-            $('#editShiftForm').on('submit', function(e) {
-                e.preventDefault();
-                const id = $('#editShiftId').val();
-                const url = updateUrlTemplate.replace(':id', id);
-                const formData = $(this).serialize(); // Incluye _method=PUT
 
                 $.ajax({
-                    url: url,
-                    method: 'POST', // Usar POST para que Laravel reconozca _method=PUT
-                    data: formData
-                })
-                .done(response => {
-                    if (response.success) {
-                        Swal.fire('{{ __("Updated") }}', response.message, 'success');
-                        table.ajax.reload(null, false);
-                        $('#editShiftModal').modal('hide');
-                    } else {
-                        const errorMsg = response.errors ? Object.values(response.errors).join('<br>') : response.message;
-                        Swal.fire('{{ __("Error") }}', errorMsg || '{{ __("Could not update.") }}', 'error');
-                    }
-                })
-                .fail(xhr => {
-                    console.error("Update Error:", xhr);
-                    Swal.fire('{{ __("Error") }}', xhr.responseJSON?.message || '{{ __("Server error.") }}', 'error');
-                });
-            });
-
-            // --- MANEJO BOTONES PLAY/PAUSE/STOP ---
-            // Delegación de eventos en el body para los botones de las tarjetas
-            $(document).on('click', 'button[data-action]', function(e) { // Delegar desde un elemento estático superior
-                const button = $(this);
-                // Evitar que se active si está dentro del modal o tabla
-                if (button.closest('.modal').length > 0 || button.closest('#shiftTable').length > 0) {
-                    return;
-                }
-
-                const action = button.data('action');
-                const lineId = button.data('line-id');
-
-                // Deshabilitar botón para evitar doble clic
-                button.prop('disabled', true).addClass('opacity-50'); // Estilo visual de deshabilitado
-
-                console.log("Enviando evento:", { production_line_id: lineId, event: action });
-
-                $.ajax({
-                    url: "/shift-event", // Ruta original
-                    method: "POST",
+                    url: deleteUrlTemplate.replace(':id', id),
+                    type: 'POST',
                     data: {
-                        production_line_id: lineId,
-                        event: action
-                        // CSRF token ya está en $.ajaxSetup
+                        _method: 'DELETE',
+                        _token: $('meta[name="csrf-token"]').attr('content')
                     },
                     success: function(response) {
-                        Swal.fire({
-                            icon: 'success',
-                            title: response.message || '{{ __("Action sent successfully") }}',
-                            timer: 1500,
-                            showConfirmButton: false
-                        }).then(() => {
-                            location.reload(); // Recargar página para actualizar estado de botones
-                        });
+                        hideLoadingModal();
+                        if (response.success) {
+                            Swal.fire('{{ __("Deleted!") }}', '{{ __("The shift has been deleted.") }}', 'success');
+                            shiftTable.ajax.reload();
+                        } else {
+                            Swal.fire('{{ __("Error") }}', response.message || '{{ __("Could not delete the shift.") }}', 'error');
+                        }
                     },
                     error: function(xhr) {
-                        console.error("Shift Event Error:", xhr);
-                        const err = xhr.responseJSON?.message || '{{ __("Error sending action.") }}';
-                        Swal.fire('Error', err, 'error');
-                        // Rehabilitar botón si falla
-                        button.prop('disabled', false).removeClass('opacity-50');
+                        hideLoadingModal();
+                        Swal.fire('{{ __("Error") }}', xhr.responseJSON?.message || '{{ __("Server error.") }}', 'error');
                     }
-                    // 'complete' no es necesario si se rehabilita en error y se recarga en success
                 });
-            });
-
-        });
-
-        // Función para actualizar los botones según el estado
-        function updateShiftButtons(statuses) {
-            statuses.forEach(status => {
-                const lineId = status.line_id;
-                const lastShift = status.last_shift;
-                const buttonGroup = $(`button[data-line-id="${lineId}"]`).closest('.btn-group');
-                
-                if (!buttonGroup.length) return; // Si no existe el grupo de botones, salir
-                
-                // Guardar el estado actual para comparar
-                const currentState = buttonGroup.html();
-                let newState = '';
-                
-                if (!lastShift) {
-                    // Sin historial: mostrar solo Iniciar Turno
-                    newState = `
-                        <button type="button" class="btn btn-outline-success" style="padding: 1rem 2rem; font-size: 1.25rem;"
-                                data-action="inicio_trabajo"
-                                data-line-id="${lineId}"
-                                title="{{ __('Start Shift') }}">
-                            <i class="fa fa-play" style="font-size: 2rem;"></i>
-                        </button>
-                    `;
-                } else if (lastShift.type === 'shift' && lastShift.action === 'start') {
-                    // Turno iniciado: mostrar Pausar y Finalizar Turno
-                    newState = `
-                        <button type="button" class="btn btn-outline-warning" style="padding: 1rem 2rem; font-size: 1.25rem;"
-                                data-action="inicio_pausa"
-                                data-line-id="${lineId}"
-                                title="{{ __('Pause') }}">
-                            <i class="fa fa-pause" style="font-size: 2rem;"></i>
-                        </button>
-                        <button type="button" class="btn btn-outline-danger" style="padding: 1rem 2rem; font-size: 1.25rem;"
-                                data-action="final_trabajo"
-                                data-line-id="${lineId}"
-                                title="{{ __('End Shift') }}">
-                            <i class="fa fa-stop" style="font-size: 2rem;"></i>
-                        </button>
-                    `;
-                } else if (lastShift.type === 'stop' && lastShift.action === 'start') {
-                    // Pausa iniciada: mostrar solo Reanudar
-                    newState = `
-                        <button type="button" class="btn btn-outline-warning" style="padding: 1rem 2rem; font-size: 1.25rem;"
-                                data-action="final_pausa"
-                                data-line-id="${lineId}"
-                                title="{{ __('Resume') }}">
-                            <i class="fa fa-play" style="font-size: 2rem;"></i>
-                        </button>
-                    `;
-                } else if (lastShift.type === 'stop' && lastShift.action === 'end') {
-                    // Pausa finalizada: mostrar Inicio pausa y Finalizar Turno
-                    newState = `
-                        <button type="button" class="btn btn-outline-warning" style="padding: 1rem 2rem; font-size: 1.25rem;"
-                                data-action="inicio_pausa"
-                                data-line-id="${lineId}"
-                                title="{{ __('Pause') }}">
-                            <i class="fa fa-pause" style="font-size: 2rem;"></i>
-                        </button>
-                        <button type="button" class="btn btn-outline-danger" style="padding: 1rem 2rem; font-size: 1.25rem;"
-                                data-action="final_trabajo"
-                                data-line-id="${lineId}"
-                                title="{{ __('End Shift') }}">
-                            <i class="fa fa-stop" style="font-size: 2rem;"></i>
-                        </button>
-                    `;
-                } else if (lastShift.type === 'shift' && lastShift.action === 'end') {
-                    // Turno finalizado: mostrar solo Iniciar Turno
-                    newState = `
-                        <button type="button" class="btn btn-outline-success" style="padding: 1rem 2rem; font-size: 1.25rem;"
-                                data-action="inicio_trabajo"
-                                data-line-id="${lineId}"
-                                title="{{ __('Start Shift') }}">
-                            <i class="fa fa-play" style="font-size: 2rem;"></i>
-                        </button>
-                    `;
-                } else {
-                    // Estado desconocido: mostrar solo Iniciar Turno
-                    newState = `
-                        <button type="button" class="btn btn-outline-success" style="padding: 1rem 2rem; font-size: 1.25rem;"
-                                data-action="inicio_trabajo"
-                                data-line-id="${lineId}"
-                                title="{{ __('Start Shift') }}">
-                            <i class="fa fa-play" style="font-size: 2rem;"></i>
-                        </button>
-                    `;
-                }
-                
-                // Actualizar el estado en el encabezado de la tarjeta
-                const statusBadge = $(`#status-badge-${lineId}`);
-                if (statusBadge.length) {
-                    if (!lastShift) {
-                        statusBadge.html('<span class="badge bg-secondary fs-5"><i class="fas fa-power-off me-1"></i> {{ __("shift.shift_stopped") }}</span>');
-                    } else if (lastShift.type === 'shift' && lastShift.action === 'start') {
-                        statusBadge.html('<span class="badge bg-success fs-5"><i class="fas fa-play-circle me-1"></i> {{ __("shift.shift_in_progress") }}</span>');
-                    } else if (lastShift.type === 'stop' && lastShift.action === 'start') {
-                        statusBadge.html('<span class="badge bg-warning text-dark fs-5"><i class="fas fa-pause-circle me-1"></i> {{ __("shift.shift_paused") }}</span>');
-                    } else if (lastShift.type === 'stop' && lastShift.action === 'end') {
-                        statusBadge.html('<span class="badge bg-info text-white fs-5"><i class="fas fa-redo me-1"></i> {{ __("shift.shift_resumed") }}</span>');
-                    } else if (lastShift.type === 'shift' && lastShift.action === 'end') {
-                        statusBadge.html('<span class="badge bg-danger fs-5"><i class="fas fa-stop-circle me-1"></i> {{ __("shift.shift_ended") }}</span>');
-                    } else {
-                        statusBadge.html('<span class="badge bg-secondary fs-5"><i class="fas fa-question-circle me-1"></i> {{ __("shift.status_unknown") }}</span>');
-                    }
-                }
-                
-                // Solo actualizar los botones si ha cambiado el estado
-                if (currentState !== newState) {
-                    buttonGroup.html(newState);
-                }
-            });
-        }
-
-
-        // Función para actualizar los estados
-        function updateShiftStatuses() {
-            $.get(`${baseUrl}/api/shift/statuses`)
-                .done(function(response) {
-                    updateShiftButtons(response);
-                })
-                .fail(function(error) {
-                    console.error('Error al actualizar estados:', error);
-                });
-        }
-
-        // Función para mostrar mensajes de error
-        function showErrorMessage(message) {
-            const table = $('#shiftHistoryTable');
-            table.find('tbody').html(`
-                <tr>
-                    <td colspan="6" class="text-center">
-                        <div class="alert alert-danger">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            ${message}
-                        </div>
-                    </td>
-                </tr>
-            `);
-        }
-        
-        // Función para inicializar la tabla de historial
-        function initializeHistoryTable() {
-            console.log('Inicializando DataTable...');
-            
-            // Primero, verifiquemos que la tabla existe
-            if ($.fn.DataTable.isDataTable('#shiftHistoryTable')) {
-                $('#shiftHistoryTable').DataTable().destroy();
             }
-            
-            // Inicializar DataTable
-            return $('#shiftHistoryTable').DataTable({
-                processing: true,
-                serverSide: true,
-                responsive: true,
-                
-                // Configuración de AJAX
-                ajax: {
-                    url: `${baseUrl}/api/shift-history`,
-                    type: 'GET',
-                    data: function(d) {
-                        // Agregar los parámetros de búsqueda
-                        d.production_line_id = $('#historyProductionLineFilter').val() || '';
-                        d.type = $('#historyTypeFilter').val() || '';
-                        d.action = $('#historyActionFilter').val() || '';
-                        d.operator_id = $('#historyOperatorFilter').val() || '';
-                        
-                        // Usar el valor del campo de búsqueda personalizado
-                        if ($('#historySearchInput').val()) {
-                            d.search = {
-                                value: $('#historySearchInput').val(),
-                                regex: false
-                            };
-                        }
-                        
-                        // Log the request data for debugging
-                        console.log('Enviando parámetros al servidor:', JSON.stringify({
-                            draw: d.draw,
-                            start: d.start,
-                            length: d.length,
-                            search: d.search,
-                            order: d.order,
-                            production_line_id: d.production_line_id,
-                            type: d.type,
-                            action: d.action,
-                            operator_id: d.operator_id
-                        }, null, 2));
-                        
-                        return d;
-                    },
-                    dataSrc: function(json) {
-                        console.log('Datos recibidos del servidor:', JSON.stringify({
-                            draw: json.draw,
-                            recordsTotal: json.recordsTotal,
-                            recordsFiltered: json.recordsFiltered,
-                            data: json.data ? json.data.length : 0
-                        }, null, 2));
-                        
-                        if (!json.data || json.data.length === 0) {
-                            console.log('No se encontraron registros en la respuesta');
-                            return [];
-                        }
-                        
-                        // Mapear los datos para asegurar que tengan el formato correcto
-                        return json.data.map(item => ({
-                            id: item.id,
-                            production_line: item.production_line || null,
-                            type: item.type,
-                            action: item.action,
-                            operator: item.operator || null,
-                            created_at: item.created_at
-                        }));
-                    },
-                    error: function(xhr, error, thrown) {
-                        console.error('Error en la petición AJAX:', {
-                            status: xhr.status,
-                            statusText: xhr.statusText,
-                            response: xhr.responseText,
-                            error: error,
-                            thrown: thrown
-                        });
-                        
-                        showErrorMessage('Error al cargar el historial. Por favor, inténtalo de nuevo.');
-                        return [];
-                    }
-                },
-                
-                // Configuración de columnas
-                columns: [
-                    { 
-                        data: 'id',
-                        name: 'id',
-                        className: 'text-center',
-                        width: '5%'
-                    },
-                    { 
-                        data: 'production_line',
-                        name: 'production_line.name',
-                        className: 'text-center',
-                        render: function(data, type, row) {
-                            return data ? data.name : 'N/A';
-                        }
-                    },
-                    { 
-                        data: 'type',
-                        name: 'type',
-                        className: 'text-center',
-                        render: function(data) {
-                            const types = {
-                                'shift': '{{ __("Turno") }}',
-                                'stop': '{{ __("Pausa") }}'
-                            };
-                            return `<span class="badge bg-info">${types[data] || data}</span>`;
-                        }
-                    },
-                    { 
-                        data: 'action',
-                        name: 'action',
-                        className: 'text-center',
-                        render: function(data) {
-                            const actions = {
-                                'start': '{{ __("Inicio") }}',
-                                'end': '{{ __("Fin") }}'
-                            };
-                            const badgeClass = data === 'start' ? 'bg-success' : 'bg-danger';
-                            return `<span class="badge ${badgeClass}">${actions[data] || data}</span>`;
-                        }
-                    },
-                    { 
-                        data: 'operator',
-                        name: 'operator.name',
-                        className: 'text-center',
-                        render: function(data) {
-                            return data ? data.name : 'Sistema';
-                        }
-                    },
-                    { 
-                        data: 'created_at',
-                        name: 'created_at',
-                        className: 'text-center',
-                        render: function(data) {
-                            if (!data) return '';
-                            const date = new Date(data);
-                            return date.toLocaleString('es-ES', {
-                                day: '2-digit',
-                                month: '2-digit',
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                second: '2-digit'
-                            });
-                        }
-                    }
-                ],
-                
-                // Configuración de paginación
-                paging: true,
-                pageLength: 10,
-                lengthMenu: [10, 25, 50, 100],
-                displayStart: 0,
-                autoWidth: false,
-                
-                // Configuración de búsqueda - Deshabilitamos la búsqueda nativa para usar nuestro campo personalizado
-                searching: false,
-                
-                // Configuración de ordenación
-                order: [[0, 'desc']],
-                
-                // Configuración de idioma
-                language: {
-                    url: '//cdn.datatables.net/plug-ins/1.10.24/i18n/Spanish.json',
-                    emptyTable: 'No hay datos disponibles en la tabla',
-                    zeroRecords: 'No se encontraron registros que coincidan con la búsqueda',
-                    info: 'Mostrando _START_ a _END_ de _TOTAL_ registros',
-                    infoEmpty: 'No hay registros disponibles',
-                    infoFiltered: '(filtrado de _MAX_ registros en total)'
-                },
-                
-                // Botones de exportación
-                dom: 'Bfrtip',
-                buttons: [
-                    'copy', 'csv', 'excel', 'pdf', 'print'
-                ],
-                
-                // Callbacks
-                drawCallback: function() {
-                    const api = this.api();
-                    const recordsDisplay = api.page.info().recordsDisplay;
-                    console.log('Tabla dibujada. Mostrando ' + recordsDisplay + ' registros');
-                    
-                    if (recordsDisplay === 0) {
-                        // Mostrar mensaje personalizado cuando no hay datos
-                        const emptyMsg = 'No se encontraron registros';
-                        $('.dataTables_empty').html(emptyMsg);
-                    }
-                    
-                    // Forzar el redibujado de los botones de DataTables
-                    api.columns.adjust().responsive.recalc();
-                },
-                error: function(xhr, error, thrown) {
-                    console.error('Error en DataTable:', { xhr, error, thrown });
-                    showErrorMessage('Error al cargar los datos. Por favor, recarga la página.');
-                },
-                initComplete: function() {
-                    console.log('DataTable inicializada correctamente');
-                }
-            });
-        }
-        
-        // Variable global para la tabla
-        let historyTable;
-        
-        // Inicializar todo cuando el documento esté listo
-        $(document).ready(function() {
-            try {
-                // Inicializar la tabla de historial
-                historyTable = initializeHistoryTable();
-                
-                // Configurar eventos de filtrado - Usar directamente la tabla del DOM para evitar problemas con la variable global
-                $('#historyProductionLineFilter, #historyTypeFilter, #historyActionFilter, #historyOperatorFilter').on('change', function() {
-                    console.log('Filtro cambiado, recargando tabla...');
-                    
-                    // Obtener la instancia actual de DataTable
-                    const table = $('#shiftHistoryTable').DataTable();
-                    
-                    // Agregar clase de carga
-                    $('#shiftHistoryTable').addClass('loading');
-                    
-                    // Recargar datos
-                    table.ajax.reload(function() {
-                        // Quitar clase de carga cuando termine
-                        $('#shiftHistoryTable').removeClass('loading');
-                    });
-                });
-                
-                // Manejar la búsqueda global con un pequeño retraso para evitar muchas peticiones
-                let searchTimeout;
-                $('#historySearchInput').on('keyup', function() {
-                    clearTimeout(searchTimeout);
-                    searchTimeout = setTimeout(function() {
-                        console.log('Búsqueda global, recargando tabla...');
-                        
-                        // Obtener la instancia actual de DataTable
-                        const table = $('#shiftHistoryTable').DataTable();
-                        
-                        // Agregar clase de carga
-                        $('#shiftHistoryTable').addClass('loading');
-                        
-                        // Recargar datos
-                        table.ajax.reload(function() {
-                            // Quitar clase de carga cuando termine
-                            $('#shiftHistoryTable').removeClass('loading');
-                        });
-                    }, 500); // Esperar 500ms después de que el usuario deje de escribir
-                });
-                
-                // Restablecer filtros
-                $('#resetHistoryFilters').on('click', function() {
-                    $('#historyProductionLineFilter, #historyTypeFilter, #historyActionFilter, #historyOperatorFilter').val('');
-                    $('#historySearchInput').val(''); // Limpiar campo de búsqueda global
-                    
-                    // Mostrar indicador de carga
-                    $('#shiftHistoryTable').addClass('loading');
-                    
-                    // Usar la instancia actual de la tabla
-                    $('#shiftHistoryTable').DataTable().ajax.reload(function() {
-                        // Callback cuando termina la carga
-                        $('#shiftHistoryTable').removeClass('loading');
-                    });
-                });
-                
-                // Actualizar automáticamente la tabla cada 30 segundos
-                setInterval(function() {
-                    try {
-                        // Usar directamente la tabla del DOM para evitar problemas con la variable global
-                        const table = $('#shiftHistoryTable').DataTable();
-                        if (table) {
-                            console.log('Actualizando tabla automáticamente...');
-                            table.ajax.reload(null, false); // false para mantener la página actual
-                        } else {
-                            console.log('No se pudo obtener la instancia de DataTable');
-                        }
-                    } catch (e) {
-                        console.log('Error al actualizar la tabla:', e.message);
-                    }
-                }, 30000);
-                
-                // Actualizar estados de los turnos
+        });
+    });
+
+    // Crear turno
+    $('#createShiftForm').on('submit', function(e) {
+        e.preventDefault();
+
+        const formData = new FormData();
+        formData.append('_token', $('meta[name="csrf-token"]').attr('content'));
+        formData.append('production_line_id', $('#createProductionLineId').val());
+        formData.append('start', $('#createStartTime').val());
+        formData.append('end', $('#createEndTime').val());
+        formData.append('active', $('#createActive').is(':checked') ? 1 : 0);
+
+        showLoadingModal();
+
+        fetch(storeUrl, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => {
+            if (!response.ok) return response.json().then(err => Promise.reject(err));
+            return response.json();
+        })
+        .then(data => {
+            hideLoadingModal();
+            if (data.success) {
+                $('#createShiftModal').modal('hide');
+                $('#createShiftForm')[0].reset();
+                Swal.fire('{{ __("Success") }}', '{{ __("Shift created successfully") }}', 'success');
+                shiftTable.ajax.reload();
                 updateShiftStatuses();
-                
-                // Actualizar estados cada 5 segundos
-                setInterval(updateShiftStatuses, 5000);
-                
-            } catch (e) {
-                console.error('Error al inicializar la tabla:', e);
+            } else {
+                throw new Error(data.message || '{{ __("Error creating shift") }}');
+            }
+        })
+        .catch(error => {
+            hideLoadingModal();
+            Swal.fire('{{ __("Error") }}', error.message || '{{ __("Server error.") }}', 'error');
+        });
+    });
+
+    // Actualizar turno
+    $('#editShiftForm').on('submit', function(e) {
+        e.preventDefault();
+        const id = $('#editShiftId').val();
+        const url = updateUrlTemplate.replace(':id', id);
+
+        showLoadingModal();
+
+        $.ajax({
+            url: url,
+            method: 'POST',
+            data: $(this).serialize()
+        })
+        .done(response => {
+            hideLoadingModal();
+            if (response.success) {
+                Swal.fire('{{ __("Updated") }}', response.message, 'success');
+                shiftTable.ajax.reload(null, false);
+                $('#editShiftModal').modal('hide');
+            } else {
+                Swal.fire('{{ __("Error") }}', response.message || '{{ __("Could not update.") }}', 'error');
+            }
+        })
+        .fail(xhr => {
+            hideLoadingModal();
+            Swal.fire('{{ __("Error") }}', xhr.responseJSON?.message || '{{ __("Server error.") }}', 'error');
+        });
+    });
+
+    // Botones de acción de líneas de producción
+    $(document).on('click', 'button[data-action]', function(e) {
+        const button = $(this);
+        if (button.closest('.modal').length > 0 || button.closest('#shiftTable').length > 0) return;
+
+        const action = button.data('action');
+        const lineId = button.data('line-id');
+
+        button.prop('disabled', true).css('opacity', '0.5');
+
+        $.ajax({
+            url: "/shift-event",
+            method: "POST",
+            data: {
+                production_line_id: lineId,
+                event: action
+            },
+            success: function(response) {
+                Swal.fire({
+                    icon: 'success',
+                    title: response.message || '{{ __("Action sent successfully") }}',
+                    timer: 1500,
+                    showConfirmButton: false
+                }).then(() => {
+                    location.reload();
+                });
+            },
+            error: function(xhr) {
+                const err = xhr.responseJSON?.message || '{{ __("Error sending action.") }}';
+                Swal.fire('Error', err, 'error');
+                button.prop('disabled', false).css('opacity', '1');
             }
         });
-    </script>
+    });
+
+    // Inicializar tabla de historial
+    initializeHistoryTable();
+
+    // Actualizar estados
+    updateShiftStatuses();
+    setInterval(updateShiftStatuses, 5000);
+});
+
+// Funciones auxiliares
+function showLoadingModal() {
+    const modalElement = document.getElementById('loadingModal');
+    if (modalElement) {
+        if (loadingModal) {
+            try { loadingModal.hide(); } catch(e) {}
+            loadingModal.dispose();
+        }
+        loadingModal = new bootstrap.Modal(modalElement, {
+            backdrop: 'static',
+            keyboard: false
+        });
+        loadingModal.show();
+    }
+}
+
+function hideLoadingModal() {
+    if (loadingModal) {
+        try {
+            loadingModal.hide();
+            setTimeout(() => {
+                if (loadingModal) {
+                    loadingModal.dispose();
+                    loadingModal = null;
+                }
+            }, 300);
+        } catch (e) {
+            document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+            document.body.classList.remove('modal-open');
+            loadingModal = null;
+        }
+    }
+}
+
+function updateShiftStatuses() {
+    $.get(`${baseUrl}/api/shift/statuses`)
+        .done(function(response) {
+            updateShiftButtons(response);
+        })
+        .fail(function(error) {
+            console.error('Error updating statuses:', error);
+        });
+}
+
+function updateShiftButtons(statuses) {
+    let activeCount = 0;
+    let pausedCount = 0;
+
+    statuses.forEach(status => {
+        const lineId = status.line_id;
+        const lastShift = status.last_shift;
+        const header = $(`.line-card-wrapper[data-line-id="${lineId}"] .shifts-line-header`);
+        const statusBadge = $(`#status-badge-${lineId}`);
+        const actionsContainer = $(`#actions-${lineId}`);
+
+        if (!header.length) return;
+
+        let statusClass = 'stopped';
+        let statusText = '{{ __("Stopped") }}';
+        let buttons = '';
+
+        if (!lastShift) {
+            buttons = `
+                <button type="button" class="shifts-action-btn shifts-btn-start"
+                        data-action="inicio_trabajo" data-line-id="${lineId}"
+                        title="{{ __('Start Shift') }}">
+                    <i class="ti ti-player-play"></i>
+                </button>`;
+        } else if (lastShift.type === 'shift' && lastShift.action === 'start') {
+            statusClass = 'active';
+            statusText = '{{ __("Active") }}';
+            activeCount++;
+            buttons = `
+                <button type="button" class="shifts-action-btn shifts-btn-pause"
+                        data-action="inicio_pausa" data-line-id="${lineId}"
+                        title="{{ __('Pause') }}">
+                    <i class="ti ti-player-pause"></i>
+                </button>
+                <button type="button" class="shifts-action-btn shifts-btn-stop"
+                        data-action="final_trabajo" data-line-id="${lineId}"
+                        title="{{ __('End Shift') }}">
+                    <i class="ti ti-player-stop"></i>
+                </button>`;
+        } else if (lastShift.type === 'stop' && lastShift.action === 'start') {
+            statusClass = 'paused';
+            statusText = '{{ __("Paused") }}';
+            pausedCount++;
+            buttons = `
+                <button type="button" class="shifts-action-btn shifts-btn-resume"
+                        data-action="final_pausa" data-line-id="${lineId}"
+                        title="{{ __('Resume') }}">
+                    <i class="ti ti-player-play"></i>
+                </button>`;
+        } else if (lastShift.type === 'stop' && lastShift.action === 'end') {
+            statusClass = 'active';
+            statusText = '{{ __("Active") }}';
+            activeCount++;
+            buttons = `
+                <button type="button" class="shifts-action-btn shifts-btn-pause"
+                        data-action="inicio_pausa" data-line-id="${lineId}"
+                        title="{{ __('Pause') }}">
+                    <i class="ti ti-player-pause"></i>
+                </button>
+                <button type="button" class="shifts-action-btn shifts-btn-stop"
+                        data-action="final_trabajo" data-line-id="${lineId}"
+                        title="{{ __('End Shift') }}">
+                    <i class="ti ti-player-stop"></i>
+                </button>`;
+        } else if (lastShift.type === 'shift' && lastShift.action === 'end') {
+            buttons = `
+                <button type="button" class="shifts-action-btn shifts-btn-start"
+                        data-action="inicio_trabajo" data-line-id="${lineId}"
+                        title="{{ __('Start Shift') }}">
+                    <i class="ti ti-player-play"></i>
+                </button>`;
+        } else {
+            buttons = `
+                <button type="button" class="shifts-action-btn shifts-btn-start"
+                        data-action="inicio_trabajo" data-line-id="${lineId}"
+                        title="{{ __('Start Shift') }}">
+                    <i class="ti ti-player-play"></i>
+                </button>`;
+        }
+
+        header.removeClass('active paused stopped').addClass(statusClass);
+        statusBadge.html(`
+            <span class="status-indicator ${statusClass}"></span>
+            <span class="status-text">${statusText}</span>
+        `);
+        actionsContainer.html(buttons);
+    });
+
+    $('#statsActiveShifts').text(activeCount);
+    $('#statsPausedShifts').text(pausedCount);
+}
+
+function initializeHistoryTable() {
+    if ($.fn.DataTable.isDataTable('#shiftHistoryTable')) {
+        $('#shiftHistoryTable').DataTable().destroy();
+    }
+
+    historyTable = $('#shiftHistoryTable').DataTable({
+        processing: true,
+        serverSide: true,
+        responsive: true,
+        ajax: {
+            url: `${baseUrl}/api/shift-history`,
+            type: 'GET',
+            data: function(d) {
+                d.production_line_id = $('#historyProductionLineFilter').val() || '';
+                d.type = $('#historyTypeFilter').val() || '';
+                d.action = $('#historyActionFilter').val() || '';
+                d.operator_id = $('#historyOperatorFilter').val() || '';
+                if ($('#historySearchInput').val()) {
+                    d.search = { value: $('#historySearchInput').val(), regex: false };
+                }
+                return d;
+            },
+            dataSrc: function(json) {
+                if (!json.data || json.data.length === 0) return [];
+                return json.data.map(item => ({
+                    id: item.id,
+                    production_line: item.production_line || null,
+                    type: item.type,
+                    action: item.action,
+                    operator: item.operator || null,
+                    created_at: item.created_at
+                }));
+            },
+            error: function(xhr, error, thrown) {
+                console.error('Error loading history:', error);
+            }
+        },
+        columns: [
+            { data: 'id', name: 'id', className: 'text-center' },
+            {
+                data: 'production_line', name: 'production_line.name',
+                render: function(data) { return data ? data.name : 'N/A'; }
+            },
+            {
+                data: 'type', name: 'type', className: 'text-center',
+                render: function(data) {
+                    const types = { 'shift': '{{ __("Shift") }}', 'stop': '{{ __("Pause") }}' };
+                    const badgeClass = data === 'shift' ? 'shifts-badge-shift' : 'shifts-badge-stop';
+                    return `<span class="shifts-badge ${badgeClass}">${types[data] || data}</span>`;
+                }
+            },
+            {
+                data: 'action', name: 'action', className: 'text-center',
+                render: function(data) {
+                    const actions = { 'start': '{{ __("Start") }}', 'end': '{{ __("End") }}' };
+                    const badgeClass = data === 'start' ? 'shifts-badge-start' : 'shifts-badge-end';
+                    return `<span class="shifts-badge ${badgeClass}">${actions[data] || data}</span>`;
+                }
+            },
+            {
+                data: 'operator', name: 'operator.name',
+                render: function(data) { return data ? data.name : '{{ __("System") }}'; }
+            },
+            {
+                data: 'created_at', name: 'created_at', className: 'text-center',
+                render: function(data) {
+                    if (!data) return '';
+                    const date = new Date(data);
+                    return date.toLocaleString('{{ app()->getLocale() }}', {
+                        day: '2-digit', month: '2-digit', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit'
+                    });
+                }
+            }
+        ],
+        paging: true,
+        pageLength: 10,
+        searching: false,
+        order: [[0, 'desc']],
+        language: {
+            url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/{{ app()->getLocale() == "es" ? "es-ES" : "en-GB" }}.json'
+        }
+    });
+
+    // Eventos de filtrado
+    $('#historyProductionLineFilter, #historyTypeFilter, #historyActionFilter, #historyOperatorFilter').on('change', function() {
+        historyTable.ajax.reload();
+    });
+
+    let searchTimeout;
+    $('#historySearchInput').on('keyup', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(function() {
+            historyTable.ajax.reload();
+        }, 500);
+    });
+
+    $('#resetHistoryFilters').on('click', function() {
+        $('#historyProductionLineFilter, #historyTypeFilter, #historyActionFilter, #historyOperatorFilter').val('');
+        $('#historySearchInput').val('');
+        historyTable.ajax.reload();
+    });
+
+    // Auto-refresh cada 30 segundos
+    setInterval(function() {
+        if (historyTable) {
+            historyTable.ajax.reload(null, false);
+        }
+    }, 30000);
+}
+</script>
 @endpush
