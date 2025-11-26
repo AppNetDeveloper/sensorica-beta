@@ -42,53 +42,6 @@
         <!-- [ sample-page ] start -->
         <!-- analytic card start -->
 
-        <!-- Widget de Mantenimiento - permiso maintenance-show -->
-        @can('maintenance-show')
-        @if(isset($maintenanceStats) && $maintenanceStats)
-        <div class="kpi-card-col mb-4 animate-card">
-            <a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#selectCustomerMaintenanceModal">
-                <div class="card modern-stat-card stat-card-primary" data-kpi="maintenance">
-                    <div class="stat-card-body">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <div class="stat-content">
-                                <h6>{{ __('Maintenance') }} <span class="kpi-trend"></span></h6>
-                                <h3 class="kpi-value">{{ $maintenanceStats['pending'] }}</h3>
-                                <small class="text-white-50">{{ __('last 7 days') }}</small>
-                                <div class="kpi-sparkline mt-2"></div>
-                            </div>
-                            <div class="stat-icon-wrapper bg-white bg-opacity-25">
-                                <i class="ti ti-tool"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </a>
-        </div>
-        @endif
-        @endcan
-
-        <!-- Widget de trabajadores si tiene permiso -->
-        @can('workers-show')
-        <div class="kpi-card-col mb-4 animate-card">
-            <a href="{{ route('workers-admin.index') }}" class="text-decoration-none">
-                <div class="card modern-stat-card stat-card-warning" data-kpi="workers">
-                    <div class="stat-card-body">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <div class="stat-content">
-                                <h6>{{ __('Total Workers') }} <span class="kpi-trend"></span></h6>
-                                <h3 class="kpi-value">{{ $operatorsCount }}</h3>
-                                <div class="kpi-sparkline mt-2"></div>
-                            </div>
-                            <div class="stat-icon-wrapper bg-white bg-opacity-25">
-                                <i class="ti ti-user-check"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </a>
-        </div>
-        @endcan
-
         <!-- Widget de Order Organizer (Grupos y Máquinas) - permiso productionline-kanban -->
         @can('productionline-kanban')
         @if(isset($orderOrganizerStats) && $orderOrganizerStats)
@@ -140,6 +93,53 @@
             </a>
         </div>
         @endif
+        @endcan
+
+        <!-- Widget de Mantenimiento - permiso maintenance-show -->
+        @can('maintenance-show')
+        @if(isset($maintenanceStats) && $maintenanceStats)
+        <div class="kpi-card-col mb-4 animate-card">
+            <a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#selectCustomerMaintenanceModal">
+                <div class="card modern-stat-card stat-card-primary" data-kpi="maintenance">
+                    <div class="stat-card-body">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="stat-content">
+                                <h6>{{ __('Maintenance') }} <span class="kpi-trend"></span></h6>
+                                <h3 class="kpi-value">{{ $maintenanceStats['pending'] }}</h3>
+                                <small class="text-white-50">{{ __('last 7 days') }}</small>
+                                <div class="kpi-sparkline mt-2"></div>
+                            </div>
+                            <div class="stat-icon-wrapper bg-white bg-opacity-25">
+                                <i class="ti ti-tool"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        @endif
+        @endcan
+
+        <!-- Widget de trabajadores si tiene permiso -->
+        @can('workers-show')
+        <div class="kpi-card-col mb-4 animate-card">
+            <a href="{{ route('workers-admin.index') }}" class="text-decoration-none">
+                <div class="card modern-stat-card stat-card-warning" data-kpi="workers">
+                    <div class="stat-card-body">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="stat-content">
+                                <h6>{{ __('Total Workers') }} <span class="kpi-trend"></span></h6>
+                                <h3 class="kpi-value">{{ $operatorsCount }}</h3>
+                                <div class="kpi-sparkline mt-2"></div>
+                            </div>
+                            <div class="stat-icon-wrapper bg-white bg-opacity-25">
+                                <i class="ti ti-user-check"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
         @endcan
 
         <!-- Widgets de Incidencias y Control de Calidad - permiso productionline-incidents -->

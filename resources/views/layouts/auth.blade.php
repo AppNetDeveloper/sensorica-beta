@@ -100,7 +100,7 @@ if (isset($settings['color'])) {
                                 {{-- Logo fijo de Xmart Technologies --}}
                                 <img src="{{ asset('logo.png') }}" class="navbar-brand-img app_logo footer-logo" alt="Xmart Technologies">
                             </span>
-                            <div class="ms-auto">Developer por&nbsp;
+                            <div class="ms-auto">Powered By&nbsp;
                                 <a href="https://xmartflow.com/" target="_blank">Xmart Technologies</a>
                                 &copy; {{ date('Y') }}
                             </div>

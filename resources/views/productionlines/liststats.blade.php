@@ -3437,204 +3437,174 @@ Estructura tipo informe ejecutivo con secciones claras. Usa datos cuantificados 
             if (!table) {
                 alert('No hay datos para exportar');
                 return;
-            }          
+            }
+
+            // Mapeo de estados
+            const statusMap = {
+                'active': 'Activo',
+                'in_progress': 'En Progreso',
+                'completed': 'Completado',
+                'paused': 'Pausado',
+                'error': 'Incidencia',
+                'pending': 'Planificada',
+                'unknown': 'Desconocido'
+            };
+
+            // Función auxiliar para formatear tiempo
+            function formatTimeExport(seconds) {
+                if (!seconds || seconds === 0) return '00:00:00';
+                const h = Math.floor(seconds / 3600);
+                const m = Math.floor((seconds % 3600) / 60);
+                const s = seconds % 60;
+                return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+            }
+
+            // Función para obtener empleados como texto
+            function getOperatorNames(data) {
+                if (!data || data.length === 0) return 'Sin asignar';
+                const names = Array.isArray(data) ? data : [data];
+                return names.join(', ');
+            }
+
+            // Función para calcular diferencia duración teórica
+            function getDiferenciaDuracion(row) {
+                if (row.fast_time && parseInt(row.fast_time) > 0) {
+                    return '+' + formatTimeExport(row.fast_time);
+                } else if (row.out_time && parseInt(row.out_time) > 0) {
+                    return '-' + formatTimeExport(row.out_time);
+                }
+                return '-';
+            }
+
             switch (type) {
                 case 'excel':
                     // Exportar a Excel usando SheetJS (XLSX)
                     const wb = XLSX.utils.book_new();
                     const wsData = [];
-                    
-                    // Encabezados
-                    const headers = [];
-                    $(table.table().header()).find('th').each(function() {
-                        headers.push($(this).text().trim());
-                    });
+
+                    // Encabezados (sin la columna Acciones)
+                    const headers = ['Línea', 'Orden', 'Empleados', 'OEE', 'Estado', 'Iniciado', 'Última actualización', 'Duración', 'Dif. Duración Teórica', 'Preparación', 'Lento', 'Paradas', 'Falta material'];
                     wsData.push(headers);
-                    
-                    // No necesitamos inicializar animaciones durante la exportación
-                    
+
                     // Datos
                     table.rows().every(function() {
                         const rowData = this.data();
                         const row = [];
-                        
-                        // ID
-                        row.push(rowData.id || '-');
-                        
-                        // Línea
+
                         row.push(rowData.production_line_name || '-');
-                        
-                        // Orden
                         row.push(rowData.order_id || '-');
-                        
-                        // Caja
-                        row.push(rowData.box || '-');
-                        
-                        // Unidades
-                        row.push(rowData.units ? rowData.units.toLocaleString() : '-');
-                        
-                        // UPM Real
-                        row.push(rowData.units_per_minute_real ? rowData.units_per_minute_real.toFixed(2) : '-');
-                        
-                        // UPM Teórico
-                        row.push(rowData.units_per_minute_theoretical ? rowData.units_per_minute_theoretical.toFixed(2) : '-');
-                        
-                        // OEE
+                        row.push(getOperatorNames(rowData.operator_names));
                         row.push(rowData.oee ? Math.round(rowData.oee) + '%' : '-');
-                        
-                        // Estado
-                        const statusMap = {
-                            'in_progress': 'En Progreso',
-                            'completed': 'Completado',
-                            'paused': 'Pausado',
-                            'error': 'Error',
-                            'pending': 'Pendiente',
-                            'unknown': 'Desconocido'
-                        };
                         row.push(statusMap[rowData.status] || statusMap['unknown']);
-                        
-                        // Actualizado
+                        row.push(rowData.created_at ? new Date(rowData.created_at).toLocaleString() : '-');
                         row.push(rowData.updated_at ? new Date(rowData.updated_at).toLocaleString() : '-');
-                        
+                        row.push(formatTimeExport(rowData.on_time));
+                        row.push(getDiferenciaDuracion(rowData));
+                        row.push(formatTimeExport(rowData.prepair_time));
+                        row.push(formatTimeExport(rowData.slow_time));
+                        row.push(formatTimeExport(rowData.down_time));
+                        row.push(formatTimeExport(rowData.production_stops_time));
+
                         wsData.push(row);
                     });
-                    
+
                     const ws = XLSX.utils.aoa_to_sheet(wsData);
                     XLSX.utils.book_append_sheet(wb, ws, "Datos de Producción");
-                    
+
                     // Guardar archivo
                     XLSX.writeFile(wb, "Datos_Produccion_" + new Date().toLocaleDateString() + ".xlsx");
                     break;
-                    
+
                 case 'pdf':
                     // Exportar a PDF usando jsPDF
                     const doc = new window.jspdf.jsPDF({ orientation: 'landscape' });
-                    
+
                     // Título del documento
                     doc.setFontSize(18);
                     doc.text('Datos de Producción', 14, 22);
                     doc.setFontSize(11);
                     doc.text('Fecha: ' + new Date().toLocaleString(), 14, 30);
-                    
-                    // Preparar datos para la tabla
-                    const pdfHeaders = [];
-                    $(table.table().header()).find('th').each(function() {
-                        pdfHeaders.push({ title: $(this).text().trim(), dataKey: $(this).text().trim() });
-                    });
-                    
+
+                    // Encabezados para PDF (sin Acciones)
+                    const pdfHeaders = ['Línea', 'Orden', 'Empleados', 'OEE', 'Estado', 'Iniciado', 'Actualizado', 'Duración', 'Dif. Teórica', 'Preparación', 'Lento', 'Paradas', 'Falta mat.'];
+
                     const pdfData = [];
                     table.rows().every(function() {
                         const rowData = this.data();
-                        const row = {};
-                        
-                        // Asignar datos a las columnas
-                        row[pdfHeaders[0].dataKey] = rowData.id || '-';
-                        row[pdfHeaders[1].dataKey] = rowData.production_line_name || '-';
-                        row[pdfHeaders[2].dataKey] = rowData.order_id || '-';
-                        row[pdfHeaders[3].dataKey] = rowData.box || '-';
-                        row[pdfHeaders[4].dataKey] = rowData.units ? rowData.units.toLocaleString() : '-';
-                        row[pdfHeaders[5].dataKey] = rowData.units_per_minute_real ? rowData.units_per_minute_real.toFixed(2) : '-';
-                        row[pdfHeaders[6].dataKey] = rowData.units_per_minute_theoretical ? rowData.units_per_minute_theoretical.toFixed(2) : '-';
-                        row[pdfHeaders[7].dataKey] = rowData.oee ? Math.round(rowData.oee) + '%' : '-';
-                        
-                        // Estado
-                        const statusMap = {
-                            'in_progress': 'En Progreso',
-                            'completed': 'Completado',
-                            'paused': 'Pausado',
-                            'error': 'Error',
-                            'pending': 'Pendiente',
-                            'unknown': 'Desconocido'
-                        };
-                        row[pdfHeaders[8].dataKey] = statusMap[rowData.status] || statusMap['unknown'];
-                        
-                        // Actualizado
-                        row[pdfHeaders[9].dataKey] = rowData.updated_at ? new Date(rowData.updated_at).toLocaleString() : '-';
-                        
+                        const row = [];
+
+                        row.push(rowData.production_line_name || '-');
+                        row.push(rowData.order_id || '-');
+                        row.push(getOperatorNames(rowData.operator_names));
+                        row.push(rowData.oee ? Math.round(rowData.oee) + '%' : '-');
+                        row.push(statusMap[rowData.status] || statusMap['unknown']);
+                        row.push(rowData.created_at ? new Date(rowData.created_at).toLocaleString() : '-');
+                        row.push(rowData.updated_at ? new Date(rowData.updated_at).toLocaleString() : '-');
+                        row.push(formatTimeExport(rowData.on_time));
+                        row.push(getDiferenciaDuracion(rowData));
+                        row.push(formatTimeExport(rowData.prepair_time));
+                        row.push(formatTimeExport(rowData.slow_time));
+                        row.push(formatTimeExport(rowData.down_time));
+                        row.push(formatTimeExport(rowData.production_stops_time));
+
                         pdfData.push(row);
                     });
-                    
+
                     // Generar tabla en PDF
                     doc.autoTable({
-                        head: [pdfHeaders.map(h => h.title)],
-                        body: pdfData.map(row => pdfHeaders.map(h => row[h.dataKey])),
+                        head: [pdfHeaders],
+                        body: pdfData,
                         startY: 40,
                         margin: { top: 40 },
-                        styles: { overflow: 'linebreak', fontSize: 8 },
+                        styles: { overflow: 'linebreak', fontSize: 7 },
                         headStyles: { fillColor: [41, 128, 185], textColor: 255 },
                         alternateRowStyles: { fillColor: [245, 245, 245] }
                     });
-                    
+
                     // Guardar PDF
                     doc.save("Datos_Produccion_" + new Date().toLocaleDateString() + ".pdf");
                     break;
-                    
+
                 case 'print':
                     // Imprimir manualmente
                     let printWindow = window.open('', '_blank');
                     let tableHtml = '<html><head><title>Datos de Producción</title>';
-                    tableHtml += '<style>body{font-family:Arial,sans-serif;font-size:12px;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #ddd;padding:8px;text-align:left;}th{background-color:#f2f2f2;}</style>';
+                    tableHtml += '<style>body{font-family:Arial,sans-serif;font-size:10px;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #ddd;padding:6px;text-align:left;}th{background-color:#f2f2f2;}</style>';
                     tableHtml += '</head><body>';
                     tableHtml += '<h1>Datos de Producción</h1>';
                     tableHtml += '<p>Fecha: ' + new Date().toLocaleString() + '</p>';
                     tableHtml += '<table>';
-                    
+
                     // Encabezados
                     tableHtml += '<thead><tr>';
-                    $(table.table().header()).find('th').each(function() {
-                        tableHtml += '<th>' + $(this).text().trim() + '</th>';
-                    });
+                    tableHtml += '<th>Línea</th><th>Orden</th><th>Empleados</th><th>OEE</th><th>Estado</th><th>Iniciado</th><th>Actualizado</th><th>Duración</th><th>Dif. Teórica</th><th>Preparación</th><th>Lento</th><th>Paradas</th><th>Falta mat.</th>';
                     tableHtml += '</tr></thead>';
-                    
+
                     // Datos
                     tableHtml += '<tbody>';
                     table.rows().every(function() {
                         let rowData = this.data();
                         tableHtml += '<tr>';
-                        
-                        // ID
-                        tableHtml += '<td>' + (rowData.id || '-') + '</td>';
-                        
-                        // Línea
+
                         tableHtml += '<td>' + (rowData.production_line_name || '-') + '</td>';
-                        
-                        // Orden
                         tableHtml += '<td>' + (rowData.order_id || '-') + '</td>';
-                        
-                        // Caja
-                        tableHtml += '<td>' + (rowData.box || '-') + '</td>';
-                        
-                        // Unidades
-                        tableHtml += '<td>' + (rowData.units ? rowData.units.toLocaleString() : '-') + '</td>';
-                        
-                        // UPM Real
-                        tableHtml += '<td>' + (rowData.units_per_minute_real ? rowData.units_per_minute_real.toFixed(2) : '-') + '</td>';
-                        
-                        // UPM Teórico
-                        tableHtml += '<td>' + (rowData.units_per_minute_theoretical ? rowData.units_per_minute_theoretical.toFixed(2) : '-') + '</td>';
-                        
-                        // OEE
+                        tableHtml += '<td>' + getOperatorNames(rowData.operator_names) + '</td>';
                         tableHtml += '<td>' + (rowData.oee ? Math.round(rowData.oee) + '%' : '-') + '</td>';
-                        
-                        // Estado
-                        const statusMap = {
-                            'in_progress': 'En Progreso',
-                            'completed': 'Completado',
-                            'paused': 'Pausado',
-                            'error': 'Error',
-                            'pending': 'Pendiente',
-                            'unknown': 'Desconocido'
-                        };
                         tableHtml += '<td>' + (statusMap[rowData.status] || statusMap['unknown']) + '</td>';
-                        
-                        // Actualizado
+                        tableHtml += '<td>' + (rowData.created_at ? new Date(rowData.created_at).toLocaleString() : '-') + '</td>';
                         tableHtml += '<td>' + (rowData.updated_at ? new Date(rowData.updated_at).toLocaleString() : '-') + '</td>';
-                        
+                        tableHtml += '<td>' + formatTimeExport(rowData.on_time) + '</td>';
+                        tableHtml += '<td>' + getDiferenciaDuracion(rowData) + '</td>';
+                        tableHtml += '<td>' + formatTimeExport(rowData.prepair_time) + '</td>';
+                        tableHtml += '<td>' + formatTimeExport(rowData.slow_time) + '</td>';
+                        tableHtml += '<td>' + formatTimeExport(rowData.down_time) + '</td>';
+                        tableHtml += '<td>' + formatTimeExport(rowData.production_stops_time) + '</td>';
+
                         tableHtml += '</tr>';
                     });
                     tableHtml += '</tbody></table>';
                     tableHtml += '</body></html>';
-                    
+
                     printWindow.document.write(tableHtml);
                     printWindow.document.close();
                     printWindow.focus();

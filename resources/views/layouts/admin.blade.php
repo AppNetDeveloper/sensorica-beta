@@ -286,7 +286,7 @@ else{
 <footer class="dash-footer">
     <div class="footer-wrapper">
         <span class="text-muted">
-            Developer por&nbsp;
+            Powered By&nbsp;
             <a href="https://xmartflow.com/" target="_blank">Xmart Technologies</a>
             &copy; {{ date('Y') }}
         </span>

@@ -2137,20 +2137,28 @@ class CustomerOriginalOrderController extends Controller
             ->with('success', 'Original order updated successfully');
     }
 
-    public function destroy(Customer $customer, OriginalOrder $originalOrder)
+    public function destroy(Request $request, Customer $customer, OriginalOrder $originalOrder)
     {
         // Usamos una transacción para asegurar que o todo funciona, o nada se borra.
         DB::transaction(function () use ($originalOrder) {
-            
+
             // 1. PRIMERO: Busca y borra los "hijos" (ProductionOrders)
             //    (Esto asume que tienes la relación "productionOrders" en tu modelo OriginalOrder)
             $originalOrder->productionOrders()->delete();
-    
+
             // 2. AHORA SÍ: Borra el "padre" (OriginalOrder)
             $originalOrder->delete();
-    
+
         });
-    
+
+        // Si es una petición AJAX, devolver JSON
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => __('Orden original y sus dependencias borradas con éxito')
+            ]);
+        }
+
         return redirect()->route('customers.original-orders.index', $customer->id)
             ->with('success', 'Orden original y sus dependencias borradas con éxito');
     }
