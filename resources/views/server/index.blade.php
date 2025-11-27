@@ -194,6 +194,214 @@
                     </div>
                 </div>
             </div>
+
+            {{-- Card de Copias de Seguridad de Base de Datos --}}
+            <div class="card border-0 shadow-lg mt-4">
+                <div class="card-header bg-gradient-dark text-white border-0 py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-database mr-2"></i>{{__('Database Backups')}}
+                        </h5>
+                        <div>
+                            <button id="refresh-backups" class="btn btn-light btn-sm mr-2">
+                                <i class="fas fa-sync-alt mr-1"></i> {{__('Refresh')}}
+                            </button>
+                            <button id="upload-backup-btn" class="btn btn-info btn-sm mr-2" data-toggle="modal" data-target="#uploadBackupModal">
+                                <i class="fas fa-upload mr-1"></i> {{__('Upload Backup')}}
+                            </button>
+                            <button id="create-backup" class="btn btn-success btn-sm">
+                                <i class="fas fa-plus mr-1"></i> {{__('Create Backup')}}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="backup-status" class="alert alert-info d-none">
+                        <i class="fas fa-spinner fa-spin mr-2"></i>
+                        <span id="backup-status-text">{{__('Creating backup...')}}</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped" id="backups-table">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th><i class="fas fa-file-alt mr-1"></i> {{__('Filename')}}</th>
+                                    <th><i class="fas fa-hdd mr-1"></i> {{__('Size')}}</th>
+                                    <th><i class="fas fa-calendar mr-1"></i> {{__('Created at')}}</th>
+                                    <th class="text-center"><i class="fas fa-cogs mr-1"></i> {{__('Actions')}}</th>
+                                </tr>
+                            </thead>
+                            <tbody id="backups-list">
+                                <tr>
+                                    <td colspan="4" class="text-center">
+                                        <div class="spinner-border spinner-border-sm mr-2" role="status">
+                                            <span class="sr-only">Loading...</span>
+                                        </div>
+                                        {{__('Loading backups...')}}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Modal para subir backup --}}
+            <div class="modal fade" id="uploadBackupModal" tabindex="-1" role="dialog" aria-labelledby="uploadBackupModalLabel" aria-hidden="true">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header bg-info text-white">
+                            <h5 class="modal-title" id="uploadBackupModalLabel">
+                                <i class="fas fa-upload mr-2"></i>{{__('Upload Backup')}}
+                            </h5>
+                            <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="upload-backup-form" enctype="multipart/form-data">
+                                <div class="form-group">
+                                    <label for="backup_file">{{__('Select SQL file')}}</label>
+                                    <div class="custom-file">
+                                        <input type="file" class="custom-file-input" id="backup_file" name="backup_file" accept=".sql">
+                                        <label class="custom-file-label" for="backup_file" id="backup_file_label">{{__('Choose file...')}}</label>
+                                    </div>
+                                    <small class="form-text text-muted">{{__('Only .sql files are allowed. Max size: 500MB')}}</small>
+                                </div>
+                                <div id="upload-progress" class="progress d-none mb-3">
+                                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">{{__('Cancel')}}</button>
+                            <button type="button" class="btn btn-info" id="submit-upload">
+                                <i class="fas fa-upload mr-1"></i> {{__('Upload')}}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Modal de confirmación para restaurar - Paso 1 --}}
+            <div class="modal fade" id="restoreBackupModal1" tabindex="-1" role="dialog" aria-labelledby="restoreBackupModal1Label" aria-hidden="true">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header bg-warning text-dark">
+                            <h5 class="modal-title" id="restoreBackupModal1Label">
+                                <i class="fas fa-exclamation-triangle mr-2"></i>{{__('Restore Backup')}} - {{__('Step')}} 1/2
+                            </h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle mr-2"></i>
+                                <strong>{{__('Attention!')}}</strong> {{__('You are about to restore a backup.')}}
+                            </div>
+                            <p>{{__('Are you sure you want to restore the backup')}} <strong id="restore-filename-1"></strong>?</p>
+                            <p class="text-muted">{{__('This will open a second confirmation window.')}}</p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">{{__('Cancel')}}</button>
+                            <button type="button" class="btn btn-warning" id="confirm-restore-step1-btn">
+                                <i class="fas fa-arrow-right mr-1"></i> {{__('Continue')}}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Modal de confirmación para restaurar - Paso 2 --}}
+            <div class="modal fade" id="restoreBackupModal2" tabindex="-1" role="dialog" aria-labelledby="restoreBackupModal2Label" aria-hidden="true">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header bg-danger text-white">
+                            <h5 class="modal-title" id="restoreBackupModal2Label">
+                                <i class="fas fa-exclamation-circle mr-2"></i>{{__('Final Confirmation')}} - {{__('Step')}} 2/2
+                            </h5>
+                            <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="alert alert-danger">
+                                <i class="fas fa-exclamation-circle mr-2"></i>
+                                <strong>{{__('Warning!')}}</strong> {{__('This action will overwrite all current data in the database. This cannot be undone.')}}
+                            </div>
+                            <p>{{__('Restoring backup')}}: <strong id="restore-filename-2"></strong></p>
+                            <div class="form-group">
+                                <label for="confirm-restore">{{__('Type RESTORE to confirm')}}:</label>
+                                <input type="text" class="form-control" id="confirm-restore" placeholder="RESTORE" autocomplete="off">
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">{{__('Cancel')}}</button>
+                            <button type="button" class="btn btn-danger" id="confirm-restore-btn" disabled>
+                                <i class="fas fa-undo mr-1"></i> {{__('Restore')}}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Modal de confirmación para eliminar - Paso 1 --}}
+            <div class="modal fade" id="deleteBackupModal1" tabindex="-1" role="dialog" aria-labelledby="deleteBackupModal1Label" aria-hidden="true">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header bg-warning text-dark">
+                            <h5 class="modal-title" id="deleteBackupModal1Label">
+                                <i class="fas fa-trash mr-2"></i>{{__('Delete Backup')}} - {{__('Step')}} 1/2
+                            </h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle mr-2"></i>
+                                <strong>{{__('Attention!')}}</strong> {{__('You are about to delete a backup.')}}
+                            </div>
+                            <p>{{__('Are you sure you want to delete the backup')}} <strong id="delete-filename-1"></strong>?</p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">{{__('Cancel')}}</button>
+                            <button type="button" class="btn btn-warning" id="confirm-delete-step1-btn">
+                                <i class="fas fa-arrow-right mr-1"></i> {{__('Continue')}}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Modal de confirmación para eliminar - Paso 2 --}}
+            <div class="modal fade" id="deleteBackupModal2" tabindex="-1" role="dialog" aria-labelledby="deleteBackupModal2Label" aria-hidden="true">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header bg-danger text-white">
+                            <h5 class="modal-title" id="deleteBackupModal2Label">
+                                <i class="fas fa-exclamation-circle mr-2"></i>{{__('Final Confirmation')}} - {{__('Step')}} 2/2
+                            </h5>
+                            <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="alert alert-danger">
+                                <i class="fas fa-exclamation-circle mr-2"></i>
+                                <strong>{{__('Warning!')}}</strong> {{__('This backup will be permanently deleted.')}}
+                            </div>
+                            <p>{{__('Deleting backup')}}: <strong id="delete-filename-2"></strong></p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">{{__('Cancel')}}</button>
+                            <button type="button" class="btn btn-danger" id="confirm-delete-btn">
+                                <i class="fas fa-trash mr-1"></i> {{__('Delete Permanently')}}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -544,6 +752,377 @@
         setInterval(updateSupervisorStatus, 10000);  // Cada 10 segundos para Supervisor
         setInterval(check485Service, 30000);  // Cada 30 segundos para servicio 485
         setInterval(getServerIps, 60000);  // Cada minuto para IPs
+
+        // ==================== BACKUP FUNCTIONS ====================
+
+        // Listar backups
+        const loadBackups = async () => {
+            try {
+                const response = await fetch('/server/backups', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    }
+                });
+                const data = await response.json();
+                const backupsList = document.getElementById('backups-list');
+
+                if (data.success && data.backups.length > 0) {
+                    backupsList.innerHTML = '';
+                    data.backups.forEach(backup => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>
+                                <i class="fas fa-file-archive text-primary mr-2"></i>
+                                <span class="font-weight-bold">${backup.filename}</span>
+                            </td>
+                            <td>
+                                <span class="badge badge-info">${backup.size}</span>
+                            </td>
+                            <td>${backup.created_at}</td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-warning restore-backup mr-1" data-filename="${backup.filename}" title="{{ __('Restore') }}">
+                                    <i class="fas fa-undo"></i>
+                                </button>
+                                <a href="/server/backup/download/${backup.filename}" class="btn btn-sm btn-primary mr-1" title="{{ __('Download') }}">
+                                    <i class="fas fa-download"></i>
+                                </a>
+                                <button class="btn btn-sm btn-danger delete-backup" data-filename="${backup.filename}" title="{{ __('Delete') }}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        `;
+                        backupsList.appendChild(row);
+                    });
+
+                    // Agregar event listeners para eliminar
+                    document.querySelectorAll('.delete-backup').forEach(btn => {
+                        btn.addEventListener('click', (e) => {
+                            const filename = e.currentTarget.dataset.filename;
+                            openDeleteModal(filename);
+                        });
+                    });
+
+                    // Agregar event listeners para restaurar
+                    document.querySelectorAll('.restore-backup').forEach(btn => {
+                        btn.addEventListener('click', (e) => {
+                            const filename = e.currentTarget.dataset.filename;
+                            openRestoreModal(filename);
+                        });
+                    });
+                } else {
+                    backupsList.innerHTML = `
+                        <tr>
+                            <td colspan="4" class="text-center text-muted">
+                                <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                                {{ __('No backups available') }}
+                            </td>
+                        </tr>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading backups:', error);
+                document.getElementById('backups-list').innerHTML = `
+                    <tr>
+                        <td colspan="4" class="text-center text-danger">
+                            <i class="fas fa-exclamation-triangle mr-2"></i>
+                            {{ __('Error loading backups') }}
+                        </td>
+                    </tr>
+                `;
+            }
+        };
+
+        // Crear backup
+        const createBackup = async () => {
+            const statusDiv = document.getElementById('backup-status');
+            const statusText = document.getElementById('backup-status-text');
+            const createBtn = document.getElementById('create-backup');
+
+            try {
+                // Mostrar estado
+                statusDiv.classList.remove('d-none', 'alert-success', 'alert-danger');
+                statusDiv.classList.add('alert-info');
+                statusText.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>{{ __("Creating backup...") }}';
+                createBtn.disabled = true;
+
+                const response = await fetch('/server/backup', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    }
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    statusDiv.classList.remove('alert-info');
+                    statusDiv.classList.add('alert-success');
+                    statusText.innerHTML = `<i class="fas fa-check-circle mr-2"></i>{{ __("Backup created successfully") }}: ${data.backup.filename} (${data.backup.size})`;
+                    loadBackups();
+                } else {
+                    statusDiv.classList.remove('alert-info');
+                    statusDiv.classList.add('alert-danger');
+                    statusText.innerHTML = `<i class="fas fa-times-circle mr-2"></i>${data.message}`;
+                }
+
+                // Ocultar mensaje después de 5 segundos
+                setTimeout(() => {
+                    statusDiv.classList.add('d-none');
+                }, 5000);
+
+            } catch (error) {
+                console.error('Error creating backup:', error);
+                statusDiv.classList.remove('alert-info');
+                statusDiv.classList.add('alert-danger');
+                statusText.innerHTML = `<i class="fas fa-times-circle mr-2"></i>{{ __("Error creating backup") }}`;
+            } finally {
+                createBtn.disabled = false;
+            }
+        };
+
+        // Eliminar backup
+        const deleteBackup = async (filename) => {
+            try {
+                const response = await fetch(`/server/backup/${filename}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    }
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    loadBackups();
+                    alert('{{ __("Backup deleted successfully") }}');
+                } else {
+                    alert(data.message || '{{ __("Error deleting backup") }}');
+                }
+            } catch (error) {
+                console.error('Error deleting backup:', error);
+                alert('{{ __("Error deleting backup") }}');
+            }
+        };
+
+        // ==================== UPLOAD BACKUP ====================
+
+        // Mostrar nombre del archivo seleccionado
+        document.getElementById('backup_file').addEventListener('change', function(e) {
+            const fileName = e.target.files[0] ? e.target.files[0].name : '{{ __("Choose file...") }}';
+            document.getElementById('backup_file_label').textContent = fileName;
+        });
+
+        // Subir backup
+        document.getElementById('submit-upload').addEventListener('click', async () => {
+            const fileInput = document.getElementById('backup_file');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                alert('{{ __("Please select a file") }}');
+                return;
+            }
+
+            if (!file.name.endsWith('.sql')) {
+                alert('{{ __("Only .sql files are allowed") }}');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('backup_file', file);
+
+            const progressDiv = document.getElementById('upload-progress');
+            const progressBar = progressDiv.querySelector('.progress-bar');
+            const submitBtn = document.getElementById('submit-upload');
+
+            try {
+                progressDiv.classList.remove('d-none');
+                submitBtn.disabled = true;
+
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', '/server/backup/upload', true);
+                xhr.setRequestHeader('X-CSRF-TOKEN', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+
+                xhr.upload.onprogress = (e) => {
+                    if (e.lengthComputable) {
+                        const percent = (e.loaded / e.total) * 100;
+                        progressBar.style.width = percent + '%';
+                    }
+                };
+
+                xhr.onload = () => {
+                    const data = JSON.parse(xhr.responseText);
+                    if (xhr.status === 200 && data.success) {
+                        alert('{{ __("Backup uploaded successfully") }}');
+                        $('#uploadBackupModal').modal('hide');
+                        loadBackups();
+                        // Reset form
+                        fileInput.value = '';
+                        document.getElementById('backup_file_label').textContent = '{{ __("Choose file...") }}';
+                    } else {
+                        alert(data.message || '{{ __("Error uploading backup") }}');
+                    }
+                    progressDiv.classList.add('d-none');
+                    progressBar.style.width = '0%';
+                    submitBtn.disabled = false;
+                };
+
+                xhr.onerror = () => {
+                    alert('{{ __("Error uploading backup") }}');
+                    progressDiv.classList.add('d-none');
+                    progressBar.style.width = '0%';
+                    submitBtn.disabled = false;
+                };
+
+                xhr.send(formData);
+
+            } catch (error) {
+                console.error('Error uploading backup:', error);
+                alert('{{ __("Error uploading backup") }}');
+                progressDiv.classList.add('d-none');
+                submitBtn.disabled = false;
+            }
+        });
+
+        // ==================== RESTORE BACKUP (2 STEPS) ====================
+
+        let currentRestoreFilename = null;
+
+        // Abrir modal de restauración - Paso 1
+        const openRestoreModal = (filename) => {
+            currentRestoreFilename = filename;
+            document.getElementById('restore-filename-1').textContent = filename;
+            $('#restoreBackupModal1').modal('show');
+        };
+
+        // Paso 1 -> Paso 2
+        document.getElementById('confirm-restore-step1-btn').addEventListener('click', () => {
+            $('#restoreBackupModal1').modal('hide');
+            document.getElementById('restore-filename-2').textContent = currentRestoreFilename;
+            document.getElementById('confirm-restore').value = '';
+            document.getElementById('confirm-restore-btn').disabled = true;
+            $('#restoreBackupModal2').modal('show');
+        });
+
+        // Validar confirmación de texto
+        document.getElementById('confirm-restore').addEventListener('input', (e) => {
+            const confirmBtn = document.getElementById('confirm-restore-btn');
+            confirmBtn.disabled = e.target.value !== 'RESTORE';
+        });
+
+        // Ejecutar restauración - Paso 2 final
+        document.getElementById('confirm-restore-btn').addEventListener('click', async () => {
+            if (!currentRestoreFilename) return;
+
+            const statusDiv = document.getElementById('backup-status');
+            const statusText = document.getElementById('backup-status-text');
+            const confirmBtn = document.getElementById('confirm-restore-btn');
+
+            try {
+                confirmBtn.disabled = true;
+                confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> {{ __("Restoring...") }}';
+
+                const response = await fetch(`/server/backup/restore/${currentRestoreFilename}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    }
+                });
+                const data = await response.json();
+
+                $('#restoreBackupModal2').modal('hide');
+
+                if (data.success) {
+                    statusDiv.classList.remove('d-none', 'alert-info', 'alert-danger');
+                    statusDiv.classList.add('alert-success');
+                    statusText.innerHTML = `<i class="fas fa-check-circle mr-2"></i>{{ __("Backup restored successfully") }}`;
+                } else {
+                    statusDiv.classList.remove('d-none', 'alert-info', 'alert-success');
+                    statusDiv.classList.add('alert-danger');
+                    statusText.innerHTML = `<i class="fas fa-times-circle mr-2"></i>${data.message || '{{ __("Error restoring backup") }}'}`;
+                }
+
+                setTimeout(() => {
+                    statusDiv.classList.add('d-none');
+                }, 5000);
+
+            } catch (error) {
+                console.error('Error restoring backup:', error);
+                $('#restoreBackupModal2').modal('hide');
+                statusDiv.classList.remove('d-none', 'alert-info', 'alert-success');
+                statusDiv.classList.add('alert-danger');
+                statusText.innerHTML = `<i class="fas fa-times-circle mr-2"></i>{{ __("Error restoring backup") }}`;
+            } finally {
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = '<i class="fas fa-undo mr-1"></i> {{ __("Restore") }}';
+                currentRestoreFilename = null;
+            }
+        });
+
+        // ==================== DELETE BACKUP (2 STEPS) ====================
+
+        let currentDeleteFilename = null;
+
+        // Abrir modal de eliminación - Paso 1
+        const openDeleteModal = (filename) => {
+            currentDeleteFilename = filename;
+            document.getElementById('delete-filename-1').textContent = filename;
+            $('#deleteBackupModal1').modal('show');
+        };
+
+        // Paso 1 -> Paso 2
+        document.getElementById('confirm-delete-step1-btn').addEventListener('click', () => {
+            $('#deleteBackupModal1').modal('hide');
+            document.getElementById('delete-filename-2').textContent = currentDeleteFilename;
+            $('#deleteBackupModal2').modal('show');
+        });
+
+        // Ejecutar eliminación - Paso 2 final
+        document.getElementById('confirm-delete-btn').addEventListener('click', async () => {
+            if (!currentDeleteFilename) return;
+
+            const confirmBtn = document.getElementById('confirm-delete-btn');
+
+            try {
+                confirmBtn.disabled = true;
+                confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> {{ __("Deleting...") }}';
+
+                const response = await fetch(`/server/backup/${currentDeleteFilename}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    }
+                });
+                const data = await response.json();
+
+                $('#deleteBackupModal2').modal('hide');
+
+                if (data.success) {
+                    loadBackups();
+                    alert('{{ __("Backup deleted successfully") }}');
+                } else {
+                    alert(data.message || '{{ __("Error deleting backup") }}');
+                }
+            } catch (error) {
+                console.error('Error deleting backup:', error);
+                $('#deleteBackupModal2').modal('hide');
+                alert('{{ __("Error deleting backup") }}');
+            } finally {
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = '<i class="fas fa-trash mr-1"></i> {{ __("Delete Permanently") }}';
+                currentDeleteFilename = null;
+            }
+        });
+
+        // Event listeners para backups
+        document.getElementById('create-backup').addEventListener('click', createBackup);
+        document.getElementById('refresh-backups').addEventListener('click', loadBackups);
+
+        // Cargar backups al iniciar
+        document.addEventListener('DOMContentLoaded', loadBackups);
     </script>
     @endpush
 @endsection

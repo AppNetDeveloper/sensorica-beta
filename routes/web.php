@@ -528,6 +528,12 @@ Route::get('/production-order-kanban', [ProductionOrderController::class, 'index
 
 //server controller
 Route::get('/server', [ServerController::class, 'index'])->name('server.index');
+Route::post('/server/backup', [ServerController::class, 'createBackup'])->name('server.backup.create');
+Route::get('/server/backups', [ServerController::class, 'listBackups'])->name('server.backup.list');
+Route::get('/server/backup/download/{filename}', [ServerController::class, 'downloadBackup'])->name('server.backup.download');
+Route::delete('/server/backup/{filename}', [ServerController::class, 'deleteBackup'])->name('server.backup.delete');
+Route::post('/server/backup/upload', [ServerController::class, 'uploadBackup'])->name('server.backup.upload');
+Route::post('/server/backup/restore/{filename}', [ServerController::class, 'restoreBackup'])->name('server.backup.restore');
 
 // Rutas para las líneas de producción
 Route::get('customers/{customer_id}/productionlines', [ProductionLineController::class, 'index'])->name('productionlines.index');
