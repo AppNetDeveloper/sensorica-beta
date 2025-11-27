@@ -1038,22 +1038,26 @@
                     statusDiv.classList.remove('d-none', 'alert-info', 'alert-danger');
                     statusDiv.classList.add('alert-success');
                     statusText.innerHTML = `<i class="fas fa-check-circle mr-2"></i>{{ __("Backup restored successfully") }}`;
+                    setTimeout(() => {
+                        statusDiv.classList.add('d-none');
+                    }, 5000);
                 } else {
                     statusDiv.classList.remove('d-none', 'alert-info', 'alert-success');
                     statusDiv.classList.add('alert-danger');
-                    statusText.innerHTML = `<i class="fas fa-times-circle mr-2"></i>${data.message || '{{ __("Error restoring backup") }}'}`;
+                    let errorMsg = data.message || '{{ __("Error restoring backup") }}';
+                    if (data.error) {
+                        errorMsg += `<br><small class="text-white-50"><strong>{{ __("Details") }}:</strong> ${data.error}</small>`;
+                    }
+                    statusText.innerHTML = `<i class="fas fa-times-circle mr-2"></i>${errorMsg}`;
+                    // No ocultar automáticamente si hay error, para que el usuario pueda leerlo
                 }
-
-                setTimeout(() => {
-                    statusDiv.classList.add('d-none');
-                }, 5000);
 
             } catch (error) {
                 console.error('Error restoring backup:', error);
                 $('#restoreBackupModal2').modal('hide');
                 statusDiv.classList.remove('d-none', 'alert-info', 'alert-success');
                 statusDiv.classList.add('alert-danger');
-                statusText.innerHTML = `<i class="fas fa-times-circle mr-2"></i>{{ __("Error restoring backup") }}`;
+                statusText.innerHTML = `<i class="fas fa-times-circle mr-2"></i>{{ __("Error restoring backup") }}<br><small class="text-white-50">${error.message}</small>`;
             } finally {
                 confirmBtn.disabled = false;
                 confirmBtn.innerHTML = '<i class="fas fa-undo mr-1"></i> {{ __("Restore") }}';

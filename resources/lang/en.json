@@ -1581,5 +1581,6 @@
   "This backup will be permanently deleted.": "This backup will be permanently deleted.",
   "Deleting backup": "Deleting backup",
   "Delete Permanently": "Delete Permanently",
-  "Deleting...": "Deleting..."
+  "Deleting...": "Deleting...",
+  "Details": "Details"
 }
