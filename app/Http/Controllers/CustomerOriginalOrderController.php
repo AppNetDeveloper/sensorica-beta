@@ -568,7 +568,7 @@ class CustomerOriginalOrderController extends Controller
             'total' => $ordersAll->count(),
             'finished' => $ordersAll->filter(fn($o) => !is_null($o->finished_at))->count(),
             'started' => $ordersAll->filter(fn($o) => is_null($o->finished_at) && $computeStatusLevel($o) === 3)->count(),
-            'pending' => $ordersAll->filter(fn($o) => is_null($o->finished_at) && in_array($computeStatusLevel($o), [0, 1, 2]))->count(),
+            'pending' => $ordersAll->filter(fn($o) => is_null($o->finished_at))->count(),
         ];
 
         // Aplicar filtro por estado

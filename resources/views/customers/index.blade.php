@@ -299,9 +299,9 @@
                         </div>
                         <div class="pc-action-buttons">
                             @can('original-order-list')
-                            <a href="{{ route('customers.production-times.view', $customer->id) }}" class="pc-btn pc-btn-outline" title="{{ __('Production Times') }}">
+                            <a href="{{ route('customers.production-times.view', $customer->id) }}" class="pc-btn pc-btn-outline" title="{{ __('Lead Time') }}">
                                 <i class="ti ti-clock"></i>
-                                <span>{{ __('Times') }}</span>
+                                <span>{{ __('Lead Time') }}</span>
                             </a>
                             @endcan
                             @can('hourly-totals-view')

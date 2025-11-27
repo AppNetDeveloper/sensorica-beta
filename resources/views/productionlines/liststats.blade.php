@@ -990,12 +990,12 @@
 
         function durationToSeconds(value) {
             const raw = safeValue(value, '');
-            if (!raw) return '';
+            if (!raw) return 0;
             if (/^-?\d+$/.test(raw)) {
                 return parseInt(raw, 10);
             }
-            const match = raw.match(/(-?)(\d{1,2}):(\d{2}):(\d{2})/);
-            if (!match) return '';
+            const match = raw.match(/(-?)(\d{1,3}):(\d{2}):(\d{2})/);
+            if (!match) return 0;
             const sign = match[1] === '-' ? -1 : 1;
             const hours = parseInt(match[2], 10) || 0;
             const minutes = parseInt(match[3], 10) || 0;
@@ -1085,38 +1085,58 @@
                 console.error('[AI] DataTable no inicializada');
                 return { metrics: {}, csv: '', type: 'OEE General' };
             }
-            
+
             const table = $('#controlWeightTable').DataTable();
             const metrics = {
                 avgOEE: $('#avgOEE').text() || '0%',
                 totalDuration: $('#totalDuration').text() || '00:00:00',
                 dateRange: `${$('#startDate').val()} a ${$('#endDate').val()}`
             };
-            
-            // CSV normalizado: Línea, Fecha_Inicio_ISO, Fecha_Fin_ISO, OEE_Porcentaje, Duracion_Segundos, Duracion_Formato
-            let csv = 'Linea,Fecha_Inicio_ISO,Fecha_Fin_ISO,OEE_Porcentaje,Duracion_Segundos,Duracion_Formato\n';
+
+            // CSV con columnas numéricas para análisis
+            let csv = 'ID,OEE_Pct,Duracion_Horas,UPM_Real,UPM_Teorico\n';
             let count = 0;
+            let skipped = 0;
+            const maxRows = 100;
 
             table.rows({search: 'applied'}).data().each(function(row) {
-                if (count >= 50) return false;
-                const linea = cleanValue(row.production_line_name ?? row[1]);
-                const startIso = cleanValue(normalizeDateTime(row.created_at ?? row[8]));
-                const endIso = cleanValue(normalizeDateTime(row.updated_at ?? row[9]));
+                if (count >= maxRows) return false;
+
+                // Validar datos mínimos
+                const lineaName = row.production_line_name ?? row[1];
+                if (!lineaName) {
+                    skipped++;
+                    return;
+                }
 
                 const oeeRaw = row.oee ?? row[7];
-                const oeeValue = oeeRaw !== null && oeeRaw !== undefined
-                    ? (typeof oeeRaw === 'number' ? oeeRaw.toFixed(2) : safeValue(oeeRaw, '0'))
-                    : '0';
-                const oeePct = cleanValue(oeeValue);
+                let oeeNum = 0;
+                if (oeeRaw !== null && oeeRaw !== undefined) {
+                    oeeNum = typeof oeeRaw === 'number' ? oeeRaw : parseFloat(String(oeeRaw).replace(',', '.')) || 0;
+                }
+                // Normalizar OEE a porcentaje (0-100)
+                if (oeeNum > 0 && oeeNum <= 1) oeeNum = oeeNum * 100;
 
-                const durationSeconds = durationToSeconds(row.on_time ?? row[10]) || 0;
-                const durationFormatted = cleanValue(formatTime(durationSeconds));
+                const durationSec = durationToSeconds(row.on_time ?? row[10]) || 0;
+                if (durationSec <= 0) {
+                    skipped++;
+                    return;
+                }
 
-                csv += `${linea},${startIso},${endIso},${oeePct},${cleanValue(String(durationSeconds))},${durationFormatted}\n`;
+                const upmReal = parseFloat(row.units_per_minute_real ?? row[5]) || 0;
+                const upmTeo = parseFloat(row.units_per_minute_theoretical ?? row[6]) || 0;
+
+                // Convertir a horas
+                const duracionHoras = (durationSec / 3600).toFixed(2);
+
+                csv += `${count + 1},${oeeNum.toFixed(2)},${duracionHoras},${upmReal.toFixed(2)},${upmTeo.toFixed(2)}\n`;
                 count++;
             });
 
-            return { metrics, csv, type: 'OEE General' };
+            let note = `${count} registros - columnas numéricas para análisis`;
+            if (skipped > 0) note += ` (${skipped} omitidos)`;
+
+            return { metrics, csv, type: 'OEE General', note };
         }
 
         // Análisis de Paradas
@@ -1125,32 +1145,48 @@
                 console.error('[AI] DataTable no inicializada');
                 return { metrics: {}, csv: '', type: 'Paradas' };
             }
-            
+
             const table = $('#controlWeightTable').DataTable();
             const metrics = {
                 totalStops: $('#totalProductionStopsTime').text() || '00:00:00',
                 totalDownTime: $('#totalDownTime').text() || '00:00:00',
                 dateRange: `${$('#startDate').val()} a ${$('#endDate').val()}`
             };
-            
-            // CSV normalizado: Línea, Paradas_Segundos, Paradas_Formato, Falta_Material_Segundos, Falta_Material_Formato, Preparacion_Segundos, Preparacion_Formato
-            let csv = 'Linea,Paradas_Segundos,Paradas_Formato,Falta_Material_Segundos,Falta_Material_Formato,Preparacion_Segundos,Preparacion_Formato\n';
+
+            // CSV con columnas numéricas (horas)
+            let csv = 'ID,Paradas_Horas,Falta_Material_Horas,Preparacion_Horas,Total_Improductivo_Horas\n';
             let count = 0;
-            
+            let skipped = 0;
+            const maxRows = 100;
+
             table.rows({search: 'applied'}).data().each(function(row) {
-                if (count >= 50) return false;
+                if (count >= maxRows) return false;
 
-                const linea = cleanValue(row.production_line_name ?? row[1]);
+                const lineaName = row.production_line_name ?? row[1];
+                if (!lineaName) {
+                    skipped++;
+                    return;
+                }
 
-                const paradasSeconds = durationToSeconds(row.production_stops_time ?? row[13]) || 0;
-                const faltaMaterialSeconds = durationToSeconds(row.down_time ?? row[14]) || 0;
-                const prepSeconds = durationToSeconds(row.prepair_time ?? row[11]) || 0;
+                const paradasSec = durationToSeconds(row.production_stops_time ?? row[13]) || 0;
+                const faltaSec = durationToSeconds(row.down_time ?? row[14]) || 0;
+                const prepSec = durationToSeconds(row.prepair_time ?? row[11]) || 0;
+                const totalImprod = paradasSec + faltaSec + prepSec;
 
-                csv += `${linea},${cleanValue(String(paradasSeconds))},${cleanValue(formatTime(paradasSeconds))},${cleanValue(String(faltaMaterialSeconds))},${cleanValue(formatTime(faltaMaterialSeconds))},${cleanValue(String(prepSeconds))},${cleanValue(formatTime(prepSeconds))}\n`;
+                // Convertir a horas
+                const paradasHoras = (paradasSec / 3600).toFixed(2);
+                const faltaHoras = (faltaSec / 3600).toFixed(2);
+                const prepHoras = (prepSec / 3600).toFixed(2);
+                const totalHoras = (totalImprod / 3600).toFixed(2);
+
+                csv += `${count + 1},${paradasHoras},${faltaHoras},${prepHoras},${totalHoras}\n`;
                 count++;
             });
 
-            return { metrics, csv, type: 'Paradas' };
+            let note = `${count} registros - tiempos en horas`;
+            if (skipped > 0) note += ` (${skipped} omitidos)`;
+
+            return { metrics, csv, type: 'Paradas', note };
         }
 
         // Análisis de Rendimiento
@@ -1159,33 +1195,52 @@
                 console.error('[AI] DataTable no inicializada');
                 return { metrics: {}, csv: '', type: 'Rendimiento' };
             }
-            
+
             const table = $('#controlWeightTable').DataTable();
             const metrics = {
                 avgOEE: $('#avgOEE').text() || '0%',
                 slowTime: $('#totalSlowTime').text() || '00:00:00',
                 dateRange: `${$('#startDate').val()} a ${$('#endDate').val()}`
             };
-            
-            // CSV normalizado: Línea, OEE_Porcentaje, Tiempo_Lento_Segundos, Tiempo_Lento_Formato, UPM_Real, UPM_Teorico
-            let csv = 'Linea,OEE_Porcentaje,Tiempo_Lento_Segundos,Tiempo_Lento_Formato,UPM_Real,UPM_Teorico\n';
+
+            // CSV con columnas numéricas
+            let csv = 'ID,OEE_Pct,Tiempo_Lento_Horas,UPM_Real,UPM_Teorico,Eficiencia_Pct\n';
             let count = 0;
-            
+            let skipped = 0;
+            const maxRows = 100;
+
             table.rows({search: 'applied'}).data().each(function(row) {
-                if (count >= 50) return false;
-                const linea = cleanValue(row.production_line_name ?? row[1]);
+                if (count >= maxRows) return false;
+
+                const lineaName = row.production_line_name ?? row[1];
+                if (!lineaName) {
+                    skipped++;
+                    return;
+                }
+
                 const oeeRaw = row.oee ?? row[7];
-                const oee = oeeRaw !== null && oeeRaw !== undefined
-                    ? cleanValue(typeof oeeRaw === 'number' ? oeeRaw.toFixed(2) : safeValue(oeeRaw, '0'))
-                    : '0';
-                const lentoSeconds = durationToSeconds(row.slow_time ?? row[12]) || 0;
-                const upmReal = cleanValue(row.units_per_minute_real ?? row[5] ?? '0');
-                const upmTeo = cleanValue(row.units_per_minute_theoretical ?? row[6] ?? '0');
-                csv += `${linea},${oee},${cleanValue(String(lentoSeconds))},${cleanValue(formatTime(lentoSeconds))},${upmReal},${upmTeo}\n`;
+                let oeeNum = 0;
+                if (oeeRaw !== null && oeeRaw !== undefined) {
+                    oeeNum = typeof oeeRaw === 'number' ? oeeRaw : parseFloat(String(oeeRaw).replace(',', '.')) || 0;
+                }
+                if (oeeNum > 0 && oeeNum <= 1) oeeNum = oeeNum * 100;
+
+                const lentoSec = durationToSeconds(row.slow_time ?? row[12]) || 0;
+                const upmReal = parseFloat(row.units_per_minute_real ?? row[5]) || 0;
+                const upmTeo = parseFloat(row.units_per_minute_theoretical ?? row[6]) || 0;
+
+                // Eficiencia = UPM Real / UPM Teórico * 100
+                const eficiencia = upmTeo > 0 ? ((upmReal / upmTeo) * 100).toFixed(2) : '0.00';
+                const lentoHoras = (lentoSec / 3600).toFixed(2);
+
+                csv += `${count + 1},${oeeNum.toFixed(2)},${lentoHoras},${upmReal.toFixed(2)},${upmTeo.toFixed(2)},${eficiencia}\n`;
                 count++;
             });
-            
-            return { metrics, csv, type: 'Rendimiento' };
+
+            let note = `${count} registros - columnas numéricas para análisis`;
+            if (skipped > 0) note += ` (${skipped} omitidos)`;
+
+            return { metrics, csv, type: 'Rendimiento', note };
         }
 
         // Análisis de Operadores
@@ -1194,7 +1249,7 @@
                 console.error('[AI] DataTable no inicializada');
                 return { metrics: {}, csv: '', type: 'Operadores' };
             }
-            
+
             const table = $('#controlWeightTable').DataTable();
             const selectedOps = $('#operatorSelect').select2('data').map(o => o.text).join(', ') || 'Todos';
             const metrics = {
@@ -1202,57 +1257,48 @@
                 avgOEE: $('#avgOEE').text() || '0%',
                 dateRange: `${$('#startDate').val()} a ${$('#endDate').val()}`
             };
-            
-            // CSV normalizado: Empleados,OEE_Porcentaje,Duracion_Segundos,Duracion_Formato,Tiempo_Ganado_Segundos,Tiempo_Ganado_Formato,Tiempo_Mas_Segundos,Tiempo_Mas_Formato
-            let csv = 'Empleados,OEE_Porcentaje,Duracion_Segundos,Duracion_Formato,Tiempo_Ganado_Segundos,Tiempo_Ganado_Formato,Tiempo_Mas_Segundos,Tiempo_Mas_Formato\n';
+
+            // CSV con columnas numéricas
+            let csv = 'ID,OEE_Pct,Duracion_Horas,Tiempo_Ganado_Horas,Tiempo_Perdido_Horas,Balance_Horas\n';
             let count = 0;
-
-            const toTimeString = (raw) => {
-                if (raw === null || raw === undefined) return '00:00:00';
-                if (typeof raw === 'number') return formatTime(raw);
-                if (typeof raw === 'string') {
-                    const trimmed = raw.trim();
-                     if (!trimmed) return '00:00:00';
-                    if (/^\d{1,2}:\d{2}:\d{2}$/.test(trimmed)) return trimmed;
-                    const parsed = parseInt(trimmed, 10);
-                    if (!isNaN(parsed)) return formatTime(parsed);
-                }
-                return '00:00:00';
-            };
-
-            const formatOEE = (raw) => {
-                if (raw === null || raw === undefined) return '0%';
-                if (typeof raw === 'number') return `${raw.toFixed(2)}%`;
-                if (typeof raw === 'string') {
-                    const trimmed = raw.trim();
-                    if (!trimmed) return '0%';
-                    if (trimmed.endsWith('%')) return trimmed;
-                    const parsed = parseFloat(trimmed);
-                    if (!isNaN(parsed)) return `${parsed.toFixed(2)}%`;
-                }
-                return '0%';
-            };
+            let skipped = 0;
+            const maxRows = 100;
 
             table.rows({search: 'applied'}).data().each(function(row) {
-                if (count >= 50) return false;
-                let empleadosRaw = '';
-                if (Array.isArray(row.operator_names)) {
-                    empleadosRaw = row.operator_names.join(' | ');
-                } else if (row.operator_names) {
-                    empleadosRaw = row.operator_names;
-                } else {
-                    empleadosRaw = 'Sin asignar';
+                if (count >= maxRows) return false;
+
+                const lineaName = row.production_line_name ?? row[1];
+                if (!lineaName) {
+                    skipped++;
+                    return;
                 }
-                const empleados = cleanValue(empleadosRaw);
-                const oee = cleanValue(formatOEE(row.oee ?? row[7]));
-                const durSeconds = durationToSeconds(row.on_time ?? row[10]) || 0;
-                const ganadoSeconds = durationToSeconds(row.fast_time ?? row[16]) || 0;
-                const masSeconds = durationToSeconds(row.out_time ?? row[17]) || 0;
-                csv += `${empleados},${oee},${cleanValue(String(durSeconds))},${cleanValue(toTimeString(durSeconds))},${cleanValue(String(ganadoSeconds))},${cleanValue(toTimeString(ganadoSeconds))},${cleanValue(String(masSeconds))},${cleanValue(toTimeString(masSeconds))}\n`;
+
+                const oeeRaw = row.oee ?? row[7];
+                let oeeNum = 0;
+                if (oeeRaw !== null && oeeRaw !== undefined) {
+                    oeeNum = typeof oeeRaw === 'number' ? oeeRaw : parseFloat(String(oeeRaw).replace(',', '.')) || 0;
+                }
+                if (oeeNum > 0 && oeeNum <= 1) oeeNum = oeeNum * 100;
+
+                const durSec = durationToSeconds(row.on_time ?? row[10]) || 0;
+                const ganadoSec = durationToSeconds(row.fast_time ?? row[16]) || 0;
+                const perdidoSec = durationToSeconds(row.out_time ?? row[17]) || 0;
+                const balanceSec = ganadoSec - perdidoSec;
+
+                // Convertir a horas
+                const durHoras = (durSec / 3600).toFixed(2);
+                const ganadoHoras = (ganadoSec / 3600).toFixed(2);
+                const perdidoHoras = (perdidoSec / 3600).toFixed(2);
+                const balanceHoras = (balanceSec / 3600).toFixed(2);
+
+                csv += `${count + 1},${oeeNum.toFixed(2)},${durHoras},${ganadoHoras},${perdidoHoras},${balanceHoras}\n`;
                 count++;
             });
-            
-            return { metrics, csv, type: 'Operadores' };
+
+            let note = `${count} registros - columnas numéricas (Balance = Ganado - Perdido)`;
+            if (skipped > 0) note += ` (${skipped} omitidos)`;
+
+            return { metrics, csv, type: 'Operadores', note };
         }
 
         // Comparativa Top/Bottom
@@ -1261,41 +1307,68 @@
                 console.error('[AI] DataTable no inicializada');
                 return { metrics: {}, csv: '', type: 'Comparativa' };
             }
-            
+
             const table = $('#controlWeightTable').DataTable();
             const metrics = {
                 avgOEE: $('#avgOEE').text() || '0%',
                 dateRange: `${$('#startDate').val()} a ${$('#endDate').val()}`
             };
-            
-            // CSV reducido: top/bottom con métricas extendidas
-            let csv = 'Tipo,Linea,OEE_Porcentaje,Duracion_Segundos,Duracion_Formato,Preparacion_Segundos,Preparacion_Formato,Lento_Segundos,Lento_Formato,Paradas_Segundos,Paradas_Formato,Falta_Material_Segundos,Falta_Material_Formato\n';
+
+            // CSV con columnas numéricas para análisis estadístico
+            let csv = 'ID,Es_Top,OEE_Pct,Duracion_Horas,Preparacion_Horas,Lento_Horas,Paradas_Horas,Falta_Material_Horas,Total_Improductivo_Horas\n';
             const allRows = [];
-            
+            let skipped = 0;
+
             table.rows({search: 'applied'}).data().each(function(row) {
+                const lineaName = row.production_line_name ?? row[1];
+                if (!lineaName || String(lineaName).trim() === '') { skipped++; return; }
+
+                const oeeRaw = row.oee ?? row[7];
+                let oeeNum = (oeeRaw !== null && oeeRaw !== undefined)
+                    ? (typeof oeeRaw === 'number' ? oeeRaw : parseFloat(String(oeeRaw).replace(',', '.')) || 0)
+                    : 0;
+                if (oeeNum > 0 && oeeNum <= 1) oeeNum = oeeNum * 100;
+
+                const durSec = durationToSeconds(row.on_time ?? row[10]) || 0;
+                const prepSec = durationToSeconds(row.prepair_time ?? row[11]) || 0;
+                const lentoSec = durationToSeconds(row.slow_time ?? row[12]) || 0;
+                const paradasSec = durationToSeconds(row.production_stops_time ?? row[13]) || 0;
+                const faltaSec = durationToSeconds(row.down_time ?? row[14]) || 0;
+
+                if (durSec <= 0) { skipped++; return; }
+
                 allRows.push({
-                    linea: cleanValue(row.production_line_name ?? row[1]),
-                    oee: cleanValue((row.oee ?? row[7]) ? (typeof (row.oee ?? row[7]) === 'number' ? (row.oee ?? row[7]).toFixed(2) : safeValue(row.oee ?? row[7], '0')) : '0'),
-                    duracionSeconds: durationToSeconds(row.on_time ?? row[10]) || 0,
-                    preparacionSeconds: durationToSeconds(row.prepair_time ?? row[11]) || 0,
-                    lentoSeconds: durationToSeconds(row.slow_time ?? row[12]) || 0,
-                    paradasSeconds: durationToSeconds(row.production_stops_time ?? row[13]) || 0,
-                    faltaMaterialSeconds: durationToSeconds(row.down_time ?? row[14]) || 0
+                    oee: oeeNum,
+                    durHoras: durSec / 3600,
+                    prepHoras: prepSec / 3600,
+                    lentoHoras: lentoSec / 3600,
+                    paradasHoras: paradasSec / 3600,
+                    faltaHoras: faltaSec / 3600,
+                    totalImprod: (prepSec + lentoSec + paradasSec + faltaSec) / 3600
                 });
             });
-            
-            // Top 10 y Bottom 10
+
+            // Ordenar por OEE descendente antes de extraer top/bottom
+            allRows.sort((a, b) => b.oee - a.oee);
+
+            // Top 10 (mejor OEE) y Bottom 10 (peor OEE)
             const top10 = allRows.slice(0, 10);
             const bottom10 = allRows.slice(-10);
-            
+            let count = 0;
+
             top10.forEach(r => {
-                csv += `TOP,${r.linea},${r.oee},${cleanValue(String(r.duracionSeconds))},${cleanValue(formatTime(r.duracionSeconds))},${cleanValue(String(r.preparacionSeconds))},${cleanValue(formatTime(r.preparacionSeconds))},${cleanValue(String(r.lentoSeconds))},${cleanValue(formatTime(r.lentoSeconds))},${cleanValue(String(r.paradasSeconds))},${cleanValue(formatTime(r.paradasSeconds))},${cleanValue(String(r.faltaMaterialSeconds))},${cleanValue(formatTime(r.faltaMaterialSeconds))}\n`;
+                csv += `${count + 1},1,${r.oee.toFixed(2)},${r.durHoras.toFixed(2)},${r.prepHoras.toFixed(2)},${r.lentoHoras.toFixed(2)},${r.paradasHoras.toFixed(2)},${r.faltaHoras.toFixed(2)},${r.totalImprod.toFixed(2)}\n`;
+                count++;
             });
             bottom10.forEach(r => {
-                csv += `BOTTOM,${r.linea},${r.oee},${cleanValue(String(r.duracionSeconds))},${cleanValue(formatTime(r.duracionSeconds))},${cleanValue(String(r.preparacionSeconds))},${cleanValue(formatTime(r.preparacionSeconds))},${cleanValue(String(r.lentoSeconds))},${cleanValue(formatTime(r.lentoSeconds))},${cleanValue(String(r.paradasSeconds))},${cleanValue(formatTime(r.paradasSeconds))},${cleanValue(String(r.faltaMaterialSeconds))},${cleanValue(formatTime(r.faltaMaterialSeconds))}\n`;
+                csv += `${count + 1},0,${r.oee.toFixed(2)},${r.durHoras.toFixed(2)},${r.prepHoras.toFixed(2)},${r.lentoHoras.toFixed(2)},${r.paradasHoras.toFixed(2)},${r.faltaHoras.toFixed(2)},${r.totalImprod.toFixed(2)}\n`;
+                count++;
             });
-            
-            return { metrics, csv, type: 'Comparativa' };
+
+            let note = `${count} registros (Top10 + Bottom10) - columnas numéricas`;
+            if (skipped > 0) note += ` (${skipped} omitidos)`;
+
+            return { metrics, csv, type: 'Comparativa', note };
         }
 
         // Disponibilidad vs Rendimiento
@@ -1311,29 +1384,50 @@
                 dateRange: `${$('#startDate').val()} a ${$('#endDate').val()}`
             };
 
-            let csv = 'Linea,OEE_Porcentaje,Duracion_Segundos,Duracion_Formato,Tiempo_Disponible_Segundos,Tiempo_Disponible_Formato,Tiempo_Incidencias_Segundos,Tiempo_Incidencias_Formato\n';
+            // CSV con columnas numéricas para análisis estadístico
+            let csv = 'ID,OEE_Pct,Duracion_Horas,Disponible_Horas,Incidencias_Horas,Pct_Disponibilidad,Pct_Incidencias\n';
             let count = 0;
+            let skipped = 0;
             const maxRows = 100;
 
             table.rows({search: 'applied'}).data().each(function(row) {
                 if (count >= maxRows) return false;
 
-                const linea = cleanValue(row.production_line_name ?? row[1]);
+                const lineaName = row.production_line_name ?? row[1];
+                if (!lineaName || String(lineaName).trim() === '') { skipped++; return; }
+
                 const oeeRaw = row.oee ?? row[7];
-                const oee = cleanValue(oeeRaw !== null && oeeRaw !== undefined ? (typeof oeeRaw === 'number' ? oeeRaw.toFixed(2) : safeValue(oeeRaw, '0')) : '0');
-                const duracionSeconds = durationToSeconds(row.on_time ?? row[10]) || 0;
-                const paradasSeconds = durationToSeconds(row.production_stops_time ?? row[13]) || 0;
-                const faltaSeconds = durationToSeconds(row.down_time ?? row[14]) || 0;
-                const prepSeconds = durationToSeconds(row.prepair_time ?? row[11]) || 0;
+                let oeeNum = (oeeRaw !== null && oeeRaw !== undefined)
+                    ? (typeof oeeRaw === 'number' ? oeeRaw : parseFloat(String(oeeRaw).replace(',', '.')) || 0)
+                    : 0;
+                if (oeeNum > 0 && oeeNum <= 1) oeeNum = oeeNum * 100;
 
-                const disponibleSeconds = Math.max(duracionSeconds - paradasSeconds - faltaSeconds, 0);
-                const incidenciasSeconds = paradasSeconds + faltaSeconds + prepSeconds;
+                const durSec = durationToSeconds(row.on_time ?? row[10]) || 0;
+                if (durSec <= 0) { skipped++; return; }
 
-                csv += `${linea},${oee},${cleanValue(String(duracionSeconds))},${cleanValue(formatTime(duracionSeconds))},${cleanValue(String(disponibleSeconds))},${cleanValue(formatTime(disponibleSeconds))},${cleanValue(String(incidenciasSeconds))},${cleanValue(formatTime(incidenciasSeconds))}\n`;
+                const paradasSec = durationToSeconds(row.production_stops_time ?? row[13]) || 0;
+                const faltaSec = durationToSeconds(row.down_time ?? row[14]) || 0;
+                const prepSec = durationToSeconds(row.prepair_time ?? row[11]) || 0;
+
+                const disponibleSec = Math.max(durSec - paradasSec - faltaSec, 0);
+                const incidenciasSec = paradasSec + faltaSec + prepSec;
+
+                // Convertir a horas
+                const durHoras = (durSec / 3600).toFixed(2);
+                const dispHoras = (disponibleSec / 3600).toFixed(2);
+                const incidHoras = (incidenciasSec / 3600).toFixed(2);
+
+                // Calcular porcentajes
+                const pctDisp = durSec > 0 ? ((disponibleSec / durSec) * 100).toFixed(2) : '0.00';
+                const pctIncid = durSec > 0 ? ((incidenciasSec / durSec) * 100).toFixed(2) : '0.00';
+
+                csv += `${count + 1},${oeeNum.toFixed(2)},${durHoras},${dispHoras},${incidHoras},${pctDisp},${pctIncid}\n`;
                 count++;
             });
 
-            const note = count >= maxRows ? `Mostrando primeras ${maxRows} líneas` : `Total analizado: ${count} líneas`;
+            let note = `${count} registros - columnas numéricas`;
+            if (skipped > 0) note += ` (${skipped} omitidos)`;
+
             return { metrics, csv, type: 'Disponibilidad vs Rendimiento', note };
         }
 
@@ -1351,36 +1445,56 @@
                 dateRange: `${$('#startDate').val()} a ${$('#endDate').val()}`
             };
 
-            let csv = 'Linea,Turno,Operadores,OEE_Porcentaje,Duracion_Segundos,Duracion_Formato,Tiempo_Lento_Segundos,Tiempo_Lento_Formato,Tiempo_Ganado_Segundos,Tiempo_Ganado_Formato\n';
+            // CSV con columnas numéricas para análisis estadístico
+            let csv = 'ID,Turno_ID,OEE_Pct,Duracion_Horas,Lento_Horas,Ganado_Horas,Num_Operadores,Eficiencia_Tiempo\n';
             let count = 0;
-            const maxRows = 120;
+            let skipped = 0;
+            const maxRows = 100;
 
             table.rows({search: 'applied'}).data().each(function(row) {
                 if (count >= maxRows) return false;
 
-                const linea = cleanValue(row.production_line_name ?? row[1]);
-                const resolvedShift = resolveShiftForRow(row);
-                const turno = cleanValue(row.shift_name ?? row.shift ?? row.turno ?? (resolvedShift ? resolvedShift.name : 'Sin turno'));
-                let operadores = '';
-                if (Array.isArray(row.operator_names)) {
-                    operadores = row.operator_names.join(' | ');
-                } else if (row.operator_names) {
-                    operadores = row.operator_names;
-                } else {
-                    operadores = 'Sin asignar';
-                }
-                const operadoresClean = cleanValue(operadores);
-                const oeeRaw = row.oee ?? row[7];
-                const oee = cleanValue(oeeRaw !== null && oeeRaw !== undefined ? (typeof oeeRaw === 'number' ? oeeRaw.toFixed(2) : safeValue(oeeRaw, '0')) : '0');
-                const durSeconds = durationToSeconds(row.on_time ?? row[10]) || 0;
-                const lentoSeconds = durationToSeconds(row.slow_time ?? row[12]) || 0;
-                const ganadoSeconds = durationToSeconds(row.fast_time ?? row[16]) || 0;
+                const lineaName = row.production_line_name ?? row[1];
+                if (!lineaName || String(lineaName).trim() === '') { skipped++; return; }
 
-                csv += `${linea},${turno},${operadoresClean},${oee},${cleanValue(String(durSeconds))},${cleanValue(formatTime(durSeconds))},${cleanValue(String(lentoSeconds))},${cleanValue(formatTime(lentoSeconds))},${cleanValue(String(ganadoSeconds))},${cleanValue(formatTime(ganadoSeconds))}\n`;
+                const resolvedShift = resolveShiftForRow(row);
+                const turnoId = (row.shift_id ?? (resolvedShift && resolvedShift.id)) || 0;
+
+                const oeeRaw = row.oee ?? row[7];
+                let oeeNum = (oeeRaw !== null && oeeRaw !== undefined)
+                    ? (typeof oeeRaw === 'number' ? oeeRaw : parseFloat(String(oeeRaw).replace(',', '.')) || 0)
+                    : 0;
+                if (oeeNum > 0 && oeeNum <= 1) oeeNum = oeeNum * 100;
+
+                const durSec = durationToSeconds(row.on_time ?? row[10]) || 0;
+                if (durSec <= 0) { skipped++; return; }
+
+                const lentoSec = durationToSeconds(row.slow_time ?? row[12]) || 0;
+                const ganadoSec = durationToSeconds(row.fast_time ?? row[16]) || 0;
+
+                // Contar operadores
+                let numOps = 0;
+                if (Array.isArray(row.operator_names)) {
+                    numOps = row.operator_names.length;
+                } else if (row.operator_names) {
+                    numOps = 1;
+                }
+
+                // Convertir a horas
+                const durHoras = (durSec / 3600).toFixed(2);
+                const lentoHoras = (lentoSec / 3600).toFixed(2);
+                const ganadoHoras = (ganadoSec / 3600).toFixed(2);
+
+                // Eficiencia de tiempo: (duración - lento) / duración * 100
+                const eficiencia = durSec > 0 ? (((durSec - lentoSec) / durSec) * 100).toFixed(2) : '0.00';
+
+                csv += `${count + 1},${turnoId},${oeeNum.toFixed(2)},${durHoras},${lentoHoras},${ganadoHoras},${numOps},${eficiencia}\n`;
                 count++;
             });
 
-            const note = count >= maxRows ? `Mostrando primeras ${maxRows} registros por turno` : `Total analizado: ${count} registros`;
+            let note = `${count} registros - columnas numéricas`;
+            if (skipped > 0) note += ` (${skipped} omitidos)`;
+
             return { metrics, csv, type: 'Variaciones por Turno/Operador', note };
         }
 
@@ -1397,19 +1511,20 @@
             };
 
             const groups = {};
+            let skipped = 0;
+
             table.rows({search: 'applied'}).data().each(function(row) {
+                const lineaName = row.production_line_name ?? row[1];
+                if (!lineaName || String(lineaName).trim() === '') { skipped++; return; }
+
                 const resolvedShift = resolveShiftForRow(row);
-                const shiftId = (row.shift_id ?? (resolvedShift && resolvedShift.id)) || 'N/A';
-                const shiftName = cleanValue(row.shift_name ?? row.shift ?? row.turno ?? (resolvedShift ? resolvedShift.name : 'Sin turno'));
-                const shiftStart = cleanValue((resolvedShift && resolvedShift.start) || '');
-                const shiftEnd = cleanValue((resolvedShift && resolvedShift.end) || '');
-                const linea = cleanValue(row.production_line_name ?? row[1]);
-                const lineId = row.production_line_id || 'N/A';
-                const key = `${lineId}|${shiftId}|${shiftName}`;
+                const shiftId = (row.shift_id ?? (resolvedShift && resolvedShift.id)) || 0;
+                const lineId = row.production_line_id || 0;
+                const key = `${lineId}|${shiftId}`;
 
                 if (!groups[key]) {
                     groups[key] = {
-                        linea, shiftId, shiftName, shiftStart, shiftEnd,
+                        shiftId: shiftId,
                         orders: 0,
                         oeeSum: 0, oeeCount: 0,
                         durSum: 0,
@@ -1444,35 +1559,38 @@
                 g.numSum += num;
             });
 
-            let csv = 'Linea,Turno_Id,Turno,Inicio_Turno,Fin_Turno,Ordenes,OEE_Promedio,Duracion_Total_Segundos,Duracion_Total_Formato,Improductivo_Segundos,Improductivo_Formato,Neto_Segundos,Neto_Formato,Lento_Segundos,Paradas_Segundos,Falta_Material_Segundos,Preparacion_Segundos,Kg_Turno_Main,Cajas_Turno_Main\n';
+            // CSV con columnas numéricas para análisis estadístico
+            let csv = 'ID,Turno_ID,Ordenes,OEE_Promedio_Pct,Duracion_Horas,Improductivo_Horas,Neto_Horas,Lento_Horas,Paradas_Horas,Falta_Material_Horas,Preparacion_Horas,Kg_Total,Cajas_Total,Pct_Productivo\n';
+            let count = 0;
+            const maxRows = 100;
+
             Object.values(groups).forEach(g => {
-                const improd = g.slowSum + g.stopsSum + g.downSum + g.prepairSum;
-                const neto = Math.max(g.durSum - improd, 0);
+                if (count >= maxRows) return;
+                if (g.durSum <= 0) return;
+
+                const improdSec = g.slowSum + g.stopsSum + g.downSum + g.prepairSum;
+                const netoSec = Math.max(g.durSum - improdSec, 0);
                 const oeeAvg = g.oeeCount > 0 ? g.oeeSum / g.oeeCount : 0;
-                csv += [
-                    cleanValue(g.linea),
-                    cleanValue(String(g.shiftId)),
-                    cleanValue(g.shiftName),
-                    cleanValue(g.shiftStart),
-                    cleanValue(g.shiftEnd),
-                    cleanValue(String(g.orders)),
-                    cleanValue(oeeAvg.toFixed(2)),
-                    cleanValue(String(g.durSum)),
-                    cleanValue(formatTime(g.durSum)),
-                    cleanValue(String(improd)),
-                    cleanValue(formatTime(improd)),
-                    cleanValue(String(neto)),
-                    cleanValue(formatTime(neto)),
-                    cleanValue(String(g.slowSum)),
-                    cleanValue(String(g.stopsSum)),
-                    cleanValue(String(g.downSum)),
-                    cleanValue(String(g.prepairSum)),
-                    cleanValue(String(g.kgSum)),
-                    cleanValue(String(g.numSum))
-                ].join(',') + '\n';
+
+                // Convertir a horas
+                const durHoras = (g.durSum / 3600).toFixed(2);
+                const improdHoras = (improdSec / 3600).toFixed(2);
+                const netoHoras = (netoSec / 3600).toFixed(2);
+                const lentoHoras = (g.slowSum / 3600).toFixed(2);
+                const paradasHoras = (g.stopsSum / 3600).toFixed(2);
+                const faltaHoras = (g.downSum / 3600).toFixed(2);
+                const prepHoras = (g.prepairSum / 3600).toFixed(2);
+
+                // Porcentaje productivo
+                const pctProductivo = g.durSum > 0 ? ((netoSec / g.durSum) * 100).toFixed(2) : '0.00';
+
+                csv += `${count + 1},${g.shiftId},${g.orders},${oeeAvg.toFixed(2)},${durHoras},${improdHoras},${netoHoras},${lentoHoras},${paradasHoras},${faltaHoras},${prepHoras},${g.kgSum.toFixed(2)},${g.numSum},${pctProductivo}\n`;
+                count++;
             });
 
-            const note = `Total grupos turno: ${Object.keys(groups).length}`;
+            let note = `${count} grupos - columnas numéricas`;
+            if (skipped > 0) note += ` (${skipped} filas omitidas)`;
+
             return { metrics, csv, type: 'Rentabilidad por Turno', note };
         }
 
@@ -1491,27 +1609,50 @@
                 dateRange: `${$('#startDate').val()} a ${$('#endDate').val()}`
             };
 
-            let csv = 'Linea,OEE_Porcentaje,Tiempo_Lento_Segundos,Tiempo_Lento_Formato,Paradas_Segundos,Paradas_Formato,Falta_Material_Segundos,Falta_Material_Formato,Tiempo_Neto_Produccion_Segundos,Tiempo_Neto_Produccion_Formato\n';
+            // CSV con columnas numéricas para análisis estadístico
+            let csv = 'ID,OEE_Pct,Lento_Horas,Paradas_Horas,Falta_Material_Horas,Neto_Horas,Total_Improductivo_Horas,Pct_Improductivo\n';
             let count = 0;
-            const maxRows = 120;
+            let skipped = 0;
+            const maxRows = 100;
 
             table.rows({search: 'applied'}).data().each(function(row) {
                 if (count >= maxRows) return false;
 
-                const linea = cleanValue(row.production_line_name ?? row[1]);
-                const oeeRaw = row.oee ?? row[7];
-                const oee = cleanValue(oeeRaw !== null && oeeRaw !== undefined ? (typeof oeeRaw === 'number' ? oeeRaw.toFixed(2) : safeValue(oeeRaw, '0')) : '0');
-                const lentoSeconds = durationToSeconds(row.slow_time ?? row[12]) || 0;
-                const paradasSeconds = durationToSeconds(row.production_stops_time ?? row[13]) || 0;
-                const faltaSeconds = durationToSeconds(row.down_time ?? row[14]) || 0;
-                const durSeconds = durationToSeconds(row.on_time ?? row[10]) || 0;
-                const netoSeconds = Math.max(durSeconds - paradasSeconds - faltaSeconds - lentoSeconds, 0);
+                const lineaName = row.production_line_name ?? row[1];
+                if (!lineaName || String(lineaName).trim() === '') { skipped++; return; }
 
-                csv += `${linea},${oee},${cleanValue(String(lentoSeconds))},${cleanValue(formatTime(lentoSeconds))},${cleanValue(String(paradasSeconds))},${cleanValue(formatTime(paradasSeconds))},${cleanValue(String(faltaSeconds))},${cleanValue(formatTime(faltaSeconds))},${cleanValue(String(netoSeconds))},${cleanValue(formatTime(netoSeconds))}\n`;
+                const oeeRaw = row.oee ?? row[7];
+                let oeeNum = (oeeRaw !== null && oeeRaw !== undefined)
+                    ? (typeof oeeRaw === 'number' ? oeeRaw : parseFloat(String(oeeRaw).replace(',', '.')) || 0)
+                    : 0;
+                if (oeeNum > 0 && oeeNum <= 1) oeeNum = oeeNum * 100;
+
+                const durSec = durationToSeconds(row.on_time ?? row[10]) || 0;
+                if (durSec <= 0) { skipped++; return; }
+
+                const lentoSec = durationToSeconds(row.slow_time ?? row[12]) || 0;
+                const paradasSec = durationToSeconds(row.production_stops_time ?? row[13]) || 0;
+                const faltaSec = durationToSeconds(row.down_time ?? row[14]) || 0;
+                const totalImprodSec = lentoSec + paradasSec + faltaSec;
+                const netoSec = Math.max(durSec - totalImprodSec, 0);
+
+                // Convertir a horas
+                const lentoHoras = (lentoSec / 3600).toFixed(2);
+                const paradasHoras = (paradasSec / 3600).toFixed(2);
+                const faltaHoras = (faltaSec / 3600).toFixed(2);
+                const netoHoras = (netoSec / 3600).toFixed(2);
+                const improdHoras = (totalImprodSec / 3600).toFixed(2);
+
+                // Porcentaje improductivo
+                const pctImprod = durSec > 0 ? ((totalImprodSec / durSec) * 100).toFixed(2) : '0.00';
+
+                csv += `${count + 1},${oeeNum.toFixed(2)},${lentoHoras},${paradasHoras},${faltaHoras},${netoHoras},${improdHoras},${pctImprod}\n`;
                 count++;
             });
 
-            const note = count >= maxRows ? `Mostrando primeras ${maxRows} líneas` : `Total analizado: ${count} líneas`;
+            let note = `${count} registros - columnas numéricas`;
+            if (skipped > 0) note += ` (${skipped} omitidos)`;
+
             return { metrics, csv, type: 'Tiempo improductivo', note };
         }
 
@@ -1533,65 +1674,84 @@
                 totalDownTime: $('#totalDownTime').text() || '00:00:00'
             };
 
-            let csv = 'Linea,Orden,Empleados,Fecha_Inicio_ISO,Fecha_Fin_ISO,OEE_Porcentaje,Duracion_Segundos,Duracion_Formato,Diferencia_Teorica_Segundos,Diferencia_Teorica_Formato,Preparacion_Segundos,Preparacion_Formato,Lento_Segundos,Lento_Formato,Paradas_Segundos,Paradas_Formato,Falta_Material_Segundos,Falta_Material_Formato\n';
+            // CSV con columnas numéricas para análisis estadístico
+            let csv = 'ID,OEE_Pct,Duracion_Horas,Diferencia_Horas,Preparacion_Horas,Lento_Horas,Paradas_Horas,Falta_Material_Horas,Neto_Horas,Pct_Productivo,Num_Operadores\n';
             let count = 0;
-            const maxRows = 150;
+            let skipped = 0;
+            const maxRows = 100;
 
             table.rows({search: 'applied'}).data().each(function(row) {
                 if (count >= maxRows) return false;
 
-                const linea = cleanValue(row.production_line_name ?? row[1]);
-                const orden = cleanValue(row.order_id ?? row[2]);
-                let empleadosRaw = '';
-                if (Array.isArray(row.operator_names)) {
-                    empleadosRaw = row.operator_names.join(' | ');
-                } else if (row.operator_names) {
-                    empleadosRaw = row.operator_names;
-                }
-                const empleados = cleanValue(empleadosRaw);
-                const startIso = cleanValue(normalizeDateTime(row.created_at ?? row[8]));
-                const endIso = cleanValue(normalizeDateTime(row.updated_at ?? row[9]));
+                const lineaName = row.production_line_name ?? row[1];
+                if (!lineaName || String(lineaName).trim() === '') { skipped++; return; }
 
                 const oeeRaw = row.oee ?? row[7];
-                const oee = cleanValue(oeeRaw !== null && oeeRaw !== undefined ? (typeof oeeRaw === 'number' ? oeeRaw.toFixed(2) : safeValue(oeeRaw, '0')) : '0');
+                let oeeNum = (oeeRaw !== null && oeeRaw !== undefined)
+                    ? (typeof oeeRaw === 'number' ? oeeRaw : parseFloat(String(oeeRaw).replace(',', '.')) || 0)
+                    : 0;
+                if (oeeNum > 0 && oeeNum <= 1) oeeNum = oeeNum * 100;
 
-                const durSeconds = durationToSeconds(row.on_time ?? row[10]) || 0;
-                const fastSeconds = durationToSeconds(row.fast_time ?? row[16]) || 0;
-                const outSeconds = durationToSeconds(row.out_time ?? row[17]) || 0;
-                const diffSeconds = outSeconds - fastSeconds;
-                const diffFormatted = diffSeconds === 0 ? '00:00:00' : `${diffSeconds > 0 ? '+' : '-'}${formatTime(Math.abs(diffSeconds))}`;
+                const durSec = durationToSeconds(row.on_time ?? row[10]) || 0;
+                if (durSec <= 0) { skipped++; return; }
 
-                const prepSeconds = durationToSeconds(row.prepair_time ?? row[11]) || 0;
-                const lentoSeconds = durationToSeconds(row.slow_time ?? row[12]) || 0;
-                const paradasSeconds = durationToSeconds(row.production_stops_time ?? row[13]) || 0;
-                const faltaSeconds = durationToSeconds(row.down_time ?? row[14]) || 0;
+                const fastSec = durationToSeconds(row.fast_time ?? row[16]) || 0;
+                const outSec = durationToSeconds(row.out_time ?? row[17]) || 0;
+                const diffSec = outSec - fastSec;
 
-                csv += `${linea},${orden},${empleados},${startIso},${endIso},${oee},${cleanValue(String(durSeconds))},${cleanValue(formatTime(durSeconds))},${cleanValue(String(diffSeconds))},${cleanValue(diffFormatted)},${cleanValue(String(prepSeconds))},${cleanValue(formatTime(prepSeconds))},${cleanValue(String(lentoSeconds))},${cleanValue(formatTime(lentoSeconds))},${cleanValue(String(paradasSeconds))},${cleanValue(formatTime(paradasSeconds))},${cleanValue(String(faltaSeconds))},${cleanValue(formatTime(faltaSeconds))}\n`;
+                const prepSec = durationToSeconds(row.prepair_time ?? row[11]) || 0;
+                const lentoSec = durationToSeconds(row.slow_time ?? row[12]) || 0;
+                const paradasSec = durationToSeconds(row.production_stops_time ?? row[13]) || 0;
+                const faltaSec = durationToSeconds(row.down_time ?? row[14]) || 0;
+
+                const totalImprodSec = prepSec + lentoSec + paradasSec + faltaSec;
+                const netoSec = Math.max(durSec - totalImprodSec, 0);
+
+                // Contar operadores
+                let numOps = 0;
+                if (Array.isArray(row.operator_names)) {
+                    numOps = row.operator_names.length;
+                } else if (row.operator_names) {
+                    numOps = 1;
+                }
+
+                // Convertir a horas
+                const durHoras = (durSec / 3600).toFixed(2);
+                const diffHoras = (diffSec / 3600).toFixed(2);
+                const prepHoras = (prepSec / 3600).toFixed(2);
+                const lentoHoras = (lentoSec / 3600).toFixed(2);
+                const paradasHoras = (paradasSec / 3600).toFixed(2);
+                const faltaHoras = (faltaSec / 3600).toFixed(2);
+                const netoHoras = (netoSec / 3600).toFixed(2);
+
+                // Porcentaje productivo
+                const pctProductivo = durSec > 0 ? ((netoSec / durSec) * 100).toFixed(2) : '0.00';
+
+                csv += `${count + 1},${oeeNum.toFixed(2)},${durHoras},${diffHoras},${prepHoras},${lentoHoras},${paradasHoras},${faltaHoras},${netoHoras},${pctProductivo},${numOps}\n`;
                 count++;
             });
 
-            const pageInfo = (typeof table.page?.info === 'function') ? table.page.info() : null;
-            const note = count >= maxRows
-                ? `Mostrando primeras ${maxRows} de ${pageInfo ? pageInfo.recordsDisplay : count} órdenes`
-                : `Total analizado: ${count} órdenes`;
+            let note = `${count} registros - columnas numéricas`;
+            if (skipped > 0) note += ` (${skipped} omitidos)`;
 
             return { metrics, csv, type: 'Análisis Total', note };
         }
 
-        async function startAiTask(fullPrompt, userPromptForDisplay) {
+        async function startAiTask(fullPrompt, userPromptForDisplay, agentType = 'supervisor') {
             try {
                 console.log('[AI] Iniciando análisis:', userPromptForDisplay);
                 console.log('[AI] Prompt length:', fullPrompt.length, 'caracteres');
-                
+                console.log('[AI] Agente seleccionado:', agentType);
+
                 // Mostrar modal de procesamiento
                 $('#aiProcessingTitle').text(userPromptForDisplay);
                 $('#aiProcessingStatus').html('<i class="fas fa-spinner fa-spin me-2"></i>Enviando solicitud a IA...');
                 const processingModal = new bootstrap.Modal(document.getElementById('aiProcessingModal'));
                 processingModal.show();
-                
+
                 const fd = new FormData();
                 fd.append('prompt', fullPrompt);
-                fd.append('agent', 'data_analysis');
+                fd.append('agent', agentType);
 
                 const resp = await fetch(`${AI_URL.replace(/\/$/, '')}/api/ollama-tasks`, {
                     method: 'POST',
@@ -2035,390 +2195,245 @@
             const analysisPrompts = {
                 'oee-general': {
                     title: 'Análisis General de OEE',
-                    prompt: `Eres un experto en manufactura lean y OEE (Overall Equipment Effectiveness). Analiza el rendimiento general de todas las líneas de producción.
+                    prompt: `Analiza el rendimiento OEE de las líneas de producción.
 
-FORMATO DE DATOS:
-Recibirás un CSV con las siguientes columnas (separadas por comas):
-- Linea: Nombre/ID de la línea de producción
-- OEE_Porcentaje: OEE calculado en % (número decimal o con símbolo %)
-- Duracion_Segundos: Duración total del periodo en segundos (número entero)
-- Duracion_Formato: Duración en formato HH:MM:SS
-- Disponibilidad_Porcentaje: % de disponibilidad operativa
-- Rendimiento_Porcentaje: % de rendimiento vs velocidad teórica
-- Calidad_Porcentaje: % de calidad (unidades buenas)
-
-IMPORTANTE: Procesa TODAS las filas del CSV para obtener una visión completa.
+COLUMNAS DEL CSV (todas numéricas):
+- ID: Identificador secuencial
+- OEE_Pct: OEE en porcentaje (0-100)
+- Duracion_Horas: Tiempo total en horas decimales
+- UPM_Real: Unidades por minuto reales
+- UPM_Teorico: Unidades por minuto teóricas
 
 ANÁLISIS REQUERIDO:
-1. **Ranking de líneas**: Top 5 mejores y Bottom 5 peores por OEE. Para cada una: Linea, OEE_Porcentaje, y desviación vs media general.
+1. Estadísticas de OEE_Pct: media | mediana | desviación estándar | mínimo | máximo
+2. Distribución: % registros con OEE >85 (excelente) | 70-85 (bueno) | <70 (mejorar)
+3. Top 5 con mejor OEE y Bottom 5 con peor OEE
+4. Correlación entre Duracion_Horas y OEE_Pct
+5. Eficiencia de velocidad: ratio UPM_Real/UPM_Teorico promedio
+6. Tres recomendaciones con impacto cuantificado
 
-2. **Estadísticas globales**:
-   - OEE promedio, mediana, desviación estándar
-   - % de líneas con OEE >85% (clase mundial), 70-85% (bueno), <70% (necesita mejora)
-
-3. **Análisis de componentes OEE**:
-   - Cuál componente (Disponibilidad, Rendimiento, Calidad) es el más débil en promedio
-   - Líneas con disponibilidad baja (<80%)
-   - Líneas con rendimiento bajo (<85%)
-   - Líneas con problemas de calidad (<95%)
-
-4. **Tendencia general**: Si los datos lo permiten, detecta si el OEE está mejorando, empeorando o estable.
-
-5. **Recomendaciones**: 3 acciones prioritarias con impacto cuantificado (ej: "Mejorar disponibilidad en línea X puede aumentar OEE +8%").
-
-FORMATO DE SALIDA:
-Estructura en secciones con tablas cuando sea apropiado. Usa números y porcentajes concretos.`
+Responde con tablas y números concretos.`
                 },
                 'stops': {
                     title: 'Análisis de Paradas',
-                    prompt: `Eres un especialista en análisis de downtime y optimización de flujo de producción. Identifica las causas principales de paradas y su impacto.
+                    prompt: `Analiza el tiempo improductivo por paradas en las líneas de producción.
 
-FORMATO DE DATOS:
-Recibirás un CSV con las siguientes columnas:
-- Linea: Nombre/ID de la línea
-- Paradas_Cantidad: Número de paradas ocurridas (número entero)
-- Paradas_Segundos: Tiempo total de paradas en segundos
-- Paradas_Formato: Tiempo en formato HH:MM:SS
-- Falta_Material_Segundos: Tiempo de paradas por falta de material
-- Falta_Material_Formato: En formato HH:MM:SS
-- OEE_Porcentaje: OEE resultante
-
-IMPORTANTE: Procesa TODAS las filas del CSV.
+COLUMNAS DEL CSV (todas numéricas):
+- ID: Identificador secuencial
+- Paradas_Horas: Tiempo total de paradas en horas decimales
+- Falta_Material_Horas: Tiempo por falta de material en horas
+- Preparacion_Horas: Tiempo de preparación en horas
+- Total_Improductivo_Horas: Suma total de tiempo improductivo
 
 ANÁLISIS REQUERIDO:
-1. **Top 5 líneas críticas**: Líneas con más tiempo de paradas. Para cada una: Linea, Paradas_Cantidad, Paradas_Formato, % del tiempo total.
+1. Estadísticas de Paradas_Horas: media | mediana | máximo | suma total
+2. Top 5 registros con mayor Total_Improductivo_Horas
+3. Composición del tiempo improductivo: % Paradas | % Falta_Material | % Preparacion
+4. Correlación entre Paradas_Horas y Falta_Material_Horas
+5. Registros donde Falta_Material_Horas > 50% del Total_Improductivo_Horas
+6. Tres acciones para reducir tiempo improductivo con impacto estimado
 
-2. **Análisis de frecuencia vs duración**:
-   - Líneas con muchas paradas cortas (alta cantidad, baja duración promedio)
-   - Líneas con pocas paradas largas (baja cantidad, alta duración promedio)
-   - MTBF (Mean Time Between Failures) estimado
-
-3. **Impacto de falta de material**:
-   - % del total de paradas atribuible a falta de material
-   - Líneas donde falta material >50% de paradas
-   - Impacto en OEE por falta de material
-
-4. **Correlación paradas-OEE**:
-   - ¿Las líneas con más paradas tienen peor OEE?
-   - Identificar líneas que recuperan bien a pesar de paradas
-
-5. **Acciones correctivas**: 3 medidas priorizadas por ROI estimado (ej: "Mejorar suministro de material en línea X reduciría paradas en 30%").
-
-FORMATO DE SALIDA:
-Usa tablas comparativas. Cuantifica todo en horas/minutos y porcentajes.`
+Responde con tablas y números concretos.`
                 },
                 'performance': {
                     title: 'Análisis de Rendimiento',
-                    prompt: `Eres un ingeniero de métodos y tiempos especializado en optimización de velocidad de líneas. Analiza las desviaciones de rendimiento.
+                    prompt: `Analiza el rendimiento y eficiencia de velocidad de las líneas.
 
-FORMATO DE DATOS:
-Recibirás un CSV con las siguientes columnas:
-- Linea: Nombre/ID de la línea
-- UPM_Real: Unidades por minuto reales (número decimal)
-- UPM_Teorico: Unidades por minuto teóricas/diseño (número decimal)
-- Rendimiento_Porcentaje: % de eficiencia de velocidad (UPM_Real/UPM_Teorico * 100)
-- Tiempo_Lento_Segundos: Tiempo operando bajo velocidad óptima
-- Tiempo_Lento_Formato: En formato HH:MM:SS
-- OEE_Porcentaje: OEE resultante
-
-IMPORTANTE: Procesa TODAS las filas del CSV.
+COLUMNAS DEL CSV (todas numéricas):
+- ID: Identificador secuencial
+- OEE_Pct: OEE en porcentaje (0-100)
+- Tiempo_Lento_Horas: Tiempo operando bajo velocidad óptima en horas
+- UPM_Real: Unidades por minuto reales
+- UPM_Teorico: Unidades por minuto teóricas
+- Eficiencia_Pct: Eficiencia de velocidad (UPM_Real/UPM_Teorico * 100)
 
 ANÁLISIS REQUERIDO:
-1. **Desviaciones de rendimiento**: Top 5 líneas con mayor gap entre UPM_Real y UPM_Teorico. Para cada una: Linea, UPM_Real, UPM_Teorico, Gap absoluto, Gap %.
+1. Estadísticas de Eficiencia_Pct: media | mediana | desviación estándar
+2. Distribución: % registros con Eficiencia >90 (óptimo) | 80-90 (aceptable) | <80 (crítico)
+3. Top 5 con mayor gap entre UPM_Teorico y UPM_Real
+4. Correlación entre Tiempo_Lento_Horas y Eficiencia_Pct
+5. Correlación entre OEE_Pct y Eficiencia_Pct
+6. Potencial de mejora: si todos operaran a UPM_Teorico
+7. Tres recomendaciones para mejorar velocidad
 
-2. **Distribución de rendimientos**:
-   - % de líneas con rendimiento >90% (óptimo)
-   - % de líneas entre 80-90% (aceptable)
-   - % de líneas <80% (crítico)
-
-3. **Análisis de tiempo lento**:
-   - Líneas con mayor Tiempo_Lento_Segundos
-   - Correlación entre tiempo lento y rendimiento
-   - Impacto estimado en producción (unidades perdidas)
-
-4. **Potencial de mejora**:
-   - Si todas las líneas operaran a UPM_Teorico, cuántas unidades adicionales/día
-   - Líneas con mayor potencial de mejora (alto gap + alto volumen)
-
-5. **Mejoras de velocidad**: 3 medidas priorizadas (ej: "Optimizar proceso en línea X puede aumentar UPM de 45 a 52, +15% rendimiento").
-
-FORMATO DE SALIDA:
-Usa tablas con comparaciones UPM Real vs Teórico. Cuantifica en unidades/minuto y unidades perdidas/día.`
+Responde con tablas y números concretos.`
                 },
                 'operators': {
                     title: 'Análisis de Operadores',
-                    prompt: `Eres un especialista en gestión de talento y productividad laboral. Analiza el impacto de operadores en el rendimiento de las líneas.
+                    prompt: `Analiza el impacto de operadores en el rendimiento de producción.
 
-FORMATO DE DATOS:
-Recibirás un CSV con las siguientes columnas:
-- Linea: Nombre/ID de la línea
-- Operadores: Lista de operadores asignados (puede ser nombres o códigos)
-- Turno: Turno de trabajo (ej: Mañana, Tarde, Noche)
-- Tiempo_Ganado_Segundos: Tiempo ganado sobre estándar (positivo=adelanto)
-- Tiempo_Ganado_Formato: En formato HH:MM:SS o +/-HH:MM:SS
-- Tiempo_Perdido_Segundos: Tiempo perdido vs estándar (positivo=retraso)
-- Tiempo_Perdido_Formato: En formato HH:MM:SS
-- OEE_Porcentaje: OEE logrado
-
-IMPORTANTE: Procesa TODAS las filas del CSV.
+COLUMNAS DEL CSV (todas numéricas):
+- ID: Identificador secuencial
+- OEE_Pct: OEE en porcentaje (0-100)
+- Duracion_Horas: Tiempo total en horas decimales
+- Tiempo_Ganado_Horas: Tiempo ganado sobre estándar (positivo = adelanto)
+- Tiempo_Perdido_Horas: Tiempo perdido vs estándar
+- Balance_Horas: Tiempo_Ganado - Tiempo_Perdido (positivo = eficiente)
 
 ANÁLISIS REQUERIDO:
-1. **Rendimiento por equipo**: Top 5 equipos con mejor balance Tiempo_Ganado vs Tiempo_Perdido. Incluye: Linea, Operadores, Turno, Balance neto.
+1. Estadísticas de Balance_Horas: media | mediana | suma total
+2. Distribución: % registros con Balance >0 (eficientes) | Balance <0 (ineficientes)
+3. Top 5 con mejor Balance_Horas y Bottom 5 con peor Balance
+4. Correlación entre Balance_Horas y OEE_Pct
+5. Correlación entre Duracion_Horas y Balance_Horas
+6. Registros donde Tiempo_Perdido_Horas > Tiempo_Ganado_Horas
+7. Tres recomendaciones para mejorar productividad
 
-2. **Patrones por turno**:
-   - Turno con mejor desempeño promedio
-   - Turno con más tiempo perdido
-   - Diferencia entre mejor y peor turno
-
-3. **Análisis de consistencia**:
-   - Operadores/equipos con alta variabilidad (unas veces bien, otras mal)
-   - Operadores/equipos consistentemente buenos
-   - Operadores/equipos que necesitan soporte
-
-4. **Impacto en OEE**:
-   - Correlación entre tiempo ganado/perdido y OEE
-   - Líneas donde el factor humano es crítico (alta variación con diferentes operadores)
-
-5. **Recomendaciones de gestión**: 3 acciones priorizadas (ej: "Capacitar operador Y en línea Z puede reducir tiempo perdido en 40%", "Replicar mejores prácticas de turno X").
-
-FORMATO DE SALIDA:
-Usa tablas por turno y operador. Respeta la privacidad pero sé específico en identificar patrones accionables.`
+Responde con tablas y números concretos.`
                 },
                 'comparison': {
                     title: 'Comparativa Alto/Bajo',
-                    prompt: `Eres un analista de benchmarking interno. Compara las líneas de mejor desempeño vs las de peor desempeño para identificar factores diferenciadores.
+                    prompt: `Compara las 10 mejores líneas (TOP) vs las 10 peores (BOTTOM) por OEE.
 
-FORMATO DE DATOS:
-Recibirás un CSV con las siguientes columnas:
-- Tipo: "TOP" para las 10 mejores líneas, "BOTTOM" para las 10 peores
-- Linea: Nombre/ID de la línea
-- OEE_Porcentaje: OEE resultante
-- Disponibilidad_Porcentaje, Rendimiento_Porcentaje, Calidad_Porcentaje: Componentes del OEE
-- Duracion_Segundos, Duracion_Formato: Tiempo total analizado
-- Paradas_Segundos, Tiempo_Lento_Segundos: Métricas de ineficiencia
-
-IMPORTANTE: Procesa las 20 filas completas (10 TOP + 10 BOTTOM).
+COLUMNAS DEL CSV (todas numéricas):
+- ID: Identificador secuencial
+- Es_Top: 1 = Top 10 mejores | 0 = Bottom 10 peores
+- OEE_Pct: OEE en porcentaje (0-100)
+- Duracion_Horas: Tiempo total en horas decimales
+- Preparacion_Horas: Tiempo de preparación
+- Lento_Horas: Tiempo operando lento
+- Paradas_Horas: Tiempo de paradas
+- Falta_Material_Horas: Tiempo por falta de material
+- Total_Improductivo_Horas: Suma de tiempo improductivo
 
 ANÁLISIS REQUERIDO:
-1. **Métricas del grupo TOP (10 mejores)**:
-   - OEE promedio y rango (min-max)
-   - Disponibilidad, Rendimiento, Calidad promedio
-   - Tiempo de paradas promedio
-   - Tiempo lento promedio
+1. Grupo TOP (Es_Top=1): media OEE_Pct | media Total_Improductivo_Horas
+2. Grupo BOTTOM (Es_Top=0): media OEE_Pct | media Total_Improductivo_Horas
+3. Gap entre grupos: diferencia en OEE_Pct y en horas improductivas
+4. Factor diferenciador principal: ¿Paradas | Lento | Falta_Material | Preparacion?
+5. Correlación entre Total_Improductivo_Horas y OEE_Pct
+6. Tres acciones para mejorar grupo BOTTOM con impacto estimado
 
-2. **Métricas del grupo BOTTOM (10 peores)**:
-   - OEE promedio y rango
-   - Disponibilidad, Rendimiento, Calidad promedio
-   - Tiempo de paradas promedio
-   - Tiempo lento promedio
-
-3. **Diferencias cuantificadas**:
-   - Gap en OEE: TOP vs BOTTOM (en puntos porcentuales)
-   - Gap en cada componente (Disponibilidad, Rendimiento, Calidad)
-   - Ratio: OEE BOTTOM / OEE TOP (ej: "1.5x peor")
-
-4. **Factores diferenciadores (3 clave)**:
-   - ¿Qué hace diferente a las TOP? (ej: menos paradas, mejor velocidad, etc.)
-   - ¿Cuál es el problema principal de las BOTTOM?
-   - ¿Hay patrones comunes? (ej: todas las TOP tienen bajo tiempo lento)
-
-5. **Plan de acción**: 3 pasos concretos para llevar líneas BOTTOM al nivel TOP, con impacto estimado en puntos de OEE.
-
-FORMATO DE SALIDA:
-Usa formato comparativo (Tabla TOP vs BOTTOM). Incluye nombres de líneas específicas.`
+Responde con tabla comparativa TOP vs BOTTOM.`
                 },
                 'availability-performance': {
                     title: 'Disponibilidad vs Rendimiento',
-                    prompt: `Eres un analista de TPM (Total Productive Maintenance). Analiza la relación entre disponibilidad operativa y rendimiento para identificar si el problema es tiempo de operación o eficiencia durante la operación.
+                    prompt: `Analiza la relación entre disponibilidad operativa y rendimiento.
 
-FORMATO DE DATOS:
-Recibirás un CSV con las siguientes columnas:
-- Linea: Nombre/ID de la línea
-- OEE_Porcentaje: OEE resultante
-- Disponibilidad_Porcentaje: % de tiempo disponible para producir
-- Rendimiento_Porcentaje: % de eficiencia durante operación
-- Duracion_Segundos, Duracion_Formato: Tiempo total del periodo
-- Tiempo_Disponible_Segundos, Tiempo_Disponible_Formato: Tiempo efectivamente disponible
-- Tiempo_Incidencias_Segundos, Tiempo_Incidencias_Formato: Tiempo perdido en incidencias
-
-IMPORTANTE: Procesa TODAS las filas del CSV.
+COLUMNAS DEL CSV (todas numéricas):
+- ID: Identificador secuencial
+- OEE_Pct: OEE en porcentaje (0-100)
+- Duracion_Horas: Tiempo total en horas decimales
+- Disponible_Horas: Tiempo efectivamente disponible
+- Incidencias_Horas: Tiempo perdido en incidencias
+- Pct_Disponibilidad: % de tiempo disponible (Disponible/Duracion*100)
+- Pct_Incidencias: % de tiempo en incidencias
 
 ANÁLISIS REQUERIDO:
-1. **Clasificación de líneas**:
-   - Alta disponibilidad (>85%) + Alto rendimiento (>85%) = Clase mundial
-   - Alta disponibilidad + Bajo rendimiento = Problema de velocidad/eficiencia
-   - Baja disponibilidad + Alto rendimiento = Problema de paradas/incidencias
-   - Baja disponibilidad + Bajo rendimiento = Crítico, múltiples problemas
+1. Estadísticas de Pct_Disponibilidad: media | mediana | mínimo | máximo
+2. Clasificación: % registros con Pct_Disponibilidad >85 (alta) | 70-85 (media) | <70 (baja)
+3. Correlación entre Pct_Disponibilidad y OEE_Pct
+4. Correlación entre Incidencias_Horas y OEE_Pct
+5. Top 5 con mayor Pct_Incidencias
+6. Registros con alta disponibilidad pero bajo OEE (problema de rendimiento)
+7. Tres acciones para mejorar disponibilidad con impacto estimado
 
-2. **Top 5 líneas por impacto de incidencias**:
-   - Líneas donde Tiempo_Incidencias reduce más el Tiempo_Disponible
-   - % de tiempo total perdido en incidencias
-   - Impacto estimado en OEE
-
-3. **Análisis de correlación**:
-   - ¿Hay correlación entre disponibilidad y rendimiento?
-   - Líneas donde mejorar disponibilidad tendría mayor impacto
-   - Líneas donde mejorar rendimiento tendría mayor impacto
-
-4. **Desbalances críticos**:
-   - Líneas con alto rendimiento pero baja disponibilidad (desperdicio de capacidad)
-   - Líneas con alta disponibilidad pero bajo rendimiento (operación ineficiente)
-
-5. **Acciones priorizadas**: 3 medidas para equilibrar disponibilidad y rendimiento, con impacto estimado en puntos de OEE.
-
-FORMATO DE SALIDA:
-Usa matriz 2x2 (Disponibilidad vs Rendimiento) para clasificar líneas. Cuantifica todo en % y tiempos.`
+Responde con tablas y números concretos.`
                 },
                 'shift-variations': {
                     title: 'Variaciones por Turno/Operador',
-                    prompt: `Eres un especialista en análisis de turnos y variabilidad operativa. Identifica diferencias de rendimiento entre turnos para encontrar mejores prácticas y áreas de mejora.
+                    prompt: `Analiza las variaciones de rendimiento por turno y operadores.
 
-FORMATO DE DATOS:
-Recibirás un CSV con las siguientes columnas:
-- Linea, Turno, Operadores
-- OEE_Porcentaje
-- Duracion_Segundos, Duracion_Formato
-- Tiempo_Lento_Segundos, Tiempo_Lento_Formato
-- Tiempo_Ganado_Segundos, Tiempo_Ganado_Formato
-
-IMPORTANTE: Procesa TODAS las filas del CSV.
+COLUMNAS DEL CSV (todas numéricas):
+- ID: Identificador secuencial
+- Turno_ID: Identificador del turno (número)
+- OEE_Pct: OEE en porcentaje (0-100)
+- Duracion_Horas: Tiempo total en horas decimales
+- Lento_Horas: Tiempo operando lento
+- Ganado_Horas: Tiempo ganado sobre estándar
+- Num_Operadores: Cantidad de operadores asignados
+- Eficiencia_Tiempo: % eficiencia ((Duracion-Lento)/Duracion*100)
 
 ANÁLISIS REQUERIDO:
-1. **Ranking por turno**: OEE promedio por turno (Mañana, Tarde, Noche). Mejor vs peor turno con gap cuantificado.
+1. Estadísticas por Turno_ID: media OEE_Pct | media Eficiencia_Tiempo
+2. Variabilidad entre turnos: desviación estándar de OEE_Pct por turno
+3. Correlación entre Num_Operadores y OEE_Pct
+4. Correlación entre Lento_Horas y Eficiencia_Tiempo
+5. Top 5 registros con mejor Eficiencia_Tiempo
+6. Registros donde Lento_Horas > 20% de Duracion_Horas
+7. Tres acciones para reducir variabilidad entre turnos
 
-2. **Top 5 combinaciones exitosas**: Línea + Turno + Operadores con mejor OEE y menor tiempo lento.
-
-3. **Identificación de patrones**:
-   - Turnos con consistentemente más tiempo ganado
-   - Turnos con más tiempo lento
-   - Líneas donde la variación entre turnos es mayor (alta dependencia del factor humano)
-
-4. **Análisis de causas**:
-   - ¿El tiempo lento es por fatiga (peor en turnos largos)?
-   - ¿Hay efecto aprendizaje (mejora en turnos específicos)?
-   - ¿Hay equipos específicos que elevan o bajan el promedio?
-
-5. **Acciones de homogeneización**: 3 recomendaciones para reducir variabilidad entre turnos en al menos 20%.
-
-FORMATO DE SALIDA:
-Usa tablas por turno. Identifica mejores prácticas específicas para replicar.`
+Responde con tablas por turno y números concretos.`
                 },
                 'idle-time': {
                     title: 'Consumo de Tiempo Improductivo',
-                    prompt: `Eres un especialista en análisis de desperdicios y optimización lean. Evalúa cómo se distribuye el tiempo improductivo (muda) en las líneas.
+                    prompt: `Analiza la distribución del tiempo improductivo en las líneas.
 
-FORMATO DE DATOS:
-Recibirás un CSV con las siguientes columnas:
-- Linea
-- OEE_Porcentaje
-- Tiempo_Lento_Segundos, Tiempo_Lento_Formato
-- Paradas_Segundos, Paradas_Formato
-- Falta_Material_Segundos, Falta_Material_Formato
-- Tiempo_Neto_Produccion_Segundos, Tiempo_Neto_Produccion_Formato
-
-IMPORTANTE: Procesa TODAS las filas del CSV.
+COLUMNAS DEL CSV (todas numéricas):
+- ID: Identificador secuencial
+- OEE_Pct: OEE en porcentaje (0-100)
+- Lento_Horas: Tiempo operando lento
+- Paradas_Horas: Tiempo de paradas
+- Falta_Material_Horas: Tiempo por falta de material
+- Neto_Horas: Tiempo neto productivo
+- Total_Improductivo_Horas: Suma de tiempo improductivo
+- Pct_Improductivo: % de tiempo improductivo sobre total
 
 ANÁLISIS REQUERIDO:
-1. **Top 5 líneas con mayor tiempo improductivo total**: Suma de Tiempo_Lento + Paradas + Falta_Material. Para cada una: Linea, Total improductivo, % del tiempo total.
+1. Estadísticas de Total_Improductivo_Horas: media | suma total | máximo
+2. Composición promedio: % Lento | % Paradas | % Falta_Material
+3. Top 5 registros con mayor Pct_Improductivo
+4. Clasificación por causa dominante: donde Lento | Paradas | Falta_Material > 50%
+5. Correlación entre Total_Improductivo_Horas y OEE_Pct
+6. Ratio Neto/Improductivo: mejor y peor caso
+7. Tres acciones para recuperar horas productivas
 
-2. **Análisis de composición**:
-   Para cada línea, calcular % de cada tipo:
-   - % Tiempo lento vs total improductivo
-   - % Paradas vs total improductivo
-   - % Falta material vs total improductivo
-
-3. **Clasificación por causa dominante**:
-   - Líneas donde tiempo lento >50% del improductivo (problema de velocidad)
-   - Líneas donde paradas >50% del improductivo (problema de confiabilidad)
-   - Líneas donde falta material >50% del improductivo (problema de suministro)
-
-4. **Ratio productivo/improductivo**:
-   - Calcular Tiempo_Neto_Produccion / Tiempo_Improductivo_Total para cada línea
-   - Benchmark: mejor y peor ratio
-
-5. **Iniciativas de recuperación**: 3 acciones priorizadas por impacto potencial en horas productivas recuperadas/día.
-
-FORMATO DE SALIDA:
-Usa gráficos de composición (%). Cuantifica oportunidad en horas/día recuperables.`
+Responde con tablas y números concretos.`
                 },
                 'shift-profitability': {
                     title: 'Rentabilidad por Turno',
-                    prompt: `Eres un analista financiero de operaciones. Evalúa la rentabilidad y eficiencia operativa por turno para identificar los turnos más y menos rentables.
+                    prompt: `Analiza la rentabilidad y eficiencia por turno de producción.
 
-FORMATO DE DATOS:
-Recibirás un CSV con las siguientes columnas:
-- Linea
-- Turno_Id, Turno, Inicio_Turno, Fin_Turno
-- Ordenes, OEE_Promedio
-- Duracion_Total_Segundos, Duracion_Total_Formato
-- Improductivo_Segundos, Improductivo_Formato (suma lento+paradas+falta material+preparación)
-- Neto_Segundos, Neto_Formato (Duracion_Total - Improductivo)
-- Lento_Segundos, Paradas_Segundos, Falta_Material_Segundos, Preparacion_Segundos
-- Kg_Turno_Main, Cajas_Turno_Main
-
-IMPORTANTE: Procesa TODAS las filas del CSV.
+COLUMNAS DEL CSV (todas numéricas):
+- ID: Identificador secuencial del grupo
+- Turno_ID: Identificador del turno
+- Ordenes: Cantidad de órdenes procesadas
+- OEE_Promedio_Pct: OEE promedio del turno (0-100)
+- Duracion_Horas: Tiempo total del turno en horas
+- Improductivo_Horas: Tiempo improductivo total
+- Neto_Horas: Tiempo neto productivo
+- Lento_Horas | Paradas_Horas | Falta_Material_Horas | Preparacion_Horas: Desglose improductivo
+- Kg_Total: Kilogramos producidos
+- Cajas_Total: Cajas producidas
+- Pct_Productivo: % de tiempo productivo
 
 ANÁLISIS REQUERIDO:
-1. **Ranking de rentabilidad por turno**: Para cada línea, ordenar turnos por:
-   - Mayor Neto_Segundos (tiempo productivo neto)
-   - Mayor OEE_Promedio
-   - Mayor output (Kg_Turno_Main, Cajas_Turno_Main)
+1. Ranking por Turno_ID: media OEE_Promedio_Pct | media Pct_Productivo | suma Kg_Total
+2. Productividad: Kg_Total / Neto_Horas por turno
+3. Eficiencia: turno con mejor y peor Pct_Productivo
+4. Composición improductivo por turno: % Lento | % Paradas | % Falta_Material | % Preparacion
+5. Correlación entre Ordenes y OEE_Promedio_Pct
+6. Gap de productividad en Kg/hora entre mejor y peor turno
+7. Tres acciones para mejorar rentabilidad
 
-2. **Análisis de tiempo improductivo**:
-   - % de Improductivo_Segundos vs Duracion_Total por turno
-   - Desglose por causa dominante en cada turno (Lento/Paradas/Falta Material/Preparacion)
-
-3. **Eficiencia comparativa**:
-   - Turno más eficiente: mayor output con menor tiempo improductivo
-   - Turno menos eficiente: menor output con mayor tiempo improductivo
-   - Gap de productividad en Kg/hora entre mejor y peor turno
-
-4. **Patrones por línea**:
-   - Líneas donde hay gran variación entre turnos (>30% diferencia en OEE)
-   - Líneas estables entre turnos (<10% variación)
-
-5. **Acciones para mejorar rentabilidad**: 3 medidas priorizadas por línea y turno, con impacto estimado en % de mejora de tiempo neto y output.
-
-FORMATO DE SALIDA:
-Usa tablas comparativas por turno. Cuantifica en horas netas, Kg/h, y % de utilización.`
+Responde con tablas comparativas por turno.`
                 },
                 'full': {
                     title: 'Análisis Total (CSV extendido)',
-                    prompt: `Eres un director de operaciones. Genera un análisis ejecutivo integral de todas las líneas de producción, identificando tendencias globales, riesgos críticos y oportunidades estratégicas.
+                    prompt: `Genera un análisis ejecutivo integral de todas las líneas de producción.
 
-FORMATO DE DATOS:
-Recibirás un CSV extendido con todas las columnas disponibles del sistema.
-
-IMPORTANTE: Procesa TODAS las filas del CSV para obtener una visión holística.
+COLUMNAS DEL CSV (todas numéricas):
+- ID: Identificador secuencial
+- OEE_Pct: OEE en porcentaje (0-100)
+- Duracion_Horas: Tiempo total en horas
+- Diferencia_Horas: Diferencia vs tiempo teórico
+- Preparacion_Horas | Lento_Horas | Paradas_Horas | Falta_Material_Horas: Desglose improductivo
+- Neto_Horas: Tiempo neto productivo
+- Pct_Productivo: % de tiempo productivo
+- Num_Operadores: Cantidad de operadores
 
 ANÁLISIS REQUERIDO:
-1. **Resumen Ejecutivo** (3-4 párrafos):
-   - Estado general del OEE: promedio, tendencia, benchmark
-   - Principal hallazgo crítico
-   - Principal oportunidad de mejora cuantificada
+1. Resumen ejecutivo: OEE promedio | % tiempo productivo | principal problema detectado
+2. Estadísticas de OEE_Pct: media | mediana | desviación estándar | percentil 90
+3. Distribución OEE: % registros >85 | 70-85 | <70
+4. Composición tiempo improductivo: % Preparacion | % Lento | % Paradas | % Falta_Material
+5. Correlación entre Num_Operadores y OEE_Pct
+6. Top 5 registros con mejor OEE y Bottom 5 con peor OEE
+7. Tres riesgos críticos identificados con magnitud
+8. Tres oportunidades de mejora con impacto estimado en puntos de OEE
+9. Plan de acción: 3 acciones prioritarias
 
-2. **Métricas clave globales**:
-   - OEE: media, mediana, P90, P95
-   - Disponibilidad, Rendimiento, Calidad: promedios
-   - Tiempo improductivo total: horas/día perdidas
-   - Top 3 líneas por volumen y su OEE
-
-3. **Identificación de 5 riesgos críticos**:
-   Para cada uno:
-   - Dónde ocurre (línea, turno)
-   - Magnitud del problema
-   - % de líneas o tiempo afectado
-   - Impacto estimado en el OEE global
-
-4. **Identificación de 5 oportunidades estratégicas**:
-   - Quick wins (implementación <1 mes, impacto medio)
-   - Iniciativas estratégicas (1-3 meses, alto impacto)
-   - Para cada una: impacto esperado en puntos de OEE
-
-5. **Plan de acción inmediato**: 3 acciones para implementar esta semana, con responsable sugerido y métrica de éxito.
-
-FORMATO DE SALIDA:
-Estructura tipo informe ejecutivo con secciones claras. Usa datos cuantificados y comparaciones. Prioriza insights accionables.`
+Responde con estructura de informe ejecutivo y números concretos.`
                 }
             };
 
@@ -2508,25 +2523,28 @@ Estructura tipo informe ejecutivo con secciones claras. Usa datos cuantificados 
             // Click en botón de enviar después de editar
             $('#btn-ai-send-edited').on('click', function() {
                 if (!currentPromptData) return;
-                
+
                 // Obtener el prompt editado
                 const editedPrompt = $('#aiPromptEdit').val().trim();
-                
+
                 if (!editedPrompt) {
                     alert('El prompt no puede estar vacío');
                     return;
                 }
-                
+
+                // Obtener el agente seleccionado
+                const selectedAgent = $('input[name="aiAgentType"]:checked').val() || 'supervisor';
+
                 // Deshabilitar botón y mostrar spinner
                 const $btn = $(this);
                 $btn.prop('disabled', true);
                 $btn.html('<i class="fas fa-spinner fa-spin me-1"></i>Enviando...');
-                
+
                 // Cerrar modal de edición
                 bootstrap.Modal.getInstance(document.getElementById('aiPromptEditModal')).hide();
-                
-                // Enviar a IA
-                startAiTask(editedPrompt, currentPromptData.title).finally(() => {
+
+                // Enviar a IA con el agente seleccionado
+                startAiTask(editedPrompt, currentPromptData.title, selectedAgent).finally(() => {
                     // Restaurar botón
                     $btn.prop('disabled', false);
                     $btn.html('<i class="fas fa-paper-plane me-1"></i>Enviar a IA');
@@ -2544,6 +2562,29 @@ Estructura tipo informe ejecutivo con secciones claras. Usa datos cuantificados 
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">@lang('Tipo de Agente IA'):</label>
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <div class="form-check border rounded p-3 h-100" style="cursor: pointer;" onclick="$('#agentSupervisor').prop('checked', true);">
+                                    <input class="form-check-input" type="radio" name="aiAgentType" id="agentSupervisor" value="supervisor" checked>
+                                    <label class="form-check-label w-100" for="agentSupervisor" style="cursor: pointer;">
+                                        <span class="fw-bold text-primary"><i class="fas fa-user-tie me-1"></i>Supervisor</span>
+                                        <small class="text-muted d-block mt-1">Respuestas más descriptivas y elaboradas. Ideal para informes ejecutivos.</small>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check border rounded p-3 h-100" style="cursor: pointer;" onclick="$('#agentDataAnalysis').prop('checked', true);">
+                                    <input class="form-check-input" type="radio" name="aiAgentType" id="agentDataAnalysis" value="data_analysis">
+                                    <label class="form-check-label w-100" for="agentDataAnalysis" style="cursor: pointer;">
+                                        <span class="fw-bold text-success"><i class="fas fa-chart-line me-1"></i>Data Analysis</span>
+                                        <small class="text-muted d-block mt-1">Respuestas técnicas y estrictas. Ideal para análisis estadístico.</small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <label class="form-label fw-bold">Prompt a enviar (puedes editarlo):</label>
                     <textarea class="form-control font-monospace" id="aiPromptEdit" rows="15" style="font-size: 0.9rem;"></textarea>
                     <small class="text-muted mt-2 d-block">

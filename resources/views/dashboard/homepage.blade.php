@@ -79,8 +79,7 @@
                                 <h6>{{ __('Pending Orders') }} <span class="kpi-trend"></span></h6>
                                 <h3><span class="kpi-value" data-field="total">{{ $originalOrdersStats['total'] }}</span> <small style="font-size: 0.5em;">{{ __('pending') }}</small></h3>
                                 <small class="text-white-50">
-                                    <span class="kpi-in-progress">{{ $originalOrdersStats['in_progress'] }}</span> {{ __('in progress') }} |
-                                    <span class="kpi-not-started">{{ $originalOrdersStats['not_started'] }}</span> {{ __('not started') }}
+                                    <span class="kpi-in-progress">{{ $originalOrdersStats['in_progress'] }}</span> {{ __('in progress') }}
                                 </small>
                                 <div class="kpi-sparkline mt-2"></div>
                             </div>

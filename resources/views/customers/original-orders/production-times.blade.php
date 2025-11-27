@@ -1,30 +1,27 @@
 @extends('layouts.admin')
 
-@section('title', __('Tiempos de fabricación'))
+@section('title', __('Lead Time'))
 
 @section('breadcrumb')
     <ul class="breadcrumb">
         <li class="breadcrumb-item"><a href="{{ route('home') }}">{{ __('Dashboard') }}</a></li>
         <li class="breadcrumb-item"><a href="{{ route('customers.index') }}">{{ __('Customers') }}</a></li>
-        <li class="breadcrumb-item active">{{ __('Tiempos de fabricación') }}</li>
+        <li class="breadcrumb-item active">{{ __('Lead Time') }}</li>
     </ul>
 @endsection
 
 @section('content')
-<div class="container-fluid">
-    <div class="row mt-3">
-        <div class="col-12">
-            <div class="card border-0 shadow-sm mb-4" style="border-left: 4px solid #0d6efd !important;">
-                <div class="card-header bg-gradient" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#filters-collapse" aria-expanded="false" aria-controls="filters-collapse">
+<div class="card border-0 shadow-sm mb-4" style="border-left: 4px solid #0d6efd !important;">
+    <div class="card-header bg-gradient" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#filters-collapse" aria-expanded="false" aria-controls="filters-collapse">
                     <div class="d-flex justify-content-between align-items-center">
                         <div class="flex-grow-1">
-                            <h5 class="mb-0 text-white">
+                            <h5 class="mb-0 text-dark">
                                 <i class="fas fa-sliders-h me-2"></i>{{ __('Filtros de búsqueda') }}
                             </h5>
                             <div id="filter-summary" class="mt-1">
-                                <small class="text-white-50">
-                                    <i class="fas fa-calendar-alt me-1"></i>
-                                    <span id="filter-summary-text">{{ __('Click para configurar filtros de análisis') }}</span>
+                                <small class="text-dark">
+                                    <i class="fas fa-hand-pointer me-1"></i>
+                                    <span id="filter-summary-text">{{ __('Click para modificar filtros') }}</span>
                                 </small>
                             </div>
                         </div>
@@ -469,8 +466,8 @@
                         </div>
                     </div>
                 </div>
-                <div class="card-body p-4">
-                    <div class="table-responsive">
+                <div class="card-body">
+                    <div class="table-responsive p-3">
                         <table class="table table-striped table-hover w-100 mb-0" id="production-times-table">
                             <thead class="table-light">
                                 <tr>
@@ -585,10 +582,6 @@
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
-</div>
 @endsection
 
 @push('styles')
@@ -952,9 +945,6 @@
             box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
         }
 
-        .dataTables_wrapper {
-            padding: 15px !important;
-        }
 
         /* Animaciones para el botón PRO de IA */
         @keyframes sparkle {
@@ -2818,17 +2808,15 @@
 
             function durationToSeconds(value) {
                 const raw = safeValue(value, '');
-                if (!raw) return '';
-                if (/^-?\d+$/.test(raw)) return raw;
+                if (!raw) return 0;
+                if (/^-?\d+$/.test(raw)) return parseInt(raw, 10);
                 const match = raw.match(/^(-)?(\d{1,3}):(\d{2}):(\d{2})$/);
-                if (!match) return '';
+                if (!match) return 0;
                 const sign = match[1] === '-' ? -1 : 1;
-                const hours = parseInt(match[2], 10);
-                const minutes = parseInt(match[3], 10);
-                const seconds = parseInt(match[4], 10);
-                if (Number.isNaN(hours) || Number.isNaN(minutes) || Number.isNaN(seconds)) return '';
-                const total = sign * (hours * 3600 + minutes * 60 + seconds);
-                return String(total);
+                const hours = parseInt(match[2], 10) || 0;
+                const minutes = parseInt(match[3], 10) || 0;
+                const seconds = parseInt(match[4], 10) || 0;
+                return sign * (hours * 3600 + minutes * 60 + seconds);
             }
 
             function formatSignedSeconds(value) {
@@ -2844,6 +2832,138 @@
                 return `${prefix}${formatTime(Math.abs(parsed))}`;
             }
 
+            // ============================================
+            // VALIDACIÓN DE DATOS PARA IA
+            // ============================================
+
+            /**
+             * Verifica si una fila tiene los datos mínimos requeridos para un análisis específico
+             * Solo se incluyen filas con datos completos y válidos
+             */
+            function isValidRowForAnalysis(row, requiredFields) {
+                for (const field of requiredFields) {
+                    const value = row[field];
+                    // Rechazar si es null, undefined, vacío, o fecha inválida
+                    if (value === null || value === undefined) return false;
+                    if (typeof value === 'string') {
+                        const trimmed = value.trim();
+                        if (!trimmed || trimmed === '-' || trimmed === '--' ||
+                            trimmed === '0000-00-00' || trimmed === '0000-00-00 00:00:00' ||
+                            trimmed.toLowerCase() === 'null') return false;
+                    }
+                    // Rechazar números inválidos o cero en campos de tiempo
+                    if (field.includes('_seconds') && (typeof value !== 'number' || value <= 0)) return false;
+                }
+                return true;
+            }
+
+            /**
+             * Formatea las métricas con nombres legibles para la IA
+             */
+            function formatMetricsForAI(metrics, analysisType) {
+                const labels = {
+                    // Comunes
+                    ordersTotal: 'Total de órdenes analizadas',
+                    dateRange: 'Período analizado',
+                    processesTotal: 'Total de procesos',
+                    // ERP → Created
+                    avgErpToCreated: 'Tiempo promedio (pedido → lanzamiento)',
+                    medianErpToCreated: 'Tiempo mediana (pedido → lanzamiento)',
+                    avgErpToCreatedWorkingDays: 'Promedio días laborables',
+                    avgErpToCreatedNonWorkingDays: 'Promedio días no laborables',
+                    medianErpToCreatedWorkingDays: 'Mediana días laborables',
+                    medianErpToCreatedNonWorkingDays: 'Mediana días no laborables',
+                    // Created → Finished
+                    avgCreatedToFinish: 'Tiempo promedio ciclo producción',
+                    medianCreatedToFinish: 'Tiempo mediana ciclo producción',
+                    // Delivery
+                    avgFinishToDelivery: 'Tiempo promedio (fin → entrega)',
+                    deliveriesDelayed: 'Entregas con retraso',
+                    slaOnTime: 'Cumplimiento SLA (a tiempo / total)',
+                    slaRate: 'Tasa de cumplimiento SLA',
+                    deliveryReference: 'Fecha de referencia usada',
+                    // Gaps
+                    avgGap: 'Tiempo promedio de espera entre procesos',
+                    // Otros
+                    avgErpToFinish: 'Tiempo promedio total (pedido → fin)',
+                    delayedTotal: 'Total de órdenes retrasadas',
+                    worstType: 'Tipo de producto con más retrasos',
+                    worstAvgDelay: 'Retraso promedio del peor tipo',
+                    ordersOverThreshold: 'Órdenes sobre umbral de espera',
+                    threshold: 'Umbral de alerta'
+                };
+
+                let formatted = '';
+                for (const [key, value] of Object.entries(metrics)) {
+                    if (key === 'dateRange') continue; // Se muestra aparte como PERÍODO
+                    const label = labels[key] || key;
+                    formatted += `- ${label}: ${value}\n`;
+                }
+                return formatted;
+            }
+
+            // ============================================
+            // DICCIONARIO DE CAMPOS PARA LA IA
+            // ============================================
+            const fieldDictionaries = {
+                'erp-to-created': `
+DICCIONARIO DE CAMPOS:
+- ID: Identificador numérico secuencial (1, 2, 3...)
+- Cliente: Nombre del cliente que realizó el pedido (usar para agrupar por cliente)
+- Tiempo_Horas: Tiempo transcurrido en horas decimales (ej: 2.50 = 2h 30min)
+- Dias_Laborables: Días hábiles (lunes-viernes, excluyendo festivos)
+- Dias_No_Laborables: Fines de semana y festivos
+- Dias_Totales: Total de días calendario`,
+
+                'created-to-finished': `
+DICCIONARIO DE CAMPOS:
+- ID: Identificador numérico secuencial (1, 2, 3...)
+- Cliente: Nombre del cliente (usar para agrupar por cliente)
+- Tiempo_Horas: Duración del ciclo de producción en horas decimales
+- Dias_Laborables: Días hábiles de producción
+- Dias_No_Laborables: Días no laborables (fines de semana y festivos)`,
+
+                'finish-to-delivery': `
+DICCIONARIO DE CAMPOS:
+- ID: Identificador numérico secuencial (1, 2, 3...)
+- Cliente: Nombre del cliente (usar para agrupar por cliente)
+- Tiempo_Entrega_Horas: Tiempo desde fin de producción hasta entrega en horas decimales
+- Retraso_Horas: Diferencia vs fecha planificada en horas (positivo=tarde, negativo=adelantado)
+- Es_Retraso: 1 si hay retraso, 0 si está a tiempo o adelantado`,
+
+                'process-gaps': `
+DICCIONARIO DE CAMPOS:
+- ID: Identificador de la orden
+- Proceso: Código y nombre del proceso de fabricación
+- Espera_Horas: Tiempo de espera ANTES de este proceso (tiempo no productivo)
+- Duracion_Horas: Tiempo de ejecución del proceso (tiempo productivo)`,
+
+                'by-client': `
+DICCIONARIO DE CAMPOS:
+- Cliente: Nombre del cliente
+- Num_Ordenes: Cantidad de órdenes procesadas
+- Tiempo_Total_Promedio: Lead time promedio (desde pedido hasta fin producción)
+- Tiempo_Produccion_Promedio: Tiempo promedio solo en producción`,
+
+                'bottleneck-analysis': `
+DICCIONARIO DE CAMPOS:
+- Proceso: Código y nombre del proceso
+- Ocurrencias: Veces que aparece este proceso
+- Tiempo_Promedio: Duración promedio del proceso
+- Espera_Promedio: Tiempo de espera promedio antes del proceso
+- Carga_Total: Suma de todos los tiempos de este proceso`,
+
+                'predictive-delays': `
+DICCIONARIO DE CAMPOS:
+- ID: Identificador de la orden
+- Cliente: Nombre del cliente
+- Dias_En_Proceso: Días desde que inició la producción
+- Fecha_Compromiso: Fecha de entrega prometida
+- Dias_Restantes: Días hasta la fecha compromiso (negativo = vencido)
+- Procesos_Pendientes: Número de procesos sin completar
+- Riesgo: Nivel de riesgo de retraso`
+            };
+
             // Análisis 1: Tiempo Pedido Cliente → Lanzamiento Producción
             function collectErpToCreatedData() {
                 const table = $('#production-times-table').DataTable();
@@ -2856,61 +2976,61 @@
                     ordersTotal: $('#kpi-orders-total').text() || '0',
                     avgErpToCreated: latestSummary?.orders_avg_erp_to_created ? formatSeconds(latestSummary.orders_avg_erp_to_created) : '-',
                     medianErpToCreated: latestSummary?.orders_p50_erp_to_created ? formatSeconds(latestSummary.orders_p50_erp_to_created) : '-',
-                    // Nuevas métricas de días laborables
                     avgErpToCreatedWorkingDays: Math.round(latestSummary?.orders_avg_erp_to_created_working_days ?? 0) + 'd',
-                    avgErpToCreatedNonWorkingDays: Math.round(latestSummary?.orders_avg_erp_to_created_non_working_days ?? 0) + 'd',
                     medianErpToCreatedWorkingDays: Math.round(latestSummary?.orders_p50_erp_to_created_working_days ?? 0) + 'd',
-                    medianErpToCreatedNonWorkingDays: Math.round(latestSummary?.orders_p50_erp_to_created_non_working_days ?? 0) + 'd',
                     dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
                 };
 
-                // CSV mejorado con días laborables y no laborables
-                let csv = 'Order_ID,Cliente,Fecha_Pedido_Cliente_ISO,Fecha_Lanzamiento_Produccion_ISO,Tiempo_Segundos,Tiempo_Formato,Dias_Laborables,Dias_No_Laborables,Dias_Totales\n';
+                // CSV con columnas numéricas para análisis estadístico (incluye Cliente para agrupar)
+                let csv = 'ID,Cliente,Tiempo_Horas,Dias_Laborables,Dias_No_Laborables,Dias_Totales\n';
                 let count = 0;
-                const maxRows = 150;
+                let skipped = 0;
+                const maxRows = 100;
 
-                console.log('[AI] Recolectando datos Pedido Cliente→Lanzamiento Producción...');
                 const rowsData = table.rows({search: 'applied'}).data();
-                console.log('[AI] Total rows disponibles:', rowsData.length);
-                
+
                 if (rowsData.length === 0) {
-                    console.warn('[AI] No hay datos en la tabla. Asegúrate de haber aplicado los filtros primero.');
                     return {
                         metrics,
-                        csv: 'Order_ID,Cliente,Fecha_Pedido_Cliente_ISO,Fecha_Lanzamiento_Produccion_ISO,Tiempo_Segundos,Tiempo_Formato,Dias_Laborables,Dias_No_Laborables,Dias_Totales\n',
+                        csv: csv,
                         type: 'Tiempo Pedido Cliente → Lanzamiento Producción',
                         note: 'Sin datos disponibles'
                     };
                 }
 
-                rowsData.each(function(row, index) {
+                rowsData.each(function(row) {
                     if (count >= maxRows) return false;
-                    
-                    // Debug primera fila
-                    if (index === 0) {
-                        console.log('[AI] Primera fila (muestra):', row);
+
+                    // Validar TODOS los campos (incluyendo cliente no nulo)
+                    if (!row.order_id || !row.customer_client_name || row.customer_client_name.trim() === '') {
+                        skipped++;
+                        return;
                     }
-                    
-                    const orderId = cleanValue(safeValue(row.order_id, '0'));
-                    const cliente = cleanValue(safeValue(row.customer_client_name, 'Sin cliente'));
-                    const fechaErpIso = cleanValue(normalizeDateTime(row.fecha_pedido_erp));
-                    const fechaCreadoIso = cleanValue(normalizeDateTime(row.created_at));
-                    const tiempoErpCreadoFormato = safeValue(row.erp_to_created_formatted, '00:00:00');
-                    const tiempoErpCreadoSegundosRaw = durationToSeconds(tiempoErpCreadoFormato);
-                    const tiempoErpCreadoSegundos = cleanValue(tiempoErpCreadoSegundosRaw !== '' ? tiempoErpCreadoSegundosRaw : '0');
-                    const tiempoErpCreado = cleanValue(tiempoErpCreadoFormato);
-                    // Nuevos campos de días laborables
-                    const diasLaborables = cleanValue(safeValue(row.erp_to_created_working_days, '0'));
-                    const diasNoLaborables = cleanValue(safeValue(row.erp_to_created_non_working_days, '0'));
-                    const diasTotales = cleanValue(safeValue(row.erp_to_created_calendar_days, '0'));
-                    csv += `${orderId},${cliente},${fechaErpIso},${fechaCreadoIso},${tiempoErpCreadoSegundos},${tiempoErpCreado},${diasLaborables},${diasNoLaborables},${diasTotales}\n`;
+
+                    // Validar tiempo numérico
+                    const tiempoSec = typeof row.erp_to_created_seconds === 'number' ? row.erp_to_created_seconds : 0;
+                    if (tiempoSec <= 0) {
+                        skipped++;
+                        return;
+                    }
+
+                    const diasLab = typeof row.erp_to_created_working_days === 'number' ? row.erp_to_created_working_days : 0;
+                    const diasNoLab = typeof row.erp_to_created_non_working_days === 'number' ? row.erp_to_created_non_working_days : 0;
+                    const diasTotales = typeof row.erp_to_created_calendar_days === 'number' ? row.erp_to_created_calendar_days : 0;
+
+                    // Convertir a horas
+                    const tiempoHoras = (tiempoSec / 3600).toFixed(2);
+
+                    // Limpiar nombre de cliente para CSV (escapar comas y comillas)
+                    const clienteClean = cleanValue(row.customer_client_name.trim());
+
+                    csv += `${count + 1},${clienteClean},${tiempoHoras},${diasLab},${diasNoLab},${diasTotales}\n`;
                     count++;
                 });
 
-                console.log(`[AI] CSV generado con ${count} filas`);
-                console.log('[AI] Primeras 200 caracteres del CSV:', csv.substring(0, 200));
-                
-                const note = count >= maxRows ? `Mostrando primeras ${maxRows} órdenes` : `Total: ${count} órdenes`;
+                let note = `${count} órdenes - columnas numéricas para análisis`;
+                if (skipped > 0) note += ` (${skipped} omitidas)`;
+
                 return { metrics, csv, type: 'Tiempo Pedido Cliente → Lanzamiento Producción', note };
             }
 
@@ -2929,26 +3049,45 @@
                     dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
                 };
 
-                // CSV: Order_ID, Cliente, Fecha_Lanzamiento_Produccion_ISO, Fecha_Fin_Produccion_ISO, Tiempo_Lanzamiento_a_Fin_Produccion_Segundos, Tiempo_Lanzamiento_a_Fin_Produccion_Formato
-                let csv = 'Order_ID,Cliente,Fecha_Lanzamiento_Produccion_ISO,Fecha_Fin_Produccion_ISO,Tiempo_Lanzamiento_a_Fin_Produccion_Segundos,Tiempo_Lanzamiento_a_Fin_Produccion_Formato\n';
+                // CSV con columnas numéricas para análisis (incluye Cliente para agrupar)
+                let csv = 'ID,Cliente,Tiempo_Horas,Dias_Laborables,Dias_No_Laborables\n';
                 let count = 0;
-                const maxRows = 150;
+                let skipped = 0;
+                const maxRows = 100;
 
                 table.rows({search: 'applied'}).data().each(function(row) {
                     if (count >= maxRows) return false;
-                    const orderId = cleanValue(safeValue(row.order_id, '0'));
-                    const cliente = cleanValue(safeValue(row.customer_client_name, 'Sin cliente'));
-                    const fechaCreadoIso = cleanValue(normalizeDateTime(row.created_at));
-                    const fechaFinIso = cleanValue(normalizeDateTime(row.finished_at));
-                    const tiempoCreadoFinFormato = safeValue(row.created_to_finished_formatted, '00:00:00');
-                    const tiempoCreadoFinSegundosRaw = durationToSeconds(tiempoCreadoFinFormato);
-                    const tiempoCreadoFinSegundos = cleanValue(tiempoCreadoFinSegundosRaw !== '' ? tiempoCreadoFinSegundosRaw : '0');
-                    const tiempoCreadoFin = cleanValue(tiempoCreadoFinFormato);
-                    csv += `${orderId},${cliente},${fechaCreadoIso},${fechaFinIso},${tiempoCreadoFinSegundos},${tiempoCreadoFin}\n`;
+
+                    // Validar TODOS los campos requeridos (incluyendo cliente)
+                    if (!row.order_id || !row.customer_client_name || row.customer_client_name.trim() === '') {
+                        skipped++;
+                        return;
+                    }
+
+                    // Validar tiempos numéricos
+                    const tiempoSec = typeof row.created_to_finished_seconds === 'number' ? row.created_to_finished_seconds : 0;
+                    const diasLab = typeof row.created_to_finished_working_days === 'number' ? row.created_to_finished_working_days : 0;
+                    const diasNoLab = typeof row.created_to_finished_non_working_days === 'number' ? row.created_to_finished_non_working_days : 0;
+
+                    // Solo incluir si tiene tiempo válido
+                    if (tiempoSec <= 0) {
+                        skipped++;
+                        return;
+                    }
+
+                    // Convertir a horas
+                    const tiempoHoras = (tiempoSec / 3600).toFixed(2);
+
+                    // Limpiar nombre de cliente para CSV (escapar comas y comillas)
+                    const clienteClean = cleanValue(row.customer_client_name.trim());
+
+                    csv += `${count + 1},${clienteClean},${tiempoHoras},${diasLab},${diasNoLab}\n`;
                     count++;
                 });
 
-                const note = count >= maxRows ? `Mostrando primeras ${maxRows} órdenes` : `Total: ${count} órdenes`;
+                let note = `${count} órdenes - columnas numéricas para análisis`;
+                if (skipped > 0) note += ` (${skipped} omitidas)`;
+
                 return { metrics, csv, type: 'Tiempo Lanzamiento Producción → Fin Producción', note };
             }
 
@@ -2960,90 +3099,61 @@
                     return { metrics: {}, csv: '', type: 'Fin Producción → Entrega' };
                 }
 
-                const header = 'Order_ID,Cliente,Fecha_Fin_ISO,Fecha_Entrega_Usada_ISO,Fecha_Entrega_Planificada_ISO,Fecha_Entrega_Real_ISO,Tiempo_Fin_a_Entrega_Segundos,Tiempo_Fin_a_Entrega_Formato,Retraso_vs_Plan_Segundos,Retraso_vs_Plan_Formato\n';
-                let csv = header;
-
                 const rows = table.rows({search: 'applied'}).data();
-                const deliveryReference = $('#use_actual_delivery').is(':checked')
-                    ? 'Fecha real de entrega (actual_delivery_date)'
-                    : 'Fecha ERP programada (delivery_date)';
-
-                const onTimeTotalRaw = latestSummary?.sla_total;
-                const onTimeCountRaw = latestSummary?.sla_on_time_count;
-                let onTimeRatio = latestSummary?.sla_on_time_ratio;
-                if (typeof onTimeRatio === 'number' && !Number.isNaN(onTimeRatio)) {
-                    onTimeRatio = `${(onTimeRatio * 100).toFixed(1)}%`;
-                } else {
-                    onTimeRatio = '-';
-                }
-
                 if (!rows || rows.length === 0) {
-                    const metrics = {
-                        ordersTotal: $('#kpi-orders-total').text() || '0',
-                        avgFinishToDelivery: '-',
-                        deliveriesDelayed: 0,
-                        slaOnTime: `${onTimeCountRaw ?? '-'} / ${onTimeTotalRaw ?? '-'}`,
-                        slaRate: onTimeRatio,
-                        deliveryReference,
-                        dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
-                    };
-                    return { metrics, csv: header, type: 'Fin Producción → Entrega', note: 'Sin datos disponibles' };
+                    return { metrics: {}, csv: '', type: 'Fin Producción → Entrega', note: 'Sin datos disponibles' };
                 }
 
+                // CSV con columnas numéricas para análisis (incluye Cliente para agrupar)
+                let csv = 'ID,Cliente,Tiempo_Entrega_Horas,Retraso_Horas,Es_Retraso\n';
                 let count = 0;
-                const maxRows = 150;
-                let totalSeconds = 0;
-                let validSeconds = 0;
+                let skipped = 0;
+                const maxRows = 100;
                 let delayedCount = 0;
 
                 rows.each(function(row) {
                     if (count >= maxRows) return false;
 
-                    const orderId = cleanValue(safeValue(row.order_id, '0'));
-                    const cliente = cleanValue(safeValue(row.customer_client_name, 'Sin cliente'));
-                    const fechaFinIso = cleanValue(normalizeDateTime(row.finished_at));
-                    const fechaEntregaUsadaIso = cleanValue(normalizeDateTime(row.delivery_date));
-                    const fechaEntregaPlanIso = cleanValue(normalizeDateTime(row.delivery_date_planned));
-                    const fechaEntregaRealIso = cleanValue(normalizeDateTime(row.actual_delivery_date));
-
-                    const tiempoFinEntregaFormato = safeValue(row.finished_to_delivery_formatted, '00:00:00');
-                    const tiempoFinEntregaSegundosRaw = durationToSeconds(tiempoFinEntregaFormato);
-                    const tiempoFinEntregaSegundos = tiempoFinEntregaSegundosRaw !== '' ? tiempoFinEntregaSegundosRaw : '0';
-
-                    let delaySegundos = '0';
-                    let delayFormato = '00:00:00';
-                    const delayRaw = typeof row.order_delivery_delay_seconds === 'number' ? row.order_delivery_delay_seconds : null;
-                    if (delayRaw !== null && !Number.isNaN(delayRaw)) {
-                        delaySegundos = String(delayRaw);
-                        delayFormato = formatSignedDuration(delayRaw);
-                        if (delayRaw > 0) {
-                            delayedCount++;
-                        }
+                    // Validar datos (cliente no nulo)
+                    if (!row.order_id || !row.customer_client_name || row.customer_client_name.trim() === '') {
+                        skipped++;
+                        return;
                     }
 
-                    const parsedSeconds = parseInt(tiempoFinEntregaSegundosRaw, 10);
-                    if (!Number.isNaN(parsedSeconds)) {
-                        totalSeconds += parsedSeconds;
-                        validSeconds++;
+                    // Tiempo fin a entrega en segundos
+                    const tiempoSec = typeof row.finished_to_delivery_seconds === 'number' ? row.finished_to_delivery_seconds : 0;
+                    const retrasoSec = typeof row.order_delivery_delay_seconds === 'number' ? row.order_delivery_delay_seconds : 0;
+
+                    // Solo incluir si tiene tiempo válido
+                    if (tiempoSec === 0 && retrasoSec === 0) {
+                        skipped++;
+                        return;
                     }
 
-                    csv += `${orderId},${cliente},${fechaFinIso},${fechaEntregaUsadaIso},${fechaEntregaPlanIso},${fechaEntregaRealIso},${cleanValue(tiempoFinEntregaSegundos)},${cleanValue(tiempoFinEntregaFormato)},${delaySegundos},${cleanValue(delayFormato)}\n`;
+                    const esRetraso = retrasoSec > 0 ? 1 : 0;
+                    if (esRetraso) delayedCount++;
+
+                    // Convertir a horas (retraso puede ser negativo = adelantado)
+                    const tiempoHoras = (tiempoSec / 3600).toFixed(2);
+                    const retrasoHoras = (retrasoSec / 3600).toFixed(2);
+
+                    // Limpiar nombre de cliente para CSV (escapar comas y comillas)
+                    const clienteClean = cleanValue(row.customer_client_name.trim());
+
+                    csv += `${count + 1},${clienteClean},${tiempoHoras},${retrasoHoras},${esRetraso}\n`;
                     count++;
                 });
 
-                const avgSeconds = validSeconds > 0 ? Math.round(totalSeconds / validSeconds) : 0;
-
                 const metrics = {
-                    ordersTotal: $('#kpi-orders-total').text() || '0',
-                    avgFinishToDelivery: formatTime(avgSeconds),
+                    ordersTotal: count,
                     deliveriesDelayed: delayedCount,
-                    slaOnTime: `${onTimeCountRaw ?? '-'} / ${onTimeTotalRaw ?? '-'}`,
-                    slaRate: onTimeRatio,
-                    deliveryReference,
+                    delayedPct: count > 0 ? ((delayedCount / count) * 100).toFixed(1) : 0,
                     dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
                 };
 
-                const note = count >= maxRows ? `Mostrando primeras ${maxRows} órdenes` : `Total: ${count} órdenes`;
+                let note = `${count} órdenes - columnas numéricas (Es_Retraso: 1=sí, 0=no)`;
+                if (skipped > 0) note += ` - ${skipped} omitidas`;
+
                 return { metrics, csv, type: 'Fin Producción → Entrega', note };
             }
 
@@ -3063,27 +3173,44 @@
                     dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
                 };
 
-                // CSV reducido: Order_ID, Cliente, Fecha_Pedido_Cliente_ISO, Tiempo_Pedido_Cliente_a_Fin_Produccion_Segundos, Tiempo_Pedido_Cliente_a_Fin_Produccion_Formato, Tiempo_Lanzamiento_a_Fin_Produccion_Segundos, Tiempo_Lanzamiento_a_Fin_Produccion_Formato
-                let csv = 'Order_ID,Cliente,Fecha_Pedido_Cliente_ISO,Tiempo_Pedido_Cliente_a_Fin_Produccion_Segundos,Tiempo_Pedido_Cliente_a_Fin_Produccion_Formato,Tiempo_Lanzamiento_a_Fin_Produccion_Segundos,Tiempo_Lanzamiento_a_Fin_Produccion_Formato\n';
+                // CSV con SOLO columnas numéricas para correlaciones
+                let csv = 'ID,Tiempo_Total_Horas,Tiempo_Produccion_Horas,Tiempo_Admin_Horas,Ratio_Produccion\n';
                 let count = 0;
-                const maxRows = 150;
+                let skipped = 0;
+                const maxRows = 100;
 
                 table.rows({search: 'applied'}).data().each(function(row) {
                     if (count >= maxRows) return false;
-                    const orderId = cleanValue(safeValue(row.order_id, '0'));
-                    const cliente = cleanValue(safeValue(row.customer_client_name, 'Sin cliente'));
-                    const fechaErpIso = cleanValue(normalizeDateTime(row.fecha_pedido_erp));
-                    const tiempoErpFinFormato = safeValue(row.erp_to_finished_formatted, '00:00:00');
-                    const tiempoErpFinSegundosRaw = durationToSeconds(tiempoErpFinFormato);
-                    const tiempoErpFinSegundos = cleanValue(tiempoErpFinSegundosRaw !== '' ? tiempoErpFinSegundosRaw : '0');
-                    const tiempoCreadoFinFormato = safeValue(row.created_to_finished_formatted, '00:00:00');
-                    const tiempoCreadoFinSegundosRaw = durationToSeconds(tiempoCreadoFinFormato);
-                    const tiempoCreadoFinSegundos = cleanValue(tiempoCreadoFinSegundosRaw !== '' ? tiempoCreadoFinSegundosRaw : '0');
-                    csv += `${orderId},${cliente},${fechaErpIso},${tiempoErpFinSegundos},${cleanValue(tiempoErpFinFormato)},${tiempoCreadoFinSegundos},${cleanValue(tiempoCreadoFinFormato)}\n`;
+
+                    // Validar datos mínimos
+                    if (!row.order_id || !row.customer_client_name || String(row.customer_client_name).trim() === '') {
+                        skipped++;
+                        return;
+                    }
+
+                    // Solo incluir si tiene tiempo total válido
+                    const tiempoTotalSec = typeof row.erp_to_finished_seconds === 'number' ? row.erp_to_finished_seconds : null;
+                    if (tiempoTotalSec === null || tiempoTotalSec <= 0) {
+                        skipped++;
+                        return;
+                    }
+
+                    const tiempoProduccionSec = typeof row.created_to_finished_seconds === 'number' ? row.created_to_finished_seconds : 0;
+                    const tiempoAdminSec = typeof row.erp_to_created_seconds === 'number' ? row.erp_to_created_seconds : 0;
+
+                    // Convertir a horas con decimales
+                    const totalHoras = (tiempoTotalSec / 3600).toFixed(2);
+                    const produccionHoras = (tiempoProduccionSec / 3600).toFixed(2);
+                    const adminHoras = (tiempoAdminSec / 3600).toFixed(2);
+                    const ratioProduccion = tiempoTotalSec > 0 ? ((tiempoProduccionSec / tiempoTotalSec) * 100).toFixed(2) : '0.00';
+
+                    csv += `${count + 1},${totalHoras},${produccionHoras},${adminHoras},${ratioProduccion}\n`;
                     count++;
                 });
 
-                const note = count >= maxRows ? `Mostrando primeras ${maxRows} órdenes` : `Total: ${count} órdenes`;
+                let note = `${count} registros - columnas numéricas (horas)`;
+                if (skipped > 0) note += ` (${skipped} omitidos)`;
+
                 return { metrics, csv, type: 'Rendimiento de Órdenes', note };
             }
 
@@ -3095,96 +3222,57 @@
                     return { metrics: {}, csv: '', type: 'Órdenes críticas por tipo' };
                 }
 
-                const header = 'Order_ID,Cliente,Tipo_Producto,Estado_Entrega,Fecha_Fin_ISO,Fecha_Entrega_Usada_ISO,Fecha_Entrega_Planificada_ISO,Fecha_Entrega_Real_ISO,Tiempo_Fin_a_Entrega_Segundos,Tiempo_Fin_a_Entrega_Formato,Retraso_vs_Plan_Segundos,Retraso_vs_Plan_Formato\n';
-                let csv = header;
                 const rows = table.rows({search: 'applied'}).data();
-
                 if (!rows || rows.length === 0) {
-                    const metrics = {
-                        ordersTotal: $('#kpi-orders-total').text() || '0',
-                        delayedTotal: 0,
-                        worstType: '-',
-                        worstAvgDelay: '-',
-                        dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
-                    };
-                    return { metrics, csv: header, type: 'Órdenes críticas por tipo', note: 'Sin datos disponibles' };
+                    return { metrics: {}, csv: '', type: 'Órdenes críticas por tipo', note: 'Sin datos disponibles' };
                 }
 
-                const typeStats = {};
-                const maxRows = 150;
+                // CSV con columnas numéricas para análisis
+                let csv = 'ID,Retraso_Horas,Es_Retraso,Tiempo_Total_Horas\n';
+                const maxRows = 100;
                 let count = 0;
+                let skipped = 0;
                 let delayedTotal = 0;
 
                 rows.each(function(row) {
                     if (count >= maxRows) return false;
 
-                    const orderId = cleanValue(safeValue(row.order_id, '0'));
-                    const cliente = cleanValue(safeValue(row.customer_client_name, 'Sin cliente'));
-                    const tipoProductoRaw = safeValue(row.route_name, 'Sin tipo');
-                    const tipoProducto = cleanValue(tipoProductoRaw);
-                    const fechaFinIso = cleanValue(normalizeDateTime(row.finished_at));
-                    const fechaEntregaUsadaIso = cleanValue(normalizeDateTime(row.delivery_date));
-                    const fechaEntregaPlanIso = cleanValue(normalizeDateTime(row.delivery_date_planned));
-                    const fechaEntregaRealIso = cleanValue(normalizeDateTime(row.actual_delivery_date));
-
-                    const tiempoFinEntregaFormato = safeValue(row.finished_to_delivery_formatted, '00:00:00');
-                    const tiempoFinEntregaSegundosStr = durationToSeconds(tiempoFinEntregaFormato);
-                    const tiempoFinEntregaSegundos = tiempoFinEntregaSegundosStr !== '' ? parseInt(tiempoFinEntregaSegundosStr, 10) : 0;
-
-                    let delaySegundos = 0;
-                    let delayFormato = '00:00:00';
-                    const delayRaw = typeof row.order_delivery_delay_seconds === 'number' ? row.order_delivery_delay_seconds : null;
-                    if (delayRaw !== null && !Number.isNaN(delayRaw)) {
-                        delaySegundos = delayRaw;
-                        delayFormato = formatSignedDuration(delayRaw);
+                    // Validar datos (cliente no nulo)
+                    if (!row.order_id || !row.customer_client_name || row.customer_client_name.trim() === '') {
+                        skipped++;
+                        return;
                     }
 
-                    const estadoEntrega = delaySegundos > 0 ? 'Retraso' : (delaySegundos < 0 ? 'Adelantado' : 'A tiempo');
-                    if (delaySegundos > 0) {
-                        delayedTotal++;
+                    const delaySec = typeof row.order_delivery_delay_seconds === 'number' ? row.order_delivery_delay_seconds : 0;
+                    const tiempoTotalSec = typeof row.erp_to_finished_seconds === 'number' ? row.erp_to_finished_seconds : 0;
+
+                    // Solo incluir si tiene tiempo total válido
+                    if (tiempoTotalSec <= 0) {
+                        skipped++;
+                        return;
                     }
 
-                    if (!typeStats[tipoProductoRaw]) {
-                        typeStats[tipoProductoRaw] = {
-                            count: 0,
-                            delayed: 0,
-                            delaySum: 0,
-                        };
-                    }
+                    const esRetraso = delaySec > 0 ? 1 : 0;
+                    if (esRetraso) delayedTotal++;
 
-                    typeStats[tipoProductoRaw].count++;
-                    if (delaySegundos > 0) {
-                        typeStats[tipoProductoRaw].delayed++;
-                        typeStats[tipoProductoRaw].delaySum += delaySegundos;
-                    }
+                    // Convertir a horas
+                    const retrasoHoras = (delaySec / 3600).toFixed(2);
+                    const tiempoTotalHoras = (tiempoTotalSec / 3600).toFixed(2);
 
-                    csv += `${orderId},${cliente},${tipoProducto},${estadoEntrega},${fechaFinIso},${fechaEntregaUsadaIso},${fechaEntregaPlanIso},${fechaEntregaRealIso},${cleanValue(String(tiempoFinEntregaSegundos))},${cleanValue(tiempoFinEntregaFormato)},${cleanValue(String(delaySegundos))},${cleanValue(delayFormato)}\n`;
+                    csv += `${count + 1},${retrasoHoras},${esRetraso},${tiempoTotalHoras}\n`;
                     count++;
                 });
 
-                let worstType = '-';
-                let worstAvgDelaySeconds = null;
-                Object.entries(typeStats).forEach(([type, stats]) => {
-                    if (stats.delayed > 0) {
-                        const avgDelay = stats.delaySum / stats.delayed;
-                        if (worstAvgDelaySeconds === null || avgDelay > worstAvgDelaySeconds) {
-                            worstAvgDelaySeconds = avgDelay;
-                            worstType = type;
-                        }
-                    }
-                });
-
-                const worstAvgDelay = worstAvgDelaySeconds !== null ? formatTime(Math.round(worstAvgDelaySeconds)) : '-';
-
                 const metrics = {
-                    ordersTotal: $('#kpi-orders-total').text() || '0',
+                    ordersTotal: count,
                     delayedTotal,
-                    worstType: cleanValue(worstType)?.replace(/^"|"$/g, '') || '-',
-                    worstAvgDelay,
+                    delayedPct: count > 0 ? ((delayedTotal / count) * 100).toFixed(1) : 0,
                     dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
                 };
 
-                const note = count >= maxRows ? `Mostrando primeras ${maxRows} órdenes` : `Total: ${count} órdenes`;
+                let note = `${count} órdenes - columnas numéricas (Es_Retraso: 1=sí, 0=no)`;
+                if (skipped > 0) note += ` - ${skipped} omitidas`;
+
                 return { metrics, csv, type: 'Órdenes críticas por tipo', note };
             }
 
@@ -3196,31 +3284,31 @@
                     return { metrics: {}, csv: '', type: 'Alertas de brechas' };
                 }
 
-                const header = 'Order_ID,Cliente,Procesos_Afectados,Tiempo_Espera_Total_Segundos,Tiempo_Espera_Total_Formato,Tiempo_Espera_Maximo_Segundos,Tiempo_Espera_Maximo_Formato,Tiempo_Espera_Promedio_Segundos,Tiempo_Espera_Promedio_Formato\n';
-                let csv = header;
                 const rows = table.rows({search: 'applied'}).data();
-
                 if (!rows || rows.length === 0) {
-                    const metrics = {
-                        ordersTotal: $('#kpi-orders-total').text() || '0',
-                        ordersOverThreshold: 0,
-                        threshold: '02:00:00',
-                        dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
-                    };
-                    return { metrics, csv: header, type: 'Alertas de brechas', note: 'Sin datos disponibles' };
+                    return { metrics: {}, csv: '', type: 'Alertas de brechas', note: 'Sin datos disponibles' };
                 }
 
+                // CSV con SOLO columnas numéricas para correlaciones
+                let csv = 'ID,Procesos,Espera_Total_Horas,Espera_Max_Horas,Espera_Promedio_Horas\n';
                 const thresholdSeconds = 2 * 3600; // 2 horas
-                const maxRows = 150;
+                const maxRows = 100;
                 let count = 0;
+                let skipped = 0;
                 let ordersOverThreshold = 0;
-                let processedOrders = 0;
 
                 rows.each(function(row) {
                     if (count >= maxRows) return false;
 
+                    // Validar datos requeridos
+                    if (!row.order_id || !row.customer_client_name || row.customer_client_name.trim() === '') {
+                        skipped++;
+                        return;
+                    }
+
                     const processes = Array.isArray(row.processes) ? row.processes : [];
                     if (!processes.length) {
+                        skipped++;
                         return;
                     }
 
@@ -3240,37 +3328,38 @@
                         if (gapSeconds !== null && !Number.isNaN(gapSeconds) && gapSeconds > 0) {
                             totalGap += gapSeconds;
                             gapsCount++;
-                            if (gapSeconds > maxGap) {
-                                maxGap = gapSeconds;
-                            }
+                            if (gapSeconds > maxGap) maxGap = gapSeconds;
                         }
                     });
 
                     if (gapsCount === 0) {
+                        skipped++;
                         return;
                     }
 
-                    processedOrders++;
-
-                    const avgGap = Math.round(totalGap / gapsCount);
                     if (totalGap >= thresholdSeconds) {
                         ordersOverThreshold++;
                     }
 
-                    const orderId = cleanValue(safeValue(row.order_id, '0'));
-                    const cliente = cleanValue(safeValue(row.customer_client_name, 'Sin cliente'));
-                    csv += `${orderId},${cliente},${cleanValue(String(gapsCount))},${cleanValue(String(totalGap))},${cleanValue(formatTime(totalGap))},${cleanValue(String(maxGap))},${cleanValue(formatTime(maxGap))},${cleanValue(String(avgGap))},${cleanValue(formatTime(avgGap))}\n`;
+                    // Convertir a horas con decimales
+                    const totalHoras = (totalGap / 3600).toFixed(2);
+                    const maxHoras = (maxGap / 3600).toFixed(2);
+                    const avgHoras = gapsCount > 0 ? (totalGap / gapsCount / 3600).toFixed(2) : '0.00';
+
+                    csv += `${count + 1},${gapsCount},${totalHoras},${maxHoras},${avgHoras}\n`;
                     count++;
                 });
 
                 const metrics = {
-                    ordersTotal: processedOrders,
+                    ordersTotal: count,
                     ordersOverThreshold,
-                    threshold: formatTime(thresholdSeconds),
+                    threshold: '2h',
                     dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
                 };
 
-                const note = count >= maxRows ? `Incluye primeras ${maxRows} órdenes evaluadas` : `Total: ${count} órdenes evaluadas`;
+                let note = `${count} registros - columnas numéricas (horas decimales)`;
+                if (skipped > 0) note += ` (${skipped} omitidos)`;
+
                 return { metrics, csv, type: 'Alertas de brechas', note };
             }
 
@@ -3288,34 +3377,50 @@
                     dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
                 };
 
-                // CSV: Order_ID, Codigo_Proceso, Nombre_Proceso, Tiempo_Espera_Segundos, Tiempo_Espera_Formato, Duracion_Segundos, Duracion_Formato
-                let csv = 'Order_ID,Codigo_Proceso,Nombre_Proceso,Tiempo_Espera_Segundos,Tiempo_Espera_Formato,Duracion_Segundos,Duracion_Formato\n';
+                // CSV con columnas numéricas para análisis
+                let csv = 'ID,Espera_Horas,Duracion_Horas,Ratio_Espera\n';
                 let count = 0;
+                let skipped = 0;
                 const maxRows = 100;
 
                 table.rows({search: 'applied'}).data().each(function(row) {
                     if (count >= maxRows) return false;
-                    const orderId = row.order_id || '-';
-                    
-                    // Acceder a los procesos si están disponibles en los datos
-                    const processes = row.processes || [];
-                    if (Array.isArray(processes) && processes.length > 0) {
-                        processes.forEach(proc => {
-                            const codigo = cleanValue(proc.process_code || '-');
-                            const nombre = cleanValue(proc.process_name || '-');
-                            const gapFormato = safeValue(proc.gap_formatted, '00:00:00');
-                            const gapSegundosRaw = durationToSeconds(gapFormato);
-                            const gapSegundos = cleanValue(gapSegundosRaw !== '' ? gapSegundosRaw : '0');
-                            const duracionFormato = safeValue(proc.duration_formatted, '00:00:00');
-                            const duracionSegundosRaw = durationToSeconds(duracionFormato);
-                            const duracionSegundos = cleanValue(duracionSegundosRaw !== '' ? duracionSegundosRaw : '0');
-                            csv += `${cleanValue(safeValue(orderId, '0'))},${cleanValue(safeValue(codigo, 'N/A'))},${cleanValue(safeValue(nombre, 'N/A'))},${gapSegundos},${cleanValue(gapFormato)},${duracionSegundos},${cleanValue(duracionFormato)}\n`;
-                            count++;
-                        });
+
+                    // Validar orden y cliente
+                    if (!row.order_id || !row.customer_client_name) {
+                        skipped++;
+                        return;
                     }
+
+                    const processes = row.processes || [];
+                    if (!Array.isArray(processes) || processes.length === 0) {
+                        skipped++;
+                        return;
+                    }
+
+                    processes.forEach(proc => {
+                        if (count >= maxRows) return;
+
+                        // Solo procesos con duración válida
+                        const duracionSec = typeof proc.duration_seconds === 'number' ? proc.duration_seconds : 0;
+                        const esperaSec = typeof proc.gap_seconds === 'number' ? proc.gap_seconds : 0;
+
+                        if (duracionSec <= 0) return;
+
+                        // Convertir a horas
+                        const esperaHoras = (esperaSec / 3600).toFixed(2);
+                        const duracionHoras = (duracionSec / 3600).toFixed(2);
+                        // Ratio: qué porcentaje del tiempo es espera vs trabajo
+                        const ratioEspera = duracionSec > 0 ? ((esperaSec / (esperaSec + duracionSec)) * 100).toFixed(1) : 0;
+
+                        csv += `${count + 1},${esperaHoras},${duracionHoras},${ratioEspera}\n`;
+                        count++;
+                    });
                 });
 
-                const note = count >= maxRows ? `Mostrando primeros ${maxRows} procesos` : `Total: ${count} procesos`;
+                let note = `${count} procesos - columnas numéricas para análisis`;
+                if (skipped > 0) note += ` - ${skipped} órdenes omitidas`;
+
                 return { metrics, csv, type: 'Tiempos de espera por Proceso', note };
             }
 
@@ -3336,57 +3441,64 @@
                 // Agrupar por cliente
                 const clientData = {};
                 let totalOrders = 0;
+                let skipped = 0;
 
                 table.rows({search: 'applied'}).data().each(function(row) {
-                    const cliente = row.customer_client_name || 'Sin cliente';
+                    // Validar datos mínimos
+                    if (!row.order_id || !row.customer_client_name || String(row.customer_client_name).trim() === '') {
+                        skipped++;
+                        return;
+                    }
+
+                    // Requiere tiempo total válido
+                    const tiempoTotalSec = typeof row.erp_to_finished_seconds === 'number' ? row.erp_to_finished_seconds : null;
+                    if (tiempoTotalSec === null || tiempoTotalSec <= 0) {
+                        skipped++;
+                        return;
+                    }
+
+                    const cliente = String(row.customer_client_name).trim();
                     if (!clientData[cliente]) {
                         clientData[cliente] = {
                             count: 0,
-                            orders: []
+                            sumaTotalSec: 0,
+                            sumaProduccionSec: 0,
+                            ordenesConProduccion: 0
                         };
                     }
+
                     clientData[cliente].count++;
-                    const tiempoTotalFormato = safeValue(row.erp_to_finished_formatted, '00:00:00');
-                    const tiempoTotalSegundosRaw = durationToSeconds(tiempoTotalFormato);
-                    const tiempoTotalSegundos = tiempoTotalSegundosRaw !== '' ? parseInt(tiempoTotalSegundosRaw, 10) : null;
-                    const tiempoCreadoFormato = safeValue(row.created_to_finished_formatted, '00:00:00');
-                    const tiempoCreadoSegundosRaw = durationToSeconds(tiempoCreadoFormato);
-                    const tiempoCreadoSegundos = tiempoCreadoSegundosRaw !== '' ? parseInt(tiempoCreadoSegundosRaw, 10) : null;
-                    clientData[cliente].orders.push({
-                        orderId: row.order_id,
-                        tiempoTotalSegundos,
-                        tiempoTotalFormato,
-                        tiempoCreadoSegundos,
-                        tiempoCreadoFormato
-                    });
+                    clientData[cliente].sumaTotalSec += tiempoTotalSec;
+
+                    const tiempoProduccionSec = typeof row.created_to_finished_seconds === 'number' ? row.created_to_finished_seconds : 0;
+                    if (tiempoProduccionSec > 0) {
+                        clientData[cliente].sumaProduccionSec += tiempoProduccionSec;
+                        clientData[cliente].ordenesConProduccion++;
+                    }
+
                     totalOrders++;
                 });
 
-                // CSV: Cliente, Cantidad_Ordenes, Ordenes_IDs, Tiempo_Pedido_Cliente_a_Fin_Produccion_Promedio_Segundos, Tiempo_Pedido_Cliente_a_Fin_Produccion_Promedio_Formato, Tiempo_Lanzamiento_a_Fin_Produccion_Promedio_Segundos, Tiempo_Lanzamiento_a_Fin_Produccion_Promedio_Formato
-                let csv = 'Cliente,Cantidad_Ordenes,Ordenes_IDs,Tiempo_Pedido_Cliente_a_Fin_Produccion_Promedio_Segundos,Tiempo_Pedido_Cliente_a_Fin_Produccion_Promedio_Formato,Tiempo_Lanzamiento_a_Fin_Produccion_Promedio_Segundos,Tiempo_Lanzamiento_a_Fin_Produccion_Promedio_Formato\n';
+                // CSV con SOLO columnas numéricas para correlaciones
+                let csv = 'ID,Num_Ordenes,Promedio_Total_Horas,Promedio_Produccion_Horas,Ratio_Produccion\n';
+                let clientCount = 0;
+
                 for (const [cliente, data] of Object.entries(clientData)) {
-                    const orderIds = data.orders.slice(0, 5).map(o => o.orderId).join(' | ');
-                    const suffix = data.count > 5 ? ` (+${data.count - 5} más)` : '';
-                    let sumaErp = 0; let cuentaErp = 0;
-                    let sumaCreado = 0; let cuentaCreado = 0;
-                    data.orders.forEach(o => {
-                        if (typeof o.tiempoTotalSegundos === 'number') {
-                            sumaErp += o.tiempoTotalSegundos;
-                            cuentaErp++;
-                        }
-                        if (typeof o.tiempoCreadoSegundos === 'number') {
-                            sumaCreado += o.tiempoCreadoSegundos;
-                            cuentaCreado++;
-                        }
-                    });
-                    const promedioErpSegundos = cuentaErp > 0 ? Math.round(sumaErp / cuentaErp) : 0;
-                    const promedioCreadoSegundos = cuentaCreado > 0 ? Math.round(sumaCreado / cuentaCreado) : 0;
-                    const promedioErpFormato = formatTime(promedioErpSegundos);
-                    const promedioCreadoFormato = formatTime(promedioCreadoSegundos);
-                    csv += `${cleanValue(cliente)},${data.count},${cleanValue(orderIds + suffix)},${promedioErpSegundos},${cleanValue(promedioErpFormato)},${promedioCreadoSegundos},${cleanValue(promedioCreadoFormato)}\n`;
+                    const promedioTotalHoras = ((data.sumaTotalSec / data.count) / 3600).toFixed(2);
+                    const promedioProduccionHoras = data.ordenesConProduccion > 0
+                        ? ((data.sumaProduccionSec / data.ordenesConProduccion) / 3600).toFixed(2)
+                        : '0.00';
+                    const ratioProduccion = data.sumaTotalSec > 0
+                        ? ((data.sumaProduccionSec / data.sumaTotalSec) * 100).toFixed(2)
+                        : '0.00';
+
+                    csv += `${clientCount + 1},${data.count},${promedioTotalHoras},${promedioProduccionHoras},${ratioProduccion}\n`;
+                    clientCount++;
                 }
 
-                const note = `${totalOrders} órdenes de ${Object.keys(clientData).length} clientes`;
+                let note = `${totalOrders} órdenes de ${clientCount} clientes - columnas numéricas`;
+                if (skipped > 0) note += ` (${skipped} omitidos)`;
+
                 return { metrics, csv, type: 'Análisis por Cliente', note };
             }
 
@@ -3404,43 +3516,52 @@
                     dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
                 };
 
-                // Recolectar todos los procesos y ordenar por duración
+                // Recolectar procesos con datos válidos
                 const allProcesses = [];
 
                 table.rows({search: 'applied'}).data().each(function(row) {
-                    const orderId = row.order_id || '-';
+                    if (!row.order_id) return;
+
                     const processes = row.processes || [];
-                    
-                    if (Array.isArray(processes) && processes.length > 0) {
-                        processes.forEach(proc => {
-                            // Extraer duración en segundos si está disponible
-                            const durationSec = proc.duration_seconds || 0;
-                            allProcesses.push({
-                                orderId: orderId,
-                                codigo: proc.process_code || '-',
-                                nombre: proc.process_name || '-',
-                                duracion: proc.duration_formatted || '-',
-                                durationSec: durationSec,
-                                gap: proc.gap_formatted || '-'
-                            });
+                    if (!Array.isArray(processes)) return;
+
+                    processes.forEach(proc => {
+                        // Solo incluir procesos con duración válida > 0
+                        const durationSec = typeof proc.duration_seconds === 'number' ? proc.duration_seconds : 0;
+                        if (durationSec <= 0) return;
+
+                        // Requiere al menos código o nombre de proceso
+                        if (!proc.process_code && !proc.process_name) return;
+
+                        // Tiempo de espera en segundos
+                        const gapSec = typeof proc.gap_seconds === 'number' ? proc.gap_seconds : 0;
+
+                        allProcesses.push({
+                            orderId: row.order_id,
+                            proceso: proc.process_code || proc.process_name,
+                            durationSec: durationSec,
+                            gapSec: gapSec
                         });
-                    }
+                    });
                 });
 
                 // Ordenar por duración (descendente) y tomar top 30
                 allProcesses.sort((a, b) => b.durationSec - a.durationSec);
                 const slowest = allProcesses.slice(0, 30);
 
-                // CSV: Order_ID, Codigo_Proceso, Nombre_Proceso, Duracion_Segundos, Duracion_Formato, Tiempo_Espera_Segundos, Tiempo_Espera_Formato
-                let csv = 'Order_ID,Codigo_Proceso,Nombre_Proceso,Duracion_Segundos,Duracion_Formato,Tiempo_Espera_Segundos,Tiempo_Espera_Formato\n';
+                // CSV con valores numéricos (horas con decimales) - sin columnas de texto
+                let csv = 'ID,Duracion_Horas,Espera_Horas,Ratio_Espera\n';
+                let csvCount = 0;
                 slowest.forEach(proc => {
-                    const duracionSec = typeof proc.durationSec === 'number' ? String(proc.durationSec) : '0';
-                    const gapSec = durationToSeconds(proc.gap || '00:00:00');
-                    const gapSegundos = cleanValue(gapSec !== '' ? gapSec : '0');
-                    csv += `${cleanValue(proc.orderId)},${cleanValue(proc.codigo)},${cleanValue(proc.nombre)},${cleanValue(duracionSec)},${cleanValue(proc.duracion)},${gapSegundos},${cleanValue(proc.gap || '00:00:00')}\n`;
+                    const duracionHoras = (proc.durationSec / 3600).toFixed(2);
+                    const esperaHoras = (proc.gapSec / 3600).toFixed(2);
+                    // Ratio: porcentaje de espera respecto al total (espera + duración)
+                    const ratioEspera = proc.durationSec > 0 ? ((proc.gapSec / (proc.gapSec + proc.durationSec)) * 100).toFixed(1) : '0.0';
+                    csv += `${csvCount + 1},${duracionHoras},${esperaHoras},${ratioEspera}\n`;
+                    csvCount++;
                 });
 
-                const note = `Top 30 procesos más lentos de ${allProcesses.length} totales`;
+                const note = `Top 30 procesos más lentos de ${allProcesses.length} válidos (tiempos en horas)`;
                 return { metrics, csv, type: 'Procesos Lentos', note };
             }
 
@@ -3458,39 +3579,62 @@
                     dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
                 };
 
+                // Solo incluir órdenes con datos completos
                 const allOrders = [];
+                let skipped = 0;
+
                 table.rows({search: 'applied'}).data().each(function(row) {
+                    if (!row.order_id || !row.customer_client_name || String(row.customer_client_name).trim() === '') {
+                        skipped++;
+                        return;
+                    }
+
+                    const tiempoTotalSec = typeof row.erp_to_finished_seconds === 'number' ? row.erp_to_finished_seconds : null;
+                    const tiempoProduccionSec = typeof row.created_to_finished_seconds === 'number' ? row.created_to_finished_seconds : 0;
+                    const tiempoAdminSec = typeof row.erp_to_created_seconds === 'number' ? row.erp_to_created_seconds : 0;
+
+                    if (tiempoTotalSec === null || tiempoTotalSec <= 0) {
+                        skipped++;
+                        return;
+                    }
+
                     allOrders.push({
-                        orderId: cleanValue(row.order_id || '-'),
-                        cliente: cleanValue(row.customer_client_name || '-'),
-                        tiempoTotal: cleanValue(row.erp_to_finished_formatted || '-'),
-                        tiempoCreado: cleanValue(row.created_to_finished_formatted || '-')
+                        tiempoTotalSec: tiempoTotalSec,
+                        tiempoProduccionSec: tiempoProduccionSec,
+                        tiempoAdminSec: tiempoAdminSec
                     });
                 });
 
-                // Top 10 y Bottom 10
+                // Ordenar por tiempo total y tomar Top 10 y Bottom 10
+                allOrders.sort((a, b) => a.tiempoTotalSec - b.tiempoTotalSec);
                 const top10 = allOrders.slice(0, 10);
-                const bottom10 = allOrders.slice(-10);
+                const bottom10 = allOrders.slice(-10).reverse();
 
-                let csv = 'Tipo,Order_ID,Cliente,Tiempo_Pedido_Cliente_a_Fin_Produccion_Segundos,Tiempo_Pedido_Cliente_a_Fin_Produccion_Formato,Tiempo_Lanzamiento_a_Fin_Produccion_Segundos,Tiempo_Lanzamiento_a_Fin_Produccion_Formato\n';
-                csv += '# TOP 10 (Más rápidas)\n';
+                // CSV con SOLO columnas numéricas para correlaciones
+                let csv = 'ID,Es_Top,Tiempo_Total_Horas,Tiempo_Produccion_Horas,Tiempo_Admin_Horas,Ratio_Produccion\n';
+                let count = 0;
+
                 top10.forEach(o => {
-                    const erpSegRaw = durationToSeconds(o.tiempoTotal || '00:00:00');
-                    const erpSeg = erpSegRaw !== '' ? erpSegRaw : '0';
-                    const creSegRaw = durationToSeconds(o.tiempoCreado || '00:00:00');
-                    const creSeg = creSegRaw !== '' ? creSegRaw : '0';
-                    csv += `TOP,${o.orderId},${o.cliente},${erpSeg},${o.tiempoTotal},${creSeg},${o.tiempoCreado}\n`;
-                });
-                csv += '# BOTTOM 10 (Más lentas)\n';
-                bottom10.forEach(o => {
-                    const erpSegRaw = durationToSeconds(o.tiempoTotal || '00:00:00');
-                    const erpSeg = erpSegRaw !== '' ? erpSegRaw : '0';
-                    const creSegRaw = durationToSeconds(o.tiempoCreado || '00:00:00');
-                    const creSeg = creSegRaw !== '' ? creSegRaw : '0';
-                    csv += `BOTTOM,${o.orderId},${o.cliente},${erpSeg},${o.tiempoTotal},${creSeg},${o.tiempoCreado}\n`;
+                    const totalHoras = (o.tiempoTotalSec / 3600).toFixed(2);
+                    const prodHoras = (o.tiempoProduccionSec / 3600).toFixed(2);
+                    const adminHoras = (o.tiempoAdminSec / 3600).toFixed(2);
+                    const ratio = o.tiempoTotalSec > 0 ? ((o.tiempoProduccionSec / o.tiempoTotalSec) * 100).toFixed(2) : '0.00';
+                    csv += `${count + 1},1,${totalHoras},${prodHoras},${adminHoras},${ratio}\n`;
+                    count++;
                 });
 
-                const note = `Comparando ${allOrders.length} órdenes`;
+                bottom10.forEach(o => {
+                    const totalHoras = (o.tiempoTotalSec / 3600).toFixed(2);
+                    const prodHoras = (o.tiempoProduccionSec / 3600).toFixed(2);
+                    const adminHoras = (o.tiempoAdminSec / 3600).toFixed(2);
+                    const ratio = o.tiempoTotalSec > 0 ? ((o.tiempoProduccionSec / o.tiempoTotalSec) * 100).toFixed(2) : '0.00';
+                    csv += `${count + 1},0,${totalHoras},${prodHoras},${adminHoras},${ratio}\n`;
+                    count++;
+                });
+
+                let note = `Top 10 vs Bottom 10 de ${allOrders.length} órdenes - columnas numéricas`;
+                if (skipped > 0) note += ` (${skipped} omitidos)`;
+
                 return { metrics, csv, type: 'Comparativa Top/Bottom', note };
             }
 
@@ -3503,33 +3647,46 @@
                     ordersTotal: $('#kpi-orders-total').text() || '0',
                     avgWorkingDays: Math.round(latestSummary?.orders_avg_created_to_finished_working_days ?? 0) + 'd',
                     avgCalendarDays: Math.round(latestSummary?.orders_avg_created_to_finished_calendar_days ?? 0) + 'd',
-                    efficiencyRatio: latestSummary?.orders_avg_created_to_finished_working_days > 0 && latestSummary?.orders_avg_created_to_finished_calendar_days > 0
-                        ? `${((latestSummary.orders_avg_created_to_finished_working_days / latestSummary.orders_avg_created_to_finished_calendar_days) * 100).toFixed(1)}%`
-                        : '-',
                     dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
                 };
 
-                let csv = 'Order_ID,Cliente,Fecha_Creado_ISO,Fecha_Fin_ISO,Tiempo_Creado_a_Fin_Segundos,Tiempo_Creado_a_Fin_Formato,Dias_Calendario,Dias_Laborables,Eficiencia_Laborable\n';
+                // CSV con TODAS las columnas numéricas para correlaciones
+                let csv = 'ID,Dias_Calendario,Dias_Laborables,Dias_No_Laborables,Tiempo_Produccion_Horas,Eficiencia_Pct\n';
                 let count = 0;
+                let skipped = 0;
+
                 table.rows({search: 'applied'}).data().each(function(row) {
-                    if (count >= 150) return false;
-                    const orderId = cleanValue(safeValue(row.order_id, '0'));
-                    const cliente = cleanValue(safeValue(row.customer_client_name, 'Sin cliente'));
-                    const fechaCreadoIso = cleanValue(normalizeDateTime(row.created_at));
-                    const fechaFinIso = cleanValue(normalizeDateTime(row.finished_at));
-                    const tiempoCreadoFinFormato = safeValue(row.created_to_finished_formatted, '00:00:00');
-                    const tiempoCreadoFinSegundosRaw = durationToSeconds(tiempoCreadoFinFormato);
-                    const tiempoCreadoFinSegundos = cleanValue(tiempoCreadoFinSegundosRaw !== '' ? tiempoCreadoFinSegundosRaw : '0');
-                    const diasCalendario = cleanValue(safeValue(row.created_to_finished_calendar_days, '0'));
-                    const diasLaborables = cleanValue(safeValue(row.created_to_finished_working_days, '0'));
-                    const diasCal = parseInt(diasCalendario) || 0;
-                    const diasLab = parseInt(diasLaborables) || 0;
-                    const eficiencia = diasCal > 0 ? `${((diasLab / diasCal) * 100).toFixed(1)}%` : '0%';
-                    csv += `${orderId},${cliente},${fechaCreadoIso},${fechaFinIso},${tiempoCreadoFinSegundos},${cleanValue(tiempoCreadoFinFormato)},${diasCalendario},${diasLaborables},${eficiencia}\n`;
+                    if (count >= 100) return false;
+
+                    // Validar datos requeridos
+                    if (!row.order_id || !row.customer_client_name) {
+                        skipped++;
+                        return;
+                    }
+
+                    const diasCal = typeof row.created_to_finished_calendar_days === 'number' ? row.created_to_finished_calendar_days : 0;
+                    const diasLab = typeof row.created_to_finished_working_days === 'number' ? row.created_to_finished_working_days : 0;
+                    const diasNoLab = typeof row.created_to_finished_non_working_days === 'number' ? row.created_to_finished_non_working_days : 0;
+                    const tiempoProdSec = typeof row.created_to_finished_seconds === 'number' ? row.created_to_finished_seconds : 0;
+
+                    // Solo incluir órdenes con días válidos > 0
+                    if (diasCal <= 0 || tiempoProdSec <= 0) {
+                        skipped++;
+                        return;
+                    }
+
+                    // Todas las columnas numéricas (sin símbolos %)
+                    const eficienciaPct = ((diasLab / diasCal) * 100).toFixed(1);
+                    const tiempoProdHoras = (tiempoProdSec / 3600).toFixed(2);
+
+                    csv += `${count + 1},${diasCal},${diasLab},${diasNoLab},${tiempoProdHoras},${eficienciaPct}\n`;
                     count++;
                 });
 
-                return { metrics, csv, type: 'Eficiencia Días Laborables', note: `Analizando ${count} órdenes` };
+                let note = `${count} órdenes - todas columnas numéricas para análisis`;
+                if (skipped > 0) note += ` (${skipped} omitidas)`;
+
+                return { metrics, csv, type: 'Eficiencia Días Laborables', note };
             }
 
             // NUEVO: Impacto del Calendario Laboral
@@ -3539,47 +3696,54 @@
 
                 const metrics = {
                     ordersTotal: $('#kpi-orders-total').text() || '0',
-                    avgNonWorkingDaysTotal: Math.round(
+                    avgNonWorkingDays: Math.round(
                         (latestSummary?.orders_avg_erp_to_created_non_working_days ?? 0) +
                         (latestSummary?.orders_avg_created_to_finished_non_working_days ?? 0)
                     ) + 'd',
-                    avgWorkingDaysTotal: Math.round(
-                        (latestSummary?.orders_avg_erp_to_created_working_days ?? 0) +
-                        (latestSummary?.orders_avg_created_to_finished_working_days ?? 0)
-                    ) + 'd',
-                    impactRatio: ((latestSummary?.orders_avg_erp_to_created_non_working_days ?? 0) +
-                                  (latestSummary?.orders_avg_created_to_finished_non_working_days ?? 0)) > 0
-                        ? `${(((latestSummary.orders_avg_erp_to_created_non_working_days + latestSummary.orders_avg_created_to_finished_non_working_days) /
-                             ((latestSummary.orders_avg_erp_to_created_working_days + latestSummary.orders_avg_created_to_finished_working_days) +
-                              (latestSummary.orders_avg_erp_to_created_non_working_days + latestSummary.orders_avg_created_to_finished_non_working_days))) * 100).toFixed(1)}%`
-                        : '-',
                     dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
                 };
 
-                let csv = 'Order_ID,Cliente,Fecha_Creado_ISO,Fecha_Fin_ISO,Dias_No_Laborables_Atravesados,Retraso_Atribuible_Calendario_Segundos,Retraso_Atribuible_Calendario_Formato,Impacto_Porcentaje\n';
+                // CSV con TODAS las columnas numéricas para correlaciones
+                let csv = 'ID,Dias_Laborables,Dias_No_Laborables,Dias_Totales,Tiempo_Total_Horas,Impacto_Pct\n';
                 let count = 0;
+                let skipped = 0;
+
                 table.rows({search: 'applied'}).data().each(function(row) {
-                    if (count >= 150) return false;
-                    const orderId = cleanValue(safeValue(row.order_id, '0'));
-                    const cliente = cleanValue(safeValue(row.customer_client_name, 'Sin cliente'));
-                    const fechaCreadoIso = cleanValue(normalizeDateTime(row.created_at));
-                    const fechaFinIso = cleanValue(normalizeDateTime(row.finished_at));
-                    const erpCreNoLab = parseInt(safeValue(row.erp_to_created_non_working_days, '0'));
-                    const creFinNoLab = parseInt(safeValue(row.created_to_finished_non_working_days, '0'));
-                    const erpCreLab = parseInt(safeValue(row.erp_to_created_working_days, '0'));
-                    const creFinLab = parseInt(safeValue(row.created_to_finished_working_days, '0'));
+                    if (count >= 100) return false;
+
+                    if (!row.order_id || !row.customer_client_name) {
+                        skipped++;
+                        return;
+                    }
+
+                    const erpCreNoLab = typeof row.erp_to_created_non_working_days === 'number' ? row.erp_to_created_non_working_days : 0;
+                    const creFinNoLab = typeof row.created_to_finished_non_working_days === 'number' ? row.created_to_finished_non_working_days : 0;
+                    const erpCreLab = typeof row.erp_to_created_working_days === 'number' ? row.erp_to_created_working_days : 0;
+                    const creFinLab = typeof row.created_to_finished_working_days === 'number' ? row.created_to_finished_working_days : 0;
+                    const tiempoTotalSec = typeof row.erp_to_finished_seconds === 'number' ? row.erp_to_finished_seconds : 0;
+
                     const totalNoLab = erpCreNoLab + creFinNoLab;
                     const totalLab = erpCreLab + creFinLab;
                     const totalDias = totalNoLab + totalLab;
-                    // Estimamos el retraso como días no laborables * 24 horas en segundos
-                    const retrasoSegundos = totalNoLab * 24 * 3600;
-                    const retrasoFormato = formatTime(retrasoSegundos);
-                    const impact = totalDias > 0 ? `${((totalNoLab / totalDias) * 100).toFixed(1)}%` : '0%';
-                    csv += `${orderId},${cliente},${fechaCreadoIso},${fechaFinIso},${totalNoLab},${retrasoSegundos},${retrasoFormato},${impact}\n`;
+
+                    // Solo incluir si hay datos válidos
+                    if (totalDias <= 0 || tiempoTotalSec <= 0) {
+                        skipped++;
+                        return;
+                    }
+
+                    // Todas las columnas numéricas (sin símbolos %)
+                    const impactoPct = ((totalNoLab / totalDias) * 100).toFixed(1);
+                    const tiempoTotalHoras = (tiempoTotalSec / 3600).toFixed(2);
+
+                    csv += `${count + 1},${totalLab},${totalNoLab},${totalDias},${tiempoTotalHoras},${impactoPct}\n`;
                     count++;
                 });
 
-                return { metrics, csv, type: 'Impacto Calendario Laboral', note: `Analizando ${count} órdenes con calendario laboral` };
+                let note = `${count} órdenes - todas columnas numéricas para análisis`;
+                if (skipped > 0) note += ` (${skipped} omitidas)`;
+
+                return { metrics, csv, type: 'Impacto Calendario Laboral', note };
             }
 
             // NUEVO: Detección de Cuellos de Botella
@@ -3594,15 +3758,26 @@
 
                 // Agrupar órdenes por semana
                 const periodData = {};
-                const clientsByPeriod = {};
+                let skipped = 0;
 
                 table.rows({search: 'applied'}).data().each(function(row) {
-                    // Usar fecha de lanzamiento para agrupar
+                    // Validar datos (cliente no nulo)
+                    if (!row.order_id || !row.customer_client_name || !row.created_at) {
+                        skipped++;
+                        return;
+                    }
+
                     const fechaCreado = row.created_at;
-                    if (!fechaCreado || fechaCreado === '0000-00-00 00:00:00') return;
+                    if (fechaCreado === '0000-00-00 00:00:00') {
+                        skipped++;
+                        return;
+                    }
 
                     const date = new Date(fechaCreado);
-                    if (isNaN(date.getTime())) return;
+                    if (isNaN(date.getTime())) {
+                        skipped++;
+                        return;
+                    }
 
                     // Obtener semana (formato: YYYY-Wxx)
                     const year = date.getFullYear();
@@ -3612,59 +3787,50 @@
                     if (!periodData[periodo]) {
                         periodData[periodo] = {
                             ordenes: 0,
-                            tiempoTotalSegundos: 0,
-                            clientes: new Set()
+                            tiempoTotalSec: 0,
+                            ordenesConTiempo: 0
                         };
                     }
 
                     periodData[periodo].ordenes++;
 
-                    // Sumar tiempo de producción
-                    const tiempoFormato = safeValue(row.created_to_finished_formatted, '00:00:00');
-                    const tiempoSegundosRaw = durationToSeconds(tiempoFormato);
-                    const tiempoSegundos = tiempoSegundosRaw !== '' ? parseInt(tiempoSegundosRaw, 10) : 0;
-                    if (!isNaN(tiempoSegundos)) {
-                        periodData[periodo].tiempoTotalSegundos += tiempoSegundos;
+                    // Sumar tiempo de producción solo si es válido
+                    const tiempoSec = typeof row.created_to_finished_seconds === 'number' ? row.created_to_finished_seconds : 0;
+                    if (tiempoSec > 0) {
+                        periodData[periodo].tiempoTotalSec += tiempoSec;
+                        periodData[periodo].ordenesConTiempo++;
                     }
-
-                    // Contar clientes únicos
-                    const cliente = row.customer_client_name || 'Sin cliente';
-                    periodData[periodo].clientes.add(cliente);
                 });
 
-                // Calcular capacidad estimada (asumimos 40 horas laborables por semana = 144000 segundos)
-                const capacidadSemanalSegundos = 40 * 3600;
+                // CSV con columnas numéricas
+                let csv = 'Semana,Num_Ordenes,Tiempo_Total_Horas,Tiempo_Promedio_Horas\n';
 
-                // CSV: Periodo, Cantidad_Ordenes, Clientes_Unicos, Tiempo_Produccion_Total_Segundos, Tiempo_Produccion_Total_Formato, Tiempo_Promedio_Por_Orden_Segundos, Tiempo_Promedio_Por_Orden_Formato, Capacidad_Utilizada_Porcentaje, Capacidad_Disponible_Estimada_Porcentaje
-                let csv = 'Periodo,Cantidad_Ordenes,Clientes_Unicos,Tiempo_Produccion_Total_Segundos,Tiempo_Produccion_Total_Formato,Tiempo_Promedio_Por_Orden_Segundos,Tiempo_Promedio_Por_Orden_Formato,Capacidad_Utilizada_Porcentaje,Capacidad_Disponible_Estimada_Porcentaje\n';
-
-                // Ordenar periodos
                 const periodosOrdenados = Object.keys(periodData).sort();
 
                 periodosOrdenados.forEach(periodo => {
                     const data = periodData[periodo];
-                    const tiempoTotal = data.tiempoTotalSegundos;
-                    const tiempoTotalFormato = formatTime(tiempoTotal);
-                    const tiempoPromedio = data.ordenes > 0 ? Math.round(tiempoTotal / data.ordenes) : 0;
-                    const tiempoPromedioFormato = formatTime(tiempoPromedio);
+                    const tiempoPromedioSec = data.ordenesConTiempo > 0 ? Math.round(data.tiempoTotalSec / data.ordenesConTiempo) : 0;
 
-                    // Estimar capacidad utilizada (tiempo total / capacidad semanal * 100)
-                    const capacidadUtilizada = capacidadSemanalSegundos > 0
-                        ? Math.min(100, ((tiempoTotal / capacidadSemanalSegundos) * 100)).toFixed(1)
-                        : '0.0';
-                    const capacidadDisponible = (100 - parseFloat(capacidadUtilizada)).toFixed(1);
+                    // Convertir a horas
+                    const tiempoTotalHoras = (data.tiempoTotalSec / 3600).toFixed(2);
+                    const tiempoPromedioHoras = (tiempoPromedioSec / 3600).toFixed(2);
 
-                    csv += `${periodo},${data.ordenes},${data.clientes.size},${tiempoTotal},${tiempoTotalFormato},${tiempoPromedio},${tiempoPromedioFormato},${capacidadUtilizada}%,${capacidadDisponible}%\n`;
+                    // Extraer solo número de semana para análisis numérico
+                    const semanaNum = parseInt(periodo.split('-W')[1], 10);
+
+                    csv += `${semanaNum},${data.ordenes},${tiempoTotalHoras},${tiempoPromedioHoras}\n`;
                 });
 
                 const metrics = {
                     periodosAnalizados: periodosOrdenados.length,
                     ordersTotal: $('#kpi-orders-total').text() || '0',
-                    avgWorkingDaysPerOrder: Math.round(latestSummary?.orders_avg_created_to_finished_working_days ?? 0) + 'd',
                     dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
                 };
 
-                return { metrics, csv, type: 'Planificación de Capacidad', note: `${periodosOrdenados.length} periodos semanales analizados` };
+                let note = `${periodosOrdenados.length} semanas - columnas numéricas para análisis`;
+                if (skipped > 0) note += ` - ${skipped} omitidas`;
+
+                return { metrics, csv, type: 'Planificación de Capacidad', note };
             }
 
             // Función auxiliar para calcular número de semana
@@ -3683,11 +3849,12 @@
 
                 const now = new Date();
 
-                // CSV: Order_ID, Cliente, Estado_Actual, Fecha_Inicio_Estimada_ISO, Fecha_Fin_Estimada_ISO, Progreso_Porcentaje, Retraso_Acumulado_Segundos, Retraso_Acumulado_Formato, Señales_Alerta, Probabilidad_Retraso_Porcentaje
-                let csv = 'Order_ID,Cliente,Estado_Actual,Fecha_Inicio_Estimada_ISO,Fecha_Fin_Estimada_ISO,Progreso_Porcentaje,Retraso_Acumulado_Segundos,Retraso_Acumulado_Formato,Señales_Alerta,Probabilidad_Retraso_Porcentaje\n';
+                // CSV con columnas numéricas para análisis
+                let csv = 'ID,Dias_En_Proceso,Retraso_Horas,Riesgo_Score,Tiempo_Produccion_Horas\n';
 
                 let count = 0;
-                const maxRows = 150;
+                let skipped = 0;
+                const maxRows = 100;
                 let highRiskCount = 0;
                 let mediumRiskCount = 0;
                 let lowRiskCount = 0;
@@ -3695,107 +3862,53 @@
                 table.rows({search: 'applied'}).data().each(function(row) {
                     if (count >= maxRows) return false;
 
-                    const orderId = cleanValue(safeValue(row.order_id, '0'));
-                    const cliente = cleanValue(safeValue(row.customer_client_name, 'Sin cliente'));
-
-                    // Determinar estado
-                    const fechaFin = row.finished_at;
-                    const tieneFinalizacion = fechaFin && fechaFin !== '0000-00-00 00:00:00';
-                    let estadoActual = tieneFinalizacion ? 'Finalizado' : 'En proceso';
-
-                    // Para órdenes finalizadas, analizar si tuvieron problemas (contexto predictivo)
-                    const fechaCreadoIso = cleanValue(normalizeDateTime(row.created_at));
-                    const fechaFinIso = cleanValue(normalizeDateTime(row.finished_at));
-                    const fechaEntregaIso = cleanValue(normalizeDateTime(row.delivery_date));
-
-                    // Calcular progreso (si está finalizado = 100%, si no, estimamos basado en tiempo transcurrido)
-                    let progreso = 100;
-                    if (!tieneFinalizacion && row.created_at) {
-                        const fechaCreado = new Date(row.created_at);
-                        if (!isNaN(fechaCreado.getTime())) {
-                            // Estimar progreso basado en tiempo promedio
-                            const tiempoTranscurrido = (now - fechaCreado) / 1000; // segundos
-                            const tiempoPromedio = (latestSummary?.orders_avg_created_to_finished || 0);
-                            if (tiempoPromedio > 0) {
-                                progreso = Math.min(95, Math.round((tiempoTranscurrido / tiempoPromedio) * 100));
-                                estadoActual = progreso < 30 ? 'Inicio' : (progreso < 70 ? 'En proceso' : 'Finalizando');
-                            } else {
-                                progreso = 50; // Valor por defecto
-                            }
-                        }
+                    // Validar datos (cliente no nulo)
+                    if (!row.order_id || !row.customer_client_name || !row.created_at) {
+                        skipped++;
+                        return;
                     }
 
-                    // Calcular retraso acumulado
-                    let retrasoSegundos = 0;
-                    let señales = [];
-
-                    // Analizar gaps elevados
-                    const processes = Array.isArray(row.processes) ? row.processes : [];
-                    let totalGap = 0;
-                    let maxGap = 0;
-                    processes.forEach(proc => {
-                        const gapSec = typeof proc.gap_seconds === 'number' ? proc.gap_seconds : 0;
-                        totalGap += gapSec;
-                        if (gapSec > maxGap) maxGap = gapSec;
-                    });
-
-                    if (totalGap > 7200) { // > 2 horas
-                        señales.push('gaps_elevados');
-                        retrasoSegundos += totalGap;
+                    // Calcular días en proceso
+                    const fechaCreado = new Date(row.created_at);
+                    if (isNaN(fechaCreado.getTime())) {
+                        skipped++;
+                        return;
                     }
 
-                    // Analizar procesos lentos
-                    const duracionPromedio = processes.length > 0
-                        ? processes.reduce((sum, p) => sum + (p.duration_seconds || 0), 0) / processes.length
-                        : 0;
-                    if (duracionPromedio > 3600) { // > 1 hora promedio
-                        señales.push('procesos_lentos');
+                    const diasEnProceso = Math.floor((now - fechaCreado) / (1000 * 60 * 60 * 24));
+
+                    // Calcular riesgo numérico (0-100)
+                    let riesgoScore = 0;
+
+                    // Factor: días en proceso vs promedio
+                    const promediosDias = latestSummary?.orders_avg_created_to_finished_calendar_days || 5;
+                    if (diasEnProceso > promediosDias * 1.5) {
+                        riesgoScore += 40;
+                    } else if (diasEnProceso > promediosDias) {
+                        riesgoScore += 20;
                     }
 
-                    // Analizar retraso vs entrega planificada
-                    const delayVsPlan = typeof row.order_delivery_delay_seconds === 'number' ? row.order_delivery_delay_seconds : 0;
-                    if (delayVsPlan > 0) {
-                        señales.push('retraso_vs_planificado');
-                        retrasoSegundos += delayVsPlan;
+                    // Factor: retraso actual
+                    const retrasoSec = typeof row.order_delivery_delay_seconds === 'number' ? row.order_delivery_delay_seconds : 0;
+                    if (retrasoSec > 0) {
+                        const diasRetraso = Math.floor(retrasoSec / 86400);
+                        if (diasRetraso > 2) riesgoScore += 40;
+                        else if (diasRetraso > 0) riesgoScore += 20;
                     }
 
-                    // Calcular probabilidad de retraso
-                    let probabilidad = 0;
-
-                    // Factor 1: Retraso acumulado
-                    if (retrasoSegundos > 86400) probabilidad += 30; // > 1 día
-                    else if (retrasoSegundos > 43200) probabilidad += 20; // > 12 horas
-                    else if (retrasoSegundos > 7200) probabilidad += 10; // > 2 horas
-
-                    // Factor 2: Gaps elevados
-                    if (totalGap > 14400) probabilidad += 25; // > 4 horas de gaps
-                    else if (totalGap > 7200) probabilidad += 15; // > 2 horas de gaps
-
-                    // Factor 3: Progreso vs tiempo
-                    if (!tieneFinalizacion && progreso < 50) {
-                        const tiempoTranscurrido = processes.length > 0 ?
-                            processes.reduce((sum, p) => sum + (p.duration_seconds || 0) + (p.gap_seconds || 0), 0) : 0;
-                        if (tiempoTranscurrido > latestSummary?.orders_avg_created_to_finished / 2) {
-                            probabilidad += 20; // Lleva mucho tiempo y poco progreso
-                            señales.push('progreso_lento');
-                        }
-                    }
-
-                    // Factor 4: Procesos lentos
-                    if (duracionPromedio > 7200) probabilidad += 15; // > 2 horas promedio
-
-                    // Ajustar probabilidad final
-                    probabilidad = Math.min(100, Math.max(0, probabilidad));
-
-                    // Clasificar por riesgo
-                    if (probabilidad > 70) highRiskCount++;
-                    else if (probabilidad > 40) mediumRiskCount++;
+                    // Contar por categoría
+                    if (riesgoScore >= 60) highRiskCount++;
+                    else if (riesgoScore >= 30) mediumRiskCount++;
                     else lowRiskCount++;
 
-                    const retrasoFormato = formatTime(Math.abs(retrasoSegundos));
-                    const señalesTexto = señales.length > 0 ? señales.join('; ') : 'ninguna';
+                    // Tiempo de producción
+                    const tiempoProdSec = typeof row.created_to_finished_seconds === 'number' ? row.created_to_finished_seconds : 0;
 
-                    csv += `${orderId},${cliente},${estadoActual},${fechaCreadoIso},${fechaFinIso || fechaEntregaIso},${progreso}%,${retrasoSegundos},${retrasoFormato},${señalesTexto},${probabilidad}%\n`;
+                    // Convertir a horas
+                    const retrasoHoras = (retrasoSec / 3600).toFixed(2);
+                    const tiempoProdHoras = (tiempoProdSec / 3600).toFixed(2);
+
+                    csv += `${count + 1},${diasEnProceso},${retrasoHoras},${riesgoScore},${tiempoProdHoras}\n`;
                     count++;
                 });
 
@@ -3807,12 +3920,10 @@
                     dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
                 };
 
-                return {
-                    metrics,
-                    csv,
-                    type: 'Predicción de Retrasos',
-                    note: `${count} órdenes analizadas: ${highRiskCount} alto riesgo, ${mediumRiskCount} riesgo medio, ${lowRiskCount} bajo riesgo`
-                };
+                let note = `${count} órdenes - Riesgo_Score: 0-100 (60+=alto, 30-59=medio, <30=bajo)`;
+                if (skipped > 0) note += ` - ${skipped} omitidas`;
+
+                return { metrics, csv, type: 'Predicción de Retrasos', note };
             }
 
             // Análisis 8: Análisis Total (CSV extendido)
@@ -3825,57 +3936,75 @@
 
                 const metrics = {
                     ordersTotal: $('#kpi-orders-total').text() || '0',
-                    processesTotal: $('#kpi-processes-total').text() || '0',
                     avgErpToFinish: $('#kpi-erp-finish').text() || '-',
                     avgGap: $('#kpi-gap').text() || '-',
-                    medianErpToFinish: latestSummary?.orders_p50_created_to_finished ? formatSeconds(latestSummary.orders_p50_created_to_finished) : '-',
-                    medianGap: latestSummary?.process_p50_gap ? formatSeconds(latestSummary.process_p50_gap) : '-',
                     dateRange: `${$('#date_start').val()} a ${$('#date_end').val()}`
                 };
 
-                // CSV completo con todas las columnas visibles (normalizadas)
-                let csv = 'Order_ID,Cliente,Fecha_Pedido_Cliente_ISO,Fecha_Lanzamiento_Produccion_ISO,Fecha_Fin_Produccion_ISO,Tiempo_Pedido_Cliente_a_Lanzamiento_Segundos,Tiempo_Pedido_Cliente_a_Lanzamiento_Formato,Tiempo_Pedido_Cliente_a_Fin_Produccion_Segundos,Tiempo_Pedido_Cliente_a_Fin_Produccion_Formato,Tiempo_Lanzamiento_a_Fin_Produccion_Segundos,Tiempo_Lanzamiento_a_Fin_Produccion_Formato\n';
+                // CSV con SOLO columnas numéricas para correlaciones
+                let csv = 'ID,Tiempo_Admin_Horas,Tiempo_Produccion_Horas,Tiempo_Total_Horas,Ratio_Admin,Ratio_Produccion\n';
                 let count = 0;
-                const maxRows = 150;
+                let skipped = 0;
+                const maxRows = 100;
 
                 table.rows({search: 'applied'}).data().each(function(row) {
                     if (count >= maxRows) return false;
-                    const orderId = cleanValue(row.order_id || '-');
-                    const cliente = cleanValue(row.customer_client_name || '-');
-                    const fechaErpIso = cleanValue(normalizeDateTime(row.fecha_pedido_erp));
-                    const fechaCreadoIso = cleanValue(normalizeDateTime(row.created_at));
-                    const fechaFinIso = cleanValue(normalizeDateTime(row.finished_at));
-                    const erpCreadoFormato = safeValue(row.erp_to_created_formatted, '00:00:00');
-                    const erpCreadoSegundosRaw = durationToSeconds(erpCreadoFormato);
-                    const erpCreadoSegundos = cleanValue(erpCreadoSegundosRaw !== '' ? erpCreadoSegundosRaw : '0');
-                    const erpFinFormato = safeValue(row.erp_to_finished_formatted, '00:00:00');
-                    const erpFinSegundosRaw = durationToSeconds(erpFinFormato);
-                    const erpFinSegundos = cleanValue(erpFinSegundosRaw !== '' ? erpFinSegundosRaw : '0');
-                    const creadoFinFormato = safeValue(row.created_to_finished_formatted, '00:00:00');
-                    const creadoFinSegundosRaw = durationToSeconds(creadoFinFormato);
-                    const creadoFinSegundos = cleanValue(creadoFinSegundosRaw !== '' ? creadoFinSegundosRaw : '0');
-                    csv += `${orderId},${cliente},${fechaErpIso},${fechaCreadoIso},${fechaFinIso},${erpCreadoSegundos},${cleanValue(erpCreadoFormato)},${erpFinSegundos},${cleanValue(erpFinFormato)},${creadoFinSegundos},${cleanValue(creadoFinFormato)}\n`;
+
+                    // Validar ID y cliente existen
+                    if (!row.order_id || !row.customer_client_name || String(row.customer_client_name).trim() === '') {
+                        skipped++;
+                        return;
+                    }
+
+                    // Validar TODOS los tiempos sean numéricos
+                    const tiempoAdmin = typeof row.erp_to_created_seconds === 'number' ? row.erp_to_created_seconds : null;
+                    const tiempoProduccion = typeof row.created_to_finished_seconds === 'number' ? row.created_to_finished_seconds : null;
+                    const tiempoTotal = typeof row.erp_to_finished_seconds === 'number' ? row.erp_to_finished_seconds : null;
+
+                    // Solo incluir si TODOS los tiempos son válidos y > 0
+                    if (tiempoAdmin === null || tiempoProduccion === null || tiempoTotal === null) {
+                        skipped++;
+                        return;
+                    }
+                    if (tiempoTotal <= 0) {
+                        skipped++;
+                        return;
+                    }
+
+                    // Convertir segundos a horas (con 2 decimales)
+                    const adminHoras = (tiempoAdmin / 3600).toFixed(2);
+                    const produccionHoras = (tiempoProduccion / 3600).toFixed(2);
+                    const totalHoras = (tiempoTotal / 3600).toFixed(2);
+
+                    // Calcular ratios (% del total)
+                    const ratioAdmin = tiempoTotal > 0 ? ((tiempoAdmin / tiempoTotal) * 100).toFixed(2) : '0.00';
+                    const ratioProduccion = tiempoTotal > 0 ? ((tiempoProduccion / tiempoTotal) * 100).toFixed(2) : '0.00';
+
+                    csv += `${count + 1},${adminHoras},${produccionHoras},${totalHoras},${ratioAdmin},${ratioProduccion}\n`;
                     count++;
                 });
 
-                const note = count >= maxRows ? `Mostrando primeras ${maxRows} órdenes de ${table.page.info().recordsDisplay}` : `Total: ${count} órdenes`;
+                let note = `${count} registros - columnas numéricas (horas y porcentajes)`;
+                if (skipped > 0) note += ` (${skipped} omitidos)`;
+
                 return { metrics, csv, type: 'Análisis Total', note };
             }
 
-            async function startAiTask(fullPrompt, userPromptForDisplay) {
+            async function startAiTask(fullPrompt, userPromptForDisplay, agentType = 'supervisor') {
                 try {
                     console.log('[AI][Production Times] Iniciando análisis:', userPromptForDisplay);
                     console.log('[AI] Prompt length:', fullPrompt.length, 'caracteres');
-                    
+                    console.log('[AI] Agente seleccionado:', agentType);
+
                     // Mostrar modal de procesamiento
                     $('#aiProcessingTitle').text(userPromptForDisplay);
                     $('#aiProcessingStatus').html('<i class="fas fa-spinner fa-spin me-2"></i>Enviando solicitud a IA...');
                     const processingModal = new bootstrap.Modal(document.getElementById('aiProcessingModal'));
                     processingModal.show();
-                    
+
                     const fd = new FormData();
                     fd.append('prompt', fullPrompt);
-                    fd.append('agent', 'data_analysis');
+                    fd.append('agent', agentType);
 
                     const resp = await fetch(`${AI_URL.replace(/\/$/, '')}/api/ollama-tasks`, {
                         method: 'POST',
@@ -3891,17 +4020,36 @@
                     if (!taskId) throw new Error('No task id');
 
                     console.log('[AI] Tarea creada con ID:', taskId);
-                    console.log('[AI] Iniciando polling cada 5 segundos...');
-                    
+                    console.log('[AI] Iniciando polling cada 5 segundos (timeout: 10 minutos)...');
+
                     // Actualizar estado
                     $('#aiProcessingStatus').html('<i class="fas fa-spinner fa-spin me-2"></i>IA procesando... Esperando respuesta...');
+
+                    // Timeout de 10 minutos (600 segundos = 120 polls de 5 segundos)
+                    const MAX_POLL_COUNT = 120;
+                    const POLL_INTERVAL = 5000;
 
                     let done = false; let last; let pollCount = 0;
                     while (!done) {
                         pollCount++;
+
+                        // Verificar timeout
+                        if (pollCount > MAX_POLL_COUNT) {
+                            console.error('[AI] Timeout: La IA tardó más de 10 minutos en responder');
+                            bootstrap.Modal.getInstance(document.getElementById('aiProcessingModal'))?.hide();
+                            alert('La solicitud ha excedido el tiempo máximo de espera (10 minutos). Por favor, intenta con menos datos o un análisis más simple.');
+                            return;
+                        }
+
+                        const elapsedMinutes = Math.floor((pollCount * 5) / 60);
+                        const elapsedSeconds = (pollCount * 5) % 60;
+                        const timeDisplay = elapsedMinutes > 0
+                            ? `${elapsedMinutes}m ${elapsedSeconds}s`
+                            : `${elapsedSeconds}s`;
+
                         console.log(`[AI] Polling #${pollCount} - Esperando 5 segundos...`);
-                        $('#aiProcessingStatus').html(`<i class="fas fa-spinner fa-spin me-2"></i>IA procesando... (${pollCount * 5}s)`);
-                        await new Promise(r => setTimeout(r, 5000));
+                        $('#aiProcessingStatus').html(`<i class="fas fa-spinner fa-spin me-2"></i>IA procesando... (${timeDisplay})`);
+                        await new Promise(r => setTimeout(r, POLL_INTERVAL));
                         
                         const pollResp = await fetch(`${AI_URL.replace(/\/$/, '')}/api/ollama-tasks/${encodeURIComponent(taskId)}`, {
                             headers: { 'Authorization': `Bearer ${AI_TOKEN}` }
@@ -4174,716 +4322,192 @@
                 }, 3000);
             }
 
-            // Configuración de prompts por tipo de análisis
+            // Configuración de prompts por tipo de análisis - OPTIMIZADOS PARA MODELOS 30B
             const analysisPrompts = {
                 'erp-to-created': {
                     title: 'Tiempo Pedido Cliente → Lanzamiento Producción',
-                    prompt: `Eres un analista de producción experto. Analiza los tiempos desde que el cliente hace el pedido hasta que se lanza la orden en fabricación.
+                    prompt: `Analiza el tiempo desde que el cliente hace un pedido hasta que se lanza en producción.
 
-FORMATO DE DATOS:
-Recibirás un CSV con las siguientes columnas (separadas por comas):
-- Order_ID: Identificador único de la orden
-- Cliente: Nombre del cliente
-- Fecha_Pedido_Cliente_ISO: Fecha del pedido en formato ISO (YYYY-MM-DDTHH:MM:SS)
-- Fecha_Lanzamiento_Produccion_ISO: Fecha de lanzamiento en formato ISO
-- Tiempo_Segundos: Duración total en segundos (número entero)
-- Tiempo_Formato: Duración en formato HH:MM:SS
-- Dias_Laborables: Días laborables transcurridos (número entero)
-- Dias_No_Laborables: Días no laborables transcurridos (número entero)
-- Dias_Totales: Total de días calendario (número entero)
+TAREA:
+1. Lista las 5 órdenes más lentas (ID, Cliente, Tiempo_Horas, Dias_Laborables)
+2. Agrupa por cliente: calcula promedio de días laborables por cliente
+3. Identifica clientes con tiempo >20% sobre la media
+4. Da 3 recomendaciones concretas para reducir estos tiempos
 
-IMPORTANTE: Procesa TODAS las filas del CSV. Ignora filas con valores vacíos o "0000-00-00" en fechas.
-
-ANÁLISIS REQUERIDO:
-1. **Top 5 órdenes con mayores retrasos**: Identifica las 5 órdenes con mayor tiempo de espera. Para cada una indica: Order_ID, Cliente, Tiempo_Formato, Dias_Laborables, y días de retraso vs promedio.
-
-2. **Patrones por cliente**: Agrupa por cliente y calcula:
-   - Tiempo promedio de espera por cliente (en días laborables)
-   - Clientes con >20% más tiempo que la media general
-   - Tendencias: ¿hay clientes sistemáticamente lentos?
-
-3. **Análisis de eficiencia**:
-   - Calcula media y mediana de Tiempo_Segundos
-   - Identifica outliers (órdenes con >150% de la mediana)
-   - Calcula % de días laborables vs total
-
-4. **Recomendaciones accionables**: Proporciona 3 acciones específicas priorizadas por impacto estimado para reducir estos tiempos.
-
-FORMATO DE SALIDA:
-Estructura tu respuesta en secciones claras con números y porcentajes concretos. Usa tablas cuando sea apropiado.`
+Responde con secciones numeradas y usa tablas para los datos.`
                 },
                 'created-to-finished': {
                     title: 'Tiempo Lanzamiento Producción → Fin Producción',
-                    prompt: `Eres un analista de operaciones manufactureras. Analiza el tiempo de ciclo real de producción (desde que la orden entra en planta hasta que sale terminada).
+                    prompt: `Analiza el tiempo de ciclo de producción (desde inicio hasta fin).
 
-FORMATO DE DATOS:
-Recibirás un CSV con las siguientes columnas (separadas por comas):
-- Order_ID: Identificador único de la orden
-- Cliente: Nombre del cliente
-- Fecha_Lanzamiento_Produccion_ISO: Fecha de inicio en formato ISO (YYYY-MM-DDTHH:MM:SS)
-- Fecha_Fin_Produccion_ISO: Fecha de finalización en formato ISO
-- Tiempo_Lanzamiento_a_Fin_Produccion_Segundos: Duración del ciclo en segundos (número entero)
-- Tiempo_Lanzamiento_a_Fin_Produccion_Formato: Duración en formato HH:MM:SS
+TAREA:
+1. Lista las 5 órdenes con ciclo más largo (ID, Cliente, Tiempo_Horas)
+2. Calcula media y mediana del tiempo de producción
+3. Identifica órdenes con tiempo >150% de la mediana (outliers)
+4. Agrupa por cliente y detecta cuáles tienen ciclos más largos
+5. Da 3 recomendaciones para reducir el tiempo de ciclo
 
-IMPORTANTE: Procesa TODAS las filas del CSV. Las fechas vacías o "0000-00-00" indican órdenes aún en proceso.
-
-ANÁLISIS REQUERIDO:
-1. **Top 5 ciclos más largos**: Identifica las 5 órdenes con mayor tiempo de ciclo. Para cada una: Order_ID, Cliente, Tiempo_Formato, y % de desviación vs mediana.
-
-2. **Distribución estadística**:
-   - Media y mediana de Tiempo_Lanzamiento_a_Fin_Produccion_Segundos
-   - Tiempo que el 90% de órdenes NO supera (representa casos lentos típicos) y tiempo que el 95% de órdenes NO supera (representa casos extremos). Expresa ambos valores en formato legible como "X horas" o "X días Y horas"
-   - Coeficiente de variación (desviación estándar / media) - explica si hay mucha inconsistencia entre tiempos
-   - Identifica órdenes fuera de 2 desviaciones estándar (casos excepcionales que requieren atención)
-
-3. **Patrones temporales**:
-   - Agrupa por semana o mes (según Fecha_Lanzamiento)
-   - Detecta tendencias: ¿los ciclos aumentan o disminuyen?
-   - Identifica periodos problemáticos con ciclos >120% del promedio
-
-4. **Análisis por cliente**:
-   - Clientes con ciclos consistentemente más largos
-   - Variabilidad por cliente (std dev)
-
-5. **Recomendaciones**: 3 medidas concretas priorizadas por ROI estimado para reducir el tiempo de ciclo promedio en al menos 15%.
-
-FORMATO DE SALIDA:
-Usa secciones numeradas con métricas cuantificadas. Incluye comparaciones porcentuales y valores absolutos.`
+Responde con secciones numeradas y datos concretos.`
                 },
                 'finish-to-delivery': {
                     title: 'Fin Producción → Entrega',
-                    prompt: `Eres un analista de logística y cumplimiento de entregas. Analiza el tiempo desde que la producción termina hasta que el producto llega al cliente.
+                    prompt: `Analiza el tiempo desde que termina la producción hasta la entrega al cliente.
 
-FORMATO DE DATOS:
-Recibirás un CSV con las siguientes columnas (separadas por comas):
-- Order_ID: Identificador único de la orden
-- Cliente: Nombre del cliente
-- Fecha_Fin_ISO: Fecha de finalización de producción en formato ISO (YYYY-MM-DDTHH:MM:SS)
-- Fecha_Entrega_Usada_ISO: Fecha de entrega considerada para el análisis (real o planificada según configuración)
-- Fecha_Entrega_Planificada_ISO: Fecha comprometida originalmente
-- Fecha_Entrega_Real_ISO: Fecha de entrega efectiva (puede estar vacía si aún no se entregó)
-- Tiempo_Fin_a_Entrega_Segundos: Duración post-producción en segundos (número entero)
-- Tiempo_Fin_a_Entrega_Formato: Duración en formato HH:MM:SS
-- Retraso_vs_Plan_Segundos: Diferencia vs planificado en segundos (positivo=retraso, negativo=adelanto)
-- Retraso_vs_Plan_Formato: Diferencia en formato +/-HH:MM:SS
+TAREA:
+1. Lista las 5 órdenes con mayor retraso (ID, Cliente, Retraso_Horas, Estado)
+2. Calcula % de entregas a tiempo vs retrasadas
+3. Identifica clientes con más retrasos
+4. Suma total de horas de retraso acumuladas
+5. Da 3 recomendaciones para mejorar el cumplimiento de entregas
 
-IMPORTANTE: Procesa TODAS las filas del CSV. Valores vacíos en fechas reales indican entregas pendientes.
-
-ANÁLISIS REQUERIDO:
-1. **Top 5 retrasos críticos**: Órdenes con mayor Retraso_vs_Plan_Segundos. Para cada una: Order_ID, Cliente, Tiempo_Fin_a_Entrega_Formato, Retraso_vs_Plan_Formato.
-
-2. **Cumplimiento de SLA**:
-   - % de órdenes entregadas a tiempo (Retraso_vs_Plan_Segundos ≤ 0)
-   - % de órdenes con retrasos <24h, 24-48h, >48h
-   - Retraso promedio solo de órdenes retrasadas
-   - Impacto: suma total de horas/días de retraso acumulado
-
-3. **Análisis por cliente**:
-   - Clientes con tasa de retraso >30%
-   - Top 3 clientes más afectados por volumen de retrasos
-   - Clientes con entregas consistentemente adelantadas
-
-4. **Patrones temporales**:
-   - Días de la semana con más retrasos
-   - Tendencia temporal de Tiempo_Fin_a_Entrega_Segundos
-
-5. **Recomendaciones**: 3 acciones priorizadas para alcanzar ≥95% de cumplimiento SLA, con impacto estimado en días de reducción.
-
-FORMATO DE SALIDA:
-Inicia indicando si se usa fecha real o planificada. Estructura con métricas claras y porcentajes de cumplimiento.`
+Responde con secciones numeradas. Indica claramente el % de cumplimiento.`
                 },
                 'process-gaps': {
                     title: 'Tiempos de espera entre Procesos',
-                    prompt: `Eres un ingeniero de procesos lean manufacturing. Analiza los tiempos de espera (gaps) entre procesos consecutivos para identificar desperdicios y cuellos de botella.
+                    prompt: `Analiza los tiempos de espera (gaps) entre procesos de fabricación.
 
-FORMATO DE DATOS:
-Recibirás un CSV con las siguientes columnas (separadas por comas):
-- Order_ID: Identificador de la orden
-- Codigo_Proceso: Código único del proceso
-- Nombre_Proceso: Descripción del proceso
-- Tiempo_Espera_Segundos: Tiempo de espera ANTES de este proceso en segundos (número entero)
-- Tiempo_Espera_Formato: Tiempo de espera en formato HH:MM:SS
-- Duracion_Segundos: Duración de ejecución del proceso en segundos (número entero)
-- Duracion_Formato: Duración en formato HH:MM:SS
+TAREA:
+1. Lista los 10 procesos con mayor tiempo de espera (ID, Proceso, Espera_Horas, Duracion_Horas)
+2. Calcula el ratio tiempo productivo vs tiempo de espera
+3. Identifica qué procesos tienen gaps consistentemente altos
+4. Da 3 recomendaciones para reducir tiempos de espera
 
-IMPORTANTE: Procesa TODAS las filas del CSV. Cada fila representa un proceso dentro de una orden.
-
-ANÁLISIS REQUERIDO:
-1. **Top 10 gaps más largos**: Procesos con mayor Tiempo_Espera_Segundos. Para cada uno: Order_ID, Codigo_Proceso, Nombre_Proceso, Tiempo_Espera_Formato, Duracion_Formato.
-
-2. **Ratio Value-Added vs Non-Value-Added**:
-   - Suma total de Duracion_Segundos (tiempo productivo)
-   - Suma total de Tiempo_Espera_Segundos (tiempo desperdiciado)
-   - Ratio: Espera / Duración (idealmente <0.5)
-   - % del tiempo total que es espera
-
-3. **Análisis por tipo de proceso**:
-   - Agrupa por Codigo_Proceso o Nombre_Proceso
-   - Identifica procesos con gaps promedio >1 hora
-   - Procesos con alta variabilidad en tiempos de espera (std dev)
-
-4. **Impacto por orden**:
-   - Agrupa por Order_ID
-   - Órdenes con mayor gap acumulado total
-   - Correlación entre número de procesos y gap total
-
-5. **Recomendaciones**: 3 acciones específicas priorizadas por reducción potencial de lead time, indicando procesos específicos a optimizar y reducción esperada en horas/días.
-
-FORMATO DE SALIDA:
-Usa métricas lean (VA/NVA ratio, lead time reduction). Incluye códigos/nombres de procesos específicos en las recomendaciones.`
+Responde con tablas y datos concretos.`
                 },
                 'by-client': {
                     title: 'Análisis por Cliente',
-                    prompt: `Eres un analista de cuentas clave y operaciones. Analiza el rendimiento de producción segmentado por cliente para identificar patrones y oportunidades de mejora por cuenta.
+                    prompt: `Analiza el rendimiento de producción por cliente.
 
-FORMATO DE DATOS:
-Recibirás un CSV con las siguientes columnas (separadas por comas):
-- Cliente: Nombre del cliente
-- Cantidad_Ordenes: Número de órdenes procesadas (número entero)
-- Ordenes_IDs: Lista de IDs de órdenes (separados por punto y coma o similar)
-- Tiempo_Pedido_Cliente_a_Fin_Produccion_Promedio_Segundos: Lead time completo promedio en segundos
-- Tiempo_Pedido_Cliente_a_Fin_Produccion_Promedio_Formato: Lead time en formato HH:MM:SS
-- Tiempo_Lanzamiento_a_Fin_Produccion_Promedio_Segundos: Tiempo de ciclo promedio en segundos
-- Tiempo_Lanzamiento_a_Fin_Produccion_Promedio_Formato: Tiempo de ciclo en formato HH:MM:SS
+TAREA:
+1. Lista los 5 clientes con más órdenes y su tiempo promedio
+2. Identifica el cliente más rápido y el más lento
+3. Calcula la diferencia en días entre mejor y peor cliente
+4. Da 3 recomendaciones para mejorar tiempos por cliente
 
-IMPORTANTE: Procesa TODAS las filas del CSV. Cada fila representa un cliente único con sus métricas agregadas.
-
-ANÁLISIS REQUERIDO:
-1. **Segmentación por volumen**:
-   - Top 5 clientes por Cantidad_Ordenes (clientes estratégicos)
-   - Clientes con 1-3 órdenes (clientes esporádicos)
-   - Concentración: % de órdenes en top 3 clientes
-
-2. **Performance por cliente**:
-   - Cliente con mejor lead time (menor Tiempo_Pedido_Cliente_a_Fin_Produccion_Promedio_Segundos)
-   - Cliente con peor lead time
-   - Diferencia entre mejor y peor (en días)
-   - Clientes con lead time >150% de la mediana general
-
-3. **Análisis de eficiencia**:
-   - Para cada cliente top 5, calcula:
-     * Tiempo administrativo promedio = Lead time - Tiempo de ciclo
-     * % de tiempo en producción vs administrativo
-   - Identifica clientes con alta fricción administrativa
-
-4. **Priorización estratégica**:
-   - Clientes a mejorar urgente: alto volumen + mal performance
-   - Clientes a estudiar: bajo volumen + excelente performance
-   - Clientes estables: alto volumen + buen performance
-
-5. **Recomendaciones**: 3 estrategias diferenciadas por segmento de cliente (ej: clientes de alto volumen con procesos dedicados, clientes esporádicos con slots estándar), con impacto esperado en días de reducción.
-
-FORMATO DE SALIDA:
-Usa tablas para comparar clientes. Incluye nombres de clientes específicos y métricas cuantificadas.`
+Responde con tablas comparativas.`
                 },
                 'order-type-critical': {
                     title: 'Órdenes críticas por tipo',
-                    prompt: `Eres un planner de producción. Analiza el desempeño de entregas segmentado por tipo de producto para identificar qué categorías presentan más problemas de cumplimiento.
+                    prompt: `Analiza entregas por tipo de producto.
 
-FORMATO DE DATOS:
-Recibirás un CSV con las siguientes columnas (separadas por comas):
-- Order_ID: Identificador de la orden
-- Cliente: Nombre del cliente
-- Tipo_Producto: Categoría o ruta de producción
-- Estado_Entrega: Estado actual (ej: "Entregado", "En proceso", "Retrasado")
-- Fecha_Fin_ISO: Fecha de fin de producción en formato ISO
-- Fecha_Entrega_Usada_ISO: Fecha de entrega utilizada para análisis
-- Fecha_Entrega_Planificada_ISO: Fecha comprometida
-- Fecha_Entrega_Real_ISO: Fecha efectiva de entrega
-- Tiempo_Fin_a_Entrega_Segundos: Tiempo post-producción en segundos
-- Tiempo_Fin_a_Entrega_Formato: Tiempo en formato HH:MM:SS
-- Retraso_vs_Plan_Segundos: Diferencia vs plan en segundos (positivo=retraso)
-- Retraso_vs_Plan_Formato: Diferencia en formato +/-HH:MM:SS
+TAREA:
+1. Agrupa por tipo de producto: cuenta órdenes y % con retraso
+2. Lista los 3 tipos con más problemas de retraso
+3. Muestra las 5 órdenes con mayor retraso (ID, Cliente, Tipo, Retraso)
+4. Da recomendaciones específicas por tipo problemático
 
-IMPORTANTE: Procesa TODAS las filas del CSV. Valores positivos en Retraso_vs_Plan_Segundos indican entregas tardías.
-
-ANÁLISIS REQUERIDO:
-1. **Ranking de tipos problemáticos**:
-   - Agrupa por Tipo_Producto
-   - Para cada tipo: cantidad total de órdenes, % con retraso, retraso promedio
-   - Top 3 tipos con mayor incidencia de retrasos (por %)
-   - Top 3 tipos con mayor retraso promedio (en horas)
-
-2. **Análisis de severidad**:
-   - Por cada tipo problemático:
-     * Órdenes críticas (retraso >48h): cantidad y %
-     * Retraso máximo registrado
-     * Retraso acumulado total (suma de todos los retrasos)
-
-3. **Casos críticos específicos**:
-   - Top 5 órdenes con mayor retraso: Order_ID, Cliente, Tipo_Producto, Retraso_vs_Plan_Formato
-   - Identifica si hay clientes específicos recurrentes
-
-4. **Performance comparativa**:
-   - Tipo con mejor cumplimiento (menor % retrasos)
-   - Tipo con peor cumplimiento
-   - Diferencia en días promedio entre mejor y peor tipo
-
-5. **Recomendaciones por tipo**: Para cada uno de los 3 tipos más problemáticos, proporciona 1-2 acciones específicas (ej: "Tipo X: asignar slot dedicado en proceso Y, impacto esperado -2 días").
-
-FORMATO DE SALIDA:
-Usa tablas comparativas por tipo. Incluye nombres específicos de tipos de producto y casos críticos con Order_ID.`
+Responde con tablas por tipo de producto.`
                 },
                 'gap-alerts': {
                     title: 'Alertas de brechas acumuladas',
-                    prompt: `Eres un analista de flow management. Identifica órdenes con tiempos de espera acumulados críticos que están impactando severamente el lead time.
+                    prompt: `Analiza órdenes con tiempos de espera críticos usando los datos CSV.
 
-FORMATO DE DATOS:
-Recibirás un CSV con órdenes que superan el umbral de 2 horas de espera acumulada. Columnas:
-- Order_ID: Identificador de la orden
-- Cliente: Nombre del cliente
-- Procesos_Afectados: Número de procesos con espera significativa (número entero)
-- Tiempo_Espera_Total_Segundos: Suma de todos los gaps de la orden en segundos
-- Tiempo_Espera_Total_Formato: Suma en formato HH:MM:SS
-- Tiempo_Espera_Maximo_Segundos: Gap más largo individual en segundos
-- Tiempo_Espera_Maximo_Formato: Gap máximo en formato HH:MM:SS
-- Tiempo_Espera_Promedio_Segundos: Gap promedio por proceso en segundos
-- Tiempo_Espera_Promedio_Formato: Gap promedio en formato HH:MM:SS
+TAREA:
+1. Clasifica por severidad según Espera_Total_Horas: Crítico si >8 horas | Alto si 4-8 horas | Medio si 2-4 horas
+2. Lista las 5 órdenes con mayor Espera_Total_Horas
+3. Identifica clientes que aparecen más de una vez
+4. Da 3 recomendaciones para reducir esperas
 
-IMPORTANTE: Procesa TODAS las filas del CSV. Todas las órdenes ya superan el umbral mínimo de 2 horas.
-
-ANÁLISIS REQUERIDO:
-1. **Clasificación de severidad**:
-   - Crítico (>8h espera total): cantidad y lista de Order_ID
-   - Alto (4-8h espera total): cantidad
-   - Medio (2-4h espera total): cantidad
-   - % de órdenes en cada categoría
-
-2. **Top 5 órdenes más afectadas**:
-   - Order_ID, Cliente, Tiempo_Espera_Total_Formato, Procesos_Afectados
-   - Impacto: cuántos días de lead time representa ese gap
-
-3. **Análisis de recurrencia**:
-   - Clientes que aparecen 2+ veces en la lista
-   - % de órdenes afectadas por cliente recurrente
-   - Suma de gaps por cliente
-
-4. **Patrones de gaps**:
-   - Correlación entre Procesos_Afectados y Tiempo_Espera_Total
-   - ¿Muchos gaps pequeños o pocos gaps grandes?
-   - Ratio entre gap máximo y gap promedio por orden
-
-5. **Recomendaciones**: 3 medidas priorizadas por impacto (ej: "Investigar proceso X que aparece en 70% de gaps críticos", "Implementar buffer management en cliente Y"), con reducción esperada en horas de espera.
-
-FORMATO DE SALIDA:
-Usa semáforo de criticidad (Crítico/Alto/Medio). Incluye Order_IDs y clientes específicos.`
+Columnas del CSV: ID (identificador) | Procesos (cantidad) | Espera_Total_Horas (suma de esperas) | Espera_Max_Horas (máxima espera).
+Responde con análisis estadístico de las columnas numéricas.`
                 },
                 'slow-processes': {
                     title: 'Procesos Lentos',
-                    prompt: `Eres un ingeniero de métodos y tiempos. Analiza los procesos más lentos para identificar oportunidades de optimización y reducción de tiempos de ciclo.
+                    prompt: `Analiza los procesos más lentos del periodo.
 
-FORMATO DE DATOS:
-Recibirás un CSV con los 30 procesos individuales más lentos del periodo. Columnas:
-- Order_ID: Identificador de la orden
-- Codigo_Proceso: Código único del proceso
-- Nombre_Proceso: Descripción del proceso
-- Duracion_Segundos: Tiempo de ejecución real en segundos (número entero)
-- Duracion_Formato: Duración en formato HH:MM:SS
-- Tiempo_Espera_Segundos: Gap antes de este proceso en segundos
-- Tiempo_Espera_Formato: Gap en formato HH:MM:SS
+TAREA:
+1. Lista los 10 procesos más lentos (ID, Proceso, Duracion_Horas)
+2. Identifica procesos que aparecen repetidamente
+3. Compara tiempo de ejecución vs tiempo de espera
+4. Da 3 recomendaciones para optimizar procesos lentos
 
-IMPORTANTE: Procesa TODAS las 30 filas del CSV. Estos son los casos individuales más extremos de duración larga.
-
-ANÁLISIS REQUERIDO:
-1. **Top 10 procesos más lentos**:
-   - Order_ID, Codigo_Proceso, Nombre_Proceso, Duracion_Formato
-   - Para cada uno: cuántas horas/días representa
-   - % del lead time total que consume cada proceso
-
-2. **Análisis de recurrencia**:
-   - Agrupa por Codigo_Proceso o Nombre_Proceso
-   - Procesos que aparecen 2+ veces en el top 30
-   - Frecuencia de aparición: ¿es un problema sistemático o casos aislados?
-   - Duración promedio por tipo de proceso recurrente
-
-3. **Comparación Duración vs Gap**:
-   - Para cada proceso top 10: ratio Gap/Duración
-   - Procesos con gap mayor que su propia duración (indicador de scheduling pobre)
-   - Suma total de tiempo productivo vs tiempo de espera en top 30
-
-4. **Identificación de patrones**:
-   - ¿Hay clientes específicos asociados a procesos lentos?
-   - ¿Hay procesos específicos consistentemente lentos?
-   - Variabilidad: compara instancias del mismo Codigo_Proceso
-
-5. **Recomendaciones**: 3 acciones priorizadas por reducción potencial (ej: "Proceso X aparece 5 veces con promedio 8h, investigar setup time - impacto potencial -20h/orden", "Optimizar secuencia para reducir gaps en proceso Y").
-
-FORMATO DE SALIDA:
-Usa tablas con Order_ID y códigos de proceso específicos. Cuantifica impacto en horas/días.`
+Responde con tablas y tiempos en formato legible.`
                 },
                 'top-bottom': {
                     title: 'Comparativa Top/Bottom',
-                    prompt: `Eres un analista de benchmarking interno. Compara las órdenes más rápidas vs las más lentas para identificar qué hace diferentes a las mejores y cómo replicar esas prácticas.
+                    prompt: `Compara las 10 órdenes más rápidas vs las 10 más lentas.
 
-FORMATO DE DATOS:
-Recibirás un CSV con exactamente 20 filas (10 TOP + 10 BOTTOM). Columnas:
-- Tipo: "TOP" para las 10 más rápidas, "BOTTOM" para las 10 más lentas
-- Order_ID: Identificador de la orden
-- Cliente: Nombre del cliente
-- Tiempo_Pedido_Cliente_a_Fin_Produccion_Segundos: Lead time completo en segundos
-- Tiempo_Pedido_Cliente_a_Fin_Produccion_Formato: Lead time en formato HH:MM:SS
-- Tiempo_Lanzamiento_a_Fin_Produccion_Segundos: Ciclo de producción en segundos
-- Tiempo_Lanzamiento_a_Fin_Produccion_Formato: Ciclo en formato HH:MM:SS
+TAREA:
+1. Calcula promedios del grupo TOP (lead time, ciclo producción)
+2. Calcula promedios del grupo BOTTOM
+3. Calcula la diferencia en días entre ambos grupos
+4. Identifica qué clientes están en cada grupo
+5. Da 3 acciones para mejorar las órdenes lentas
 
-IMPORTANTE: Procesa las 20 filas completas. Analiza por separado el grupo TOP y el grupo BOTTOM.
-
-ANÁLISIS REQUERIDO:
-1. **Métricas del grupo TOP (10 mejores)**:
-   - Lead time promedio y rango (min-max)
-   - Ciclo de producción promedio
-   - Tiempo administrativo promedio = (Lead time - Ciclo)
-   - Lista de clientes que aparecen en TOP
-
-2. **Métricas del grupo BOTTOM (10 peores)**:
-   - Lead time promedio y rango (min-max)
-   - Ciclo de producción promedio
-   - Tiempo administrativo promedio
-   - Lista de clientes que aparecen en BOTTOM
-
-3. **Diferencias cuantificadas**:
-   - Diferencia en lead time: TOP vs BOTTOM en días
-   - Diferencia en ciclo de producción: TOP vs BOTTOM en días
-   - Diferencia en tiempo administrativo: TOP vs BOTTOM en días
-   - Ratio: Lead time BOTTOM / Lead time TOP (ej: "2.5x más lento")
-
-4. **Factores diferenciadores (3 clave)**:
-   - ¿Hay clientes específicos solo en TOP o solo en BOTTOM?
-   - ¿El ciclo de producción es similar pero el tiempo admin diferente?
-   - ¿Ambos tiempos (ciclo y admin) son problemáticos en BOTTOM?
-
-5. **Plan de replicación**: 3 acciones concretas para llevar órdenes BOTTOM al nivel TOP:
-   - Basadas en las diferencias identificadas
-   - Cuantifica el impacto esperado en días
-   - Prioriza por facilidad de implementación
-
-FORMATO DE SALIDA:
-Usa formato comparativo (Tabla TOP vs BOTTOM). Incluye nombres de clientes y Order_IDs específicos.`
+Usa tabla comparativa TOP vs BOTTOM.`
                 },
                 'full': {
                     title: 'Análisis Total',
-                    prompt: `Eres un director de operaciones. Realiza un análisis ejecutivo integral de toda la cadena de producción, identificando oportunidades estratégicas de mejora.
+                    prompt: `Analiza el rendimiento completo de producción del periodo.
 
-FORMATO DE DATOS:
-Recibirás un CSV con hasta 150 órdenes. Columnas:
-- Order_ID, Cliente: Identificación básica
-- Fecha_Pedido_Cliente_ISO, Fecha_Lanzamiento_Produccion_ISO, Fecha_Fin_Produccion_ISO: Timestamps en formato ISO
-- Tiempo_Pedido_Cliente_a_Lanzamiento_Segundos/Formato: Tiempo administrativo pre-producción
-- Tiempo_Pedido_Cliente_a_Fin_Produccion_Segundos/Formato: Lead time completo (pedido → fin)
-- Tiempo_Lanzamiento_a_Fin_Produccion_Segundos/Formato: Ciclo de producción real
+TAREA:
+1. Resumen ejecutivo: total órdenes, lead time promedio, principal problema detectado
+2. Métricas clave: media y mediana de lead time y ciclo producción
+3. Top 3 clientes por volumen con su tiempo promedio
+4. Identifica las 5 órdenes más problemáticas
+5. Da 5 recomendaciones priorizadas para mejorar tiempos
 
-IMPORTANTE: Procesa TODAS las filas del CSV para obtener una visión completa del periodo.
-
-ANÁLISIS REQUERIDO:
-1. **Resumen Ejecutivo** (3-4 párrafos):
-   - Estado general del periodo: volumen de órdenes, clientes atendidos
-   - Lead time promedio actual vs objetivo (si puedes inferir)
-   - Principal hallazgo: ¿dónde está el mayor problema?
-   - Oportunidad principal de mejora cuantificada
-
-2. **Métricas clave de performance**:
-   - Lead time: media, mediana, tiempo que el 90% de órdenes no supera (casos lentos típicos), tiempo que el 95% de órdenes no supera (casos extremos). Presenta todos los valores en formato legible como "X días Y horas"
-   - Ciclo de producción: media, mediana, tiempo que el 90% de órdenes no supera (casos lentos típicos), tiempo que el 95% de órdenes no supera (casos extremos). Usa formato legible
-   - Tiempo administrativo: media y % del lead time total
-   - Variabilidad: coeficiente de variación - indica qué tan predecible es el proceso
-   - Top 3 clientes por volumen y su lead time promedio
-
-3. **Análisis de tendencias temporales**:
-   - Agrupa por semana/mes según rango de fechas
-   - ¿Los tiempos mejoran, empeoran o se mantienen estables?
-   - Detecta periodos problemáticos específicos
-
-4. **Identificación de 5 cuellos de botella críticos**:
-   Para cada uno indica:
-   - Dónde ocurre (tiempo admin, ciclo producción, entrega)
-   - Magnitud del problema (horas/días)
-   - % de órdenes afectadas
-   - Impacto estimado en el lead time total
-
-5. **Recomendaciones priorizadas** (5 acciones):
-   Clasifica en:
-   - Quick wins (implementación <1 mes, impacto medio)
-   - Iniciativas estratégicas (implementación 1-3 meses, alto impacto)
-   Para cada recomendación: impacto esperado en días de reducción
-
-6. **Plan de acción inmediato** (3 acciones para implementar esta semana):
-   - Específicas y accionables
-   - Con responsable sugerido
-   - Con métrica de éxito
-
-FORMATO DE SALIDA:
-Estructura tipo informe ejecutivo con secciones claras. Usa datos cuantificados y comparaciones. Prioriza insights accionables.`
+Responde como informe ejecutivo con datos concretos.`
                 },
                 'working-days-efficiency': {
                     title: 'Eficiencia Días Laborables',
-                    prompt: `Eres un analista de productividad laboral. Evalúa qué tan eficientemente se aprovechan los días laborables de producción.
+                    prompt: `Evalúa el aprovechamiento de días laborables vs calendario.
 
-FORMATO DE DATOS:
-Recibirás un CSV con las siguientes columnas:
-- Order_ID: Identificador de la orden
-- Cliente: Nombre del cliente
-- Fecha_Creado_ISO: Fecha de lanzamiento en formato ISO
-- Fecha_Fin_ISO: Fecha de finalización en formato ISO
-- Tiempo_Creado_a_Fin_Segundos: Duración total en segundos
-- Tiempo_Creado_a_Fin_Formato: Duración en formato HH:MM:SS
-- Dias_Calendario: Días calendario totales transcurridos (número entero)
-- Dias_Laborables: Días laborables dentro del periodo (número entero)
-- Eficiencia_Laborable: Ratio o % de aprovechamiento (puede ser número o texto con %)
+TAREA:
+1. Calcula ratio promedio: días laborables / días calendario
+2. Lista 5 órdenes con peor eficiencia (más días no laborables)
+3. Identifica si hay patrones (ej: órdenes que cruzan fines de semana)
+4. Da 3 recomendaciones para mejor planificación
 
-IMPORTANTE: Procesa TODAS las filas del CSV. Dias_Laborables excluye fines de semana y festivos.
-
-ANÁLISIS REQUERIDO:
-1. **Métricas de eficiencia global**:
-   - Promedio de Dias_Laborables por orden
-   - Promedio de Dias_Calendario por orden
-   - Ratio promedio: Dias_Laborables / Dias_Calendario
-   - % de tiempo perdido en días no laborables
-
-2. **Top 5 órdenes con peor eficiencia**:
-   - Order_ID, Cliente, Dias_Laborables, Dias_Calendario, Eficiencia_Laborable
-   - Para cada una: cuántos días adicionales vs promedio
-   - ¿Qué tienen en común? (cliente, duración, fechas)
-
-3. **Análisis de patrones de inactividad**:
-   - Órdenes que atraviesan períodos largos de días no laborables
-   - Identifica órdenes con alta proporción de días festivos/fines de semana
-   - Detecta si hay inicio/fin de órdenes que caen sistemáticamente en viernes/lunes (indicador de planificación pobre)
-
-4. **Análisis temporal**:
-   - Agrupa por mes o semana
-   - Identifica períodos con alta proporción de días no laborables (vacaciones, fiestas)
-   - Impacto de cada periodo problemático
-
-5. **Recomendaciones**: 3 acciones para maximizar uso de días laborables:
-   - Ajustes en scheduling para evitar arranques antes de festivos
-   - Optimización de lanzamientos considerando calendario
-   - Posible implementación de turnos/días especiales
-   - Impacto esperado: reducción en días calendario manteniendo días laborables
-
-FORMATO DE SALIDA:
-Usa ratios y porcentajes. Identifica periodos específicos con festivos. Cuantifica oportunidad de mejora en días.`
+Responde con ratios y porcentajes.`
                 },
                 'calendar-impact': {
                     title: 'Impacto Calendario Laboral',
-                    prompt: `Eres un analista de planificación estratégica. Cuantifica el impacto real del calendario laboral (festivos, fines de semana) en los tiempos de producción y entregas.
+                    prompt: `Cuantifica el impacto de festivos y fines de semana en producción.
 
-FORMATO DE DATOS:
-Recibirás un CSV con las siguientes columnas:
-- Order_ID: Identificador de la orden
-- Cliente: Nombre del cliente
-- Fecha_Creado_ISO: Fecha de lanzamiento en formato ISO
-- Fecha_Fin_ISO: Fecha de finalización en formato ISO
-- Dias_No_Laborables_Atravesados: Número de días no laborables en el periodo (número entero)
-- Retraso_Atribuible_Calendario_Segundos: Tiempo perdido por calendario en segundos
-- Retraso_Atribuible_Calendario_Formato: Tiempo en formato HH:MM:SS
-- Impacto_Porcentaje: % del lead time atribuible al calendario (puede incluir símbolo %)
+TAREA:
+1. Suma total de días perdidos por calendario
+2. Lista 10 órdenes más afectadas por días no laborables
+3. Identifica periodos problemáticos (vacaciones, festivos)
+4. Da 3 estrategias para reducir el impacto del calendario
 
-IMPORTANTE: Procesa TODAS las filas del CSV. Este análisis aísla el impacto específico del calendario.
-
-ANÁLISIS REQUERIDO:
-1. **Impacto global del calendario**:
-   - Total de órdenes analizadas
-   - Suma total de Retraso_Atribuible_Calendario_Segundos (convertir a días)
-   - Promedio de días no laborables por orden
-   - Impacto_Porcentaje promedio: qué % del lead time se pierde en calendario
-   - Órdenes con 0 impacto vs órdenes muy afectadas (>20% impacto)
-
-2. **Top 10 órdenes más afectadas**:
-   - Order_ID, Cliente, Dias_No_Laborables_Atravesados, Retraso_Atribuible_Calendario_Formato, Impacto_Porcentaje
-   - Para cada una: cuántos días de retraso puro por calendario
-   - ¿Hay clientes recurrentes?
-
-3. **Análisis temporal de periodos problemáticos**:
-   - Agrupa por mes o fecha según Fecha_Creado_ISO
-   - Identifica meses con más órdenes afectadas
-   - Periodos específicos: vacaciones de verano, Navidad, festivos locales
-   - Cuantifica impacto de cada periodo (días perdidos totales)
-
-4. **Patrones de afectación**:
-   - Relación entre duración de orden y días no laborables atravesados
-   - ¿Las órdenes largas sufren proporcionalmente más o menos?
-   - Distribución: cuántas órdenes tienen 0-2 días, 3-5 días, >5 días no laborables
-
-5. **Estrategias de mitigación** (3 priorizadas):
-   - Basadas en los periodos problemáticos identificados
-   - Ajustes de lanzamiento pre-festivos
-   - Buffers de tiempo en estimaciones
-   - Posibles esquemas de producción en días especiales
-   - Cuantifica reducción esperada en días de lead time
-
-FORMATO DE SALIDA:
-Usa estadísticas agregadas y casos específicos. Identifica periodos/meses problemáticos con nombres (ej: "Agosto 2024", "Semana Santa").`
+Responde con datos concretos y periodos específicos.`
                 },
                 'bottleneck-analysis': {
                     title: 'Detección de Cuellos de Botella',
-                    prompt: `Eres un ingeniero industrial especializado en Theory of Constraints. Identifica los cuellos de botella críticos que limitan la capacidad del sistema de producción.
+                    prompt: `Identifica los cuellos de botella que limitan la producción.
 
-FORMATO DE DATOS:
-Recibirás un CSV con datos agregados por tipo de proceso. Columnas:
-- Codigo_Proceso: Código único del proceso
-- Nombre_Proceso: Descripción del proceso
-- Ordenes_Afectadas: Número de órdenes que pasan por este proceso (número entero)
-- Clientes_Afectados: Número de clientes distintos (número entero)
-- Duracion_Promedio_Segundos: Tiempo promedio de ejecución en segundos
-- Duracion_Promedio_Formato: Duración promedio en HH:MM:SS
-- Duracion_Maxima_Segundos: Caso más lento registrado en segundos
-- Duracion_Maxima_Formato: Duración máxima en HH:MM:SS
-- Tiempo_Espera_Promedio_Segundos: Gap promedio antes de este proceso en segundos
-- Tiempo_Espera_Promedio_Formato: Gap promedio en HH:MM:SS
-- Tasa_Utilizacion_Porcentaje: % de utilización del recurso (puede incluir símbolo %)
+TAREA:
+1. Identifica los 3 procesos con mayor impacto (alta duración + muchas órdenes)
+2. Para cada uno: nombre, duración promedio, órdenes afectadas
+3. Calcula ratio espera/duración para detectar scheduling pobre
+4. Da 3 soluciones específicas por cuello de botella
 
-IMPORTANTE: Procesa TODAS las filas del CSV. Cada fila representa un tipo de proceso con sus estadísticas agregadas.
-
-ANÁLISIS REQUERIDO:
-1. **Identificación de cuellos de botella (Top 3)**:
-   Criterios combinados:
-   - Alta tasa de utilización (idealmente >80%)
-   - Alta duración promedio
-   - Alto tiempo de espera subsecuente (indicador de cola)
-   - Alto volumen de órdenes afectadas
-
-   Para cada cuello de botella: Codigo_Proceso, Nombre_Proceso, Duracion_Promedio_Formato, Tasa_Utilizacion_Porcentaje, Ordenes_Afectadas
-
-2. **Cuantificación del impacto**:
-   Para cada cuello de botella:
-   - Duración total acumulada: Duracion_Promedio × Ordenes_Afectadas (en días)
-   - % del tiempo total de producción que consume
-   - Clientes afectados directamente
-   - Variabilidad: ratio Duracion_Maxima / Duracion_Promedio
-
-3. **Análisis de correlación proceso-espera**:
-   - Para cada proceso: ratio Tiempo_Espera_Promedio / Duracion_Promedio
-   - Procesos con alto ratio (>1.0) indican scheduling pobre
-   - Procesos con bajo ratio pero alta duración son cuellos de botella "puros"
-   - Identifica si los gaps ocurren ANTES o DESPUÉS de los cuellos de botella
-
-4. **Análisis de capacidad**:
-   - Procesos al límite: Tasa_Utilizacion >90% (riesgo alto)
-   - Procesos sobrecargados: 70-90% utilización (monitorear)
-   - Procesos con capacidad: <70% utilización
-   - Capacidad adicional necesaria estimada (en %)
-
-5. **Soluciones específicas por cuello de botella** (3 para cada uno):
-   - Soluciones operativas (paralelización, turnos, redistribución)
-   - Soluciones de proceso (reducir setup time, mejorar métodos)
-   - Inversiones (equipamiento adicional si justificado)
-   - Para cada solución: impacto estimado en reducción de duración o aumento de capacidad
-
-FORMATO DE SALIDA:
-Prioriza por impacto operacional usando matriz (Impacto vs Esfuerzo). Usa códigos y nombres de procesos específicos. Cuantifica todo en horas/días.`
+Responde con procesos específicos y tiempos concretos.`
                 },
                 'capacity-planning': {
                     title: 'Planificación de Capacidad',
-                    prompt: `Eres un planner de capacidad estratégica. Analiza la utilización de capacidad actual y proyecta necesidades futuras basadas en patrones históricos.
+                    prompt: `Analiza la utilización de capacidad por periodo.
 
-FORMATO DE DATOS:
-Recibirás un CSV con datos agregados por periodo temporal. Columnas:
-- Periodo: Identificador del periodo (semana, mes, etc.)
-- Cantidad_Ordenes: Número de órdenes en el periodo (número entero)
-- Clientes_Unicos: Clientes distintos atendidos (número entero)
-- Tiempo_Produccion_Total_Segundos: Suma de tiempos de producción en segundos
-- Tiempo_Produccion_Total_Formato: Suma en formato HH:MM:SS
-- Tiempo_Promedio_Por_Orden_Segundos: Promedio por orden en segundos
-- Tiempo_Promedio_Por_Orden_Formato: Promedio en HH:MM:SS
-- Capacidad_Utilizada_Porcentaje: % de capacidad usada (puede incluir símbolo %)
-- Capacidad_Disponible_Estimada_Porcentaje: % de capacidad libre
+TAREA:
+1. Identifica periodos sobrecargados (>90%) y con baja utilización (<50%)
+2. Detecta tendencias: ¿la carga aumenta o disminuye?
+3. Lista los 3 periodos de mayor carga
+4. Da 3 estrategias para redistribuir carga
 
-IMPORTANTE: Procesa TODAS las filas del CSV. Cada fila representa un periodo temporal distinto.
-
-ANÁLISIS REQUERIDO:
-1. **Identificación de periodos críticos**:
-   - Periodos con sobrecarga (Capacidad_Utilizada >90%): listar con fecha/periodo
-   - Periodos con baja utilización (<50%): listar con fecha/periodo
-   - Periodos óptimos (70-85% utilización): listar
-   - % de periodos en cada categoría
-
-2. **Análisis de tendencias históricas**:
-   - Tendencia de Cantidad_Ordenes: ¿aumenta, disminuye o es estable?
-   - Tendencia de Capacidad_Utilizada: ¿mejora o empeora?
-   - Variabilidad: desviación estándar de Cantidad_Ordenes
-   - Estacionalidad: ¿hay patrones mensuales/trimestrales?
-
-3. **Cálculo de capacidad óptima**:
-   - Capacidad actual estimada (basada en periodos pico)
-   - Utilización promedio actual
-   - Utilización objetivo: 75-80% para permitir flexibilidad
-   - Gap de capacidad: diferencia entre actual y óptimo
-
-4. **Análisis de picos de demanda**:
-   - Top 3 periodos de mayor carga: Periodo, Cantidad_Ordenes, Capacidad_Utilizada
-   - Capacidad adicional necesaria para esos picos (en %)
-   - Impacto si los picos se repiten: ¿cuánta capacidad extra se necesita?
-
-5. **Estrategias de redistribución de carga** (3 priorizadas):
-   - Nivelación de carga: mover órdenes de periodos sobrecargados a periodos con capacidad
-   - Cuantifica: cuántas órdenes mover y a qué periodos
-   - Anticipación: lanzar órdenes antes en periodos de baja utilización
-   - Impacto estimado: mejora en % de utilización y reducción de sobrecarga
-
-6. **Recomendaciones de capacidad adicional**:
-   - Basada en tendencias y picos
-   - Capacidad adicional necesaria (en % o en órdenes/periodo)
-   - ROI estimado: impacto en lead time y cumplimiento
-   - Priorización: ¿capacidad permanente o temporal?
-
-FORMATO DE SALIDA:
-Usa gráficos conceptuales de utilización por periodo. Cuantifica todo en % de capacidad y número de órdenes. Incluye nombres de periodos específicos.`
+Responde con porcentajes y periodos específicos.`
                 },
                 'predictive-delays': {
                     title: 'Predicción de Retrasos',
-                    prompt: `Eres un analista de gestión de riesgos operacionales. Identifica órdenes activas en riesgo de retraso y patrones predictivos para actuar preventivamente.
+                    prompt: `Identifica órdenes en riesgo de retraso.
 
-FORMATO DE DATOS:
-Recibirás un CSV con órdenes activas y su análisis de riesgo. Columnas:
-- Order_ID: Identificador de la orden
-- Cliente: Nombre del cliente
-- Estado_Actual: Estado de la orden (ej: "En proceso", "Bloqueada", etc.)
-- Fecha_Inicio_Estimada_ISO: Fecha de inicio esperada en formato ISO
-- Fecha_Fin_Estimada_ISO: Fecha de fin planificada en formato ISO
-- Progreso_Porcentaje: % de completitud actual (número o con símbolo %)
-- Retraso_Acumulado_Segundos: Retraso actual respecto a lo esperado en segundos
-- Retraso_Acumulado_Formato: Retraso en formato HH:MM:SS
-- Señales_Alerta: Indicadores de riesgo (puede ser texto descriptivo o códigos)
-- Probabilidad_Retraso_Porcentaje: Probabilidad estimada de retraso final (número o con %)
+TAREA:
+1. Clasifica por riesgo: Alto (>70%), Medio (40-70%), Bajo (<40%)
+2. Lista órdenes de alto riesgo (ID, Cliente, Retraso, Riesgo)
+3. Identifica patrones: clientes o procesos recurrentes
+4. Da 3 acciones preventivas para evitar retrasos
 
-IMPORTANTE: Procesa TODAS las filas del CSV. Estas son órdenes ACTIVAS que aún pueden ser salvadas.
-
-ANÁLISIS REQUERIDO:
-1. **Clasificación de riesgo**:
-   - Alto riesgo (Probabilidad >70%): cantidad y lista de Order_ID
-   - Riesgo medio (40-70%): cantidad
-   - Riesgo bajo (<40%): cantidad
-   - % de órdenes activas en cada categoría
-
-2. **Órdenes críticas que requieren acción inmediata**:
-   Para cada orden con Probabilidad >70%:
-   - Order_ID, Cliente, Progreso_Porcentaje, Retraso_Acumulado_Formato, Señales_Alerta
-   - Días hasta Fecha_Fin_Estimada
-   - Severidad del riesgo (alto progreso + alto retraso = crítico)
-
-3. **Análisis de patrones predictivos**:
-   - Señales de alerta más comunes en órdenes de alto riesgo
-   - Correlación entre Progreso_Porcentaje y Probabilidad_Retraso
-   - ¿Hay clientes específicos con múltiples órdenes en riesgo?
-   - Estados que correlacionan con alto riesgo
-
-4. **Análisis de señales tempranas**:
-   - Órdenes con bajo progreso pero ya con retraso acumulado
-   - Órdenes con Señales_Alerta específicas (ej: "gaps elevados", "proceso lento")
-   - Patrones: ¿el retraso ocurre al inicio o se acumula gradualmente?
-
-5. **Impacto proyectado**:
-   - Suma de Retraso_Acumulado de órdenes de alto riesgo (en días)
-   - Si todas las órdenes de alto riesgo se retrasan: cuántos días totales de retraso
-   - Clientes más afectados por volumen de órdenes en riesgo
-
-6. **Plan de acción preventivo** (3 acciones inmediatas priorizadas):
-   - Para órdenes específicas: Order_ID, acción correctiva, impacto esperado
-   - Acciones sistémicas: resolver señales de alerta recurrentes
-   - Timeline: acciones para esta semana vs próximas 2 semanas
-   - Métrica de éxito: reducir X órdenes de alto riesgo a medio/bajo riesgo
-
-FORMATO DE SALIDA:
-Usa semáforo de riesgo (Alto/Medio/Bajo). Lista Order_IDs específicos con recomendaciones. Cuantifica impacto en días de retraso evitados.`
+Usa formato de semáforo (Alto/Medio/Bajo).`
                 }
             };
 
@@ -4972,28 +4596,29 @@ Usa semáforo de riesgo (Alto/Medio/Bajo). Lista Order_IDs específicos con reco
                 // Contar filas del CSV
                 const csvLines = data.csv.split('\n').filter(line => line.trim() !== '');
                 const csvRows = csvLines.length - 1; // -1 porque el primer elemento es el header
-                
-                // Construir prompt final con formato optimizado para agentes
+
+                // Construir prompt final OPTIMIZADO para modelos 30B
                 let finalPrompt = `${config.prompt}\n\n`;
-                finalPrompt += `PERIODO: ${data.metrics.dateRange}\n\n`;
-                
-                // Añadir métricas específicas
-                finalPrompt += 'METRICAS CLAVE:\n';
-                Object.keys(data.metrics).forEach(key => {
-                    if (key !== 'dateRange') {
-                        finalPrompt += `- ${key}: ${data.metrics[key]}\n`;
-                    }
-                });
-                
-                if (data.note) {
-                    finalPrompt += `\n${data.note}\n`;
+
+                // Añadir diccionario de campos si existe
+                const dictionary = fieldDictionaries[analysisType];
+                if (dictionary) {
+                    finalPrompt += dictionary + '\n\n';
                 }
-                
-                // Información clara sobre el CSV
-                finalPrompt += `\n--- INICIO DEL CSV (${csvRows} filas de datos) ---\n`;
+
+                // Período y métricas con nombres legibles
+                finalPrompt += `PERÍODO: ${data.metrics.dateRange}\n\n`;
+                finalPrompt += 'RESUMEN:\n';
+                finalPrompt += formatMetricsForAI(data.metrics, analysisType);
+
+                if (data.note) {
+                    finalPrompt += `\nNOTA: ${data.note}\n`;
+                }
+
+                // CSV con formato claro
+                finalPrompt += `\n=== DATOS CSV (${csvRows} filas) ===\n`;
                 finalPrompt += data.csv;
-                finalPrompt += `--- FIN DEL CSV ---\n`;
-                finalPrompt += `\nATENCION: El CSV anterior contiene ${csvRows} filas de datos reales. Asegurate de procesar TODAS las filas para tu analisis.`;
+                finalPrompt += `=== FIN DATOS ===`;
                 
                 console.log(`[AI] Análisis: ${config.title}`);
                 console.log(`[AI] Filas CSV: ${csvRows}`);
@@ -5061,8 +4686,11 @@ Usa semáforo de riesgo (Alto/Medio/Bajo). Lista Order_IDs específicos con reco
                     console.log(`[AI] Líneas detectadas en sección CSV del prompt: ${csvLinesInPrompt}`);
                 }
                 
-                // Enviar a IA
-                startAiTask(editedPrompt, currentPromptData.title).finally(() => {
+                // Obtener el agente seleccionado
+                const selectedAgent = $('input[name="aiAgentType"]:checked').val() || 'supervisor';
+
+                // Enviar a IA con el agente seleccionado
+                startAiTask(editedPrompt, currentPromptData.title, selectedAgent).finally(() => {
                     $btn.prop('disabled', false);
                     $btn.html('{{ __('Enviar a IA') }}');
                 });
@@ -5135,6 +4763,29 @@ Usa semáforo de riesgo (Alto/Medio/Bajo). Lista Order_IDs específicos con reco
                             <li><strong>{{ __('KPIs') }}:</strong> {{ __('promedios y medianas de tiempos ERP → Fin, duraciones de procesos y gaps') }}</li>
                             <li><strong>{{ __('Datos detallados') }}:</strong> {{ __('hasta 150 órdenes en formato CSV con toda la información') }}</li>
                         </ul>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">{{ __('Tipo de Agente IA') }}:</label>
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <div class="form-check border rounded p-3 h-100" style="cursor: pointer;" onclick="$('#agentSupervisor').prop('checked', true);">
+                                    <input class="form-check-input" type="radio" name="aiAgentType" id="agentSupervisor" value="supervisor" checked>
+                                    <label class="form-check-label w-100" for="agentSupervisor" style="cursor: pointer;">
+                                        <span class="fw-bold text-primary"><i class="fas fa-user-tie me-1"></i>Supervisor</span>
+                                        <small class="text-muted d-block mt-1">{{ __('Respuestas más descriptivas y elaboradas. Ideal para informes ejecutivos.') }}</small>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check border rounded p-3 h-100" style="cursor: pointer;" onclick="$('#agentDataAnalysis').prop('checked', true);">
+                                    <input class="form-check-input" type="radio" name="aiAgentType" id="agentDataAnalysis" value="data_analysis">
+                                    <label class="form-check-label w-100" for="agentDataAnalysis" style="cursor: pointer;">
+                                        <span class="fw-bold text-success"><i class="fas fa-chart-line me-1"></i>Data Analysis</span>
+                                        <small class="text-muted d-block mt-1">{{ __('Respuestas técnicas y estrictas. Ideal para análisis estadístico.') }}</small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <label class="form-label fw-bold">{{ __('Prompt a enviar (puedes editarlo):') }}</label>
                     <textarea class="form-control font-monospace" id="aiPrompt" rows="12" style="font-size: 0.9rem;" placeholder="{{ __('Selecciona un tipo de análisis del dropdown...') }}"></textarea>
