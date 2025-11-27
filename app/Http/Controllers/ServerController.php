@@ -42,9 +42,9 @@ class ServerController extends Controller
             $dbUser = config('database.connections.mysql.username');
             $dbPass = config('database.connections.mysql.password');
 
-            // Ejecutar mysqldump
+            // Ejecutar mysqldump (stderr a /dev/null para evitar warnings en el archivo)
             $command = sprintf(
-                'mysqldump --host=%s --port=%s --user=%s --password=%s %s > %s 2>&1',
+                'mysqldump --host=%s --port=%s --user=%s --password=%s %s 2>/dev/null > %s',
                 escapeshellarg($dbHost),
                 escapeshellarg($dbPort),
                 escapeshellarg($dbUser),
