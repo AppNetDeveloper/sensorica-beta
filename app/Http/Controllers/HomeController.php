@@ -143,6 +143,163 @@ class HomeController extends Controller
                 ];
             }
 
+            // Datos de Órdenes Completadas Hoy y Pedidos Retrasados - permiso productionline-orders
+            $completedTodayStats = null;
+            $delayedOrdersStats = null;
+            if (auth()->user()->can('productionline-orders')) {
+                // Órdenes completadas hoy
+                $completedToday = \App\Models\OriginalOrder::whereNotNull('finished_at')
+                    ->whereDate('finished_at', now()->toDateString())
+                    ->count();
+
+                // Órdenes completadas ayer para comparar
+                $completedYesterday = \App\Models\OriginalOrder::whereNotNull('finished_at')
+                    ->whereDate('finished_at', now()->subDay()->toDateString())
+                    ->count();
+
+                // Sparkline - órdenes completadas por día (últimos 7 días)
+                $completedSparkline = [];
+                for ($i = 6; $i >= 0; $i--) {
+                    $date = now()->subDays($i);
+                    $count = \App\Models\OriginalOrder::whereNotNull('finished_at')
+                        ->whereDate('finished_at', $date->toDateString())
+                        ->count();
+                    $completedSparkline[] = $count;
+                }
+
+                $completedTodayStats = [
+                    'today' => $completedToday,
+                    'yesterday' => $completedYesterday,
+                    'sparkline' => $completedSparkline,
+                ];
+
+                // Pedidos Retrasados - órdenes sin finalizar que han pasado su fecha de entrega
+                $delayedOrders = \App\Models\OriginalOrder::whereNull('finished_at')
+                    ->where(function($q) {
+                        $q->where('delivery_date', '<', now())
+                          ->orWhere('actual_delivery_date', '<', now());
+                    })
+                    ->count();
+
+                // Pedidos retrasados de hace una semana para comparar tendencia
+                $delayedLastWeek = \App\Models\OriginalOrder::whereNull('finished_at')
+                    ->where('created_at', '<', now()->subDays(7))
+                    ->where(function($q) {
+                        $q->where('delivery_date', '<', now()->subDays(7))
+                          ->orWhere('actual_delivery_date', '<', now()->subDays(7));
+                    })
+                    ->count();
+
+                // Sparkline - pedidos retrasados acumulados por día (snapshot diario)
+                $delayedSparkline = [];
+                for ($i = 6; $i >= 0; $i--) {
+                    $date = now()->subDays($i);
+                    // Contar pedidos que estaban retrasados a esa fecha
+                    $count = \App\Models\OriginalOrder::where(function($q) use ($date) {
+                            $q->whereNull('finished_at')
+                              ->orWhere('finished_at', '>', $date->endOfDay());
+                        })
+                        ->where('created_at', '<=', $date->endOfDay())
+                        ->where(function($q) use ($date) {
+                            $q->where('delivery_date', '<', $date->startOfDay())
+                              ->orWhere('actual_delivery_date', '<', $date->startOfDay());
+                        })
+                        ->count();
+                    $delayedSparkline[] = $count;
+                }
+
+                $delayedOrdersStats = [
+                    'count' => $delayedOrders,
+                    'last_week' => $delayedLastWeek,
+                    'sparkline' => $delayedSparkline,
+                ];
+            }
+
+            // Datos de Lead Time - solo si tiene permiso original-order-list
+            $leadTimeStats = null;
+            $customersForLeadTime = null;
+            if (auth()->user()->can('original-order-list')) {
+                $customersForLeadTime = \App\Models\Customer::all();
+
+                // Calcular Lead Time promedio de los últimos 7 días de TODOS los centros
+                // Lead Time 1: Pedido a Entrega (created_at -> delivery_date)
+                // Lead Time 2: Pedido a Fin Producción (created_at -> finished_at)
+                $tz = config('app.timezone');
+                $dateStart = now()->subDays(7)->startOfDay();
+                $dateEnd = now()->endOfDay();
+
+                $orders = \App\Models\OriginalOrder::whereNotNull('finished_at')
+                    ->whereBetween('finished_at', [$dateStart, $dateEnd])
+                    ->select('created_at', 'finished_at', 'delivery_date', 'actual_delivery_date')
+                    ->get();
+
+                $createdToDeliveryValues = [];
+                $createdToFinishedValues = [];
+                $totalOrders = $orders->count();
+
+                foreach ($orders as $order) {
+                    $createdAt = $order->created_at ? $order->created_at->copy()->timezone($tz) : null;
+                    $finishedAt = $order->finished_at ? $order->finished_at->copy()->timezone($tz) : null;
+                    $deliveryDate = $order->actual_delivery_date
+                        ? $order->actual_delivery_date->copy()->timezone($tz)->endOfDay()
+                        : ($order->delivery_date ? $order->delivery_date->copy()->timezone($tz)->endOfDay() : null);
+
+                    // Pedido a Entrega
+                    if ($createdAt && $deliveryDate) {
+                        $seconds = $createdAt->diffInSeconds($deliveryDate, false);
+                        if ($seconds > 0) {
+                            $createdToDeliveryValues[] = $seconds;
+                        }
+                    }
+
+                    // Pedido a Fin Producción
+                    if ($createdAt && $finishedAt) {
+                        $seconds = $createdAt->diffInSeconds($finishedAt, false);
+                        if ($seconds > 0) {
+                            $createdToFinishedValues[] = $seconds;
+                        }
+                    }
+                }
+
+                // Calcular promedios en días
+                $avgCreatedToDeliveryDays = count($createdToDeliveryValues) > 0
+                    ? round(array_sum($createdToDeliveryValues) / count($createdToDeliveryValues) / 86400, 1)
+                    : 0;
+                $avgCreatedToFinishedDays = count($createdToFinishedValues) > 0
+                    ? round(array_sum($createdToFinishedValues) / count($createdToFinishedValues) / 86400, 1)
+                    : 0;
+
+                $leadTimeStats = [
+                    'avg_to_delivery_days' => $avgCreatedToDeliveryDays,
+                    'avg_to_finished_days' => $avgCreatedToFinishedDays,
+                    'total_orders' => $totalOrders,
+                    'orders_with_delivery' => count($createdToDeliveryValues),
+                    'orders_with_finished' => count($createdToFinishedValues),
+                ];
+            }
+
+            // Datos de OEE (Production Stats) - solo si tiene permiso productionline-production-stats
+            $oeeStats = null;
+            $customersForOee = null;
+            if (auth()->user()->can('productionline-production-stats')) {
+                $customersForOee = \App\Models\Customer::all();
+
+                // Calcular OEE promedio de los últimos 7 días de todas las líneas
+                $oeeData = \App\Models\OrderStat::where('created_at', '>=', now()->subDays(7))
+                    ->whereNotNull('oee')
+                    ->where('oee', '>', 0)
+                    ->selectRaw('AVG(oee) as avg_oee, COUNT(*) as total_records')
+                    ->first();
+
+                $avgOee = $oeeData->avg_oee ? round($oeeData->avg_oee, 1) : 0;
+                $totalRecords = $oeeData->total_records ?? 0;
+
+                $oeeStats = [
+                    'avg_oee' => $avgOee,
+                    'total_records' => $totalRecords
+                ];
+            }
+
             // Datos de líneas de producción y turnos - solo si tiene permiso
             $productionLines = null;
             $productionLineStats = null;
@@ -254,7 +411,10 @@ class HomeController extends Controller
                 'orderOrganizerStats', 'customersForKanban',
                 'originalOrdersStats', 'customersForOrders',
                 'incidentsStats', 'customersForIncidents',
-                'maintenanceStats', 'customersForMaintenance'
+                'maintenanceStats', 'customersForMaintenance',
+                'oeeStats', 'customersForOee',
+                'leadTimeStats', 'customersForLeadTime',
+                'completedTodayStats', 'delayedOrdersStats'
             ));
         }
     }
@@ -550,6 +710,189 @@ class HomeController extends Controller
                 'sparkline' => $qualitySparkline,
                 'isAlert' => $qualityIssuesToday > 0, // Alerta si hay incidencias de calidad hoy
                 'todayCount' => $qualityIssuesToday
+            ];
+        }
+
+        // Lead Time Stats
+        if (auth()->user()->can('original-order-list')) {
+            $tz = config('app.timezone');
+            $dateStart = now()->subDays(7)->startOfDay();
+            $dateEnd = now()->endOfDay();
+
+            $orders = \App\Models\OriginalOrder::whereNotNull('finished_at')
+                ->whereBetween('finished_at', [$dateStart, $dateEnd])
+                ->select('created_at', 'finished_at', 'delivery_date', 'actual_delivery_date')
+                ->get();
+
+            $createdToDeliveryValues = [];
+            $createdToFinishedValues = [];
+
+            foreach ($orders as $order) {
+                $createdAt = $order->created_at ? $order->created_at->copy()->timezone($tz) : null;
+                $finishedAt = $order->finished_at ? $order->finished_at->copy()->timezone($tz) : null;
+                $deliveryDate = $order->actual_delivery_date
+                    ? $order->actual_delivery_date->copy()->timezone($tz)->endOfDay()
+                    : ($order->delivery_date ? $order->delivery_date->copy()->timezone($tz)->endOfDay() : null);
+
+                if ($createdAt && $deliveryDate) {
+                    $seconds = $createdAt->diffInSeconds($deliveryDate, false);
+                    if ($seconds > 0) {
+                        $createdToDeliveryValues[] = $seconds;
+                    }
+                }
+
+                if ($createdAt && $finishedAt) {
+                    $seconds = $createdAt->diffInSeconds($finishedAt, false);
+                    if ($seconds > 0) {
+                        $createdToFinishedValues[] = $seconds;
+                    }
+                }
+            }
+
+            $avgToDeliveryDays = count($createdToDeliveryValues) > 0
+                ? round(array_sum($createdToDeliveryValues) / count($createdToDeliveryValues) / 86400, 1)
+                : 0;
+            $avgToFinishedDays = count($createdToFinishedValues) > 0
+                ? round(array_sum($createdToFinishedValues) / count($createdToFinishedValues) / 86400, 1)
+                : 0;
+
+            // Semana anterior para comparar
+            $prevDateStart = now()->subDays(14)->startOfDay();
+            $prevDateEnd = now()->subDays(7)->endOfDay();
+
+            $prevOrders = \App\Models\OriginalOrder::whereNotNull('finished_at')
+                ->whereBetween('finished_at', [$prevDateStart, $prevDateEnd])
+                ->select('created_at', 'finished_at', 'delivery_date', 'actual_delivery_date')
+                ->get();
+
+            $prevToDeliveryValues = [];
+            $prevToFinishedValues = [];
+
+            foreach ($prevOrders as $order) {
+                $createdAt = $order->created_at ? $order->created_at->copy()->timezone($tz) : null;
+                $finishedAt = $order->finished_at ? $order->finished_at->copy()->timezone($tz) : null;
+                $deliveryDate = $order->actual_delivery_date
+                    ? $order->actual_delivery_date->copy()->timezone($tz)->endOfDay()
+                    : ($order->delivery_date ? $order->delivery_date->copy()->timezone($tz)->endOfDay() : null);
+
+                if ($createdAt && $deliveryDate) {
+                    $seconds = $createdAt->diffInSeconds($deliveryDate, false);
+                    if ($seconds > 0) {
+                        $prevToDeliveryValues[] = $seconds;
+                    }
+                }
+
+                if ($createdAt && $finishedAt) {
+                    $seconds = $createdAt->diffInSeconds($finishedAt, false);
+                    if ($seconds > 0) {
+                        $prevToFinishedValues[] = $seconds;
+                    }
+                }
+            }
+
+            $prevAvgToDeliveryDays = count($prevToDeliveryValues) > 0
+                ? round(array_sum($prevToDeliveryValues) / count($prevToDeliveryValues) / 86400, 1)
+                : 0;
+            $prevAvgToFinishedDays = count($prevToFinishedValues) > 0
+                ? round(array_sum($prevToFinishedValues) / count($prevToFinishedValues) / 86400, 1)
+                : 0;
+
+            // Sparklines - promedio diario
+            $deliverySparkline = [];
+            $finishedSparkline = [];
+            for ($i = 6; $i >= 0; $i--) {
+                $date = now()->subDays($i);
+                $dayOrders = \App\Models\OriginalOrder::whereNotNull('finished_at')
+                    ->whereDate('finished_at', $date->toDateString())
+                    ->select('created_at', 'finished_at', 'delivery_date', 'actual_delivery_date')
+                    ->get();
+
+                $dayDeliveryVals = [];
+                $dayFinishedVals = [];
+                foreach ($dayOrders as $order) {
+                    $createdAt = $order->created_at ? $order->created_at->copy()->timezone($tz) : null;
+                    $finishedAt = $order->finished_at ? $order->finished_at->copy()->timezone($tz) : null;
+                    $deliveryDate = $order->actual_delivery_date
+                        ? $order->actual_delivery_date->copy()->timezone($tz)->endOfDay()
+                        : ($order->delivery_date ? $order->delivery_date->copy()->timezone($tz)->endOfDay() : null);
+
+                    if ($createdAt && $deliveryDate) {
+                        $seconds = $createdAt->diffInSeconds($deliveryDate, false);
+                        if ($seconds > 0) {
+                            $dayDeliveryVals[] = $seconds / 86400;
+                        }
+                    }
+                    if ($createdAt && $finishedAt) {
+                        $seconds = $createdAt->diffInSeconds($finishedAt, false);
+                        if ($seconds > 0) {
+                            $dayFinishedVals[] = $seconds / 86400;
+                        }
+                    }
+                }
+
+                $deliverySparkline[] = count($dayDeliveryVals) > 0 ? round(array_sum($dayDeliveryVals) / count($dayDeliveryVals), 1) : 0;
+                $finishedSparkline[] = count($dayFinishedVals) > 0 ? round(array_sum($dayFinishedVals) / count($dayFinishedVals), 1) : 0;
+            }
+
+            // Para Lead Time, menor es mejor, así que invertimos la tendencia
+            $data['leadTimeToDelivery'] = [
+                'value' => $avgToDeliveryDays,
+                'previous' => $prevAvgToDeliveryDays,
+                'trend' => $avgToDeliveryDays < $prevAvgToDeliveryDays ? 'up' : ($avgToDeliveryDays > $prevAvgToDeliveryDays ? 'down' : 'same'),
+                'sparkline' => $deliverySparkline,
+                'ordersCount' => count($createdToDeliveryValues),
+                'isAlert' => $avgToDeliveryDays > 10 // Alerta si más de 10 días
+            ];
+
+            $data['leadTimeToFinished'] = [
+                'value' => $avgToFinishedDays,
+                'previous' => $prevAvgToFinishedDays,
+                'trend' => $avgToFinishedDays < $prevAvgToFinishedDays ? 'up' : ($avgToFinishedDays > $prevAvgToFinishedDays ? 'down' : 'same'),
+                'sparkline' => $finishedSparkline,
+                'ordersCount' => count($createdToFinishedValues),
+                'isAlert' => $avgToFinishedDays > 7 // Alerta si más de 7 días
+            ];
+        }
+
+        // OEE (Production Stats)
+        if (auth()->user()->can('productionline-production-stats')) {
+            // OEE promedio últimos 7 días
+            $oeeData = \App\Models\OrderStat::where('created_at', '>=', now()->subDays(7))
+                ->whereNotNull('oee')
+                ->where('oee', '>', 0)
+                ->selectRaw('AVG(oee) as avg_oee, COUNT(*) as total_records')
+                ->first();
+
+            $avgOee = $oeeData->avg_oee ? round($oeeData->avg_oee, 1) : 0;
+            $totalRecords = $oeeData->total_records ?? 0;
+
+            // OEE de la semana anterior para comparar
+            $oeePrevData = \App\Models\OrderStat::where('created_at', '>=', now()->subDays(14))
+                ->where('created_at', '<', now()->subDays(7))
+                ->whereNotNull('oee')
+                ->where('oee', '>', 0)
+                ->selectRaw('AVG(oee) as avg_oee')
+                ->first();
+            $prevOee = $oeePrevData->avg_oee ? round($oeePrevData->avg_oee, 1) : 0;
+
+            // Sparkline - OEE promedio por día
+            $oeeSparkline = [];
+            for ($i = 6; $i >= 0; $i--) {
+                $date = now()->subDays($i);
+                $dayOee = \App\Models\OrderStat::whereDate('created_at', $date->toDateString())
+                    ->whereNotNull('oee')
+                    ->where('oee', '>', 0)
+                    ->avg('oee');
+                $oeeSparkline[] = $dayOee ? round($dayOee, 1) : 0;
+            }
+
+            $data['oeeStats'] = [
+                'value' => $avgOee,
+                'previous' => $prevOee,
+                'trend' => $avgOee > $prevOee ? 'up' : ($avgOee < $prevOee ? 'down' : 'same'),
+                'sparkline' => $oeeSparkline,
+                'totalRecords' => $totalRecords,
+                'isAlert' => $avgOee < 60 // Alerta si OEE es menor al 60%
             ];
         }
 

@@ -15,610 +15,507 @@
 @endsection
 
 @section('content')
-    <div class="row mt-3">
-        <div class="col-lg-10 mx-auto">
-            <div class="card border-0 shadow">
-                <div class="card-header border-0">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="card-title text-white mb-0">{{ __('Process Details') }}: {{ $process->name }}</h5>
-                        <div class="d-flex gap-2">
-                            <a href="{{ route('processes.edit', $process) }}" class="btn-modern btn-primary">
-                                <i class="fas fa-edit me-1"></i> {{ __('Edit') }}
-                            </a>
-                            <a href="{{ route('processes.index') }}" class="btn-modern btn-secondary">
-                                <i class="fas fa-list me-1"></i> {{ __('Back to Processes') }}
-                            </a>
-                        </div>
+<div class="ps-container">
+    {{-- Header Principal --}}
+    <div class="ps-header">
+        <div class="row align-items-center">
+            <div class="col-lg-6 col-md-12 mb-3 mb-lg-0">
+                <div class="d-flex align-items-center">
+                    <div class="ps-header-icon me-3">
+                        <i class="fas fa-cog"></i>
+                    </div>
+                    <div>
+                        <h4 class="ps-title mb-1">{{ $process->name }}</h4>
+                        <p class="ps-subtitle mb-0">{{ __('Process Details') }} #{{ $process->id }}</p>
                     </div>
                 </div>
-                <div class="card-body p-4">
-                    <!-- Información Principal en Tarjetas Modernas -->
-                    <div class="row mb-5">
-                        <div class="col-md-6 mb-4">
-                            <div class="info-card-modern">
-                                <div class="info-card-header">
-                                    <i class="fas fa-info-circle"></i>
-                                    <h6 class="mb-0">{{ __('Basic Information') }}</h6>
-                                </div>
-                                <div class="info-card-body">
-                                    <div class="info-item">
-                                        <span class="info-label">{{ __('ID') }}:</span>
-                                        <span class="info-value">{{ $process->id }}</span>
-                                    </div>
-                                    <div class="info-item">
-                                        <span class="info-label">{{ __('Code') }}:</span>
-                                        <span class="info-value">{{ $process->code }}</span>
-                                    </div>
-                                    <div class="info-item">
-                                        <span class="info-label">{{ __('Name') }}:</span>
-                                        <span class="info-value">{{ $process->name }}</span>
-                                    </div>
-                                    <div class="info-item">
-                                        <span class="info-label">{{ __('Correction Factor') }}:</span>
-                                        <span class="info-value">{{ number_format($process->factor_correccion, 2) }}</span>
-                                    </div>
-                                    <div class="info-item">
-                                        <span class="info-label">{{ __('Sequence') }}:</span>
-                                        <span class="info-value">{{ $process->sequence }}</span>
-                                    </div>
-                                    @if($process->posicion_kanban)
-                                    <div class="info-item">
-                                        <span class="info-label">{{ __('Kanban Position') }}:</span>
-                                        <span class="info-value">{{ $process->posicion_kanban }}</span>
-                                    </div>
-                                    @endif
-                                </div>
-                            </div>
-                        </div>
+            </div>
+            <div class="col-lg-6 col-md-12">
+                <div class="d-flex align-items-center justify-content-lg-end gap-2 flex-wrap">
+                    @can('process-edit')
+                    <a href="{{ route('processes.edit', $process) }}" class="ps-btn ps-btn-primary">
+                        <i class="fas fa-edit"></i>
+                        <span>{{ __('Edit') }}</span>
+                    </a>
+                    @endcan
+                    <a href="{{ route('processes.index') }}" class="ps-btn ps-btn-secondary">
+                        <i class="fas fa-arrow-left"></i>
+                        <span>{{ __('Back') }}</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
 
-                        <div class="col-md-6 mb-4">
-                            <div class="info-card-modern">
-                                <div class="info-card-header">
-                                    <i class="fas fa-align-left"></i>
-                                    <h6 class="mb-0">{{ __('Description') }}</h6>
-                                </div>
-                                <div class="info-card-body">
-                                    <p class="description-text">
-                                        {{ $process->description ?? __('No description available.') }}
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div class="info-card-modern mt-3">
-                                <div class="info-card-header">
-                                    <i class="fas fa-clock"></i>
-                                    <h6 class="mb-0">{{ __('Timeline Information') }}</h6>
-                                </div>
-                                <div class="info-card-body">
-                                    <div class="info-item">
-                                        <span class="info-label">{{ __('Created') }}:</span>
-                                        <span class="info-value">{{ $process->created_at->format('d/m/Y H:i:s') }}</span>
-                                    </div>
-                                    <div class="info-item">
-                                        <span class="info-label">{{ __('Last Updated') }}:</span>
-                                        <span class="info-value">{{ $process->updated_at->format('d/m/Y H:i:s') }}</span>
-                                    </div>
-                                    @if($process->color)
-                                    <div class="info-item">
-                                        <span class="info-label">{{ __('Color') }}:</span>
-                                        <span class="color-indicator" style="background-color: {{ $process->color }};"></span>
-                                        <span class="info-value">{{ $process->color }}</span>
-                                    </div>
-                                    @endif
-                                </div>
-                            </div>
+    {{-- Info Cards --}}
+    <div class="row g-4 mb-4">
+        {{-- Basic Information --}}
+        <div class="col-lg-6">
+            <div class="ps-info-card">
+                <div class="ps-info-header">
+                    <i class="fas fa-info-circle"></i>
+                    <span>{{ __('Basic Information') }}</span>
+                </div>
+                <div class="ps-info-body">
+                    <div class="ps-info-row">
+                        <span class="ps-info-label">{{ __('Code') }}</span>
+                        <span class="ps-code-badge">{{ $process->code }}</span>
+                    </div>
+                    <div class="ps-info-row">
+                        <span class="ps-info-label">{{ __('Name') }}</span>
+                        <span class="ps-info-value">{{ $process->name }}</span>
+                    </div>
+                    <div class="ps-info-row">
+                        <span class="ps-info-label">{{ __('Correction Factor') }}</span>
+                        <span class="ps-info-value">{{ number_format($process->factor_correccion, 2) }}</span>
+                    </div>
+                    <div class="ps-info-row">
+                        <span class="ps-info-label">{{ __('Sequence') }}</span>
+                        <span class="ps-sequence-badge">{{ $process->sequence }}</span>
+                    </div>
+                    @if($process->posicion_kanban)
+                    <div class="ps-info-row">
+                        <span class="ps-info-label">{{ __('Kanban Position') }}</span>
+                        <span class="ps-info-value">{{ $process->posicion_kanban }}</span>
+                    </div>
+                    @endif
+                    @if($process->color)
+                    <div class="ps-info-row">
+                        <span class="ps-info-label">{{ __('Color') }}</span>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="ps-color-badge" style="background-color: {{ $process->color }};"></span>
+                            <span class="ps-info-value">{{ $process->color }}</span>
                         </div>
                     </div>
+                    @endif
+                </div>
+            </div>
+        </div>
 
-                    <!-- Líneas de Producción Asociadas -->
-                    <div class="mt-4">
-                        <h5 class="section-title mb-4">
-                            <i class="fas fa-industry me-2"></i>
-                            {{ __('Associated Production Lines') }}
-                        </h5>
-                        @if($process->productionLines->isNotEmpty())
-                            <div class="table-responsive-modern">
-                                <table class="table-modern">
-                                    <thead>
-                                        <tr>
-                                            <th><i class="fas fa-hashtag me-1"></i> #</th>
-                                            <th><i class="fas fa-tag me-1"></i> {{ __('Line Name') }}</th>
-                                            <th><i class="fas fa-user me-1"></i> {{ __('Customer') }}</th>
-                                            <th><i class="fas fa-sort me-1"></i> {{ __('Order in this Line') }}</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach($process->productionLines as $index => $line)
-                                            <tr class="table-row-hover">
-                                                <td><span class="badge-modern">{{ $index + 1 }}</span></td>
-                                                <td>{{ $line->name }}</td>
-                                                <td>{{ $line->customer->name ?? 'N/A' }}</td>
-                                                <td><span class="sequence-badge">{{ $line->pivot->order }}</span></td>
-                                            </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
-                            </div>
-                        @else
-                            <div class="empty-state-modern">
-                                <i class="fas fa-inbox fa-3x mb-3"></i>
-                                <h6>{{ __('No production lines associated with this process.') }}</h6>
-                                <p class="text-muted">{{ __('This process is not currently assigned to any production line.') }}</p>
-                            </div>
-                        @endif
+        {{-- Description & Timeline --}}
+        <div class="col-lg-6">
+            <div class="ps-info-card mb-4">
+                <div class="ps-info-header">
+                    <i class="fas fa-align-left"></i>
+                    <span>{{ __('Description') }}</span>
+                </div>
+                <div class="ps-info-body">
+                    <p class="ps-description">{{ $process->description ?? __('No description available.') }}</p>
+                </div>
+            </div>
+
+            <div class="ps-info-card">
+                <div class="ps-info-header">
+                    <i class="fas fa-clock"></i>
+                    <span>{{ __('Timeline') }}</span>
+                </div>
+                <div class="ps-info-body">
+                    <div class="ps-info-row">
+                        <span class="ps-info-label">{{ __('Created') }}</span>
+                        <span class="ps-info-value">{{ $process->created_at->format('d/m/Y H:i') }}</span>
                     </div>
-
-                    <!-- Botones de Acción -->
-                    <div class="d-flex justify-content-between mt-5 pt-4 border-top">
-                        <a href="{{ route('processes.index') }}" class="btn-modern btn-secondary">
-                            <i class="fas fa-arrow-left me-1"></i> {{ __('Back to List') }}
-                        </a>
-                        <div class="d-flex gap-2">
-                            <a href="{{ route('processes.edit', $process) }}" class="btn-modern btn-primary">
-                                <i class="fas fa-edit me-1"></i> {{ __('Edit') }}
-                            </a>
-                            <form action="{{ route('processes.destroy', $process) }}" method="POST" class="d-inline">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn-modern btn-danger"
-                                        onclick="return confirm('{{ __('Are you sure you want to delete this process?') }}')">
-                                    <i class="fas fa-trash me-1"></i> {{ __('Delete') }}
-                                </button>
-                            </form>
-                        </div>
+                    <div class="ps-info-row">
+                        <span class="ps-info-label">{{ __('Last Updated') }}</span>
+                        <span class="ps-info-value">{{ $process->updated_at->format('d/m/Y H:i') }}</span>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
+    {{-- Production Lines --}}
+    <div class="ps-table-card">
+        <div class="ps-table-header">
+            <span class="ps-table-title">
+                <i class="fas fa-industry"></i>
+                {{ __('Associated Production Lines') }}
+            </span>
+            <span class="ps-table-count">
+                {{ $process->productionLines->count() }} {{ __('lines') }}
+            </span>
+        </div>
+        <div class="ps-table-body">
+            @if($process->productionLines->isNotEmpty())
+                <table class="ps-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>{{ __('Line Name') }}</th>
+                            <th>{{ __('Customer') }}</th>
+                            <th>{{ __('Order') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($process->productionLines as $index => $line)
+                            <tr>
+                                <td><span class="ps-index-badge">{{ $index + 1 }}</span></td>
+                                <td><span class="ps-line-name">{{ $line->name }}</span></td>
+                                <td>{{ $line->customer->name ?? 'N/A' }}</td>
+                                <td><span class="ps-order-badge">{{ $line->pivot->order }}</span></td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            @else
+                <div class="ps-empty-state">
+                    <i class="fas fa-inbox"></i>
+                    <h6>{{ __('No production lines associated') }}</h6>
+                    <p>{{ __('This process is not currently assigned to any production line.') }}</p>
+                </div>
+            @endif
+        </div>
+    </div>
+
+    {{-- Actions Footer --}}
+    <div class="ps-actions-footer">
+        <a href="{{ route('processes.index') }}" class="ps-footer-btn ps-footer-back">
+            <i class="fas fa-arrow-left"></i>
+            {{ __('Back to List') }}
+        </a>
+        <div class="d-flex gap-2">
+            @can('process-edit')
+            <a href="{{ route('processes.edit', $process) }}" class="ps-footer-btn ps-footer-edit">
+                <i class="fas fa-edit"></i>
+                {{ __('Edit') }}
+            </a>
+            @endcan
+            @can('process-delete')
+            <form action="{{ route('processes.destroy', $process) }}" method="POST" class="d-inline">
+                @csrf
+                @method('DELETE')
+                <button type="submit" class="ps-footer-btn ps-footer-delete" onclick="return confirm('{{ __('Are you sure you want to delete this process?') }}')">
+                    <i class="fas fa-trash"></i>
+                    {{ __('Delete') }}
+                </button>
+            </form>
+            @endcan
+        </div>
+    </div>
+</div>
 @endsection
 
 @push('style')
-    {{-- Font Awesome para iconos --}}
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
     <style>
-        /* Estilos modernos para la página */
-        body {
+        /* ===== Process Show - Estilo Moderno ===== */
+        .ps-container { padding: 0; }
+
+        /* Header con gradiente */
+        .ps-header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-        }
-
-        /* Card principal con glassmorfismo */
-        .card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
-            overflow: hidden;
-            animation: slideUp 0.5s ease-out;
-        }
-
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .card-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-bottom: none;
-            padding: 2rem;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .card-header::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-            animation: float 6s ease-in-out infinite;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translate(0, 0) rotate(0deg); }
-            50% { transform: translate(-20px, -20px) rotate(180deg); }
-        }
-
-        .card-title {
-            color: white;
-            font-weight: 700;
-            font-size: 2rem;
-            margin: 0;
-            position: relative;
-            z-index: 1;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        /* Breadcrumb moderno */
-        .breadcrumb {
-            background: rgba(255, 255, 255, 0.9);
-            border-radius: 15px;
-            padding: 1rem 1.5rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-        }
-
-        .breadcrumb-item a {
-            color: #667eea;
-            text-decoration: none;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-
-        .breadcrumb-item a:hover {
-            color: #764ba2;
-            transform: translateX(3px);
-        }
-
-        .breadcrumb-item.active {
-            color: #6c757d;
-            font-weight: 600;
-        }
-
-        /* Tarjetas de información modernas */
-        .info-card-modern {
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
             border-radius: 16px;
-            padding: 1.5rem;
-            box-shadow: 0 4px 20px rgba(31, 38, 135, 0.1);
-            transition: all 0.3s ease;
-            animation: fadeInScale 0.6s ease-out;
+            padding: 24px;
+            color: white;
+            margin-bottom: 24px;
         }
-
-        @keyframes fadeInScale {
-            from {
-                opacity: 0;
-                transform: scale(0.95);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
-
-        .info-card-modern:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 30px rgba(31, 38, 135, 0.2);
-        }
-
-        .info-card-header {
+        .ps-header-icon {
+            width: 56px;
+            height: 56px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 14px;
             display: flex;
             align-items: center;
-            gap: 0.75rem;
-            margin-bottom: 1.5rem;
-            padding-bottom: 0.75rem;
-            border-bottom: 2px solid rgba(102, 126, 234, 0.2);
+            justify-content: center;
+            font-size: 1.75rem;
         }
-
-        .info-card-header i {
-            color: #667eea;
-            font-size: 1.2rem;
-        }
-
-        .info-card-header h6 {
-            color: #495057;
+        .ps-title {
+            color: white;
             font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            font-size: 0.9rem;
+            font-size: 1.5rem;
             margin: 0;
         }
-
-        .info-card-body {
-            color: #495057;
+        .ps-subtitle {
+            color: rgba(255,255,255,0.85);
+            font-size: 0.95rem;
         }
 
-        .info-item {
+        /* Botones del header */
+        .ps-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+        .ps-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .ps-btn-primary {
+            background: white;
+            color: #667eea;
+        }
+        .ps-btn-primary:hover {
+            background: #f8fafc;
+            color: #5a67d8;
+        }
+        .ps-btn-secondary {
+            background: rgba(255,255,255,0.15);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        .ps-btn-secondary:hover {
+            background: rgba(255,255,255,0.25);
+            color: white;
+        }
+
+        /* Info Cards */
+        .ps-info-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+        .ps-info-header {
+            padding: 16px 20px;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 700;
+            color: #1e293b;
+        }
+        .ps-info-header i {
+            color: #667eea;
+        }
+        .ps-info-body {
+            padding: 20px;
+        }
+        .ps-info-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 0.5rem 0;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-            transition: all 0.2s ease;
+            padding: 12px 0;
+            border-bottom: 1px solid #f1f5f9;
         }
-
-        .info-item:last-child {
+        .ps-info-row:last-child {
             border-bottom: none;
         }
-
-        .info-item:hover {
-            background: rgba(102, 126, 234, 0.05);
-            padding-left: 0.5rem;
-            padding-right: 0.5rem;
-            margin-left: -0.5rem;
-            margin-right: -0.5rem;
-            border-radius: 8px;
-        }
-
-        .info-label {
+        .ps-info-label {
             font-weight: 600;
-            color: #6c757d;
+            color: #64748b;
+            font-size: 0.85rem;
             text-transform: uppercase;
-            font-size: 0.8rem;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.3px;
         }
-
-        .info-value {
+        .ps-info-value {
             font-weight: 500;
-            color: #495057;
-            font-size: 0.95rem;
+            color: #1e293b;
         }
 
-        .description-text {
-            color: #495057;
+        /* Badges */
+        .ps-code-badge {
+            font-family: monospace;
+            background: #f1f5f9;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #334155;
+        }
+        .ps-sequence-badge {
+            background: rgba(102, 126, 234, 0.15);
+            color: #667eea;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-weight: 700;
+        }
+        .ps-color-badge {
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            border: 2px solid rgba(0,0,0,0.1);
+        }
+
+        /* Description */
+        .ps-description {
+            color: #64748b;
             line-height: 1.6;
-            font-size: 0.95rem;
             margin: 0;
         }
 
-        .color-indicator {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            margin-right: 0.5rem;
-            vertical-align: middle;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        /* Sección de título */
-        .section-title {
-            color: #495057;
-            font-weight: 700;
-            font-size: 1.3rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            position: relative;
-            padding-bottom: 1rem;
-        }
-
-        .section-title::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 60px;
-            height: 3px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 2px;
-        }
-
-        /* Tabla moderna */
-        .table-responsive-modern {
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(8px);
+        /* Table Card */
+        .ps-table-card {
+            background: white;
             border-radius: 16px;
-            padding: 1.5rem;
-            box-shadow: 0 4px 20px rgba(31, 38, 135, 0.1);
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
             overflow: hidden;
+            margin-bottom: 24px;
         }
-
-        .table-modern {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
+        .ps-table-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-
-        .table-modern thead th {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+        .ps-table-title {
             font-weight: 700;
-            text-transform: uppercase;
-            font-size: 0.85rem;
-            letter-spacing: 0.5px;
-            padding: 1rem;
-            border: none;
-            position: relative;
+            font-size: 1.1rem;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
-
-        .table-modern thead th:first-child {
-            border-top-left-radius: 12px;
-        }
-
-        .table-modern thead th:last-child {
-            border-top-right-radius: 12px;
-        }
-
-        .table-modern tbody tr {
-            transition: all 0.3s ease;
-            background: rgba(255, 255, 255, 0.9);
-        }
-
-        .table-row-hover:hover {
-            background: rgba(102, 126, 234, 0.1);
-            transform: scale(1.01);
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.15);
-        }
-
-        .table-modern tbody td {
-            padding: 1rem;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-            color: #495057;
-            font-weight: 500;
-        }
-
-        .badge-modern {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 0.4rem 0.8rem;
-            border-radius: 20px;
-            font-weight: 600;
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
-        }
-
-        .sequence-badge {
-            background: rgba(102, 126, 234, 0.1);
+        .ps-table-title i {
             color: #667eea;
-            padding: 0.4rem 0.8rem;
+        }
+        .ps-table-count {
+            background: #f1f5f9;
+            color: #64748b;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .ps-table-body {
+            padding: 0;
+        }
+
+        /* Table */
+        .ps-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .ps-table thead th {
+            background: #f8fafc;
+            color: #64748b;
+            font-weight: 600;
+            font-size: 0.75rem;
+            padding: 14px 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            text-align: left;
+        }
+        .ps-table tbody td {
+            padding: 16px 20px;
+            border-bottom: 1px solid #f1f5f9;
+            color: #334155;
+        }
+        .ps-table tbody tr:hover {
+            background: #f8fafc;
+        }
+        .ps-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .ps-index-badge {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.8rem;
+        }
+        .ps-line-name {
+            font-weight: 600;
+            color: #1e293b;
+        }
+        .ps-order-badge {
+            background: rgba(34, 197, 94, 0.15);
+            color: #16a34a;
+            padding: 4px 12px;
             border-radius: 20px;
             font-weight: 600;
             font-size: 0.85rem;
-            border: 2px solid rgba(102, 126, 234, 0.2);
-            transition: all 0.3s ease;
         }
 
-        .sequence-badge:hover {
-            background: rgba(102, 126, 234, 0.2);
-            transform: scale(1.05);
-        }
-
-        /* Estado vacío moderno */
-        .empty-state-modern {
+        /* Empty State */
+        .ps-empty-state {
             text-align: center;
-            padding: 3rem 2rem;
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(8px);
+            padding: 48px 24px;
+            color: #64748b;
+        }
+        .ps-empty-state i {
+            font-size: 3rem;
+            color: #cbd5e1;
+            margin-bottom: 16px;
+        }
+        .ps-empty-state h6 {
+            color: #334155;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .ps-empty-state p {
+            margin: 0;
+            font-size: 0.9rem;
+        }
+
+        /* Actions Footer */
+        .ps-actions-footer {
+            background: white;
             border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(31, 38, 135, 0.1);
-            color: #6c757d;
+            padding: 20px 24px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-
-        .empty-state-modern i {
-            color: rgba(102, 126, 234, 0.3);
-            opacity: 0.5;
-        }
-
-        .empty-state-modern h6 {
-            color: #495057;
+        .ps-footer-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            border-radius: 50px;
             font-weight: 600;
-            margin: 1rem 0 0.5rem 0;
-        }
-
-        /* Botones modernos */
-        .btn-modern {
-            border: none;
-            border-radius: 12px;
-            padding: 0.8rem 1.5rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            transition: all 0.3s ease;
-            color: white;
+            font-size: 0.9rem;
             text-decoration: none;
-            display: inline-block;
-            position: relative;
-            overflow: hidden;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
         }
-
-        .btn-modern::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.2);
-            transform: translate(-50%, -50%);
-            transition: width 0.6s, height 0.6s;
+        .ps-footer-btn:hover {
+            transform: translateY(-2px);
         }
-
-        .btn-modern:hover::before {
-            width: 300px;
-            height: 300px;
+        .ps-footer-back {
+            background: #f1f5f9;
+            color: #64748b;
         }
-
-        .btn-modern.btn-primary {
+        .ps-footer-back:hover {
+            background: #e2e8f0;
+            color: #334155;
+        }
+        .ps-footer-edit {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-        }
-
-        .btn-modern.btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
             color: white;
         }
-
-        .btn-modern.btn-secondary {
-            background: #6c757d;
-            box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
-        }
-
-        .btn-modern.btn-secondary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(108, 117, 125, 0.4);
+        .ps-footer-edit:hover {
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
             color: white;
         }
-
-        .btn-modern.btn-danger {
-            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
-            box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+        .ps-footer-delete {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
         }
-
-        .btn-modern.btn-danger:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
+        .ps-footer-delete:hover {
+            background: #ef4444;
             color: white;
-        }
-
-        /* Efectos adicionales */
-        .gap-2 {
-            gap: 0.5rem;
-        }
-
-        .pt-4 {
-            padding-top: 2rem;
-        }
-
-        .border-top {
-            border-top: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
         }
 
         /* Responsive */
         @media (max-width: 768px) {
-            .card-title {
-                font-size: 1.5rem;
-            }
-
-            .btn-modern {
-                padding: 0.6rem 1rem;
-                font-size: 0.85rem;
-            }
-
-            .info-card-modern {
-                margin-bottom: 1rem;
-            }
-
-            .table-responsive-modern {
-                padding: 1rem;
-            }
-
-            .section-title {
-                font-size: 1.1rem;
-            }
+            .ps-header { padding: 16px; border-radius: 12px; }
+            .ps-header-icon { width: 46px; height: 46px; font-size: 1.4rem; }
+            .ps-title { font-size: 1.2rem; }
+            .ps-table-header { flex-direction: column; gap: 12px; align-items: flex-start; }
+            .ps-actions-footer { flex-direction: column; gap: 16px; }
+            .ps-actions-footer > * { width: 100%; text-align: center; justify-content: center; }
         }
-
-        /* Animaciones de entrada */
-        .info-card-modern:nth-child(1) {
-            animation-delay: 0.1s;
-        }
-
-        .info-card-modern:nth-child(2) {
-            animation-delay: 0.2s;
-        }
-
-        .table-responsive-modern {
-            animation-delay: 0.3s;
-        }
-
-        .empty-state-modern {
-            animation-delay: 0.3s;
+        @media (max-width: 576px) {
+            .ps-header { padding: 14px; }
+            .ps-btn { padding: 10px 16px; font-size: 0.85rem; }
+            .ps-info-row { flex-direction: column; align-items: flex-start; gap: 6px; }
         }
     </style>
 @endpush

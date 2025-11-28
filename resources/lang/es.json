@@ -1970,5 +1970,11 @@
   "Deleting backup": "Eliminando copia",
   "Delete Permanently": "Eliminar Permanentemente",
   "Deleting...": "Eliminando...",
-  "Details": "Detalles"
+  "Details": "Detalles",
+  "Order to Delivery": "Pedido a Entrega",
+  "Order to Production End": "Pedido a Fin Producción",
+  "Production Stats (OEE)": "Estadísticas (OEE)",
+  "records": "registros",
+  "orders": "pedidos",
+  "Lead Time": "Tiempo de Entrega"
 }

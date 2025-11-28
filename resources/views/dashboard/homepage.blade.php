@@ -119,6 +119,133 @@
         @endif
         @endcan
 
+        <!-- Widget de Órdenes Completadas Hoy - permiso productionline-orders -->
+        @can('productionline-orders')
+        @if(isset($completedTodayStats) && $completedTodayStats)
+        <div class="kpi-card-col mb-4 animate-card">
+            <a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#selectCustomerOrdersModal">
+                <div class="card modern-stat-card stat-card-success" data-kpi="completedToday">
+                    <div class="stat-card-body">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="stat-content">
+                                <h6>{{ __('Completed Today') }} <span class="kpi-trend"></span></h6>
+                                <h3><span class="kpi-value">{{ $completedTodayStats['today'] }}</span></h3>
+                                <small class="text-white-50">{{ __('yesterday') }}: {{ $completedTodayStats['yesterday'] }}</small>
+                                <div class="kpi-sparkline mt-2">
+                                    @foreach($completedTodayStats['sparkline'] as $val)
+                                    <div class="spark-bar" style="height: {{ $val > 0 ? max(20, min(100, $val * 10)) : 5 }}%;"></div>
+                                    @endforeach
+                                </div>
+                            </div>
+                            <div class="stat-icon-wrapper bg-white bg-opacity-25">
+                                <i class="ti ti-checks"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        @endif
+
+        <!-- Widget de Pedidos Retrasados -->
+        @if(isset($delayedOrdersStats) && $delayedOrdersStats)
+        <div class="kpi-card-col mb-4 animate-card">
+            <a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#selectCustomerOrdersModal">
+                <div class="card modern-stat-card stat-card-danger" data-kpi="delayedOrders">
+                    <div class="stat-card-body">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="stat-content">
+                                <h6>{{ __('Delayed Orders') }} <span class="kpi-trend"></span></h6>
+                                <h3><span class="kpi-value">{{ $delayedOrdersStats['count'] }}</span></h3>
+                                <small class="text-white-50">{{ __('overdue delivery') }}</small>
+                                <div class="kpi-sparkline mt-2">
+                                    @foreach($delayedOrdersStats['sparkline'] as $val)
+                                    <div class="spark-bar" style="height: {{ $val > 0 ? max(20, min(100, $val * 10)) : 5 }}%;"></div>
+                                    @endforeach
+                                </div>
+                            </div>
+                            <div class="stat-icon-wrapper bg-white bg-opacity-25">
+                                <i class="ti ti-alert-triangle"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        @endif
+        @endcan
+
+        <!-- Widget de Lead Time: Pedido a Entrega - permiso original-order-list -->
+        @can('original-order-list')
+        @if(isset($leadTimeStats) && $leadTimeStats)
+        <div class="kpi-card-col mb-4 animate-card">
+            <a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#selectCustomerLeadTimeModal">
+                <div class="card modern-stat-card stat-card-cyan" data-kpi="leadTimeToDelivery">
+                    <div class="stat-card-body">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="stat-content">
+                                <h6>{{ __('Order to Delivery') }} <span class="kpi-trend"></span></h6>
+                                <h3><span class="kpi-value">{{ $leadTimeStats['avg_to_delivery_days'] }}</span> <small style="font-size: 0.5em;">{{ __('days') }}</small></h3>
+                                <small class="text-white-50">{{ __('last 7 days') }} ({{ $leadTimeStats['orders_with_delivery'] }} {{ __('orders') }})</small>
+                                <div class="kpi-sparkline mt-2"></div>
+                            </div>
+                            <div class="stat-icon-wrapper bg-white bg-opacity-25">
+                                <i class="ti ti-truck-delivery"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Widget de Lead Time: Pedido a Fin Producción -->
+        <div class="kpi-card-col mb-4 animate-card">
+            <a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#selectCustomerLeadTimeModal">
+                <div class="card modern-stat-card stat-card-orange" data-kpi="leadTimeToFinished">
+                    <div class="stat-card-body">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="stat-content">
+                                <h6>{{ __('Order to Production End') }} <span class="kpi-trend"></span></h6>
+                                <h3><span class="kpi-value">{{ $leadTimeStats['avg_to_finished_days'] }}</span> <small style="font-size: 0.5em;">{{ __('days') }}</small></h3>
+                                <small class="text-white-50">{{ __('last 7 days') }} ({{ $leadTimeStats['orders_with_finished'] }} {{ __('orders') }})</small>
+                                <div class="kpi-sparkline mt-2"></div>
+                            </div>
+                            <div class="stat-icon-wrapper bg-white bg-opacity-25">
+                                <i class="ti ti-package"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        @endif
+        @endcan
+
+        <!-- Widget de OEE (Production Stats) - permiso productionline-production-stats -->
+        @can('productionline-production-stats')
+        @if(isset($oeeStats) && $oeeStats)
+        <div class="kpi-card-col mb-4 animate-card">
+            <a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#selectCustomerOeeModal">
+                <div class="card modern-stat-card stat-card-success" data-kpi="oeeStats">
+                    <div class="stat-card-body">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="stat-content">
+                                <h6>{{ __('Production Stats (OEE)') }} <span class="kpi-trend"></span></h6>
+                                <h3><span class="kpi-value">{{ $oeeStats['avg_oee'] }}</span><small style="font-size: 0.5em;">%</small></h3>
+                                <small class="text-white-50">{{ __('last 7 days') }} ({{ $oeeStats['total_records'] }} {{ __('records') }})</small>
+                                <div class="kpi-sparkline mt-2"></div>
+                            </div>
+                            <div class="stat-icon-wrapper bg-white bg-opacity-25">
+                                <i class="ti ti-chart-pie"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        @endif
+        @endcan
+
         <!-- Widget de trabajadores si tiene permiso -->
         @can('workers-show')
         <div class="kpi-card-col mb-4 animate-card">
@@ -574,6 +701,74 @@
     @endif
     @endcan
 
+    <!-- Modal para seleccionar Centro de Producción (Lead Time) -->
+    @can('original-order-list')
+    @if(isset($customersForLeadTime) && $customersForLeadTime && $customersForLeadTime->count() > 0)
+    <div class="modal fade" id="selectCustomerLeadTimeModal" tabindex="-1" aria-labelledby="selectCustomerLeadTimeModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header text-white" style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);">
+                    <h5 class="modal-title" id="selectCustomerLeadTimeModalLabel">
+                        <i class="ti ti-clock me-2"></i>{{ __('Select Production Center') }}
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div class="list-group list-group-flush">
+                        @foreach($customersForLeadTime as $customer)
+                        <a href="{{ route('customers.production-times.view', $customer->id) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3">
+                            <div>
+                                <i class="ti ti-building-factory me-2 text-info"></i>
+                                <strong>{{ $customer->name }}</strong>
+                            </div>
+                            <span class="badge bg-info rounded-pill">{{ __('Lead Time') }}</span>
+                        </a>
+                        @endforeach
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+    @endcan
+
+    <!-- Modal para seleccionar Centro de Producción (OEE / Production Stats) -->
+    @can('productionline-production-stats')
+    @if(isset($customersForOee) && $customersForOee && $customersForOee->count() > 0)
+    <div class="modal fade" id="selectCustomerOeeModal" tabindex="-1" aria-labelledby="selectCustomerOeeModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="selectCustomerOeeModalLabel">
+                        <i class="ti ti-chart-pie me-2"></i>{{ __('Select Production Center') }}
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div class="list-group list-group-flush">
+                        @foreach($customersForOee as $customer)
+                        <a href="{{ secure_url('/productionlines/liststats?token=' . $customer->token) }}" target="_blank" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3">
+                            <div>
+                                <i class="ti ti-building-factory me-2 text-success"></i>
+                                <strong>{{ $customer->name }}</strong>
+                            </div>
+                            <span class="badge bg-success rounded-pill">{{ __('Production Stats') }}</span>
+                        </a>
+                        @endforeach
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+    @endcan
+
     <!-- Modal para seleccionar Centro de Producción (Maintenance) -->
     @can('maintenance-show')
     @if(isset($customersForMaintenance) && $customersForMaintenance && $customersForMaintenance->count() > 0)
@@ -642,6 +837,23 @@
                 flex: 0 0 100%;
                 max-width: 100%;
             }
+        }
+
+        /* Colores para KPIs de Lead Time */
+        .stat-card-cyan {
+            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%) !important;
+        }
+        .stat-card-cyan .stat-content h6,
+        .stat-card-cyan .stat-content h3 {
+            color: white !important;
+        }
+
+        .stat-card-orange {
+            background: linear-gradient(135deg, #fd7e14 0%, #e85d04 100%) !important;
+        }
+        .stat-card-orange .stat-content h6,
+        .stat-card-orange .stat-content h3 {
+            color: white !important;
         }
 
         /* Efecto de parpadeo cuando el KPI cambia */
@@ -715,6 +927,34 @@
         /* Alerta amarilla para incidencias de calidad */
         [data-kpi="qualityIssues"].kpi-alert-active {
             animation: alertPulseYellow 2s infinite;
+        }
+        /* Alerta verde para OEE bajo */
+        @keyframes alertPulseGreen {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
+            }
+            50% {
+                box-shadow: 0 0 0 15px rgba(40, 167, 69, 0);
+            }
+        }
+        [data-kpi="oeeStats"].kpi-alert-active {
+            animation: alertPulseGreen 2s infinite;
+        }
+        /* Alerta cyan para Lead Time Entrega */
+        [data-kpi="leadTimeToDelivery"].kpi-alert-active {
+            animation: alertPulseCyan 2s infinite;
+        }
+        /* Alerta naranja para Lead Time Producción */
+        @keyframes alertPulseOrangeLight {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(253, 126, 20, 0.7);
+            }
+            50% {
+                box-shadow: 0 0 0 15px rgba(253, 126, 20, 0);
+            }
+        }
+        [data-kpi="leadTimeToFinished"].kpi-alert-active {
+            animation: alertPulseOrangeLight 2s infinite;
         }
 
         /* Mini sparklines */
@@ -876,6 +1116,21 @@
         // Quality Issues (con alerta si hay incidencias hoy)
         if (data.qualityIssues) {
             updateKpiCardWithAlert('qualityIssues', data.qualityIssues.value, data.qualityIssues);
+        }
+
+        // OEE Stats (con alerta si OEE bajo)
+        if (data.oeeStats) {
+            updateKpiCardWithAlert('oeeStats', data.oeeStats.value, data.oeeStats);
+        }
+
+        // Lead Time: Pedido a Entrega
+        if (data.leadTimeToDelivery) {
+            updateKpiCardWithAlert('leadTimeToDelivery', data.leadTimeToDelivery.value, data.leadTimeToDelivery);
+        }
+
+        // Lead Time: Pedido a Fin Producción
+        if (data.leadTimeToFinished) {
+            updateKpiCardWithAlert('leadTimeToFinished', data.leadTimeToFinished.value, data.leadTimeToFinished);
         }
 
         // Production Lines stats

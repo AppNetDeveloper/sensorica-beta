@@ -2150,7 +2150,7 @@
                             if (val === null || typeof val === 'undefined') return '';
                             return (Math.round(val * 100) / 100) + ' h';
                         },
-                        style: { fontSize: '11px', fontWeight: 600 }
+                        style: { fontSize: '11px', fontWeight: 600, colors: ['#1e293b'] }
                     },
                     states: {
                         normal: { filter: { type: 'none' } },

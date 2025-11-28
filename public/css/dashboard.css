@@ -107,35 +107,43 @@
 
 /* Gradientes específicos para cada tipo de card */
 .stat-card-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
 }
 
 .stat-card-info {
-    background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%);
+    background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%) !important;
 }
 
 .stat-card-success {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
 }
 
 .stat-card-danger {
-    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
 }
 
 .stat-card-warning {
-    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
 }
 
 .stat-card-purple {
-    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%) !important;
 }
 
 .stat-card-indigo {
-    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
 }
 
 .stat-card-teal {
-    background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+    background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%) !important;
+}
+
+.stat-card-cyan {
+    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%) !important;
+}
+
+.stat-card-orange {
+    background: linear-gradient(135deg, #fd7e14 0%, #e85d04 100%) !important;
 }
 
 /* Texto blanco en las cards con gradiente */
@@ -146,7 +154,9 @@
 .stat-card-warning .stat-content h6,
 .stat-card-purple .stat-content h6,
 .stat-card-indigo .stat-content h6,
-.stat-card-teal .stat-content h6 {
+.stat-card-teal .stat-content h6,
+.stat-card-cyan .stat-content h6,
+.stat-card-orange .stat-content h6 {
     color: rgba(255, 255, 255, 0.9);
 }
 
@@ -157,7 +167,9 @@
 .stat-card-warning .stat-content h3,
 .stat-card-purple .stat-content h3,
 .stat-card-indigo .stat-content h3,
-.stat-card-teal .stat-content h3 {
+.stat-card-teal .stat-content h3,
+.stat-card-cyan .stat-content h3,
+.stat-card-orange .stat-content h3 {
     color: white;
 }
 

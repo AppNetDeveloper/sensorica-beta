@@ -1582,5 +1582,10 @@
   "Deleting backup": "Deleting backup",
   "Delete Permanently": "Delete Permanently",
   "Deleting...": "Deleting...",
-  "Details": "Details"
+  "Details": "Details",
+  "Order to Delivery": "Order to Delivery",
+  "Order to Production End": "Order to Production End",
+  "Production Stats (OEE)": "Production Stats (OEE)",
+  "records": "records",
+  "orders": "orders"
 }
