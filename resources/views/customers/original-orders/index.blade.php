@@ -124,7 +124,7 @@
         </div>
         <div class="col-md-3 col-sm-6 mb-3 mb-md-0">
             <div class="oo-stats-card" data-filter="started">
-                <div class="oo-stats-icon oo-stats-info">
+                <div class="oo-stats-icon oo-stats-cyan">
                     <i class="ti ti-player-play"></i>
                 </div>
                 <div class="oo-stats-info">
@@ -420,7 +420,7 @@
     color: #22c55e;
 }
 
-.oo-stats-info {
+.oo-stats-cyan {
     background: rgba(14, 165, 233, 0.15);
     color: #0ea5e9;
 }

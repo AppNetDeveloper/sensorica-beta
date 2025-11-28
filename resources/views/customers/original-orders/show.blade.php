@@ -905,7 +905,7 @@
 .oo-stat-success { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
 .oo-stat-warning { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
 .oo-stat-danger { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
-.oo-stat-info { background: rgba(14, 165, 233, 0.15); color: #0ea5e9; }
+.oo-stat-cyan { background: rgba(14, 165, 233, 0.15); color: #0ea5e9; }
 
 .oo-stat-info h3 {
     font-size: 1.25rem;
@@ -917,8 +917,6 @@
 .oo-stat-info span {
     color: #64748b;
     font-size: 0.8rem;
-    background: transparent;
-    box-shadow: none;
 }
 
 .oo-stat-progress {
