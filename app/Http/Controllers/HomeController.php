@@ -713,6 +713,78 @@ class HomeController extends Controller
             ];
         }
 
+        // Órdenes Completadas Hoy y Pedidos Retrasados
+        if (auth()->user()->can('productionline-orders')) {
+            // Órdenes completadas hoy
+            $completedToday = \App\Models\OriginalOrder::whereNotNull('finished_at')
+                ->whereDate('finished_at', now()->toDateString())
+                ->count();
+
+            $completedYesterday = \App\Models\OriginalOrder::whereNotNull('finished_at')
+                ->whereDate('finished_at', now()->subDay()->toDateString())
+                ->count();
+
+            // Sparkline
+            $completedSparkline = [];
+            for ($i = 6; $i >= 0; $i--) {
+                $date = now()->subDays($i);
+                $count = \App\Models\OriginalOrder::whereNotNull('finished_at')
+                    ->whereDate('finished_at', $date->toDateString())
+                    ->count();
+                $completedSparkline[] = $count;
+            }
+
+            $data['completedToday'] = [
+                'value' => $completedToday,
+                'previous' => $completedYesterday,
+                'trend' => $completedToday > $completedYesterday ? 'up' : ($completedToday < $completedYesterday ? 'down' : 'same'),
+                'sparkline' => $completedSparkline,
+                'isAlert' => false
+            ];
+
+            // Pedidos Retrasados
+            $delayedOrders = \App\Models\OriginalOrder::whereNull('finished_at')
+                ->where(function($q) {
+                    $q->where('delivery_date', '<', now())
+                      ->orWhere('actual_delivery_date', '<', now());
+                })
+                ->count();
+
+            $delayedLastWeek = \App\Models\OriginalOrder::whereNull('finished_at')
+                ->where('created_at', '<', now()->subDays(7))
+                ->where(function($q) {
+                    $q->where('delivery_date', '<', now()->subDays(7))
+                      ->orWhere('actual_delivery_date', '<', now()->subDays(7));
+                })
+                ->count();
+
+            // Sparkline para retrasados
+            $delayedSparkline = [];
+            for ($i = 6; $i >= 0; $i--) {
+                $date = now()->subDays($i);
+                $count = \App\Models\OriginalOrder::where(function($q) use ($date) {
+                        $q->whereNull('finished_at')
+                          ->orWhere('finished_at', '>', $date->endOfDay());
+                    })
+                    ->where('created_at', '<=', $date->endOfDay())
+                    ->where(function($q) use ($date) {
+                        $q->where('delivery_date', '<', $date->startOfDay())
+                          ->orWhere('actual_delivery_date', '<', $date->startOfDay());
+                    })
+                    ->count();
+                $delayedSparkline[] = $count;
+            }
+
+            // Para retrasados, menor es mejor
+            $data['delayedOrders'] = [
+                'value' => $delayedOrders,
+                'previous' => $delayedLastWeek,
+                'trend' => $delayedOrders < $delayedLastWeek ? 'up' : ($delayedOrders > $delayedLastWeek ? 'down' : 'same'),
+                'sparkline' => $delayedSparkline,
+                'isAlert' => $delayedOrders > 0 // Alerta si hay pedidos retrasados
+            ];
+        }
+
         // Lead Time Stats
         if (auth()->user()->can('original-order-list')) {
             $tz = config('app.timezone');

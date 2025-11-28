@@ -1587,5 +1587,9 @@
   "Order to Production End": "Order to Production End",
   "Production Stats (OEE)": "Production Stats (OEE)",
   "records": "records",
-  "orders": "orders"
+  "orders": "orders",
+  "Completed Today": "Completed Today",
+  "yesterday": "yesterday",
+  "Delayed Orders": "Delayed Orders",
+  "overdue delivery": "overdue delivery"
 }

@@ -1133,6 +1133,16 @@
             updateKpiCardWithAlert('leadTimeToFinished', data.leadTimeToFinished.value, data.leadTimeToFinished);
         }
 
+        // Órdenes Completadas Hoy
+        if (data.completedToday) {
+            updateKpiCardWithAlert('completedToday', data.completedToday.value, data.completedToday);
+        }
+
+        // Pedidos Retrasados
+        if (data.delayedOrders) {
+            updateKpiCardWithAlert('delayedOrders', data.delayedOrders.value, data.delayedOrders);
+        }
+
         // Production Lines stats
         if (data.productionLines) {
             // Este KPI no tiene data-kpi, pero podríamos añadirlo después si se requiere

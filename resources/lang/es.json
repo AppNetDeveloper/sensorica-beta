@@ -1976,5 +1976,9 @@
   "Production Stats (OEE)": "Estadísticas (OEE)",
   "records": "registros",
   "orders": "pedidos",
-  "Lead Time": "Tiempo de Entrega"
+  "Lead Time": "Tiempo de Entrega",
+  "Completed Today": "Completados Hoy",
+  "yesterday": "ayer",
+  "Delayed Orders": "Pedidos Retrasados",
+  "overdue delivery": "entrega vencida"
 }
