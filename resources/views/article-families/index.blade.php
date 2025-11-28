@@ -12,458 +12,392 @@
 @endsection
 
 @section('content')
-<div class="container-fluid px-0">
-    <div class="row mt-3 mx-0">
-        <div class="col-12 px-0">
-            <div class="card border-0 shadow" style="width: 100%;">
-                <div class="card-header bg-primary text-white">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0 text-white">@lang('List of Article Families')</h5>
-                        @can('article-family-create')
-                        <a href="{{ route('article-families.create') }}" class="btn btn-light btn-sm">
-                            <i class="fas fa-plus"></i> @lang('New Article Family')
-                        </a>
-                        @endcan
+<div class="af-container">
+    {{-- Header Principal --}}
+    <div class="af-header">
+        <div class="row align-items-center">
+            <div class="col-lg-6 col-md-12 mb-3 mb-lg-0">
+                <div class="d-flex align-items-center">
+                    <div class="af-header-icon me-3">
+                        <i class="fas fa-layer-group"></i>
                     </div>
-                </div>
-                <div class="card-body">
-                    @if(session('success'))
-                        <div class="alert alert-success">
-                            {{ session('success') }}
-                        </div>
-                    @endif
-                    @if(session('error'))
-                        <div class="alert alert-danger">
-                            {{ session('error') }}
-                        </div>
-                    @endif
-                    
-                    <div class="table-responsive" style="width: 100%; margin: 0 auto;">
-                        <table id="article-families-table" class="table table-striped table-hover" style="width: 100%;">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>#</th>
-                                    <th class="text-uppercase">@lang('NOMBRE')</th>
-                                    <th class="text-uppercase">@lang('DESCRIPCIÓN')</th>
-                                    <th class="text-uppercase">@lang('FECHA DE CREACIÓN')</th>
-                                    <th class="text-uppercase">@lang('ACCIONES')</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse($articleFamilies as $index => $articleFamily)
-                                    <tr>
-                                        <td>{{ $index + 1 }}</td>
-                                        <td>{{ $articleFamily->name }}</td>
-                                        <td>{{ $articleFamily->description ?? 'N/A' }}</td>
-                                        <td>{{ $articleFamily->created_at->format('d/m/Y H:i') }}</td>
-                                        <td>
-                                            @can('article-family-show')
-                                            <a href="{{ route('article-families.show', $articleFamily) }}" class="btn btn-sm btn-info" title="@lang('View')">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-                                            @endcan
-                                            
-                                            @can('article-family-edit')
-                                            <a href="{{ route('article-families.edit', $articleFamily) }}" class="btn btn-sm btn-warning" title="@lang('Edit')">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
-                                            @endcan
-                                            
-                                            @can('article-show')
-                                            <a href="{{ route('article-families.articles.index', $articleFamily) }}" class="btn btn-sm btn-success" title="@lang('View Articles')">
-                                                <i class="fas fa-list"></i> @lang('View Articles')
-                                            </a>
-                                            @endcan
-                                            
-                                            @can('article-family-delete')
-                                            <form action="{{ route('article-families.destroy', $articleFamily) }}" method="POST" style="display: inline-block;">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-danger" title="@lang('Delete')" onclick="return confirm('@lang('Are you sure you want to delete this article family?')')">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </form>
-                                            @endcan
-                                        </td>
-                                    </tr>
-                                @empty
-                                @endforelse
-                            </tbody>
-                        </table>
+                    <div>
+                        <h4 class="af-title mb-1">@lang('Article Families')</h4>
+                        <p class="af-subtitle mb-0">@lang('Manage article families and categories')</p>
                     </div>
                 </div>
             </div>
+            <div class="col-lg-6 col-md-12">
+                <div class="d-flex align-items-center justify-content-lg-end gap-2 flex-wrap">
+                    @can('article-family-create')
+                    <a href="{{ route('article-families.create') }}" class="af-btn af-btn-primary">
+                        <i class="fas fa-plus"></i>
+                        <span>@lang('New Article Family')</span>
+                    </a>
+                    @endcan
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Alertas --}}
+    @if(session('success'))
+        <div class="af-alert af-alert-success">
+            <i class="fas fa-check-circle me-2"></i>{{ session('success') }}
+        </div>
+    @endif
+    @if(session('error'))
+        <div class="af-alert af-alert-danger">
+            <i class="fas fa-exclamation-circle me-2"></i>{{ session('error') }}
+        </div>
+    @endif
+
+    {{-- Tabla Card --}}
+    <div class="af-table-card">
+        <div class="af-table-header">
+            <span class="af-table-title">
+                <i class="fas fa-list"></i>
+                @lang('List of Article Families')
+            </span>
+            <span class="af-table-count">
+                {{ $articleFamilies->count() }} @lang('families')
+            </span>
+        </div>
+        <div class="af-table-body">
+            <table id="article-families-table" class="table" style="width:100%">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>@lang('Name')</th>
+                        <th>@lang('Description')</th>
+                        <th>@lang('Created At')</th>
+                        <th>@lang('Actions')</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($articleFamilies as $index => $articleFamily)
+                        <tr>
+                            <td>{{ $index + 1 }}</td>
+                            <td>
+                                <span class="af-family-name">{{ $articleFamily->name }}</span>
+                            </td>
+                            <td>
+                                <span class="af-description">{{ $articleFamily->description ?? '-' }}</span>
+                            </td>
+                            <td>
+                                <span class="af-date">{{ $articleFamily->created_at->format('d/m/Y H:i') }}</span>
+                            </td>
+                            <td>
+                                <div class="af-actions">
+                                    @can('article-family-show')
+                                    <a href="{{ route('article-families.show', $articleFamily) }}" class="af-action-btn af-action-view" title="@lang('View')">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    @endcan
+
+                                    @can('article-family-edit')
+                                    <a href="{{ route('article-families.edit', $articleFamily) }}" class="af-action-btn af-action-edit" title="@lang('Edit')">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    @endcan
+
+                                    @can('article-show')
+                                    <a href="{{ route('article-families.articles.index', $articleFamily) }}" class="af-action-btn af-action-articles" title="@lang('View Articles')">
+                                        <i class="fas fa-boxes"></i>
+                                    </a>
+                                    @endcan
+
+                                    @can('article-family-delete')
+                                    <form action="{{ route('article-families.destroy', $articleFamily) }}" method="POST" style="display: inline-block;">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="af-action-btn af-action-delete" title="@lang('Delete')" onclick="return confirm('@lang('Are you sure you want to delete this article family?')')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                    @endcan
+                                </div>
+                            </td>
+                        </tr>
+                    @empty
+                    @endforelse
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
 @endsection
 
 @push('style')
-    {{-- DataTables CSS --}}
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css">
-    {{-- Font Awesome para iconos --}}
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
     <style>
-        /* Estilos modernos para la página */
-        body {
+        /* ===== Article Families - Estilo Moderno ===== */
+        .af-container { padding: 0; }
+
+        /* Header con gradiente */
+        .af-header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
+            border-radius: 16px;
+            padding: 24px;
+            color: white;
+            margin-bottom: 24px;
         }
-
-        /* Card principal con glassmorfismo */
-        .card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
-            overflow: hidden;
+        .af-header-icon {
+            width: 56px;
+            height: 56px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.75rem;
         }
-
-        .card-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-bottom: none;
-            padding: 2rem;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .card-header::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-            animation: float 6s ease-in-out infinite;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translate(0, 0) rotate(0deg); }
-            50% { transform: translate(-20px, -20px) rotate(180deg); }
-        }
-
-        .card-title, .card-header h5 {
+        .af-title {
             color: white;
             font-weight: 700;
-            font-size: 2rem;
+            font-size: 1.5rem;
             margin: 0;
-            position: relative;
-            z-index: 1;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .af-subtitle {
+            color: rgba(255,255,255,0.85);
+            font-size: 0.95rem;
         }
 
-        /* Breadcrumb moderno */
-        .breadcrumb {
-            background: rgba(255, 255, 255, 0.9);
-            border-radius: 15px;
-            padding: 1rem 1.5rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-        }
-
-        .breadcrumb-item a {
-            color: #667eea;
-            text-decoration: none;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-
-        .breadcrumb-item a:hover {
-            color: #764ba2;
-            transform: translateX(3px);
-        }
-
-        .breadcrumb-item.active {
-            color: #6c757d;
-            font-weight: 600;
-        }
-
-        /* Botón añadir */
-        .btn-light {
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 12px;
-            padding: 0.8rem 1.5rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+        /* Botones del header */
+        .af-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px;
+            border-radius: 50px;
             font-size: 0.9rem;
-            transition: all 0.3s ease;
+            font-weight: 600;
             text-decoration: none;
-            position: relative;
-            overflow: hidden;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
         }
-
-        .btn-light::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.2);
-            transform: translate(-50%, -50%);
-            transition: width 0.6s, height 0.6s;
-        }
-
-        .btn-light:hover {
-            background: rgba(255, 255, 255, 0.3);
-            color: white;
+        .af-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         }
-
-        .btn-light:hover::before {
-            width: 300px;
-            height: 300px;
-        }
-
-        /* Tabla moderna */
-        .table-responsive {
-            border-radius: 15px;
-            overflow: hidden;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-            margin: 2rem auto;
+        .af-btn-primary {
             background: white;
+            color: #667eea;
+        }
+        .af-btn-primary:hover {
+            background: #f8fafc;
+            color: #5a67d8;
         }
 
-        #article-families-table {
-            margin: 0;
-            border: none;
-        }
-
-        #article-families-table thead {
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        }
-
-        #article-families-table thead th {
-            border: none;
-            padding: 1.2rem;
-            font-weight: 700;
-            color: #495057;
-            text-transform: uppercase;
-            font-size: 0.85rem;
-            letter-spacing: 0.5px;
-            border-bottom: 2px solid #dee2e6;
-        }
-
-        #article-families-table tbody tr {
-            transition: all 0.3s ease;
-            border-bottom: 1px solid #f1f3f4;
-            position: relative;
-        }
-
-        #article-families-table tbody tr:hover {
-            background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%);
-            transform: scale(1.01);
-            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
-        }
-
-        #article-families-table tbody tr::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 2px;
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-            transform: scaleX(0);
-            transition: transform 0.3s ease;
-        }
-
-        #article-families-table tbody tr:hover::after {
-            transform: scaleX(1);
-        }
-
-        #article-families-table tbody td {
-            padding: 1rem;
-            vertical-align: middle;
-            border: none;
-        }
-
-        /* Botones de acción mejorados */
-        .action-btn {
-            padding: 0.4rem 0.8rem;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 0.8rem;
-            transition: all 0.3s ease;
-            border: none;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin: 0.2rem;
-            position: relative;
-            overflow: hidden;
-            text-decoration: none;
-            display: inline-block;
-        }
-
-        .action-btn::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.3);
-            transform: translate(-50%, -50%);
-            transition: width 0.6s, height 0.6s;
-        }
-
-        .action-btn:hover::before {
-            width: 300px;
-            height: 300px;
-        }
-
-        .btn-info {
-            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
-            color: white;
-        }
-
-        .btn-info:hover {
-            color: white;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(23, 162, 184, 0.4);
-        }
-
-        .btn-warning {
-            background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
-            color: #212529;
-        }
-
-        .btn-warning:hover {
-            color: #212529;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4);
-        }
-
-        .btn-success {
-            background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
-            color: white;
-        }
-
-        .btn-success:hover {
-            color: white;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
-        }
-
-        .btn-danger {
-            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
-            color: white;
-        }
-
-        .btn-danger:hover {
-            color: white;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
-        }
-
-        /* Alerts modernos */
-        .alert {
-            border: none;
-            border-radius: 15px;
-            padding: 1rem 1.5rem;
-            margin-bottom: 1.5rem;
-            border-left: 5px solid;
-        }
-
-        .alert-success {
-            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
-            border-left-color: #28a745;
-            color: #155724;
-        }
-
-        .alert-danger {
-            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
-            border-left-color: #dc3545;
-            color: #721c24;
-        }
-
-        /* DataTables estilos personalizados */
-        .dataTables_wrapper {
-            padding: 0;
-        }
-
-        .dataTables_length, .dataTables_filter {
-            margin-bottom: 1rem;
-        }
-
-        .dataTables_length label, .dataTables_filter label {
-            font-weight: 600;
-            color: #495057;
-        }
-
-        .dataTables_length select, .dataTables_filter input {
-            border: 2px solid #e9ecef;
-            border-radius: 8px;
-            padding: 0.5rem;
-            transition: all 0.3s ease;
-        }
-
-        .dataTables_length select:focus, .dataTables_filter input:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-            outline: none;
-        }
-
-        .dataTables_info {
-            color: #6c757d;
+        /* Alertas */
+        .af-alert {
+            padding: 14px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
             font-weight: 500;
         }
+        .af-alert-success {
+            background: #dcfce7;
+            color: #166534;
+            border-left: 4px solid #22c55e;
+        }
+        .af-alert-danger {
+            background: #fee2e2;
+            color: #991b1b;
+            border-left: 4px solid #ef4444;
+        }
 
-        .dataTables_paginate .paginate_button {
+        /* Tabla Card */
+        .af-table-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+        .af-table-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .af-table-title {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .af-table-title i { color: #667eea; }
+        .af-table-count {
+            background: #f1f5f9;
+            color: #64748b;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .af-table-body { padding: 0; }
+
+        /* DataTable estilos */
+        .dataTables_wrapper { padding: 20px !important; }
+
+        #article-families-table {
+            border-collapse: collapse !important;
+            width: 100% !important;
+            margin: 0 !important;
+        }
+        #article-families-table thead th {
+            background: #f8fafc;
+            color: #64748b;
+            font-weight: 600;
+            font-size: 0.8rem;
+            padding: 14px 16px;
+            border-bottom: 2px solid #e2e8f0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        #article-families-table tbody td {
+            padding: 16px;
+            vertical-align: middle;
+            border-bottom: 1px solid #f1f5f9;
+            color: #334155;
+        }
+        #article-families-table tbody tr:hover {
+            background-color: #f8fafc;
+        }
+
+        /* Celdas especiales */
+        .af-family-name {
+            font-weight: 600;
+            color: #1e293b;
+        }
+        .af-description {
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+        .af-date {
+            color: #64748b;
+            font-size: 0.85rem;
+        }
+
+        /* Botones de acción */
+        .af-actions {
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+        }
+        .af-action-btn {
+            width: 34px;
+            height: 34px;
             border-radius: 8px;
-            margin: 0 2px;
-            transition: all 0.3s ease;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            font-size: 0.85rem;
+        }
+        .af-action-btn:hover {
+            transform: translateY(-2px);
+        }
+        .af-action-view {
+            background: rgba(14, 165, 233, 0.15);
+            color: #0ea5e9;
+        }
+        .af-action-view:hover {
+            background: #0ea5e9;
+            color: white;
+            box-shadow: 0 4px 12px rgba(14, 165, 233, 0.4);
+        }
+        .af-action-edit {
+            background: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
+        }
+        .af-action-edit:hover {
+            background: #f59e0b;
+            color: white;
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+        }
+        .af-action-articles {
+            background: rgba(34, 197, 94, 0.15);
+            color: #22c55e;
+        }
+        .af-action-articles:hover {
+            background: #22c55e;
+            color: white;
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
+        }
+        .af-action-delete {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+        }
+        .af-action-delete:hover {
+            background: #ef4444;
+            color: white;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
         }
 
+        /* DataTables controles */
+        .dataTables_filter input {
+            border-radius: 50px !important;
+            border: 2px solid #e2e8f0 !important;
+            padding: 8px 16px !important;
+            transition: all 0.2s;
+        }
+        .dataTables_filter input:focus {
+            border-color: #667eea !important;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15) !important;
+            outline: none;
+        }
+        .dataTables_length select {
+            border-radius: 10px !important;
+            border: 2px solid #e2e8f0 !important;
+            padding: 6px 12px !important;
+        }
+        .dataTables_paginate .paginate_button {
+            border-radius: 8px !important;
+            margin: 0 2px !important;
+            padding: 8px 14px !important;
+            border: none !important;
+            background: #f1f5f9 !important;
+            color: #64748b !important;
+            font-weight: 600 !important;
+        }
+        .dataTables_paginate .paginate_button:hover:not(.disabled) {
+            background: #e2e8f0 !important;
+            color: #334155 !important;
+        }
         .dataTables_paginate .paginate_button.current {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border: none;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
             color: white !important;
         }
-
-        .dataTables_paginate .paginate_button:hover {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border: none;
-            color: white !important;
-            transform: translateY(-1px);
-        }
-
-        .container-fluid.px-0 {
-            width: 100%;
-            max-width: 100%;
-        }
-        .row.mx-0 {
-            margin-left: 0;
-            margin-right: 0;
-            width: 100%;
+        .dataTables_info {
+            color: #64748b;
+            font-size: 0.9rem;
         }
 
         /* Responsive */
         @media (max-width: 768px) {
-            .card-title, .card-header h5 {
-                font-size: 1.5rem;
-            }
-
-            .action-btn {
-                font-size: 0.7rem;
-                padding: 0.3rem 0.6rem;
-            }
-
-            .btn-light {
-                padding: 0.6rem 1rem;
-                font-size: 0.8rem;
-            }
+            .af-header { padding: 16px; border-radius: 12px; }
+            .af-header-icon { width: 46px; height: 46px; font-size: 1.4rem; }
+            .af-title { font-size: 1.2rem; }
+            .af-table-header { flex-direction: column; gap: 12px; align-items: flex-start; }
+            .af-action-btn { width: 30px; height: 30px; font-size: 0.8rem; }
+            .af-actions { gap: 4px; }
+        }
+        @media (max-width: 576px) {
+            .af-header { padding: 14px; }
+            .af-btn { padding: 10px 16px; font-size: 0.85rem; }
+            #article-families-table thead th { font-size: 0.7rem; padding: 10px 8px; }
+            #article-families-table tbody td { padding: 12px 8px; font-size: 0.85rem; }
         }
     </style>
 @endpush
@@ -473,16 +407,13 @@
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
     <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
     <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.bootstrap5.min.js"></script>
     <script>
         $(document).ready(function() {
-            const table = $('#article-families-table').DataTable({
-                responsive: {
-                    details: false  // Deshabilitar detalles responsivos para evitar duplicación
-                },
-                scrollX: false, // Desactivar scrollX para evitar duplicación de encabezados
-                pagingType: 'simple_numbers',
+            $('#article-families-table').DataTable({
+                responsive: true,
+                dom: "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
+                     "<'row'<'col-sm-12'tr>>" +
+                     "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
                 language: {
                     search: "{{ __('Search:') }}",
                     lengthMenu: "{{ __('Show _MENU_ entries') }}",
@@ -492,57 +423,18 @@
                     paginate: {
                         first: "{{ __('First') }}",
                         last: "{{ __('Last') }}",
-                        next: '»',
-                        previous: '«'
+                        next: '<i class="fas fa-chevron-right"></i>',
+                        previous: '<i class="fas fa-chevron-left"></i>'
                     },
                     emptyTable: "{{ __('No data available in table') }}",
-                    zeroRecords: "{{ __('No matching records found') }}",
-                    infoPostFix: ""
+                    zeroRecords: "{{ __('No matching records found') }}"
                 },
-                dom: "<'row mb-3'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
-                      "<'row'<'col-sm-12'tr>>" +
-                      "<'row mt-3'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7 d-flex justify-content-end'p>>",
-                autoWidth: false, // Evitar cálculo automático de ancho
                 order: [[0, 'asc']],
                 columnDefs: [
-                    { 
-                        orderable: true, 
-                        targets: [0, 1, 2, 3],
-                        className: 'text-center'
-                    },
-                    { 
-                        orderable: false, 
-                        targets: [4], 
-                        searchable: false,
-                        className: 'text-center'
-                    }
+                    { orderable: false, targets: [4], className: 'text-center' }
                 ],
-                lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "{{ __('All') }}"]],
-                pageLength: 10,
-                initComplete: function() {
-                    // Mejora el aspecto de la tabla después de inicializar
-                    $('#article-families-table_wrapper').addClass('pb-3');
-                    $('#article-families-table_length label').addClass('font-weight-normal');
-                    $('#article-families-table_filter label').addClass('font-weight-normal');
-                    $('#article-families-table_paginate').addClass('mt-3');
-                    
-                    // Añade íconos a los botones de ordenación
-                    setTimeout(function() {
-                        // Limpiar cualquier ícono existente primero
-                        $('.sorting i, .sorting_asc i, .sorting_desc i').remove();
-                        
-                        // Añadir nuevos íconos
-                        $('.sorting').append(' <i class="fas fa-sort text-muted"></i>');
-                        $('.sorting_asc').append(' <i class="fas fa-sort-up"></i>');
-                        $('.sorting_desc').append(' <i class="fas fa-sort-down"></i>');
-                    }, 100);
-                }
+                pageLength: 10
             });
-
-            // Actualizar la tabla si hay un mensaje de éxito o error
-            @if(session('success') || session('error'))
-                table.draw(false);
-            @endif
         });
     </script>
 @endpush

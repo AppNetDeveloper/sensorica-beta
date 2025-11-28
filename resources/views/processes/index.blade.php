@@ -16,856 +16,648 @@
 @endsection
 
 @section('content')
-<div class="container-fluid px-0">
-    <div class="row mt-3 mx-0">
-        <div class="col-12 px-0">
-            <div class="card border-0 shadow" style="width: 100%;">
-                <div class="card-header border-0">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h4 class="card-title mb-0">@lang('Gestión de Procesos')</h4>
-                        @can('process-create')
-                        <a href="{{ route('processes.create') }}" class="btn-add-process">
-                            <i class="fas fa-plus"></i> @lang('Nuevo Proceso')
-                        </a>
-                        @endcan
+<div class="pr-container">
+    {{-- Header Principal --}}
+    <div class="pr-header">
+        <div class="row align-items-center">
+            <div class="col-lg-6 col-md-12 mb-3 mb-lg-0">
+                <div class="d-flex align-items-center">
+                    <div class="pr-header-icon me-3">
+                        <i class="fas fa-cogs"></i>
+                    </div>
+                    <div>
+                        <h4 class="pr-title mb-1">@lang('Gestión de Procesos')</h4>
+                        <p class="pr-subtitle mb-0">@lang('Manage production processes and settings')</p>
                     </div>
                 </div>
-                <div class="card-body">
-                    @if(session('success'))
-                        <div class="alert alert-success">
-                            <i class="fas fa-check-circle me-2"></i>
-                            {{ session('success') }}
-                        </div>
-                    @endif
-                    @if(session('error'))
-                        <div class="alert alert-danger">
-                            <i class="fas fa-exclamation-circle me-2"></i>
-                            {{ session('error') }}
-                        </div>
-                    @endif
-
-                    @can('process-edit')
-                        <div class="d-flex flex-wrap align-items-center justify-content-between mb-3 gap-2">
-                            <div class="d-flex flex-wrap align-items-center gap-2">
-                                <button type="button" class="btn-bulk-edit" id="bulk-edit-btn" data-bs-toggle="modal" data-bs-target="#bulkEditModal" disabled>
-                                    <i class="fas fa-layer-group me-1"></i> @lang('Bulk edit selected')
-                                </button>
-                                <button type="button" class="btn-bulk-delete" id="bulk-delete-btn" disabled data-bs-toggle="modal" data-bs-target="#bulkDeleteModal">
-                                    <i class="fas fa-trash me-1"></i> @lang('Bulk delete selected')
-                                </button>
-                                <span class="text-muted small" id="selected-count">@lang('Selected processes: 0')</span>
-                            </div>
-                            <small class="text-muted">@lang('Select one or more processes to edit color, Kanban position, factor or sequence in bulk, or delete multiple processes at once.')</small>
-                        </div>
+            </div>
+            <div class="col-lg-6 col-md-12">
+                <div class="d-flex align-items-center justify-content-lg-end gap-2 flex-wrap">
+                    @can('process-create')
+                    <a href="{{ route('processes.create') }}" class="pr-btn pr-btn-primary">
+                        <i class="fas fa-plus"></i>
+                        <span>@lang('Nuevo Proceso')</span>
+                    </a>
                     @endcan
-                    
-                    <div class="table-responsive" style="width: 100%; margin: 0 auto;">
-                        <table id="processes-table" class="table table-striped table-hover" style="width: 100%;">
-                            <thead class="table-light">
-                                <tr>
-                                    @can('process-edit')
-                                        <th class="text-center" style="width: 50px;">
-                                            <input type="checkbox" id="select-all" class="form-check-input" title="@lang('Select all')">
-                                        </th>
-                                    @endcan
-                                    <th>#</th>
-                                    <th class="text-uppercase">@lang('CÓDIGO')</th>
-                                    <th class="text-uppercase">@lang('NOMBRE')</th>
-                                    <th class="text-uppercase">@lang('FACTOR')</th>
-                                    <th class="text-uppercase">@lang('SECUENCIA')</th>
-                                    <th class="text-uppercase">@lang('COLOR')</th>
-                                    <th class="text-uppercase">@lang('POS. KANBAN')</th>
-                                    <th class="text-uppercase">@lang('DESCRIPCIÓN')</th>
-                                    <th class="text-uppercase">@lang('ACCIONES')</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse($processes as $index => $process)
-                                    <tr>
-                                        @can('process-edit')
-                                            <td class="text-center">
-                                                <input type="checkbox" class="form-check-input process-select" value="{{ $process->id }}"
-                                                    data-name="{{ $process->name }}">
-                                            </td>
-                                        @endcan
-                                        <td>{{ $index + 1 }}</td>
-                                        <td>{{ $process->code }}</td>
-                                        <td>{{ $process->name }}</td>
-                                        <td class="text-center">{{ number_format($process->factor_correccion, 2) }}</td>
-                                        <td>{{ $process->sequence }}</td>
-                                        <td class="text-center">
-                                            @if($process->color)
-                                                <span style="display: inline-block; width: 30px; height: 30px; background-color: {{ $process->color }}; border: 1px solid #ddd; border-radius: 4px;" title="{{ $process->color }}"></span>
-                                            @else
-                                                <span class="text-muted">-</span>
-                                            @endif
-                                        </td>
-                                        <td class="text-center">{{ $process->posicion_kanban ?? '-' }}</td>
-                                        <td>{{ $process->description ?? 'N/A' }}</td>
-                                        <td>
-                                            <div class="d-flex flex-wrap gap-1">
-                                                @can('process-show')
-                                                <a href="{{ route('processes.show', $process) }}" class="action-btn btn-view" title="@lang('View')">
-                                                    <i class="fas fa-eye"></i> Ver
-                                                </a>
-                                                @endcan
-
-                                                @can('process-edit')
-                                                <a href="{{ route('processes.edit', $process) }}" class="action-btn btn-edit" title="@lang('Edit')">
-                                                    <i class="fas fa-edit"></i> Editar
-                                                </a>
-                                                @endcan
-
-                                                @can('process-delete')
-                                                <form action="{{ route('processes.destroy', $process) }}" method="POST" style="display: inline-block;">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="action-btn btn-delete" title="@lang('Delete')" onclick="return confirm('@lang('Are you sure you want to delete this process?')')">
-                                                        <i class="fas fa-trash"></i> Eliminar
-                                                    </button>
-                                                </form>
-                                                @endcan
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @empty
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-
-                    @can('process-edit')
-                        <form id="bulk-edit-form" action="{{ route('processes.bulk-update') }}" method="POST">
-                            @csrf
-                            <input type="hidden" name="process_ids" id="process-ids-input">
-
-                            <div class="modal fade" id="bulkEditModal" tabindex="-1" aria-labelledby="bulkEditModalLabel" aria-hidden="true">
-                                <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-                                    <div class="modal-content">
-                                        <div class="modal-header bg-primary text-white">
-                                            <h5 class="modal-title" id="bulkEditModalLabel"><i class="fas fa-layer-group me-2"></i>@lang('Bulk edit processes')</h5>
-                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                                        </div>
-                                        <div class="modal-body">
-                                            <p class="mb-3 text-muted">
-                                                @lang('You can update the selected fields for all chosen processes. Any field left empty will remain unchanged.')
-                                            </p>
-                                            <div class="alert alert-info" role="alert">
-                                                <strong>@lang('Selected processes'):</strong>
-                                                <span id="bulk-selected-names" class="ms-1 text-dark fw-semibold">-</span>
-                                            </div>
-
-                                            <div class="row g-3">
-                                                <div class="col-md-6">
-                                                    <label for="bulk-color" class="form-label">@lang('Color')</label>
-                                                    <input type="color" class="form-control form-control-color" id="bulk-color" name="color">
-                                                    <small class="text-muted">@lang('Set a color for all selected processes. Leave empty to keep current colors.')</small>
-                                                </div>
-
-                                                <div class="col-md-6">
-                                                    <label for="bulk-posicion" class="form-label">@lang('Kanban Position')</label>
-                                                    <input type="number" min="1" class="form-control" id="bulk-posicion" name="posicion_kanban">
-                                                    <small class="text-muted">@lang('Set a position for the Kanban board. Leave empty to keep current positions.')</small>
-                                                </div>
-
-                                                <div class="col-md-6">
-                                                    <label for="bulk-factor" class="form-label">@lang('Correction Factor')</label>
-                                                    <input type="number" step="0.01" min="0.1" class="form-control" id="bulk-factor" name="factor_correccion">
-                                                    <small class="text-muted">@lang('Example: 60.00. Leave empty to avoid changing the factor.')</small>
-                                                </div>
-
-                                                <div class="col-md-6">
-                                                    <label for="bulk-sequence" class="form-label">@lang('Sequence')</label>
-                                                    <input type="number" min="1" class="form-control" id="bulk-sequence" name="sequence">
-                                                    <small class="text-muted">@lang('Defines the process order. Leave empty to keep the current value.')</small>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="modal-footer d-flex justify-content-between">
-                                            <button type="button" class="btn-cancel-modal" data-bs-dismiss="modal">
-                                                <i class="fas fa-times me-1"></i>@lang('Cancel')
-                                            </button>
-                                            <button type="submit" class="btn-confirm-modal">
-                                                <i class="fas fa-save me-1"></i>@lang('Apply changes')
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </form>
-                    @endcan
-
-                    @can('process-delete')
-                        <form id="bulk-delete-form" action="{{ route('processes.bulk-delete') }}" method="POST">
-                            @csrf
-                            @method('DELETE')
-                            <input type="hidden" name="process_ids" id="bulk-delete-process-ids-input">
-
-                            <div class="modal fade" id="bulkDeleteModal" tabindex="-1" aria-labelledby="bulkDeleteModalLabel" aria-hidden="true">
-                                <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-                                    <div class="modal-content">
-                                        <div class="modal-header bg-danger text-white">
-                                            <h5 class="modal-title" id="bulkDeleteModalLabel"><i class="fas fa-exclamation-triangle me-2"></i>@lang('Confirm Bulk Delete')</h5>
-                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                                        </div>
-                                        <div class="modal-body">
-                                            <div class="alert alert-warning" role="alert">
-                                                <i class="fas fa-exclamation-triangle me-2"></i>
-                                                <strong>@lang('Warning:'):</strong> @lang('This action cannot be undone. All selected processes will be permanently deleted.')
-                                            </div>
-
-                                            <p class="mb-3">
-                                                @lang('Are you sure you want to delete the following processes?')
-                                            </p>
-
-                                            <div class="alert alert-info" role="alert">
-                                                <strong>@lang('Selected processes'):</strong>
-                                                <span id="bulk-delete-selected-names" class="ms-1 text-dark fw-semibold">-</span>
-                                            </div>
-
-                                            <div class="alert alert-danger" role="alert">
-                                                <i class="fas fa-info-circle me-2"></i>
-                                                <strong>@lang('Important:'):</strong> @lang('Make sure these processes are not being used in active production lines or orders before deleting.')
-                                            </div>
-                                        </div>
-                                        <div class="modal-footer d-flex justify-content-between">
-                                            <button type="button" class="btn-cancel-modal" data-bs-dismiss="modal">
-                                                <i class="fas fa-times me-1"></i>@lang('Cancel')
-                                            </button>
-                                            <button type="submit" class="btn-confirm-modal btn-danger">
-                                                <i class="fas fa-trash me-1"></i>@lang('Delete Selected Processes')
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </form>
-                    @endcan
-
-                    <!-- Leyenda de ayuda sobre la gestión de procesos -->
-                    <div class="alert alert-info" role="alert">
-                        <strong>Información:</strong>
-                        <div>- <strong>Color</strong>: se utiliza para identificar visualmente los procesos en el Kanban board.</div>
-                        <div>- <strong>Posición Kanban</strong>: define el orden de visualización en el tablero Kanban.</div>
-                        <div>- <strong>Factor de Corrección</strong>: ajuste multiplicador para tiempos de producción.</div>
-                        <div>- <strong>Secuencia</strong>: orden numérico para organizar los procesos en la producción.</div>
-                    </div>
                 </div>
             </div>
         </div>
     </div>
+
+    {{-- Alertas --}}
+    @if(session('success'))
+        <div class="pr-alert pr-alert-success">
+            <i class="fas fa-check-circle me-2"></i>{{ session('success') }}
+        </div>
+    @endif
+    @if(session('error'))
+        <div class="pr-alert pr-alert-danger">
+            <i class="fas fa-exclamation-circle me-2"></i>{{ session('error') }}
+        </div>
+    @endif
+
+    {{-- Bulk Actions --}}
+    @can('process-edit')
+    <div class="pr-bulk-actions">
+        <div class="d-flex flex-wrap align-items-center gap-3">
+            <button type="button" class="pr-bulk-btn pr-bulk-edit" id="bulk-edit-btn" data-bs-toggle="modal" data-bs-target="#bulkEditModal" disabled>
+                <i class="fas fa-layer-group"></i> @lang('Bulk edit selected')
+            </button>
+            <button type="button" class="pr-bulk-btn pr-bulk-delete" id="bulk-delete-btn" disabled data-bs-toggle="modal" data-bs-target="#bulkDeleteModal">
+                <i class="fas fa-trash"></i> @lang('Bulk delete selected')
+            </button>
+            <span class="pr-selected-count" id="selected-count">@lang('Selected processes: 0')</span>
+        </div>
+    </div>
+    @endcan
+
+    {{-- Tabla Card --}}
+    <div class="pr-table-card">
+        <div class="pr-table-header">
+            <span class="pr-table-title">
+                <i class="fas fa-list"></i>
+                @lang('List of Processes')
+            </span>
+            <span class="pr-table-count">
+                {{ $processes->count() }} @lang('processes')
+            </span>
+        </div>
+        <div class="pr-table-body">
+            <table id="processes-table" class="table" style="width:100%">
+                <thead>
+                    <tr>
+                        @can('process-edit')
+                            <th style="width: 50px;">
+                                <input type="checkbox" id="select-all" class="form-check-input" title="@lang('Select all')">
+                            </th>
+                        @endcan
+                        <th>#</th>
+                        <th>@lang('Code')</th>
+                        <th>@lang('Name')</th>
+                        <th>@lang('Factor')</th>
+                        <th>@lang('Sequence')</th>
+                        <th>@lang('Color')</th>
+                        <th>@lang('Kanban Pos.')</th>
+                        <th>@lang('Description')</th>
+                        <th>@lang('Actions')</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($processes as $index => $process)
+                        <tr>
+                            @can('process-edit')
+                                <td class="text-center">
+                                    <input type="checkbox" class="form-check-input process-select" value="{{ $process->id }}" data-name="{{ $process->name }}">
+                                </td>
+                            @endcan
+                            <td>{{ $index + 1 }}</td>
+                            <td><span class="pr-code">{{ $process->code }}</span></td>
+                            <td><span class="pr-name">{{ $process->name }}</span></td>
+                            <td class="text-center">{{ number_format($process->factor_correccion, 2) }}</td>
+                            <td class="text-center">{{ $process->sequence }}</td>
+                            <td class="text-center">
+                                @if($process->color)
+                                    <span class="pr-color-badge" style="background-color: {{ $process->color }};" title="{{ $process->color }}"></span>
+                                @else
+                                    <span class="text-muted">-</span>
+                                @endif
+                            </td>
+                            <td class="text-center">{{ $process->posicion_kanban ?? '-' }}</td>
+                            <td><span class="pr-description">{{ $process->description ?? '-' }}</span></td>
+                            <td>
+                                <div class="pr-actions">
+                                    @can('process-show')
+                                    <a href="{{ route('processes.show', $process) }}" class="pr-action-btn pr-action-view" title="@lang('View')">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    @endcan
+
+                                    @can('process-edit')
+                                    <a href="{{ route('processes.edit', $process) }}" class="pr-action-btn pr-action-edit" title="@lang('Edit')">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    @endcan
+
+                                    @can('process-delete')
+                                    <form action="{{ route('processes.destroy', $process) }}" method="POST" style="display: inline-block;">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="pr-action-btn pr-action-delete" title="@lang('Delete')" onclick="return confirm('@lang('Are you sure you want to delete this process?')')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                    @endcan
+                                </div>
+                            </td>
+                        </tr>
+                    @empty
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {{-- Info Card --}}
+    <div class="pr-info-card">
+        <div class="pr-info-title"><i class="fas fa-info-circle me-2"></i>@lang('Information')</div>
+        <div class="pr-info-items">
+            <div><strong>@lang('Color')</strong>: @lang('Used to visually identify processes in the Kanban board.')</div>
+            <div><strong>@lang('Kanban Position')</strong>: @lang('Defines display order on the Kanban board.')</div>
+            <div><strong>@lang('Correction Factor')</strong>: @lang('Multiplier adjustment for production times.')</div>
+            <div><strong>@lang('Sequence')</strong>: @lang('Numeric order to organize processes in production.')</div>
+        </div>
+    </div>
+
+    {{-- Modal Bulk Edit --}}
+    @can('process-edit')
+    <form id="bulk-edit-form" action="{{ route('processes.bulk-update') }}" method="POST">
+        @csrf
+        <input type="hidden" name="process_ids" id="process-ids-input">
+        <div class="modal fade" id="bulkEditModal" tabindex="-1" aria-labelledby="bulkEditModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content pr-modal">
+                    <div class="modal-header pr-modal-header">
+                        <h5 class="modal-title"><i class="fas fa-layer-group me-2"></i>@lang('Bulk edit processes')</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="text-muted mb-3">@lang('Update selected fields for all chosen processes. Empty fields will remain unchanged.')</p>
+                        <div class="pr-modal-alert">
+                            <strong>@lang('Selected processes'):</strong>
+                            <span id="bulk-selected-names">-</span>
+                        </div>
+                        <div class="row g-3 mt-2">
+                            <div class="col-md-6">
+                                <label class="form-label">@lang('Color')</label>
+                                <input type="color" class="form-control form-control-color" id="bulk-color" name="color">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">@lang('Kanban Position')</label>
+                                <input type="number" min="1" class="form-control" id="bulk-posicion" name="posicion_kanban">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">@lang('Correction Factor')</label>
+                                <input type="number" step="0.01" min="0.1" class="form-control" id="bulk-factor" name="factor_correccion">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">@lang('Sequence')</label>
+                                <input type="number" min="1" class="form-control" id="bulk-sequence" name="sequence">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="pr-modal-btn pr-modal-cancel" data-bs-dismiss="modal">
+                            <i class="fas fa-times me-1"></i>@lang('Cancel')
+                        </button>
+                        <button type="submit" class="pr-modal-btn pr-modal-confirm">
+                            <i class="fas fa-save me-1"></i>@lang('Apply changes')
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+    @endcan
+
+    {{-- Modal Bulk Delete --}}
+    @can('process-delete')
+    <form id="bulk-delete-form" action="{{ route('processes.bulk-delete') }}" method="POST">
+        @csrf
+        @method('DELETE')
+        <input type="hidden" name="process_ids" id="bulk-delete-process-ids-input">
+        <div class="modal fade" id="bulkDeleteModal" tabindex="-1" aria-labelledby="bulkDeleteModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content pr-modal">
+                    <div class="modal-header pr-modal-header pr-modal-header-danger">
+                        <h5 class="modal-title"><i class="fas fa-exclamation-triangle me-2"></i>@lang('Confirm Bulk Delete')</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="pr-modal-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            @lang('This action cannot be undone. All selected processes will be permanently deleted.')
+                        </div>
+                        <p class="mt-3">@lang('Are you sure you want to delete the following processes?')</p>
+                        <div class="pr-modal-alert">
+                            <strong>@lang('Selected processes'):</strong>
+                            <span id="bulk-delete-selected-names">-</span>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="pr-modal-btn pr-modal-cancel" data-bs-dismiss="modal">
+                            <i class="fas fa-times me-1"></i>@lang('Cancel')
+                        </button>
+                        <button type="submit" class="pr-modal-btn pr-modal-danger">
+                            <i class="fas fa-trash me-1"></i>@lang('Delete Selected')
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+    @endcan
 </div>
 @endsection
 
 @push('style')
-    {{-- Font Awesome para iconos --}}
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
     <style>
-        /* Estilos modernos para la página */
-        body {
+        /* ===== Processes - Estilo Moderno ===== */
+        .pr-container { padding: 0; }
+
+        /* Header con gradiente */
+        .pr-header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
+            border-radius: 16px;
+            padding: 24px;
+            color: white;
+            margin-bottom: 24px;
         }
-
-        /* Card principal con glassmorfismo */
-        .card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
-            overflow: hidden;
+        .pr-header-icon {
+            width: 56px;
+            height: 56px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.75rem;
         }
-
-        .card-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-bottom: none;
-            padding: 2rem;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .card-header::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-            animation: float 6s ease-in-out infinite;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translate(0, 0) rotate(0deg); }
-            50% { transform: translate(-20px, -20px) rotate(180deg); }
-        }
-
-        .card-title {
+        .pr-title {
             color: white;
             font-weight: 700;
-            font-size: 2rem;
+            font-size: 1.5rem;
             margin: 0;
-            position: relative;
-            z-index: 1;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .pr-subtitle {
+            color: rgba(255,255,255,0.85);
+            font-size: 0.95rem;
         }
 
-        /* Breadcrumb moderno */
-        .breadcrumb {
-            background: rgba(255, 255, 255, 0.9);
-            border-radius: 15px;
-            padding: 1rem 1.5rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-        }
-
-        .breadcrumb-item a {
-            color: #667eea;
-            text-decoration: none;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-
-        .breadcrumb-item a:hover {
-            color: #764ba2;
-            transform: translateX(3px);
-        }
-
-        .breadcrumb-item.active {
-            color: #6c757d;
-            font-weight: 600;
-        }
-
-        /* Botón añadir proceso */
-        .btn-add-process {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 12px;
-            padding: 0.8rem 1.5rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+        /* Botones del header */
+        .pr-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px;
+            border-radius: 50px;
             font-size: 0.9rem;
-            transition: all 0.3s ease;
+            font-weight: 600;
             text-decoration: none;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
         }
-
-        .btn-add-process::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.2);
-            transform: translate(-50%, -50%);
-            transition: width 0.6s, height 0.6s;
-        }
-
-        .btn-add-process:hover {
+        .pr-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-            color: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         }
-
-        .btn-add-process:hover::before {
-            width: 300px;
-            height: 300px;
-        }
-
-        /* Tabla moderna */
-        .table-responsive {
-            border-radius: 15px;
-            overflow: hidden;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-            margin: 2rem auto;
+        .pr-btn-primary {
             background: white;
+            color: #667eea;
+        }
+        .pr-btn-primary:hover {
+            background: #f8fafc;
+            color: #5a67d8;
         }
 
-        #processes-table {
-            margin: 0;
-            border: none;
-        }
-
-        #processes-table thead {
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        }
-
-        #processes-table thead th {
-            border: none;
-            padding: 1.2rem;
-            font-weight: 700;
-            color: #495057;
-            text-transform: uppercase;
-            font-size: 0.85rem;
-            letter-spacing: 0.5px;
-            border-bottom: 2px solid #dee2e6;
-        }
-
-        #processes-table tbody tr {
-            transition: all 0.3s ease;
-            border-bottom: 1px solid #f1f3f4;
-        }
-
-        #processes-table tbody tr:hover {
-            background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%);
-            transform: scale(1.01);
-            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
-        }
-
-        #processes-table tbody td {
-            padding: 1rem;
-            vertical-align: middle;
-            border: none;
-        }
-
-        /* Contenedor de la tabla para consistencia con otras páginas */
-        #processes-table_wrapper .dataTables_wrapper {
-            padding: 1rem;
-        }
-
-        /* Botones de acción mejorados */
-        .action-btn {
-            padding: 0.4rem 0.8rem;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 0.8rem;
-            transition: all 0.3s ease;
-            border: none;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin: 0.2rem;
-            position: relative;
-            overflow: hidden;
-            text-decoration: none;
-            display: inline-block;
-        }
-
-        .action-btn::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.3);
-            transform: translate(-50%, -50%);
-            transition: width 0.6s, height 0.6s;
-        }
-
-        .action-btn:hover::before {
-            width: 300px;
-            height: 300px;
-        }
-
-        .btn-edit {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        .btn-edit:hover {
-            color: white;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-        }
-
-        .btn-view {
-            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
-            color: white;
-        }
-
-        .btn-view:hover {
-            color: white;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(23, 162, 184, 0.4);
-        }
-
-        .btn-edit {
-            background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
-            color: #212529;
-        }
-
-        .btn-edit:hover {
-            color: #212529;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4);
-        }
-
-        .btn-delete {
-            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
-            color: white;
-        }
-
-        .btn-delete:hover {
-            color: white;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
-        }
-
-        /* Botones de bulk edit */
-        .btn-bulk-edit {
-            background: linear-gradient(135deg, #6f42c1 0%, #5a32a3 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 0.5rem 1rem;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            border: none;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            font-size: 0.8rem;
-        }
-
-        .btn-bulk-edit:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(111, 66, 193, 0.4);
-            color: white;
-        }
-
-        .btn-bulk-edit:disabled {
-            background: #6c757d;
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        /* Botones de bulk delete */
-        .btn-bulk-delete {
-            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 0.5rem 1rem;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            border: none;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            font-size: 0.8rem;
-        }
-
-        .btn-bulk-delete:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
-            color: white;
-        }
-
-        .btn-bulk-delete:disabled {
-            background: #6c757d;
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        .btn-danger {
-            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important;
-            border: none !important;
-        }
-
-        .btn-danger:hover {
-            background: linear-gradient(135deg, #c82333 0%, #a02622 100%) !important;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4) !important;
-            color: white !important;
-        }
-
-        /* Alerts modernos */
-        .alert {
-            border: none;
-            border-radius: 15px;
-            padding: 1rem 1.5rem;
-            margin-bottom: 1.5rem;
-            border-left: 5px solid;
-        }
-
-        .alert-success {
-            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
-            border-left-color: #28a745;
-            color: #155724;
-        }
-
-        .alert-danger {
-            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
-            border-left-color: #dc3545;
-            color: #721c24;
-        }
-
-        .alert-info {
-            background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
-            border-left-color: #17a2b8;
-            color: #0c5460;
-        }
-
-        /* Modal mejorado - Estilos específicos para los modales de esta página */
-        .modal-backdrop {
-            z-index: 1040 !important;
-        }
-
-        #bulkEditModal,
-        #bulkDeleteModal {
-            z-index: 1050 !important;
-        }
-
-        #bulkEditModal .modal-dialog,
-        #bulkDeleteModal .modal-dialog {
-            z-index: 1055 !important;
-            position: relative;
-        }
-
-        #bulkEditModal .modal-content,
-        #bulkDeleteModal .modal-content {
-            border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
-            backdrop-filter: blur(10px);
-            background: rgba(255, 255, 255, 0.98);
-            border: none;
-            position: relative;
-            z-index: 1060 !important;
-        }
-
-        .modal-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-bottom: none;
-            border-radius: 20px 20px 0 0;
-        }
-
-        .modal-title {
-            color: white;
-            font-weight: 700;
-        }
-
-        .btn-close-white {
-            filter: brightness(0) invert(1);
-        }
-
-        /* DataTables estilos personalizados */
-        .dataTables_wrapper {
-            padding: 0;
-        }
-
-        .dataTables_length, .dataTables_filter {
-            margin-bottom: 1rem;
-        }
-
-        .dataTables_length label, .dataTables_filter label {
-            font-weight: 600;
-            color: #495057;
-        }
-
-        .dataTables_length select, .dataTables_filter input {
-            border: 2px solid #e9ecef;
-            border-radius: 8px;
-            padding: 0.5rem;
-            transition: all 0.3s ease;
-        }
-
-        .dataTables_length select:focus, .dataTables_filter input:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-            outline: none;
-        }
-
-        .dataTables_info {
-            color: #6c757d;
+        /* Alertas */
+        .pr-alert {
+            padding: 14px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
             font-weight: 500;
         }
-
-        .dataTables_paginate .paginate_button {
-            border-radius: 8px;
-            margin: 0 2px;
-            transition: all 0.3s ease;
+        .pr-alert-success {
+            background: #dcfce7;
+            color: #166534;
+            border-left: 4px solid #22c55e;
+        }
+        .pr-alert-danger {
+            background: #fee2e2;
+            color: #991b1b;
+            border-left: 4px solid #ef4444;
         }
 
-        .dataTables_paginate .paginate_button.current {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        /* Bulk Actions */
+        .pr-bulk-actions {
+            background: white;
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .pr-bulk-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 18px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            font-weight: 600;
             border: none;
-            color: white !important;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .pr-bulk-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .pr-bulk-edit {
+            background: rgba(102, 126, 234, 0.15);
+            color: #667eea;
+        }
+        .pr-bulk-edit:hover:not(:disabled) {
+            background: #667eea;
+            color: white;
+        }
+        .pr-bulk-delete {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+        }
+        .pr-bulk-delete:hover:not(:disabled) {
+            background: #ef4444;
+            color: white;
+        }
+        .pr-selected-count {
+            color: #64748b;
+            font-size: 0.9rem;
         }
 
-        .dataTables_paginate .paginate_button:hover {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border: none;
-            color: white !important;
-            transform: translateY(-1px);
+        /* Tabla Card */
+        .pr-table-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            overflow: hidden;
+            margin-bottom: 20px;
         }
-
-        /* Formularios del modal */
-        .form-control {
-            border: 2px solid #e9ecef;
-            border-radius: 8px;
-            padding: 0.75rem;
-            transition: all 0.3s ease;
+        .pr-table-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-
-        .form-control:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-            outline: none;
-        }
-
-        .form-label {
+        .pr-table-title {
             font-weight: 700;
-            color: #495057;
+            font-size: 1.1rem;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .pr-table-title i { color: #667eea; }
+        .pr-table-count {
+            background: #f1f5f9;
+            color: #64748b;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .pr-table-body { padding: 0; }
+
+        /* DataTable estilos */
+        .dataTables_wrapper { padding: 20px !important; }
+
+        #processes-table {
+            border-collapse: collapse !important;
+            width: 100% !important;
+            margin: 0 !important;
+        }
+        #processes-table thead th {
+            background: #f8fafc;
+            color: #64748b;
+            font-weight: 600;
+            font-size: 0.75rem;
+            padding: 14px 12px;
+            border-bottom: 2px solid #e2e8f0;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+        }
+        #processes-table tbody td {
+            padding: 14px 12px;
+            vertical-align: middle;
+            border-bottom: 1px solid #f1f5f9;
+            color: #334155;
+        }
+        #processes-table tbody tr:hover {
+            background-color: #f8fafc;
+        }
+
+        /* Celdas especiales */
+        .pr-code {
+            font-family: monospace;
+            background: #f1f5f9;
+            padding: 4px 8px;
+            border-radius: 6px;
             font-size: 0.85rem;
         }
+        .pr-name {
+            font-weight: 600;
+            color: #1e293b;
+        }
+        .pr-description {
+            color: #64748b;
+            font-size: 0.85rem;
+        }
+        .pr-color-badge {
+            display: inline-block;
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            border: 2px solid rgba(0,0,0,0.1);
+        }
 
-        /* Botones del modal */
-        .btn-confirm-modal {
+        /* Botones de acción */
+        .pr-actions {
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+        }
+        .pr-action-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            font-size: 0.8rem;
+        }
+        .pr-action-btn:hover {
+            transform: translateY(-2px);
+        }
+        .pr-action-view {
+            background: rgba(14, 165, 233, 0.15);
+            color: #0ea5e9;
+        }
+        .pr-action-view:hover {
+            background: #0ea5e9;
+            color: white;
+            box-shadow: 0 4px 12px rgba(14, 165, 233, 0.4);
+        }
+        .pr-action-edit {
+            background: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
+        }
+        .pr-action-edit:hover {
+            background: #f59e0b;
+            color: white;
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+        }
+        .pr-action-delete {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+        }
+        .pr-action-delete:hover {
+            background: #ef4444;
+            color: white;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+        }
+
+        /* Info Card */
+        .pr-info-card {
+            background: #eff6ff;
+            border-radius: 12px;
+            padding: 20px;
+            border-left: 4px solid #3b82f6;
+        }
+        .pr-info-title {
+            font-weight: 700;
+            color: #1e40af;
+            margin-bottom: 12px;
+        }
+        .pr-info-items {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            color: #1e3a5f;
+            font-size: 0.9rem;
+        }
+
+        /* Modal */
+        .pr-modal {
+            border-radius: 16px;
+            border: none;
+            overflow: hidden;
+        }
+        .pr-modal-header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border: none;
-            border-radius: 12px;
-            padding: 0.8rem 2rem;
+            padding: 20px;
+        }
+        .pr-modal-header-danger {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+        .pr-modal-header .modal-title {
+            color: white;
+            font-weight: 700;
+        }
+        .pr-modal-alert {
+            background: #eff6ff;
+            border-radius: 10px;
+            padding: 14px;
+            color: #1e40af;
+        }
+        .pr-modal-warning {
+            background: #fef3c7;
+            border-radius: 10px;
+            padding: 14px;
+            color: #92400e;
+        }
+        .pr-modal-btn {
+            padding: 12px 24px;
+            border-radius: 50px;
             font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            transition: all 0.3s ease;
-            color: white;
-        }
-
-        .btn-confirm-modal:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-            color: white;
-        }
-
-        .btn-cancel-modal {
-            background: #6c757d;
             border: none;
-            border-radius: 12px;
-            padding: 0.8rem 2rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            transition: all 0.3s ease;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .pr-modal-cancel {
+            background: #f1f5f9;
+            color: #64748b;
+        }
+        .pr-modal-cancel:hover {
+            background: #e2e8f0;
+        }
+        .pr-modal-confirm {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
         }
-
-        .btn-cancel-modal:hover {
+        .pr-modal-confirm:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(108, 117, 125, 0.4);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        .pr-modal-danger {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
             color: white;
         }
-
-        /* Loading spinner personalizado */
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(5px);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
+        .pr-modal-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
         }
 
-        .loading-spinner {
-            width: 60px;
-            height: 60px;
-            border: 4px solid rgba(255, 255, 255, 0.3);
-            border-top: 4px solid white;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
+        /* DataTables controles */
+        .dataTables_filter input {
+            border-radius: 50px !important;
+            border: 2px solid #e2e8f0 !important;
+            padding: 8px 16px !important;
         }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        .dataTables_filter input:focus {
+            border-color: #667eea !important;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15) !important;
+            outline: none;
         }
-
-        /* Animaciones para los toast notifications */
-        .animated-toast {
-            animation: slideInRight 0.3s ease-out;
+        .dataTables_length select {
+            border-radius: 10px !important;
+            border: 2px solid #e2e8f0 !important;
+            padding: 6px 12px !important;
         }
-
-        @keyframes slideInRight {
-            0% {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            100% {
-                transform: translateX(0);
-                opacity: 1;
-            }
+        .dataTables_paginate .paginate_button {
+            border-radius: 8px !important;
+            margin: 0 2px !important;
+            padding: 8px 14px !important;
+            border: none !important;
+            background: #f1f5f9 !important;
+            color: #64748b !important;
+            font-weight: 600 !important;
         }
-
-        .animated-toast.swal2-show {
-            animation: slideInRight 0.3s ease-out;
+        .dataTables_paginate .paginate_button:hover:not(.disabled) {
+            background: #e2e8f0 !important;
+            color: #334155 !important;
         }
-
-        .animated-toast.swal2-hide {
-            animation: slideOutRight 0.3s ease-out;
+        .dataTables_paginate .paginate_button.current {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            color: white !important;
         }
-
-        @keyframes slideOutRight {
-            0% {
-                transform: translateX(0);
-                opacity: 1;
-            }
-            100% {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-        }
-
-        /* Mejorar efecto hover en todas las filas */
-        #processes-table tbody tr {
-            position: relative;
-        }
-
-        #processes-table tbody tr::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 2px;
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-            transform: scaleX(0);
-            transition: transform 0.3s ease;
-        }
-
-        #processes-table tbody tr:hover::after {
-            transform: scaleX(1);
+        .dataTables_info {
+            color: #64748b;
+            font-size: 0.9rem;
         }
 
         /* Responsive */
         @media (max-width: 768px) {
-            .card-title {
-                font-size: 1.5rem;
-            }
-
-            .action-btn {
-                font-size: 0.7rem;
-                padding: 0.3rem 0.6rem;
-                margin: 0.1rem;
-            }
-
-            .btn-add-process {
-                padding: 0.6rem 1rem;
-                font-size: 0.8rem;
-            }
+            .pr-header { padding: 16px; border-radius: 12px; }
+            .pr-header-icon { width: 46px; height: 46px; font-size: 1.4rem; }
+            .pr-title { font-size: 1.2rem; }
+            .pr-table-header { flex-direction: column; gap: 12px; align-items: flex-start; }
+            .pr-action-btn { width: 28px; height: 28px; font-size: 0.75rem; }
+            .pr-actions { gap: 4px; }
+            .pr-bulk-actions { flex-direction: column; }
         }
-
-        .container-fluid.px-0 {
-            width: 100%;
-            max-width: 100%;
-        }
-        .row.mx-0 {
-            margin-left: 0;
-            margin-right: 0;
-            width: 100%;
+        @media (max-width: 576px) {
+            .pr-header { padding: 14px; }
+            .pr-btn { padding: 10px 16px; font-size: 0.85rem; }
+            #processes-table thead th { font-size: 0.65rem; padding: 10px 6px; }
+            #processes-table tbody td { padding: 10px 6px; font-size: 0.8rem; }
         }
     </style>
 @endpush
@@ -875,125 +667,38 @@
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
     <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
     <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.bootstrap5.min.js"></script>
-
-    {{-- SweetAlert2 para alertas --}}
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         $(document).ready(function() {
             const canEdit = @json($canEditProcesses);
 
-            // ---- Limpieza de modales atascados (solo modales de esta página) ----
-            // Limpiar cualquier modal o backdrop residual de los modales de esta página
+            // Limpiar modales residuales
             $('#bulkEditModal, #bulkDeleteModal').removeClass('show').css('display', 'none');
-
-            // Solo eliminar backdrops si no hay otros modales activos en la página
             if ($('.modal.show').length === 0) {
                 $('.modal-backdrop').remove();
-                $('body').removeClass('modal-open');
-                $('body').css('padding-right', '');
-                $('body').css('overflow', '');
+                $('body').removeClass('modal-open').css({'padding-right': '', 'overflow': ''});
             }
-
-            // Forzar que los modales siempre estén por encima del backdrop
-            $('#bulkEditModal, #bulkDeleteModal').on('show.bs.modal', function (e) {
-                const $modal = $(this);
-
-                // Esperar a que el backdrop se cree
-                setTimeout(() => {
-                    const $backdrop = $('.modal-backdrop').last();
-
-                    // Mover el backdrop ANTES del modal en el DOM para que quede detrás visualmente
-                    if ($backdrop.length) {
-                        $backdrop.insertBefore($modal);
-                    }
-
-                    // Asegurar z-index correcto
-                    $backdrop.css('z-index', '1040');
-                    $modal.css('z-index', '1050');
-                }, 50);
-            });
-
-            // También manejar cuando el modal se muestra completamente
-            $('#bulkEditModal, #bulkDeleteModal').on('shown.bs.modal', function (e) {
-                const $modal = $(this);
-                const $backdrop = $('.modal-backdrop').last();
-
-                // Doble verificación
-                if ($backdrop.length && $backdrop.index() > $modal.index()) {
-                    $backdrop.insertBefore($modal);
-                }
-            });
-
-            // ---- Mejoras visuales y de experiencia de usuario ----
-
-            // Añadir efecto de carga personalizado
-            $(document).ajaxStart(function() {
-                if (!$('.loading-overlay').length) {
-                    $('body').append('<div class="loading-overlay"><div class="loading-spinner"></div></div>');
-                }
-            });
-
-            $(document).ajaxStop(function() {
-                $('.loading-overlay').fadeOut(300, function() {
-                    $(this).remove();
-                });
-            });
-
-            // Animación de entrada para las filas de la tabla
-            $('#processes-table').on('draw.dt', function() {
-                $('#processes-table tbody tr').each(function(index) {
-                    $(this).css({
-                        'opacity': 0,
-                        'transform': 'translateY(20px)'
-                    }).delay(index * 50).animate({
-                        'opacity': 1,
-                        'transform': 'translateY(0)'
-                    }, 300);
-                });
-            });
 
             const columnDefs = [];
             const defaultOrder = [0, 'asc'];
 
             if (canEdit) {
                 columnDefs.push(
-                    {
-                        orderable: false,
-                        targets: [0, 6, 8, 9],
-                        searchable: false,
-                        className: 'text-center'
-                    },
-                    {
-                        orderable: true,
-                        targets: [1, 2, 3, 4, 5, 7],
-                        className: 'text-center'
-                    }
+                    { orderable: false, targets: [0, 6, 8, 9], searchable: false, className: 'text-center' },
+                    { orderable: true, targets: [1, 2, 3, 4, 5, 7], className: 'text-center' }
                 );
-                defaultOrder[0] = 1; // Ordenar por la columna de índice cuando hay checkbox
+                defaultOrder[0] = 1;
             } else {
                 columnDefs.push(
-                    {
-                        orderable: false,
-                        targets: [0, 5, 7, 8],
-                        searchable: false,
-                        className: 'text-center'
-                    },
-                    {
-                        orderable: true,
-                        targets: [1, 2, 3, 4, 6],
-                        className: 'text-center'
-                    }
+                    { orderable: false, targets: [0, 5, 7, 8], searchable: false, className: 'text-center' },
+                    { orderable: true, targets: [1, 2, 3, 4, 6], className: 'text-center' }
                 );
             }
 
             const table = $('#processes-table').DataTable({
-                responsive: {
-                    details: false // Deshabilitar detalles responsivos para evitar duplicación
-                },
-                scrollX: false, // Desactivar scrollX para evitar duplicación de encabezados
-                pagingType: 'simple_numbers',
+                responsive: true,
+                dom: "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
+                     "<'row'<'col-sm-12'tr>>" +
+                     "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
                 language: {
                     search: "{{ __('Search:') }}",
                     lengthMenu: "{{ __('Show _MENU_ entries') }}",
@@ -1001,51 +706,18 @@
                     infoEmpty: "{{ __('No entries to show') }}",
                     infoFiltered: "{{ __('(filtered from _MAX_ total entries)') }}",
                     paginate: {
-                        first: "{{ __('First') }}",
-                        last: "{{ __('Last') }}",
-                        next: '»',
-                        previous: '«'
+                        next: '<i class="fas fa-chevron-right"></i>',
+                        previous: '<i class="fas fa-chevron-left"></i>'
                     },
                     emptyTable: "{{ __('No data available in table') }}",
-                    zeroRecords: "{{ __('No matching records found') }}",
-                    infoPostFix: ""
+                    zeroRecords: "{{ __('No matching records found') }}"
                 },
-                dom: "<'row mb-3'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
-                     "<'row'<'col-sm-12'tr>>" +
-                     "<'row mt-3'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7 d-flex justify-content-end'p>>",
-                autoWidth: false, // Evitar cálculo automático de ancho
                 order: [defaultOrder],
                 columnDefs: columnDefs,
-                lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "{{ __('All') }}"]],
-                pageLength: 10,
-                initComplete: function() {
-                    // Mejora el aspecto de la tabla después de inicializar
-                    $('#processes-table_wrapper').addClass('pb-3');
-                    $('#processes-table_length label').addClass('font-weight-normal');
-                    $('#processes-table_filter label').addClass('font-weight-normal');
-                    $('#processes-table_paginate').addClass('mt-3');
-
-                    // Añade íconos a los botones de ordenación
-                    setTimeout(function() {
-                        // Limpiar cualquier ícono existente primero
-                        $('.sorting i, .sorting_asc i, .sorting_desc i').remove();
-
-                        // Añadir nuevos íconos
-                        $('.sorting').append(' <i class="fas fa-sort text-muted"></i>');
-                        $('.sorting_asc').append(' <i class="fas fa-sort-up"></i>');
-                        $('.sorting_desc').append(' <i class="fas fa-sort-down"></i>');
-                    }, 100);
-                }
+                pageLength: 10
             });
 
-            // Actualizar la tabla si hay un mensaje de éxito o error
-            @if(session('success') || session('error'))
-                table.draw(false);
-            @endif
-
-            if (!canEdit) {
-                return;
-            }
+            if (!canEdit) return;
 
             const selectAll = $('#select-all');
             const bulkEditBtn = $('#bulk-edit-btn');
@@ -1055,8 +727,6 @@
             const bulkDeleteSelectedNamesSpan = $('#bulk-delete-selected-names');
             const processIdsContainer = $('#process-ids-input');
             const bulkDeleteProcessIdsContainer = $('#bulk-delete-process-ids-input');
-            const modalElement = document.getElementById('bulkEditModal');
-            const bulkDeleteModalElement = document.getElementById('bulkDeleteModal');
             const bulkForm = $('#bulk-edit-form');
             const bulkDeleteForm = $('#bulk-delete-form');
 
@@ -1078,83 +748,33 @@
                 bulkDeleteProcessIdsContainer.val(JSON.stringify(ids));
             }
 
-            // Manejo de selección de filas
             $(document).on('change', '.process-select', updateSelectionState);
 
             selectAll.on('change', function() {
-                const isChecked = $(this).is(':checked');
-                $('.process-select').prop('checked', isChecked);
+                $('.process-select').prop('checked', $(this).is(':checked'));
                 updateSelectionState();
             });
 
-            // Limpiar inputs al cerrar el modal
-            modalElement.addEventListener('hidden.bs.modal', function () {
-                $('#bulk-color').val('');
-                $('#bulk-posicion').val('');
-                $('#bulk-factor').val('');
-                $('#bulk-sequence').val('');
+            document.getElementById('bulkEditModal').addEventListener('hidden.bs.modal', function() {
+                $('#bulk-color, #bulk-posicion, #bulk-factor, #bulk-sequence').val('');
             });
 
-            // Antes de enviar, transformar el valor JSON a campos ocultos tipo array
             bulkForm.on('submit', function(event) {
                 const ids = JSON.parse(processIdsContainer.val() || '[]');
-
-                if (!ids.length) {
-                    event.preventDefault();
-                    bulkEditBtn.prop('disabled', true);
-                    return;
-                }
-
-                // Limpiar inputs anteriores
+                if (!ids.length) { event.preventDefault(); return; }
                 bulkForm.find('input[name="process_ids[]"]').remove();
-
-                ids.forEach(function(id) {
-                    bulkForm.append('<input type="hidden" name="process_ids[]" value="' + id + '">');
-                });
-
-                // Cerrar el modal después de enviar
-                const modal = bootstrap.Modal.getInstance(modalElement);
-                if (modal) {
-                    modal.hide();
-                }
-
-                // Forzar limpieza del backdrop por si queda residuo
-                setTimeout(() => {
-                    $('.modal-backdrop').remove();
-                    $('body').removeClass('modal-open');
-                    $('body').css('padding-right', '');
-                }, 300);
+                ids.forEach(id => bulkForm.append('<input type="hidden" name="process_ids[]" value="' + id + '">'));
+                bootstrap.Modal.getInstance(document.getElementById('bulkEditModal'))?.hide();
+                setTimeout(() => { $('.modal-backdrop').remove(); $('body').removeClass('modal-open').css('padding-right', ''); }, 300);
             });
 
-            // Manejo del formulario de bulk delete
             bulkDeleteForm.on('submit', function(event) {
                 const ids = JSON.parse(bulkDeleteProcessIdsContainer.val() || '[]');
-
-                if (!ids.length) {
-                    event.preventDefault();
-                    bulkDeleteBtn.prop('disabled', true);
-                    return;
-                }
-
-                // Limpiar inputs anteriores
+                if (!ids.length) { event.preventDefault(); return; }
                 bulkDeleteForm.find('input[name="process_ids[]"]').remove();
-
-                ids.forEach(function(id) {
-                    bulkDeleteForm.append('<input type="hidden" name="process_ids[]" value="' + id + '">');
-                });
-
-                // Cerrar el modal después de enviar
-                const modal = bootstrap.Modal.getInstance(bulkDeleteModalElement);
-                if (modal) {
-                    modal.hide();
-                }
-
-                // Forzar limpieza del backdrop por si queda residuo
-                setTimeout(() => {
-                    $('.modal-backdrop').remove();
-                    $('body').removeClass('modal-open');
-                    $('body').css('padding-right', '');
-                }, 300);
+                ids.forEach(id => bulkDeleteForm.append('<input type="hidden" name="process_ids[]" value="' + id + '">'));
+                bootstrap.Modal.getInstance(document.getElementById('bulkDeleteModal'))?.hide();
+                setTimeout(() => { $('.modal-backdrop').remove(); $('body').removeClass('modal-open').css('padding-right', ''); }, 300);
             });
         });
     </script>

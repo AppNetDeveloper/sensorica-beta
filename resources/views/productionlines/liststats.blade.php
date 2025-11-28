@@ -4,107 +4,544 @@
 
 @push('style')
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
     <style>
-        .card {
-            border-radius: 10px;
-            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-            width: 100%;
+        /* ===== NUEVO DISEÑO MODERNO ===== */
+
+        /* Container */
+        .ls-container { padding: 0; }
+
+        /* Header con gradiente */
+        .ls-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 16px;
+            padding: 24px;
+            color: white;
+            margin-bottom: 24px;
         }
-        .card-header {
-            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-            background-color: #f8f9fa;
+
+        .ls-header-icon {
+            width: 56px;
+            height: 56px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.75rem;
         }
-        .table-responsive {
-            border-radius: 8px;
+
+        .ls-title {
+            color: white;
+            font-weight: 700;
+            font-size: 1.5rem;
+            margin: 0;
+        }
+
+        .ls-subtitle {
+            color: rgba(255,255,255,0.85);
+            font-size: 0.95rem;
+        }
+
+        /* Filtros Card */
+        .ls-filters-card {
             background: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            margin-bottom: 24px;
         }
-        .table thead th {
-            background-color: #f8f9fa;
-            border-bottom: 2px solid #dee2e6;
-            white-space: nowrap;
-        }
-        .table > :not(:last-child) > :last-child > * {
-            border-bottom-color: #dee2e6;
-        }
-        .badge {
-            font-weight: 500;
-            padding: 0.4em 0.8em;
-        }
-        .progress {
-            height: 20px;
-            border-radius: 4px;
-        }
-        .form-control, .form-select {
-            border-radius: 6px;
-            border: 1px solid #ced4da;
-        }
-        .btn {
-            border-radius: 6px;
-            font-weight: 500;
-        }
-        .dataTables_wrapper .dataTables_filter input {
-            border-radius: 4px;
-            border: 1px solid #ced4da;
-            padding: 0.375rem 0.75rem;
-        }
-        .dataTables_wrapper .dataTables_paginate .paginate_button {
-            border-radius: 4px !important;
-            margin: 0 2px;
-        }
-        .dataTables_wrapper .dataTables_paginate .paginate_button.current {
-            background: #0d6efd !important;
-            color: white !important;
-            border: none !important;
-        }
-        .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
-            background: #0b5ed7 !important;
-            color: white !important;
-        }
-        .table-hover tbody tr:hover {
-            background-color: rgba(13, 110, 253, 0.05) !important;
-        }
-        
-        /* Mejoras de espaciado para DataTable */
-        table.dataTable {
-            border-spacing: 0 8px !important;
-            border-collapse: separate !important;
-            margin-top: 15px !important;
-            margin-left: 10px !important;
-            margin-right: 10px !important;
-            width: calc(100% - 20px) !important;
-        }
-        
-        .dataTables_wrapper {
-            padding: 15px !important;
-        }
-        
-        table.dataTable thead th {
-            padding: 12px 10px;
-            border-bottom: 2px solid #dee2e6;
+
+        .ls-filters-card .form-label {
             font-weight: 600;
+            color: #64748b;
+            font-size: 0.85rem;
+            margin-bottom: 6px;
         }
-        
+
+        .ls-filters-card .form-control,
+        .ls-filters-card .form-select {
+            border-radius: 10px;
+            border: 2px solid #e2e8f0;
+            padding: 10px 14px;
+            transition: all 0.2s;
+        }
+
+        .ls-filters-card .form-control:focus,
+        .ls-filters-card .form-select:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+        }
+
+        /* Botones del header */
+        .ls-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 18px;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+
+        .ls-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .ls-btn-primary {
+            background: white;
+            color: #667eea;
+        }
+        .ls-btn-primary:hover {
+            background: #f8fafc;
+            color: #5a67d8;
+        }
+
+        .ls-btn-secondary {
+            background: rgba(255,255,255,0.15);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        .ls-btn-secondary:hover {
+            background: rgba(255,255,255,0.25);
+            color: white;
+        }
+
+        /* Stats Cards (KPIs) */
+        .ls-stats-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            height: 100%;
+        }
+
+        .ls-stats-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+        }
+
+        .ls-stats-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+        }
+
+        .ls-stats-success { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
+        .ls-stats-primary { background: rgba(102, 126, 234, 0.15); color: #667eea; }
+        .ls-stats-warning { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+        .ls-stats-secondary { background: rgba(100, 116, 139, 0.15); color: #64748b; }
+        .ls-stats-danger { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+
+        .ls-stats-info h4 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin: 0;
+            color: #1e293b;
+        }
+
+        .ls-stats-info span {
+            color: #64748b;
+            font-size: 0.85rem;
+        }
+
+        /* Tabla Card */
+        .ls-table-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+
+        .ls-table-header {
+            padding: 20px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .ls-table-title {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .ls-table-title i {
+            color: #667eea;
+        }
+
+        /* Checkboxes modernos */
+        .ls-check-group {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .ls-check-group .form-check {
+            margin: 0;
+        }
+
+        .ls-check-group .form-check-input {
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            border: 2px solid #cbd5e1;
+        }
+
+        .ls-check-group .form-check-input:checked {
+            background-color: #667eea;
+            border-color: #667eea;
+        }
+
+        .ls-check-group .form-check-label {
+            font-size: 0.85rem;
+            color: #64748b;
+        }
+
+        /* Toolbar botones */
+        .ls-toolbar {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .ls-toolbar .btn {
+            border-radius: 50px;
+            padding: 8px 16px;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        .ls-ai-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+        }
+
+        .ls-ai-btn:hover {
+            opacity: 0.9;
+            color: white;
+        }
+
+        /* DataTable estilos */
+        .ls-table-body {
+            padding: 0;
+        }
+
+        .dataTables_wrapper {
+            padding: 20px !important;
+        }
+
+        table.dataTable {
+            border-collapse: collapse !important;
+            width: 100% !important;
+            margin: 0 !important;
+        }
+
+        table.dataTable thead th {
+            background: #f8fafc;
+            color: #64748b;
+            font-weight: 600;
+            font-size: 0.85rem;
+            padding: 14px 12px;
+            border-bottom: 2px solid #e2e8f0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
         table.dataTable tbody td {
-            padding: 12px 10px;
+            padding: 14px 12px;
             vertical-align: middle;
-            border-top: 1px solid #f0f0f0;
-            border-bottom: 1px solid #f0f0f0;
+            border-bottom: 1px solid #f1f5f9;
+            color: #334155;
         }
+
+        table.dataTable tbody tr:hover {
+            background-color: #f8fafc !important;
+        }
+
+        .dataTables_filter input {
+            border-radius: 50px !important;
+            border: 2px solid #e2e8f0 !important;
+            padding: 8px 16px !important;
+        }
+
+        .dataTables_filter input:focus {
+            border-color: #667eea !important;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15) !important;
+        }
+
+        .dataTables_paginate .paginate_button {
+            border-radius: 8px !important;
+            margin: 0 2px !important;
+        }
+
+        .dataTables_paginate .paginate_button.current {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            border: none !important;
+            color: white !important;
+        }
+
+        /* Select2 personalizado */
+        .select2-container--default .select2-selection--multiple {
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            min-height: 44px;
+            padding: 4px 8px;
+        }
+
+        .select2-container--default.select2-container--focus .select2-selection--multiple {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+        }
+
+        .select2-container--default .select2-selection--multiple .select2-selection__choice {
+            background-color: #667eea;
+            border: none;
+            color: white;
+            border-radius: 6px;
+            padding: 4px 10px;
+            font-size: 0.85rem;
+        }
+
+        .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+            color: white;
+            margin-right: 6px;
+        }
+
+        /* Scrollbar */
         ::-webkit-scrollbar {
             height: 8px;
             width: 8px;
         }
         ::-webkit-scrollbar-track {
-            background: #f1f1f1;
+            background: #f1f5f9;
             border-radius: 4px;
         }
         ::-webkit-scrollbar-thumb {
-            background: #888;
+            background: #cbd5e1;
             border-radius: 4px;
         }
         ::-webkit-scrollbar-thumb:hover {
-            background: #555;
+            background: #94a3b8;
+        }
+
+        /* ===== DataTable Badges y Elementos ===== */
+
+        /* OEE Badge */
+        .ls-oee-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.85rem;
+        }
+        .ls-oee-success { background: rgba(34, 197, 94, 0.15); color: #16a34a; }
+        .ls-oee-warning { background: rgba(245, 158, 11, 0.15); color: #d97706; }
+        .ls-oee-danger { background: rgba(239, 68, 68, 0.15); color: #dc2626; }
+
+        /* Status Badge */
+        .ls-status-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.8rem;
+        }
+        .ls-status-active { background: #dcfce7; color: #16a34a; }
+        .ls-status-paused { background: #fef3c7; color: #d97706; }
+        .ls-status-error { background: #fee2e2; color: #dc2626; }
+        .ls-status-completed { background: #dbeafe; color: #2563eb; }
+        .ls-status-progress { background: #e0f2fe; color: #0284c7; }
+        .ls-status-pending { background: #f1f5f9; color: #64748b; }
+
+        /* Time Badge */
+        .ls-time-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.8rem;
+            font-family: 'Monaco', 'Consolas', monospace;
+        }
+        .ls-time-positive { background: #dcfce7; color: #16a34a; }
+        .ls-time-negative { background: #fee2e2; color: #dc2626; }
+        .ls-time-neutral { background: #f1f5f9; color: #64748b; }
+
+        /* Action Button */
+        .ls-action-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            border: none;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .ls-action-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        /* Search Input */
+        .ls-search-input {
+            border-radius: 50px !important;
+            border: 2px solid #e2e8f0 !important;
+            padding: 8px 16px !important;
+            transition: all 0.2s;
+        }
+        .ls-search-input:focus {
+            border-color: #667eea !important;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15) !important;
+        }
+
+        /* Length Select */
+        .ls-length-select {
+            border-radius: 10px !important;
+            border: 2px solid #e2e8f0 !important;
+            padding: 6px 12px !important;
+        }
+
+        /* ===== DataTables Responsive ===== */
+
+        /* Control column (expand icon) */
+        td.dtr-control {
+            position: relative;
+            cursor: pointer;
+        }
+        td.dtr-control::before {
+            content: '\f105';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            display: inline-block;
+            width: 28px;
+            height: 28px;
+            line-height: 28px;
+            text-align: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+        tr.parent td.dtr-control::before {
+            content: '\f107';
+            background: #64748b;
+        }
+        td.dtr-control:hover::before {
+            transform: scale(1.1);
+        }
+
+        /* Child row (expanded content) */
+        .ls-child-row {
+            background: #f8fafc;
+            padding: 16px;
+            border-radius: 12px;
+            margin: 8px 0;
+        }
+        .ls-child-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .ls-child-item:last-child {
+            border-bottom: none;
+        }
+        .ls-child-label {
+            font-weight: 600;
+            color: #64748b;
+            font-size: 0.85rem;
+        }
+        .ls-child-value {
+            color: #1e293b;
+            font-weight: 500;
+        }
+
+        /* Pagination */
+        .dataTables_paginate .paginate_button {
+            border-radius: 10px !important;
+            margin: 0 3px !important;
+            padding: 8px 14px !important;
+            border: none !important;
+            background: #f1f5f9 !important;
+            color: #64748b !important;
+            font-weight: 600 !important;
+            transition: all 0.2s !important;
+        }
+        .dataTables_paginate .paginate_button:hover:not(.disabled) {
+            background: #e2e8f0 !important;
+            color: #334155 !important;
+        }
+        .dataTables_paginate .paginate_button.current {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            color: white !important;
+        }
+        .dataTables_paginate .paginate_button.disabled {
+            opacity: 0.5 !important;
+            cursor: not-allowed !important;
+        }
+
+        /* Info text */
+        .dataTables_info {
+            color: #64748b;
+            font-size: 0.9rem;
+            padding-top: 12px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .ls-header { padding: 16px; }
+            .ls-header-icon { width: 46px; height: 46px; font-size: 1.4rem; }
+            .ls-title { font-size: 1.2rem; }
+            .ls-stats-card { padding: 14px; }
+            .ls-stats-icon { width: 42px; height: 42px; font-size: 1.2rem; }
+            .ls-stats-info h4 { font-size: 1.2rem; }
+            .ls-table-header { flex-direction: column; align-items: flex-start; }
+            .ls-toolbar { width: 100%; justify-content: flex-start; margin-top: 12px; }
+            .ls-check-group { flex-wrap: wrap; }
+
+            /* DataTable mobile */
+            table.dataTable thead { display: none; }
+            table.dataTable tbody td {
+                padding: 12px 8px !important;
+                font-size: 0.9rem;
+            }
+            .ls-action-btn { width: 32px; height: 32px; }
+            .ls-oee-badge, .ls-status-badge { font-size: 0.75rem; padding: 4px 8px; }
+        }
+
+        @media (max-width: 576px) {
+            .ls-header { border-radius: 12px; padding: 14px; }
+            .ls-filters-card { padding: 14px; border-radius: 12px; }
+            .ls-table-card { border-radius: 12px; }
+            .ls-stats-card { border-radius: 10px; }
+            .row.g-3 > [class*="col-"] { padding-left: 6px; padding-right: 6px; }
         }
 
         /* ===== ESTILOS PARA MODAL DE RESULTADOS IA ===== */
@@ -429,187 +866,168 @@
 @endpush
 
 @section('content')
-    <div class="container-fluid py-4 px-1">
-        <!-- Filtros -->
-        <div class="card mb-4">
-            <div class="card-header bg-light">
-                <h6 class="mb-0">
-                    <i class="fas fa-table me-2 text-primary"></i>
-                    Datos de Producción
-                </h6>
+<div class="ls-container">
+    {{-- Header Principal --}}
+    <div class="ls-header">
+        <div class="row align-items-center">
+            <div class="col-lg-6 col-md-12 mb-3 mb-lg-0">
+                <div class="d-flex align-items-center">
+                    <div class="ls-header-icon me-3">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div>
+                        <h4 class="ls-title mb-1">Estadísticas de Producción</h4>
+                        <p class="ls-subtitle mb-0">Análisis OEE y tiempos de líneas</p>
+                    </div>
+                </div>
             </div>
-            <div class="card-body py-2 px-3">
-                <div class="row g-3">
-                    <div class="col-md-2">
-                        <label class="form-label">Líneas de Producción</label>
-                        <select id="modbusSelect" class="form-select select2-multiple" multiple style="width: 100%;">
-                            <!-- Opciones dinámicas -->
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Empleado</label>
-                        <select id="operatorSelect" class="form-select select2-multiple" multiple style="width: 100%;">
-                            <!-- Opciones dinámicas de operarios -->
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Artículo</label>
-                        <select class="form-select" disabled>
-                            <option>Todos</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Fecha Inicio</label>
-                        <input type="datetime-local" class="form-control" id="startDate">
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Fecha Fin</label>
-                        <input type="datetime-local" class="form-control" id="endDate">
-                    </div>
-                    <div class="col-md-2 d-flex align-items-end gap-2">
-                        <button type="button" class="btn btn-primary" id="fetchData" title="Buscar">
-                            <i class="fas fa-search"></i>
-                        </button>
-                        <button type="button" class="btn btn-secondary" id="resetFilters" title="Restablecer filtros">
-                            <i class="fas fa-undo"></i>
-                        </button>
-                    </div>
+            <div class="col-lg-6 col-md-12">
+                <div class="d-flex align-items-center justify-content-lg-end gap-2 flex-wrap">
+                    <button type="button" class="ls-btn ls-btn-primary" id="fetchData">
+                        <i class="fas fa-search"></i>
+                        <span>Buscar</span>
+                    </button>
+                    <button type="button" class="ls-btn ls-btn-secondary" id="resetFilters">
+                        <i class="fas fa-undo"></i>
+                        <span>Restablecer</span>
+                    </button>
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- Tarjetas de Resumen -->
-        <div class="row g-3 mb-4">
-            <div class="col-sm-6 col-md-4 col-lg-3 col-xl mb-3">
-                <div class="card border-start border-success border-3 h-100">
-                    <div class="card-body py-2 px-3">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <h6 class="text-muted mb-1 small">Promedio OEE</h6>
-                                <h4 class="mb-0" id="avgOEE">0%</h4>
-                            </div>
-                            <div class="bg-success bg-opacity-10 p-2 rounded">
-                                <i class="fas fa-chart-line text-success"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+    {{-- Filtros Card --}}
+    <div class="ls-filters-card">
+        <div class="row g-3">
+            <div class="col-lg-3 col-md-6">
+                <label class="form-label">Líneas de Producción</label>
+                <select id="modbusSelect" class="form-select select2-multiple" multiple style="width: 100%;">
+                </select>
             </div>
-            <div class="col-sm-6 col-md-4 col-lg-3 col-xl mb-3">
-                <div class="card border-start border-primary border-3 h-100">
-                    <div class="card-body py-2 px-3">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <h6 class="text-muted mb-1 small">Total Duración</h6>
-                                <h4 class="mb-0" id="totalDuration">00:00:00</h4>
-                            </div>
-                            <div class="bg-primary bg-opacity-10 p-2 rounded">
-                                <i class="fas fa-clock text-primary"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <div class="col-lg-3 col-md-6">
+                <label class="form-label">Empleado</label>
+                <select id="operatorSelect" class="form-select select2-multiple" multiple style="width: 100%;">
+                </select>
             </div>
-            <div class="col-sm-6 col-md-4 col-lg-3 col-xl mb-3">
-                <div class="card border-start border-warning border-3 h-100">
-                    <div class="card-body py-2 px-3">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <h6 class="text-muted mb-1 small">Total Diferencia</h6>
-                                <h4 class="mb-0" id="totalTheoretical" title="Suma neta: tiempo ganado (fast_time) menos tiempo de más (out_time)">00:00:00</h4>
-                            </div>
-                            <div class="bg-warning bg-opacity-10 p-2 rounded">
-                                <i class="fas fa-balance-scale text-warning"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <div class="col-lg-3 col-md-6">
+                <label class="form-label">Fecha Inicio</label>
+                <input type="datetime-local" class="form-control" id="startDate">
             </div>
-            <div class="col-sm-6 col-md-4 col-lg-3 col-xl mb-3">
-                <div class="card border-start border-secondary border-3 h-100">
-                    <div class="card-body py-2 px-3">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <h6 class="text-muted mb-1 small">Total Preparación</h6>
-                                <h4 class="mb-0" id="totalPrepairTime">00:00:00</h4>
-                            </div>
-                            <div class="bg-secondary bg-opacity-10 p-2 rounded">
-                                <i class="fas fa-hand-paper text-secondary"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <div class="col-lg-3 col-md-6">
+                <label class="form-label">Fecha Fin</label>
+                <input type="datetime-local" class="form-control" id="endDate">
             </div>
-            <div class="col-sm-6 col-md-4 col-lg-3 col-xl mb-3">
-                <div class="card border-start border-warning border-3 h-100">
-                    <div class="card-body py-2 px-3">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <h6 class="text-muted mb-1 small">Tiempo Lento</h6>
-                                <h4 class="mb-0" id="totalSlowTime">00:00:00</h4>
-                            </div>
-                            <div class="bg-warning bg-opacity-10 p-2 rounded">
-                                <i class="fas fa-tachometer-alt text-warning"></i>
-                            </div>
-                        </div>
-                    </div>
+        </div>
+    </div>
+
+    {{-- KPIs Cards --}}
+    <div class="row g-3 mb-4">
+        {{-- OEE Promedio --}}
+        <div class="col-xl col-lg-3 col-md-4 col-sm-6">
+            <div class="ls-stats-card">
+                <div class="ls-stats-icon ls-stats-success">
+                    <i class="fas fa-chart-line"></i>
                 </div>
-            </div>
-            <div class="col-sm-6 col-md-4 col-lg-3 col-xl mb-3">
-                <div class="card border-start border-danger border-3 h-100">
-                    <div class="card-body py-2 px-3">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <h6 class="text-muted mb-1 small">Paradas</h6>
-                                <h4 class="mb-0" id="totalProductionStopsTime">00:00:00</h4>
-                            </div>
-                            <div class="bg-danger bg-opacity-10 p-2 rounded">
-                                <i class="fas fa-tools text-danger"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-sm-6 col-md-4 col-lg-3 col-xl mb-3">
-                <div class="card border-start border-danger border-3 h-100">
-                    <div class="card-body py-2 px-3">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <h6 class="text-muted mb-1 small">Falta Material</h6>
-                                <h4 class="mb-0" id="totalDownTime">00:00:00</h4>
-                            </div>
-                            <div class="bg-danger bg-opacity-10 p-2 rounded" style="opacity: 0.8;">
-                                <i class="fas fa-exclamation-triangle text-danger" style="opacity: 0.8;"></i>
-                            </div>
-                        </div>
-                    </div>
+                <div class="ls-stats-info">
+                    <h4 id="avgOEE">0%</h4>
+                    <span>Promedio OEE</span>
                 </div>
             </div>
         </div>
+        {{-- Total Duración --}}
+        <div class="col-xl col-lg-3 col-md-4 col-sm-6">
+            <div class="ls-stats-card">
+                <div class="ls-stats-icon ls-stats-primary">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="ls-stats-info">
+                    <h4 id="totalDuration">00:00:00</h4>
+                    <span>Total Duración</span>
+                </div>
+            </div>
+        </div>
+        {{-- Diferencia --}}
+        <div class="col-xl col-lg-3 col-md-4 col-sm-6">
+            <div class="ls-stats-card">
+                <div class="ls-stats-icon ls-stats-warning">
+                    <i class="fas fa-balance-scale"></i>
+                </div>
+                <div class="ls-stats-info">
+                    <h4 id="totalTheoretical" title="Suma neta: tiempo ganado menos tiempo de más">00:00:00</h4>
+                    <span>Total Diferencia</span>
+                </div>
+            </div>
+        </div>
+        {{-- Preparación --}}
+        <div class="col-xl col-lg-3 col-md-4 col-sm-6">
+            <div class="ls-stats-card">
+                <div class="ls-stats-icon ls-stats-secondary">
+                    <i class="fas fa-hand-paper"></i>
+                </div>
+                <div class="ls-stats-info">
+                    <h4 id="totalPrepairTime">00:00:00</h4>
+                    <span>Total Preparación</span>
+                </div>
+            </div>
+        </div>
+        {{-- Tiempo Lento --}}
+        <div class="col-xl col-lg-3 col-md-4 col-sm-6">
+            <div class="ls-stats-card">
+                <div class="ls-stats-icon ls-stats-warning">
+                    <i class="fas fa-tachometer-alt"></i>
+                </div>
+                <div class="ls-stats-info">
+                    <h4 id="totalSlowTime">00:00:00</h4>
+                    <span>Tiempo Lento</span>
+                </div>
+            </div>
+        </div>
+        {{-- Paradas --}}
+        <div class="col-xl col-lg-3 col-md-4 col-sm-6">
+            <div class="ls-stats-card">
+                <div class="ls-stats-icon ls-stats-danger">
+                    <i class="fas fa-stop-circle"></i>
+                </div>
+                <div class="ls-stats-info">
+                    <h4 id="totalProductionStopsTime">00:00:00</h4>
+                    <span>Paradas</span>
+                </div>
+            </div>
+        </div>
+        {{-- Falta Material --}}
+        <div class="col-xl col-lg-3 col-md-4 col-sm-6">
+            <div class="ls-stats-card">
+                <div class="ls-stats-icon ls-stats-danger">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="ls-stats-info">
+                    <h4 id="totalDownTime">00:00:00</h4>
+                    <span>Falta Material</span>
+                </div>
+            </div>
+        </div>
+    </div>
 
-        <!-- Tabla de Datos -->
-        <div class="card">
-            <div class="card-header bg-white py-3 border-bottom">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div class="d-flex align-items-center gap-3">
-                        <h6 class="mb-0">
-                            <i class="fas fa-table me-2 text-primary"></i>
-                            Filtros OEE
-                        </h6>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="hideZeroOEE">
-                            <label class="form-check-label" for="hideZeroOEE">
-                                Ocultar 0% OEE
-                            </label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="hide100OEE">
-                            <label class="form-check-label" for="hide100OEE">
-                                Ocultar 100% OEE
-                            </label>
-                        </div>
+    {{-- Tabla de Datos --}}
+    <div class="ls-table-card">
+        <div class="ls-table-header">
+            <div class="d-flex align-items-center gap-3 flex-wrap">
+                <span class="ls-table-title">
+                    <i class="fas fa-table"></i>
+                    Registros de Producción
+                </span>
+                <div class="ls-check-group">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="hideZeroOEE">
+                        <label class="form-check-label" for="hideZeroOEE">Ocultar 0% OEE</label>
                     </div>
-                    <div class="btn-toolbar" role="toolbar" aria-label="Toolbar">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="hide100OEE">
+                        <label class="form-check-label" for="hide100OEE">Ocultar 100% OEE</label>
+                    </div>
+                </div>
+            </div>
+            <div class="ls-toolbar">
                         @php($aiUrl = config('services.ai.url'))
                         @php($aiToken = config('services.ai.token'))
                         @if(!empty($aiUrl) && !empty($aiToken))
@@ -680,33 +1098,31 @@
                             </ul>
                         </div>
                         @endif
-                        <div class="btn-group" role="group">
-                            <button type="button" class="btn btn-sm btn-outline-success" id="exportExcel">
-                                <i class="fas fa-file-excel me-1"></i> Excel
-                            </button>
-                            <button type="button" class="btn btn-sm btn-outline-danger" id="exportPDF">
-                                <i class="fas fa-file-pdf me-1"></i> PDF
-                            </button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" id="printTable">
-                                <i class="fas fa-print me-1"></i> Imprimir
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="card-body py-2 px-3">
-                <div class="table-responsive">
-                    <table id="controlWeightTable" class="table table-hover table-striped" style="width:100%">
-                        <!-- La tabla se generará dinámicamente con DataTables -->
-                    </table>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-sm btn-outline-success" id="exportExcel">
+                        <i class="fas fa-file-excel me-1"></i> Excel
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-danger" id="exportPDF">
+                        <i class="fas fa-file-pdf me-1"></i> PDF
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="printTable">
+                        <i class="fas fa-print me-1"></i> Imprimir
+                    </button>
                 </div>
             </div>
         </div>
-        
-        @include('productionlines.status-legend')
-        
-        @include('productionlines.time-legend')
+        <div class="ls-table-body">
+            <div class="table-responsive">
+                <table id="controlWeightTable" class="table table-hover" style="width:100%">
+                </table>
+            </div>
+        </div>
     </div>
+
+    @include('productionlines.status-legend')
+
+    @include('productionlines.time-legend')
+</div>
     
     <!-- Modal para detalles de línea de producción -->
     <div class="modal fade" id="detailsModal" tabindex="-1" aria-labelledby="detailsModalLabel" aria-hidden="true">
@@ -910,6 +1326,9 @@
 @push('scripts')
   {{-- DataTables JS --}}
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="{{ asset('css/dashboard-animations.css') }}" rel="stylesheet">
@@ -2928,61 +3347,79 @@ Responde con estructura de informe ejecutivo y números concretos.`
                 $('#controlWeightTable').empty();
 
                 const table = $('#controlWeightTable').DataTable({
-                    dom: 'lfrtip',
+                    dom: "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
+                         "<'row'<'col-sm-12'tr>>" +
+                         "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
                     buttons: [],
-                    scrollX: true,
-                    responsive: true,
+                    responsive: {
+                        details: {
+                            type: 'column',
+                            target: 0,
+                            renderer: function(api, rowIdx, columns) {
+                                let data = '<div class="ls-child-row">';
+                                columns.forEach(function(col, i) {
+                                    if (col.hidden) {
+                                        data += '<div class="ls-child-item">' +
+                                            '<span class="ls-child-label">' + col.title + '</span>' +
+                                            '<span class="ls-child-value">' + col.data + '</span>' +
+                                            '</div>';
+                                    }
+                                });
+                                data += '</div>';
+                                return data;
+                            }
+                        }
+                    },
                     data: processedData,
-                    // 'destroy: true' ya no es necesario gracias al manejo manual
                     columns: [
-                        { data: 'production_line_name', title: 'Línea', className: 'text-truncate', createdCell: function(td, cellData, rowData) {
+                        { data: null, defaultContent: '', className: 'dtr-control', orderable: false, responsivePriority: 1 },
+                        { data: 'production_line_name', title: 'Línea', className: 'text-truncate', responsivePriority: 1, createdCell: function(td, cellData, rowData) {
                             $(td).attr('title', `Línea: ${cellData}`);
                         }},
-                        { data: 'order_id', title: 'Orden', className: 'text-truncate', createdCell: function(td, cellData, rowData) {
+                        { data: 'order_id', title: 'Orden', className: 'text-truncate', responsivePriority: 2, createdCell: function(td, cellData, rowData) {
                             $(td).attr('title', `Orden: ${cellData}`);
                         }},
-                        { data: 'operator_names', title: 'Empleados', className: 'text-truncate', render: function(data, type, row) {
+                        { data: 'operator_names', title: 'Empleados', className: 'text-truncate', responsivePriority: 5, render: function(data, type, row) {
                             if (!data || data.length === 0) return '<span class="text-muted">Sin asignar</span>';
-                            // Limitar a mostrar máximo 2 nombres y un contador si hay más
                             const names = Array.isArray(data) ? data : [data];
                             const displayNames = names.slice(0, 2).join(', ');
                             const remaining = names.length > 2 ? ` +${names.length - 2} más` : '';
                             return `<span title="${names.join(', ')}">${displayNames}${remaining}</span>`;
                         }},
-                        { data: 'oee', title: 'OEE', render: data => `${Math.round(data)}%`, createdCell: function(td, cellData, rowData) {
-                            const color = cellData >= 80 ? 'text-success' : cellData >= 60 ? 'text-warning' : 'text-danger';
-                            $(td).html(`<span class="${color} fw-bold">${Math.round(cellData)}%</span>`);
+                        { data: 'oee', title: 'OEE', responsivePriority: 1, render: data => `${Math.round(data)}%`, createdCell: function(td, cellData, rowData) {
+                            const color = cellData >= 80 ? 'success' : cellData >= 60 ? 'warning' : 'danger';
+                            $(td).html(`<span class="ls-oee-badge ls-oee-${color}">${Math.round(cellData)}%</span>`);
                             $(td).attr('title', `OEE: ${Math.round(cellData)}%\nEstado: ${cellData >= 80 ? 'Excelente' : cellData >= 60 ? 'Aceptable' : 'Necesita mejora'}`);
                         }},
-                        { data: 'status', title: 'Estado', render: data => {
+                        { data: 'status', title: 'Estado', responsivePriority: 2, render: data => {
                             const statusMap = {
-                                'active': '<span class="badge bg-success">Activo</span>',
-                                'paused': '<span class="badge bg-warning">Pausado</span>',
-                                'error': '<span class="badge bg-danger">Incidencia</span>',
-                                'completed': '<span class="badge bg-primary">Completado</span>',
-                                'in_progress': '<span class="badge bg-info">En Progreso</span>',
-                                'pending': '<span class="badge bg-secondary">Planificada</span>'
+                                'active': '<span class="ls-status-badge ls-status-active">Activo</span>',
+                                'paused': '<span class="ls-status-badge ls-status-paused">Pausado</span>',
+                                'error': '<span class="ls-status-badge ls-status-error">Incidencia</span>',
+                                'completed': '<span class="ls-status-badge ls-status-completed">Completado</span>',
+                                'in_progress': '<span class="ls-status-badge ls-status-progress">En Progreso</span>',
+                                'pending': '<span class="ls-status-badge ls-status-pending">Planificada</span>'
                             };
-                            return statusMap[data] || '<span class="badge bg-secondary">Desconocido</span>';
+                            return statusMap[data] || '<span class="ls-status-badge ls-status-pending">Desconocido</span>';
                         }, createdCell: function(td, cellData, rowData) {
                             $(td).attr('title', `Estado actual: ${cellData}`);
                         }},
-                        { data: 'created_at', title: 'Iniciado', render: data => new Date(data).toLocaleString(), createdCell: function(td, cellData, rowData) {
+                        { data: 'created_at', title: 'Iniciado', responsivePriority: 6, render: data => new Date(data).toLocaleString(), createdCell: function(td, cellData, rowData) {
                             $(td).attr('title', `Inicio: ${new Date(data).toLocaleString()}`);
                         }},
-                        { data: 'updated_at', title: 'Última actualización', render: data => data ? new Date(data).toLocaleString() : '-', createdCell: function(td, cellData, rowData) {
+                        { data: 'updated_at', title: 'Últ. actualización', responsivePriority: 7, render: data => data ? new Date(data).toLocaleString() : '-', createdCell: function(td, cellData, rowData) {
                             $(td).attr('title', `Última actualización: ${data ? new Date(data).toLocaleString() : '-'}`);
                         }},
-                        { data: 'on_time', title: 'DURACIÓN', render: data => formatTime(data), createdCell: function(td, cellData, rowData) {
+                        { data: 'on_time', title: 'Duración', responsivePriority: 3, render: data => formatTime(data), createdCell: function(td, cellData, rowData) {
                             $(td).attr('title', `Duración: ${formatTime(cellData)}`);
                         }},
-                        { data: null, title: 'Diferencia duración teórica', render: function(data, type, row) {
+                        { data: null, title: 'Diferencia', responsivePriority: 4, render: function(data, type, row) {
                             if (row.fast_time && parseInt(row.fast_time) > 0) {
-                                return '<span class="badge bg-success">' + formatTime(row.fast_time) + '</span>';
+                                return '<span class="ls-time-badge ls-time-positive">+' + formatTime(row.fast_time) + '</span>';
                             } else if (row.out_time && parseInt(row.out_time) > 0) {
-                                return '<span class="badge bg-danger">' + formatTime(row.out_time) + '</span>';
+                                return '<span class="ls-time-badge ls-time-negative">-' + formatTime(row.out_time) + '</span>';
                             } else {
-                                return '';
+                                return '<span class="ls-time-badge ls-time-neutral">00:00:00</span>';
                             }
                         }, createdCell: function(td, cellData, rowData) {
                             if (rowData.fast_time && parseInt(rowData.fast_time) > 0) {
@@ -2991,27 +3428,27 @@ Responde con estructura de informe ejecutivo y números concretos.`
                                 $(td).attr('title', `Tiempo de más: ${formatTime(rowData.out_time)}`);
                             }
                         }},
-                        { data: 'prepair_time', title: 'Preparación', render: data => formatTime(data), createdCell: function(td, cellData, rowData) {
+                        { data: 'prepair_time', title: 'Preparación', responsivePriority: 8, render: data => formatTime(data), createdCell: function(td, cellData, rowData) {
                             $(td).attr('title', `Tiempo de preparación: ${formatTime(cellData)}`);
                         }},
-                        { data: 'slow_time', title: 'Lento', render: data => formatTime(data), createdCell: function(td, cellData, rowData) {
+                        { data: 'slow_time', title: 'Lento', responsivePriority: 9, render: data => formatTime(data), createdCell: function(td, cellData, rowData) {
                             $(td).attr('title', `Tiempo en velocidad lenta: ${formatTime(cellData)}`);
                         }},
-                        { data: 'down_time', title: 'Paradas', render: data => formatTime(data), createdCell: function(td, cellData, rowData) {
+                        { data: 'down_time', title: 'Paradas', responsivePriority: 10, render: data => formatTime(data), createdCell: function(td, cellData, rowData) {
                             $(td).attr('title', `Paradas no justificadas: ${formatTime(cellData)}`);
                         }},
-                        { data: 'production_stops_time', title: 'Falta material', render: data => formatTime(data), createdCell: function(td, cellData, rowData) {
+                        { data: 'production_stops_time', title: 'Falta material', responsivePriority: 11, render: data => formatTime(data), createdCell: function(td, cellData, rowData) {
                             $(td).attr('title', `Parada falta material: ${formatTime(cellData)}`);
                         }},
-                        { data: null, title: 'Acciones', orderable: false, render: function(data, type, row) {
-                            return `<button class="btn btn-sm btn-primary" onclick="showDetailsModal(${JSON.stringify(row).replace(/"/g, '&quot;')})">
-                                <i class="fas fa-eye"></i> Ver
+                        { data: null, title: '', orderable: false, responsivePriority: 1, className: 'text-end', render: function(data, type, row) {
+                            return `<button class="ls-action-btn" onclick="showDetailsModal(${JSON.stringify(row).replace(/"/g, '&quot;')})">
+                                <i class="fas fa-eye"></i>
                             </button>`;
                         }, createdCell: function(td, cellData, rowData) {
                             $(td).attr('title', 'Ver detalles completos');
                         }}
                     ],
-                    order: [[1, 'desc']], // Ordenar por Orden (ahora es la segunda columna)
+                    order: [[2, 'desc']],
                     paging: true,
                     pageLength: 10,
                     lengthChange: true,
@@ -3019,10 +3456,14 @@ Responde con estructura de informe ejecutivo y números concretos.`
                     language: {
                         url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json"
                     },
+                    drawCallback: function() {
+                        // Estilizar los controles después de cada redibujado
+                        $('.dataTables_filter input').addClass('ls-search-input');
+                        $('.dataTables_length select').addClass('ls-length-select');
+                    },
                     initComplete: function() {
-                        // Añadir clases de Bootstrap a los elementos de DataTables
-                        $('.dataTables_filter input').addClass('form-control form-control-sm');
-                        $('.dataTables_length select').addClass('form-select form-select-sm');
+                        $('.dataTables_filter input').addClass('ls-search-input');
+                        $('.dataTables_length select').addClass('ls-length-select');
                     }
                 });
 

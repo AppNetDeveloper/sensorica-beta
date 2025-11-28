@@ -78,297 +78,167 @@
                 </div>
             </div>
 
-            <div class="row g-4 mb-4" id="kpi-cards">
-                    <div class="col-12 col-sm-6 col-lg-3">
-                    <div class="card shadow-sm border-0 h-100 hover-lift">
-                        <div class="card-body text-center">
-                            <div class="mb-2">
-                                <i class="fas fa-chart-line fa-2x text-warning"></i>
+            <div class="row g-3 mb-4" id="kpi-cards">
+                {{-- KPI 1: Promedio Tiempo Espera --}}
+                <div class="col-6 col-lg-3">
+                    <div class="pt-kpi-card">
+                        <div class="pt-kpi-header">
+                            <div class="pt-kpi-icon pt-kpi-icon-warning">
+                                <i class="fas fa-chart-line"></i>
                             </div>
-                            <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Promedio Tiempo de Espera Operacion / Máquina') }}</h6>
-                            <h2 class="mb-0 text-dark fw-bold" id="kpi-gap">-</h2>
+                            <p class="pt-kpi-title">{{ __('Promedio Tiempo Espera Op/Máq') }}</p>
                         </div>
+                        <h3 class="pt-kpi-value" id="kpi-gap">-</h3>
                     </div>
                 </div>
-                <div class="col-12 col-sm-6 col-lg-3">
-                    <div class="card shadow-sm border-0 h-100 hover-lift">
-                        <div class="card-body text-center">
-                            <div class="mb-2">
-                                <i class="fas fa-equals fa-2x text-muted"></i>
+                {{-- KPI 2: Mediana Tiempo Espera --}}
+                <div class="col-6 col-lg-3">
+                    <div class="pt-kpi-card">
+                        <div class="pt-kpi-header">
+                            <div class="pt-kpi-icon pt-kpi-icon-muted">
+                                <i class="fas fa-equals"></i>
                             </div>
-                            <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Mediana Tiempo de Espera Operacion / Máquina') }}</h6>
-                            <h2 class="mb-0 text-dark fw-bold" id="kpi-gap-median">-</h2>
+                            <p class="pt-kpi-title">{{ __('Mediana Tiempo Espera Op/Máq') }}</p>
                         </div>
+                        <h3 class="pt-kpi-value" id="kpi-gap-median">-</h3>
                     </div>
                 </div>
-                <div class="col-12 col-sm-6 col-lg-3">
-                    <div class="card shadow-sm border-0 h-100 hover-lift" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#kpi-erp-finish-details" aria-expanded="false">
-                        <div class="card-body text-center">
-                            <div class="mb-2">
-                                <i class="fas fa-stopwatch fa-2x text-info"></i>
+                {{-- KPI 3: Promedio Pedido → Fin Producción --}}
+                <div class="col-6 col-lg-3">
+                    <div class="pt-kpi-card" data-bs-toggle="collapse" data-bs-target="#kpi-erp-finish-details">
+                        <div class="pt-kpi-header">
+                            <div class="pt-kpi-icon pt-kpi-icon-info">
+                                <i class="fas fa-stopwatch"></i>
                             </div>
-                            <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Promedio Pedido Cliente → Fin Producción') }}</h6>
-                            <h2 class="mb-0 text-dark fw-bold" id="kpi-erp-finish">-</h2>
-                            <div class="mt-3" id="kpi-erp-finish-days">
-                                <span class="badge bg-primary text-white fs-6 py-2 px-3 me-2" id="kpi-erp-finish-total-days" data-bs-toggle="tooltip" title="{{ __('Total días naturales') }}">
-                                    <i class="fas fa-calendar fa-lg me-2"></i>-
-                                </span>
-                                <span class="badge bg-success text-white fs-6 py-2 px-3 me-2" id="kpi-erp-finish-working-days" data-bs-toggle="tooltip" title="{{ __('Días laborables') }}">
-                                    <i class="fas fa-briefcase fa-lg me-2"></i>-
-                                </span>
-                                <span class="badge bg-secondary text-white fs-6 py-2 px-3" id="kpi-erp-finish-non-working-days" data-bs-toggle="tooltip" title="{{ __('Días no laborables') }}">
-                                    <i class="fas fa-calendar-times fa-lg me-2"></i>-
-                                </span>
-                            </div>
-                            <div class="collapse mt-3" id="kpi-erp-finish-details">
-                                <hr class="my-2">
-                                <div class="text-start small">
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span class="text-muted"><i class="fas fa-clock me-1"></i>{{ __('Total horas') }}:</span>
-                                        <strong id="kpi-erp-finish-total-hours">-</strong>
-                                    </div>
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span class="text-success"><i class="fas fa-business-time me-1"></i>{{ __('Horas laborables') }}:</span>
-                                        <strong id="kpi-erp-finish-working-hours">-</strong>
-                                    </div>
-                                    <div class="d-flex justify-content-between">
-                                        <span class="text-secondary"><i class="fas fa-bed me-1"></i>{{ __('Horas no laborables') }}:</span>
-                                        <strong id="kpi-erp-finish-non-working-hours">-</strong>
-                                    </div>
-                                </div>
-                                <div class="mt-2">
-                                    <small class="text-muted"><i class="fas fa-info-circle me-1"></i>{{ __('Click para ocultar') }}</small>
-                                </div>
-                            </div>
-                            <div class="mt-2">
-                                <small class="text-muted"><i class="fas fa-hand-pointer me-1"></i>{{ __('Click para más detalles') }}</small>
-                            </div>
+                            <p class="pt-kpi-title">{{ __('Prom. Pedido → Fin Prod.') }}</p>
                         </div>
+                        <h3 class="pt-kpi-value" id="kpi-erp-finish">-</h3>
+                        <div class="pt-kpi-badges">
+                            <span class="pt-kpi-badge pt-kpi-badge-primary" id="kpi-erp-finish-total-days" title="{{ __('Total días') }}"><i class="fas fa-calendar"></i> -</span>
+                            <span class="pt-kpi-badge pt-kpi-badge-success" id="kpi-erp-finish-working-days" title="{{ __('Días laborables') }}"><i class="fas fa-briefcase"></i> -</span>
+                            <span class="pt-kpi-badge pt-kpi-badge-secondary" id="kpi-erp-finish-non-working-days" title="{{ __('No laborables') }}"><i class="fas fa-calendar-times"></i> -</span>
+                        </div>
+                        <div class="collapse pt-kpi-details" id="kpi-erp-finish-details">
+                            <div class="pt-kpi-detail-row"><span class="pt-kpi-detail-label"><i class="fas fa-clock me-1"></i>{{ __('Total horas') }}</span><span class="pt-kpi-detail-value" id="kpi-erp-finish-total-hours">-</span></div>
+                            <div class="pt-kpi-detail-row"><span class="pt-kpi-detail-label"><i class="fas fa-business-time me-1"></i>{{ __('Laborables') }}</span><span class="pt-kpi-detail-value" id="kpi-erp-finish-working-hours">-</span></div>
+                            <div class="pt-kpi-detail-row"><span class="pt-kpi-detail-label"><i class="fas fa-bed me-1"></i>{{ __('No laborables') }}</span><span class="pt-kpi-detail-value" id="kpi-erp-finish-non-working-hours">-</span></div>
+                        </div>
+                        <p class="pt-kpi-hint"><i class="fas fa-hand-pointer me-1"></i>{{ __('Click para detalles') }}</p>
                     </div>
                 </div>
-                <div class="col-12 col-sm-6 col-lg-3">
-                    <div class="card shadow-sm border-0 h-100 hover-lift" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#kpi-erp-finish-median-details" aria-expanded="false">
-                        <div class="card-body text-center">
-                            <div class="mb-2">
-                                <i class="fas fa-clock fa-2x text-secondary"></i>
+                {{-- KPI 4: Mediana Pedido → Fin Producción --}}
+                <div class="col-6 col-lg-3">
+                    <div class="pt-kpi-card" data-bs-toggle="collapse" data-bs-target="#kpi-erp-finish-median-details">
+                        <div class="pt-kpi-header">
+                            <div class="pt-kpi-icon pt-kpi-icon-secondary">
+                                <i class="fas fa-clock"></i>
                             </div>
-                            <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Mediana Pedido Cliente → Fin Producción') }}</h6>
-                            <h2 class="mb-0 text-dark fw-bold" id="kpi-erp-finish-median">-</h2>
-                            <div class="mt-3">
-                                <span class="badge bg-primary text-white fs-6 py-2 px-3 me-2" id="kpi-erp-finish-median-total-days" data-bs-toggle="tooltip" title="{{ __('Total días naturales') }}">
-                                    <i class="fas fa-calendar fa-lg me-2"></i>-
-                                </span>
-                                <span class="badge bg-success text-white fs-6 py-2 px-3 me-2" id="kpi-erp-finish-median-working-days" data-bs-toggle="tooltip" title="{{ __('Días laborables') }}">
-                                    <i class="fas fa-briefcase fa-lg me-2"></i>-
-                                </span>
-                                <span class="badge bg-secondary text-white fs-6 py-2 px-3" id="kpi-erp-finish-median-non-working-days" data-bs-toggle="tooltip" title="{{ __('Días no laborables') }}">
-                                    <i class="fas fa-calendar-times fa-lg me-2"></i>-
-                                </span>
-                            </div>
-                            <div class="collapse mt-3" id="kpi-erp-finish-median-details">
-                                <hr class="my-2">
-                                <div class="text-start small">
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span class="text-muted"><i class="fas fa-clock me-1"></i>{{ __('Total horas') }}:</span>
-                                        <strong id="kpi-erp-finish-median-total-hours">-</strong>
-                                    </div>
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span class="text-success"><i class="fas fa-business-time me-1"></i>{{ __('Horas laborables') }}:</span>
-                                        <strong id="kpi-erp-finish-median-working-hours">-</strong>
-                                    </div>
-                                    <div class="d-flex justify-content-between">
-                                        <span class="text-secondary"><i class="fas fa-bed me-1"></i>{{ __('Horas no laborables') }}:</span>
-                                        <strong id="kpi-erp-finish-median-non-working-hours">-</strong>
-                                    </div>
-                                </div>
-                                <div class="mt-2">
-                                    <small class="text-muted"><i class="fas fa-info-circle me-1"></i>{{ __('Click para ocultar') }}</small>
-                                </div>
-                            </div>
-                            <div class="mt-2">
-                                <small class="text-muted"><i class="fas fa-hand-pointer me-1"></i>{{ __('Click para más detalles') }}</small>
-                            </div>
+                            <p class="pt-kpi-title">{{ __('Med. Pedido → Fin Prod.') }}</p>
                         </div>
+                        <h3 class="pt-kpi-value" id="kpi-erp-finish-median">-</h3>
+                        <div class="pt-kpi-badges">
+                            <span class="pt-kpi-badge pt-kpi-badge-primary" id="kpi-erp-finish-median-total-days" title="{{ __('Total días') }}"><i class="fas fa-calendar"></i> -</span>
+                            <span class="pt-kpi-badge pt-kpi-badge-success" id="kpi-erp-finish-median-working-days" title="{{ __('Días laborables') }}"><i class="fas fa-briefcase"></i> -</span>
+                            <span class="pt-kpi-badge pt-kpi-badge-secondary" id="kpi-erp-finish-median-non-working-days" title="{{ __('No laborables') }}"><i class="fas fa-calendar-times"></i> -</span>
+                        </div>
+                        <div class="collapse pt-kpi-details" id="kpi-erp-finish-median-details">
+                            <div class="pt-kpi-detail-row"><span class="pt-kpi-detail-label"><i class="fas fa-clock me-1"></i>{{ __('Total horas') }}</span><span class="pt-kpi-detail-value" id="kpi-erp-finish-median-total-hours">-</span></div>
+                            <div class="pt-kpi-detail-row"><span class="pt-kpi-detail-label"><i class="fas fa-business-time me-1"></i>{{ __('Laborables') }}</span><span class="pt-kpi-detail-value" id="kpi-erp-finish-median-working-hours">-</span></div>
+                            <div class="pt-kpi-detail-row"><span class="pt-kpi-detail-label"><i class="fas fa-bed me-1"></i>{{ __('No laborables') }}</span><span class="pt-kpi-detail-value" id="kpi-erp-finish-median-non-working-hours">-</span></div>
+                        </div>
+                        <p class="pt-kpi-hint"><i class="fas fa-hand-pointer me-1"></i>{{ __('Click para detalles') }}</p>
                     </div>
                 </div>
-                <div class="col-12 col-sm-6 col-lg-3">
-                    <div class="card shadow-sm border-0 h-100 hover-lift" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#kpi-created-finish-details" aria-expanded="false">
-                        <div class="card-body text-center">
-                            <div class="mb-2">
-                                <i class="fas fa-industry fa-2x text-success"></i>
+                {{-- KPI 5: Promedio Lanzamiento → Fin --}}
+                <div class="col-6 col-lg-3">
+                    <div class="pt-kpi-card" data-bs-toggle="collapse" data-bs-target="#kpi-created-finish-details">
+                        <div class="pt-kpi-header">
+                            <div class="pt-kpi-icon pt-kpi-icon-success">
+                                <i class="fas fa-industry"></i>
                             </div>
-                            <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Promedio lanzamiento producción → fin orden') }}</h6>
-                            <h2 class="mb-0 text-dark fw-bold" id="kpi-created-finish">-</h2>
-                            <div class="mt-3">
-                                <span class="badge bg-primary text-white fs-6 py-2 px-3 me-2" id="kpi-created-finish-total-days" data-bs-toggle="tooltip" title="{{ __('Total días naturales') }}">
-                                    <i class="fas fa-calendar fa-lg me-2"></i>-
-                                </span>
-                                <span class="badge bg-success text-white fs-6 py-2 px-3 me-2" id="kpi-created-finish-working-days" data-bs-toggle="tooltip" title="{{ __('Días laborables') }}">
-                                    <i class="fas fa-briefcase fa-lg me-2"></i>-
-                                </span>
-                                <span class="badge bg-secondary text-white fs-6 py-2 px-3" id="kpi-created-finish-non-working-days" data-bs-toggle="tooltip" title="{{ __('Días no laborables') }}">
-                                    <i class="fas fa-calendar-times fa-lg me-2"></i>-
-                                </span>
-                            </div>
-                            <div class="collapse mt-3" id="kpi-created-finish-details">
-                                <hr class="my-2">
-                                <div class="text-start small">
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span class="text-muted"><i class="fas fa-clock me-1"></i>{{ __('Total horas') }}:</span>
-                                        <strong id="kpi-created-finish-total-hours">-</strong>
-                                    </div>
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span class="text-success"><i class="fas fa-business-time me-1"></i>{{ __('Horas laborables') }}:</span>
-                                        <strong id="kpi-created-finish-working-hours">-</strong>
-                                    </div>
-                                    <div class="d-flex justify-content-between">
-                                        <span class="text-secondary"><i class="fas fa-bed me-1"></i>{{ __('Horas no laborables') }}:</span>
-                                        <strong id="kpi-created-finish-non-working-hours">-</strong>
-                                    </div>
-                                </div>
-                                <div class="mt-2">
-                                    <small class="text-muted"><i class="fas fa-info-circle me-1"></i>{{ __('Click para ocultar') }}</small>
-                                </div>
-                            </div>
-                            <div class="mt-2">
-                                <small class="text-muted"><i class="fas fa-hand-pointer me-1"></i>{{ __('Click para más detalles') }}</small>
-                            </div>
+                            <p class="pt-kpi-title">{{ __('Prom. Lanzamiento → Fin') }}</p>
                         </div>
+                        <h3 class="pt-kpi-value" id="kpi-created-finish">-</h3>
+                        <div class="pt-kpi-badges">
+                            <span class="pt-kpi-badge pt-kpi-badge-primary" id="kpi-created-finish-total-days" title="{{ __('Total días') }}"><i class="fas fa-calendar"></i> -</span>
+                            <span class="pt-kpi-badge pt-kpi-badge-success" id="kpi-created-finish-working-days" title="{{ __('Días laborables') }}"><i class="fas fa-briefcase"></i> -</span>
+                            <span class="pt-kpi-badge pt-kpi-badge-secondary" id="kpi-created-finish-non-working-days" title="{{ __('No laborables') }}"><i class="fas fa-calendar-times"></i> -</span>
+                        </div>
+                        <div class="collapse pt-kpi-details" id="kpi-created-finish-details">
+                            <div class="pt-kpi-detail-row"><span class="pt-kpi-detail-label"><i class="fas fa-clock me-1"></i>{{ __('Total horas') }}</span><span class="pt-kpi-detail-value" id="kpi-created-finish-total-hours">-</span></div>
+                            <div class="pt-kpi-detail-row"><span class="pt-kpi-detail-label"><i class="fas fa-business-time me-1"></i>{{ __('Laborables') }}</span><span class="pt-kpi-detail-value" id="kpi-created-finish-working-hours">-</span></div>
+                            <div class="pt-kpi-detail-row"><span class="pt-kpi-detail-label"><i class="fas fa-bed me-1"></i>{{ __('No laborables') }}</span><span class="pt-kpi-detail-value" id="kpi-created-finish-non-working-hours">-</span></div>
+                        </div>
+                        <p class="pt-kpi-hint"><i class="fas fa-hand-pointer me-1"></i>{{ __('Click para detalles') }}</p>
                     </div>
                 </div>
-                <div class="col-12 col-sm-6 col-lg-3">
-                    <div class="card shadow-sm border-0 h-100 hover-lift" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#kpi-created-finish-median-details" aria-expanded="false">
-                        <div class="card-body text-center">
-                            <div class="mb-2">
-                                <i class="fas fa-stopwatch fa-2x text-info"></i>
+                {{-- KPI 6: Mediana Lanzamiento → Fin --}}
+                <div class="col-6 col-lg-3">
+                    <div class="pt-kpi-card" data-bs-toggle="collapse" data-bs-target="#kpi-created-finish-median-details">
+                        <div class="pt-kpi-header">
+                            <div class="pt-kpi-icon pt-kpi-icon-info">
+                                <i class="fas fa-stopwatch"></i>
                             </div>
-                            <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Mediana lanzamiento producción → fin orden') }}</h6>
-                            <h2 class="mb-0 text-dark fw-bold" id="kpi-created-finish-median">-</h2>
-                            <div class="mt-3">
-                                <span class="badge bg-primary text-white fs-6 py-2 px-3 me-2" id="kpi-created-finish-median-total-days" data-bs-toggle="tooltip" title="{{ __('Total días naturales') }}">
-                                    <i class="fas fa-calendar fa-lg me-2"></i>-
-                                </span>
-                                <span class="badge bg-success text-white fs-6 py-2 px-3 me-2" id="kpi-created-finish-median-working-days" data-bs-toggle="tooltip" title="{{ __('Días laborables') }}">
-                                    <i class="fas fa-briefcase fa-lg me-2"></i>-
-                                </span>
-                                <span class="badge bg-secondary text-white fs-6 py-2 px-3" id="kpi-created-finish-median-non-working-days" data-bs-toggle="tooltip" title="{{ __('Días no laborables') }}">
-                                    <i class="fas fa-calendar-times fa-lg me-2"></i>-
-                                </span>
-                            </div>
-                            <div class="collapse mt-3" id="kpi-created-finish-median-details">
-                                <hr class="my-2">
-                                <div class="text-start small">
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span class="text-muted"><i class="fas fa-clock me-1"></i>{{ __('Total horas') }}:</span>
-                                        <strong id="kpi-created-finish-median-total-hours">-</strong>
-                                    </div>
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span class="text-success"><i class="fas fa-business-time me-1"></i>{{ __('Horas laborables') }}:</span>
-                                        <strong id="kpi-created-finish-median-working-hours">-</strong>
-                                    </div>
-                                    <div class="d-flex justify-content-between">
-                                        <span class="text-secondary"><i class="fas fa-bed me-1"></i>{{ __('Horas no laborables') }}:</span>
-                                        <strong id="kpi-created-finish-median-non-working-hours">-</strong>
-                                    </div>
-                                </div>
-                                <div class="mt-2">
-                                    <small class="text-muted"><i class="fas fa-info-circle me-1"></i>{{ __('Click para ocultar') }}</small>
-                                </div>
-                            </div>
-                            <div class="mt-2">
-                                <small class="text-muted"><i class="fas fa-hand-pointer me-1"></i>{{ __('Click para más detalles') }}</small>
-                            </div>
+                            <p class="pt-kpi-title">{{ __('Med. Lanzamiento → Fin') }}</p>
                         </div>
+                        <h3 class="pt-kpi-value" id="kpi-created-finish-median">-</h3>
+                        <div class="pt-kpi-badges">
+                            <span class="pt-kpi-badge pt-kpi-badge-primary" id="kpi-created-finish-median-total-days" title="{{ __('Total días') }}"><i class="fas fa-calendar"></i> -</span>
+                            <span class="pt-kpi-badge pt-kpi-badge-success" id="kpi-created-finish-median-working-days" title="{{ __('Días laborables') }}"><i class="fas fa-briefcase"></i> -</span>
+                            <span class="pt-kpi-badge pt-kpi-badge-secondary" id="kpi-created-finish-median-non-working-days" title="{{ __('No laborables') }}"><i class="fas fa-calendar-times"></i> -</span>
+                        </div>
+                        <div class="collapse pt-kpi-details" id="kpi-created-finish-median-details">
+                            <div class="pt-kpi-detail-row"><span class="pt-kpi-detail-label"><i class="fas fa-clock me-1"></i>{{ __('Total horas') }}</span><span class="pt-kpi-detail-value" id="kpi-created-finish-median-total-hours">-</span></div>
+                            <div class="pt-kpi-detail-row"><span class="pt-kpi-detail-label"><i class="fas fa-business-time me-1"></i>{{ __('Laborables') }}</span><span class="pt-kpi-detail-value" id="kpi-created-finish-median-working-hours">-</span></div>
+                            <div class="pt-kpi-detail-row"><span class="pt-kpi-detail-label"><i class="fas fa-bed me-1"></i>{{ __('No laborables') }}</span><span class="pt-kpi-detail-value" id="kpi-created-finish-median-non-working-hours">-</span></div>
+                        </div>
+                        <p class="pt-kpi-hint"><i class="fas fa-hand-pointer me-1"></i>{{ __('Click para detalles') }}</p>
                     </div>
                 </div>
-                <div class="col-12 col-sm-6 col-lg-3">
-                    <div class="card shadow-sm border-0 h-100 hover-lift" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#kpi-erp-delivery-details" aria-expanded="false">
-                        <div class="card-body text-center">
-                            <div class="mb-2">
-                                <i class="fas fa-truck fa-2x text-warning"></i>
+                {{-- KPI 7: Promedio Pedido → Entregado --}}
+                <div class="col-6 col-lg-3">
+                    <div class="pt-kpi-card" data-bs-toggle="collapse" data-bs-target="#kpi-erp-delivery-details">
+                        <div class="pt-kpi-header">
+                            <div class="pt-kpi-icon pt-kpi-icon-warning">
+                                <i class="fas fa-truck"></i>
                             </div>
-                            <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Promedio Pedido Cliente → Pedido Entregado') }}</h6>
-                            <h2 class="mb-0 text-dark fw-bold" id="kpi-erp-delivery">-</h2>
-                            <div class="mt-3">
-                                <span class="badge bg-primary text-white fs-6 py-2 px-3 me-2" id="kpi-erp-delivery-total-days" data-bs-toggle="tooltip" title="{{ __('Total días naturales') }}">
-                                    <i class="fas fa-calendar fa-lg me-2"></i>-
-                                </span>
-                                <span class="badge bg-success text-white fs-6 py-2 px-3 me-2" id="kpi-erp-delivery-working-days" data-bs-toggle="tooltip" title="{{ __('Días laborables') }}">
-                                    <i class="fas fa-briefcase fa-lg me-2"></i>-
-                                </span>
-                                <span class="badge bg-secondary text-white fs-6 py-2 px-3" id="kpi-erp-delivery-non-working-days" data-bs-toggle="tooltip" title="{{ __('Días no laborables') }}">
-                                    <i class="fas fa-calendar-times fa-lg me-2"></i>-
-                                </span>
-                            </div>
-                            <div class="collapse mt-3" id="kpi-erp-delivery-details">
-                                <hr class="my-2">
-                                <div class="text-start small">
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span class="text-muted"><i class="fas fa-clock me-1"></i>{{ __('Total horas') }}:</span>
-                                        <strong id="kpi-erp-delivery-total-hours">-</strong>
-                                    </div>
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span class="text-success"><i class="fas fa-business-time me-1"></i>{{ __('Horas laborables') }}:</span>
-                                        <strong id="kpi-erp-delivery-working-hours">-</strong>
-                                    </div>
-                                    <div class="d-flex justify-content-between">
-                                        <span class="text-secondary"><i class="fas fa-bed me-1"></i>{{ __('Horas no laborables') }}:</span>
-                                        <strong id="kpi-erp-delivery-non-working-hours">-</strong>
-                                    </div>
-                                </div>
-                                <div class="mt-2">
-                                    <small class="text-muted"><i class="fas fa-info-circle me-1"></i>{{ __('Click para ocultar') }}</small>
-                                </div>
-                            </div>
-                            <div class="mt-2">
-                                <small class="text-muted"><i class="fas fa-hand-pointer me-1"></i>{{ __('Click para más detalles') }}</small>
-                            </div>
+                            <p class="pt-kpi-title">{{ __('Prom. Pedido → Entregado') }}</p>
                         </div>
+                        <h3 class="pt-kpi-value" id="kpi-erp-delivery">-</h3>
+                        <div class="pt-kpi-badges">
+                            <span class="pt-kpi-badge pt-kpi-badge-primary" id="kpi-erp-delivery-total-days" title="{{ __('Total días') }}"><i class="fas fa-calendar"></i> -</span>
+                            <span class="pt-kpi-badge pt-kpi-badge-success" id="kpi-erp-delivery-working-days" title="{{ __('Días laborables') }}"><i class="fas fa-briefcase"></i> -</span>
+                            <span class="pt-kpi-badge pt-kpi-badge-secondary" id="kpi-erp-delivery-non-working-days" title="{{ __('No laborables') }}"><i class="fas fa-calendar-times"></i> -</span>
+                        </div>
+                        <div class="collapse pt-kpi-details" id="kpi-erp-delivery-details">
+                            <div class="pt-kpi-detail-row"><span class="pt-kpi-detail-label"><i class="fas fa-clock me-1"></i>{{ __('Total horas') }}</span><span class="pt-kpi-detail-value" id="kpi-erp-delivery-total-hours">-</span></div>
+                            <div class="pt-kpi-detail-row"><span class="pt-kpi-detail-label"><i class="fas fa-business-time me-1"></i>{{ __('Laborables') }}</span><span class="pt-kpi-detail-value" id="kpi-erp-delivery-working-hours">-</span></div>
+                            <div class="pt-kpi-detail-row"><span class="pt-kpi-detail-label"><i class="fas fa-bed me-1"></i>{{ __('No laborables') }}</span><span class="pt-kpi-detail-value" id="kpi-erp-delivery-non-working-hours">-</span></div>
+                        </div>
+                        <p class="pt-kpi-hint"><i class="fas fa-hand-pointer me-1"></i>{{ __('Click para detalles') }}</p>
                     </div>
                 </div>
-                <div class="col-12 col-sm-6 col-lg-3">
-                    <div class="card shadow-sm border-0 h-100 hover-lift" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#kpi-erp-delivery-median-details" aria-expanded="false">
-                        <div class="card-body text-center">
-                            <div class="mb-2">
-                                <i class="fas fa-shipping-fast fa-2x text-danger"></i>
+                {{-- KPI 8: Mediana Pedido → Entregado --}}
+                <div class="col-6 col-lg-3">
+                    <div class="pt-kpi-card" data-bs-toggle="collapse" data-bs-target="#kpi-erp-delivery-median-details">
+                        <div class="pt-kpi-header">
+                            <div class="pt-kpi-icon pt-kpi-icon-danger">
+                                <i class="fas fa-shipping-fast"></i>
                             </div>
-                            <h6 class="text-muted text-uppercase mb-2 small fw-bold">{{ __('Mediana Pedido Cliente → Pedido Entregado') }}</h6>
-                            <h2 class="mb-0 text-dark fw-bold" id="kpi-erp-delivery-median">-</h2>
-                            <div class="mt-3">
-                                <span class="badge bg-primary text-white fs-6 py-2 px-3 me-2" id="kpi-erp-delivery-median-total-days" data-bs-toggle="tooltip" title="{{ __('Total días naturales') }}">
-                                    <i class="fas fa-calendar fa-lg me-2"></i>-
-                                </span>
-                                <span class="badge bg-success text-white fs-6 py-2 px-3 me-2" id="kpi-erp-delivery-median-working-days" data-bs-toggle="tooltip" title="{{ __('Días laborables') }}">
-                                    <i class="fas fa-briefcase fa-lg me-2"></i>-
-                                </span>
-                                <span class="badge bg-secondary text-white fs-6 py-2 px-3" id="kpi-erp-delivery-median-non-working-days" data-bs-toggle="tooltip" title="{{ __('Días no laborables') }}">
-                                    <i class="fas fa-calendar-times fa-lg me-2"></i>-
-                                </span>
-                            </div>
-                            <div class="collapse mt-3" id="kpi-erp-delivery-median-details">
-                                <hr class="my-2">
-                                <div class="text-start small">
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span class="text-muted"><i class="fas fa-clock me-1"></i>{{ __('Total horas') }}:</span>
-                                        <strong id="kpi-erp-delivery-median-total-hours">-</strong>
-                                    </div>
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span class="text-success"><i class="fas fa-business-time me-1"></i>{{ __('Horas laborables') }}:</span>
-                                        <strong id="kpi-erp-delivery-median-working-hours">-</strong>
-                                    </div>
-                                    <div class="d-flex justify-content-between">
-                                        <span class="text-secondary"><i class="fas fa-bed me-1"></i>{{ __('Horas no laborables') }}:</span>
-                                        <strong id="kpi-erp-delivery-median-non-working-hours">-</strong>
-                                    </div>
-                                </div>
-                                <div class="mt-2">
-                                    <small class="text-muted"><i class="fas fa-info-circle me-1"></i>{{ __('Click para ocultar') }}</small>
-                                </div>
-                            </div>
-                            <div class="mt-2">
-                                <small class="text-muted"><i class="fas fa-hand-pointer me-1"></i>{{ __('Click para más detalles') }}</small>
-                            </div>
+                            <p class="pt-kpi-title">{{ __('Med. Pedido → Entregado') }}</p>
                         </div>
+                        <h3 class="pt-kpi-value" id="kpi-erp-delivery-median">-</h3>
+                        <div class="pt-kpi-badges">
+                            <span class="pt-kpi-badge pt-kpi-badge-primary" id="kpi-erp-delivery-median-total-days" title="{{ __('Total días') }}"><i class="fas fa-calendar"></i> -</span>
+                            <span class="pt-kpi-badge pt-kpi-badge-success" id="kpi-erp-delivery-median-working-days" title="{{ __('Días laborables') }}"><i class="fas fa-briefcase"></i> -</span>
+                            <span class="pt-kpi-badge pt-kpi-badge-secondary" id="kpi-erp-delivery-median-non-working-days" title="{{ __('No laborables') }}"><i class="fas fa-calendar-times"></i> -</span>
+                        </div>
+                        <div class="collapse pt-kpi-details" id="kpi-erp-delivery-median-details">
+                            <div class="pt-kpi-detail-row"><span class="pt-kpi-detail-label"><i class="fas fa-clock me-1"></i>{{ __('Total horas') }}</span><span class="pt-kpi-detail-value" id="kpi-erp-delivery-median-total-hours">-</span></div>
+                            <div class="pt-kpi-detail-row"><span class="pt-kpi-detail-label"><i class="fas fa-business-time me-1"></i>{{ __('Laborables') }}</span><span class="pt-kpi-detail-value" id="kpi-erp-delivery-median-working-hours">-</span></div>
+                            <div class="pt-kpi-detail-row"><span class="pt-kpi-detail-label"><i class="fas fa-bed me-1"></i>{{ __('No laborables') }}</span><span class="pt-kpi-detail-value" id="kpi-erp-delivery-median-non-working-hours">-</span></div>
+                        </div>
+                        <p class="pt-kpi-hint"><i class="fas fa-hand-pointer me-1"></i>{{ __('Click para detalles') }}</p>
                     </div>
                 </div>
             </div>
@@ -584,50 +454,150 @@
                 </div>
 @endsection
 
-@push('styles')
+@push('style')
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     <style>
+        /* ===== KPI Cards Compactas ===== */
+        .pt-kpi-card {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+            transition: all 0.2s ease;
+            cursor: pointer;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        .pt-kpi-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+        }
+        .pt-kpi-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .pt-kpi-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+        .pt-kpi-icon-warning { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+        .pt-kpi-icon-muted { background: rgba(100, 116, 139, 0.15); color: #64748b; }
+        .pt-kpi-icon-info { background: rgba(14, 165, 233, 0.15); color: #0ea5e9; }
+        .pt-kpi-icon-secondary { background: rgba(100, 116, 139, 0.15); color: #64748b; }
+        .pt-kpi-icon-success { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
+        .pt-kpi-icon-danger { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+        .pt-kpi-icon-primary { background: rgba(102, 126, 234, 0.15); color: #667eea; }
+
+        .pt-kpi-title {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            line-height: 1.3;
+            margin: 0;
+        }
+        .pt-kpi-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin: 0 0 8px 0;
+        }
+        .pt-kpi-badges {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .pt-kpi-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        .pt-kpi-badge-primary { background: #dbeafe; color: #2563eb; }
+        .pt-kpi-badge-success { background: #dcfce7; color: #16a34a; }
+        .pt-kpi-badge-secondary { background: #f1f5f9; color: #64748b; }
+
+        .pt-kpi-badge i { font-size: 0.65rem; }
+
+        .pt-kpi-details {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #e2e8f0;
+        }
+        .pt-kpi-detail-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            padding: 4px 0;
+        }
+        .pt-kpi-detail-label { color: #64748b; }
+        .pt-kpi-detail-value { font-weight: 600; color: #334155; }
+
+        .pt-kpi-hint {
+            font-size: 0.65rem;
+            color: #94a3b8;
+            margin-top: 8px;
+            text-align: center;
+        }
+
+        /* Hover lift legacy */
         .hover-lift {
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
         .hover-lift:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.1);
         }
 
-        /* === Mejoras sutiles para KPI cards === */
-        #kpi-cards .card {
-            border-left: 4px solid transparent;
+        /* Responsive KPIs */
+        @media (max-width: 992px) {
+            .pt-kpi-value { font-size: 1.2rem; }
+            .pt-kpi-icon { width: 36px; height: 36px; font-size: 1rem; }
         }
-        #kpi-cards .card:nth-child(1) { border-left-color: #0d6efd; }
-        #kpi-cards .card:nth-child(2) { border-left-color: #198754; }
-        #kpi-cards .card:nth-child(3) { border-left-color: #0dcaf0; }
-        #kpi-cards .card:nth-child(4) { border-left-color: #ffc107; }
-        #kpi-cards .card:nth-child(5) { border-left-color: #6c757d; }
-        #kpi-cards .card:nth-child(6) { border-left-color: #6f42c1; }
-        #kpi-cards .card:nth-child(7) { border-left-color: #198754; }
-        #kpi-cards .card:nth-child(8) { border-left-color: #0dcaf0; }
-
-        /* Mejor espaciado */
-        #kpi-cards .card-body h2 {
-            font-size: 2.25rem;
-            margin-bottom: 0.5rem;
-        }
-        #kpi-cards .card-body h6 {
-            line-height: 1.4;
-        }
-
-        /* Responsive */
         @media (max-width: 768px) {
-            #kpi-cards .card {
-                border-left-width: 3px;
-            }
-            #kpi-cards .card-body h2 {
-                font-size: 1.75rem;
-            }
+            .pt-kpi-card { padding: 14px; }
+            .pt-kpi-header { gap: 10px; margin-bottom: 10px; }
+            .pt-kpi-title { font-size: 0.65rem; }
+            .pt-kpi-value { font-size: 1.15rem; }
+            .pt-kpi-badges { gap: 4px; }
+            .pt-kpi-badge { padding: 3px 6px; font-size: 0.6rem; }
+            .pt-kpi-hint { font-size: 0.6rem; margin-top: 6px; }
+        }
+        @media (max-width: 576px) {
+            .pt-kpi-card { padding: 12px; }
+            .pt-kpi-icon { width: 32px; height: 32px; font-size: 0.9rem; }
+            .pt-kpi-title { font-size: 0.6rem; }
+            .pt-kpi-value { font-size: 1rem; margin-bottom: 6px; }
+            .pt-kpi-badges { gap: 3px; }
+            .pt-kpi-badge { padding: 2px 5px; font-size: 0.55rem; }
+            .pt-kpi-badge i { font-size: 0.5rem; }
+            .pt-kpi-details { margin-top: 8px; padding-top: 8px; }
+            .pt-kpi-detail-row { font-size: 0.65rem; padding: 3px 0; }
+            .pt-kpi-hint { display: none; }
+        }
+        @media (max-width: 400px) {
+            #kpi-cards { gap: 8px !important; }
+            .pt-kpi-card { padding: 10px; }
+            .pt-kpi-header { flex-direction: column; gap: 6px; }
+            .pt-kpi-icon { width: 28px; height: 28px; font-size: 0.8rem; }
+            .pt-kpi-value { font-size: 0.95rem; }
+            .pt-kpi-badges { flex-direction: column; gap: 2px; }
         }
 
         #production-times-table_wrapper .dataTables_filter { 
